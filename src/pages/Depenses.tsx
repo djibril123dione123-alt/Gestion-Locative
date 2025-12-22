@@ -1,0 +1,246 @@
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../lib/supabase';
+import { Modal } from '../components/ui/Modal';
+import { Table } from '../components/ui/Table';
+import { Plus, Search } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+
+export function Depenses() {
+  const { user } = useAuth();
+  const [depenses, setDepenses] = useState<any[]>([]);
+  const [filtered, setFiltered] = useState<any[]>([]);
+  const [immeubles, setImmeubles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingDepense, setEditingDepense] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const [formData, setFormData] = useState({
+    montant: '',
+    date_depense: new Date().toISOString().split('T')[0],
+    categorie: 'maintenance' as const,
+    description: '',
+    beneficiaire: '',
+    immeuble_id: '',
+  });
+
+  const categories = ['🌐 Internet', '⚡ Électricité', '💧 Eau', '👷 Salaires', '🚌 Prime de transport','📱 Crédit téléphonique', '📦 Autres'];
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    setFiltered(depenses.filter((d) => JSON.stringify(d).toLowerCase().includes(searchTerm.toLowerCase())));
+  }, [searchTerm, depenses]);
+
+  const loadData = async () => {
+    try {
+      const [depensesRes, immeublesRes] = await Promise.all([
+        supabase.from('depenses').select('*, immeubles(nom)').order('created_at', { ascending: false }),
+        supabase.from('immeubles').select('id, nom').eq('actif', true),
+      ]);
+
+      setDepenses(depensesRes.data || []);
+      setFiltered(depensesRes.data || []);
+      setImmeubles(immeublesRes.data || []);
+    } catch (error) {
+      console.error('Erreur:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const data = {
+        montant: parseFloat(formData.montant),
+        date_depense: formData.date_depense,
+        categorie: formData.categorie,
+        description: formData.description,
+        beneficiaire: formData.beneficiaire,
+        immeuble_id: formData.immeuble_id || null,
+      };
+
+      if (editingDepense) {
+        await supabase.from('depenses').update(data).eq('id', editingDepense.id);
+      } else {
+        await supabase.from('depenses').insert([{ ...data, created_by: user?.id }]);
+      }
+
+      closeModal();
+      loadData();
+    } catch (error: any) {
+      alert(`Erreur : ${error.message}`);
+    }
+  };
+
+  const handleEdit = (depense: any) => {
+    setEditingDepense(depense);
+    setFormData({
+      montant: depense.montant.toString(),
+      date_depense: depense.date_depense,
+      categorie: depense.categorie,
+      description: depense.description,
+      beneficiaire: depense.beneficiaire,
+      immeuble_id: depense.immeuble_id || '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (depense: any) => {
+    if (!confirm('Supprimer cette dépense ?')) return;
+    try {
+      await supabase.from('depenses').delete().eq('id', depense.id);
+      loadData();
+    } catch (error: any) {
+      alert(`Erreur : ${error.message}`);
+    }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingDepense(null);
+    setFormData({
+      montant: '',
+      date_depense: new Date().toISOString().split('T')[0],
+      categorie: 'maintenance',
+      description: '',
+      beneficiaire: '',
+      immeuble_id: '',
+    });
+  };
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(amount);
+
+  const columns = [
+    { key: 'date_depense', label: 'Date' },
+    { key: 'categorie', label: 'Catégorie' },
+    { key: 'description', label: 'Description' },
+    { key: 'beneficiaire', label: 'Bénéficiaire' },
+    { key: 'montant', label: 'Montant', render: (d: any) => formatCurrency(d.montant) },
+    { key: 'immeuble', label: 'Immeuble', render: (d: any) => d.immeubles?.nom || '-' },
+  ];
+
+  if (loading) return <div className="flex items-center justify-center h-full"><div>Chargement...</div></div>;
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 mb-2">Dépenses</h1>
+          <p className="text-slate-600">Gestion des frais d'exploitation</p>
+        </div>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        >
+          <Plus className="w-5 h-5" />
+          Nouvelle dépense
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Rechercher..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <Table columns={columns} data={filtered} onEdit={handleEdit} onDelete={handleDelete} />
+      </div>
+
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingDepense ? 'Modifier dépense' : 'Nouvelle dépense'}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Montant *</label>
+              <input
+                type="number"
+                required
+                value={formData.montant}
+                onChange={(e) => setFormData({ ...formData, montant: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Date *</label>
+              <input
+                type="date"
+                required
+                value={formData.date_depense}
+                onChange={(e) => setFormData({ ...formData, date_depense: e.target.value })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Catégorie *</label>
+            <select
+              required
+              value={formData.categorie}
+              onChange={(e) => setFormData({ ...formData, categorie: e.target.value as any })}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              {categories.map((c) => (
+                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
+            <input
+              type="text"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Bénéficiaire</label>
+            <input
+              type="text"
+              value={formData.beneficiaire}
+              onChange={(e) => setFormData({ ...formData, beneficiaire: e.target.value })}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Immeuble</label>
+            <select
+              value={formData.immeuble_id}
+              onChange={(e) => setFormData({ ...formData, immeuble_id: e.target.value })}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Sélectionner (optionnel)</option>
+              {immeubles.map((i) => (
+                <option key={i.id} value={i.id}>{i.nom}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6">
+            <button type="button" onClick={closeModal} className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">
+              Annuler
+            </button>
+            <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              {editingDepense ? 'Modifier' : 'Créer'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </div>
+  );
+}

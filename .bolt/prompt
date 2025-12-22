@@ -1,0 +1,110 @@
+For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.
+
+By default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.
+
+Use icons from lucide-react for logos.
+
+Confort Immo Archi - Système de Gestion Immobilière
+Architecture globale
+Il s'agit d'une application web complète de gestion immobilière développée avec :
+•	Frontend : React + TypeScript + Vite + Tailwind CSS
+•	Backend : Supabase (PostgreSQL + Auth)
+•	Librairies : recharts (graphiques), jsPDF (exports PDF), XLSX (exports Excel), lucide-react (icônes)
+
+Fonctionnalités principales
+1. Gestion multi-entités
+L'application gère 6 entités principales :
+•	Bailleurs : Propriétaires des immeubles
+•	Immeubles : Bâtiments appartenant aux bailleurs
+•	Unités : Appartements/locaux dans les immeubles (statuts : libre, loué, maintenance)
+•	Locataires : Personnes qui louent les unités
+•	Contrats : Liens entre locataires et unités avec détails financiers
+•	Paiements : Enregistrement des loyers avec calcul automatique des commissions
+2. Système de rôles (RLS - Row Level Security)
+4 rôles avec permissions différentes :
+•	Admin : Accès total
+•	Agent : Gestion opérationnelle (bailleurs, immeubles, contrats, paiements)
+•	Comptable : Vue finances uniquement
+•	Bailleur : Vue limitée à ses propres biens
+3. Modules fonctionnels
+Dashboard
+•	Statistiques en temps réel (nombre d'immeubles, unités, locataires)
+•	Taux d'occupation
+•	Revenus/impayés du mois
+•	Graphiques mensuels (revenus, occupation)
+Filtres avancés
+•	Recherche multicritères (bailleur, immeuble, unité, statuts, loyer, dates)
+•	Export Excel des résultats
+•	Compteur de filtres actifs
+Loyers impayés
+•	Détection automatique des loyers non payés sur 6 mois
+•	Liste des locataires en retard
+•	Filtrage par bailleur
+•	Export PDF
+Rapports par immeuble
+•	Analyse financière par immeuble
+•	Loyers perçus vs impayés
+•	Frais de gestion
+•	Résultat net bailleur
+•	Taux d'occupation
+Bilans mensuels
+•	Rapport détaillé par bailleur
+•	Ventilation par immeuble
+•	Calcul automatique des montants à verser
+•	Export PDF personnalisé pour chaque bailleur
+Comptabilité
+•	Vue consolidée des revenus (commissions agence)
+•	Dépenses
+•	Solde net
+•	Évolution mensuelle en graphiques
+Contrats
+•	Génération automatique de PDF avec toutes les informations légales
+•	Gestion du cycle de vie (actif, expiré, résilié)
+•	Libération automatique des unités à la résiliation
+
+Points techniques importants
+Calculs automatiques
+Lors d'un paiement, l'application calcule automatiquement :
+part_agence = montant_total × pourcentage_agence / 100
+part_bailleur = montant_total - part_agence
+Gestion des dates
+•	Les mois sont stockés au format YYYY-MM-DD (début du mois)
+•	Input type="month" pour sélection conviviale
+Relations de données
+Bailleur → Immeubles → Unités → Contrats → Paiements
+                                     ↓
+                                 Locataires
+Sécurité
+•	Authentification Supabase
+•	RLS sur toutes les tables
+•	Politiques adaptées par rôle
+•	Audit logs pour traçabilité
+Export de documents
+•	PDF : jsPDF + jsPDF-autotable pour contrats et rapports
+•	Excel : XLSX pour exports de données filtrées
+
+Structure du code
+Pages principales (src/pages/)
+•	Dashboard, Bailleurs, Immeubles, Unités, Locataires, Contrats, Paiements
+•	LoyersImpayes, RapportsImmeubles, BilansMensuels, FiltresAvances, Comptabilite
+Composants réutilisables (src/components/)
+•	Modal, Table, Sidebar, LoginForm
+Contextes
+•	AuthContext : Gestion de l'authentification et du profil utilisateur
+Base de données
+•	Schéma complet dans supabase/migrations/
+•	11 tables principales avec relations
+•	Triggers pour updated_at
+•	RLS configuré pour chaque table
+
+Flux utilisateur typique
+1.	Connexion → Authentification Supabase
+2.	Création bailleur → Ajout propriétaire
+3.	Création immeuble → Associé au bailleur
+4.	Création unités → Appartements dans l'immeuble
+5.	Création locataire → Personne qui loue
+6.	Création contrat → Lie locataire + unité (unité passe en statut "loué")
+7.	Enregistrement paiements → Calcul automatique des commissions
+8.	Consultation rapports → Bilans, impayés, comptabilité
+Points remarquables
+✅ Calculs intelligents : Commission agence calculée automatiquement ✅ Exports multiformats : PDF (rapports) + Excel (données) ✅ Gestion d'état : Unités (libre/loué/maintenance), Contrats (actif/expiré/résilié) ✅ Recherche avancée : Filtres multiples combinables ✅ UI moderne : Tailwind CSS, composants réutilisables ✅ Sécurité : RLS Supabase avec permissions granulaires ✅ Traçabilité : created_by, updated_at, audit_logs

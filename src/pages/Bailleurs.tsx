@@ -2,9 +2,13 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { ToastContainer } from '../components/ui/Toast';
 import { Plus, Search, FileText, AlertCircle } from 'lucide-react';
 import { generateMandatBailleurPDF } from '../lib/pdf';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
+import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages';
 
 /**
  * Interface Bailleur avec les champs commission et debut_contrat
@@ -60,7 +64,8 @@ const ErrorAlert: React.FC<{ message: string; onClose: () => void }> = ({ messag
  */
 export function Bailleurs() {
   const { user } = useAuth();
-  
+  const toast = useToast();
+
   // États
   const [bailleurs, setBailleurs] = useState<Bailleur[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,6 +74,11 @@ export function Bailleurs() {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    bailleur: Bailleur | null;
+    isDeleting: boolean;
+  }>({ isOpen: false, bailleur: null, isDeleting: false });
 
   // État du formulaire avec commission et debut_contrat
   const [formData, setFormData] = useState<FormData>({
@@ -105,11 +115,13 @@ export function Bailleurs() {
         .order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
-      
+
       setBailleurs(data || []);
     } catch (err) {
       console.error('Erreur lors du chargement des bailleurs:', err);
-      setError('Impossible de charger les bailleurs. Veuillez réessayer.');
+      const errorMessage = translateSupabaseError(err);
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -178,24 +190,28 @@ export function Bailleurs() {
           .eq('id', editingBailleur.id);
 
         if (updateError) throw updateError;
+        toast.success(getSuccessMessage('update', 'Bailleur'));
       } else {
         // Création
         const { error: insertError } = await supabase
           .from('bailleurs')
-          .insert([{ 
+          .insert([{
             ...submitData,
             created_by: user?.id,
-            actif: true 
+            actif: true
           }]);
 
         if (insertError) throw insertError;
+        toast.success(getSuccessMessage('create', 'Bailleur'));
       }
 
       closeModal();
       await loadBailleurs();
     } catch (err: any) {
       console.error('Erreur lors de l\'enregistrement:', err);
-      setError(err.message || 'Erreur lors de l\'enregistrement du bailleur.');
+      const errorMessage = translateSupabaseError(err);
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -222,26 +238,38 @@ export function Bailleurs() {
   }, []);
 
   /**
+   * Ouverture de la modal de confirmation de suppression
+   */
+  const handleDelete = (bailleur: Bailleur) => {
+    setConfirmModal({ isOpen: true, bailleur, isDeleting: false });
+  };
+
+  /**
    * Suppression logique d'un bailleur
    */
-  const handleDelete = async (bailleur: Bailleur) => {
-    const confirmMessage = `Êtes-vous sûr de vouloir supprimer ${bailleur.prenom} ${bailleur.nom} ?`;
-    if (!confirm(confirmMessage)) return;
+  const confirmDelete = async () => {
+    if (!confirmModal.bailleur) return;
 
     try {
+      setConfirmModal((prev) => ({ ...prev, isDeleting: true }));
       setError(null);
 
       const { error: deleteError } = await supabase
         .from('bailleurs')
         .update({ actif: false, updated_at: new Date().toISOString() })
-        .eq('id', bailleur.id);
+        .eq('id', confirmModal.bailleur.id);
 
       if (deleteError) throw deleteError;
-      
+
+      toast.success(getSuccessMessage('delete', 'Bailleur'));
+      setConfirmModal({ isOpen: false, bailleur: null, isDeleting: false });
       await loadBailleurs();
     } catch (err) {
       console.error('Erreur lors de la suppression:', err);
-      setError('Erreur lors de la suppression du bailleur.');
+      const errorMessage = translateSupabaseError(err);
+      setError(errorMessage);
+      toast.error(errorMessage);
+      setConfirmModal((prev) => ({ ...prev, isDeleting: false }));
     }
   };
 
@@ -675,6 +703,22 @@ export function Bailleurs() {
           </div>
         </form>
       </Modal>
+
+      {/* Modal de confirmation de suppression */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ isOpen: false, bailleur: null, isDeleting: false })}
+        onConfirm={confirmDelete}
+        title="Confirmer la suppression"
+        message={`Êtes-vous sûr de vouloir supprimer ${confirmModal.bailleur?.prenom} ${confirmModal.bailleur?.nom} ? Cette action est irréversible.`}
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        variant="danger"
+        isLoading={confirmModal.isDeleting}
+      />
+
+      {/* Conteneur de toasts */}
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>
   );
 }

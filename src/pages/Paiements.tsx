@@ -134,8 +134,8 @@ export function Paiements() {
             if (!contrat) throw new Error('Contrat non trouvé'); // [19, 20]
 
             const montantTotal = parseFloat(formData.montant_total);
-            const partAgence = (montantTotal * contrat.comission) / 100; // Calcul de la part Agence [20, 22]
-            const partBailleur = montantTotal - partAgence; // Calcul de la part Bailleur [20, 22]
+            const partAgence = (montantTotal * (contrat.commission || contrat.pourcentage_agence || 10)) / 100;
+            const partBailleur = montantTotal - partAgence;
 
             const moisConcerne = new Date(formData.mois_display + '-01')
                 .toISOString()

@@ -17,7 +17,7 @@ interface Unite {
 }
 
 export function Unites() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [unites, setUnites] = useState<Unite[]>([]);
   const [filteredUnites, setFilteredUnites] = useState<Unite[]>([]);
   const [immeubles, setImmeubles] = useState<any[]>([]);

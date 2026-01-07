@@ -25,7 +25,7 @@ interface Bailleur {
 }
 
 export function Immeubles() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [immeubles, setImmeubles] = useState<Immeuble[]>([]);
   const [filteredImmeubles, setFilteredImmeubles] = useState<Immeuble[]>([]);
   const [bailleurs, setBailleurs] = useState<Bailleur[]>([]);

@@ -16,7 +16,7 @@ interface Locataire {
 }
 
 export function Locataires() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [locataires, setLocataires] = useState<Locataire[]>([]);
   const [filtered, setFiltered] = useState<Locataire[]>([]);
   const [loading, setLoading] = useState(true);

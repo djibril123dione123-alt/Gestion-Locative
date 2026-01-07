@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Building2,
   Users,
@@ -38,6 +39,7 @@ interface DashboardStats {
 }
 
 export function Dashboard() {
+  const { profile } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalBailleurs: 0,
     totalImmeubles: 0,
@@ -54,11 +56,17 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (profile?.agency_id) {
+      loadDashboardData();
+    }
+  }, [profile?.agency_id]);
 
   const loadDashboardData = async () => {
+    if (!profile?.agency_id) return;
+
     try {
+      const agencyId = profile.agency_id;
+
       const [
         { count: bailleursCount },
         { count: immeublesCount },
@@ -69,16 +77,17 @@ export function Dashboard() {
         { count: contratsCount },
         { data: paiementsData },
       ] = await Promise.all([
-        supabase.from('bailleurs').select('*', { count: 'exact', head: true }),
-        supabase.from('immeubles').select('*', { count: 'exact', head: true }),
-        supabase.from('unites').select('*', { count: 'exact', head: true }),
-        supabase.from('unites').select('*', { count: 'exact', head: true }).eq('statut', 'libre'),
-        supabase.from('unites').select('*', { count: 'exact', head: true }).eq('statut', 'loue'),
-        supabase.from('locataires').select('*', { count: 'exact', head: true }),
-        supabase.from('contrats').select('*', { count: 'exact', head: true }).eq('statut', 'actif'),
+        supabase.from('bailleurs').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId),
+        supabase.from('immeubles').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId),
+        supabase.from('unites').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId),
+        supabase.from('unites').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId).eq('statut', 'libre'),
+        supabase.from('unites').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId).eq('statut', 'loue'),
+        supabase.from('locataires').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId),
+        supabase.from('contrats').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId).eq('statut', 'actif'),
         supabase
           .from('paiements')
           .select('montant_total, mois_concerne, statut')
+          .eq('agency_id', agencyId)
           .gte('mois_concerne', new Date(new Date().getFullYear(), 0, 1).toISOString()),
       ]);
 

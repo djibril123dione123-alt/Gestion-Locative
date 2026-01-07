@@ -6,7 +6,7 @@ import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export function Depenses() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [depenses, setDepenses] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
   const [immeubles, setImmeubles] = useState<any[]>([]);

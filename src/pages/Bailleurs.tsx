@@ -63,7 +63,7 @@ const ErrorAlert: React.FC<{ message: string; onClose: () => void }> = ({ messag
  * Composant principal - Gestion des Bailleurs
  */
 export function Bailleurs() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const toast = useToast();
 
   // États

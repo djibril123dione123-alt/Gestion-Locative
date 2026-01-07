@@ -19,6 +19,7 @@ export interface UserProfile {
   telephone: string | null;
   role: UserRole;
   bailleur_id: string | null;
+  agency_id: string | null;
   actif: boolean;
   created_at: string;
   updated_at: string;

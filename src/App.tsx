@@ -15,9 +15,10 @@ import { Commissions } from './pages/Commissions';
 import { LoyersImpayes } from './pages/LoyersImpayes';
 import { FiltresAvances } from './pages/FiltresAvances';
 import { TableauDeBordFinancierGlobal } from './pages/TableauDeBordFinancierGlobal';
+import Welcome from './pages/Welcome';
 
 function AppContent() {
-    const { user, loading } = useAuth();
+    const { user, profile, loading } = useAuth();
     const [currentPage, setCurrentPage] = useState('dashboard');
 
     if (loading) {
@@ -30,6 +31,10 @@ function AppContent() {
 
     if (!user) {
         return <LoginForm />;
+    }
+
+    if (user && profile && !profile.agency_id) {
+        return <Welcome />;
     }
 
     const renderPage = () => {

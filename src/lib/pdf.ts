@@ -1,6 +1,23 @@
 // src/lib/pdf.ts
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { supabase } from './supabase';
+
+/**
+ * ------------------------------
+ * TYPES ET INTERFACES
+ * ------------------------------
+ */
+interface AgencySettings {
+  nom_agence: string | null;
+  logo_url: string | null;
+  couleur_primaire: string | null;
+  ninea: string | null;
+  devise: string | null;
+  pied_page_personnalise: string | null;
+  signature_url: string | null;
+  qr_code_quittances: boolean;
+}
 
 /**
  * ------------------------------
@@ -9,23 +26,94 @@ import autoTable from 'jspdf-autotable';
  */
 
 /**
- * Format XOF propre : 75 000 F CFA
+ * Charge les paramètres de l'agence depuis Supabase
  */
-export function formatCurrency(amount: number | string): string {
-  if (!amount) return "0 F CFA";
+async function loadAgencySettings(): Promise<AgencySettings> {
+  try {
+    const { data, error } = await supabase
+      .from('agency_settings')
+      .select('nom_agence, logo_url, couleur_primaire, ninea, devise, pied_page_personnalise, signature_url, qr_code_quittances')
+      .eq('id', 'default')
+      .maybeSingle();
 
-  // 🧹 Nettoyage des erreurs de format ("/", espaces, etc.)
+    if (error) throw error;
+
+    return data || {
+      nom_agence: 'Gestion Locative',
+      logo_url: null,
+      couleur_primaire: '#0066CC',
+      ninea: null,
+      devise: 'XOF',
+      pied_page_personnalise: null,
+      signature_url: null,
+      qr_code_quittances: true,
+    };
+  } catch (error) {
+    console.error('Erreur chargement paramètres agence:', error);
+    return {
+      nom_agence: 'Gestion Locative',
+      logo_url: null,
+      couleur_primaire: '#0066CC',
+      ninea: null,
+      devise: 'XOF',
+      pied_page_personnalise: null,
+      signature_url: null,
+      qr_code_quittances: true,
+    };
+  }
+}
+
+/**
+ * Ajoute le logo de l'agence en haut du document
+ */
+async function addAgencyLogo(doc: jsPDF, logoUrl: string | null): Promise<number> {
+  if (!logoUrl) return 10;
+
+  try {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = logoUrl;
+    });
+
+    const imgWidth = 30;
+    const imgHeight = (img.height / img.width) * imgWidth;
+    doc.addImage(img, 'PNG', 14, 10, imgWidth, imgHeight);
+
+    return 10 + imgHeight + 5;
+  } catch (error) {
+    console.error('Erreur chargement logo:', error);
+    return 10;
+  }
+}
+
+/**
+ * Format dynamique selon la devise
+ */
+export function formatCurrency(amount: number | string, devise: string = 'XOF'): string {
+  if (!amount) {
+    if (devise === 'XOF') return "0 F CFA";
+    if (devise === 'EUR') return "0 €";
+    if (devise === 'USD') return "0 $";
+    return "0";
+  }
+
   const cleaned = String(amount)
-    .replace(/\//g, "") // enlève tous les slashs
-    .replace(/\s/g, ""); // enlève espaces inutiles
+    .replace(/\//g, "")
+    .replace(/\s/g, "");
 
   const num = Number(cleaned);
+  const formatted = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 0 })
+    .format(num)
+    .replace(/\u00A0/g, " ");
 
-  return (
-    new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 0 })
-      .format(num)
-      .replace(/\u00A0/g, " ") + " F CFA"
-  );
+  if (devise === 'XOF') return formatted + " F CFA";
+  if (devise === 'EUR') return formatted + " €";
+  if (devise === 'USD') return formatted + " $";
+  return formatted;
 }
 export function drawPageBorder(doc: jsPDF) {
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -110,6 +198,8 @@ function drawTextWithBold(doc: jsPDF, text: string, x: number, y: number) {
  */
 export async function generateContratPDF(contrat: any) {
   if (!contrat) throw new Error('Aucun contrat fourni');
+
+  const settings = await loadAgencySettings();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
 
   const bailleur = contrat?.unites?.immeubles?.bailleurs || {};
@@ -142,8 +232,8 @@ export async function generateContratPDF(contrat: any) {
       duree_annees: dureeAnnees,
       date_debut: contrat.date_debut ? new Date(contrat.date_debut).toLocaleDateString('fr-FR') : '…',
       date_fin: contrat.date_fin ? new Date(contrat.date_fin).toLocaleDateString('fr-FR') : '…',
-      loyer_mensuel: formatCurrency(Number(contrat.loyer_mensuel || 0)),
-      depot_garantie: contrat.caution ? formatCurrency(Number(contrat.caution)) : '',
+      loyer_mensuel: formatCurrency(Number(contrat.loyer_mensuel || 0), settings.devise || 'XOF'),
+      depot_garantie: contrat.caution ? formatCurrency(Number(contrat.caution), settings.devise || 'XOF') : '',
       date_du_jour: new Date().toLocaleDateString('fr-FR'),
     };
 
@@ -162,14 +252,17 @@ export async function generateContratPDF(contrat: any) {
     const usableWidth = pageWidth - 28;
     const lineHeight = 7;
     const pageHeight = doc.internal.pageSize.getHeight();
-    let y = 25;
-    drawPageBorder(doc); // bordure sur la première page
 
+    drawPageBorder(doc);
 
-    // TITRE sur la première page uniquement
+    let titleY = await addAgencyLogo(doc, settings.logo_url);
+    titleY = Math.max(titleY, 15);
+
     doc.setFontSize(16);
     doc.setFont(undefined, 'bold');
-    doc.text('CONTRAT DE LOCATION', pageWidth / 2, 15, { align: 'center' });
+    doc.text('CONTRAT DE LOCATION', pageWidth / 2, titleY, { align: 'center' });
+
+    let y = titleY + 10;
 
     doc.setFontSize(11);
     doc.setFont(undefined, 'normal');
@@ -240,6 +333,7 @@ export async function generateContratPDF(contrat: any) {
 export async function generatePaiementFacturePDF(paiement: any) {
   if (!paiement) throw new Error('Aucun paiement fourni');
 
+  const settings = await loadAgencySettings();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
   const contrat = paiement?.contrats || {};
   const locataire = contrat?.locataires || {};
@@ -256,18 +350,20 @@ export async function generatePaiementFacturePDF(paiement: any) {
   const usableWidth = pageWidth - leftMargin - rightMargin;
   const title = 'Quittance Loyer';
   const titleFontSize = 16;
-  const bodyFontSize = 11
-  drawPageBorder(doc); // bordure sur la première page
+  const bodyFontSize = 11;
 
+  drawPageBorder(doc);
 
-  // Titre
+  let titleY = await addAgencyLogo(doc, settings.logo_url);
+  titleY = Math.max(titleY, 15);
+
   doc.setFont(undefined, 'bold');
   doc.setFontSize(titleFontSize);
-  doc.text(title, pageWidth / 2, 15, { align: 'center' });
+  doc.text(title, pageWidth / 2, titleY, { align: 'center' });
 
   doc.setFont(undefined, 'normal');
   doc.setFontSize(bodyFontSize);
-  let y = 25;
+  let y = titleY + 10;
 
   // Référence
   doc.setFont(undefined, 'bold');
@@ -303,13 +399,14 @@ export async function generatePaiementFacturePDF(paiement: any) {
   y += 10;
 
   // Tableau autoTable
+  const devise = settings.devise || 'XOF';
   autoTable(doc, {
     startY: y,
     head: [['Libellé', 'Montant']],
     body: [
-      ['Montant du loyer', formatCurrency(loyer)],
-      ['Montant payé', formatCurrency(paye)],
-      ['Reliquat (reste à payer)', formatCurrency(reliquat)],
+      ['Montant du loyer', formatCurrency(loyer, devise)],
+      ['Montant payé', formatCurrency(paye, devise)],
+      ['Reliquat (reste à payer)', formatCurrency(reliquat, devise)],
     ],
     theme: 'grid',
     styles: { fontSize: 10, cellPadding: 3 },
@@ -322,7 +419,7 @@ export async function generatePaiementFacturePDF(paiement: any) {
   const finalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 10 : y + 10;
 
   const mentions = [
-    "NB 1 : Le locataire ne peut déménager sans avoir payé l’intégralité du loyer dû et effectué toutes les réparations à sa charge.",
+    "NB 1 : Le locataire ne peut déménager sans avoir payé l'intégralité du loyer dû et effectué toutes les réparations à sa charge.",
     'NB 2 : La sous-location est strictement interdite.',
   ];
 
@@ -336,6 +433,14 @@ export async function generatePaiementFacturePDF(paiement: any) {
     doc.text(lines, leftMargin, yMentions);
     yMentions += lines.length * 5;
   });
+
+  if (settings.pied_page_personnalise) {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    const footerLines = doc.splitTextToSize(settings.pied_page_personnalise, usableWidth);
+    doc.text(footerLines, leftMargin, pageHeight - 25);
+  }
 
   addFooter(doc);
   doc.save(`facture-${locataire?.nom || 'locataire'}-${Date.now()}.pdf`);
@@ -351,13 +456,19 @@ export async function generatePaiementFacturePDF(paiement: any) {
 export async function generateMandatBailleurPDF(bailleur: any) {
   if (!bailleur) throw new Error('Aucun bailleur fourni');
 
+  const settings = await loadAgencySettings();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
 
   try {
     const tpl = await fetchTemplate('/templates/mandat_gerance.txt');
 
-    // Champs dynamiques
+    // Champs dynamiques incluant les paramètres de l'agence
     const vars: Record<string, string> = {
+      nom_agence: settings.nom_agence || 'Gestion Locative',
+      agence_ninea: settings.ninea || '',
+      agence_adresse: 'Dakar',
+      agence_directeur: 'Le Directeur',
+      lieu: 'Dakar',
       bailleur_prenom: bailleur.prenom || '',
       bailleur_nom: bailleur.nom || '',
       bailleur_cni: bailleur.piece_identite || '',
@@ -393,15 +504,11 @@ export async function generateMandatBailleurPDF(bailleur: any) {
     const bodyFontSize = 12;
     const lineHeight = 7;
 
-    drawPageBorder(doc); // bordure sur la première page
+    drawPageBorder(doc);
 
-    // ---- AJOUT : espace pour le logo (4 lignes) ----
-    const skipLogoSpace = lineHeight * 6;
+    let titleY = await addAgencyLogo(doc, settings.logo_url);
+    titleY = Math.max(titleY, 15);
 
-    // Position du titre après l'espace
-    const titleY = 15 + skipLogoSpace;
-
-    // TITRE UNIQUEMENT SUR LA PREMIÈRE PAGE
     doc.setFont(undefined, 'bold');
     doc.setFontSize(titleFontSize);
     doc.text(title, pageWidth / 2, titleY, { align: 'center' });
@@ -413,7 +520,6 @@ export async function generateMandatBailleurPDF(bailleur: any) {
     const pageHeight = doc.internal.pageSize.getHeight();
     const marginBottom = 20;
 
-    // ---- AJUSTEMENT : commencer le texte plus bas ----
     let y = titleY + lineHeight * 2;
 
     for (const line of lines) {

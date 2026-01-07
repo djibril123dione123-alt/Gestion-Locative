@@ -610,9 +610,9 @@ CREATE TABLE IF NOT EXISTS subscription_plans (
 -- Insérer les plans par défaut
 INSERT INTO subscription_plans (id, name, price_xof, price_eur, price_usd, max_users, max_immeubles, max_unites, storage_gb, features)
 VALUES
-  ('basic', 'Basic', 15000, 23, 25, 1, 5, 20, 1, '{"support": "email"}'::jsonb),
-  ('pro', 'Pro', 35000, 53, 58, 10, 50, 200, 5, '{"support": "prioritaire", "all_modules": true}'::jsonb),
-  ('enterprise', 'Enterprise', 0, 0, 0, -1, -1, -1, 50, '{"support": "dedie", "api_access": true, "custom": true}'::jsonb)
+  ('basic', 'Essai Gratuit', 0, 0, 0, 1, 3, 10, 1, '{"support": "email", "trial_days": 30}'::jsonb),
+  ('pro', 'Pro - Accès Complet', 15000, 23, 25, 999, 999, 9999, 20, '{"support": "prioritaire", "all_modules": true, "unlimited": true}'::jsonb),
+  ('enterprise', 'Enterprise', 0, 0, 0, -1, -1, -1, 100, '{"support": "dedie", "api_access": true, "custom": true, "whitelabel": true}'::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS subscriptions (

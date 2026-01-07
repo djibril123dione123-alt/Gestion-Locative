@@ -934,29 +934,30 @@ Table :
 
 **Plans :**
 
-**Basic (Gratuit / 15 000 XOF/mois)**
+**Essai Gratuit (0 XOF - 30 jours)**
 - 1 utilisateur
-- 5 immeubles max
-- 20 unités max
-- 500 MB stockage
+- 3 immeubles max
+- 10 unités max
+- 1 GB stockage
 - Support email
+- Essai de 30 jours
 
-**Pro (35 000 XOF/mois)**
-- 10 utilisateurs
-- 50 immeubles max
-- 200 unités max
-- 5 GB stockage
-- Tous les modules
-- Support prioritaire
-
-**Enterprise (Sur devis)**
+**Pro - Accès Complet (15 000 XOF/mois)**
 - Utilisateurs illimités
 - Immeubles illimités
 - Unités illimitées
-- 50 GB stockage
+- 20 GB stockage
+- Tous les modules
+- Support prioritaire
+- Accès complet à toutes les fonctionnalités
+
+**Enterprise (Sur devis)**
+- Tout du plan Pro +
+- 100 GB stockage
 - API access
 - Support dédié
-- Personnalisation
+- Personnalisation avancée
+- Whitelabel (logo et marque personnalisés)
 
 **Fonctionnalités :**
 - Modifier les prix

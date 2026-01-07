@@ -187,31 +187,34 @@ Migration complète pour le multi-tenant :
 
 ## 🎨 PLANS TARIFAIRES
 
-### Plan Basic (15 000 XOF / 23 EUR / 25 USD par mois)
+### Essai Gratuit (0 XOF - Gratuit pendant 30 jours)
 - 1 utilisateur
-- 5 immeubles max
-- 20 unités max
+- 3 immeubles max
+- 10 unités max
 - 1 GB stockage
 - Support email
-- Modules de base
+- Essai de 30 jours
+- Idéal pour tester l'application
 
-### Plan Pro (35 000 XOF / 53 EUR / 58 USD par mois)
-- 10 utilisateurs
-- 50 immeubles max
-- 200 unités max
-- 5 GB stockage
-- Tous les modules (Inventaires, Interventions, Documents)
-- Support prioritaire
-
-### Plan Enterprise (Sur devis)
+### Pro - Accès Complet (15 000 XOF / 23 EUR / 25 USD par mois)
 - Utilisateurs illimités
 - Immeubles illimités
 - Unités illimitées
-- 50 GB stockage
+- 20 GB stockage
+- Tous les modules (Inventaires, Interventions, Documents, Rapports, Calendrier)
+- Support prioritaire
+- Accès complet à toutes les fonctionnalités
+- Idéal pour les agences et bailleurs
+
+### Plan Enterprise (Sur devis)
+- Tout du plan Pro +
+- 100 GB stockage
 - API access
-- Personnalisation avancée
 - Support dédié
-- Whitelabel (optionnel)
+- Personnalisation avancée
+- Whitelabel (marque personnalisée)
+- Formation dédiée
+- Idéal pour les grandes agences et groupes immobiliers
 
 ---
 
@@ -490,10 +493,11 @@ La transformation en SaaS multi-tenant est un projet ambitieux mais parfaitement
 **Estimation globale : 14-20 semaines (3,5 à 5 mois)**
 
 **ROI estimé :**
-- 50 agences × 35 000 XOF/mois = 1 750 000 XOF/mois (2 670 EUR/mois)
-- Année 1 : ~32 000 EUR
-- Coût développement : ~20 000 EUR
-- Breakeven : 8 mois
+- 50 agences × 15 000 XOF/mois = 750 000 XOF/mois (1 145 EUR/mois)
+- Année 1 : ~13 740 EUR
+- Coût développement : ~15 000 EUR
+- Breakeven : ~13 mois
+- Avec 100 agences : ~27 000 EUR/an (breakeven à 7 mois)
 
 ---
 

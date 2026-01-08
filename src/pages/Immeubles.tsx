@@ -176,22 +176,22 @@ export function Immeubles() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Immeubles</h1>
-          <p className="text-slate-600">Gestion des bâtiments</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Immeubles</h1>
+          <p className="text-slate-600 text-sm lg:text-base">Gestion des bâtiments</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+          className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg text-sm sm:text-base hover:bg-blue-700 transition w-full sm:w-auto"
         >
           <Plus className="w-5 h-5" />
           Nouvel immeuble
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -200,17 +200,19 @@ export function Immeubles() {
               placeholder="Rechercher un immeuble..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
 
-        <Table
-          columns={columns}
-          data={filteredImmeubles}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        <div className="overflow-x-auto">
+          <Table
+            columns={columns}
+            data={filteredImmeubles}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        </div>
       </div>
 
       <Modal
@@ -241,7 +243,7 @@ export function Immeubles() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Quartier</label>
               <input
@@ -290,17 +292,17 @@ export function Immeubles() {
             />
           </div>
 
-          <div className="flex justify-end gap-3 mt-6">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6">
             <button
               type="button"
               onClick={closeModal}
-              className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition"
+              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition w-full sm:w-auto"
             >
               Annuler
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition w-full sm:w-auto"
             >
               {editingImmeuble ? 'Mettre à jour' : 'Créer'}
             </button>

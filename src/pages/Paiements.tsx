@@ -388,40 +388,42 @@ export function Paiements() {
         );
 
     return (
-        <div className="p-8">
-            <header className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-slate-800">Paiements</h1>
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
+            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800">Paiements</h1>
                 <div className="flex gap-4">
                     {/* Bouton Export PDF (optionnel / commenté dans les sources, mais inclus si souhaité) [35] */}
                     {/* <button
                         onClick={exportPDF}
-                        className="flex items-center gap-2 px-6 py-3 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition"
+                        className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition"
                     >
                         <Download size={18} /> Export PDF Liste
                     </button> */}
                     <button
                         onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition" // [34, 35]
+                        className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                     >
                         <Plus size={20} /> Nouveau paiement
                     </button>
                 </div>
             </header>
 
-            <p className="text-slate-500 mb-6">Gestion des paiements de loyers</p> {/* [34] */}
+            <p className="text-slate-500">Gestion des paiements de loyers</p>
 
-            <div className="relative mb-6">
+            <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
                     type="text"
                     placeholder="Rechercher..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" // [34, 35]
+                    className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
             </div>
 
-            <Table columns={columns} data={filtered} /> {/* Utilisation des colonnes fusionnées */}
+            <div className="overflow-x-auto">
+                <Table columns={columns} data={filtered} />
+            </div>
 
             <Modal
                 isOpen={isModalOpen}
@@ -516,19 +518,19 @@ export function Paiements() {
                     </div>
                     */}
 
-                    <div className="flex justify-end gap-3 pt-4">
+                    <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
                         <button
                             type="button"
                             onClick={closeModal}
-                            className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition" // [39, 40]
+                            className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition"
                         >
                             Annuler
                         </button>
                         <button
                             type="submit"
-                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition" // [40, 41]
+                            className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                         >
-                            {editingPaiement ? "Modifier" : "Créer"} {/* Texte dynamique [40, 41] */}
+                            {editingPaiement ? "Modifier" : "Créer"}
                         </button>
                     </div>
                 </form>

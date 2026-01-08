@@ -277,30 +277,30 @@ const formatCurrency = (amount: number) => {
   const activeFiltersCount = Object.values(filters).filter(v => v !== '').length;
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Filtres Avancés</h1>
-        <p className="text-slate-600">Recherche multicritères dans toutes les données</p>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Filtres Avancés</h1>
+        <p className="text-sm sm:text-base text-slate-600">Recherche multicritères dans toutes les données</p>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Filter className="w-5 h-5 text-blue-600" />
-          <h2 className="text-lg font-semibold text-slate-900">Critères de recherche</h2>
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
+          <Filter className="w-5 h-5 text-blue-600 flex-shrink-0" />
+          <h2 className="text-base lg:text-lg font-semibold text-slate-900">Critères de recherche</h2>
           {activeFiltersCount > 0 && (
-            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs sm:text-sm font-medium rounded-full">
               {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''}
             </span>
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Bailleur</label>
             <select
               value={filters.bailleur_id}
               onChange={(e) => setFilters({ ...filters, bailleur_id: e.target.value, immeuble_id: '', unite_id: '' })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             >
               <option value="">Tous les bailleurs</option>
               {bailleurs.map((b) => (
@@ -317,7 +317,7 @@ const formatCurrency = (amount: number) => {
               value={filters.immeuble_id}
               onChange={(e) => setFilters({ ...filters, immeuble_id: e.target.value, unite_id: '' })}
               disabled={!filters.bailleur_id}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 text-sm"
             >
               <option value="">Tous les immeubles</option>
               {immeubles.map((i) => (
@@ -334,7 +334,7 @@ const formatCurrency = (amount: number) => {
               value={filters.unite_id}
               onChange={(e) => setFilters({ ...filters, unite_id: e.target.value })}
               disabled={!filters.immeuble_id}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 text-sm"
             >
               <option value="">Toutes les produits</option>
               {unites.map((u) => (
@@ -350,7 +350,7 @@ const formatCurrency = (amount: number) => {
             <select
               value={filters.statut_unite}
               onChange={(e) => setFilters({ ...filters, statut_unite: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             >
               <option value="">Tous les statuts</option>
               <option value="libre">Libre</option>
@@ -364,7 +364,7 @@ const formatCurrency = (amount: number) => {
             <select
               value={filters.statut_paiement}
               onChange={(e) => setFilters({ ...filters, statut_paiement: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             >
               <option value="">Tous les statuts</option>
               <option value="paye">Payé</option>
@@ -380,7 +380,7 @@ const formatCurrency = (amount: number) => {
               value={filters.loyer_min}
               onChange={(e) => setFilters({ ...filters, loyer_min: e.target.value })}
               placeholder="0"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
 
@@ -391,7 +391,7 @@ const formatCurrency = (amount: number) => {
               value={filters.loyer_max}
               onChange={(e) => setFilters({ ...filters, loyer_max: e.target.value })}
               placeholder="1000000"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
 
@@ -401,7 +401,7 @@ const formatCurrency = (amount: number) => {
               type="date"
               value={filters.date_debut_min}
               onChange={(e) => setFilters({ ...filters, date_debut_min: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
 
@@ -411,35 +411,35 @@ const formatCurrency = (amount: number) => {
               type="date"
               value={filters.date_debut_max}
               onChange={(e) => setFilters({ ...filters, date_debut_max: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
           <button
             onClick={handleSearch}
             disabled={loading}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+            className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 text-sm sm:text-base"
           >
-            <Search className="w-5 h-5" />
+            <Search className="w-4 sm:w-5 h-4 sm:h-5" />
             {loading ? 'Recherche...' : 'Rechercher'}
           </button>
 
           <button
             onClick={resetFilters}
-            className="flex items-center gap-2 px-6 py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition"
+            className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 sm:px-6 sm:py-3 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition text-sm sm:text-base"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 sm:w-5 h-4 sm:h-5" />
             Réinitialiser
           </button>
 
           {results.length > 0 && (
             <button
               onClick={exportToExcel}
-              className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition ml-auto"
+              className="flex items-center justify-center sm:justify-start gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition sm:ml-auto text-sm sm:text-base"
             >
-              <Download className="w-5 h-5" />
+              <Download className="w-4 sm:w-5 h-4 sm:h-5" />
               Export Excel
             </button>
           )}
@@ -447,13 +447,13 @@ const formatCurrency = (amount: number) => {
       </div>
 
       {results.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+          <h2 className="text-base lg:text-lg font-semibold text-slate-900 mb-4">
             Résultats ({results.length} contrat{results.length > 1 ? 's' : ''})
           </h2>
 
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200">
                   <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Locataire</th>
@@ -502,10 +502,10 @@ const formatCurrency = (amount: number) => {
       )}
 
       {!loading && results.length === 0 && activeFiltersCount > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
-          <Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-900 mb-2">Aucun résultat</h3>
-          <p className="text-slate-600">Essayez de modifier vos critères de recherche</p>
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-12 text-center">
+          <Search className="w-12 sm:w-16 h-12 sm:h-16 text-slate-300 mx-auto mb-4" />
+          <h3 className="text-base lg:text-lg font-medium text-slate-900 mb-2">Aucun résultat</h3>
+          <p className="text-sm sm:text-base text-slate-600">Essayez de modifier vos critères de recherche</p>
         </div>
       )}
     </div>

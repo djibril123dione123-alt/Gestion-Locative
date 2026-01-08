@@ -226,44 +226,44 @@ export function LoyersImpayes() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Loyers Impayés</h1>
-          <p className="text-slate-600">Suivi des loyers en retard</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Loyers Impayés</h1>
+          <p className="text-sm sm:text-base text-slate-600">Suivi des loyers en retard</p>
         </div>
       </div>
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-red-200">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-red-200">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 rounded-lg bg-red-50 text-red-600">
-              <AlertCircle className="w-6 h-6" />
+            <div className="p-2 sm:p-3 rounded-lg bg-red-50 text-red-600">
+              <AlertCircle className="w-5 sm:w-6 h-5 sm:h-6" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-slate-600">Total impayés</h3>
-              <p className="text-2xl font-bold text-red-600">{formatCurrency(totalImpaye)}</p>
+              <h3 className="text-xs sm:text-sm font-medium text-slate-600">Total impayés</h3>
+              <p className="text-lg sm:text-2xl font-bold text-red-600 mt-1">{formatCurrency(totalImpaye)}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-sm font-medium text-slate-600 mb-2">Nombre de loyers impayés</h3>
-          <p className="text-2xl font-bold text-slate-900">{filtered.length}</p>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Nombre de loyers impayés</h3>
+          <p className="text-lg sm:text-2xl font-bold text-slate-900">{filtered.length}</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-sm font-medium text-slate-600 mb-2">Locataires concernés</h3>
-          <p className="text-2xl font-bold text-slate-900">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Locataires concernés</h3>
+          <p className="text-lg sm:text-2xl font-bold text-slate-900">
             {new Set(filtered.map(i => `${i.locataire_nom} ${i.locataire_prenom}`)).size}
           </p>
         </div>
       </div>
 
       {/* Filtres + Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
@@ -291,22 +291,24 @@ export function LoyersImpayes() {
           </div>
         </div>
 
-        <Table columns={columns} data={filtered} />
+        <div className="overflow-x-auto">
+          <Table columns={columns} data={filtered} />
+        </div>
       </div>
 
       {/* MODAL DE CONFIRMATION */}
       {showModal && selectedLoyer && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 max-w-md w-full text-center">
             <img
               src="/templates/Logo confort immo archi neutre.png"
               alt="Logo"
-              className="mx-auto mb-4 h-16 w-auto object-contain"
+              className="mx-auto mb-4 h-12 sm:h-16 w-auto object-contain"
             />
-            <h2 className="text-xl font-bold text-slate-800 mb-2">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-800 mb-2">
               Confirmer le paiement ?
             </h2>
-            <p className="text-slate-600 mb-6">
+            <p className="text-sm sm:text-base text-slate-600 mb-6">
               Voulez-vous confirmer le paiement du loyer de{' '}
               <strong>
                 {selectedLoyer.locataire_prenom} {selectedLoyer.locataire_nom}
@@ -320,10 +322,10 @@ export function LoyersImpayes() {
               </strong>{' '}
               ?
             </p>
-            <div className="flex justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
               <button
                 onClick={handleConfirmPaiement}
-                className="px-6 py-2 rounded-lg text-white font-semibold shadow-md"
+                className="px-4 py-2 sm:px-6 sm:py-2 rounded-lg text-white font-semibold shadow-md text-sm sm:text-base"
                 style={{
                   background: 'linear-gradient(135deg, #F58220, #C0392B)',
                 }}
@@ -332,7 +334,7 @@ export function LoyersImpayes() {
               </button>
               <button
                 onClick={() => setShowModal(false)}
-                className="px-6 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-slate-800 font-semibold transition"
+                className="px-4 py-2 sm:px-6 sm:py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-slate-800 font-semibold transition text-sm sm:text-base"
               >
                 Annuler
               </button>

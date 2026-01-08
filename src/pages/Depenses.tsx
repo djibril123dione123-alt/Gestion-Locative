@@ -132,22 +132,22 @@ export function Depenses() {
   if (loading) return <div className="flex items-center justify-center h-full"><div>Chargement...</div></div>;
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Dépenses</h1>
-          <p className="text-slate-600">Gestion des frais d'exploitation</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Dépenses</h1>
+          <p className="text-sm sm:text-base text-slate-600">Gestion des frais d'exploitation</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base whitespace-nowrap"
         >
           <Plus className="w-5 h-5" />
           Nouvelle dépense
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -156,16 +156,18 @@ export function Depenses() {
               placeholder="Rechercher..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
             />
           </div>
         </div>
-        <Table columns={columns} data={filtered} onEdit={handleEdit} onDelete={handleDelete} />
+        <div className="overflow-x-auto">
+          <Table columns={columns} data={filtered} onEdit={handleEdit} onDelete={handleDelete} />
+        </div>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingDepense ? 'Modifier dépense' : 'Nouvelle dépense'}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Montant *</label>
               <input
@@ -173,7 +175,7 @@ export function Depenses() {
                 required
                 value={formData.montant}
                 onChange={(e) => setFormData({ ...formData, montant: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
             <div>
@@ -183,7 +185,7 @@ export function Depenses() {
                 required
                 value={formData.date_depense}
                 onChange={(e) => setFormData({ ...formData, date_depense: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
           </div>
@@ -194,7 +196,7 @@ export function Depenses() {
               required
               value={formData.categorie}
               onChange={(e) => setFormData({ ...formData, categorie: e.target.value as any })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             >
               {categories.map((c) => (
                 <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
@@ -208,7 +210,7 @@ export function Depenses() {
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
 
@@ -218,7 +220,7 @@ export function Depenses() {
               type="text"
               value={formData.beneficiaire}
               onChange={(e) => setFormData({ ...formData, beneficiaire: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             />
           </div>
 
@@ -227,7 +229,7 @@ export function Depenses() {
             <select
               value={formData.immeuble_id}
               onChange={(e) => setFormData({ ...formData, immeuble_id: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             >
               <option value="">Sélectionner (optionnel)</option>
               {immeubles.map((i) => (
@@ -236,11 +238,11 @@ export function Depenses() {
             </select>
           </div>
 
-          <div className="flex justify-end gap-3 mt-6">
-            <button type="button" onClick={closeModal} className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
+            <button type="button" onClick={closeModal} className="px-4 py-2 sm:px-6 sm:py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 text-sm sm:text-base">
               Annuler
             </button>
-            <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <button type="submit" className="px-4 py-2 sm:px-6 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base">
               {editingDepense ? 'Modifier' : 'Créer'}
             </button>
           </div>

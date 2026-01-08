@@ -618,18 +618,18 @@ export function Contrats() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
       {/* 📊 En-tête et statistiques */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
         <div>
-          <h1 className="text-3xl font-bold mb-2" style={{ color: BRAND_COLORS.gray }}>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2" style={{ color: BRAND_COLORS.gray }}>
             Contrats
           </h1>
           <p className="text-slate-600">Gestion des contrats de location</p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-3 text-white rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-105"
+          className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base text-white rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-105"
           style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.primary}, ${BRAND_COLORS.red})` }}
         >
           <Plus className="w-5 h-5" />
@@ -638,7 +638,7 @@ export function Contrats() {
       </div>
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <p className="text-sm text-blue-600 font-medium">Total contrats</p>
           <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
@@ -668,7 +668,7 @@ export function Contrats() {
       </div>
 
       {/* Recherche et tableau */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
         <div className="mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
@@ -677,9 +677,9 @@ export function Contrats() {
               placeholder="Rechercher un locataire, produit, immeuble, destination..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:border-transparent transition-all"
-              style={{ 
-                boxShadow: searchTerm ? `0 0 0 3px rgba(245, 130, 32, 0.1)` : 'none' 
+              className="w-full pl-10 pr-4 py-2 sm:py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:border-transparent transition-all"
+              style={{
+                boxShadow: searchTerm ? `0 0 0 3px rgba(245, 130, 32, 0.1)` : 'none'
               }}
             />
           </div>
@@ -687,14 +687,16 @@ export function Contrats() {
 
         {filteredContrats.length === 0 ? (
           <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
-            <p className="text-slate-600 text-lg">
+            <p className="text-slate-600 text-base lg:text-lg">
               {searchTerm
                 ? 'Aucun contrat trouvé pour votre recherche'
                 : 'Aucun contrat enregistré'}
             </p>
           </div>
         ) : (
-          <Table columns={columns} data={filteredContrats} onEdit={handleEdit} />
+          <div className="overflow-x-auto">
+            <Table columns={columns} data={filteredContrats} onEdit={handleEdit} />
+          </div>
         )}
       </div>
 
@@ -771,7 +773,7 @@ export function Contrats() {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6">
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
                 Date début *
@@ -801,7 +803,7 @@ export function Contrats() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-6">
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
                 Loyer mensuel *
@@ -849,19 +851,19 @@ export function Contrats() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 mt-6">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
             <button
               type="button"
               onClick={closeModal}
               disabled={submitting}
-              className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition disabled:opacity-50"
+              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition disabled:opacity-50"
             >
               Annuler
             </button>
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="px-6 py-2 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.primary}, ${BRAND_COLORS.red})` }}
             >
               {submitting ? 'Création...' : 'Créer le contrat'}
@@ -942,19 +944,19 @@ export function Contrats() {
             />
           </div>
 
-          <div className="flex justify-end gap-3 mt-6">
+          <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
             <button
               type="button"
               onClick={closeEditModal}
               disabled={submitting}
-              className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition disabled:opacity-50"
+              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition disabled:opacity-50"
             >
               Annuler
             </button>
             <button
               onClick={handleEditSubmit}
               disabled={submitting}
-              className="px-6 py-2 text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
               style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.primary}, ${BRAND_COLORS.red})` }}
             >
               {submitting ? 'Modification...' : 'Modifier le contrat'}

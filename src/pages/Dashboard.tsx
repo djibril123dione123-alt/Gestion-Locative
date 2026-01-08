@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -39,7 +39,7 @@ interface DashboardStats {
 }
 
 export function Dashboard() {
-  const { profile } = useAuth();
+  const { profile, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalBailleurs: 0,
     totalImmeubles: 0,
@@ -54,14 +54,21 @@ export function Dashboard() {
   });
   const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile?.agency_id) {
       loadDashboardData();
+    } else if (!authLoading && profile && !profile.agency_id) {
+      setLoading(false);
+      setError('Aucune agence associée à votre compte.');
+    } else if (!authLoading && !profile) {
+      setLoading(false);
+      setError('Impossible de charger votre profil.');
     }
-  }, [profile?.agency_id]);
+  }, [profile?.agency_id, authLoading, profile]);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     if (!profile?.agency_id) return;
 
     try {
@@ -118,12 +125,14 @@ export function Dashboard() {
       });
 
       setMonthlyRevenue(monthlyData);
-    } catch (error) {
+      setError(null);
+    } catch (error: any) {
       console.error('Error loading dashboard:', error);
+      setError(error.message || 'Une erreur est survenue lors du chargement du tableau de bord.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.agency_id]);
 
   const processMonthlyRevenue = (paiements: any[]) => {
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -151,10 +160,10 @@ const formatCurrency = (amount: number) => {
 };
 
 
-  const pieData = [
+  const pieData = useMemo(() => [
     { name: 'Louées', value: stats.unitesLouees },
     { name: 'Libres', value: stats.unitesLibres },
-  ];
+  ], [stats.unitesLouees, stats.unitesLibres]);
 
   const COLORS = ['#F58220', '#94a3b8'];
 
@@ -169,16 +178,39 @@ const formatCurrency = (amount: number) => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-full p-4">
+        <div className="text-center max-w-md">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Erreur de chargement</h2>
+          <p className="text-slate-600 mb-6">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              setLoading(true);
+              loadDashboardData();
+            }}
+            className="px-6 py-3 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+            style={{ background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)' }}
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-8 space-y-8 animate-fadeIn">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 animate-fadeIn">
       <div className="animate-slideInLeft">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
           Tableau de bord
         </h1>
-        <p className="text-slate-600 text-lg">Vue d'ensemble de votre activité immobilière</p>
+        <p className="text-slate-600 text-base lg:text-lg">Vue d'ensemble de votre activité immobilière</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <StatCard
           title="Immeubles"
           value={stats.totalImmeubles}
@@ -211,38 +243,38 @@ const formatCurrency = (amount: number) => {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
-          <h2 className="text-lg font-semibold text-slate-900 mb-2">Finances du mois</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        <div className="lg:col-span-1 bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
+          <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-2">Finances du mois</h2>
           <div className="space-y-4 mt-4">
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl transition-all duration-300 hover:scale-105">
-              <div>
-                <p className="text-sm text-green-700 font-medium">Revenus perçus</p>
-                <p className="text-2xl font-bold text-green-900">{formatCurrency(stats.revenusMois)}</p>
+            <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl transition-all duration-300 hover:scale-105">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm text-green-700 font-medium">Revenus perçus</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-900 truncate">{formatCurrency(stats.revenusMois)}</p>
               </div>
-              <DollarSign className="w-8 h-8 text-green-600" />
+              <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl transition-all duration-300 hover:scale-105">
-              <div>
-                <p className="text-sm text-red-700 font-medium">Loyers impayés</p>
-                <p className="text-2xl font-bold text-red-900">{formatCurrency(stats.impayesMois)}</p>
+            <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl transition-all duration-300 hover:scale-105">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm text-red-700 font-medium">Loyers impayés</p>
+                <p className="text-lg sm:text-2xl font-bold text-red-900 truncate">{formatCurrency(stats.impayesMois)}</p>
               </div>
-              <AlertCircle className="w-8 h-8 text-red-600" />
+              <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600 flex-shrink-0" />
             </div>
           </div>
         </div>
 
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Revenus mensuels</h2>
-          <ResponsiveContainer width="100%" height={250}>
+        <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
+          <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-4">Revenus mensuels</h2>
+          <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
             <BarChart data={monthlyRevenue}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="month" stroke="#64748b" />
-              <YAxis stroke="#64748b" />
+              <XAxis dataKey="month" stroke="#64748b" tick={{ fontSize: 12 }} />
+              <YAxis stroke="#64748b" tick={{ fontSize: 12 }} />
               <Tooltip
                 formatter={(value: number) => formatCurrency(value)}
-                contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
               />
               <Bar dataKey="revenus" fill="#F58220" radius={[8, 8, 0, 0]} />
             </BarChart>
@@ -250,10 +282,10 @@ const formatCurrency = (amount: number) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Occupation des produits</h2>
-          <ResponsiveContainer width="100%" height={250}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
+          <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-4">Occupation des produits</h2>
+          <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
             <PieChart>
               <Pie
                 data={pieData}
@@ -274,8 +306,8 @@ const formatCurrency = (amount: number) => {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Statistiques générales</h2>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
+          <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-4">Statistiques générales</h2>
           <div className="space-y-4">
             <StatRow label="Bailleurs enregistrés" value={stats.totalBailleurs} />
             <StatRow label="Immeubles gérés" value={stats.totalImmeubles} />
@@ -290,7 +322,7 @@ const formatCurrency = (amount: number) => {
   );
 }
 
-function StatCard({ title, value, subtitle, icon: Icon, color, delay }: any) {
+const StatCard = memo(({ title, value, subtitle, icon: Icon, color, delay }: any) => {
   const colorClasses = {
     orange: 'bg-gradient-to-br from-orange-50 to-orange-100 text-orange-600',
     blue: 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600',
@@ -301,26 +333,30 @@ function StatCard({ title, value, subtitle, icon: Icon, color, delay }: any) {
 
   return (
     <div
-      className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 animate-slideInUp"
+      className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 animate-slideInUp"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-xl ${colorClasses[color]} transition-transform duration-300 hover:scale-110`}>
-          <Icon className="w-6 h-6" />
+      <div className="flex items-center justify-between mb-3 sm:mb-4">
+        <div className={`p-2 sm:p-3 rounded-xl ${colorClasses[color]} transition-transform duration-300 hover:scale-110`}>
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
         </div>
       </div>
-      <h3 className="text-sm font-medium text-slate-600 mb-1">{title}</h3>
-      <p className="text-3xl font-bold text-slate-900">{value}</p>
-      {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
+      <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-1">{title}</h3>
+      <p className="text-2xl sm:text-3xl font-bold text-slate-900 truncate">{value}</p>
+      {subtitle && <p className="text-xs sm:text-sm text-slate-500 mt-1">{subtitle}</p>}
     </div>
   );
-}
+});
 
-function StatRow({ label, value }: { label: string; value: number }) {
+StatCard.displayName = 'StatCard';
+
+const StatRow = memo(({ label, value }: { label: string; value: number }) => {
   return (
     <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
       <span className="text-slate-600">{label}</span>
       <span className="font-semibold text-slate-900">{value}</span>
     </div>
   );
-}
+});
+
+StatRow.displayName = 'StatRow';

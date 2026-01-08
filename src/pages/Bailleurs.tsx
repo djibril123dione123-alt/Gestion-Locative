@@ -428,20 +428,20 @@ export function Bailleurs() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto animate-fadeIn">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-fadeIn">
       {/* En-tête */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="animate-slideInLeft">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:mb-6 lg:mb-8 mb-6">
+        <div className="animate-slideInLeft w-full">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
             Bailleurs
           </h1>
-          <p className="text-slate-600 text-lg">
+          <p className="text-slate-600 text-base lg:text-lg">
             Gestion des propriétaires • {bailleurs.length} bailleur{bailleurs.length > 1 ? 's' : ''}
           </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-3 text-white rounded-xl font-semibold
+          className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-white rounded-xl font-semibold text-sm sm:text-base
                    shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-0.5 animate-slideInRight"
           style={{
             background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)',
@@ -458,7 +458,7 @@ export function Bailleurs() {
       {/* Conteneur principal */}
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-xl">
         {/* Barre de recherche */}
-        <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-orange-50 to-orange-100">
+        <div className="p-4 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-orange-50 to-orange-100">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-orange-500 w-5 h-5" />
             <input
@@ -466,7 +466,7 @@ export function Bailleurs() {
               placeholder="Rechercher par nom, prénom, téléphone, email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border-2 border-orange-200 rounded-xl
+              className="w-full pl-10 pr-4 py-2 sm:py-3 border-2 border-orange-200 rounded-xl text-sm sm:text-base
                        focus:ring-2 focus:ring-orange-500 focus:border-orange-500
                        transition-all duration-300 hover:border-orange-300"
             />
@@ -479,7 +479,7 @@ export function Bailleurs() {
         </div>
 
         {/* Tableau */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-x-auto">
           {filteredBailleurs.length === 0 ? (
             <div className="text-center py-12">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
@@ -488,9 +488,9 @@ export function Bailleurs() {
               <p className="text-lg font-medium text-slate-900 mb-1">
                 Aucun bailleur trouvé
               </p>
-              <p className="text-slate-600">
-                {searchTerm 
-                  ? 'Essayez de modifier votre recherche' 
+              <p className="text-slate-600 text-sm sm:text-base">
+                {searchTerm
+                  ? 'Essayez de modifier votre recherche'
                   : 'Commencez par créer votre premier bailleur'
                 }
               </p>
@@ -512,17 +512,17 @@ export function Bailleurs() {
         onClose={closeModal}
         title={editingBailleur ? 'Modifier le bailleur' : 'Nouveau bailleur'}
       >
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
           {/* Erreurs dans le modal */}
           {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
 
           {/* Informations principales */}
           <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+            <h3 className="text-xs sm:text-sm font-semibold text-slate-900 uppercase tracking-wide">
               Informations principales
             </h3>
-            
-            <div className="grid grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Nom <span className="text-red-500">*</span>
@@ -556,7 +556,7 @@ export function Bailleurs() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Téléphone <span className="text-red-500">*</span>
@@ -592,7 +592,7 @@ export function Bailleurs() {
 
           {/* Informations complémentaires */}
           <div className="space-y-4 pt-4 border-t border-slate-200">
-            <h3 className="text-sm font-semibold text-slate-900 uppercase tracking-wide">
+            <h3 className="text-xs sm:text-sm font-semibold text-slate-900 uppercase tracking-wide">
               Informations complémentaires
             </h3>
 
@@ -626,7 +626,7 @@ export function Bailleurs() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Commission (%) <span className="text-red-500">*</span>
@@ -682,23 +682,23 @@ export function Bailleurs() {
           </div>
 
           {/* Boutons d'action */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-slate-200">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-slate-200">
             <button
               type="button"
               onClick={closeModal}
               disabled={isSubmitting}
-              className="px-6 py-2 border border-slate-300 text-slate-700 rounded-lg 
-                       hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base border border-slate-300 text-slate-700 rounded-lg
+                       hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2 text-white rounded-lg font-semibold
+              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base text-white rounded-lg font-semibold
                        shadow-md hover:shadow-lg transition-all duration-300
                        disabled:opacity-50 disabled:cursor-not-allowed
-                       flex items-center gap-2 transform hover:scale-105"
+                       flex items-center justify-center gap-2 transform hover:scale-105 w-full sm:w-auto"
               style={{
                 background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)',
               }}

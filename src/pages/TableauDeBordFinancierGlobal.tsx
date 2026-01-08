@@ -476,8 +476,8 @@ export function TableauDeBordFinancierGlobal() {
     
     if (loading) {
         return (
-            <div className="p-8 text-center text-xl font-semibold">
-                Chargement... {/* [17, 20, 35-37] */}
+            <div className="p-4 sm:p-6 lg:p-8 text-center text-base sm:text-lg lg:text-xl font-semibold">
+                Chargement...
             </div>
         );
     }
@@ -487,48 +487,48 @@ export function TableauDeBordFinancierGlobal() {
     // -------------------------------------------------------------------------
 
     return (
-        <div className="p-8 space-y-10">
-            <h1 className="text-3xl font-bold text-gray-800">Tableau de Bord Financier Global 📊</h1>
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-10">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">Tableau de Bord Financier Global</h1>
 
             {/* BARRE DE NAVIGATION (Simulée) */}
-            <div className="flex space-x-4 border-b pb-2">
-                <button 
-                    onClick={() => setCurrentPage('bilan-entreprise')} 
-                    className={`px-4 py-2 rounded-lg transition ${currentPage === 'bilan-entreprise' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 border-b pb-2">
+                <button
+                    onClick={() => setCurrentPage('bilan-entreprise')}
+                    className={`px-3 sm:px-4 py-2 rounded-lg transition text-xs sm:text-sm whitespace-nowrap ${currentPage === 'bilan-entreprise' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                 >
-                    Bilan Agence (Mensuel)
+                    Bilan Agence
                 </button>
-                <button 
-                    onClick={() => setCurrentPage('comptabilite')} 
-                    className={`px-4 py-2 rounded-lg transition ${currentPage === 'comptabilite' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                <button
+                    onClick={() => setCurrentPage('comptabilite')}
+                    className={`px-3 sm:px-4 py-2 rounded-lg transition text-xs sm:text-sm whitespace-nowrap ${currentPage === 'comptabilite' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                 >
-                    Comptabilité (Annuelle)
+                    Comptabilité
                 </button>
-                <button 
-                    onClick={() => setCurrentPage('rapports-immeubles')} 
-                    className={`px-4 py-2 rounded-lg transition ${currentPage === 'rapports-immeubles' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                <button
+                    onClick={() => setCurrentPage('rapports-immeubles')}
+                    className={`px-3 sm:px-4 py-2 rounded-lg transition text-xs sm:text-sm whitespace-nowrap ${currentPage === 'rapports-immeubles' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                 >
-                    Rapports Immeubles
+                    Immeubles
                 </button>
-                <button 
-                    onClick={() => setCurrentPage('bilans-bailleurs')} 
-                    className={`px-4 py-2 rounded-lg transition ${currentPage === 'bilans-bailleurs' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                <button
+                    onClick={() => setCurrentPage('bilans-bailleurs')}
+                    className={`px-3 sm:px-4 py-2 rounded-lg transition text-xs sm:text-sm whitespace-nowrap ${currentPage === 'bilans-bailleurs' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                 >
-                    Bilans Bailleurs
+                    Bailleurs
                 </button>
             </div>
             
             {/* SÉLECTEUR DE PÉRIODE (Unique pour les rapports Mensuels) */}
             {(currentPage !== 'comptabilite') && (
-                <div className="flex items-center gap-4">
-                    <Calendar className="w-5 h-5 text-gray-500" />
-                    <label htmlFor="month-selector" className="text-gray-700 font-medium">Période:</label>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                    <Calendar className="w-4 sm:w-5 h-4 sm:h-5 text-gray-500 flex-shrink-0 mt-0.5 sm:mt-0" />
+                    <label htmlFor="month-selector" className="text-sm sm:text-base text-gray-700 font-medium">Période:</label>
                     <input
                         id="month-selector"
-                        type="month" // [17]
-                        value={selectedMonth} // [17]
-                        onChange={(e) => setSelectedMonth(e.target.value)} // [17]
-                        className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" // [35, 37, 38]
+                        type="month"
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                        className="px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm w-full sm:w-auto"
                     />
                 </div>
             )}
@@ -536,54 +536,47 @@ export function TableauDeBordFinancierGlobal() {
             {/* VUE 1: BILAN ENTREPRISE (Mensuel) */}
             {currentPage === 'bilan-entreprise' && bilanEntreprise && (
                 <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-2xl font-semibold text-gray-700">Bilan de l'Entreprise (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
-                      {/*<button 
-                            onClick={exportBilanEntreprisePDF}
-                            className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                        >
-                            <Download className="w-5 h-5" /> Export PDF
-                        </button>*/}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Bilan de l'Entreprise (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                         {/* Carte 1: Commission agence */}
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-sm font-medium text-gray-500"> Total Gérance</p>
-                            <p className="text-2xl font-bold text-blue-600 mt-1">{formatCurrency(bilanEntreprise.commission)}</p>
+                        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Total Gérance</p>
+                            <p className="text-lg sm:text-2xl font-bold text-blue-600 mt-1">{formatCurrency(bilanEntreprise.commission)}</p>
                         </div>
-
 
                         {/* Carte 3: Total dépenses */}
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-sm font-medium text-gray-500">Total dépenses</p>
-                            <p className="text-2xl font-bold text-red-600 mt-1">{formatCurrency(bilanEntreprise.totalDepenses)}</p>
+                        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Total dépenses</p>
+                            <p className="text-lg sm:text-2xl font-bold text-red-600 mt-1">{formatCurrency(bilanEntreprise.totalDepenses)}</p>
                         </div>
 
-                        {/* Carte 4: Solde Net (Dynamique) [38] */}
-                        <div className={`${bilanEntreprise.soldeNet >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'} p-6 rounded-2xl border shadow-md`}>
-                            <div className={`${bilanEntreprise.soldeNet >= 0 ? 'bg-emerald-600' : 'bg-orange-600'} text-white rounded-lg p-2 flex items-center justify-center w-10 h-10`}>
-                                {bilanEntreprise.soldeNet >= 0 ? <TrendingUp className="w-6 h-6" /> : <TrendingDown className="w-6 h-6" />}
+                        {/* Carte 4: Solde Net (Dynamique) */}
+                        <div className={`${bilanEntreprise.soldeNet >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'} p-4 sm:p-6 rounded-2xl border shadow-md`}>
+                            <div className={`${bilanEntreprise.soldeNet >= 0 ? 'bg-emerald-600' : 'bg-orange-600'} text-white rounded-lg p-2 flex items-center justify-center w-8 sm:w-10 h-8 sm:h-10`}>
+                                {bilanEntreprise.soldeNet >= 0 ? <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6" /> : <TrendingDown className="w-5 sm:w-6 h-5 sm:h-6" />}
                             </div>
-                            <p className={`${bilanEntreprise.soldeNet >= 0 ? 'text-emerald-700' : 'text-orange-700'} text-sm font-medium mt-3`}>Solde net</p>
-                            <p className={`${bilanEntreprise.soldeNet >= 0 ? 'text-emerald-900' : 'text-orange-900'} text-3xl font-extrabold mt-1`}>{formatCurrency(bilanEntreprise.soldeNet)}</p>
+                            <p className={`${bilanEntreprise.soldeNet >= 0 ? 'text-emerald-700' : 'text-orange-700'} text-xs sm:text-sm font-medium mt-3`}>Solde net</p>
+                            <p className={`${bilanEntreprise.soldeNet >= 0 ? 'text-emerald-900' : 'text-orange-900'} text-2xl sm:text-3xl font-extrabold mt-1`}>{formatCurrency(bilanEntreprise.soldeNet)}</p>
                         </div>
                     </div>
                     
-                    {/* Résumé du mois [39] */}
-                    <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
-                        <h3 className="text-xl font-semibold mb-4 text-gray-700">Résumé du mois</h3>
-                         <div className="grid grid-cols-3 gap-4 text-center">
-                            <p className="text-gray-600">Total loyers <span className="block font-bold text-lg text-blue-500">{formatCurrency(bilanEntreprise.totalLoyers)}</span></p>
-                            <p className="text-gray-600">Impayés <span className="block font-bold text-lg text-red-500">{formatCurrency(bilanEntreprise.loyersImpayes)}</span></p>
-                            <p className="text-gray-600">Autres revenus <span className="block font-bold text-lg text-green-500">{formatCurrency(bilanEntreprise.revenus_alt)}</span></p>
+                    {/* Résumé du mois */}
+                    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-100">
+                        <h3 className="text-base lg:text-xl font-semibold mb-4 text-gray-700">Résumé du mois</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                            <p className="text-xs sm:text-sm text-gray-600">Total loyers <span className="block font-bold text-base sm:text-lg text-blue-500 mt-1">{formatCurrency(bilanEntreprise.totalLoyers)}</span></p>
+                            <p className="text-xs sm:text-sm text-gray-600">Impayés <span className="block font-bold text-base sm:text-lg text-red-500 mt-1">{formatCurrency(bilanEntreprise.loyersImpayes)}</span></p>
+                            <p className="text-xs sm:text-sm text-gray-600">Autres revenus <span className="block font-bold text-base sm:text-lg text-green-500 mt-1">{formatCurrency(bilanEntreprise.revenus_alt)}</span></p>
                         </div>
                     </div>
 
-                    {/* Tendance annuelle [39] */}
-                    <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
-                        <h3 className="text-xl font-semibold mb-4 text-gray-700">Tendance annuelle (Commission vs Dépenses)</h3>
-                        <ResponsiveContainer width="100%" height={300}>
+                    {/* Tendance annuelle */}
+                    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-100">
+                        <h3 className="text-base lg:text-xl font-semibold mb-4 text-gray-700">Tendance annuelle (Commission vs Dépenses)</h3>
+                        <ResponsiveContainer width="100%" height={200} className="sm:h-[300px]">
                             <LineChart data={monthlyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="month" />
@@ -601,42 +594,36 @@ export function TableauDeBordFinancierGlobal() {
             {/* VUE 2: COMPTABILITÉ (Annuelle) */}
             {currentPage === 'comptabilite' && (
                  <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-2xl font-semibold text-gray-700">Comptabilité (Année {new Date().getFullYear()})</h2>
-                      {/* <button 
-                            onClick={exportComptabilitePDF}
-                            className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                        >
-                            <Download className="w-5 h-5" /> Export PDF
-                        </button>*/}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Comptabilité (Année {new Date().getFullYear()})</h2>
                     </div>
 
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                         {/* Total Revenus (Commission annuelle) */}
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-sm font-medium text-gray-500">Total Revenus</p>
-                            <p className="text-2xl font-bold text-blue-600 mt-1">{formatCurrency(statsAnnuel.totalRevenus)}</p>
+                        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Total Revenus</p>
+                            <p className="text-lg sm:text-2xl font-bold text-blue-600 mt-1">{formatCurrency(statsAnnuel.totalRevenus)}</p>
                         </div>
 
                         {/* Total Dépenses (Annuel) */}
-                         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-sm font-medium text-gray-500">Total Dépenses</p>
-                            <p className="text-2xl font-bold text-red-600 mt-1">{formatCurrency(statsAnnuel.totalDepenses)}</p>
+                         <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Total Dépenses</p>
+                            <p className="text-lg sm:text-2xl font-bold text-red-600 mt-1">{formatCurrency(statsAnnuel.totalDepenses)}</p>
                         </div>
 
-                        {/* Solde Net (Annuel) [40] */}
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-sm font-medium text-gray-500">Solde Net</p>
-                             <p className={`text-2xl font-bold mt-1 ${statsAnnuel.soldeNet >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {/* Solde Net (Annuel) */}
+                        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Solde Net</p>
+                             <p className={`text-lg sm:text-2xl font-bold mt-1 ${statsAnnuel.soldeNet >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {formatCurrency(statsAnnuel.soldeNet)}
                             </p>
                         </div>
                     </div>
 
-                    {/* Évolution mensuelle (Bar Chart) [40] */}
-                    <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
-                        <h3 className="text-xl font-semibold mb-4 text-gray-700">Évolution mensuelle</h3>
-                        <ResponsiveContainer width="100%" height={300}>
+                    {/* Évolution mensuelle (Bar Chart) */}
+                    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-100">
+                        <h3 className="text-base lg:text-xl font-semibold mb-4 text-gray-700">Évolution mensuelle</h3>
+                        <ResponsiveContainer width="100%" height={200} className="sm:h-[300px]">
                             <BarChart data={monthlyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="month" />
@@ -648,11 +635,12 @@ export function TableauDeBordFinancierGlobal() {
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                    
-                    {/* Détails mensuels (Tableau) [40] */}
-                    <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
-                        <h3 className="text-xl font-semibold mb-4 text-gray-700">Détails mensuels</h3>
-                        <table className="min-w-full divide-y divide-gray-200">
+
+                    {/* Détails mensuels (Tableau) */}
+                    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-100">
+                        <h3 className="text-base lg:text-xl font-semibold mb-4 text-gray-700">Détails mensuels</h3>
+                        <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 text-sm">
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mois</th>
@@ -672,6 +660,7 @@ export function TableauDeBordFinancierGlobal() {
                                 ))}
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 </div>
             )}
@@ -680,24 +669,18 @@ export function TableauDeBordFinancierGlobal() {
             {/* VUE 3: RAPPORTS PAR IMMEUBLE */}
             {currentPage === 'rapports-immeubles' && (
                  <div className="space-y-6">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-2xl font-semibold text-gray-700">Rapports par Immeuble (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
-                      {/*<button 
-                            onClick={exportRapportsImmeublesPDF}
-                            className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                        >
-                            <Download className="w-5 h-5" /> Export PDF
-                        </button>*/}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Rapports par Immeuble (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
                     </div>
 
-                    {/* Filtre Bailleur [41] */}
-                    <div className="flex items-center gap-4">
-                        <label htmlFor="bailleur-filter" className="text-gray-700 font-medium">Bailleur:</label>
+                    {/* Filtre Bailleur */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                        <label htmlFor="bailleur-filter" className="text-sm sm:text-base text-gray-700 font-medium">Bailleur:</label>
                         <select
                             id="bailleur-filter"
                             value={selectedBailleur}
                             onChange={(e) => setSelectedBailleur(e.target.value)}
-                            className="w-full md:w-64 px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" // [41]
+                            className="w-full sm:w-64 px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
                         >
                             <option value="">Tous les bailleurs</option>
                             {bailleursFilterList.map((b, index) => (
@@ -705,60 +688,60 @@ export function TableauDeBordFinancierGlobal() {
                             ))}
                         </select>
                     </div>
-                    
-                    {/* Totaux Filtrés [41] */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                        <div className="bg-white p-6 rounded-2xl border shadow-md">
-                            <p className="text-sm font-medium text-gray-500">Loyers perçus</p>
-                            <p className="text-xl font-bold text-green-600 mt-1">{formatCurrency(totauxImmeubles.loyers_percus)}</p>
+
+                    {/* Totaux Filtrés */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                        <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-md">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Loyers perçus</p>
+                            <p className="text-lg sm:text-xl font-bold text-green-600 mt-1">{formatCurrency(totauxImmeubles.loyers_percus)}</p>
                         </div>
-                        <div className="bg-white p-6 rounded-2xl border shadow-md">
-                            <p className="text-sm font-medium text-gray-500">Loyers impayés</p>
-                            <p className="text-xl font-bold text-red-600 mt-1">{formatCurrency(totauxImmeubles.loyers_impayes)}</p>
+                        <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-md">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Loyers impayés</p>
+                            <p className="text-lg sm:text-xl font-bold text-red-600 mt-1">{formatCurrency(totauxImmeubles.loyers_impayes)}</p>
                         </div>
-                        <div className="bg-white p-6 rounded-2xl border shadow-md">
-                            <p className="text-sm font-medium text-gray-500">Frais de gestion</p>
-                            <p className="text-xl font-bold text-blue-600 mt-1">{formatCurrency(totauxImmeubles.frais_gestion)}</p>
+                        <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-md">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Frais de gestion</p>
+                            <p className="text-lg sm:text-xl font-bold text-blue-600 mt-1">{formatCurrency(totauxImmeubles.frais_gestion)}</p>
                         </div>
-                        <div className="bg-white p-6 rounded-2xl border shadow-md">
-                            <p className="text-sm font-medium text-gray-500">Résultat net</p>
-                            <p className="text-xl font-bold text-gray-800 mt-1">{formatCurrency(totauxImmeubles.resultat_net)}</p>
+                        <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-md">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Résultat net</p>
+                            <p className="text-lg sm:text-xl font-bold text-gray-800 mt-1">{formatCurrency(totauxImmeubles.resultat_net)}</p>
                         </div>
                     </div>
                     
-                    {/* Liste des Rapports Détaillés [42] */}
+                    {/* Liste des Rapports Détaillés */}
                     <div className="space-y-4">
                         {filteredRapports.map((rapport) => (
-                            <div key={rapport.immeuble_id} className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-                                <div className="flex justify-between items-center border-b pb-2 mb-3">
-                                    <h4 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                                        <Building2 className="w-5 h-5 text-blue-500" />
+                            <div key={rapport.immeuble_id} className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-2 mb-3 gap-2">
+                                    <h4 className="text-base lg:text-lg font-bold text-gray-800 flex items-center gap-2">
+                                        <Building2 className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500 flex-shrink-0" />
                                         {rapport.immeuble_nom}
                                     </h4>
-                                    <p className="text-sm text-gray-600">Bailleur: {rapport.bailleur_prenom} {rapport.bailleur_nom}</p>
+                                    <p className="text-xs sm:text-sm text-gray-600">Bailleur: {rapport.bailleur_prenom} {rapport.bailleur_nom}</p>
                                 </div>
 
-                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
                                     <div>
-                                        <p className="text-xs font-medium text-gray-500">Taux d'occupation</p>
-                                        <p className="text-lg font-bold text-purple-600">{rapport.taux_occupation.toFixed(1)}%</p>
-                                        <p className="text-xs text-gray-500">{rapport.unites_louees} / {rapport.nombre_unites} produits</p>
+                                        <p className="text-xs font-medium text-gray-500">Taux occupation</p>
+                                        <p className="text-base sm:text-lg font-bold text-purple-600 mt-1">{rapport.taux_occupation.toFixed(1)}%</p>
+                                        <p className="text-xs text-gray-500 mt-1">{rapport.unites_louees}/{rapport.nombre_unites}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs font-medium text-gray-500">Loyers perçus</p>
-                                        <p className="text-lg font-bold text-green-600">{formatCurrency(rapport.loyers_percus)}</p>
+                                        <p className="text-base sm:text-lg font-bold text-green-600 mt-1">{formatCurrency(rapport.loyers_percus)}</p>
                                     </div>
                                     <div>
                                         <p className="text-xs font-medium text-gray-500">Loyers impayés</p>
-                                        <p className="text-lg font-bold text-red-600">{formatCurrency(rapport.loyers_impayes)}</p>
+                                        <p className="text-base sm:text-lg font-bold text-red-600 mt-1">{formatCurrency(rapport.loyers_impayes)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-medium text-gray-500">Frais de gestion</p>
-                                        <p className="text-lg font-bold text-blue-600">{formatCurrency(rapport.frais_gestion)}</p>
+                                        <p className="text-xs font-medium text-gray-500">Frais gestion</p>
+                                        <p className="text-base sm:text-lg font-bold text-blue-600 mt-1">{formatCurrency(rapport.frais_gestion)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs font-medium text-gray-500">Résultat net bailleur</p>
-                                        <p className="text-lg font-bold text-gray-800">{formatCurrency(rapport.resultat_net)}</p>
+                                        <p className="text-xs font-medium text-gray-500">Résultat net</p>
+                                        <p className="text-base sm:text-lg font-bold text-gray-800 mt-1">{formatCurrency(rapport.resultat_net)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -770,67 +753,69 @@ export function TableauDeBordFinancierGlobal() {
             
             {/* VUE 4: BILANS MENSUELS BAILLEURS */}
             {currentPage === 'bilans-bailleurs' && (
-                <div className="space-y-8">
-                     <h2 className="text-2xl font-semibold text-gray-700">Bilans Mensuels Bailleurs (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
+                <div className="space-y-6 lg:space-y-8">
+                     <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Bilans Mensuels Bailleurs (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
 
                     {bilansBailleurs.map((bilan: BilanBailleur) => (
-                        <div key={bilan.bailleur_id} className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 space-y-4">
-                            
+                        <div key={bilan.bailleur_id} className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100 space-y-4">
+
                             {/* Entête Bailleur */}
-                            <div className="flex justify-between items-center border-b pb-3">
-                                <h3 className="text-xl font-bold text-gray-800">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-3 gap-3">
+                                <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-800">
                                     {bilan.bailleur_prenom} {bilan.bailleur_nom}
                                 </h3>
-                                <div className="flex items-center gap-4">
-                                    <p className="text-sm text-gray-600">{bilan.immeubles.length} immeuble(s) géré(s)</p>
-                                    <button 
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                                    <p className="text-xs sm:text-sm text-gray-600">{bilan.immeubles.length} immeuble(s)</p>
+                                    <button
                                         onClick={() => exportBilanBailleurPDF(bilan)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition"
+                                        className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white text-xs sm:text-sm rounded-lg hover:bg-red-700 transition whitespace-nowrap"
                                     >
-                                        <Download className="w-4 h-4" /> Bilan PDF
+                                        <Download className="w-3 sm:w-4 h-3 sm:h-4" /> Bilan PDF
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Tableau de Ventilation par Immeuble [2] */}
-                            <table className="min-w-full divide-y divide-gray-200">
+                            {/* Tableau de Ventilation par Immeuble */}
+                            <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200 text-sm">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Immeuble</th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Loyers perçus</th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Impayés</th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Frais gestion</th>
-                                        <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Montant net</th>
+                                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Immeuble</th>
+                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Loyers</th>
+                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Impayés</th>
+                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Frais</th>
+                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Net</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {bilan.immeubles.map((immeuble, index) => (
                                         <tr key={index}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{immeuble.immeuble_nom}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{formatCurrency(immeuble.loyers_percus)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{formatCurrency(immeuble.loyers_impayes)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">{formatCurrency(immeuble.frais_gestion)}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-right">{formatCurrency(immeuble.resultat_net)}</td>
+                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">{immeuble.immeuble_nom}</td>
+                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 text-right">{formatCurrency(immeuble.loyers_percus)}</td>
+                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 text-right">{formatCurrency(immeuble.loyers_impayes)}</td>
+                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 text-right">{formatCurrency(immeuble.frais_gestion)}</td>
+                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-semibold text-right">{formatCurrency(immeuble.resultat_net)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
+                            </div>
                             
-                            {/* Totaux du Bilan [2, 43] */}
+                            {/* Totaux du Bilan */}
                             <div className="pt-4 border-t border-dashed">
-                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
                                     <p className="text-gray-600">Total loyers perçus:</p>
                                     <p className="font-semibold text-right text-green-600">{formatCurrency(bilan.total_loyers_percus)}</p>
-                                    
+
                                     <p className="text-gray-600">Total impayés:</p>
                                     <p className="font-semibold text-right text-red-600">{formatCurrency(bilan.total_impayes)}</p>
 
                                     <p className="text-gray-600">Total frais gestion:</p>
                                     <p className="font-semibold text-right text-blue-600">{formatCurrency(bilan.total_frais)}</p>
                                 </div>
-                                <div className="mt-4 pt-2 border-t border-gray-300 flex justify-between items-center">
-                                    <p className="text-lg font-bold text-gray-800">Montant à verser:</p>
-                                    <p className="text-2xl font-extrabold text-blue-800">{formatCurrency(bilan.total_net)}</p>
+                                <div className="mt-4 pt-2 border-t border-gray-300 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                    <p className="text-base sm:text-lg font-bold text-gray-800">Montant à verser:</p>
+                                    <p className="text-xl sm:text-2xl font-extrabold text-blue-800">{formatCurrency(bilan.total_net)}</p>
                                 </div>
                             </div>
                         </div>

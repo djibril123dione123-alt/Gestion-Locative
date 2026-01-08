@@ -146,64 +146,64 @@ export function Commissions() {
   if (loading) return <div className="flex items-center justify-center h-full"><div>Chargement...</div></div>;
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Gestion des Commissions</h1>
-          <p className="text-slate-600">Suivi des revenus d'agence</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Gestion des Commissions</h1>
+          <p className="text-sm sm:text-base text-slate-600">Suivi des revenus d'agence</p>
         </div>
-        <button onClick={exportPDF} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base whitespace-nowrap">
           <Download className="w-5 h-5" />
           Export PDF
         </button>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-slate-200">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200">
         <label className="block text-sm font-medium text-slate-700 mb-2">Période</label>
         <input
           type="month"
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-          className="px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+          className="px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm w-full sm:w-auto"
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-2xl border border-blue-200">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 sm:p-6 rounded-2xl border border-blue-200">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-blue-600 text-white rounded-lg">
-              <TrendingUp className="w-5 h-5" />
+            <div className="p-2 sm:p-3 bg-blue-600 text-white rounded-lg">
+              <TrendingUp className="w-4 sm:w-5 h-4 sm:h-5" />
             </div>
           </div>
-          <p className="text-sm text-blue-700 font-medium">Total commissions</p>
-          <p className="text-3xl font-bold text-blue-900">{formatCurrency(stats.totalCommission)}</p>
+          <p className="text-xs sm:text-sm text-blue-700 font-medium">Total commissions</p>
+          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-blue-900 mt-1">{formatCurrency(stats.totalCommission)}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-2xl border border-green-200">
+        <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 sm:p-6 rounded-2xl border border-green-200">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-green-600 text-white rounded-lg">
-              <BarChart3 className="w-5 h-5" />
+            <div className="p-2 sm:p-3 bg-green-600 text-white rounded-lg">
+              <BarChart3 className="w-4 sm:w-5 h-4 sm:h-5" />
             </div>
           </div>
-          <p className="text-sm text-green-700 font-medium">Nombre de paiements</p>
-          <p className="text-3xl font-bold text-green-900">{stats.nombrePaiements}</p>
+          <p className="text-xs sm:text-sm text-green-700 font-medium">Nombre de paiements</p>
+          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-green-900 mt-1">{stats.nombrePaiements}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-2xl border border-purple-200">
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 sm:p-6 rounded-2xl border border-purple-200">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-purple-600 text-white rounded-lg">
-              <TrendingUp className="w-5 h-5" />
+            <div className="p-2 sm:p-3 bg-purple-600 text-white rounded-lg">
+              <TrendingUp className="w-4 sm:w-5 h-4 sm:h-5" />
             </div>
           </div>
-          <p className="text-sm text-purple-700 font-medium">Commission moyenne</p>
-          <p className="text-3xl font-bold text-purple-900">{formatCurrency(stats.commissionMoyenne)}</p>
+          <p className="text-xs sm:text-sm text-purple-700 font-medium">Commission moyenne</p>
+          <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-purple-900 mt-1">{formatCurrency(stats.commissionMoyenne)}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Commissions par immeuble</h3>
-          <ResponsiveContainer width="100%" height={300}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200">
+          <h3 className="text-base lg:text-lg font-semibold text-slate-900 mb-4">Commissions par immeuble</h3>
+          <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
@@ -214,10 +214,10 @@ export function Commissions() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Répartition</h3>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200">
+          <h3 className="text-base lg:text-lg font-semibold text-slate-900 mb-4">Répartition</h3>
           {chartData.length > 0 && (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
               <PieChart>
                 <Pie data={chartData} dataKey="commission" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
                   {chartData.map((_, idx) => (
@@ -231,8 +231,8 @@ export function Commissions() {
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-2xl border border-slate-200">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">Détail des commissions</h3>
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200">
+        <h3 className="text-base lg:text-lg font-semibold text-slate-900 mb-4">Détail des commissions</h3>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>

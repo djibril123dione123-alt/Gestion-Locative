@@ -36,7 +36,18 @@ function AppContent() {
         return <Auth />;
     }
 
-    if (user && profile && !profile.agency_id) {
+    if (!profile) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-orange-200 border-t-orange-600 mb-4"></div>
+                    <p className="text-lg text-slate-600">Chargement de votre profil...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!profile.agency_id) {
         return <Welcome />;
     }
 

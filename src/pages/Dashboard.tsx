@@ -56,20 +56,11 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (profile?.agency_id) {
-      loadDashboardData();
-    } else if (!authLoading && profile && !profile.agency_id) {
-      setLoading(false);
-      setError('Aucune agence associée à votre compte.');
-    } else if (!authLoading && !profile) {
-      setLoading(false);
-      setError('Impossible de charger votre profil.');
-    }
-  }, [profile?.agency_id, authLoading, profile]);
-
   const loadDashboardData = useCallback(async () => {
-    if (!profile?.agency_id) return;
+    if (!profile?.agency_id) {
+      setLoading(false);
+      return;
+    }
 
     try {
       const agencyId = profile.agency_id;
@@ -134,6 +125,18 @@ export function Dashboard() {
     }
   }, [profile?.agency_id]);
 
+  useEffect(() => {
+    if (profile?.agency_id) {
+      loadDashboardData();
+    } else if (!authLoading && profile && !profile.agency_id) {
+      setLoading(false);
+      setError('Aucune agence associée à votre compte.');
+    } else if (!authLoading && !profile) {
+      setLoading(false);
+      setError('Impossible de charger votre profil.');
+    }
+  }, [profile?.agency_id, authLoading, profile, loadDashboardData]);
+
   const processMonthlyRevenue = (paiements: any[]) => {
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
     const currentYear = new Date().getFullYear();
@@ -187,6 +190,10 @@ const formatCurrency = (amount: number) => {
           <p className="text-slate-600 mb-6">{error}</p>
           <button
             onClick={() => {
+              if (!profile?.agency_id) {
+                setError('Votre compte n\'a pas d\'agence associée. Veuillez contacter le support.');
+                return;
+              }
               setError(null);
               setLoading(true);
               loadDashboardData();

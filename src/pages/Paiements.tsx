@@ -1,5 +1,6 @@
 // Imports de base, hooks, utilitaires Supabase, et composants UI
 import React, { useEffect, useState } from 'react'; // [3, 4]
+import { useAuth } from '../contexts/AuthContext'; // [NEW] Multi-tenant support
 import { supabase } from '../lib/supabase'; // [3, 4]
 import { Modal } from '../components/ui/Modal'; // [3, 4]
 import { Table } from '../components/ui/Table'; // [3, 4]
@@ -16,6 +17,9 @@ declare module 'jspdf' {
 }
 
 export function Paiements() {
+    // Multi-tenant context [NEW]
+    const { profile } = useAuth();
+
     // États principaux des données et de l'interface [2-6]
     const [paiements, setPaiements] = useState([]); // [3, 4]
     const [filtered, setFiltered] = useState([]); // [5, 6]
@@ -61,6 +65,9 @@ export function Paiements() {
 
     // Chargement des données (Paiements et Contrats Actifs) [7, 15-17]
     const loadData = async () => {
+        // Multi-tenant guard [NEW]
+        if (!profile?.agency_id) return;
+
         try {
             const [paiementsRes, contratsRes] = await Promise.all([
                 supabase
@@ -68,12 +75,14 @@ export function Paiements() {
                     .select(
                         '*, contrats(loyer_mensuel, commission, locataires(nom, prenom), unites(nom,id))' // Ajout de 'id' pour unites [15]
                     )
+                    .eq('agency_id', profile.agency_id) // [NEW] Multi-tenant filter
                     .order('created_at', { ascending: false }),
                 supabase
                     .from('contrats')
                     .select(
                         'id, loyer_mensuel, commission, locataires(nom, prenom), unites(nom)'
                     )
+                    .eq('agency_id', profile.agency_id) // [NEW] Multi-tenant filter
                     .eq('statut', 'actif'),
             ]);
 
@@ -89,8 +98,10 @@ export function Paiements() {
 
     // Effets : Chargement initial et Filtrage par recherche [7, 16]
     useEffect(() => {
-        loadData(); // [7, 16]
-    }, []);
+        if (profile?.agency_id) {
+            loadData(); // [7, 16]
+        }
+    }, [profile?.agency_id]); // [NEW] Multi-tenant dependency
 
     useEffect(() => {
         setFiltered( // [7, 16]
@@ -127,6 +138,9 @@ export function Paiements() {
 
     // Soumission du formulaire (Création OU Modification) [15, 20-23]
     const handleSubmit = async (e: React.FormEvent) => {
+        // Multi-tenant guard [NEW]
+        if (!profile?.agency_id) return;
+
         e.preventDefault();
 
         try {
@@ -150,6 +164,7 @@ export function Paiements() {
                 reference: formData.reference || null,
                 part_agence: partAgence, // [21, 22]
                 part_bailleur: partBailleur, // [21, 22]
+                agency_id: profile?.agency_id, // [NEW] Multi-tenant support
             };
 
             let error;
@@ -184,6 +199,9 @@ export function Paiements() {
 
     // Suppression d'un paiement (avec synchronisation des revenus) [11, 24, 25]
     const handleDelete = async (paiement: any) => {
+        // Multi-tenant guard [NEW]
+        if (!profile?.agency_id) return;
+
         if (!confirm('Êtes-vous sûr de vouloir supprimer ce paiement ?')) return; // Confirmation robuste [25]
 
         try {
@@ -205,6 +223,9 @@ export function Paiements() {
 
     // Génération de la Facture PDF (version robuste avec chargement de l'adresse séparé) [8, 12, 26-28]
     const exportFacture = async (paiementId: string) => {
+        // Multi-tenant guard [NEW]
+        if (!profile?.agency_id) return;
+
         try {
             // 1. Charger le paiement et les relations proches
             const { data: pmt, error: e1 } = await supabase
@@ -217,6 +238,7 @@ export function Paiements() {
                         unites(id, nom)
                     )
                 `)
+                .eq('agency_id', profile.agency_id) // [NEW] Multi-tenant filter
                 .eq('id', paiementId)
                 .single(); // [26, 27]
 
@@ -231,6 +253,7 @@ export function Paiements() {
                 const { data: u } = await supabase
                     .from('unites')
                     .select('immeubles(adresse)')
+                    .eq('agency_id', profile.agency_id) // [NEW] Multi-tenant filter
                     .eq('id', uniteId)
                     .maybeSingle();
 
@@ -261,6 +284,9 @@ export function Paiements() {
     
     // Fonction d'export de la liste des paiements au format PDF [14, 26]
     const exportPDF = () => {
+        // Multi-tenant guard [NEW]
+        if (!profile?.agency_id) return;
+
         const doc = new jsPDF();
         doc.text('Liste des Paiements', 14, 15);
         doc.autoTable({

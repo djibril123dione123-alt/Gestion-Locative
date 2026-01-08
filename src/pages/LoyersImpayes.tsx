@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
 import { Search, AlertCircle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -25,6 +26,7 @@ interface LoyerImpaye {
 }
 
 export function LoyersImpayes() {
+  const { profile } = useAuth();
   const [impayes, setImpayes] = useState<LoyerImpaye[]>([]);
   const [filtered, setFiltered] = useState<LoyerImpaye[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,8 +37,10 @@ export function LoyersImpayes() {
   const [selectedLoyer, setSelectedLoyer] = useState<LoyerImpaye | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (profile?.agency_id) {
+      loadData();
+    }
+  }, [profile?.agency_id]);
 
   useEffect(() => {
     let result = impayes;
@@ -59,6 +63,7 @@ export function LoyersImpayes() {
   }, [searchTerm, selectedBailleur, impayes]);
 
   const loadData = async () => {
+    if (!profile?.agency_id) return;
     try {
       const { data: contratsActifs } = await supabase
         .from('contrats')
@@ -74,7 +79,8 @@ export function LoyersImpayes() {
             )
           )
         `)
-        .eq('statut', 'actif');
+        .eq('statut', 'actif')
+        .eq('agency_id', profile.agency_id);
 
       const currentDate = new Date();
       const lastSixMonths = [];
@@ -88,6 +94,7 @@ export function LoyersImpayes() {
       const { data: paiementsExistants } = await supabase
         .from('paiements')
         .select('contrat_id, mois_concerne, statut')
+        .eq('agency_id', profile.agency_id)
         .in('contrat_id', contratIds)
         .in('mois_concerne', lastSixMonths);
 

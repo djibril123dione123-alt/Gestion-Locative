@@ -27,18 +27,21 @@ export function Depenses() {
   const categories = ['🌐 Internet', '⚡ Électricité', '💧 Eau', '👷 Salaires', '🚌 Prime de transport','📱 Crédit téléphonique', '📦 Autres'];
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (profile?.agency_id) {
+      loadData();
+    }
+  }, [profile?.agency_id]);
 
   useEffect(() => {
     setFiltered(depenses.filter((d) => JSON.stringify(d).toLowerCase().includes(searchTerm.toLowerCase())));
   }, [searchTerm, depenses]);
 
   const loadData = async () => {
+    if (!profile?.agency_id) return;
     try {
       const [depensesRes, immeublesRes] = await Promise.all([
-        supabase.from('depenses').select('*, immeubles(nom)').order('created_at', { ascending: false }),
-        supabase.from('immeubles').select('id, nom').eq('actif', true),
+        supabase.from('depenses').select('*, immeubles(nom)').eq('agency_id', profile.agency_id).order('created_at', { ascending: false }),
+        supabase.from('immeubles').select('id, nom').eq('agency_id', profile.agency_id).eq('actif', true),
       ]);
 
       setDepenses(depensesRes.data || []);
@@ -52,6 +55,7 @@ export function Depenses() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    if (!profile?.agency_id) return;
     e.preventDefault();
     try {
       const data = {
@@ -66,7 +70,7 @@ export function Depenses() {
       if (editingDepense) {
         await supabase.from('depenses').update(data).eq('id', editingDepense.id);
       } else {
-        await supabase.from('depenses').insert([{ ...data, created_by: user?.id }]);
+        await supabase.from('depenses').insert([{ ...data, created_by: user?.id, agency_id: profile.agency_id }]);
       }
 
       closeModal();
@@ -90,6 +94,7 @@ export function Depenses() {
   };
 
   const handleDelete = async (depense: any) => {
+    if (!profile?.agency_id) return;
     if (!confirm('Supprimer cette dépense ?')) return;
     try {
       await supabase.from('depenses').delete().eq('id', depense.id);

@@ -34,8 +34,10 @@ export function Locataires() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (profile?.agency_id) {
+      loadData();
+    }
+  }, [profile?.agency_id]);
 
   useEffect(() => {
     const f = locataires.filter(l =>
@@ -45,10 +47,12 @@ export function Locataires() {
   }, [searchTerm, locataires]);
 
   const loadData = async () => {
+    if (!profile?.agency_id) return;
     try {
       const { data, error } = await supabase
         .from('locataires')
         .select('*')
+        .eq('agency_id', profile.agency_id)
         .eq('actif', true)
         .order('created_at', { ascending: false });
 
@@ -68,7 +72,7 @@ export function Locataires() {
       if (editing) {
         await supabase.from('locataires').update(formData).eq('id', editing.id);
       } else {
-        await supabase.from('locataires').insert([{ ...formData, created_by: user?.id }]);
+        await supabase.from('locataires').insert([{ ...formData, created_by: user?.id, agency_id: profile?.agency_id }]);
       }
       closeModal();
       loadData();

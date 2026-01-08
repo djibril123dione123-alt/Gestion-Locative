@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { Plus, Search, Download, AlertCircle, TrendingUp } from 'lucide-react';
@@ -98,6 +99,9 @@ const INITIAL_FORM_DATA: FormData = {
 // 🔸 COMPOSANT PRINCIPAL
 // =========================
 export function Contrats() {
+  // Auth context
+  const { user, profile } = useAuth();
+
   // États
   const [contrats, setContrats] = useState<Contrat[]>([]);
   const [locataires, setLocataires] = useState<Locataire[]>([]);
@@ -132,6 +136,8 @@ export function Contrats() {
   // 🔁 CHARGEMENT DES DONNÉES
   // =========================
   const loadData = useCallback(async () => {
+    if (!profile?.agency_id) return;
+
     try {
       setLoading(true);
       setError(null);
@@ -152,21 +158,25 @@ export function Contrats() {
               )
             )
           `)
+          .eq('agency_id', profile.agency_id)
           .order('created_at', { ascending: false }),
         supabase
           .from('locataires')
           .select('id, nom, prenom')
+          .eq('agency_id', profile.agency_id)
           .eq('actif', true)
           .order('nom', { ascending: true }),
         supabase
           .from('unites')
           .select('id, nom, loyer_base, statut, immeubles(nom, bailleurs(id, nom, prenom, commission))')
+          .eq('agency_id', profile.agency_id)
           .eq('actif', true)
           .eq('statut', 'libre')
           .order('nom', { ascending: true }),
         supabase
           .from('bailleurs')
           .select('id, nom, prenom, telephone, adresse, commission')
+          .eq('agency_id', profile.agency_id)
           .eq('actif', true)
           .order('nom', { ascending: true }),
       ]);
@@ -189,8 +199,10 @@ export function Contrats() {
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (profile?.agency_id) {
+      loadData();
+    }
+  }, [profile?.agency_id, loadData]);
 
   // =========================
   // 🔍 FILTRAGE DES CONTRATS
@@ -281,6 +293,8 @@ export function Contrats() {
     async (e: React.FormEvent) => {
       e.preventDefault();
 
+      if (!profile?.agency_id) return;
+
       const validationError = validateForm();
       if (validationError) {
         alert(validationError);
@@ -293,6 +307,7 @@ export function Contrats() {
           .from('unites')
           .select('statut')
           .eq('id', formData.unite_id)
+          .eq('agency_id', profile.agency_id)
           .single();
 
         if (uniteError) throw uniteError;
@@ -312,6 +327,7 @@ export function Contrats() {
           caution: formData.caution ? parseFloat(formData.caution) : null,
           statut: formData.statut,
           destination: formData.destination,
+          agency_id: profile.agency_id,
         };
 
         const { error: insertError } = await supabase
@@ -337,7 +353,7 @@ export function Contrats() {
         setSubmitting(false);
       }
     },
-    [formData, validateForm, loadData]
+    [formData, validateForm, loadData, profile?.agency_id]
   );
 
   // =========================
@@ -347,6 +363,7 @@ export function Contrats() {
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!editing) return;
+      if (!profile?.agency_id) return;
 
       setSubmitting(true);
       try {
@@ -360,7 +377,8 @@ export function Contrats() {
         const { error: updateError } = await supabase
           .from('contrats')
           .update(data)
-          .eq('id', editing.id);
+          .eq('id', editing.id)
+          .eq('agency_id', profile.agency_id);
 
         if (updateError) throw updateError;
 
@@ -368,7 +386,8 @@ export function Contrats() {
           const { error: uniteError } = await supabase
             .from('unites')
             .update({ statut: 'libre' })
-            .eq('id', editing.unite_id);
+            .eq('id', editing.unite_id)
+            .eq('agency_id', profile.agency_id);
 
           if (uniteError) throw uniteError;
         }
@@ -383,7 +402,7 @@ export function Contrats() {
         setSubmitting(false);
       }
     },
-    [formData, editing, loadData]
+    [formData, editing, loadData, profile?.agency_id]
   );
 
   // =========================
@@ -409,6 +428,8 @@ export function Contrats() {
   // 📄 TÉLÉCHARGEMENT PDF
   // =========================
   const handleDownloadPDF = useCallback(async (contratId: string) => {
+    if (!profile?.agency_id) return;
+
     setDownloadingId(contratId);
     try {
       const { data: contrat, error } = await supabase
@@ -427,6 +448,7 @@ export function Contrats() {
           )
         `)
         .eq('id', contratId)
+        .eq('agency_id', profile.agency_id)
         .single();
 
       if (error) throw error;
@@ -439,7 +461,7 @@ export function Contrats() {
     } finally {
       setDownloadingId(null);
     }
-  }, []);
+  }, [profile?.agency_id]);
 
   // =========================
   // 🚪 FERMETURE DES MODALS

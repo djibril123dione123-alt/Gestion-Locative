@@ -75,13 +75,13 @@ export default function Welcome() {
 
   if (!accountType) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4 animate-fadeIn">
         <div className="max-w-4xl w-full">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-12 animate-slideInUp">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-4">
               Bienvenue sur Confort Immo Archi
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-xl text-gray-700">
               Choisissez le type de compte qui vous correspond
             </p>
           </div>

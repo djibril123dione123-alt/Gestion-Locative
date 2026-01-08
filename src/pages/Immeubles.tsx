@@ -43,8 +43,10 @@ export function Immeubles() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (profile?.agency_id) {
+      loadData();
+    }
+  }, [profile?.agency_id]);
 
   useEffect(() => {
     const filtered = immeubles.filter(i =>
@@ -56,14 +58,21 @@ export function Immeubles() {
   }, [searchTerm, immeubles]);
 
   const loadData = async () => {
+    if (!profile?.agency_id) return;
+
     try {
       const [immeublesRes, bailleursRes] = await Promise.all([
         supabase
           .from('immeubles')
           .select('*, bailleurs(nom, prenom)')
+          .eq('agency_id', profile.agency_id)
           .eq('actif', true)
           .order('created_at', { ascending: false }),
-        supabase.from('bailleurs').select('id, nom, prenom').eq('actif', true),
+        supabase
+          .from('bailleurs')
+          .select('id, nom, prenom')
+          .eq('agency_id', profile.agency_id)
+          .eq('actif', true),
       ]);
 
       if (immeublesRes.error) throw immeublesRes.error;
@@ -93,7 +102,7 @@ export function Immeubles() {
       } else {
         const { error } = await supabase
           .from('immeubles')
-          .insert([{ ...formData, created_by: user?.id }]);
+          .insert([{ ...formData, agency_id: profile?.agency_id, created_by: user?.id }]);
 
         if (error) throw error;
       }

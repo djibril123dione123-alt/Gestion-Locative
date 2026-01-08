@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase'; // Supposons que le chemin soit correct
+import { useAuth } from '../contexts/AuthContext';
 import { TrendingUp, TrendingDown, DollarSign, Download, Calendar, Building2, DollarSign as Dollar } from 'lucide-react'; // Imports d'icônes unifiés [3-6]
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'; // Imports graphiques unifiés [3, 6]
 import jsPDF from 'jspdf'; // Import PDF unifié [3-6]
@@ -68,7 +69,8 @@ const formatCurrency = (amount: number) =>
 
 
 export function TableauDeBordFinancierGlobal() {
-    
+    const { profile } = useAuth();
+
     // -------------------------------------------------------------------------
     // 3. ÉTATS CENTRALISÉS [7-9, 11]
     // -------------------------------------------------------------------------
@@ -96,10 +98,13 @@ export function TableauDeBordFinancierGlobal() {
     // -------------------------------------------------------------------------
 
     useEffect(() => {
-        loadAllData();
-    }, [selectedMonth]); 
+        if (profile?.agency_id) {
+            loadAllData();
+        }
+    }, [selectedMonth, profile?.agency_id]); 
 
     const loadAllData = async () => {
+        if (!profile?.agency_id) return;
         setLoading(true);
 
         try {
@@ -114,10 +119,10 @@ export function TableauDeBordFinancierGlobal() {
             
             // --- Requêtes Supabase Centrales (Optimisation par Promise.all) ---
             const [
-                paiementsMensuelsRes, 
-                depensesMensuelsRes, 
+                paiementsMensuelsRes,
+                depensesMensuelsRes,
                 revenusAutresMensuelsRes,
-                
+
                 // Pour Rapports Annuels et Comptabilité:
                 paiementsAnnuelsRes, // Utilisation pour 'part_agence' annuelle [23]
                 depensesAnnuelsRes, // [23]
@@ -128,18 +133,18 @@ export function TableauDeBordFinancierGlobal() {
                 unitesRes // [24]
             ] = await Promise.all([
                 // 1. Données Mensuelles
-                supabase.from('paiements').select('*, contrats(unites(immeuble_id))').gte('mois_concerne', monthStart).lt('mois_concerne', monthEndStr),
-                supabase.from('depenses').select('*').gte('date_depense', monthStart).lt('date_depense', monthEndStr),
-                supabase.from('revenus').select('*').gte('date_revenu', monthStart).lt('date_revenu', monthEndStr),
-                
+                supabase.from('paiements').select('*, contrats(unites(immeuble_id))').eq('agency_id', profile.agency_id).gte('mois_concerne', monthStart).lt('mois_concerne', monthEndStr),
+                supabase.from('depenses').select('*').eq('agency_id', profile.agency_id).gte('date_depense', monthStart).lt('date_depense', monthEndStr),
+                supabase.from('revenus').select('*').eq('agency_id', profile.agency_id).gte('date_revenu', monthStart).lt('date_revenu', monthEndStr),
+
                 // 2. Données Annuelles (pour Tendance / Comptabilité)
-                supabase.from('paiements').select('part_agence, mois_concerne, statut').gte('mois_concerne', yearStartDate),
-                supabase.from('depenses').select('montant, date_depense').gte('date_depense', yearStartDate),
+                supabase.from('paiements').select('part_agence, mois_concerne, statut').eq('agency_id', profile.agency_id).gte('mois_concerne', yearStartDate),
+                supabase.from('depenses').select('montant, date_depense').eq('agency_id', profile.agency_id).gte('date_depense', yearStartDate),
 
                 // 3. Données Structurelles
-                supabase.from('bailleurs').select('id, nom, prenom').eq('actif', true),
-                supabase.from('immeubles').select('id, nom, bailleur_id, nombre_unites, bailleurs(nom, prenom)').eq('actif', true), // [10]
-                supabase.from('unites').select('immeuble_id, statut').eq('actif', true), // [24]
+                supabase.from('bailleurs').select('id, nom, prenom').eq('agency_id', profile.agency_id).eq('actif', true),
+                supabase.from('immeubles').select('id, nom, bailleur_id, nombre_unites, bailleurs(nom, prenom)').eq('agency_id', profile.agency_id).eq('actif', true), // [10]
+                supabase.from('unites').select('immeuble_id, statut').eq('agency_id', profile.agency_id).eq('actif', true), // [24]
             ]);
 
             // Extraction des données

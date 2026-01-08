@@ -36,8 +36,10 @@ export function Unites() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (profile?.agency_id) {
+      loadData();
+    }
+  }, [profile?.agency_id]);
 
   useEffect(() => {
     const filtered = unites.filter(u =>
@@ -49,14 +51,21 @@ export function Unites() {
   }, [searchTerm, unites]);
 
   const loadData = async () => {
+    if (!profile?.agency_id) return;
+
     try {
       const [unitesRes, immeublesRes] = await Promise.all([
         supabase
           .from('unites')
           .select('*, immeubles(nom)')
+          .eq('agency_id', profile.agency_id)
           .eq('actif', true)
           .order('created_at', { ascending: false }),
-        supabase.from('immeubles').select('id, nom').eq('actif', true),
+        supabase
+          .from('immeubles')
+          .select('id, nom')
+          .eq('agency_id', profile.agency_id)
+          .eq('actif', true),
       ]);
 
       if (unitesRes.error) throw unitesRes.error;
@@ -91,7 +100,7 @@ export function Unites() {
       } else {
         const { error } = await supabase
           .from('unites')
-          .insert([{ ...data, created_by: user?.id }]);
+          .insert([{ ...data, agency_id: profile?.agency_id, created_by: user?.id }]);
 
         if (error) throw error;
       }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 import { TrendingUp, BarChart3, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
@@ -12,6 +13,7 @@ declare module 'jspdf' {
 }
 
 export function Commissions() {
+  const { profile } = useAuth();
   const [commissions, setCommissions] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [stats, setStats] = useState({
@@ -26,10 +28,13 @@ export function Commissions() {
   });
 
   useEffect(() => {
-    loadCommissions();
-  }, [selectedMonth]);
+    if (profile?.agency_id) {
+      loadCommissions();
+    }
+  }, [selectedMonth, profile?.agency_id]);
 
   const loadCommissions = async () => {
+    if (!profile?.agency_id) return;
     setLoading(true);
     try {
       const monthStart = `${selectedMonth}-01`;
@@ -50,6 +55,7 @@ export function Commissions() {
             unites(nom, immeubles(nom, bailleurs(nom, prenom)))
           )
         `)
+        .eq('agency_id', profile.agency_id)
         .eq('statut', 'paye')
         .gte('mois_concerne', monthStart)
         .lt('mois_concerne', monthEndStr)

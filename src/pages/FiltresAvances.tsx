@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Search, Filter, X, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useAuth } from '../contexts/AuthContext';
 
 interface FiltersState {
   bailleur_id: string;
@@ -16,6 +17,7 @@ interface FiltersState {
 }
 
 export function FiltresAvances() {
+  const { profile } = useAuth();
   const [results, setResults] = useState<any[]>([]);
   const [bailleurs, setBailleurs] = useState<any[]>([]);
   const [immeubles, setImmeubles] = useState<any[]>([]);
@@ -34,8 +36,10 @@ export function FiltresAvances() {
   });
 
   useEffect(() => {
-    loadFilterOptions();
-  }, []);
+    if (profile?.agency_id) {
+      loadFilterOptions();
+    }
+  }, [profile?.agency_id]);
 
   useEffect(() => {
     if (filters.bailleur_id) {
@@ -55,10 +59,12 @@ export function FiltresAvances() {
   }, [filters.immeuble_id]);
 
   const loadFilterOptions = async () => {
+    if (!profile?.agency_id) return;
     try {
       const { data: bailleursData } = await supabase
         .from('bailleurs')
         .select('id, nom, prenom')
+        .eq('agency_id', profile.agency_id)
         .eq('actif', true)
         .order('nom');
 
@@ -69,10 +75,12 @@ export function FiltresAvances() {
   };
 
   const loadImmeublesByBailleur = async (bailleurId: string) => {
+    if (!profile?.agency_id) return;
     try {
       const { data } = await supabase
         .from('immeubles')
         .select('id, nom')
+        .eq('agency_id', profile.agency_id)
         .eq('bailleur_id', bailleurId)
         .eq('actif', true)
         .order('nom');
@@ -84,10 +92,12 @@ export function FiltresAvances() {
   };
 
   const loadUnitesByImmeuble = async (immeubleId: string) => {
+    if (!profile?.agency_id) return;
     try {
       const { data } = await supabase
         .from('unites')
         .select('id, nom')
+        .eq('agency_id', profile.agency_id)
         .eq('immeuble_id', immeubleId)
         .eq('actif', true)
         .order('nom');
@@ -99,6 +109,7 @@ export function FiltresAvances() {
   };
 
   const handleSearch = async () => {
+    if (!profile?.agency_id) return;
     setLoading(true);
     try {
       let query = supabase
@@ -115,12 +126,14 @@ export function FiltresAvances() {
               bailleurs(nom, prenom)
             )
           )
-        `);
+        `)
+        .eq('agency_id', profile.agency_id);
 
       if (filters.bailleur_id) {
         const { data: immeublesFiltered } = await supabase
           .from('immeubles')
           .select('id')
+          .eq('agency_id', profile.agency_id)
           .eq('bailleur_id', filters.bailleur_id);
 
         const immeubleIds = immeublesFiltered?.map(i => i.id) || [];
@@ -128,6 +141,7 @@ export function FiltresAvances() {
         const { data: unitesFiltered } = await supabase
           .from('unites')
           .select('id')
+          .eq('agency_id', profile.agency_id)
           .in('immeuble_id', immeubleIds);
 
         const uniteIds = unitesFiltered?.map(u => u.id) || [];
@@ -138,6 +152,7 @@ export function FiltresAvances() {
         const { data: unitesFiltered } = await supabase
           .from('unites')
           .select('id')
+          .eq('agency_id', profile.agency_id)
           .eq('immeuble_id', filters.immeuble_id);
 
         const uniteIds = unitesFiltered?.map(u => u.id) || [];
@@ -168,6 +183,7 @@ export function FiltresAvances() {
         const { data: unitesFiltered } = await supabase
           .from('unites')
           .select('id')
+          .eq('agency_id', profile.agency_id)
           .eq('statut', filters.statut_unite);
 
         const uniteIds = unitesFiltered?.map(u => u.id) || [];
@@ -184,6 +200,7 @@ export function FiltresAvances() {
             const { data: paiements } = await supabase
               .from('paiements')
               .select('statut')
+              .eq('agency_id', profile.agency_id)
               .eq('contrat_id', contrat.id)
               .order('created_at', { ascending: false })
               .limit(1);

@@ -68,7 +68,7 @@ export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
               <li key={item.id}>
                 <button
                   onClick={() => onNavigate(item.id)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition group relative"
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 group relative hover:translate-x-1"
                   style={{
                     backgroundColor: isActive ? 'rgba(245, 130, 32, 0.15)' : 'transparent',
                     color: isActive ? '#FFA64D' : '#B0B0B0',

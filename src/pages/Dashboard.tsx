@@ -156,21 +156,26 @@ const formatCurrency = (amount: number) => {
     { name: 'Libres', value: stats.unitesLibres },
   ];
 
-  const COLORS = ['#3b82f6', '#94a3b8'];
+  const COLORS = ['#F58220', '#94a3b8'];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-lg text-slate-600">Chargement...</div>
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-orange-200 border-t-orange-600 mb-4"></div>
+          <p className="text-lg text-slate-600 animate-pulse-soft">Chargement du tableau de bord...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Tableau de bord</h1>
-        <p className="text-slate-600">Vue d'ensemble de votre activité immobilière</p>
+    <div className="p-8 space-y-8 animate-fadeIn">
+      <div className="animate-slideInLeft">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
+          Tableau de bord
+        </h1>
+        <p className="text-slate-600 text-lg">Vue d'ensemble de votre activité immobilière</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -178,14 +183,16 @@ const formatCurrency = (amount: number) => {
           title="Immeubles"
           value={stats.totalImmeubles}
           icon={Building2}
-          color="blue"
+          color="orange"
+          delay="0"
         />
         <StatCard
           title="Produits totales"
           value={stats.totalUnites}
           subtitle={`${stats.unitesLibres} libres`}
           icon={DoorOpen}
-          color="slate"
+          color="blue"
+          delay="100"
         />
         <StatCard
           title="Locataires actifs"
@@ -193,20 +200,22 @@ const formatCurrency = (amount: number) => {
           subtitle={`${stats.contratsActifs} contrats`}
           icon={Users}
           color="green"
+          delay="200"
         />
         <StatCard
           title="Taux d'occupation"
           value={`${stats.tauxOccupation.toFixed(1)}%`}
           icon={TrendingUp}
           color="emerald"
+          delay="300"
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
           <h2 className="text-lg font-semibold text-slate-900 mb-2">Finances du mois</h2>
           <div className="space-y-4 mt-4">
-            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl transition-all duration-300 hover:scale-105">
               <div>
                 <p className="text-sm text-green-700 font-medium">Revenus perçus</p>
                 <p className="text-2xl font-bold text-green-900">{formatCurrency(stats.revenusMois)}</p>
@@ -214,7 +223,7 @@ const formatCurrency = (amount: number) => {
               <DollarSign className="w-8 h-8 text-green-600" />
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl transition-all duration-300 hover:scale-105">
               <div>
                 <p className="text-sm text-red-700 font-medium">Loyers impayés</p>
                 <p className="text-2xl font-bold text-red-900">{formatCurrency(stats.impayesMois)}</p>
@@ -224,7 +233,7 @@ const formatCurrency = (amount: number) => {
           </div>
         </div>
 
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Revenus mensuels</h2>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={monthlyRevenue}>
@@ -235,14 +244,14 @@ const formatCurrency = (amount: number) => {
                 formatter={(value: number) => formatCurrency(value)}
                 contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
               />
-              <Bar dataKey="revenus" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="revenus" fill="#F58220" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Occupation des produits</h2>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
@@ -265,7 +274,7 @@ const formatCurrency = (amount: number) => {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Statistiques générales</h2>
           <div className="space-y-4">
             <StatRow label="Bailleurs enregistrés" value={stats.totalBailleurs} />
@@ -281,18 +290,22 @@ const formatCurrency = (amount: number) => {
   );
 }
 
-function StatCard({ title, value, subtitle, icon: Icon, color }: any) {
+function StatCard({ title, value, subtitle, icon: Icon, color, delay }: any) {
   const colorClasses = {
-    blue: 'bg-blue-50 text-blue-600',
-    slate: 'bg-slate-50 text-slate-600',
-    green: 'bg-green-50 text-green-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
+    orange: 'bg-gradient-to-br from-orange-50 to-orange-100 text-orange-600',
+    blue: 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600',
+    slate: 'bg-gradient-to-br from-slate-50 to-slate-100 text-slate-600',
+    green: 'bg-gradient-to-br from-green-50 to-green-100 text-green-600',
+    emerald: 'bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-600',
   };
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+    <div
+      className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 animate-slideInUp"
+      style={{ animationDelay: `${delay}ms` }}
+    >
       <div className="flex items-center justify-between mb-4">
-        <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
+        <div className={`p-3 rounded-xl ${colorClasses[color]} transition-transform duration-300 hover:scale-110`}>
           <Icon className="w-6 h-6" />
         </div>
       </div>

@@ -97,13 +97,17 @@ export function Bailleurs() {
    * Chargement initial des bailleurs
    */
   useEffect(() => {
-    loadBailleurs();
-  }, []);
+    if (profile?.agency_id) {
+      loadBailleurs();
+    }
+  }, [profile?.agency_id]);
 
   /**
    * Fonction de chargement des bailleurs
    */
   const loadBailleurs = async () => {
+    if (!profile?.agency_id) return;
+
     try {
       setLoading(true);
       setError(null);
@@ -111,6 +115,7 @@ export function Bailleurs() {
       const { data, error: fetchError } = await supabase
         .from('bailleurs')
         .select('*')
+        .eq('agency_id', profile.agency_id)
         .eq('actif', true)
         .order('created_at', { ascending: false });
 
@@ -197,6 +202,7 @@ export function Bailleurs() {
           .from('bailleurs')
           .insert([{
             ...submitData,
+            agency_id: profile?.agency_id,
             created_by: user?.id,
             actif: true
           }]);
@@ -422,21 +428,24 @@ export function Bailleurs() {
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-8 max-w-7xl mx-auto animate-fadeIn">
       {/* En-tête */}
       <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+        <div className="animate-slideInLeft">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
             Bailleurs
           </h1>
-          <p className="text-slate-600">
+          <p className="text-slate-600 text-lg">
             Gestion des propriétaires • {bailleurs.length} bailleur{bailleurs.length > 1 ? 's' : ''}
           </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg 
-                   hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105"
+          className="flex items-center gap-2 px-6 py-3 text-white rounded-xl font-semibold
+                   shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-0.5 animate-slideInRight"
+          style={{
+            background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)',
+          }}
         >
           <Plus className="w-5 h-5" />
           Nouveau bailleur
@@ -447,19 +456,19 @@ export function Bailleurs() {
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
 
       {/* Conteneur principal */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-xl">
         {/* Barre de recherche */}
-        <div className="p-6 border-b border-slate-200 bg-slate-50">
+        <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-orange-50 to-orange-100">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-orange-500 w-5 h-5" />
             <input
               type="text"
               placeholder="Rechercher par nom, prénom, téléphone, email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg 
-                       focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                       transition-all"
+              className="w-full pl-10 pr-4 py-3 border-2 border-orange-200 rounded-xl
+                       focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+                       transition-all duration-300 hover:border-orange-300"
             />
           </div>
           {searchTerm && (
@@ -686,10 +695,13 @@ export function Bailleurs() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg 
-                       hover:bg-blue-700 transition-all shadow-md hover:shadow-lg
+              className="px-6 py-2 text-white rounded-lg font-semibold
+                       shadow-md hover:shadow-lg transition-all duration-300
                        disabled:opacity-50 disabled:cursor-not-allowed
-                       flex items-center gap-2"
+                       flex items-center gap-2 transform hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)',
+              }}
             >
               {isSubmitting ? (
                 <>

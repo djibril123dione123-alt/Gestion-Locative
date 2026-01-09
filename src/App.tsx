@@ -4,6 +4,7 @@ import { Menu } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Auth } from './pages/Auth';
 import { Sidebar } from './components/layout/Sidebar';
+import { TrialBanner } from './components/ui/TrialBanner';
 import Welcome from './pages/Welcome';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -55,7 +56,7 @@ function AppContent() {
     const renderPage = () => {
         switch (currentPage) {
             case 'dashboard':
-                return <Dashboard />;
+                return <Dashboard onNavigate={setCurrentPage} />;
             case 'agences':
                 return <Agences />;
             case 'bailleurs':
@@ -105,12 +106,13 @@ function AppContent() {
                     >
                         <Menu className="w-6 h-6 text-slate-700" />
                     </button>
-                    <img
-                        src="/templates/Logo confort immo archi neutre.png"
-                        alt="Logo"
-                        className="h-10 w-auto object-contain"
-                    />
+                    <span className="text-xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent">
+                        Gestion Locative
+                    </span>
                 </div>
+
+                {/* Trial Banner */}
+                <TrialBanner />
 
                 {/* Contenu défilable */}
                 <main className="flex-1 overflow-y-auto">

@@ -7,7 +7,8 @@ import {
   TrendingUp,
   DollarSign,
   AlertCircle,
-  DoorOpen
+  DoorOpen,
+  Sparkles
 } from 'lucide-react';
 import {
   BarChart,
@@ -24,6 +25,8 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import { QuickStart } from '../components/ui/QuickStart';
+import { EmptyState } from '../components/ui/EmptyState';
 
 interface DashboardStats {
   totalBailleurs: number;
@@ -38,7 +41,11 @@ interface DashboardStats {
   tauxOccupation: number;
 }
 
-export function Dashboard() {
+interface DashboardProps {
+  onNavigate?: (page: string) => void;
+}
+
+export function Dashboard({ onNavigate }: DashboardProps = {}) {
   const { profile, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalBailleurs: 0,
@@ -55,6 +62,7 @@ export function Dashboard() {
   const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isNewUser, setIsNewUser] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     if (!profile?.agency_id) {
@@ -102,7 +110,7 @@ export function Dashboard() {
 
       const tauxOccupation = unitesCount ? ((unitesLoueesCount || 0) / unitesCount) * 100 : 0;
 
-      setStats({
+      const newStats = {
         totalBailleurs: bailleursCount || 0,
         totalImmeubles: immeublesCount || 0,
         totalUnites: unitesCount || 0,
@@ -113,7 +121,17 @@ export function Dashboard() {
         revenusMois,
         impayesMois,
         tauxOccupation,
-      });
+      };
+
+      setStats(newStats);
+
+      const hasNoData =
+        newStats.totalBailleurs === 0 &&
+        newStats.totalImmeubles === 0 &&
+        newStats.totalUnites === 0 &&
+        newStats.totalLocataires === 0;
+
+      setIsNewUser(hasNoData);
 
       setMonthlyRevenue(monthlyData);
       setError(null);
@@ -203,6 +221,71 @@ const formatCurrency = (amount: number) => {
           >
             Réessayer
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isNewUser) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 animate-fadeIn">
+        <div className="animate-slideInLeft">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
+            Bienvenue sur Gestion Locative
+          </h1>
+          <p className="text-slate-600 text-base lg:text-lg">Commencez par configurer votre plateforme en quelques étapes simples</p>
+        </div>
+
+        <QuickStart onNavigate={onNavigate} />
+
+        <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
+          <EmptyState
+            icon={Sparkles}
+            title="Votre tableau de bord est prêt !"
+            description="Une fois que vous aurez ajouté vos premiers bailleurs, immeubles et locataires, vous verrez apparaître ici toutes vos statistiques et graphiques en temps réel."
+            action={{
+              label: "Commencer la configuration",
+              onClick: () => onNavigate?.('bailleurs'),
+            }}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                <Building2 className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-bold text-orange-900">Gestion complète</h3>
+            </div>
+            <p className="text-sm text-orange-800">
+              Gérez vos bailleurs, immeubles, unités et locataires dans une seule plateforme intuitive
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-2 border-blue-200">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-bold text-blue-900">Suivi financier</h3>
+            </div>
+            <p className="text-sm text-blue-800">
+              Encaissements, rapports mensuels, détection des impayés automatique et exports PDF
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-white" />
+              </div>
+              <h3 className="font-bold text-green-900">Rapports intelligents</h3>
+            </div>
+            <p className="text-sm text-green-800">
+              Statistiques en temps réel, graphiques mensuels et bilans automatisés pour chaque bailleur
+            </p>
+          </div>
         </div>
       </div>
     );

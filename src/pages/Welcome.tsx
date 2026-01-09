@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Building2, User, ArrowRight } from 'lucide-react';
+import { Building2, User, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
+type AccountType = 'agency' | 'bailleur';
+
 export default function Welcome() {
   const { user, profile } = useAuth();
-  const [accountType, setAccountType] = useState<'agency' | 'bailleur' | null>(null);
+  const [step, setStep] = useState(0);
+  const [accountType, setAccountType] = useState<AccountType | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -13,6 +16,8 @@ export default function Welcome() {
     email: user?.email || '',
     address: '',
     ninea: '',
+    nbImmeubles: '1-5',
+    devise: 'XOF',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,6 +26,8 @@ export default function Welcome() {
 
     setLoading(true);
     try {
+      const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
       const { data: agency, error: agencyError } = await supabase
         .from('agencies')
         .insert({
@@ -28,10 +35,10 @@ export default function Welcome() {
           phone: formData.phone,
           email: formData.email,
           address: formData.address,
-          ninea: formData.ninea,
-          plan: 'basic',
+          ninea: formData.ninea || null,
+          plan: 'pro',
           status: 'trial',
-          trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          trial_ends_at: trialEndsAt,
           is_bailleur_account: accountType === 'bailleur',
         })
         .select()
@@ -41,242 +48,458 @@ export default function Welcome() {
 
       await supabase
         .from('user_profiles')
-        .update({ agency_id: agency.id })
+        .update({
+          agency_id: agency.id,
+          role: accountType === 'agency' ? 'admin' : 'bailleur'
+        })
         .eq('id', user.id);
 
       await supabase
         .from('agency_settings')
-        .update({
+        .insert({
           agency_id: agency.id,
           nom_agence: formData.name,
           telephone: formData.phone,
           email: formData.email,
           adresse: formData.address,
-          ninea: formData.ninea,
-        })
-        .eq('id', 'default');
+          ninea: formData.ninea || null,
+          devise: formData.devise,
+        });
 
       await supabase
         .from('subscriptions')
         .insert({
           agency_id: agency.id,
-          plan_id: 'basic',
+          plan_id: 'pro',
           status: 'active',
-          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          current_period_end: trialEndsAt,
         });
 
       window.location.href = '/';
     } catch (error: any) {
-      alert(error.message);
+      console.error('Error creating agency:', error);
+      alert(error.message || 'Une erreur est survenue lors de la création de votre compte');
     } finally {
       setLoading(false);
     }
   };
 
-  if (!accountType) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4 animate-fadeIn">
-        <div className="max-w-4xl w-full">
-          <div className="text-center mb-12 animate-slideInUp">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-4">
-              Bienvenue sur Confort Immo Archi
-            </h1>
-            <p className="text-xl text-gray-700">
-              Choisissez le type de compte qui vous correspond
-            </p>
-          </div>
+  const nextStep = () => {
+    if (step === 0 && !accountType) return;
+    if (step === 1 && !formData.name.trim()) return;
+    if (step === 2 && !formData.phone.trim()) return;
+    setStep(step + 1);
+  };
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <button
-              onClick={() => setAccountType('agency')}
-              className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow text-left group"
-            >
-              <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center mb-6 group-hover:bg-orange-200 transition-colors">
-                <Building2 className="w-8 h-8 text-orange-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Agence Immobilière</h2>
-              <p className="text-gray-600 mb-6">
-                Gérez plusieurs propriétaires et leurs biens immobiliers. Idéal pour les agences de gestion locative.
+  const prevStep = () => {
+    if (step > 0) setStep(step - 1);
+  };
+
+  const renderStepContent = () => {
+    switch (step) {
+      case 0:
+        return (
+          <div className="max-w-4xl w-full animate-fadeIn">
+            <div className="text-center mb-12 animate-slideInUp">
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-4">
+                Bienvenue sur Gestion Locative
+              </h1>
+              <p className="text-lg md:text-xl text-gray-700">
+                Choisissez le type de compte qui vous correspond
               </p>
-              <ul className="space-y-2 text-sm text-gray-600 mb-6">
-                <li className="flex items-center">
-                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-2"></span>
-                  Gestion multi-bailleurs
-                </li>
-                <li className="flex items-center">
-                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-2"></span>
-                  Équipe collaborative
-                </li>
-                <li className="flex items-center">
-                  <span className="w-1.5 h-1.5 bg-orange-500 rounded-full mr-2"></span>
-                  Rapports personnalisés
-                </li>
-              </ul>
-              <div className="flex items-center text-orange-600 font-semibold">
-                Choisir ce type
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </button>
+            </div>
 
-            <button
-              onClick={() => setAccountType('bailleur')}
-              className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow text-left group"
-            >
-              <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mb-6 group-hover:bg-blue-200 transition-colors">
-                <User className="w-8 h-8 text-blue-600" />
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Bailleur Individuel</h2>
-              <p className="text-gray-600 mb-6">
-                Gérez vos propres biens immobiliers en toute autonomie. Solution simple et efficace.
+            <div className="grid md:grid-cols-2 gap-6">
+              <button
+                onClick={() => { setAccountType('agency'); nextStep(); }}
+                className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all text-left group hover:scale-105"
+              >
+                <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center mb-6 group-hover:bg-orange-200 transition-colors">
+                  <Building2 className="w-8 h-8 text-orange-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">Agence Immobilière</h2>
+                <p className="text-gray-600 mb-6">
+                  Gérez plusieurs propriétaires et leurs biens immobiliers. Idéal pour les agences de gestion locative.
+                </p>
+                <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                  <li className="flex items-center">
+                    <CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />
+                    Gestion multi-bailleurs
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />
+                    Équipe collaborative
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />
+                    Rapports personnalisés
+                  </li>
+                </ul>
+                <div className="flex items-center text-orange-600 font-semibold">
+                  Choisir ce type
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </button>
+
+              <button
+                onClick={() => { setAccountType('bailleur'); nextStep(); }}
+                className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all text-left group hover:scale-105"
+              >
+                <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mb-6 group-hover:bg-blue-200 transition-colors">
+                  <User className="w-8 h-8 text-blue-600" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">Bailleur Individuel</h2>
+                <p className="text-gray-600 mb-6">
+                  Gérez vos propres biens immobiliers en toute autonomie. Solution simple et efficace.
+                </p>
+                <ul className="space-y-2 text-sm text-gray-600 mb-6">
+                  <li className="flex items-center">
+                    <CheckCircle2 className="w-4 h-4 text-blue-500 mr-2" />
+                    Gestion de vos biens
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle2 className="w-4 h-4 text-blue-500 mr-2" />
+                    Suivi des loyers
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle2 className="w-4 h-4 text-blue-500 mr-2" />
+                    Tableaux de bord clairs
+                  </li>
+                </ul>
+                <div className="flex items-center text-blue-600 font-semibold">
+                  Choisir ce type
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </button>
+            </div>
+
+            <div className="text-center mt-8">
+              <p className="text-sm text-gray-500">
+                🎉 Essai gratuit Pro de 30 jours - Sans carte bancaire requise
               </p>
-              <ul className="space-y-2 text-sm text-gray-600 mb-6">
-                <li className="flex items-center">
-                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
-                  Gestion de vos biens
-                </li>
-                <li className="flex items-center">
-                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
-                  Suivi des loyers
-                </li>
-                <li className="flex items-center">
-                  <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
-                  Tableaux de bord clairs
-                </li>
-              </ul>
-              <div className="flex items-center text-blue-600 font-semibold">
-                Choisir ce type
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+        );
+
+      case 1:
+        return (
+          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={prevStep}
+                  className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Retour
+                </button>
+                <span className="text-sm text-gray-500">Étape 1 sur 6</span>
               </div>
-            </button>
-          </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                {accountType === 'agency' ? 'Nom de votre agence' : 'Votre nom complet'}
+              </h2>
+              <p className="text-gray-600">
+                {accountType === 'agency'
+                  ? 'Comment s\'appelle votre agence immobilière ?'
+                  : 'Quel est votre nom complet ?'}
+              </p>
+            </div>
 
-          <div className="text-center mt-8">
-            <p className="text-sm text-gray-500">
-              Essai gratuit de 30 jours - Sans carte bancaire requise
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8">
-        <div className="text-center mb-8">
-          <div className={`w-16 h-16 ${accountType === 'agency' ? 'bg-orange-100' : 'bg-blue-100'} rounded-lg flex items-center justify-center mx-auto mb-4`}>
-            {accountType === 'agency' ? (
-              <Building2 className={`w-8 h-8 ${accountType === 'agency' ? 'text-orange-600' : 'text-blue-600'}`} />
-            ) : (
-              <User className="w-8 h-8 text-blue-600" />
-            )}
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            {accountType === 'agency' ? 'Configuration de votre agence' : 'Configuration de votre compte'}
-          </h2>
-          <p className="text-gray-600">
-            Renseignez les informations de {accountType === 'agency' ? 'votre agence' : 'votre compte'}
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              {accountType === 'agency' ? 'Nom de l\'agence' : 'Votre nom complet'} *
-            </label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder={accountType === 'agency' ? 'Ex: Immobilier Premium' : 'Ex: Jean Dupont'}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Téléphone *
-            </label>
-            <input
-              type="tel"
-              required
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="+221 77 123 45 67"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email *
-            </label>
-            <input
-              type="email"
-              required
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-gray-50"
-              readOnly
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Adresse
-            </label>
-            <input
-              type="text"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="Adresse complète"
-            />
-          </div>
-
-          {accountType === 'agency' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                NINEA
-              </label>
+            <div className="space-y-6">
               <input
                 type="text"
+                autoFocus
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
+                placeholder={accountType === 'agency' ? 'Ex: Immobilier Premium Dakar' : 'Ex: Moussa Diop'}
+                onKeyPress={(e) => e.key === 'Enter' && formData.name.trim() && nextStep()}
+              />
+
+              <button
+                onClick={nextStep}
+                disabled={!formData.name.trim()}
+                className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center"
+              >
+                Continuer
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </button>
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={prevStep}
+                  className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Retour
+                </button>
+                <span className="text-sm text-gray-500">Étape 2 sur 6</span>
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Numéro de téléphone
+              </h2>
+              <p className="text-gray-600">
+                Pour que vos locataires et bailleurs puissent vous joindre
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <input
+                type="tel"
+                autoFocus
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
+                placeholder="+221 77 123 45 67"
+                onKeyPress={(e) => e.key === 'Enter' && formData.phone.trim() && nextStep()}
+              />
+
+              <button
+                onClick={nextStep}
+                disabled={!formData.phone.trim()}
+                className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center"
+              >
+                Continuer
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </button>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={prevStep}
+                  className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Retour
+                </button>
+                <span className="text-sm text-gray-500">Étape 3 sur 6</span>
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Votre adresse
+              </h2>
+              <p className="text-gray-600">
+                Adresse de votre {accountType === 'agency' ? 'agence' : 'domicile'} (optionnel)
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <input
+                type="text"
+                autoFocus
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
+                placeholder="Ex: Mermoz, Dakar, Sénégal"
+                onKeyPress={(e) => e.key === 'Enter' && nextStep()}
+              />
+
+              <button
+                onClick={nextStep}
+                className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold flex items-center justify-center"
+              >
+                Continuer
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </button>
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={prevStep}
+                  className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Retour
+                </button>
+                <span className="text-sm text-gray-500">Étape 4 sur 6</span>
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Numéro NINEA
+              </h2>
+              <p className="text-gray-600">
+                Numéro d'identification fiscale (optionnel, vous pourrez l'ajouter plus tard)
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <input
+                type="text"
+                autoFocus
                 value={formData.ninea}
                 onChange={(e) => setFormData({ ...formData, ninea: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="Numéro d'identification"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
+                placeholder="Ex: 0123456789"
+                onKeyPress={(e) => e.key === 'Enter' && nextStep()}
               />
+
+              <button
+                onClick={nextStep}
+                className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold flex items-center justify-center"
+              >
+                Continuer
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </button>
             </div>
-          )}
-
-          <div className="bg-orange-50 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-2">Plan Essai Gratuit</h3>
-            <ul className="space-y-1 text-sm text-gray-600">
-              <li>30 jours d'essai gratuit</li>
-              <li>Jusqu'à 3 immeubles et 10 unités</li>
-              <li>Toutes les fonctionnalités incluses</li>
-            </ul>
           </div>
+        );
 
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={() => setAccountType(null)}
-              className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Retour
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Configuration...' : 'Commencer'}
-            </button>
+      case 5:
+        return (
+          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={prevStep}
+                  className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Retour
+                </button>
+                <span className="text-sm text-gray-500">Étape 5 sur 6</span>
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Combien d'immeubles gérez-vous ?
+              </h2>
+              <p className="text-gray-600">
+                Cela nous aide à personnaliser votre expérience
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              {['1-5', '6-20', '21-50', '50+'].map((range) => (
+                <button
+                  key={range}
+                  onClick={() => {
+                    setFormData({ ...formData, nbImmeubles: range });
+                    nextStep();
+                  }}
+                  className={`w-full px-6 py-4 border-2 rounded-lg transition-all text-left font-medium ${
+                    formData.nbImmeubles === range
+                      ? 'border-orange-500 bg-orange-50 text-orange-700'
+                      : 'border-gray-200 hover:border-orange-300 text-gray-700'
+                  }`}
+                >
+                  {range} immeubles
+                </button>
+              ))}
+            </div>
           </div>
-        </form>
-      </div>
+        );
+
+      case 6:
+        return (
+          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={prevStep}
+                  className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Retour
+                </button>
+                <span className="text-sm text-gray-500">Étape 6 sur 6</span>
+              </div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                Devise préférée
+              </h2>
+              <p className="text-gray-600">
+                Choisissez la devise pour vos loyers et rapports
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-3">
+                {[
+                  { code: 'XOF', name: 'Franc CFA (XOF)', flag: '🇸🇳' },
+                  { code: 'EUR', name: 'Euro (EUR)', flag: '🇪🇺' },
+                  { code: 'USD', name: 'Dollar US (USD)', flag: '🇺🇸' },
+                ].map((currency) => (
+                  <button
+                    key={currency.code}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, devise: currency.code })}
+                    className={`w-full px-6 py-4 border-2 rounded-lg transition-all text-left font-medium flex items-center ${
+                      formData.devise === currency.code
+                        ? 'border-orange-500 bg-orange-50 text-orange-700'
+                        : 'border-gray-200 hover:border-orange-300 text-gray-700'
+                    }`}
+                  >
+                    <span className="text-2xl mr-3">{currency.flag}</span>
+                    {currency.name}
+                  </button>
+                ))}
+              </div>
+
+              <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-6 border-2 border-orange-200">
+                <h3 className="font-bold text-orange-900 mb-3 text-lg">🎉 Plan Essai Pro Gratuit</h3>
+                <ul className="space-y-2 text-sm text-orange-800">
+                  <li className="flex items-center">
+                    <CheckCircle2 className="w-4 h-4 mr-2 text-orange-600" />
+                    30 jours d'essai gratuit du plan Pro
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle2 className="w-4 h-4 mr-2 text-orange-600" />
+                    Immeubles et unités illimités
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle2 className="w-4 h-4 mr-2 text-orange-600" />
+                    Toutes les fonctionnalités incluses
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle2 className="w-4 h-4 mr-2 text-orange-600" />
+                    Sans carte bancaire requise
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center shadow-lg hover:shadow-xl"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3"></div>
+                    Création en cours...
+                  </>
+                ) : (
+                  <>
+                    Créer mon compte
+                    <CheckCircle2 className="w-5 h-5 ml-2" />
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4">
+      {renderStepContent()}
     </div>
   );
 }

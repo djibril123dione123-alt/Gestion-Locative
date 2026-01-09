@@ -7,6 +7,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import Welcome from './pages/Welcome';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const Agences = lazy(() => import('./pages/Agences'));
 const Bailleurs = lazy(() => import('./pages/Bailleurs').then(m => ({ default: m.Bailleurs })));
 const Immeubles = lazy(() => import('./pages/Immeubles').then(m => ({ default: m.Immeubles })));
 const Unites = lazy(() => import('./pages/Unites').then(m => ({ default: m.Unites })));
@@ -55,6 +56,8 @@ function AppContent() {
         switch (currentPage) {
             case 'dashboard':
                 return <Dashboard />;
+            case 'agences':
+                return <Agences />;
             case 'bailleurs':
                 return <Bailleurs />;
             case 'immeubles':

@@ -51,10 +51,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      if (error) throw error;
-      setProfile(data);
+      if (error) {
+        console.error('Error loading profile:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.warn('No profile found for user, will retry...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const { data: retryData } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+        setProfile(retryData);
+      } else {
+        setProfile(data);
+      }
     } catch (error) {
       console.error('Error loading profile:', error);
+      setProfile(null);
     } finally {
       setLoading(false);
     }
@@ -70,13 +86,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (authError) throw authError;
     if (!authData.user) throw new Error('User creation failed');
 
-    const { error: profileError } = await supabase.from('user_profiles').insert({
-      id: authData.user.id,
-      email,
-      ...profileData,
-    });
+    const { data: newProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        id: authData.user.id,
+        email,
+        ...profileData,
+      })
+      .select()
+      .single();
 
     if (profileError) throw profileError;
+
+    setProfile(newProfile);
+    setLoading(false);
   };
 
   const signOut = async () => {

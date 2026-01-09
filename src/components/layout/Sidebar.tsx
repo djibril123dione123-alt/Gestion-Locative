@@ -38,6 +38,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
 
   const menuItems = [
     { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['admin'] },
+    { id: 'agences', label: 'Agences', icon: Home, roles: ['admin'] },
     { id: 'bailleurs', label: 'Bailleurs', icon: UserCircle, roles: ['admin'] },
     { id: 'immeubles', label: 'Immeubles', icon: Building2, roles: ['admin'] },
     { id: 'unites', label: 'Produits', icon: DoorOpen, roles: ['admin'] },

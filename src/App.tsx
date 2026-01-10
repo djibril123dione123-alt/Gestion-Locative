@@ -26,11 +26,26 @@ function AppContent() {
     const { user, profile, loading } = useAuth();
     const [currentPage, setCurrentPage] = useState('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [showWelcomeAnyway, setShowWelcomeAnyway] = useState(false);
+
+    // After 5 seconds of loading without profile, show Welcome page anyway
+    React.useEffect(() => {
+        if (!loading && user && !profile) {
+            const timer = setTimeout(() => {
+                console.log('⏰ Profile loading timeout - showing Welcome page');
+                setShowWelcomeAnyway(true);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [loading, user, profile]);
 
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                Chargement...
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600 mb-4"></div>
+                    <p className="text-slate-600">Chargement...</p>
+                </div>
             </div>
         );
     }
@@ -39,7 +54,8 @@ function AppContent() {
         return <Auth />;
     }
 
-    if (!profile) {
+    // If profile not loaded yet and timeout not reached, show loading
+    if (!profile && !showWelcomeAnyway) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 p-4">
                 <div className="text-center max-w-md bg-white rounded-2xl shadow-xl p-8">
@@ -64,7 +80,8 @@ function AppContent() {
         );
     }
 
-    if (!profile.agency_id) {
+    // If no profile or no agency_id, show Welcome page
+    if (!profile || !profile.agency_id) {
         return <Welcome />;
     }
 

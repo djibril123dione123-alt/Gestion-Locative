@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { Building2, User, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
+import { reloadUserProfile } from '../lib/agencyHelper';
 
 type AccountType = 'agency' | 'bailleur';
 
 export default function Welcome() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+  const { showToast } = useToast();
   const [step, setStep] = useState(0);
   const [accountType, setAccountType] = useState<AccountType | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,12 +25,19 @@ export default function Welcome() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accountType || !user || !profile) return;
+    if (!accountType || !user) {
+      console.error('❌ Missing required data:', { accountType, user: !!user });
+      showToast('Données manquantes', 'error');
+      return;
+    }
 
     setLoading(true);
+    console.log('🚀 Starting agency creation...', { userId: user.id, accountType });
+
     try {
       const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
+      console.log('📝 Step 1: Creating agency...');
       const { data: agency, error: agencyError } = await supabase
         .from('agencies')
         .insert({
@@ -44,9 +54,16 @@ export default function Welcome() {
         .select()
         .single();
 
-      if (agencyError) throw agencyError;
+      if (agencyError) {
+        console.error('❌ Agency creation error:', agencyError);
+        throw agencyError;
+      }
 
-      await supabase
+      console.log('✅ Agency created:', agency.id);
+      showToast('Agence créée avec succès', 'success');
+
+      console.log('📝 Step 2: Updating user profile...');
+      const { error: profileError } = await supabase
         .from('user_profiles')
         .update({
           agency_id: agency.id,
@@ -54,7 +71,15 @@ export default function Welcome() {
         })
         .eq('id', user.id);
 
-      await supabase
+      if (profileError) {
+        console.error('❌ Profile update error:', profileError);
+        throw profileError;
+      }
+
+      console.log('✅ Profile updated with agency_id');
+
+      console.log('📝 Step 3: Creating agency settings...');
+      const { error: settingsError } = await supabase
         .from('agency_settings')
         .insert({
           agency_id: agency.id,
@@ -66,7 +91,15 @@ export default function Welcome() {
           devise: formData.devise,
         });
 
-      await supabase
+      if (settingsError) {
+        console.error('❌ Settings creation error:', settingsError);
+        throw settingsError;
+      }
+
+      console.log('✅ Agency settings created');
+
+      console.log('📝 Step 4: Creating subscription...');
+      const { error: subscriptionError } = await supabase
         .from('subscriptions')
         .insert({
           agency_id: agency.id,
@@ -75,10 +108,31 @@ export default function Welcome() {
           current_period_end: trialEndsAt,
         });
 
-      window.location.href = '/';
+      if (subscriptionError) {
+        console.error('❌ Subscription creation error:', subscriptionError);
+        throw subscriptionError;
+      }
+
+      console.log('✅ Subscription created');
+      console.log('🎉 All setup complete!');
+
+      showToast('Compte créé avec succès ! Bienvenue ! 🎉', 'success');
+
+      console.log('📝 Step 5: Reloading profile to get updated agency_id...');
+      const updatedProfile = await reloadUserProfile();
+
+      if (updatedProfile && updatedProfile.agency_id) {
+        console.log('✅ Profile reloaded with agency_id, redirecting to dashboard...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        window.location.href = '/';
+      } else {
+        console.warn('⚠️ Profile reload incomplete, forcing refresh...');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        window.location.href = '/';
+      }
     } catch (error: any) {
-      console.error('Error creating agency:', error);
-      alert(error.message || 'Une erreur est survenue lors de la création de votre compte');
+      console.error('❌ Error creating agency:', error);
+      showToast(error.message || 'Une erreur est survenue lors de la création de votre compte', 'error');
     } finally {
       setLoading(false);
     }

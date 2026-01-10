@@ -43,8 +43,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const loadProfile = async (userId: string) => {
+  const loadProfile = async (userId: string, retryCount = 0) => {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000;
+
     try {
+      console.log(`🔍 Loading profile for user ${userId} (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
+
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -52,36 +57,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error) {
-        console.error('Error loading profile:', error);
+        console.error('❌ Error loading profile:', error);
         setProfile(null);
         setLoading(false);
         return;
       }
 
       if (!data) {
-        console.warn('No profile found for user, retrying...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        const { data: retryData, error: retryError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-
-        if (retryError) {
-          console.error('Retry error loading profile:', retryError);
-          setProfile(null);
-        } else if (!retryData) {
-          console.error('Profile still not found after retry. User may need to complete registration.');
-          setProfile(null);
+        if (retryCount < MAX_RETRIES) {
+          console.warn(`⏳ No profile found, retrying in ${RETRY_DELAY}ms... (${retryCount + 1}/${MAX_RETRIES})`);
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+          return loadProfile(userId, retryCount + 1);
         } else {
-          setProfile(retryData);
+          console.warn('⚠️ Profile not found after all retries. User profile will be created by trigger or needs to complete registration.');
+          setProfile(null);
         }
       } else {
+        console.log('✅ Profile loaded successfully:', {
+          id: data.id,
+          role: data.role,
+          hasAgency: !!data.agency_id
+        });
         setProfile(data);
       }
     } catch (error) {
-      console.error('Unexpected error loading profile:', error);
+      console.error('❌ Unexpected error loading profile:', error);
       setProfile(null);
     } finally {
       setLoading(false);
@@ -94,6 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, profileData: Partial<UserProfile>) => {
+    console.log('🚀 Starting sign up...', { email });
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -105,8 +107,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     });
-    if (authError) throw authError;
-    if (!authData.user) throw new Error('User creation failed');
+
+    if (authError) {
+      console.error('❌ Auth sign up error:', authError);
+      throw authError;
+    }
+
+    if (!authData.user) {
+      console.error('❌ User creation failed - no user returned');
+      throw new Error('User creation failed');
+    }
+
+    console.log('✅ Auth user created:', authData.user.id);
+    console.log('⏳ Waiting for trigger to create profile...');
 
     await new Promise(resolve => setTimeout(resolve, 1500));
 
@@ -117,12 +130,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .maybeSingle();
 
     if (profileError) {
-      console.error('Error fetching profile:', profileError);
+      console.error('❌ Error fetching profile:', profileError);
     }
 
     if (newProfile) {
+      console.log('✅ Profile found:', newProfile.id);
       setProfile(newProfile);
+    } else {
+      console.warn('⚠️ Profile not found yet, will be loaded by AuthContext');
     }
+
     setLoading(false);
   };
 

@@ -9,7 +9,7 @@ type AccountType = 'agency' | 'bailleur';
 
 export default function Welcome() {
   const { user } = useAuth();
-  const { showToast } = useToast();
+  const { addToast } = useToast();
   const [step, setStep] = useState(0);
   const [accountType, setAccountType] = useState<AccountType | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,7 +38,7 @@ export default function Welcome() {
       const errorMsg = 'Données manquantes pour la création du compte';
       console.error('❌ Missing required data:', { accountType, user: !!user });
       alert(errorMsg);
-      showToast(errorMsg, 'error');
+      addToast(errorMsg, 'error');
       return;
     }
 
@@ -69,7 +69,7 @@ export default function Welcome() {
         console.error('❌ Agency creation error:', agencyError);
         const errorMsg = `Erreur de création d'agence: ${agencyError.message}`;
         alert(errorMsg);
-        showToast(errorMsg, 'error');
+        addToast(errorMsg, 'error');
         throw agencyError;
       }
 
@@ -81,7 +81,7 @@ export default function Welcome() {
       }
 
       console.log('✅ Agency created:', agency.id);
-      showToast('Agence créée avec succès', 'success');
+      addToast('Agence créée avec succès', 'success');
 
       console.log('📝 Step 2: Updating user profile...');
       const { error: profileError } = await supabase
@@ -96,7 +96,7 @@ export default function Welcome() {
         console.error('❌ Profile update error:', profileError);
         const errorMsg = `Erreur mise à jour profil: ${profileError.message}`;
         alert(errorMsg);
-        showToast(errorMsg, 'error');
+        addToast(errorMsg, 'error');
         throw profileError;
       }
 
@@ -119,7 +119,7 @@ export default function Welcome() {
         console.error('❌ Settings creation error:', settingsError);
         const errorMsg = `Erreur création settings: ${settingsError.message}`;
         alert(errorMsg);
-        showToast(errorMsg, 'error');
+        addToast(errorMsg, 'error');
         throw settingsError;
       }
 
@@ -139,14 +139,14 @@ export default function Welcome() {
         console.error('❌ Subscription creation error:', subscriptionError);
         const errorMsg = `Erreur création subscription: ${subscriptionError.message}`;
         alert(errorMsg);
-        showToast(errorMsg, 'error');
+        addToast(errorMsg, 'error');
         throw subscriptionError;
       }
 
       console.log('✅ Subscription created');
       console.log('🎉 All setup complete!');
 
-      showToast('Compte créé avec succès ! Bienvenue ! 🎉', 'success');
+      addToast('Compte créé avec succès ! Bienvenue ! 🎉', 'success');
 
       console.log('📝 Step 5: Reloading profile to get updated agency_id...');
       const updatedProfile = await reloadUserProfile();
@@ -172,7 +172,7 @@ export default function Welcome() {
 
       const userMessage = error.message || 'Une erreur est survenue lors de la création de votre compte';
       alert(`ERREUR: ${userMessage}`);
-      showToast(userMessage, 'error');
+      addToast(userMessage, 'error');
     } finally {
       console.log('🔄 Setting loading to false');
       setLoading(false);

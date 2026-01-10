@@ -53,23 +53,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('Error loading profile:', error);
-        throw error;
+        setProfile(null);
+        setLoading(false);
+        return;
       }
 
       if (!data) {
-        console.warn('No profile found for user, will retry...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const { data: retryData } = await supabase
+        console.warn('No profile found for user, retrying...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const { data: retryData, error: retryError } = await supabase
           .from('user_profiles')
           .select('*')
           .eq('id', userId)
           .maybeSingle();
-        setProfile(retryData);
+
+        if (retryError) {
+          console.error('Retry error loading profile:', retryError);
+          setProfile(null);
+        } else if (!retryData) {
+          console.error('Profile still not found after retry. User may need to complete registration.');
+          setProfile(null);
+        } else {
+          setProfile(retryData);
+        }
       } else {
         setProfile(data);
       }
     } catch (error) {
-      console.error('Error loading profile:', error);
+      console.error('Unexpected error loading profile:', error);
       setProfile(null);
     } finally {
       setLoading(false);
@@ -82,23 +94,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, profileData: Partial<UserProfile>) => {
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          nom: profileData.nom || '',
+          prenom: profileData.prenom || '',
+          role: profileData.role || 'agent',
+        }
+      }
+    });
     if (authError) throw authError;
     if (!authData.user) throw new Error('User creation failed');
 
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
     const { data: newProfile, error: profileError } = await supabase
       .from('user_profiles')
-      .insert({
-        id: authData.user.id,
-        email,
-        ...profileData,
-      })
       .select()
-      .single();
+      .eq('id', authData.user.id)
+      .maybeSingle();
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
+    }
 
-    setProfile(newProfile);
+    if (newProfile) {
+      setProfile(newProfile);
+    }
     setLoading(false);
   };
 

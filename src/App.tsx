@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Auth } from './pages/Auth';
 import { Sidebar } from './components/layout/Sidebar';
 import { TrialBanner } from './components/ui/TrialBanner';
+import { supabase } from './lib/supabase';
 import Welcome from './pages/Welcome';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -40,10 +41,24 @@ function AppContent() {
 
     if (!profile) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
+            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 p-4">
+                <div className="text-center max-w-md bg-white rounded-2xl shadow-xl p-8">
                     <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-orange-200 border-t-orange-600 mb-4"></div>
-                    <p className="text-lg text-slate-600">Chargement de votre profil...</p>
+                    <p className="text-lg text-slate-900 font-semibold mb-2">Chargement de votre profil...</p>
+                    <p className="text-sm text-slate-600 mb-6">Cela peut prendre quelques secondes</p>
+                    <button
+                        onClick={async () => {
+                            try {
+                                await supabase.auth.signOut();
+                                window.location.reload();
+                            } catch (error) {
+                                console.error('Error signing out:', error);
+                            }
+                        }}
+                        className="text-sm text-orange-600 hover:text-orange-700 underline"
+                    >
+                        Problème de connexion ? Déconnectez-vous
+                    </button>
                 </div>
             </div>
         );

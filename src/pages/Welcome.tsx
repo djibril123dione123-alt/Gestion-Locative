@@ -25,9 +25,20 @@ export default function Welcome() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    console.log('🎯 Button clicked - Form submitted!');
+    console.log('📊 Current state:', {
+      accountType,
+      hasUser: !!user,
+      loading,
+      formData
+    });
+
     if (!accountType || !user) {
+      const errorMsg = 'Données manquantes pour la création du compte';
       console.error('❌ Missing required data:', { accountType, user: !!user });
-      showToast('Données manquantes', 'error');
+      alert(errorMsg);
+      showToast(errorMsg, 'error');
       return;
     }
 
@@ -56,7 +67,17 @@ export default function Welcome() {
 
       if (agencyError) {
         console.error('❌ Agency creation error:', agencyError);
+        const errorMsg = `Erreur de création d'agence: ${agencyError.message}`;
+        alert(errorMsg);
+        showToast(errorMsg, 'error');
         throw agencyError;
+      }
+
+      if (!agency) {
+        const errorMsg = 'Agence non créée - aucune donnée retournée';
+        console.error('❌', errorMsg);
+        alert(errorMsg);
+        throw new Error(errorMsg);
       }
 
       console.log('✅ Agency created:', agency.id);
@@ -73,6 +94,9 @@ export default function Welcome() {
 
       if (profileError) {
         console.error('❌ Profile update error:', profileError);
+        const errorMsg = `Erreur mise à jour profil: ${profileError.message}`;
+        alert(errorMsg);
+        showToast(errorMsg, 'error');
         throw profileError;
       }
 
@@ -93,6 +117,9 @@ export default function Welcome() {
 
       if (settingsError) {
         console.error('❌ Settings creation error:', settingsError);
+        const errorMsg = `Erreur création settings: ${settingsError.message}`;
+        alert(errorMsg);
+        showToast(errorMsg, 'error');
         throw settingsError;
       }
 
@@ -110,6 +137,9 @@ export default function Welcome() {
 
       if (subscriptionError) {
         console.error('❌ Subscription creation error:', subscriptionError);
+        const errorMsg = `Erreur création subscription: ${subscriptionError.message}`;
+        alert(errorMsg);
+        showToast(errorMsg, 'error');
         throw subscriptionError;
       }
 
@@ -131,9 +161,20 @@ export default function Welcome() {
         window.location.href = '/';
       }
     } catch (error: any) {
-      console.error('❌ Error creating agency:', error);
-      showToast(error.message || 'Une erreur est survenue lors de la création de votre compte', 'error');
+      console.error('❌ CRITICAL ERROR in handleSubmit:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        full: error
+      });
+
+      const userMessage = error.message || 'Une erreur est survenue lors de la création de votre compte';
+      alert(`ERREUR: ${userMessage}`);
+      showToast(userMessage, 'error');
     } finally {
+      console.log('🔄 Setting loading to false');
       setLoading(false);
     }
   };

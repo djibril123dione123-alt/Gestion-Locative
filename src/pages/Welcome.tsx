@@ -3,13 +3,14 @@ import { Building2, User, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-rea
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
+import { ToastContainer } from '../components/ui/Toast';
 import { reloadUserProfile } from '../lib/agencyHelper';
 
 type AccountType = 'agency' | 'bailleur';
 
 export default function Welcome() {
   const { user } = useAuth();
-  const { showToast } = useToast();
+  const { showToast, toasts, removeToast } = useToast();
   const [step, setStep] = useState(0);
   const [accountType, setAccountType] = useState<AccountType | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,16 +54,12 @@ export default function Welcome() {
         .single();
 
       if (agencyError) {
-        showToast(`Erreur de création d'agence: ${agencyError.message}`, 'error');
-        throw agencyError;
+        throw new Error(`Impossible de créer votre compte : ${agencyError.message}`);
       }
 
       if (!agency) {
-        showToast('Agence non créée - aucune donnée retournée', 'error');
-        throw new Error('Agence non créée');
+        throw new Error('Une erreur est survenue lors de la création de votre compte');
       }
-
-      showToast('Agence créée avec succès', 'success');
 
       const { error: profileError } = await supabase
         .from('user_profiles')
@@ -73,8 +70,7 @@ export default function Welcome() {
         .eq('id', user.id);
 
       if (profileError) {
-        showToast(`Erreur mise à jour profil: ${profileError.message}`, 'error');
-        throw profileError;
+        throw new Error(`Erreur lors de la configuration de votre profil : ${profileError.message}`);
       }
 
       const { error: settingsError } = await supabase
@@ -90,8 +86,7 @@ export default function Welcome() {
         });
 
       if (settingsError) {
-        showToast(`Erreur création settings: ${settingsError.message}`, 'error');
-        throw settingsError;
+        throw new Error(`Erreur lors de la configuration de votre compte : ${settingsError.message}`);
       }
 
       const { error: subscriptionError } = await supabase
@@ -104,11 +99,10 @@ export default function Welcome() {
         });
 
       if (subscriptionError) {
-        showToast(`Erreur création subscription: ${subscriptionError.message}`, 'error');
-        throw subscriptionError;
+        throw new Error(`Erreur lors de l'activation de votre essai gratuit : ${subscriptionError.message}`);
       }
 
-      showToast('Compte créé avec succès ! Bienvenue !', 'success');
+      showToast('Compte créé avec succès ! Redirection en cours...', 'success');
 
       const updatedProfile = await reloadUserProfile();
 
@@ -120,8 +114,9 @@ export default function Welcome() {
         window.location.href = '/';
       }
     } catch (error: any) {
-      const userMessage = error.message || 'Une erreur est survenue lors de la création de votre compte';
+      const userMessage = error.message || 'Une erreur inattendue est survenue. Veuillez réessayer ou contacter le support.';
       showToast(userMessage, 'error');
+      console.error('Erreur création compte:', error);
     } finally {
       setLoading(false);
     }
@@ -389,8 +384,11 @@ export default function Welcome() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4">
-      {renderStepContent()}
-    </div>
+    <>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4">
+        {renderStepContent()}
+      </div>
+    </>
   );
 }

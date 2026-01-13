@@ -35,6 +35,12 @@ export default function Welcome() {
     setLoading(true);
 
     try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError || !session) {
+        throw new Error('Votre session a expiré. Veuillez vous reconnecter.');
+      }
+
       const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
       const { data: agency, error: agencyError } = await supabase

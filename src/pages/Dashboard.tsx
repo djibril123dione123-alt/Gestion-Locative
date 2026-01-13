@@ -309,7 +309,7 @@ const formatCurrency = (amount: number) => {
           delay="0"
         />
         <StatCard
-          title="Produits totales"
+          title="Unités totales"
           value={stats.totalUnites}
           subtitle={`${stats.unitesLibres} libres`}
           icon={DoorOpen}
@@ -374,7 +374,7 @@ const formatCurrency = (amount: number) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
-          <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-4">Occupation des produits</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-4">Occupation des unités</h2>
           <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
             <PieChart>
               <Pie
@@ -401,8 +401,8 @@ const formatCurrency = (amount: number) => {
           <div className="space-y-4">
             <StatRow label="Bailleurs enregistrés" value={stats.totalBailleurs} />
             <StatRow label="Immeubles gérés" value={stats.totalImmeubles} />
-            <StatRow label="Produits disponibles" value={stats.unitesLibres} />
-            <StatRow label="Produits louées" value={stats.unitesLouees} />
+            <StatRow label="Unités disponibles" value={stats.unitesLibres} />
+            <StatRow label="Unités louées" value={stats.unitesLouees} />
             <StatRow label="Locataires actifs" value={stats.totalLocataires} />
             <StatRow label="Contrats en cours" value={stats.contratsActifs} />
           </div>

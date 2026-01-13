@@ -28,11 +28,9 @@ function AppContent() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [showWelcomeAnyway, setShowWelcomeAnyway] = useState(false);
 
-    // After 5 seconds of loading without profile, show Welcome page anyway
     React.useEffect(() => {
         if (!loading && user && !profile) {
             const timer = setTimeout(() => {
-                console.log('⏰ Profile loading timeout - showing Welcome page');
                 setShowWelcomeAnyway(true);
             }, 5000);
             return () => clearTimeout(timer);
@@ -68,7 +66,7 @@ function AppContent() {
                                 await supabase.auth.signOut();
                                 window.location.reload();
                             } catch (error) {
-                                console.error('Error signing out:', error);
+                                // Erreur silencieuse
                             }
                         }}
                         className="text-sm text-orange-600 hover:text-orange-700 underline"

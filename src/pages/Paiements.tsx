@@ -1,13 +1,14 @@
-// Imports de base, hooks, utilitaires Supabase, et composants UI
-import React, { useEffect, useState } from 'react'; // [3, 4]
-import { useAuth } from '../contexts/AuthContext'; // [NEW] Multi-tenant support
-import { supabase } from '../lib/supabase'; // [3, 4]
-import { Modal } from '../components/ui/Modal'; // [3, 4]
-import { Table } from '../components/ui/Table'; // [3, 4]
-import { Plus, Search, Download } from 'lucide-react'; // Ajout de Download pour l'export [4]
-import jsPDF from 'jspdf'; // [3, 4]
-import 'jspdf-autotable'; // [3, 4]
-import { generatePaiementFacturePDF } from '../lib/pdf'; // [3, 4]
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import { Modal } from '../components/ui/Modal';
+import { Table } from '../components/ui/Table';
+import { ToastContainer } from '../components/ui/Toast';
+import { Plus, Search, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { generatePaiementFacturePDF } from '../lib/pdf';
+import { useToast } from '../hooks/useToast';
 
 // Déclaration des modules pour jsPDF (nécessaire pour autoTable) [3, 4]
 declare module 'jspdf' {
@@ -17,17 +18,16 @@ declare module 'jspdf' {
 }
 
 export function Paiements() {
-    // Multi-tenant context [NEW]
     const { profile } = useAuth();
+    const { success, error: showError, toasts, removeToast } = useToast();
 
-    // États principaux des données et de l'interface [2-6]
-    const [paiements, setPaiements] = useState([]); // [3, 4]
-    const [filtered, setFiltered] = useState([]); // [5, 6]
-    const [contrats, setContrats] = useState([]); // [5, 6]
-    const [loading, setLoading] = useState(true); // [5, 6]
-    const [isModalOpen, setIsModalOpen] = useState(false); // [5, 6]
-    const [searchTerm, setSearchTerm] = useState(''); // [5, 6]
-    const [editingPaiement, setEditingPaiement] = useState(null); // Permet la modification [2, 5]
+    const [paiements, setPaiements] = useState([]);
+    const [filtered, setFiltered] = useState([]);
+    const [contrats, setContrats] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [editingPaiement, setEditingPaiement] = useState(null);
 
     // État du formulaire [5-7]
     const initialFormData = {
@@ -90,7 +90,7 @@ export function Paiements() {
             setFiltered(paiementsRes.data || []);
             setContrats(contratsRes.data || []);
         } catch (error) {
-            console.error('Erreur chargement données :', error);
+            showError('Impossible de charger les paiements');
         } finally {
             setLoading(false);
         }
@@ -185,39 +185,34 @@ export function Paiements() {
             if (error) throw error;
 
             const message = editingPaiement
-                ? '✅ Paiement modifié avec succès !'
-                : '✅ Paiement enregistré avec succès !'; // Messages unifiés [21, 23]
-            alert(message);
+                ? 'Paiement modifié avec succès'
+                : 'Paiement enregistré avec succès';
+            success(message);
             setEditingPaiement(null);
             closeModal();
             loadData();
         } catch (error: any) {
-            console.error('Erreur :', error.message);
-            alert(`Erreur : ${error.message}`); // [18, 24]
+            showError(error.message || 'Une erreur est survenue lors de l\'enregistrement du paiement');
         }
     };
 
-    // Suppression d'un paiement (avec synchronisation des revenus) [11, 24, 25]
     const handleDelete = async (paiement: any) => {
-        // Multi-tenant guard [NEW]
         if (!profile?.agency_id) return;
 
-        if (!confirm('Êtes-vous sûr de vouloir supprimer ce paiement ?')) return; // Confirmation robuste [25]
+        if (!confirm('Êtes-vous sûr de vouloir supprimer ce paiement ?')) return;
 
         try {
-            const { error } = await supabase.from('paiements').delete().eq('id', paiement.id); // [11, 24]
+            const { error } = await supabase.from('paiements').delete().eq('id', paiement.id);
             if (error) throw error;
 
-            // Supprimer l'entrée correspondante dans 'revenus' si le paiement était 'payé' [11, 24, 25]
             if (paiement.statut === 'paye') {
                 await supabase.from('revenus').delete().eq('paiement_id', paiement.id);
             }
 
-            alert('✅ Paiement supprimé avec succès !'); // [25]
+            success('Paiement supprimé avec succès');
             loadData();
         } catch (error: any) {
-            console.error('Erreur suppression paiement :', error.message);
-            alert(`Erreur : ${error.message}`);
+            showError(error.message || 'Impossible de supprimer ce paiement');
         }
     };
 
@@ -253,13 +248,13 @@ export function Paiements() {
                 const { data: u } = await supabase
                     .from('unites')
                     .select('immeubles(adresse)')
-                    .eq('agency_id', profile.agency_id) // [NEW] Multi-tenant filter
+                    .eq('agency_id', profile.agency_id)
                     .eq('id', uniteId)
                     .maybeSingle();
 
                 if (u?.immeubles?.adresse) adresse = u.immeubles.adresse;
             } catch (e) {
-                console.warn('Adresse non récupérée (fallback "—"):', e); // [28]
+                // Adresse non disponible, utilisation du fallback
             }
 
             // 3. Préparer le payload et générer le PDF [28]
@@ -275,10 +270,10 @@ export function Paiements() {
             };
 
             await generatePaiementFacturePDF(payload);
+            success('Facture générée avec succès');
 
         } catch (err: any) {
-            console.error('Facture PDF:', err);
-            alert(`Erreur lors de la génération de la facture PDF: ${err?.message || err}`); // [9]
+            showError(err?.message || 'Impossible de générer la facture PDF');
         }
     };
     
@@ -388,8 +383,10 @@ export function Paiements() {
         );
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
-            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+        <>
+            <ToastContainer toasts={toasts} onRemove={removeToast} />
+            <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
+                <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800">Paiements</h1>
                 <div className="flex gap-4">
                     {/* Bouton Export PDF (optionnel / commenté dans les sources, mais inclus si souhaité) [35] */}
@@ -436,14 +433,21 @@ export function Paiements() {
                         <select
                             required
                             value={formData.contrat_id}
-                            onChange={(e) => setFormData({ ...formData, contrat_id: e.target.value })}
-                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" // [33, 36]
+                            onChange={(e) => {
+                                const selectedContrat = contrats.find((c: any) => c.id === e.target.value);
+                                setFormData({
+                                    ...formData,
+                                    contrat_id: e.target.value,
+                                    montant_total: selectedContrat?.loyer_mensuel?.toString() || ''
+                                });
+                            }}
+                            className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                         >
-                            <option value="">Sélectionner</option> {/* [33, 36] */}
+                            <option value="">Sélectionner un contrat</option>
                             {contrats.map((c: any) => (
                                 <option key={c.id} value={c.id}>
                                     {c.locataires?.prenom} {c.locataires?.nom} - {c.unites?.nom}
-                                </option> // [33, 36]
+                                </option>
                             ))}
                         </select>
                     </div>
@@ -535,6 +539,7 @@ export function Paiements() {
                     </div>
                 </form>
             </Modal>
-        </div>
+            </div>
+        </>
     );
 }

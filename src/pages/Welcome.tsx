@@ -26,29 +26,16 @@ export default function Welcome() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log('🎯 Button clicked - Form submitted!');
-    console.log('📊 Current state:', {
-      accountType,
-      hasUser: !!user,
-      loading,
-      formData
-    });
-
     if (!accountType || !user) {
-      const errorMsg = 'Données manquantes pour la création du compte';
-      console.error('❌ Missing required data:', { accountType, user: !!user });
-      alert(errorMsg);
-      showToast(errorMsg, 'error');
+      showToast('Données manquantes pour la création du compte', 'error');
       return;
     }
 
     setLoading(true);
-    console.log('🚀 Starting agency creation...', { userId: user.id, accountType });
 
     try {
       const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-      console.log('📝 Step 1: Creating agency...');
       const { data: agency, error: agencyError } = await supabase
         .from('agencies')
         .insert({
@@ -66,24 +53,17 @@ export default function Welcome() {
         .single();
 
       if (agencyError) {
-        console.error('❌ Agency creation error:', agencyError);
-        const errorMsg = `Erreur de création d'agence: ${agencyError.message}`;
-        alert(errorMsg);
-        showToast(errorMsg, 'error');
+        showToast(`Erreur de création d'agence: ${agencyError.message}`, 'error');
         throw agencyError;
       }
 
       if (!agency) {
-        const errorMsg = 'Agence non créée - aucune donnée retournée';
-        console.error('❌', errorMsg);
-        alert(errorMsg);
-        throw new Error(errorMsg);
+        showToast('Agence non créée - aucune donnée retournée', 'error');
+        throw new Error('Agence non créée');
       }
 
-      console.log('✅ Agency created:', agency.id);
       showToast('Agence créée avec succès', 'success');
 
-      console.log('📝 Step 2: Updating user profile...');
       const { error: profileError } = await supabase
         .from('user_profiles')
         .update({
@@ -93,16 +73,10 @@ export default function Welcome() {
         .eq('id', user.id);
 
       if (profileError) {
-        console.error('❌ Profile update error:', profileError);
-        const errorMsg = `Erreur mise à jour profil: ${profileError.message}`;
-        alert(errorMsg);
-        showToast(errorMsg, 'error');
+        showToast(`Erreur mise à jour profil: ${profileError.message}`, 'error');
         throw profileError;
       }
 
-      console.log('✅ Profile updated with agency_id');
-
-      console.log('📝 Step 3: Creating agency settings...');
       const { error: settingsError } = await supabase
         .from('agency_settings')
         .insert({
@@ -116,16 +90,10 @@ export default function Welcome() {
         });
 
       if (settingsError) {
-        console.error('❌ Settings creation error:', settingsError);
-        const errorMsg = `Erreur création settings: ${settingsError.message}`;
-        alert(errorMsg);
-        showToast(errorMsg, 'error');
+        showToast(`Erreur création settings: ${settingsError.message}`, 'error');
         throw settingsError;
       }
 
-      console.log('✅ Agency settings created');
-
-      console.log('📝 Step 4: Creating subscription...');
       const { error: subscriptionError } = await supabase
         .from('subscriptions')
         .insert({
@@ -136,45 +104,25 @@ export default function Welcome() {
         });
 
       if (subscriptionError) {
-        console.error('❌ Subscription creation error:', subscriptionError);
-        const errorMsg = `Erreur création subscription: ${subscriptionError.message}`;
-        alert(errorMsg);
-        showToast(errorMsg, 'error');
+        showToast(`Erreur création subscription: ${subscriptionError.message}`, 'error');
         throw subscriptionError;
       }
 
-      console.log('✅ Subscription created');
-      console.log('🎉 All setup complete!');
+      showToast('Compte créé avec succès ! Bienvenue !', 'success');
 
-      showToast('Compte créé avec succès ! Bienvenue ! 🎉', 'success');
-
-      console.log('📝 Step 5: Reloading profile to get updated agency_id...');
       const updatedProfile = await reloadUserProfile();
 
       if (updatedProfile && updatedProfile.agency_id) {
-        console.log('✅ Profile reloaded with agency_id, redirecting to dashboard...');
         await new Promise(resolve => setTimeout(resolve, 500));
         window.location.href = '/';
       } else {
-        console.warn('⚠️ Profile reload incomplete, forcing refresh...');
         await new Promise(resolve => setTimeout(resolve, 1000));
         window.location.href = '/';
       }
     } catch (error: any) {
-      console.error('❌ CRITICAL ERROR in handleSubmit:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-        full: error
-      });
-
       const userMessage = error.message || 'Une erreur est survenue lors de la création de votre compte';
-      alert(`ERREUR: ${userMessage}`);
       showToast(userMessage, 'error');
     } finally {
-      console.log('🔄 Setting loading to false');
       setLoading(false);
     }
   };
@@ -183,6 +131,7 @@ export default function Welcome() {
     if (step === 0 && !accountType) return;
     if (step === 1 && !formData.name.trim()) return;
     if (step === 2 && !formData.phone.trim()) return;
+    if (step >= 3) return;
     setStep(step + 1);
   };
 
@@ -288,7 +237,7 @@ export default function Welcome() {
                   <ArrowLeft className="w-5 h-5 mr-2" />
                   Retour
                 </button>
-                <span className="text-sm text-gray-500">Étape 1 sur 6</span>
+                <span className="text-sm text-gray-500">Étape 1 sur 3</span>
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
                 {accountType === 'agency' ? 'Nom de votre agence' : 'Votre nom complet'}
@@ -335,7 +284,7 @@ export default function Welcome() {
                   <ArrowLeft className="w-5 h-5 mr-2" />
                   Retour
                 </button>
-                <span className="text-sm text-gray-500">Étape 2 sur 6</span>
+                <span className="text-sm text-gray-500">Étape 2 sur 3</span>
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
                 Numéro de téléphone
@@ -380,172 +329,19 @@ export default function Welcome() {
                   <ArrowLeft className="w-5 h-5 mr-2" />
                   Retour
                 </button>
-                <span className="text-sm text-gray-500">Étape 3 sur 6</span>
+                <span className="text-sm text-gray-500">Étape 3 sur 3</span>
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Votre adresse
+                Prêt à commencer !
               </h2>
               <p className="text-gray-600">
-                Adresse de votre {accountType === 'agency' ? 'agence' : 'domicile'} (optionnel)
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <input
-                type="text"
-                autoFocus
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
-                placeholder="Ex: Mermoz, Dakar, Sénégal"
-                onKeyPress={(e) => e.key === 'Enter' && nextStep()}
-              />
-
-              <button
-                onClick={nextStep}
-                className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold flex items-center justify-center"
-              >
-                Continuer
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </button>
-            </div>
-          </div>
-        );
-
-      case 4:
-        return (
-          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <button
-                  onClick={prevStep}
-                  className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 mr-2" />
-                  Retour
-                </button>
-                <span className="text-sm text-gray-500">Étape 4 sur 6</span>
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Numéro NINEA
-              </h2>
-              <p className="text-gray-600">
-                Numéro d'identification fiscale (optionnel, vous pourrez l'ajouter plus tard)
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              <input
-                type="text"
-                autoFocus
-                value={formData.ninea}
-                onChange={(e) => setFormData({ ...formData, ninea: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
-                placeholder="Ex: 0123456789"
-                onKeyPress={(e) => e.key === 'Enter' && nextStep()}
-              />
-
-              <button
-                onClick={nextStep}
-                className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-semibold flex items-center justify-center"
-              >
-                Continuer
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </button>
-            </div>
-          </div>
-        );
-
-      case 5:
-        return (
-          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <button
-                  onClick={prevStep}
-                  className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 mr-2" />
-                  Retour
-                </button>
-                <span className="text-sm text-gray-500">Étape 5 sur 6</span>
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Combien d'immeubles gérez-vous ?
-              </h2>
-              <p className="text-gray-600">
-                Cela nous aide à personnaliser votre expérience
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              {['1-5', '6-20', '21-50', '50+'].map((range) => (
-                <button
-                  key={range}
-                  onClick={() => {
-                    setFormData({ ...formData, nbImmeubles: range });
-                    nextStep();
-                  }}
-                  className={`w-full px-6 py-4 border-2 rounded-lg transition-all text-left font-medium ${
-                    formData.nbImmeubles === range
-                      ? 'border-orange-500 bg-orange-50 text-orange-700'
-                      : 'border-gray-200 hover:border-orange-300 text-gray-700'
-                  }`}
-                >
-                  {range} immeubles
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-
-      case 6:
-        return (
-          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <button
-                  onClick={prevStep}
-                  className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
-                >
-                  <ArrowLeft className="w-5 h-5 mr-2" />
-                  Retour
-                </button>
-                <span className="text-sm text-gray-500">Étape 6 sur 6</span>
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                Devise préférée
-              </h2>
-              <p className="text-gray-600">
-                Choisissez la devise pour vos loyers et rapports
+                Profitez de 30 jours d'essai gratuit du plan Pro
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-3">
-                {[
-                  { code: 'XOF', name: 'Franc CFA (XOF)', flag: '🇸🇳' },
-                  { code: 'EUR', name: 'Euro (EUR)', flag: '🇪🇺' },
-                  { code: 'USD', name: 'Dollar US (USD)', flag: '🇺🇸' },
-                ].map((currency) => (
-                  <button
-                    key={currency.code}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, devise: currency.code })}
-                    className={`w-full px-6 py-4 border-2 rounded-lg transition-all text-left font-medium flex items-center ${
-                      formData.devise === currency.code
-                        ? 'border-orange-500 bg-orange-50 text-orange-700'
-                        : 'border-gray-200 hover:border-orange-300 text-gray-700'
-                    }`}
-                  >
-                    <span className="text-2xl mr-3">{currency.flag}</span>
-                    {currency.name}
-                  </button>
-                ))}
-              </div>
-
               <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-6 border-2 border-orange-200">
-                <h3 className="font-bold text-orange-900 mb-3 text-lg">🎉 Plan Essai Pro Gratuit</h3>
+                <h3 className="font-bold text-orange-900 mb-3 text-lg">Plan Essai Pro Gratuit</h3>
                 <ul className="space-y-2 text-sm text-orange-800">
                   <li className="flex items-center">
                     <CheckCircle2 className="w-4 h-4 mr-2 text-orange-600" />

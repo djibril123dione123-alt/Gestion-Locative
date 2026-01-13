@@ -27,6 +27,7 @@ import {
 } from 'recharts';
 import { QuickStart } from '../components/ui/QuickStart';
 import { EmptyState } from '../components/ui/EmptyState';
+import { SetupWizard } from '../components/ui/SetupWizard';
 
 interface DashboardStats {
   totalBailleurs: number;
@@ -63,6 +64,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     if (!profile?.agency_id) {
@@ -228,15 +230,43 @@ const formatCurrency = (amount: number) => {
 
   if (isNewUser) {
     return (
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 animate-fadeIn">
-        <div className="animate-slideInLeft">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
-            Bienvenue sur Gestion Locative
-          </h1>
-          <p className="text-slate-600 text-base lg:text-lg">Commencez par configurer votre plateforme en quelques étapes simples</p>
-        </div>
+      <>
+        {showWizard && (
+          <SetupWizard
+            onClose={() => setShowWizard(false)}
+            onComplete={() => {
+              setShowWizard(false);
+              loadDashboardData();
+            }}
+          />
+        )}
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 animate-fadeIn">
+          <div className="animate-slideInLeft">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
+              Bienvenue sur Gestion Locative
+            </h1>
+            <p className="text-slate-600 text-base lg:text-lg">Commencez par configurer votre plateforme en quelques étapes simples</p>
+          </div>
 
-        <QuickStart onNavigate={onNavigate} />
+          <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200 animate-slideInUp">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-orange-900 mb-2">Configuration guidée recommandée</h3>
+                <p className="text-orange-800 text-sm mb-4">
+                  Laissez-vous guider étape par étape pour créer votre premier flux complet en quelques minutes.
+                </p>
+                <button
+                  onClick={() => setShowWizard(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all font-semibold shadow-lg hover:shadow-xl flex items-center gap-2"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  Lancer la configuration guidée
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <QuickStart onNavigate={onNavigate} />
 
         <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
           <EmptyState
@@ -287,7 +317,8 @@ const formatCurrency = (amount: number) => {
             </p>
           </div>
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 

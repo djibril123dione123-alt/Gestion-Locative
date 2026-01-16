@@ -21,6 +21,7 @@ const Commissions = lazy(() => import('./pages/Commissions').then(m => ({ defaul
 const LoyersImpayes = lazy(() => import('./pages/LoyersImpayes').then(m => ({ default: m.LoyersImpayes })));
 const FiltresAvances = lazy(() => import('./pages/FiltresAvances').then(m => ({ default: m.FiltresAvances })));
 const TableauDeBordFinancierGlobal = lazy(() => import('./pages/TableauDeBordFinancierGlobal').then(m => ({ default: m.TableauDeBordFinancierGlobal })));
+const Parametres = lazy(() => import('./pages/Parametres').then(m => ({ default: m.Parametres })));
 
 function AppContent() {
     const { user, profile, loading } = useAuth();
@@ -111,6 +112,8 @@ function AppContent() {
                 return <TableauDeBordFinancierGlobal />;
             case 'filtres-avances':
                 return <FiltresAvances />;
+            case 'parametres':
+                return <Parametres />;
             default:
                 return <Dashboard />;
         }

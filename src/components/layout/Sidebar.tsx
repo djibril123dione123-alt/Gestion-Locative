@@ -17,6 +17,7 @@ import {
   TrendingDown,
   ChevronRight,
   X,
+  Settings,
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
@@ -49,6 +50,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
     { id: 'loyers-impayes', label: 'Loyers impayés', icon: AlertCircle, roles: ['admin', 'agent', 'comptable'] },
     { id: 'tableau-de-bord-financier', label: 'Rapports Financiers', icon: Calculator, roles: ['admin'] },
     { id: 'filtres-avances', label: 'Filtres avancés', icon: Filter, roles: ['admin', 'agent', 'comptable'] },
+    { id: 'parametres', label: 'Paramètres', icon: Settings, roles: ['admin'] },
   ];
 
   const filteredItems = menuItems.filter(

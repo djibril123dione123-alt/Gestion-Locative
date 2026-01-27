@@ -15,7 +15,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 
 interface AgencySettings {
-  id: string;
   agency_id: string;
   nom_agence: string;
   adresse: string;
@@ -147,17 +146,46 @@ export function Parametres() {
 
     setSaving(true);
     try {
+      const dataToSave = {
+        agency_id: profile.agency_id,
+        nom_agence: settings.nom_agence || '',
+        adresse: settings.adresse || '',
+        telephone: settings.telephone || '',
+        email: settings.email || '',
+        site_web: settings.site_web || '',
+        ninea: settings.ninea || '',
+        rc: settings.rc || '',
+        representant_nom: settings.representant_nom || '',
+        representant_fonction: settings.representant_fonction || 'Gérant',
+        manager_id_type: settings.manager_id_type || 'CNI',
+        manager_id_number: settings.manager_id_number || '',
+        city: settings.city || 'Dakar',
+        logo_url: settings.logo_url || '',
+        logo_position: settings.logo_position || 'left',
+        couleur_primaire: settings.couleur_primaire || '#F58220',
+        couleur_secondaire: settings.couleur_secondaire || '#333333',
+        mention_tribunal: settings.mention_tribunal || '',
+        mention_penalites: settings.mention_penalites || '',
+        pied_page_personnalise: settings.pied_page_personnalise || '',
+        frais_huissier: settings.frais_huissier || 37500,
+        commission_globale: settings.commission_globale || 10,
+        penalite_retard_montant: settings.penalite_retard_montant || 1000,
+        penalite_retard_delai_jours: settings.penalite_retard_delai_jours || 3,
+        devise: settings.devise || 'XOF',
+        updated_at: new Date().toISOString(),
+      };
+
       const { error } = await supabase
         .from('agency_settings')
-        .upsert({
-          ...settings,
-          agency_id: profile.agency_id,
-          updated_at: new Date().toISOString(),
-        });
+        .upsert(dataToSave);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur détaillée:', error);
+        throw error;
+      }
 
       showToast('Paramètres enregistrés avec succès', 'success');
+      await loadSettings();
     } catch (error) {
       console.error('Erreur sauvegarde:', error);
       showToast('Erreur lors de l\'enregistrement', 'error');

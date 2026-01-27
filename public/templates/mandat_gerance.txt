@@ -1,8 +1,8 @@
 Entre :
-M. {{bailleur_prenom}} {{bailleur_nom}}, carte d’identité/passeport n° {{bailleur_cni}}, (Propriétaire), domicilié à {{bailleur_adresse}}, d’une part ;
-Et la société CONFORT IMMO ARCHI, domiciliée à Ouakam cité Comico, en face de l’école 6, NINEA : 004786317 / RC : SN.DKR.2016.M.27828, représentée par M. PAPA MOUHAMADOU FALL, Chef d’agence, d’autre part.
+M. {{bailleur_prenom}} {{bailleur_nom}}, carte d'identité/passeport n° {{bailleur_cni}}, (Propriétaire), domicilié à {{bailleur_adresse}}, d'une part ;
+Et la société {{agency_name}}, domiciliée à {{agency_address}}, NINEA : {{agency_ninea}} / RC : {{agency_rc}}, représentée par M./Mme {{agency_manager_full_name}}, {{agency_manager_title}}, d'autre part.
 
-Objet du mandat : Le propriétaire confie à CONFORT IMMO ARCHI la gestion complète de son bien immobilier sis à {{bien_adresse}} composé de {{bien_composition}} dans son état actuel à la remise des clés.
+Objet du mandat : Le propriétaire confie à {{agency_name}} la gestion complète de son bien immobilier sis à {{bien_adresse}} composé de {{bien_composition}} dans son état actuel à la remise des clés.
 
 Durée : Le mandat est conclu à compter du {{date_debut}} pour une durée de 3 ans, renouvelable par tacite reconduction. Chaque partie peut y mettre fin par LRAR six (6) mois avant l’échéance.
 
@@ -10,7 +10,7 @@ Conditions principales :
 1) L’agence percevra à titre d’honoraires un taux de  {{taux_honoraires}}% des sommes mensuellement encaissées.
 2) Elle assure la perception des loyers, la rédaction des contrats, et le suivi juridique et technique des biens.
 3) Elle peut représenter le propriétaire dans toute action judiciaire ou extrajudiciaire liée à la gestion.
-4) En cas de litige, le Tribunal de commerce de Dakar est seul compétent.
+4) En cas de litige, le Tribunal de commerce de {{agency_city}} est seul compétent.
 
 Pouvoirs donnés à l’agence :
 - Louer par écrit, renouveler ou résilier les locations, dresser état des lieux, exiger les réparations locatives
@@ -23,6 +23,7 @@ Pouvoirs donnés à l’agence :
 
 Mentions supplémentaires : En cas d'assignation en expulsion d'un locataire, les frais d'huissier sont prélevés sur la caution du locataire.
 
-Fait à Dakar, le {{date_du_jour}}
-  Le Propriétaire                                                                          Le Manager CONFORT IMMO ARCHI
-    (Signature)                                                                                          (Signature et cachet)
+Fait à {{agency_city}}, le {{date_du_jour}}
+  Le Propriétaire                                                                          Le {{agency_manager_title}}
+    (Signature)                                                                            (Signature et cachet)
+                                                                                           {{agency_name}}

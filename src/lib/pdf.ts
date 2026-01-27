@@ -10,9 +10,16 @@ import { supabase } from './supabase';
  */
 interface AgencySettings {
   nom_agence: string | null;
+  adresse: string | null;
   logo_url: string | null;
   couleur_primaire: string | null;
   ninea: string | null;
+  rc: string | null;
+  representant_nom: string | null;
+  representant_fonction: string | null;
+  manager_id_type: string | null;
+  manager_id_number: string | null;
+  city: string | null;
   devise: string | null;
   pied_page_personnalise: string | null;
   signature_url: string | null;
@@ -30,19 +37,36 @@ interface AgencySettings {
  */
 async function loadAgencySettings(): Promise<AgencySettings> {
   try {
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('agency_id')
+      .eq('id', (await supabase.auth.getUser()).data.user?.id)
+      .maybeSingle();
+
+    if (!profile?.agency_id) {
+      throw new Error('Agency ID not found');
+    }
+
     const { data, error } = await supabase
       .from('agency_settings')
-      .select('nom_agence, logo_url, couleur_primaire, ninea, devise, pied_page_personnalise, signature_url, qr_code_quittances')
-      .eq('id', 'default')
+      .select('nom_agence, adresse, logo_url, couleur_primaire, ninea, rc, representant_nom, representant_fonction, manager_id_type, manager_id_number, city, devise, pied_page_personnalise, signature_url, qr_code_quittances')
+      .eq('agency_id', profile.agency_id)
       .maybeSingle();
 
     if (error) throw error;
 
     return data || {
       nom_agence: 'Gestion Locative',
+      adresse: null,
       logo_url: null,
       couleur_primaire: '#0066CC',
       ninea: null,
+      rc: null,
+      representant_nom: null,
+      representant_fonction: null,
+      manager_id_type: 'CNI',
+      manager_id_number: null,
+      city: 'Dakar',
       devise: 'XOF',
       pied_page_personnalise: null,
       signature_url: null,
@@ -52,9 +76,16 @@ async function loadAgencySettings(): Promise<AgencySettings> {
     console.error('Erreur chargement paramètres agence:', error);
     return {
       nom_agence: 'Gestion Locative',
+      adresse: null,
       logo_url: null,
       couleur_primaire: '#0066CC',
       ninea: null,
+      rc: null,
+      representant_nom: null,
+      representant_fonction: null,
+      manager_id_type: 'CNI',
+      manager_id_number: null,
+      city: 'Dakar',
       devise: 'XOF',
       pied_page_personnalise: null,
       signature_url: null,
@@ -221,6 +252,15 @@ export async function generateContratPDF(contrat: any) {
 
     // Remplacement des variables dans le template et récupération des valeurs dynamiques pour le gras
     const dynamicVars: Record<string, string> = {
+      agency_name: settings.nom_agence || 'Gestion Locative',
+      agency_address: settings.adresse || '',
+      agency_ninea: settings.ninea || '',
+      agency_rc: settings.rc || '',
+      agency_manager_full_name: settings.representant_nom || 'Le Représentant',
+      agency_manager_title: settings.representant_fonction || 'Gérant',
+      agency_manager_id_type: settings.manager_id_type || 'CNI',
+      agency_manager_id_number: settings.manager_id_number || '',
+      agency_city: settings.city || 'Dakar',
       bailleur_prenom: bailleur.prenom || '',
       bailleur_nom: bailleur.nom || '',
       locataire_prenom: locataire.prenom || '',
@@ -464,11 +504,15 @@ export async function generateMandatBailleurPDF(bailleur: any) {
 
     // Champs dynamiques incluant les paramètres de l'agence
     const vars: Record<string, string> = {
-      nom_agence: settings.nom_agence || 'Gestion Locative',
-      agence_ninea: settings.ninea || '',
-      agence_adresse: 'Dakar',
-      agence_directeur: 'Le Directeur',
-      lieu: 'Dakar',
+      agency_name: settings.nom_agence || 'Gestion Locative',
+      agency_address: settings.adresse || '',
+      agency_ninea: settings.ninea || '',
+      agency_rc: settings.rc || '',
+      agency_manager_full_name: settings.representant_nom || 'Le Représentant',
+      agency_manager_title: settings.representant_fonction || 'Gérant',
+      agency_manager_id_type: settings.manager_id_type || 'CNI',
+      agency_manager_id_number: settings.manager_id_number || '',
+      agency_city: settings.city || 'Dakar',
       bailleur_prenom: bailleur.prenom || '',
       bailleur_nom: bailleur.nom || '',
       bailleur_cni: bailleur.piece_identite || '',

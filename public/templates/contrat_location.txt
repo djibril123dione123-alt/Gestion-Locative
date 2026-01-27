@@ -1,7 +1,7 @@
 
 Entre les soussignés :
-M. {{bailleur_prenom}} {{bailleur_nom}} (Propriétaire), représenté(e) par M. PAPA MOUHAMADOU FALL CNI n° 1761198600458, mandataire, d’une part;
-Et M. {{locataire_prenom}} {{locataire_nom}} (Locataire), Pièce d’identité (CNI) ou Passeport n° {{locataire_cni}}, demeurant à {{locataire_adresse}}, d’autre part.
+M. {{bailleur_prenom}} {{bailleur_nom}} (Propriétaire), représenté(e) par M./Mme {{agency_manager_full_name}}, {{agency_manager_title}} de {{agency_name}}, {{agency_manager_id_type}} n° {{agency_manager_id_number}}, mandataire, d'une part;
+Et M. {{locataire_prenom}} {{locataire_nom}} (Locataire), Pièce d'identité (CNI) ou Passeport n° {{locataire_cni}}, demeurant à {{locataire_adresse}}, d'autre part.
 
 Il a été arrêté et convenu ce qui suit :
 Le bailleur louant le local ci-après désigné au locataire qui les accepte aux conditions suivantes.
@@ -58,7 +58,7 @@ seront appliquées pendant 03 jours. Passé ce délai, la procédure judiciaire 
 Il est expressément convenu qu’en cas de litige, les frais d’huissier, d’expertises et d’honoraires
 d’avocat, qui auraient été engagés par le bailleur et ce sur pièces justificatives, seront remboursés par
 le locataire.
-Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.
+Avec attribution exclusive de juridiction au juge des référés du Tribunal de {{agency_city}}.
 
 ARTICLE 9 : ÉTAT DES LIEUX
 À défaut d'état des lieux contradictoire, la partie la plus diligente peut le faire dresser par huissier.
@@ -75,9 +75,10 @@ En cas de non-paiement du loyer dans les délais impartis,une somme de
 37 500 FCFA est prélevée sur la caution pour 
 les frais d'huissier afin d’assignation en expulsion, conformément à la loi sénégalaise.
 
-Fait à Dakar, le {{date_du_jour}} en deux originaux.
+Fait à {{agency_city}}, le {{date_du_jour}} en deux originaux.
 
 Le Locataire                                                                                    Le Mandataire
  (Signature)                                                                                      (Signature)
+                                                                                                 {{agency_name}}
 
 

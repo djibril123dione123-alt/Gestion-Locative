@@ -26,6 +26,9 @@ interface AgencySettings {
   rc: string;
   representant_nom: string;
   representant_fonction: string;
+  manager_id_type: string;
+  manager_id_number: string;
+  city: string;
   logo_url: string;
   logo_position: 'left' | 'center' | 'right';
   couleur_primaire: string;
@@ -56,6 +59,9 @@ export function Parametres() {
     rc: '',
     representant_nom: '',
     representant_fonction: 'Gérant',
+    manager_id_type: 'CNI',
+    manager_id_number: '',
+    city: 'Dakar',
     logo_url: '',
     logo_position: 'left',
     couleur_primaire: '#F58220',
@@ -376,6 +382,64 @@ export function Parametres() {
                     placeholder="ex: Gérant, Directeur"
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Type de pièce d'identité du représentant
+                  </label>
+                  <select
+                    value={settings.manager_id_type || 'CNI'}
+                    onChange={(e) =>
+                      setSettings({ ...settings, manager_id_type: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="CNI">CNI (Carte Nationale d'Identité)</option>
+                    <option value="Passeport">Passeport</option>
+                    <option value="Carte consulaire">Carte consulaire</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Numéro de pièce d'identité
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.manager_id_number || ''}
+                    onChange={(e) =>
+                      setSettings({ ...settings, manager_id_number: e.target.value })
+                    }
+                    placeholder="ex: 1761198600458"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Ville de l'agence
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.city || ''}
+                    onChange={(e) => setSettings({ ...settings, city: e.target.value })}
+                    placeholder="ex: Dakar, Thiès, Saint-Louis"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mt-6">
+                <div className="flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm text-orange-800">
+                    <p className="font-medium mb-1">Informations du représentant légal</p>
+                    <p className="text-orange-700">
+                      Ces informations apparaîtront dans les contrats de location et mandats de
+                      gérance. Assurez-vous qu'elles sont exactes et à jour.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

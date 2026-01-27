@@ -19,6 +19,9 @@ Nouveaux champs dans la table `agency_settings` :
 - `site_web` : Site web de l'agence
 - `representant_nom` : Nom du représentant légal
 - `representant_fonction` : Fonction (Gérant, Directeur, etc.)
+- `manager_id_type` : Type de pièce d'identité (CNI, Passeport, etc.)
+- `manager_id_number` : Numéro de la pièce d'identité du représentant
+- `city` : Ville de l'agence (défaut: Dakar)
 - `mention_tribunal` : Tribunal compétent (défaut: Tribunal de commerce de Dakar)
 - `mention_penalites` : Texte standard des pénalités de retard
 - `couleur_secondaire` : Couleur secondaire pour les documents
@@ -45,6 +48,8 @@ Trois onglets principaux :
 - NINEA (Numéro d'Identification National des Entreprises et Associations)
 - RC (Registre de Commerce)
 - Nom et fonction du représentant légal
+- Type et numéro de pièce d'identité du représentant
+- Ville de l'agence
 
 #### b) Modèles de documents
 - Tribunal compétent (utilisé dans contrats et mandats)
@@ -80,6 +85,9 @@ Trois onglets principaux :
 {{agence_rc}}
 {{agence_representant_nom}}
 {{agence_representant_fonction}}
+{{agence_manager_id_type}}
+{{agence_manager_id_number}}
+{{agence_city}}
 {{agence_mention_tribunal}}
 {{agence_mention_penalites}}
 {{agence_frais_huissier}}
@@ -114,13 +122,19 @@ Trois onglets principaux :
 
 **Variables disponibles** :
 ```typescript
-{{agence_*}} (mêmes que contrat)
+{{agence_*}} (mêmes que contrat, incluant city, manager_id_type, manager_id_number)
 {{bailleur_*}} (mêmes que contrat)
 {{bien_composition}} (ex: "2 chambres salon, cuisine, douche")
 {{mandat_date_debut}}
 {{mandat_taux_honoraires}} (pourcentage)
 {{mandat_date_du_jour}}
 ```
+
+**Améliorations apportées** :
+- ✅ Plus de valeurs en dur (PAPA MOUHAMADOU FALL, CNI fixe, etc.)
+- ✅ Ville paramétrable (Dakar, Thiès, Saint-Louis, etc.)
+- ✅ Pièce d'identité du représentant flexible (CNI, Passeport, Carte consulaire)
+- ✅ Signature avec nom de l'agence
 
 #### `src/lib/templates/helpers.ts`
 Fonctions utilitaires :

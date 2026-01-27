@@ -9,6 +9,9 @@ export interface ContratData {
     rc?: string;
     representant_nom?: string;
     representant_fonction?: string;
+    manager_id_type?: string;
+    manager_id_number?: string;
+    city?: string;
     logo_url?: string;
     couleur_primaire?: string;
     couleur_secondaire?: string;
@@ -49,16 +52,23 @@ export interface ContratData {
 export function generateContratText(data: ContratData): string {
   const representant = data.agence.representant_nom || 'Le Représentant';
   const fonction = data.agence.representant_fonction || 'Gérant';
+  const managerIdType = data.agence.manager_id_type || 'CNI';
+  const managerIdNumber = data.agence.manager_id_number || '';
+  const city = data.agence.city || 'Dakar';
   const tribunal = data.agence.mention_tribunal || 'Tribunal de commerce de Dakar';
   const penalites = data.agence.mention_penalites ||
     "À défaut de paiement d'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours), des pénalités qui s'élèvent à 1000 FCFA par jour de retard seront appliquées pendant 03 jours. Passé ce délai, la procédure judiciaire sera enclenchée.";
   const fraisHuissier = data.agence.frais_huissier || 37500;
 
+  const managerIdentity = managerIdNumber
+    ? `${managerIdType} n° ${managerIdNumber}`
+    : managerIdType;
+
   return `
 CONTRAT DE LOCATION
 
 Entre les soussignés :
-M. ${data.bailleur.prenom} ${data.bailleur.nom} (Propriétaire), représenté(e) par M. ${representant}, ${fonction} de ${data.agence.nom}, CNI n° ${data.bailleur.cni}, mandataire, d'une part;
+M. ${data.bailleur.prenom} ${data.bailleur.nom} (Propriétaire), représenté(e) par M. ${representant}, ${fonction} de ${data.agence.nom}, ${managerIdentity}, mandataire, d'une part;
 Et M./Mme ${data.locataire.prenom} ${data.locataire.nom} (Locataire), Pièce d'identité (CNI) ou Passeport n° ${data.locataire.cni}, demeurant à ${data.locataire.adresse}, d'autre part.
 
 Il a été arrêté et convenu ce qui suit :
@@ -125,10 +135,11 @@ Pour l'exécution des obligations, le bailleur fait élection de domicile en sa 
 ARTICLE 12 : IMPORTANT
 En cas de non-paiement du loyer dans les délais impartis, une somme de ${fraisHuissier.toLocaleString('fr-FR')} FCFA est prélevée sur la caution pour les frais d'huissier afin d'assignation en expulsion, conformément à la loi sénégalaise.
 
-Fait à Dakar, le ${data.contrat.date_du_jour} en deux originaux.
+Fait à ${city}, le ${data.contrat.date_du_jour} en deux originaux.
 
 Le Locataire                                                Le Mandataire
 (Signature)                                                 (Signature)
+                                                            ${data.agence.nom}
 
 
 ${data.agence.pied_page || ''}

@@ -10,6 +10,9 @@ export interface AgencySettings {
   rc?: string;
   representant_nom?: string;
   representant_fonction?: string;
+  manager_id_type?: string;
+  manager_id_number?: string;
+  city?: string;
   logo_url?: string;
   logo_position?: 'left' | 'center' | 'right';
   couleur_primaire?: string;

@@ -9,6 +9,9 @@ export interface MandatData {
     rc?: string;
     representant_nom?: string;
     representant_fonction?: string;
+    manager_id_type?: string;
+    manager_id_number?: string;
+    city?: string;
     logo_url?: string;
     couleur_primaire?: string;
     couleur_secondaire?: string;
@@ -35,6 +38,7 @@ export interface MandatData {
 export function generateMandatText(data: MandatData): string {
   const representant = data.agence.representant_nom || 'Le Représentant';
   const fonction = data.agence.representant_fonction || 'Gérant';
+  const city = data.agence.city || 'Dakar';
   const tribunal = data.agence.mention_tribunal || 'Tribunal de commerce de Dakar';
   const ninea = data.agence.ninea ? `NINEA : ${data.agence.ninea}` : '';
   const rc = data.agence.rc ? `RC : ${data.agence.rc}` : '';
@@ -69,10 +73,11 @@ Pouvoirs donnés à l'agence :
 
 Mentions supplémentaires : En cas d'assignation en expulsion d'un locataire, les frais d'huissier sont prélevés sur la caution du locataire.
 
-Fait à Dakar, le ${data.mandat.date_du_jour}
+Fait à ${city}, le ${data.mandat.date_du_jour}
 
-Le Propriétaire                                            Le Manager ${data.agence.nom}
-(Signature)                                                (Signature et cachet)
+Le Propriétaire                                            Le ${fonction}
+(Signature)                                                ${data.agence.nom}
+                                                           (Signature et cachet)
 
 
 ${data.agence.pied_page || ''}

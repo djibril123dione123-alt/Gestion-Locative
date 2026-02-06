@@ -30,7 +30,7 @@ ARTICLE 4 : OBLIGATIONS DU BAILLEUR
 
 ARTICLE 5 : OBLIGATIONS DU LOCATAIRE
 1) Payer le loyer et les charges récupérables aux termes convenus.
-2) Payer les frais d'enregistrement du contrat, d’eau et d'électricité ainsi que toutes les charges incombant au locataire.
+2) Payer les frais d'enregistrement du contrat, d'eau et d'électricité ainsi que toutes les charges incombant au locataire.
 3) Répondre des dégradations ou des pertes.
 4) Prendre à sa charge l'entretien courant du logement et des équipements.
 5) Ne faire aucun changement sans accord écrit du mandataire.
@@ -39,46 +39,37 @@ ARTICLE 5 : OBLIGATIONS DU LOCATAIRE
 8) Laisser exécuter les travaux nécessaires.
 9) Laisser visiter le logement dans les conditions prévues.
 10) Respecter le règlement de l'immeuble.
-11) Recourir au mandataire en cas d’incident.
+11) Recourir au mandataire en cas d'incident.
 12) Satisfaire à toutes les charges de ville ou de police habituelles.
 
 ARTICLE 6 : MONTANT DU LOYER
-Le montant du loyer initial est fixé à la somme {{loyer_mensuel}}  {{loyer_lettres}} 
+Le montant du loyer initial est fixé à la somme {{loyer_mensuel}}
 Le loyer est payé mensuellement d'avance avant le 05 du mois, chez le mandataire.
 
 ARTICLE 7 : DÉPÔT DE GARANTIE
-Le dépôt de garantie est fixé à la somme {{depot_garantie}}  {{depot_lettres}}
-correspondant à un mois de loyer payé d’avance et un mois de caution.
+Le dépôt de garantie est fixé à la somme {{depot_garantie}}
+correspondant à un mois de loyer payé d'avance et un mois de caution.
 
 ARTICLE 8 : PÉNALITÉS
-Il est expressément convenu qu’à défaut de paiement d’un mois de loyer dans les délais impartis
-(au plus tard le 07 du mois en cours) des pénalités qui s’élèvent à 1000fcfa par jour de retard,
-seront appliquées pendant 03 jours. Passé ce délai, la procédure judiciaire sera enclenchée.
+Il est expressément convenu qu'à défaut de paiement d'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours) des pénalités qui s'élèvent à {{penalite_montant}} par jour de retard, seront appliquées pendant {{penalite_delai}} jours. Passé ce délai, la procédure judiciaire sera enclenchée.
 
-Il est expressément convenu qu’en cas de litige, les frais d’huissier, d’expertises et d’honoraires
-d’avocat, qui auraient été engagés par le bailleur et ce sur pièces justificatives, seront remboursés par
-le locataire.
-Avec attribution exclusive de juridiction au juge des référés du Tribunal de {{agency_city}}.
+{{mention_litige}}
+{{mention_tribunal}}
 
 ARTICLE 9 : ÉTAT DES LIEUX
 À défaut d'état des lieux contradictoire, la partie la plus diligente peut le faire dresser par huissier.
 
-
 ARTICLE 10 : CAUTION ET REMISE EN ÉTAT
-À la sortie du locataire, une partie de la caution servira au rafraîchissement de la peinture. Les autres corps d’état seront vérifiés et remplacés en cas de défaillance; les factures impayées d'eau/électricité seront défalquées de la caution.
+À la sortie du locataire, une partie de la caution servira au rafraîchissement de la peinture. Les autres corps d'état seront vérifiés et remplacés en cas de défaillance; les factures impayées d'eau/électricité seront défalquées de la caution.
 
 ARTICLE 11 : ÉLECTION DE DOMICILE
 Pour l'exécution des obligations, le bailleur fait élection de domicile en sa demeure et le locataire dans les lieux loués.
 
 ARTICLE 12 : IMPORTANT
-En cas de non-paiement du loyer dans les délais impartis,une somme de
-37 500 FCFA est prélevée sur la caution pour 
-les frais d'huissier afin d’assignation en expulsion, conformément à la loi sénégalaise.
+{{mention_frais_huissier}} Le montant des frais d'huissier s'élève à {{frais_huissier}}.
 
 Fait à {{agency_city}}, le {{date_du_jour}} en deux originaux.
 
 Le Locataire                                                                                    Le Mandataire
  (Signature)                                                                                      (Signature)
                                                                                                  {{agency_name}}
-
-

@@ -11,6 +11,8 @@ import { supabase } from './supabase';
 interface AgencySettings {
   nom_agence: string | null;
   adresse: string | null;
+  telephone: string | null;
+  email: string | null;
   logo_url: string | null;
   couleur_primaire: string | null;
   ninea: string | null;
@@ -24,6 +26,13 @@ interface AgencySettings {
   pied_page_personnalise: string | null;
   signature_url: string | null;
   qr_code_quittances: boolean;
+  penalite_retard_montant: number | null;
+  penalite_retard_delai_jours: number | null;
+  frais_huissier: number | null;
+  mention_tribunal: string | null;
+  mention_penalites: string | null;
+  mention_frais_huissier: string | null;
+  mention_litige: string | null;
 }
 
 /**
@@ -49,7 +58,14 @@ async function loadAgencySettings(): Promise<AgencySettings> {
 
     const { data, error } = await supabase
       .from('agency_settings')
-      .select('nom_agence, adresse, logo_url, couleur_primaire, ninea, rc, representant_nom, representant_fonction, manager_id_type, manager_id_number, city, devise, pied_page_personnalise, signature_url, qr_code_quittances')
+      .select(`
+        nom_agence, adresse, telephone, email, logo_url, couleur_primaire,
+        ninea, rc, representant_nom, representant_fonction,
+        manager_id_type, manager_id_number, city, devise,
+        pied_page_personnalise, signature_url, qr_code_quittances,
+        penalite_retard_montant, penalite_retard_delai_jours, frais_huissier,
+        mention_tribunal, mention_penalites, mention_frais_huissier, mention_litige
+      `)
       .eq('agency_id', profile.agency_id)
       .maybeSingle();
 
@@ -58,12 +74,14 @@ async function loadAgencySettings(): Promise<AgencySettings> {
     return data || {
       nom_agence: 'Gestion Locative',
       adresse: null,
+      telephone: null,
+      email: null,
       logo_url: null,
       couleur_primaire: '#0066CC',
       ninea: null,
       rc: null,
       representant_nom: null,
-      representant_fonction: null,
+      representant_fonction: 'Gérant',
       manager_id_type: 'CNI',
       manager_id_number: null,
       city: 'Dakar',
@@ -71,18 +89,27 @@ async function loadAgencySettings(): Promise<AgencySettings> {
       pied_page_personnalise: null,
       signature_url: null,
       qr_code_quittances: true,
+      penalite_retard_montant: 1000,
+      penalite_retard_delai_jours: 3,
+      frais_huissier: 37500,
+      mention_tribunal: 'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
+      mention_penalites: 'Il est expressément convenu qu\'à défaut de paiement d\'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours) des pénalités seront appliquées. Passé ce délai, la procédure judiciaire sera enclenchée.',
+      mention_frais_huissier: 'En cas de non-paiement du loyer dans les délais impartis, une somme est prélevée sur la caution pour les frais d\'huissier afin d\'assignation en expulsion, conformément à la loi sénégalaise.',
+      mention_litige: 'Il est expressément convenu qu\'en cas de litige, les frais d\'huissier, d\'expertises et d\'honoraires d\'avocat, qui auraient été engagés par le bailleur et ce sur pièces justificatives, seront remboursés par le locataire.',
     };
   } catch (error) {
     console.error('Erreur chargement paramètres agence:', error);
     return {
       nom_agence: 'Gestion Locative',
       adresse: null,
+      telephone: null,
+      email: null,
       logo_url: null,
       couleur_primaire: '#0066CC',
       ninea: null,
       rc: null,
       representant_nom: null,
-      representant_fonction: null,
+      representant_fonction: 'Gérant',
       manager_id_type: 'CNI',
       manager_id_number: null,
       city: 'Dakar',
@@ -90,6 +117,13 @@ async function loadAgencySettings(): Promise<AgencySettings> {
       pied_page_personnalise: null,
       signature_url: null,
       qr_code_quittances: true,
+      penalite_retard_montant: 1000,
+      penalite_retard_delai_jours: 3,
+      frais_huissier: 37500,
+      mention_tribunal: 'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
+      mention_penalites: 'Il est expressément convenu qu\'à défaut de paiement d\'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours) des pénalités seront appliquées. Passé ce délai, la procédure judiciaire sera enclenchée.',
+      mention_frais_huissier: 'En cas de non-paiement du loyer dans les délais impartis, une somme est prélevée sur la caution pour les frais d\'huissier afin d\'assignation en expulsion, conformément à la loi sénégalaise.',
+      mention_litige: 'Il est expressément convenu qu\'en cas de litige, les frais d\'huissier, d\'expertises et d\'honoraires d\'avocat, qui auraient été engagés par le bailleur et ce sur pièces justificatives, seront remboursés par le locataire.',
     };
   }
 }
@@ -275,6 +309,13 @@ export async function generateContratPDF(contrat: any) {
       loyer_mensuel: formatCurrency(Number(contrat.loyer_mensuel || 0), settings.devise || 'XOF'),
       depot_garantie: contrat.caution ? formatCurrency(Number(contrat.caution), settings.devise || 'XOF') : '',
       date_du_jour: new Date().toLocaleDateString('fr-FR'),
+      penalite_montant: formatCurrency(settings.penalite_retard_montant || 1000, settings.devise || 'XOF'),
+      penalite_delai: String(settings.penalite_retard_delai_jours || 3),
+      frais_huissier: formatCurrency(settings.frais_huissier || 37500, settings.devise || 'XOF'),
+      mention_tribunal: settings.mention_tribunal || 'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
+      mention_penalites: settings.mention_penalites || '',
+      mention_frais_huissier: settings.mention_frais_huissier || '',
+      mention_litige: settings.mention_litige || '',
     };
 
     let body = tpl;
@@ -523,8 +564,11 @@ export async function generateMandatBailleurPDF(bailleur: any) {
       date_debut: bailleur.debut_contrat
         ? new Date(bailleur.debut_contrat).toLocaleDateString('fr-FR')
         : new Date().toLocaleDateString('fr-FR'),
-      duree_annees: bailleur.duree_annees ? String(bailleur.duree_annees) : '1',
+      duree_annees: bailleur.duree_annees ? String(bailleur.duree_annees) : '3',
       date_du_jour: new Date().toLocaleDateString('fr-FR'),
+      mention_tribunal: settings.mention_tribunal || 'En cas de litige, le Tribunal de commerce de Dakar est seul compétent.',
+      mention_penalites: settings.mention_penalites || '',
+      mention_frais_huissier: settings.mention_frais_huissier || '',
     };
 
     let body = tpl;

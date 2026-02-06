@@ -34,6 +34,8 @@ interface AgencySettings {
   couleur_secondaire: string;
   mention_tribunal: string;
   mention_penalites: string;
+  mention_frais_huissier: string;
+  mention_litige: string;
   pied_page_personnalise: string;
   frais_huissier: number;
   commission_globale: number;
@@ -65,8 +67,10 @@ export function Parametres() {
     logo_position: 'left',
     couleur_primaire: '#F58220',
     couleur_secondaire: '#333333',
-    mention_tribunal: 'Tribunal de commerce de Dakar',
-    mention_penalites: "À défaut de paiement d'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours), des pénalités qui s'élèvent à 1000 FCFA par jour de retard seront appliquées pendant 03 jours. Passé ce délai, la procédure judiciaire sera enclenchée.",
+    mention_tribunal: 'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
+    mention_penalites: "Il est expressément convenu qu'à défaut de paiement d'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours) des pénalités seront appliquées. Passé ce délai, la procédure judiciaire sera enclenchée.",
+    mention_frais_huissier: "En cas de non-paiement du loyer dans les délais impartis, une somme est prélevée sur la caution pour les frais d'huissier afin d'assignation en expulsion, conformément à la loi sénégalaise.",
+    mention_litige: "Il est expressément convenu qu'en cas de litige, les frais d'huissier, d'expertises et d'honoraires d'avocat, qui auraient été engagés par le bailleur et ce sur pièces justificatives, seront remboursés par le locataire.",
     pied_page_personnalise: 'Gestion Locative - Dakar, Sénégal',
     frais_huissier: 37500,
     commission_globale: 10,
@@ -166,6 +170,8 @@ export function Parametres() {
         couleur_secondaire: settings.couleur_secondaire || '#333333',
         mention_tribunal: settings.mention_tribunal || '',
         mention_penalites: settings.mention_penalites || '',
+        mention_frais_huissier: settings.mention_frais_huissier || '',
+        mention_litige: settings.mention_litige || '',
         pied_page_personnalise: settings.pied_page_personnalise || '',
         frais_huissier: settings.frais_huissier || 37500,
         commission_globale: settings.commission_globale || 10,
@@ -177,10 +183,13 @@ export function Parametres() {
 
       const { error } = await supabase
         .from('agency_settings')
-        .upsert(dataToSave);
+        .upsert(dataToSave, {
+          onConflict: 'agency_id',
+          ignoreDuplicates: false
+        });
 
       if (error) {
-        console.error('Erreur détaillée:', error);
+        console.error('Erreur sauvegarde paramètres:', error);
         throw error;
       }
 

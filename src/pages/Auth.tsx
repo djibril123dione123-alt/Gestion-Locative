@@ -60,7 +60,10 @@ export function Auth() {
                 alt="Logo Confort Immo Archi"
                 className="h-30 w-auto object-contain mx-auto mb-1"
               />
-
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
+                Samay Këur
+              </h1>
+              <p className="text-slate-600">Votre gestion locative, simplifiée et automatisée</p>
             </div>
 
             <div className="flex gap-2 mb-6 p-1 bg-slate-100 rounded-xl">

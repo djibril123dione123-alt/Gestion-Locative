@@ -58,7 +58,7 @@ export function Auth() {
               <img
                 src="/templates/Logo confort immo archi neutre.png"
                 alt="Logo Confort Immo Archi"
-                className="h-50 w-auto object-contain mx-auto mb-10"
+                className="h-10 w-auto object-contain mx-auto mb-10"
               />
               <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
                 Samay Këur

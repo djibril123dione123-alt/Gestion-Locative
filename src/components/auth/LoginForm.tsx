@@ -112,7 +112,7 @@ export function LoginForm() {
 
         {/* --- Footer --- */}
         <div className="mt-6 text-center text-sm" style={{ color: '#707070' }}>
-          <p>© 2025 Confort Immo Archi. Tous droits réservés.</p>
+          <p>© 2025 Samay Këur. Tous droits réservés.</p>
         </div>
       </div>
     </div>

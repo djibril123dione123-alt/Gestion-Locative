@@ -80,7 +80,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
         {/* En-tête avec logo centré et bouton fermer sur mobile */}
         <div className="p-3 border-b flex items-center justify-between" style={{ borderColor: '#3A3A3A' }}>
           <img
-            src="/templates/Logo confort immo archi neutre.png"
+            src="/templates/Logo_confort_immo_archi_neutre.png"
             alt="Logo Confort Samay Keur"
             className="h-16 w-auto object-contain mx-auto"
           />

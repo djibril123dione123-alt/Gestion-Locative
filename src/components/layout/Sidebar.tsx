@@ -82,7 +82,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
           <img
             src="/templates/Logo_confort_immo_archi_neutre.png"
             alt="Logo Confort Samay Keur"
-            className="h-18 w-auto object-contain mx-auto"
+            className="h-20 w-auto object-contain mx-auto"
           />
           {onClose && (
             <button

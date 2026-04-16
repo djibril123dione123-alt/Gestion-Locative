@@ -2,38 +2,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from './supabase';
-
-/**
- * ------------------------------
- * TYPES ET INTERFACES
- * ------------------------------
- */
-interface AgencySettings {
-  nom_agence: string | null;
-  adresse: string | null;
-  telephone: string | null;
-  email: string | null;
-  logo_url: string | null;
-  couleur_primaire: string | null;
-  ninea: string | null;
-  rc: string | null;
-  representant_nom: string | null;
-  representant_fonction: string | null;
-  manager_id_type: string | null;
-  manager_id_number: string | null;
-  city: string | null;
-  devise: string | null;
-  pied_page_personnalise: string | null;
-  signature_url: string | null;
-  qr_code_quittances: boolean;
-  penalite_retard_montant: number | null;
-  penalite_retard_delai_jours: number | null;
-  frais_huissier: number | null;
-  mention_tribunal: string | null;
-  mention_penalites: string | null;
-  mention_frais_huissier: string | null;
-  mention_litige: string | null;
-}
+import { AgencySettings, DEFAULT_AGENCY_SETTINGS, ContratPDFData, PaiementPDFData, MandatPDFData } from '../types';
 
 /**
  * ------------------------------

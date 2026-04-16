@@ -81,7 +81,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
         <div className="p-3 border-b flex items-center justify-between" style={{ borderColor: '#3A3A3A' }}>
           <img
             src="/templates/Logo confort immo archi neutre.png"
-            alt="Logo Confort Immo Archi"
+            alt="Logo Confort Samay Keur"
             className="h-16 w-auto object-contain mx-auto"
           />
           {onClose && (

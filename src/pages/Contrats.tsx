@@ -5,6 +5,7 @@ import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { Plus, Search, Download, AlertCircle, TrendingUp } from 'lucide-react';
 import { generateContratPDF } from '../lib/pdf';
+import { formatCurrency } from '../lib/formatters';
 
 // =========================
 // 🎨 PALETTE CONFORT IMMO ARCHI
@@ -116,21 +117,6 @@ export function Contrats() {
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
   const [submitting, setSubmitting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-
-  // =========================
-  // 💰 FORMATAGE DES MONTANTS
-  // =========================
-  const formatCurrency = useCallback((amount: number | string): string => {
-    if (!amount) return '0 F CFA';
-    const cleaned = String(amount).replace(/[/\s]/g, '');
-    const num = Number(cleaned);
-    if (isNaN(num)) return '0 F CFA';
-    return (
-      new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 })
-        .format(num)
-        .replace(/\u00A0/g, ' ') + ' F CFA'
-    );
-  }, []);
 
   // =========================
   // 🔁 CHARGEMENT DES DONNÉES
@@ -367,7 +353,7 @@ export function Contrats() {
 
       setSubmitting(true);
       try {
-        const data: any = {
+        const data = {
           statut: formData.statut,
           date_fin: formData.date_fin || null,
           commission: formData.commission ? parseFloat(formData.commission) : null,
@@ -419,7 +405,7 @@ export function Contrats() {
       caution: contrat.caution?.toString() || '',
       commission: contrat.commission?.toString() || '',
       statut: contrat.statut,
-      destination: (contrat.destination as any) || '',
+      destination: (contrat.destination as 'Habitation' | 'Commercial' | '') || '',
     });
     setIsEditModalOpen(true);
   }, []);
@@ -565,7 +551,7 @@ export function Contrats() {
         ),
       },
     ],
-    [formatCurrency, handleDownloadPDF, downloadingId]
+    [handleDownloadPDF, downloadingId]
   );
 
   // =========================

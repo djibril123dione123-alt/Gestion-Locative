@@ -4,6 +4,7 @@ import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency } from '../lib/formatters';
 
 interface Unite {
   id: string;
@@ -156,10 +157,6 @@ export function Unites() {
       immeuble_id: '',
       description: '',
     });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(amount);
   };
 
   const getStatutBadge = (statut: string) => {

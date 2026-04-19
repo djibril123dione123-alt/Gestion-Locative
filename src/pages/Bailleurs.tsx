@@ -9,6 +9,7 @@ import { generateMandatBailleurPDF } from '../lib/pdf';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages';
+import { formatDate } from '../lib/formatters';
 
 /**
  * Interface Bailleur avec les champs commission et debut_contrat
@@ -309,18 +310,6 @@ export function Bailleurs() {
       commission: '',
       debut_contrat: '',
     });
-  };
-
-  /**
-   * Formatage de la date
-   */
-  const formatDate = (dateString: string | null): string => {
-    if (!dateString) return '-';
-    try {
-      return new Date(dateString).toLocaleDateString('fr-FR');
-    } catch {
-      return '-';
-    }
   };
 
   /**

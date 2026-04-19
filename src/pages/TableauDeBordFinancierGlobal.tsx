@@ -3,15 +3,9 @@ import { supabase } from '../lib/supabase'; // Supposons que le chemin soit corr
 import { useAuth } from '../contexts/AuthContext';
 import { TrendingUp, TrendingDown, DollarSign, Download, Calendar, Building2, DollarSign as Dollar } from 'lucide-react'; // Imports d'icônes unifiés [3-6]
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'; // Imports graphiques unifiés [3, 6]
-import jsPDF from 'jspdf'; // Import PDF unifié [3-6]
-import 'jspdf-autotable'; // Import PDF unifié [3-6]
-
-// Déclaration de module unifiée pour jspdf-autotable [3-6]
-declare module 'jspdf' {
-    interface jsPDF {
-        autoTable: (options: any) => jsPDF;
-    }
-}
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { formatCurrency } from '../lib/formatters';
 
 // -------------------------------------------------------------------------
 // 1. DÉFINITION DES TYPES ET INTERFACES UNIFIÉS
@@ -62,11 +56,6 @@ interface MonthlyStat {
 // -------------------------------------------------------------------------
 // 2. FONCTIONS UTILITAIRES UNIFIÉES
 // -------------------------------------------------------------------------
-
-// Fonction de formatage monétaire unique [17-20]
-const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(amount);
-
 
 export function TableauDeBordFinancierGlobal() {
     const { profile } = useAuth();
@@ -391,7 +380,7 @@ export function TableauDeBordFinancierGlobal() {
             styles: { fontSize: 10 }, // [13]
         });
 
-        const finalY = (doc as any).lastAutoTable.finalY + 10;
+        const finalY = doc.lastAutoTable.finalY + 10;
         doc.setFontSize(12); // [13]
         doc.setFont(undefined, 'bold');
         doc.text('TOTAUX:', 14, finalY);

@@ -1,114 +1,101 @@
-// src/lib/pdf.ts
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from './supabase';
-import { AgencySettings, DEFAULT_AGENCY_SETTINGS, ContratPDFData, PaiementPDFData, MandatPDFData } from '../types';
+import {
+  AgencySettings,
+  DEFAULT_AGENCY_SETTINGS,
+  ContratPDFData,
+  PaiementPDFData,
+  MandatPDFData,
+} from '../types';
+import { formatCurrency } from './formatters';
 
-/**
- * ------------------------------
- * FONCTIONS UTILITAIRES
- * ------------------------------
- */
+export { formatCurrency };
 
-/**
- * Charge les paramètres de l'agence depuis Supabase
- */
-async function loadAgencySettings(): Promise<AgencySettings> {
+// ---------------------------------------------------------------------------
+// Internal types & constants
+// ---------------------------------------------------------------------------
+
+/** Subset of AgencySettings used when loading fails or row is missing. */
+const PDF_SETTINGS_FALLBACK: Partial<AgencySettings> = {
+  nom_agence: DEFAULT_AGENCY_SETTINGS.nom_agence ?? 'Gestion Locative',
+  adresse: DEFAULT_AGENCY_SETTINGS.adresse ?? null,
+  telephone: DEFAULT_AGENCY_SETTINGS.telephone ?? null,
+  email: DEFAULT_AGENCY_SETTINGS.email ?? null,
+  logo_url: DEFAULT_AGENCY_SETTINGS.logo_url ?? null,
+  couleur_primaire: DEFAULT_AGENCY_SETTINGS.couleur_primaire ?? '#F58220',
+  ninea: DEFAULT_AGENCY_SETTINGS.ninea ?? null,
+  rc: DEFAULT_AGENCY_SETTINGS.rc ?? null,
+  representant_nom: DEFAULT_AGENCY_SETTINGS.representant_nom ?? null,
+  representant_fonction: DEFAULT_AGENCY_SETTINGS.representant_fonction ?? 'Gérant',
+  manager_id_type: DEFAULT_AGENCY_SETTINGS.manager_id_type ?? 'CNI',
+  manager_id_number: DEFAULT_AGENCY_SETTINGS.manager_id_number ?? null,
+  city: DEFAULT_AGENCY_SETTINGS.city ?? 'Dakar',
+  devise: DEFAULT_AGENCY_SETTINGS.devise ?? 'XOF',
+  pied_page_personnalise: DEFAULT_AGENCY_SETTINGS.pied_page_personnalise ?? null,
+  signature_url: DEFAULT_AGENCY_SETTINGS.signature_url ?? null,
+  qr_code_quittances: DEFAULT_AGENCY_SETTINGS.qr_code_quittances ?? true,
+  penalite_retard_montant: DEFAULT_AGENCY_SETTINGS.penalite_retard_montant ?? 1000,
+  penalite_retard_delai_jours: DEFAULT_AGENCY_SETTINGS.penalite_retard_delai_jours ?? 3,
+  frais_huissier: DEFAULT_AGENCY_SETTINGS.frais_huissier ?? 37500,
+  mention_tribunal:
+    DEFAULT_AGENCY_SETTINGS.mention_tribunal ??
+    'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
+  mention_penalites: DEFAULT_AGENCY_SETTINGS.mention_penalites ?? '',
+  mention_frais_huissier: DEFAULT_AGENCY_SETTINGS.mention_frais_huissier ?? '',
+  mention_litige: DEFAULT_AGENCY_SETTINGS.mention_litige ?? '',
+};
+
+// ---------------------------------------------------------------------------
+// Private helpers
+// ---------------------------------------------------------------------------
+
+async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
   try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return PDF_SETTINGS_FALLBACK;
+
     const { data: profile } = await supabase
       .from('user_profiles')
       .select('agency_id')
-      .eq('id', (await supabase.auth.getUser()).data.user?.id)
+      .eq('id', user.id)
       .maybeSingle();
 
-    if (!profile?.agency_id) {
-      throw new Error('Agency ID not found');
-    }
+    if (!profile?.agency_id) return PDF_SETTINGS_FALLBACK;
 
     const { data, error } = await supabase
       .from('agency_settings')
-      .select(`
-        nom_agence, adresse, telephone, email, logo_url, couleur_primaire,
-        ninea, rc, representant_nom, representant_fonction,
-        manager_id_type, manager_id_number, city, devise,
-        pied_page_personnalise, signature_url, qr_code_quittances,
-        penalite_retard_montant, penalite_retard_delai_jours, frais_huissier,
-        mention_tribunal, mention_penalites, mention_frais_huissier, mention_litige
-      `)
+      .select(
+        `nom_agence, adresse, telephone, email, logo_url, couleur_primaire,
+         ninea, rc, representant_nom, representant_fonction,
+         manager_id_type, manager_id_number, city, devise,
+         pied_page_personnalise, signature_url, qr_code_quittances,
+         penalite_retard_montant, penalite_retard_delai_jours, frais_huissier,
+         mention_tribunal, mention_penalites, mention_frais_huissier, mention_litige`
+      )
       .eq('agency_id', profile.agency_id)
       .maybeSingle();
 
     if (error) throw error;
-
-    return data || {
-      nom_agence: 'Gestion Locative',
-      adresse: null,
-      telephone: null,
-      email: null,
-      logo_url: null,
-      couleur_primaire: '#0066CC',
-      ninea: null,
-      rc: null,
-      representant_nom: null,
-      representant_fonction: 'Gérant',
-      manager_id_type: 'CNI',
-      manager_id_number: null,
-      city: 'Dakar',
-      devise: 'XOF',
-      pied_page_personnalise: null,
-      signature_url: null,
-      qr_code_quittances: true,
-      penalite_retard_montant: 1000,
-      penalite_retard_delai_jours: 3,
-      frais_huissier: 37500,
-      mention_tribunal: 'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
-      mention_penalites: 'Il est expressément convenu qu\'à défaut de paiement d\'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours) des pénalités seront appliquées. Passé ce délai, la procédure judiciaire sera enclenchée.',
-      mention_frais_huissier: 'En cas de non-paiement du loyer dans les délais impartis, une somme est prélevée sur la caution pour les frais d\'huissier afin d\'assignation en expulsion, conformément à la loi sénégalaise.',
-      mention_litige: 'Il est expressément convenu qu\'en cas de litige, les frais d\'huissier, d\'expertises et d\'honoraires d\'avocat, qui auraient été engagés par le bailleur et ce sur pièces justificatives, seront remboursés par le locataire.',
-    };
+    return data ?? PDF_SETTINGS_FALLBACK;
   } catch (error) {
     console.error('Erreur chargement paramètres agence:', error);
-    return {
-      nom_agence: 'Gestion Locative',
-      adresse: null,
-      telephone: null,
-      email: null,
-      logo_url: null,
-      couleur_primaire: '#0066CC',
-      ninea: null,
-      rc: null,
-      representant_nom: null,
-      representant_fonction: 'Gérant',
-      manager_id_type: 'CNI',
-      manager_id_number: null,
-      city: 'Dakar',
-      devise: 'XOF',
-      pied_page_personnalise: null,
-      signature_url: null,
-      qr_code_quittances: true,
-      penalite_retard_montant: 1000,
-      penalite_retard_delai_jours: 3,
-      frais_huissier: 37500,
-      mention_tribunal: 'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
-      mention_penalites: 'Il est expressément convenu qu\'à défaut de paiement d\'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours) des pénalités seront appliquées. Passé ce délai, la procédure judiciaire sera enclenchée.',
-      mention_frais_huissier: 'En cas de non-paiement du loyer dans les délais impartis, une somme est prélevée sur la caution pour les frais d\'huissier afin d\'assignation en expulsion, conformément à la loi sénégalaise.',
-      mention_litige: 'Il est expressément convenu qu\'en cas de litige, les frais d\'huissier, d\'expertises et d\'honoraires d\'avocat, qui auraient été engagés par le bailleur et ce sur pièces justificatives, seront remboursés par le locataire.',
-    };
+    return PDF_SETTINGS_FALLBACK;
   }
 }
 
-/**
- * Ajoute le logo de l'agence en haut du document
- */
-async function addAgencyLogo(doc: jsPDF, logoUrl: string | null): Promise<number> {
+async function addAgencyLogo(doc: jsPDF, logoUrl: string | null | undefined): Promise<number> {
   if (!logoUrl) return 10;
 
   try {
     const img = new Image();
     img.crossOrigin = 'anonymous';
 
-    await new Promise((resolve, reject) => {
-      img.onload = resolve;
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
       img.onerror = reject;
       img.src = logoUrl;
     });
@@ -124,52 +111,26 @@ async function addAgencyLogo(doc: jsPDF, logoUrl: string | null): Promise<number
   }
 }
 
-/**
- * Format dynamique selon la devise
- */
-export function formatCurrency(amount: number | string, devise: string = 'XOF'): string {
-  if (!amount) {
-    if (devise === 'XOF') return "0 F CFA";
-    if (devise === 'EUR') return "0 €";
-    if (devise === 'USD') return "0 $";
-    return "0";
-  }
+// ---------------------------------------------------------------------------
+// Public utilities
+// ---------------------------------------------------------------------------
 
-  const cleaned = String(amount)
-    .replace(/\//g, "")
-    .replace(/\s/g, "");
-
-  const num = Number(cleaned);
-  const formatted = new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 0 })
-    .format(num)
-    .replace(/\u00A0/g, " ");
-
-  if (devise === 'XOF') return formatted + " F CFA";
-  if (devise === 'EUR') return formatted + " €";
-  if (devise === 'USD') return formatted + " $";
-  return formatted;
-}
-export function drawPageBorder(doc: jsPDF) {
+export function drawPageBorder(doc: jsPDF): void {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 5; // distance entre la bordure et le bord de la page
-
-  doc.setLineWidth(0.5); // épaisseur de la bordure
+  const margin = 5;
+  doc.setLineWidth(0.5);
   doc.rect(margin, margin, pageWidth - 2 * margin, pageHeight - 2 * margin);
 }
 
-
-/**
- * Ajoute un footer avec numéro de page
- */
-export function addFooter(doc: jsPDF) {
+export function addFooter(doc: jsPDF): void {
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(9);
     doc.setTextColor(120);
-    doc.setFont(undefined, 'normal');
+    doc.setFont(undefined as unknown as string, 'normal');
     doc.text(
       `Page ${i} / ${pageCount}`,
       doc.internal.pageSize.getWidth() / 2,
@@ -179,119 +140,160 @@ export function addFooter(doc: jsPDF) {
   }
 }
 
-/**
- * Génère une référence unique pour la facture
- */
-export function generateFactureRef(p: any) {
-  const d = new Date(p.created_at || Date.now());
+export function generateFactureRef(p: { id?: string; created_at?: string }): string {
+  const d = new Date(p.created_at ?? Date.now());
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
-  const suffix = (p.id || '').toString().replace(/-/g, '').slice(0, 8).toUpperCase();
+  const suffix = (p.id ?? '').replace(/-/g, '').slice(0, 8).toUpperCase();
   return `FAC-${y}${m}-${suffix || 'XXXXXX'}`;
 }
 
-/**
- * Charger un template texte depuis un chemin
- */
 export async function fetchTemplate(path: string): Promise<string> {
   const res = await fetch(path);
   if (!res.ok) throw new Error('Template introuvable: ' + path);
-  return await res.text();
+  return res.text();
 }
 
-/**
- * Remplacer les variables dans le template sans laisser de ** visibles
- */
-export function fillTemplate(tpl: string, vars: Record<string, string>) {
-  return tpl.replace(/\{\{(.*?)\}\}/g, (_match, key) => {
-    const val = vars[key.trim()] ?? '';
-    return val;
-  });
+export function fillTemplate(tpl: string, vars: Record<string, string>): string {
+  return tpl.replace(/\{\{(.*?)\}\}/g, (_match, key: string) => vars[key.trim()] ?? '');
 }
 
-/**
- * Affiche du texte en gérant le gras si nécessaire
- */
-function drawTextWithBold(doc: jsPDF, text: string, x: number, y: number) {
-  const parts = text.split('**'); // on peut conserver pour futur, ici aucun ** ne sera présent
-  let cursorX = x;
-  let bold = false;
+// ---------------------------------------------------------------------------
+// Template rendering helper (shared between contrat & mandat)
+// ---------------------------------------------------------------------------
 
-  parts.forEach(part => {
-    doc.setFont(undefined, bold ? 'bold' : 'normal');
-    doc.text(part, cursorX, y);
-    cursorX += doc.getTextWidth(part);
-    bold = !bold;
-  });
+function renderTemplateToDoc(
+  doc: jsPDF,
+  body: string,
+  dynamicValues: string[],
+  startY: number,
+  leftMargin: number,
+  usableWidth: number,
+  lineHeight: number,
+  fontSize: number
+): void {
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const marginBottom = 20;
+
+  doc.setFontSize(fontSize);
+  doc.setFont(undefined as unknown as string, 'normal');
+
+  const lines = doc.splitTextToSize(body, usableWidth) as string[];
+  let y = startY;
+
+  for (const line of lines) {
+    if (y > pageHeight - marginBottom) {
+      doc.addPage();
+      drawPageBorder(doc);
+      y = 25;
+    }
+
+    let x = leftMargin;
+    let remaining = line;
+
+    while (remaining) {
+      let found = false;
+      for (const val of dynamicValues) {
+        const idx = remaining.indexOf(val);
+        if (idx !== -1) {
+          const before = remaining.substring(0, idx);
+          if (before) {
+            doc.setFont(undefined as unknown as string, 'normal');
+            doc.text(before, x, y);
+            x += doc.getTextWidth(before);
+          }
+          doc.setFont(undefined as unknown as string, 'bold');
+          doc.text(val, x, y);
+          x += doc.getTextWidth(val);
+          remaining = remaining.substring(idx + val.length);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        doc.setFont(undefined as unknown as string, 'normal');
+        doc.text(remaining, x, y);
+        remaining = '';
+      }
+    }
+
+    y += lineHeight;
+  }
 }
 
-/**
- * ------------------------------
- * CONTRAT LOCATION
- * ------------------------------
- */
-export async function generateContratPDF(contrat: any) {
+// ---------------------------------------------------------------------------
+// PDF generators
+// ---------------------------------------------------------------------------
+
+export async function generateContratPDF(contrat: ContratPDFData): Promise<void> {
   if (!contrat) throw new Error('Aucun contrat fourni');
 
   const settings = await loadAgencySettings();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
 
-  const bailleur = contrat?.unites?.immeubles?.bailleurs || {};
-  const locataire = contrat?.locataires || {};
+  const bailleur = contrat.unites?.immeubles?.bailleurs ?? {};
+  const locataire = contrat.locataires ?? {};
 
   try {
     const tpl = await fetchTemplate('/templates/contrat_location.txt');
 
-    // Calcul de la durée en années
     let dureeAnnees = '1';
     if (contrat.date_debut && contrat.date_fin) {
       try {
         const d1 = new Date(contrat.date_debut);
         const d2 = new Date(contrat.date_fin);
-        const months = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+        const months =
+          (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
         if (months > 0) dureeAnnees = (months / 12).toFixed(months % 12 === 0 ? 0 : 1);
-      } catch {}
+      } catch {
+        // keep default
+      }
     }
 
-    // Remplacement des variables dans le template et récupération des valeurs dynamiques pour le gras
+    const devise = settings.devise ?? 'XOF';
     const dynamicVars: Record<string, string> = {
-      agency_name: settings.nom_agence || 'Gestion Locative',
-      agency_address: settings.adresse || '',
-      agency_ninea: settings.ninea || '',
-      agency_rc: settings.rc || '',
-      agency_manager_full_name: settings.representant_nom || 'Le Représentant',
-      agency_manager_title: settings.representant_fonction || 'Gérant',
-      agency_manager_id_type: settings.manager_id_type || 'CNI',
-      agency_manager_id_number: settings.manager_id_number || '',
-      agency_city: settings.city || 'Dakar',
-      bailleur_prenom: bailleur.prenom || '',
-      bailleur_nom: bailleur.nom || '',
-      locataire_prenom: locataire.prenom || '',
-      locataire_nom: locataire.nom || '',
-      locataire_cni: locataire.piece_identite || '',
-      locataire_adresse: locataire.adresse_personnelle || '',
-      designation: `${contrat?.unites?.nom || ''} - ${contrat?.unites?.immeubles?.nom || ''}`,
-      destination_local: contrat.destination || '',
+      agency_name: settings.nom_agence ?? 'Gestion Locative',
+      agency_address: settings.adresse ?? '',
+      agency_ninea: settings.ninea ?? '',
+      agency_rc: settings.rc ?? '',
+      agency_manager_full_name: settings.representant_nom ?? 'Le Représentant',
+      agency_manager_title: settings.representant_fonction ?? 'Gérant',
+      agency_manager_id_type: settings.manager_id_type ?? 'CNI',
+      agency_manager_id_number: settings.manager_id_number ?? '',
+      agency_city: settings.city ?? 'Dakar',
+      bailleur_prenom: (bailleur as { prenom?: string }).prenom ?? '',
+      bailleur_nom: (bailleur as { nom?: string }).nom ?? '',
+      locataire_prenom: locataire.prenom ?? '',
+      locataire_nom: locataire.nom ?? '',
+      locataire_cni: locataire.piece_identite ?? '',
+      locataire_adresse: locataire.adresse_personnelle ?? '',
+      designation: `${contrat.unites?.nom ?? ''} - ${contrat.unites?.immeubles?.nom ?? ''}`,
+      destination_local: contrat.destination ?? '',
       duree_annees: dureeAnnees,
-      date_debut: contrat.date_debut ? new Date(contrat.date_debut).toLocaleDateString('fr-FR') : '…',
-      date_fin: contrat.date_fin ? new Date(contrat.date_fin).toLocaleDateString('fr-FR') : '…',
-      loyer_mensuel: formatCurrency(Number(contrat.loyer_mensuel || 0), settings.devise || 'XOF'),
-      depot_garantie: contrat.caution ? formatCurrency(Number(contrat.caution), settings.devise || 'XOF') : '',
+      date_debut: contrat.date_debut
+        ? new Date(contrat.date_debut).toLocaleDateString('fr-FR')
+        : '…',
+      date_fin: contrat.date_fin
+        ? new Date(contrat.date_fin).toLocaleDateString('fr-FR')
+        : '…',
+      loyer_mensuel: formatCurrency(Number(contrat.loyer_mensuel ?? 0), devise),
+      depot_garantie: contrat.caution
+        ? formatCurrency(Number(contrat.caution), devise)
+        : '',
       date_du_jour: new Date().toLocaleDateString('fr-FR'),
-      penalite_montant: formatCurrency(settings.penalite_retard_montant || 1000, settings.devise || 'XOF'),
-      penalite_delai: String(settings.penalite_retard_delai_jours || 3),
-      frais_huissier: formatCurrency(settings.frais_huissier || 37500, settings.devise || 'XOF'),
-      mention_tribunal: settings.mention_tribunal || 'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
-      mention_penalites: settings.mention_penalites || '',
-      mention_frais_huissier: settings.mention_frais_huissier || '',
-      mention_litige: settings.mention_litige || '',
+      penalite_montant: formatCurrency(settings.penalite_retard_montant ?? 1000, devise),
+      penalite_delai: String(settings.penalite_retard_delai_jours ?? 3),
+      frais_huissier: formatCurrency(settings.frais_huissier ?? 37500, devise),
+      mention_tribunal:
+        settings.mention_tribunal ??
+        'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
+      mention_penalites: settings.mention_penalites ?? '',
+      mention_frais_huissier: settings.mention_frais_huissier ?? '',
+      mention_litige: settings.mention_litige ?? '',
     };
 
-    let body = tpl;
     const dynamicValues: string[] = [];
-
-    // Remplacer les {{key}} par la valeur réelle et enregistrer les valeurs dynamiques
-    body = body.replace(/\{\{(.*?)\}\}/g, (_match, key) => {
+    const body = tpl.replace(/\{\{(.*?)\}\}/g, (_match, key: string) => {
       const value = dynamicVars[key.trim()] ?? '';
       if (value) dynamicValues.push(value);
       return value;
@@ -300,156 +302,92 @@ export async function generateContratPDF(contrat: any) {
     const pageWidth = doc.internal.pageSize.getWidth();
     const leftMargin = 14;
     const usableWidth = pageWidth - 28;
-    const lineHeight = 7;
-    const pageHeight = doc.internal.pageSize.getHeight();
 
     drawPageBorder(doc);
-
     let titleY = await addAgencyLogo(doc, settings.logo_url);
     titleY = Math.max(titleY, 15);
 
     doc.setFontSize(16);
-    doc.setFont(undefined, 'bold');
+    doc.setFont(undefined as unknown as string, 'bold');
     doc.text('CONTRAT DE LOCATION', pageWidth / 2, titleY, { align: 'center' });
 
-    let y = titleY + 10;
-
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'normal');
-
-    const lines = doc.splitTextToSize(body, usableWidth);
-    let isFirstPage = true;
-
-    for (const line of lines) {
-      // Passage à la page suivante si besoin
-      if (y > pageHeight - 20) {
-        doc.addPage();
-        drawPageBorder(doc); // bordure sur la nouvelle page
-        y = 25;
-
-        // **Ne pas répéter le titre sur les pages suivantes**
-        isFirstPage = false;
-      }
-
-      // Dessiner le texte avec les valeurs dynamiques en gras
-      let x = leftMargin;
-      let remainingLine = line;
-
-      while (remainingLine) {
-        let found = false;
-        for (const val of dynamicValues) {
-          const index = remainingLine.indexOf(val);
-          if (index !== -1) {
-            const before = remainingLine.substring(0, index);
-            if (before) {
-              doc.setFont(undefined, 'normal');
-              doc.text(before, x, y);
-              x += doc.getTextWidth(before);
-            }
-            doc.setFont(undefined, 'bold');
-            doc.text(val, x, y);
-            x += doc.getTextWidth(val);
-            remainingLine = remainingLine.substring(index + val.length);
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          doc.setFont(undefined, 'normal');
-          doc.text(remainingLine, x, y);
-          remainingLine = '';
-        }
-      }
-
-      y += lineHeight;
-    }
+    renderTemplateToDoc(doc, body, dynamicValues, titleY + 10, leftMargin, usableWidth, 7, 11);
   } catch (err) {
     console.error('Erreur génération contrat:', err);
   }
 
-  // Ajouter le footer avec numéro de page
   addFooter(doc);
-
-  // Sauvegarder le PDF
-  doc.save(`contrat-${locataire?.nom || 'locataire'}-${Date.now()}.pdf`);
+  doc.save(`contrat-${(contrat.locataires?.nom ?? 'locataire')}-${Date.now()}.pdf`);
 }
 
-
-/**
- * ------------------------------
- * FACTURE DE PAIEMENT
- * ------------------------------
- */
-export async function generatePaiementFacturePDF(paiement: any) {
+export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Promise<void> {
   if (!paiement) throw new Error('Aucun paiement fourni');
 
   const settings = await loadAgencySettings();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-  const contrat = paiement?.contrats || {};
-  const locataire = contrat?.locataires || {};
-  const unite = contrat?.unites || {};
+  const contrat = paiement.contrats ?? {};
+  const locataire = contrat.locataires ?? {};
+  const unite = contrat.unites ?? {};
 
-  const loyer = Number(contrat?.loyer_mensuel || 0);
-  const paye = Number(paiement?.montant_total || 0);
+  const loyer = Number(contrat.loyer_mensuel ?? 0);
+  const paye = Number(paiement.montant_total ?? 0);
   const reliquat = Math.max(loyer - paye, 0);
-  const ref = paiement.reference || generateFactureRef(paiement);
+  const ref = paiement.reference ?? generateFactureRef(paiement);
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const leftMargin = 14;
   const rightMargin = 14;
   const usableWidth = pageWidth - leftMargin - rightMargin;
-  const title = 'Quittance Loyer';
-  const titleFontSize = 16;
-  const bodyFontSize = 11;
+  const devise = settings.devise ?? 'XOF';
 
   drawPageBorder(doc);
 
   let titleY = await addAgencyLogo(doc, settings.logo_url);
   titleY = Math.max(titleY, 15);
 
-  doc.setFont(undefined, 'bold');
-  doc.setFontSize(titleFontSize);
-  doc.text(title, pageWidth / 2, titleY, { align: 'center' });
+  doc.setFont(undefined as unknown as string, 'bold');
+  doc.setFontSize(16);
+  doc.text('Quittance Loyer', pageWidth / 2, titleY, { align: 'center' });
 
-  doc.setFont(undefined, 'normal');
-  doc.setFontSize(bodyFontSize);
+  doc.setFont(undefined as unknown as string, 'normal');
+  doc.setFontSize(11);
   let y = titleY + 10;
 
-  // Référence
-  doc.setFont(undefined, 'bold');
+  doc.setFont(undefined as unknown as string, 'bold');
   doc.text(`Référence : ${ref}`, leftMargin, y);
   y += 6;
 
-  // Date
   const datePaiement = paiement.date_paiement
     ? new Date(paiement.date_paiement).toLocaleDateString('fr-FR')
     : new Date().toLocaleDateString('fr-FR');
   doc.text(`Date : ${datePaiement}`, leftMargin, y);
   y += 8;
 
-  // Informations du locataire
-  doc.setFont(undefined, 'bold');
+  doc.setFont(undefined as unknown as string, 'bold');
   doc.text('Informations du locataire', leftMargin, y);
   y += 6;
-  doc.setFont(undefined, 'bold');
   doc.text(
-    `Nom : ${locataire ? `${locataire.prenom || ''} ${locataire.nom || ''}` : '—'}`,
+    `Nom : ${locataire.prenom ?? ''} ${locataire.nom ?? ''}`.trim() || '—',
+    leftMargin,
+    y
+  );
+  y += 6;
+  doc.text(
+    `Adresse du logement : ${(unite.immeubles as { adresse?: string } | undefined)?.adresse ?? '—'}`,
     leftMargin,
     y
   );
   y += 6;
 
-  doc.text(`Adresse du logement : ${unite?.immeubles?.adresse || '—'}`, leftMargin, y);
-  y += 6;
-
   const moisConcerne = paiement.mois_concerne
-    ? new Date(paiement.mois_concerne).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })
+    ? new Date(paiement.mois_concerne).toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+      })
     : '—';
   doc.text(`Mois concerné : ${moisConcerne}`, leftMargin, y);
   y += 10;
 
-  // Tableau autoTable
-  const devise = settings.devise || 'XOF';
   autoTable(doc, {
     startY: y,
     head: [['Libellé', 'Montant']],
@@ -466,44 +404,37 @@ export async function generatePaiementFacturePDF(paiement: any) {
     tableWidth: usableWidth,
   });
 
-  const finalY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 10 : y + 10;
+  const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : y + 10;
 
   const mentions = [
     "NB 1 : Le locataire ne peut déménager sans avoir payé l'intégralité du loyer dû et effectué toutes les réparations à sa charge.",
     'NB 2 : La sous-location est strictement interdite.',
   ];
 
-  doc.setFont(undefined, 'bold');
+  doc.setFont(undefined as unknown as string, 'bold');
   doc.text('Mentions', leftMargin, finalY);
 
-  doc.setFont(undefined, 'normal');
+  doc.setFont(undefined as unknown as string, 'normal');
   let yMentions = finalY + 6;
-  mentions.forEach((m) => {
-    const lines = doc.splitTextToSize(`- ${m}`, usableWidth);
+  for (const m of mentions) {
+    const lines = doc.splitTextToSize(`- ${m}`, usableWidth) as string[];
     doc.text(lines, leftMargin, yMentions);
     yMentions += lines.length * 5;
-  });
+  }
 
   if (settings.pied_page_personnalise) {
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(9);
     doc.setTextColor(100);
-    const footerLines = doc.splitTextToSize(settings.pied_page_personnalise, usableWidth);
+    const footerLines = doc.splitTextToSize(settings.pied_page_personnalise, usableWidth) as string[];
     doc.text(footerLines, leftMargin, pageHeight - 25);
   }
 
   addFooter(doc);
-  doc.save(`facture-${locataire?.nom || 'locataire'}-${Date.now()}.pdf`);
+  doc.save(`facture-${locataire.nom ?? 'locataire'}-${Date.now()}.pdf`);
 }
 
-/**
- * ------------------------------
- * MANDAT DE GÉRANCE BAILLEUR
- * ------------------------------
- * Génère un mandat de gérance avec les valeurs dynamiques en gras
- * Le titre n'apparaît que sur la première page
- */
-export async function generateMandatBailleurPDF(bailleur: any) {
+export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promise<void> {
   if (!bailleur) throw new Error('Aucun bailleur fourni');
 
   const settings = await loadAgencySettings();
@@ -512,39 +443,37 @@ export async function generateMandatBailleurPDF(bailleur: any) {
   try {
     const tpl = await fetchTemplate('/templates/mandat_gerance.txt');
 
-    // Champs dynamiques incluant les paramètres de l'agence
     const vars: Record<string, string> = {
-      agency_name: settings.nom_agence || 'Gestion Locative',
-      agency_address: settings.adresse || '',
-      agency_ninea: settings.ninea || '',
-      agency_rc: settings.rc || '',
-      agency_manager_full_name: settings.representant_nom || 'Le Représentant',
-      agency_manager_title: settings.representant_fonction || 'Gérant',
-      agency_manager_id_type: settings.manager_id_type || 'CNI',
-      agency_manager_id_number: settings.manager_id_number || '',
-      agency_city: settings.city || 'Dakar',
-      bailleur_prenom: bailleur.prenom || '',
-      bailleur_nom: bailleur.nom || '',
-      bailleur_cni: bailleur.piece_identite || '',
-      bailleur_adresse: bailleur.adresse || '',
-      bien_adresse: bailleur.bien_adresse || '',
-      bien_composition: bailleur.bien_composition || '',
-      taux_honoraires: bailleur.commission ? String(bailleur.commission) : '10',
+      agency_name: settings.nom_agence ?? 'Gestion Locative',
+      agency_address: settings.adresse ?? '',
+      agency_ninea: settings.ninea ?? '',
+      agency_rc: settings.rc ?? '',
+      agency_manager_full_name: settings.representant_nom ?? 'Le Représentant',
+      agency_manager_title: settings.representant_fonction ?? 'Gérant',
+      agency_manager_id_type: settings.manager_id_type ?? 'CNI',
+      agency_manager_id_number: settings.manager_id_number ?? '',
+      agency_city: settings.city ?? 'Dakar',
+      bailleur_prenom: bailleur.prenom ?? '',
+      bailleur_nom: bailleur.nom ?? '',
+      bailleur_cni: bailleur.piece_identite ?? '',
+      bailleur_adresse: bailleur.adresse ?? '',
+      bien_adresse: bailleur.bien_adresse ?? '',
+      bien_composition: bailleur.bien_composition ?? '',
+      taux_honoraires: bailleur.commission != null ? String(bailleur.commission) : '10',
       date_debut: bailleur.debut_contrat
         ? new Date(bailleur.debut_contrat).toLocaleDateString('fr-FR')
         : new Date().toLocaleDateString('fr-FR'),
-      duree_annees: bailleur.duree_annees ? String(bailleur.duree_annees) : '3',
+      duree_annees: bailleur.duree_annees != null ? String(bailleur.duree_annees) : '3',
       date_du_jour: new Date().toLocaleDateString('fr-FR'),
-      mention_tribunal: settings.mention_tribunal || 'En cas de litige, le Tribunal de commerce de Dakar est seul compétent.',
-      mention_penalites: settings.mention_penalites || '',
-      mention_frais_huissier: settings.mention_frais_huissier || '',
+      mention_tribunal:
+        settings.mention_tribunal ??
+        'En cas de litige, le Tribunal de commerce de Dakar est seul compétent.',
+      mention_penalites: settings.mention_penalites ?? '',
+      mention_frais_huissier: settings.mention_frais_huissier ?? '',
     };
 
-    let body = tpl;
     const dynamicValues: string[] = [];
-
-    // Remplacer les {{key}} par la valeur réelle et garder la liste pour gras
-    body = body.replace(/\{\{(.*?)\}\}/g, (_match, key) => {
+    let body = tpl.replace(/\{\{(.*?)\}\}/g, (_match, key: string) => {
       const value = vars[key.trim()] ?? '';
       if (value) dynamicValues.push(value);
       return value;
@@ -556,84 +485,22 @@ export async function generateMandatBailleurPDF(bailleur: any) {
     const leftMargin = 14;
     const usableWidth = pageWidth - leftMargin - 14;
 
-    const title = 'MANDAT DE GÉRANCE';
-    const titleFontSize = 16;
-    const bodyFontSize = 12;
-    const lineHeight = 7;
-
     drawPageBorder(doc);
-
     let titleY = await addAgencyLogo(doc, settings.logo_url);
     titleY = Math.max(titleY, 15);
 
-    doc.setFont(undefined, 'bold');
-    doc.setFontSize(titleFontSize);
-    doc.text(title, pageWidth / 2, titleY, { align: 'center' });
+    doc.setFont(undefined as unknown as string, 'bold');
+    doc.setFontSize(16);
+    doc.text('MANDAT DE GÉRANCE', pageWidth / 2, titleY, { align: 'center' });
 
-    doc.setFont(undefined, 'normal');
-    doc.setFontSize(bodyFontSize);
-
-    const lines = doc.splitTextToSize(body, usableWidth);
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const marginBottom = 20;
-
-    let y = titleY + lineHeight * 2;
-
-    for (const line of lines) {
-      if (y > pageHeight - marginBottom) {
-        doc.addPage();
-        drawPageBorder(doc);
-
-        // Nouvelle page = pas de titre, pas d'espace logo
-        y = 25;
-      }
-
-      // Vérifier si la ligne contient une valeur dynamique et mettre en gras
-      let x = leftMargin;
-      let remainingLine = line;
-
-      while (remainingLine) {
-        let found = false;
-
-        for (const val of dynamicValues) {
-          const index = remainingLine.indexOf(val);
-
-          if (index !== -1) {
-            const before = remainingLine.substring(0, index);
-
-            if (before) {
-              doc.setFont(undefined, 'normal');
-              doc.text(before, x, y);
-              x += doc.getTextWidth(before);
-            }
-
-            doc.setFont(undefined, 'bold');
-            doc.text(val, x, y);
-            x += doc.getTextWidth(val);
-
-            remainingLine = remainingLine.substring(index + val.length);
-            found = true;
-            break;
-          }
-        }
-
-        if (!found) {
-          doc.setFont(undefined, 'normal');
-          doc.text(remainingLine, x, y);
-          remainingLine = '';
-        }
-      }
-
-      y += lineHeight;
-    }
-    
+    renderTemplateToDoc(doc, body, dynamicValues, titleY + 14, leftMargin, usableWidth, 7, 12);
   } catch {
-    doc.setFont(undefined, 'normal');
+    doc.setFont(undefined as unknown as string, 'normal');
     doc.setFontSize(12);
-    const text = `Mandat de gérance\nPropriétaire: ${bailleur.prenom || ''} ${bailleur.nom || ''}`;
-    doc.text(doc.splitTextToSize(text, 182), 14, 50);
+    const text = `Mandat de gérance\nPropriétaire: ${bailleur.prenom ?? ''} ${bailleur.nom ?? ''}`;
+    doc.text(doc.splitTextToSize(text, 182) as string[], 14, 50);
   }
 
   addFooter(doc);
-  doc.save(`mandat-${bailleur.nom || 'bailleur'}-${Date.now()}.pdf`);
+  doc.save(`mandat-${bailleur.nom ?? 'bailleur'}-${Date.now()}.pdf`);
 }

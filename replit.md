@@ -33,6 +33,24 @@ The app runs on port 5000 in development.
 - `Parametres` — Agency settings
 - `Welcome` — Onboarding flow for new agencies
 
+## Code Architecture
+
+### Shared Utilities
+- `src/lib/formatters.ts` — Centralized `formatCurrency`, `formatDate`, `formatMonth`. Import from here, never redefine locally.
+- `src/lib/pdf.ts` — PDF generators for contrats, paiements, mandats. All generators are now strongly typed using `ContratPDFData`, `PaiementPDFData`, `MandatPDFData` from `src/types/pdf.ts`.
+- `src/lib/supabase.ts` — Supabase client singleton.
+- `src/lib/agencyHelper.ts` — Auth helpers (`getCurrentAgencyId`, `reloadUserProfile`).
+- `src/lib/errorMessages.ts` — Supabase error translation utilities.
+
+### Types
+- `src/types/entities.ts` — Core domain entities (Bailleur, Immeuble, Unite, Locataire, Contrat, Paiement, Depense, Commission, Revenu).
+- `src/types/database.ts` — Auth/platform types (UserProfile, Agency, AuditLog).
+- `src/types/agency.ts` — AgencySettings + DEFAULT_AGENCY_SETTINGS constant.
+- `src/types/pdf.ts` — Typed PDF data shapes for generators.
+- `src/types/forms.ts` — Form input types derived from entities.
+- `src/types/jspdf-autotable.d.ts` — Global ambient augmentation for jsPDF. Provides `doc.autoTable()` and `doc.lastAutoTable.finalY` types. Do NOT redeclare per-file.
+- `src/types/index.ts` — Re-exports all types.
+
 ## Database Schema
 All migrations are in `supabase/migrations/`. The schema includes:
 - `user_profiles`, `agencies`, `agency_settings`

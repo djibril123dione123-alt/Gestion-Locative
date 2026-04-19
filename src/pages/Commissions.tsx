@@ -5,12 +5,7 @@ import { TrendingUp, BarChart3, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+import { formatCurrency } from '../lib/formatters';
 
 export function Commissions() {
   const { profile } = useAuth();
@@ -133,15 +128,12 @@ export function Commissions() {
         formatCurrency(c.montant_total),
         formatCurrency(c.part_agence),
       ]),
-      startY: (doc as any).lastAutoTable.finalY + 10,
+      startY: doc.lastAutoTable.finalY + 10,
       styles: { fontSize: 9 },
     });
 
     doc.save(`commissions-${selectedMonth}.pdf`);
   };
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(amount);
 
   if (loading) return <div className="flex items-center justify-center h-full"><div>Chargement...</div></div>;
 

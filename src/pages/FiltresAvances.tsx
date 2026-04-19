@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Search, Filter, X, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency } from '../lib/formatters';
 
 interface FiltersState {
   bailleur_id: string;
@@ -263,16 +264,6 @@ export function FiltresAvances() {
     XLSX.utils.book_append_sheet(wb, ws, 'Résultats');
     XLSX.writeFile(wb, 'filtres-avances.xlsx');
   };
-
-const formatCurrency = (amount: number) => {
-  if (!amount) return '0 F CFA';
-  return (
-    new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 })
-      .format(amount)
-      .replace(/\u00A0/g, ' ') + ' F CFA'
-  );
-};
-
 
   const activeFiltersCount = Object.values(filters).filter(v => v !== '').length;
 

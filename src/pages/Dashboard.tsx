@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency } from '../lib/formatters';
 import {
   Building2,
   Users,
@@ -173,14 +174,6 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
     return data;
   };
 
-const formatCurrency = (amount: number) => {
-  if (!amount) return '0 F CFA';
-  return (
-    new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 })
-      .format(amount)
-      .replace(/\u00A0/g, ' ') + ' F CFA'
-  );
-};
 
 
   const pieData = useMemo(() => [
@@ -443,8 +436,17 @@ const formatCurrency = (amount: number) => {
   );
 }
 
-const StatCard = memo(({ title, value, subtitle, icon: Icon, color, delay }: any) => {
-  const colorClasses = {
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ElementType;
+  color: 'orange' | 'blue' | 'slate' | 'green' | 'emerald';
+  delay: number;
+}
+
+const StatCard = memo(({ title, value, subtitle, icon: Icon, color, delay }: StatCardProps) => {
+  const colorClasses: Record<StatCardProps['color'], string> = {
     orange: 'bg-gradient-to-br from-orange-50 to-orange-100 text-orange-600',
     blue: 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600',
     slate: 'bg-gradient-to-br from-slate-50 to-slate-100 text-slate-600',

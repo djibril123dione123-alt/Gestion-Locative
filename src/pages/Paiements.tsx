@@ -9,13 +9,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { generatePaiementFacturePDF } from '../lib/pdf';
 import { useToast } from '../hooks/useToast';
-
-// Déclaration des modules pour jsPDF (nécessaire pour autoTable) [3, 4]
-declare module 'jspdf' {
-    interface jsPDF {
-        autoTable: (options: any) => jsPDF;
-    }
-}
+import { formatCurrency } from '../lib/formatters';
 
 export function Paiements() {
     const { profile } = useAuth();
@@ -41,20 +35,6 @@ export function Paiements() {
         reference: '',
     };
     const [formData, setFormData] = useState(initialFormData);
-
-    // Fonction de formatage des devises (version robuste) [8-10]
-    const formatCurrency = (amount: number | string): string => {
-        if (!amount) return "0 F CFA";
-        const cleaned = String(amount)
-            .replace(/\//g, "")
-            .replace(/\s/g, "");
-        const num = Number(cleaned);
-        return (
-            new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 0 })
-                .format(num)
-                .replace(/\u00A0/g, " ") + " F CFA"
-        );
-    };
 
     // Fermeture du modal et réinitialisation des états [11-14]
     const closeModal = () => {

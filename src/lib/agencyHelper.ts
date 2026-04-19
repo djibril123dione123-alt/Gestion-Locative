@@ -53,8 +53,3 @@ export async function reloadUserProfile(maxRetries = 5, delay = 1000): Promise<U
   return null;
 }
 
-export function buildAgencyQuery(tableName: string) {
-  return supabase
-    .from(tableName)
-    .select('*');
-}

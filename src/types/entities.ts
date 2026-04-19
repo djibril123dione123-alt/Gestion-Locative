@@ -137,6 +137,7 @@ export interface Commission {
 
 export interface Revenu {
   id: string;
+  agency_id: string;
   montant: number;
   date_revenu: string;
   categorie: string;

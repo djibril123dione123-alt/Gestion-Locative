@@ -4,6 +4,7 @@ import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency } from '../lib/formatters';
 
 export function Depenses() {
   const { user, profile } = useAuth();
@@ -116,9 +117,6 @@ export function Depenses() {
       immeuble_id: '',
     });
   };
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(amount);
 
   const columns = [
     { key: 'date_depense', label: 'Date' },

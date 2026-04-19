@@ -3,14 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
 import { Search, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+import { formatCurrency } from '../lib/formatters';
 
 interface LoyerImpaye {
   id: string;
@@ -143,14 +136,6 @@ export function LoyersImpayes() {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    if (!amount) return '0 F CFA';
-    return (
-      new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 })
-        .format(amount)
-        .replace(/\u00A0/g, ' ') + ' F CFA'
-    );
-  };
 
   const handlePayerClick = (loyer: LoyerImpaye) => {
     setSelectedLoyer(loyer);

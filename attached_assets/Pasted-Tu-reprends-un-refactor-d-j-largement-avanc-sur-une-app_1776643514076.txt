@@ -1,0 +1,233 @@
+Tu reprends un refactor déjà largement avancé sur une application React + TypeScript + Vite + Supabase multi-tenant.
+
+IMPORTANT :
+Tu ne pars pas de zéro.
+Tu dois reprendre intelligemment l’état actuel du projet après un premier gros chantier de nettoyage, vérifier ce qui a réellement été fait, valider que c’est propre, puis pousser le refactor jusqu’à un niveau plus abouti, plus homogène et plus robuste.
+
+Je veux que tu te comportes comme un staff engineer très rigoureux en phase de consolidation/finalisation, pas comme un générateur de modifications chaotiques.
+
+## CONTEXTE ACTUEL
+
+Un premier passage de refactor a déjà été effectué avec les résultats suivants annoncés :
+
+### Nouveaux fichiers créés
+- `src/lib/formatters.ts`
+  - contient les helpers partagés `formatCurrency`, `formatDate`, `formatMonth`
+- `src/types/jspdf-autotable.d.ts`
+  - contient l’augmentation de type globale pour jsPDF + autoTable
+- `src/types/pdf.ts`
+  - contient les types PDF forts (`ContratPDFData`, `PaiementPDFData`, `MandatPDFData`)
+
+### Fichiers refactorés
+- `src/lib/pdf.ts`
+  - générateurs PDF typés
+  - fallback centralisé
+  - extraction d’un helper du type `renderTemplateToDoc`
+  - suppression de dead code
+- `src/lib/agencyHelper.ts`
+  - suppression de `buildAgencyQuery`
+- `src/types/entities.ts`
+  - `Revenu` inclut maintenant `agency_id`
+- pages nettoyées :
+  - `src/pages/Bailleurs.tsx`
+  - `src/pages/Unites.tsx`
+  - `src/pages/Commissions.tsx`
+  - `src/pages/LoyersImpayes.tsx`
+  - `src/pages/Paiements.tsx`
+  - `src/pages/Dashboard.tsx`
+  - `src/pages/Depenses.tsx`
+  - `src/pages/Contrats.tsx`
+  - `src/pages/FiltresAvances.tsx`
+  - `src/pages/TableauDeBordFinancierGlobal.tsx`
+
+### Résultat annoncé
+- zéro erreur TypeScript
+- build propre
+- duplication de `formatCurrency` supprimée
+- duplications `declare module 'jspdf'` supprimées
+- plusieurs `any` critiques supprimés
+- pas de régression fonctionnelle apparente
+
+## CE QUE TU DOIS FAIRE MAINTENANT
+
+Ta mission est de reprendre ce chantier et de le mener à un niveau plus professionnel, plus homogène et plus durable.
+
+Tu dois travailler en 3 temps :
+1. **vérifier**
+2. **critiquer**
+3. **améliorer**
+
+Ne crois pas aveuglément le résumé précédent.
+Vérifie réellement les fichiers, les usages, les types, les imports, les pages et les patterns.
+
+## PHASE 1 — VALIDATION DU REFACTOR DÉJÀ FAIT
+
+Commence par auditer l’état réel actuel du code.
+
+Je veux que tu vérifies explicitement :
+- que `src/lib/formatters.ts` est bien utilisé partout où nécessaire
+- qu’il ne reste plus de `formatCurrency` ou `formatDate` locaux inutiles
+- que `src/types/jspdf-autotable.d.ts` fonctionne correctement sans hacks redondants
+- qu’il ne reste plus de `declare module 'jspdf'` dans les pages
+- qu’il ne reste pas de `doc as any` évitable pour `lastAutoTable`
+- que les générateurs PDF utilisent vraiment les types de `src/types/pdf.ts`
+- que `Revenu` et les types liés sont cohérents avec la DB
+- que les pages modifiées compilent proprement sans warnings silencieux
+- qu’aucune régression subtile n’a été introduite
+
+Tu dois relever :
+- ce qui a été bien fait
+- ce qui reste incomplet
+- ce qui a été “nettoyé en surface” mais pas complètement résolu
+- ce qui mérite un second passage plus propre
+
+## PHASE 2 — TRAITEMENT DES DETTES RESTANTES
+
+Le résumé précédent mentionne des dettes restantes “safe to defer”.
+Je veux que tu les réévalues de manière critique, et que tu traites en priorité celles qui valent vraiment le coup.
+
+### Dettes explicitement mentionnées
+- interfaces locales dans `Immeubles.tsx`, `Unites.tsx`, `Locataires.tsx` gardées parce qu’elles portent des champs de jointure spécifiques
+- `loadAgencySettings` dans `pdf.ts` refetch à chaque appel PDF
+- `BRAND_COLORS` hardcodé dans `Contrats.tsx`
+- `err: any` restant dans les `catch`
+- éventuellement d’autres `any`, `unknown`, `useState([])` mal typés, ou petits hacks résiduels
+
+Je veux que tu détermines :
+- lesquelles doivent être réellement corrigées maintenant
+- lesquelles peuvent être laissées en l’état
+- lesquelles méritent une refonte plus structurante
+
+## PHASE 3 — FINALISATION PROPRE
+
+Après validation, je veux que tu pousses le codebase vers une version plus propre et plus mature.
+
+### A. Typage plus strict
+- remplace les `err: any` pertinents par `unknown`
+- ajoute du narrowing propre
+- supprime les `any` restants évitables
+- vérifie les états React encore insuffisamment typés
+- vérifie les props non typées
+- vérifie les retours de fonctions de services/helpers
+- uniformise les types de jointure quand c’est possible
+
+### B. Types de vue / jointures
+Pour les pages qui gardent des interfaces locales seulement à cause des jointures, je préfère une vraie solution propre.
+
+Si pertinent, crée des types dédiés du genre :
+- `BailleurListItem`
+- `LocataireWithUnite`
+- `UniteWithBailleur`
+- `ImmeubleWithStats`
+- `ContratWithRelations`
+
+Je veux éviter les redéfinitions locales si une modélisation plus claire est possible.
+
+Sépare clairement :
+- entités DB pures
+- types enrichis de lecture UI
+- types de formulaire
+- types PDF
+- types de statistiques/agrégats
+
+### C. Module PDF
+Je veux que tu réévalues `src/lib/pdf.ts`.
+
+Si le fichier reste trop gros ou trop dense :
+- découpe-le proprement
+- sans casser les imports existants si possible
+- avec une structure claire, par exemple :
+  - `src/lib/pdf/core.ts`
+  - `src/lib/pdf/contrat.ts`
+  - `src/lib/pdf/paiement.ts`
+  - `src/lib/pdf/mandat.ts`
+  - `src/lib/pdf/helpers.ts`
+
+Mais ne le fais que si le gain est réel.
+Je veux une amélioration utile, pas une abstraction gratuite.
+
+Je veux aussi que tu regardes si :
+- `loadAgencySettings` peut être rationalisé
+- un fallback typé central peut être extrait
+- les données déjà disponibles dans `AuthContext` peuvent être réutilisées
+- on peut éviter des fetchs répétitifs inutiles
+
+### D. Multi-tenant / cohérence agence
+Même si l’audit précédent dit que les `eq('agency_id', ...)` sont cohérents, je veux une seconde vérification.
+
+Vérifie :
+- qu’aucune requête n’échappe au filtrage attendu
+- que les pages critiques utilisent toutes le bon pattern
+- que l’usage de `profile.agency_id` est cohérent
+- qu’aucun stale closure ou callback mal dépendant ne subsiste sur ce sujet
+
+Les callbacks React avec dépendances incomplètes peuvent capturer des valeurs obsolètes si on les mémoïse avec `[]`, donc contrôle particulièrement les `useCallback`, `useMemo` et `useEffect` autour de `profile`, `agency_id`, `settings` et des loaders de données. [web:168][web:169]
+
+### E. Qualité UI/UX technique
+Sans refaire le design, améliore la qualité technique de l’UX :
+- remplace les `alert()` résiduels par un système cohérent si le projet a déjà des toasts
+- homogénéise les états de chargement / erreur / succès
+- vérifie les patterns de modales / confirmations
+- évite les feedbacks trop bruts
+
+### F. Constantes et cohérence
+- extraire les constantes métier ou branding pertinentes si elles sont hardcodées à plusieurs endroits
+- harmoniser les valeurs par défaut
+- vérifier les incohérences entre fallbacks de settings et `DEFAULT_AGENCY_SETTINGS`
+
+## CONTRAINTES IMPORTANTES
+
+- Ne casse rien.
+- Ne lance pas une refonte totale inutile.
+- Ne fais pas d’abstractions excessives.
+- Ne “sur-engineer” pas.
+- N’invente pas de nouvelles conventions si l’existant peut être homogénéisé simplement.
+- Préserve le comportement métier existant.
+- Conserve les spécificités métier locales (Sénégal, XOF, contrats, quittances, commissions, etc.).
+- Sois pragmatique et exigeant.
+
+## MÉTHODE DE TRAVAIL
+
+Travaille par lots cohérents et visibles.
+
+Ordre attendu :
+1. audit de validation
+2. liste des écarts réels restants
+3. plan précis de finalisation
+4. implémentation des correctifs prioritaires
+5. vérification TypeScript
+6. build
+7. résumé final structuré
+
+À chaque étape :
+- explique brièvement ce que tu constates
+- justifie les changements
+- garde les modifications ciblées
+- montre une logique d’architecture claire
+
+## LIVRABLE FINAL
+
+Je veux à la fin :
+1. un audit de validation du refactor précédent
+2. la liste des vrais problèmes restants
+3. les correctifs appliqués
+4. les fichiers créés / modifiés
+5. le résultat de `typecheck` et `build`
+6. les dettes restantes réellement assumées
+7. des recommandations de prochaine étape
+
+## POINT D’ATTENTION SPÉCIAL
+
+Pour `jsPDF` + `autoTable`, privilégie une solution de typage propre et centralisée plutôt que des casts dispersés ou des déclarations répétées, car l’approche recommandée côté TypeScript consiste justement à centraliser l’extension/plugin au lieu de redéclarer le type dans chaque fichier. [web:173]
+
+Pour le multi-tenant Supabase, considère que le pattern sain est :
+- un identifiant de tenant clair (`agency_id`)
+- des requêtes filtrées de manière cohérente
+- une sécurité réellement portée par RLS
+- un front homogène sur ce pattern. [web:174]
+
+Commence maintenant par :
+1. vérifier si le refactor déjà annoncé est réellement en place
+2. identifier les dettes restantes les plus importantes
+3. proposer un plan de finalisation concis
+4. puis implémenter les améliorations les plus rentables sans régression

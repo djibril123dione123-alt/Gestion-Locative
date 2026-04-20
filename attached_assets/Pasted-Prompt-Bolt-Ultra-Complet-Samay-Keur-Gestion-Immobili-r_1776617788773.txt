@@ -1,0 +1,249 @@
+Prompt Bolt Ultra-Complet — Samay Keur (Gestion Immobilière SaaS)
+text
+Tu es un staff engineer / principal engineer full-stack expert React 18 + TypeScript + Vite + Supabase + PostgreSQL + SaaS multi-tenant. Tu travailles sur **Samay Keur**, une application SaaS sénégalaise de gestion immobilière.
+
+## CONTEXTE PROJET — SAMAY KEUR
+**Stack actuelle :** React 18 • TypeScript • Vite • Tailwind • Supabase • jsPDF • Recharts • XLSX
+**Fonctionnalités live :** 16+ pages (Dashboard, Bailleurs, Immeubles, Unités, Locataires, Contrats, Paiements, Dépenses, Commissions, Loyers impayés, Filtres avancés, Tableau financier, Paramètres agence, Onboarding, Auth)
+**Architecture :** Multi-tenant (`agencyid`) • RLS PostgreSQL • Soft delete • Audit logs • Plans SaaS
+
+## MISSION CRITIQUE
+**Refactor complet production-grade sans casser l'existant :**
+✅ Types 100% cohérents (une seule source de vérité)
+✅ Zéro as any / duplication interfaces
+✅ Services métier isolés des pages
+✅ Module PDF modulaire et typé
+✅ Multi-tenant homogène partout
+✅ Frontend ↔ Supabase parfaitement alignés
+✅ Code maintenable/scalable
+✅ Build/lint/typecheck propres
+
+text
+
+## DETTES TECHNIQUES PRIORITAIRES — À CORRIGER ABSOLUMENT
+
+### 1. **TYPES INCOHÉRENTS CRITIQUES**
+❌ AgencySettings = 3 définitions différentes :
+- src/lib/pdf.ts
+- src/lib/templates/helpers.ts
+- src/pages/Parametres.tsx
+
+❌ Locataire/Bailleur/Immeuble/Unite dupliqués
+❌ Champs manquants : siteweb, couleursecondaire, signatureurl, qrcodequittances
+❌ null | undefined | ? incohérents
+
+text
+
+### 2. **any AS HELL**
+❌ Parametres.tsx, Contrats.tsx, Commissions.tsx
+❌ Table.tsx générique mal typé
+❌ PDF functions (generateContratPDF, etc.)
+❌ Supabase responses non typées
+
+text
+
+### 3. **DUPLICATIONS MASSIVES**
+❌ formatCurrency x plusieurs endroits
+❌ Helpers agency répétés
+❌ Logique métier dans les pages
+
+text
+
+### 4. **PDF MONOLITHE 600+ LIGNES**
+❌ generateContratPDF = usine à gaz
+❌ Types any partout
+❌ Logique templates + rendu mélangés
+❌ XOF/sénégal specifics mal isolés
+
+text
+
+## PLAN D'ATTAQUE — 8 PHASES STRICTES
+
+### **PHASE 1 — TYPES : UNE SEULE SOURCE DE VÉRITÉ**
+Créer src/types/ complet :
+├── entities.ts (Locataire, Bailleur, Immeuble, Unite, Contrat, Paiement, etc.)
+├── agency.ts (AgencySettings FINAL)
+├── pdf.ts (PDF inputs/outputs)
+├── ui.ts (TableColumn, FormData génériques)
+├── database.ts (Supabase responses)
+
+RÈGLES TYPES :
+
+DB types (nullable comme PostgreSQL)
+
+Form types (non-nullables)
+
+Create/Update payloads
+
+View types (avec jointures)
+
+text
+
+### **PHASE 2 — SERVICES MÉTIER**
+src/services/
+├── bailleurs.service.ts
+├── immeubles.service.ts
+├── locataires.service.ts
+├── contrats.service.ts
+├── paiements.service.ts
+├── agency.service.ts
+└── pdf.service.ts
+
+Chaque service :
+✅ Typé en entrée/sortie
+✅ agencyid injecté systématiquement
+✅ Erreurs homogénéisées
+✅ Reusable + testable
+
+text
+
+### **PHASE 3 — UTILS CENTRALISÉS**
+src/lib/
+├── formatters.ts (formatCurrency XOF, dates FR)
+├── validators.ts (CNI, téléphone SN, etc.)
+├── constants.ts (ROLES, STATUTS, etc.)
+├── permissions.ts (canEdit, canDelete)
+└── mappers.ts (DB → Form, Form → PDF)
+
+text
+
+### **PHASE 4 — PDF REMISE À NIVEAU**
+src/lib/pdf/
+├── core.ts (PDF utils, fonts, headers)
+├── types.ts (PDF inputs stricts)
+├── contrat.ts (generateContratPDF)
+├── paiement.ts (generatePaiementFacturePDF)
+├── mandat.ts (generateMandatBailleurPDF)
+└── senegal.ts (XOF, mentions légales SN)
+
+SPÉCIFICS À GARDER :
+
+Devise XOF formatting
+
+Pénalités retard
+
+Frais huissier
+
+Mentions juridiques sénégalaises
+
+text
+
+### **PHASE 5 — MULTI-TENANT BULLETPROOF**
+✅ TOUTES les queries = agencyid filtré
+✅ Rôles guards homogénéisés (admin/agent/comptable/bailleur)
+✅ Menu/pages selon permissions
+✅ Onboarding flow sécurisé
+✅ RLS frontend validation (défensive)
+
+text
+
+### **PHASE 6 — PAGES + UI**
+✅ Pages → thin components (logique → services)
+✅ Table générique parfaitement typée
+✅ Forms typées + validation
+✅ Empty states cohérents
+✅ Loading states homogènes
+✅ Error boundaries
+✅ Toasts centralisés
+
+text
+
+### **PHASE 7 — BDD ALIGNEMENT**
+Audit schéma PostgreSQL vs frontend :
+✅ Toutes colonnes utilisées existent
+✅ commissionglobale cohérent
+✅ RLS policies correctes
+✅ Soft delete partout
+✅ Audit logs fonctionnels
+✅ Index performances
+
+Migrations si nécessaire :
+✅ Idempotentes
+✅ Non destructives
+✅ Commentées
+
+text
+
+### **PHASE 8 — QUALITÉ + TESTS**
+✅ npm run build ✅
+✅ npm run lint ✅
+✅ npm run typecheck ✅
+✅ Tests unitaires critiques :
+- formatters
+- permissions
+- PDF mappers
+- validators
+✅ E2E smoke tests si possible
+
+text
+
+## RÈGLES ABSOLUES D'EXÉCUTION
+✅ NE PAS casser : auth, onboarding, CRUD, PDF gen, permissions
+✅ Garder specs Sénégal : XOF, pénalités, mentions légales
+✅ Pragmatique > parfait (pas d'usine à gaz)
+✅ Progressif : phase par phase visible
+✅ Zéro régression fonctionnelle
+✅ Code lisible > ingénieux
+
+text
+
+## LIVRABLES ATTENDUS
+✅ Code refactoré (types, services, PDF, pages)
+✅ Migrations SQL si nécessaires
+✅ Tests unitaires clés
+✅ Documentation changements
+✅ Checklist dettes restantes
+✅ Mesures avant/après (loc, bundle size, etc.)
+✅ Prochaines priorités
+
+text
+
+## MÉTHODOLOGIE D'EXÉCUTION
+📋 PHASE 1 — Audit + plan détaillé
+
+🏗️ PHASE 2 — Types (src/types/)
+
+🔧 PHASE 3 — Services (src/services/)
+
+📄 PHASE 4 — PDF modularisé
+
+🛡️ PHASE 5 — Multi-tenant audit
+
+🎨 PHASE 6 — Pages + UI polish
+
+🗄️ PHASE 7 — BDD alignement
+
+✅ PHASE 8 — QA + tests + build
+
+À CHAQUE PHASE :
+
+Montre avant/après
+
+Explique pourquoi ce choix
+
+Valide build/lint/typecheck
+
+Teste flux critiques
+
+text
+
+## COMMENCE MAINTENANT PAR :
+🚀 PHASE 1 — AUDIT COMPLET IMMÉDIAT
+
+Explorer arborescence projet
+
+Mapper types dupliqués/incohérents
+
+Lister tous les as any
+
+Identifier services à extraire
+
+Vérifier multi-tenant everywhere
+
+Proposer plan d'attaque PHASE 2-8
+
+text
+
+**Exécute méthodiquement phase par phase.**
+
+**Transforme Samay Keur en codebase production-grade maintenable.**

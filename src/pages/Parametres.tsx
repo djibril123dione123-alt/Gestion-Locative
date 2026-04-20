@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Save,
   Upload,
-  Image as ImageIcon,
   AlertCircle,
   Settings,
   FileText,
@@ -13,191 +12,223 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
+import { AgencySettings, DEFAULT_AGENCY_SETTINGS } from '../types/agency';
+import { ToastContainer } from '../components/ui/Toast';
 
-interface AgencySettings {
-  agency_id: string;
-  nom_agence: string;
-  adresse: string;
-  telephone: string;
-  email: string;
-  site_web: string;
-  ninea: string;
-  rc: string;
-  representant_nom: string;
-  representant_fonction: string;
-  manager_id_type: string;
-  manager_id_number: string;
-  city: string;
-  logo_url: string;
-  logo_position: 'left' | 'center' | 'right';
-  couleur_primaire: string;
-  couleur_secondaire: string;
-  mention_tribunal: string;
-  mention_penalites: string;
-  mention_frais_huissier: string;
-  mention_litige: string;
-  pied_page_personnalise: string;
-  frais_huissier: number;
-  commission_globale: number;
-  penalite_retard_montant: number;
-  penalite_retard_delai_jours: number;
-  devise: string;
-}
+type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
+  created_at?: string;
+  updated_at?: string;
+};
+
+const EMPTY_SETTINGS: Omit<SettingsState, 'agency_id'> = {
+  nom_agence: '',
+  adresse: '',
+  telephone: '',
+  email: '',
+  site_web: '',
+  ninea: '',
+  rc: '',
+  representant_nom: '',
+  representant_fonction: DEFAULT_AGENCY_SETTINGS.representant_fonction ?? 'Gérant',
+  manager_id_type: DEFAULT_AGENCY_SETTINGS.manager_id_type ?? 'CNI',
+  manager_id_number: '',
+  city: DEFAULT_AGENCY_SETTINGS.city ?? 'Dakar',
+  logo_url: '',
+  logo_position: DEFAULT_AGENCY_SETTINGS.logo_position ?? 'left',
+  couleur_primaire: DEFAULT_AGENCY_SETTINGS.couleur_primaire ?? '#F58220',
+  couleur_secondaire: DEFAULT_AGENCY_SETTINGS.couleur_secondaire ?? '#333333',
+  devise: DEFAULT_AGENCY_SETTINGS.devise ?? 'XOF',
+  pied_page_personnalise: DEFAULT_AGENCY_SETTINGS.pied_page_personnalise ?? '',
+  signature_url: null,
+  qr_code_quittances: true,
+  mention_tribunal: DEFAULT_AGENCY_SETTINGS.mention_tribunal ?? '',
+  mention_penalites: DEFAULT_AGENCY_SETTINGS.mention_penalites ?? '',
+  mention_frais_huissier: DEFAULT_AGENCY_SETTINGS.mention_frais_huissier ?? '',
+  mention_litige: DEFAULT_AGENCY_SETTINGS.mention_litige ?? '',
+  frais_huissier: DEFAULT_AGENCY_SETTINGS.frais_huissier ?? 37500,
+  commission_globale: DEFAULT_AGENCY_SETTINGS.commission_globale ?? 10,
+  penalite_retard_montant: DEFAULT_AGENCY_SETTINGS.penalite_retard_montant ?? 1000,
+  penalite_retard_delai_jours: DEFAULT_AGENCY_SETTINGS.penalite_retard_delai_jours ?? 3,
+  commission_personnalisee_par_bailleur: false,
+  mode_avance_actif: false,
+  module_depenses_actif: true,
+  module_inventaires_actif: false,
+  module_interventions_actif: false,
+  wave_actif: false,
+  wave_numero: null,
+  orange_money_actif: false,
+  orange_money_numero: null,
+  free_money_actif: false,
+  free_money_numero: null,
+  email_notifications_actif: false,
+  sms_notifications_actif: false,
+  champs_personnalises_locataire: 0,
+};
 
 export function Parametres() {
   const { profile } = useAuth();
-  const { showToast } = useToast();
+  const { showToast, toasts, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'general' | 'documents' | 'appearance'>('general');
-  const [settings, setSettings] = useState<Partial<AgencySettings>>({
-    nom_agence: '',
-    adresse: '',
-    telephone: '',
-    email: '',
-    site_web: '',
-    ninea: '',
-    rc: '',
-    representant_nom: '',
-    representant_fonction: 'Gérant',
-    manager_id_type: 'CNI',
-    manager_id_number: '',
-    city: 'Dakar',
-    logo_url: '',
-    logo_position: 'left',
-    couleur_primaire: '#F58220',
-    couleur_secondaire: '#333333',
-    mention_tribunal: 'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
-    mention_penalites: "Il est expressément convenu qu'à défaut de paiement d'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours) des pénalités seront appliquées. Passé ce délai, la procédure judiciaire sera enclenchée.",
-    mention_frais_huissier: "En cas de non-paiement du loyer dans les délais impartis, une somme est prélevée sur la caution pour les frais d'huissier afin d'assignation en expulsion, conformément à la loi sénégalaise.",
-    mention_litige: "Il est expressément convenu qu'en cas de litige, les frais d'huissier, d'expertises et d'honoraires d'avocat, qui auraient été engagés par le bailleur et ce sur pièces justificatives, seront remboursés par le locataire.",
-    pied_page_personnalise: 'Gestion Locative - Dakar, Sénégal',
-    frais_huissier: 37500,
-    commission_globale: 10,
-    penalite_retard_montant: 1000,
-    penalite_retard_delai_jours: 3,
-    devise: 'XOF',
-  });
+  const [settings, setSettings] = useState<SettingsState | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
 
   useEffect(() => {
-    loadSettings();
+    if (profile?.agency_id) {
+      loadSettings(profile.agency_id);
+    }
   }, [profile?.agency_id]);
 
-  const loadSettings = async () => {
-    if (!profile?.agency_id) return;
-
+  const loadSettings = async (agencyId: string) => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('agency_settings')
         .select('*')
-        .eq('agency_id', profile.agency_id)
+        .eq('agency_id', agencyId)
         .maybeSingle();
 
       if (error) throw error;
 
       if (data) {
-        setSettings(data);
+        setSettings(data as SettingsState);
         if (data.logo_url) {
           setLogoPreview(data.logo_url);
         }
       } else {
-        await createDefaultSettings();
+        const created = await createDefaultSettings(agencyId);
+        if (created) {
+          setSettings(created as SettingsState);
+        }
       }
-    } catch (error) {
-      console.error('Erreur chargement paramètres:', error);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Erreur chargement paramètres:', msg);
       showToast('Erreur lors du chargement des paramètres', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const createDefaultSettings = async () => {
-    if (!profile?.agency_id) return;
-
+  const createDefaultSettings = async (agencyId: string): Promise<AgencySettings | null> => {
     try {
       const { data: agency } = await supabase
         .from('agencies')
         .select('name, phone, email, address, ninea')
-        .eq('id', profile.agency_id)
-        .single();
+        .eq('id', agencyId)
+        .maybeSingle();
 
-      const defaultSettings = {
-        agency_id: profile.agency_id,
-        nom_agence: agency?.name || 'Mon Agence',
-        adresse: agency?.address || '',
-        telephone: agency?.phone || '',
-        email: agency?.email || '',
-        ninea: agency?.ninea || '',
-        ...settings,
+      const rowToInsert = {
+        ...EMPTY_SETTINGS,
+        agency_id: agencyId,
+        nom_agence: agency?.name ?? DEFAULT_AGENCY_SETTINGS.nom_agence ?? 'Mon Agence',
+        adresse: agency?.address ?? '',
+        telephone: agency?.phone ?? '',
+        email: agency?.email ?? '',
+        ninea: agency?.ninea ?? '',
       };
 
       const { data, error } = await supabase
         .from('agency_settings')
-        .insert(defaultSettings)
+        .insert(rowToInsert)
         .select()
         .single();
 
-      if (error) throw error;
-      if (data) setSettings(data);
-    } catch (error) {
-      console.error('Erreur création paramètres:', error);
+      if (error) {
+        if (error.code === '23505') {
+          const { data: existing, error: fetchError } = await supabase
+            .from('agency_settings')
+            .select('*')
+            .eq('agency_id', agencyId)
+            .single();
+          if (fetchError) throw fetchError;
+          return existing as AgencySettings;
+        }
+        throw error;
+      }
+      return data as AgencySettings;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Erreur création paramètres par défaut:', msg);
+      return null;
     }
   };
 
   const handleSave = async () => {
-    if (!profile?.agency_id) return;
+    if (!profile?.agency_id || !settings) return;
 
     setSaving(true);
     try {
-      const dataToSave = {
+      const dataToSave: Omit<AgencySettings, 'created_at' | 'updated_at'> = {
         agency_id: profile.agency_id,
-        nom_agence: settings.nom_agence || '',
-        adresse: settings.adresse || '',
-        telephone: settings.telephone || '',
-        email: settings.email || '',
-        site_web: settings.site_web || '',
-        ninea: settings.ninea || '',
-        rc: settings.rc || '',
-        representant_nom: settings.representant_nom || '',
-        representant_fonction: settings.representant_fonction || 'Gérant',
-        manager_id_type: settings.manager_id_type || 'CNI',
-        manager_id_number: settings.manager_id_number || '',
-        city: settings.city || 'Dakar',
-        logo_url: settings.logo_url || '',
-        logo_position: settings.logo_position || 'left',
-        couleur_primaire: settings.couleur_primaire || '#F58220',
-        couleur_secondaire: settings.couleur_secondaire || '#333333',
-        mention_tribunal: settings.mention_tribunal || '',
-        mention_penalites: settings.mention_penalites || '',
-        mention_frais_huissier: settings.mention_frais_huissier || '',
-        mention_litige: settings.mention_litige || '',
-        pied_page_personnalise: settings.pied_page_personnalise || '',
-        frais_huissier: settings.frais_huissier || 37500,
-        commission_globale: settings.commission_globale || 10,
-        penalite_retard_montant: settings.penalite_retard_montant || 1000,
-        penalite_retard_delai_jours: settings.penalite_retard_delai_jours || 3,
-        devise: settings.devise || 'XOF',
-        updated_at: new Date().toISOString(),
+        nom_agence: settings.nom_agence ?? '',
+        adresse: settings.adresse ?? '',
+        telephone: settings.telephone ?? '',
+        email: settings.email ?? '',
+        site_web: settings.site_web ?? '',
+        ninea: settings.ninea ?? '',
+        rc: settings.rc ?? '',
+        representant_nom: settings.representant_nom ?? '',
+        representant_fonction: settings.representant_fonction ?? 'Gérant',
+        manager_id_type: settings.manager_id_type ?? 'CNI',
+        manager_id_number: settings.manager_id_number ?? '',
+        city: settings.city ?? 'Dakar',
+        logo_url: settings.logo_url ?? '',
+        logo_position: settings.logo_position ?? 'left',
+        couleur_primaire: settings.couleur_primaire ?? '#F58220',
+        couleur_secondaire: settings.couleur_secondaire ?? '#333333',
+        mention_tribunal: settings.mention_tribunal ?? '',
+        mention_penalites: settings.mention_penalites ?? '',
+        mention_frais_huissier: settings.mention_frais_huissier ?? '',
+        mention_litige: settings.mention_litige ?? '',
+        pied_page_personnalise: settings.pied_page_personnalise ?? '',
+        frais_huissier: settings.frais_huissier ?? 37500,
+        commission_globale: settings.commission_globale ?? 10,
+        penalite_retard_montant: settings.penalite_retard_montant ?? 1000,
+        penalite_retard_delai_jours: settings.penalite_retard_delai_jours ?? 3,
+        devise: settings.devise ?? 'XOF',
+        signature_url: settings.signature_url ?? null,
+        qr_code_quittances: settings.qr_code_quittances ?? true,
+        commission_personnalisee_par_bailleur: settings.commission_personnalisee_par_bailleur ?? false,
+        mode_avance_actif: settings.mode_avance_actif ?? false,
+        module_depenses_actif: settings.module_depenses_actif ?? true,
+        module_inventaires_actif: settings.module_inventaires_actif ?? false,
+        module_interventions_actif: settings.module_interventions_actif ?? false,
+        wave_actif: settings.wave_actif ?? false,
+        wave_numero: settings.wave_numero ?? null,
+        orange_money_actif: settings.orange_money_actif ?? false,
+        orange_money_numero: settings.orange_money_numero ?? null,
+        free_money_actif: settings.free_money_actif ?? false,
+        free_money_numero: settings.free_money_numero ?? null,
+        email_notifications_actif: settings.email_notifications_actif ?? false,
+        sms_notifications_actif: settings.sms_notifications_actif ?? false,
+        champs_personnalises_locataire: settings.champs_personnalises_locataire ?? 0,
       };
 
-      const { error } = await supabase
+      const { data: savedData, error } = await supabase
         .from('agency_settings')
-        .upsert(dataToSave, {
-          onConflict: 'agency_id',
-          ignoreDuplicates: false
-        });
+        .upsert(dataToSave, { onConflict: 'agency_id', ignoreDuplicates: false })
+        .select()
+        .single();
 
       if (error) {
-        console.error('Erreur sauvegarde paramètres:', error);
-        throw error;
+        console.error('Erreur Supabase upsert:', error);
+        throw new Error(error.message);
       }
 
+      if (!savedData) {
+        throw new Error(
+          'Sauvegarde bloquée par les permissions. Vérifiez votre rôle ou contactez l\'administrateur.'
+        );
+      }
+
+      setSettings(savedData as SettingsState);
       showToast('Paramètres enregistrés avec succès', 'success');
-      await loadSettings();
-    } catch (error) {
-      console.error('Erreur sauvegarde:', error);
-      showToast('Erreur lors de l\'enregistrement', 'error');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erreur inconnue';
+      console.error('Erreur sauvegarde paramètres:', msg);
+      showToast(`Erreur : ${msg}`, 'error');
     } finally {
       setSaving(false);
     }
@@ -205,7 +236,7 @@ export function Parametres() {
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !profile?.agency_id) return;
+    if (!file || !profile?.agency_id || !settings) return;
 
     if (!file.type.startsWith('image/')) {
       showToast('Veuillez sélectionner une image', 'error');
@@ -213,7 +244,7 @@ export function Parametres() {
     }
 
     if (file.size > 2 * 1024 * 1024) {
-      showToast('L\'image ne doit pas dépasser 2 Mo', 'error');
+      showToast("L'image ne doit pas dépasser 2 Mo", 'error');
       return;
     }
 
@@ -235,9 +266,10 @@ export function Parametres() {
       setSettings({ ...settings, logo_url: publicUrl.publicUrl });
       setLogoPreview(publicUrl.publicUrl);
       showToast('Logo uploadé avec succès', 'success');
-    } catch (error) {
-      console.error('Erreur upload logo:', error);
-      showToast('Erreur lors de l\'upload du logo', 'error');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Erreur upload logo:", msg);
+      showToast("Erreur lors de l'upload du logo", 'error');
     }
   };
 
@@ -247,7 +279,7 @@ export function Parametres() {
     { id: 'appearance', label: 'Apparence', icon: Palette },
   ];
 
-  if (loading) {
+  if (loading || !settings) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
@@ -257,6 +289,8 @@ export function Parametres() {
 
   return (
     <div className="space-y-6">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-orange-100 rounded-lg">
@@ -296,7 +330,7 @@ export function Parametres() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as 'general' | 'documents' | 'appearance')}
                   className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-colors ${
                     activeTab === tab.id
                       ? 'border-orange-500 text-orange-600'
@@ -321,7 +355,7 @@ export function Parametres() {
                   </label>
                   <input
                     type="text"
-                    value={settings.nom_agence || ''}
+                    value={settings.nom_agence ?? ''}
                     onChange={(e) => setSettings({ ...settings, nom_agence: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
@@ -333,7 +367,7 @@ export function Parametres() {
                   </label>
                   <input
                     type="text"
-                    value={settings.telephone || ''}
+                    value={settings.telephone ?? ''}
                     onChange={(e) => setSettings({ ...settings, telephone: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
@@ -343,7 +377,7 @@ export function Parametres() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
                   <input
                     type="email"
-                    value={settings.email || ''}
+                    value={settings.email ?? ''}
                     onChange={(e) => setSettings({ ...settings, email: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
@@ -355,7 +389,7 @@ export function Parametres() {
                   </label>
                   <input
                     type="url"
-                    value={settings.site_web || ''}
+                    value={settings.site_web ?? ''}
                     onChange={(e) => setSettings({ ...settings, site_web: e.target.value })}
                     placeholder="https://www.example.com"
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -366,7 +400,7 @@ export function Parametres() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">Adresse</label>
                   <input
                     type="text"
-                    value={settings.adresse || ''}
+                    value={settings.adresse ?? ''}
                     onChange={(e) => setSettings({ ...settings, adresse: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
@@ -376,7 +410,7 @@ export function Parametres() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">NINEA</label>
                   <input
                     type="text"
-                    value={settings.ninea || ''}
+                    value={settings.ninea ?? ''}
                     onChange={(e) => setSettings({ ...settings, ninea: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
@@ -388,7 +422,7 @@ export function Parametres() {
                   </label>
                   <input
                     type="text"
-                    value={settings.rc || ''}
+                    value={settings.rc ?? ''}
                     onChange={(e) => setSettings({ ...settings, rc: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
@@ -400,7 +434,7 @@ export function Parametres() {
                   </label>
                   <input
                     type="text"
-                    value={settings.representant_nom || ''}
+                    value={settings.representant_nom ?? ''}
                     onChange={(e) => setSettings({ ...settings, representant_nom: e.target.value })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
@@ -412,7 +446,7 @@ export function Parametres() {
                   </label>
                   <input
                     type="text"
-                    value={settings.representant_fonction || ''}
+                    value={settings.representant_fonction ?? ''}
                     onChange={(e) =>
                       setSettings({ ...settings, representant_fonction: e.target.value })
                     }
@@ -426,7 +460,7 @@ export function Parametres() {
                     Type de pièce d'identité du représentant
                   </label>
                   <select
-                    value={settings.manager_id_type || 'CNI'}
+                    value={settings.manager_id_type ?? 'CNI'}
                     onChange={(e) =>
                       setSettings({ ...settings, manager_id_type: e.target.value })
                     }
@@ -444,7 +478,7 @@ export function Parametres() {
                   </label>
                   <input
                     type="text"
-                    value={settings.manager_id_number || ''}
+                    value={settings.manager_id_number ?? ''}
                     onChange={(e) =>
                       setSettings({ ...settings, manager_id_number: e.target.value })
                     }
@@ -459,7 +493,7 @@ export function Parametres() {
                   </label>
                   <input
                     type="text"
-                    value={settings.city || ''}
+                    value={settings.city ?? ''}
                     onChange={(e) => setSettings({ ...settings, city: e.target.value })}
                     placeholder="ex: Dakar, Thiès, Saint-Louis"
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -490,7 +524,7 @@ export function Parametres() {
                 </label>
                 <input
                   type="text"
-                  value={settings.mention_tribunal || ''}
+                  value={settings.mention_tribunal ?? ''}
                   onChange={(e) => setSettings({ ...settings, mention_tribunal: e.target.value })}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
@@ -501,8 +535,10 @@ export function Parametres() {
                   Texte des pénalités de retard
                 </label>
                 <textarea
-                  value={settings.mention_penalites || ''}
-                  onChange={(e) => setSettings({ ...settings, mention_penalites: e.target.value })}
+                  value={settings.mention_penalites ?? ''}
+                  onChange={(e) =>
+                    setSettings({ ...settings, mention_penalites: e.target.value })
+                  }
                   rows={4}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
@@ -514,7 +550,7 @@ export function Parametres() {
                 </label>
                 <input
                   type="text"
-                  value={settings.pied_page_personnalise || ''}
+                  value={settings.pied_page_personnalise ?? ''}
                   onChange={(e) =>
                     setSettings({ ...settings, pied_page_personnalise: e.target.value })
                   }
@@ -529,7 +565,7 @@ export function Parametres() {
                   </label>
                   <input
                     type="number"
-                    value={settings.frais_huissier || 0}
+                    value={settings.frais_huissier ?? 0}
                     onChange={(e) =>
                       setSettings({ ...settings, frais_huissier: Number(e.target.value) })
                     }
@@ -543,9 +579,12 @@ export function Parametres() {
                   </label>
                   <input
                     type="number"
-                    value={settings.penalite_retard_montant || 0}
+                    value={settings.penalite_retard_montant ?? 0}
                     onChange={(e) =>
-                      setSettings({ ...settings, penalite_retard_montant: Number(e.target.value) })
+                      setSettings({
+                        ...settings,
+                        penalite_retard_montant: Number(e.target.value),
+                      })
                     }
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
@@ -557,7 +596,7 @@ export function Parametres() {
                   </label>
                   <input
                     type="number"
-                    value={settings.penalite_retard_delai_jours || 0}
+                    value={settings.penalite_retard_delai_jours ?? 0}
                     onChange={(e) =>
                       setSettings({
                         ...settings,
@@ -615,7 +654,7 @@ export function Parametres() {
                       <div className="w-48 h-32 border border-slate-300 rounded-lg p-4 bg-slate-50 flex items-center justify-center">
                         <img
                           src={logoPreview}
-                          alt="Logo"
+                          alt="Logo agence"
                           className="max-w-full max-h-full object-contain"
                         />
                       </div>
@@ -655,7 +694,7 @@ export function Parametres() {
                   <div className="flex gap-3">
                     <input
                       type="color"
-                      value={settings.couleur_primaire || '#F58220'}
+                      value={settings.couleur_primaire ?? '#F58220'}
                       onChange={(e) =>
                         setSettings({ ...settings, couleur_primaire: e.target.value })
                       }
@@ -663,7 +702,7 @@ export function Parametres() {
                     />
                     <input
                       type="text"
-                      value={settings.couleur_primaire || '#F58220'}
+                      value={settings.couleur_primaire ?? '#F58220'}
                       onChange={(e) =>
                         setSettings({ ...settings, couleur_primaire: e.target.value })
                       }
@@ -679,7 +718,7 @@ export function Parametres() {
                   <div className="flex gap-3">
                     <input
                       type="color"
-                      value={settings.couleur_secondaire || '#333333'}
+                      value={settings.couleur_secondaire ?? '#333333'}
                       onChange={(e) =>
                         setSettings({ ...settings, couleur_secondaire: e.target.value })
                       }
@@ -687,7 +726,7 @@ export function Parametres() {
                     />
                     <input
                       type="text"
-                      value={settings.couleur_secondaire || '#333333'}
+                      value={settings.couleur_secondaire ?? '#333333'}
                       onChange={(e) =>
                         setSettings({ ...settings, couleur_secondaire: e.target.value })
                       }

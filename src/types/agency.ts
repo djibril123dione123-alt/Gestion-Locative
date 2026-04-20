@@ -4,6 +4,7 @@ export interface AgencySettings {
   adresse: string | null;
   telephone: string | null;
   email: string | null;
+  site_web: string | null;
   ninea: string | null;
   rc: string | null;
   representant_nom: string | null;
@@ -12,7 +13,9 @@ export interface AgencySettings {
   manager_id_number: string | null;
   city: string | null;
   logo_url: string | null;
+  logo_position: 'left' | 'center' | 'right' | null;
   couleur_primaire: string | null;
+  couleur_secondaire: string | null;
   devise: string | null;
   pied_page_personnalise: string | null;
   signature_url: string | null;
@@ -43,13 +46,14 @@ export interface AgencySettings {
   updated_at: string;
 }
 
-export interface AgencySettingsFormInput extends Partial<Omit<AgencySettings, 'agency_id' | 'created_at' | 'updated_at'>> {}
+export type AgencySettingsFormInput = Partial<Omit<AgencySettings, 'agency_id' | 'created_at' | 'updated_at'>>;
 
 export const DEFAULT_AGENCY_SETTINGS: AgencySettingsFormInput = {
   nom_agence: 'Gestion Locative',
   adresse: null,
   telephone: null,
   email: null,
+  site_web: null,
   ninea: null,
   rc: null,
   representant_nom: null,
@@ -58,7 +62,9 @@ export const DEFAULT_AGENCY_SETTINGS: AgencySettingsFormInput = {
   manager_id_number: null,
   city: 'Dakar',
   logo_url: null,
+  logo_position: 'left',
   couleur_primaire: '#F58220',
+  couleur_secondaire: '#333333',
   devise: 'XOF',
   pied_page_personnalise: 'Gestion Locative - Dakar, Sénégal',
   signature_url: null,

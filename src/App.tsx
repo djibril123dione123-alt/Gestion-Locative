@@ -22,6 +22,7 @@ const LoyersImpayes = lazy(() => import('./pages/LoyersImpayes').then(m => ({ de
 const FiltresAvances = lazy(() => import('./pages/FiltresAvances').then(m => ({ default: m.FiltresAvances })));
 const TableauDeBordFinancierGlobal = lazy(() => import('./pages/TableauDeBordFinancierGlobal').then(m => ({ default: m.TableauDeBordFinancierGlobal })));
 const Parametres = lazy(() => import('./pages/Parametres').then(m => ({ default: m.Parametres })));
+const Console = lazy(() => import('./pages/Console').then(m => ({ default: m.Console })));
 
 function AppContent() {
     const { user, profile, loading } = useAuth();
@@ -79,6 +80,21 @@ function AppContent() {
         );
     }
 
+    // Super admin : pas d'agency_id — accès direct à la console propriétaire
+    if (profile?.role === 'super_admin') {
+        return (
+            <div className="min-h-screen bg-gray-950">
+                <Suspense fallback={
+                    <div className="flex items-center justify-center min-h-screen">
+                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600"></div>
+                    </div>
+                }>
+                    <Console />
+                </Suspense>
+            </div>
+        );
+    }
+
     // If no profile or no agency_id, show Welcome page
     if (!profile || !profile.agency_id) {
         return <Welcome />;
@@ -89,7 +105,7 @@ function AppContent() {
             case 'dashboard':
                 return <Dashboard onNavigate={setCurrentPage} />;
             case 'agences':
-                return <Agences />;
+                return profile?.role === 'super_admin' ? <Console /> : <Agences />;
             case 'bailleurs':
                 return <Bailleurs />;
             case 'immeubles':

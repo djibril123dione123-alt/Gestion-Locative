@@ -2,7 +2,6 @@ import React from 'react';
 import {
   LayoutDashboard,
   Building2,
-  Home,
   Users,
   FileText,
   CreditCard,
@@ -11,8 +10,6 @@ import {
   UserCircle,
   DoorOpen,
   AlertCircle,
-  BarChart3,
-  FileBarChart,
   Filter,
   TrendingDown,
   ChevronRight,
@@ -37,24 +34,25 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
     if (onClose) onClose();
   };
 
+  // super_admin n'utilise pas cette sidebar — il a sa propre Console.tsx
+  // 'agences' retiré du menu admin : la liste globale des agences est réservée au super_admin
   const menuItems = [
-    { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['admin'] },
-    { id: 'agences', label: 'Agences', icon: Home, roles: ['admin'] },
-    { id: 'bailleurs', label: 'Bailleurs', icon: UserCircle, roles: ['admin'] },
-    { id: 'immeubles', label: 'Immeubles', icon: Building2, roles: ['admin'] },
-    { id: 'unites', label: 'Produits', icon: DoorOpen, roles: ['admin'] },
-    { id: 'locataires', label: 'Locataires', icon: Users, roles: ['admin', 'agent', 'comptable'] },
-    { id: 'contrats', label: 'Contrats', icon: FileText, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
-    { id: 'paiements', label: 'Paiements', icon: CreditCard, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
-    { id: 'depenses', label: 'Dépenses', icon: TrendingDown, roles: ['admin'] },
-    { id: 'loyers-impayes', label: 'Loyers impayés', icon: AlertCircle, roles: ['admin', 'agent', 'comptable'] },
-    { id: 'tableau-de-bord-financier', label: 'Rapports Financiers', icon: Calculator, roles: ['admin'] },
-    { id: 'filtres-avances', label: 'Filtres avancés', icon: Filter, roles: ['admin', 'agent', 'comptable'] },
-    { id: 'parametres', label: 'Paramètres', icon: Settings, roles: ['admin'] },
+    { id: 'dashboard',               label: 'Tableau de bord',     icon: LayoutDashboard, roles: ['admin'] },
+    { id: 'bailleurs',               label: 'Bailleurs',            icon: UserCircle,      roles: ['admin'] },
+    { id: 'immeubles',               label: 'Immeubles',            icon: Building2,       roles: ['admin'] },
+    { id: 'unites',                  label: 'Produits',             icon: DoorOpen,        roles: ['admin'] },
+    { id: 'locataires',              label: 'Locataires',           icon: Users,           roles: ['admin', 'agent', 'comptable'] },
+    { id: 'contrats',                label: 'Contrats',             icon: FileText,        roles: ['admin', 'agent', 'comptable', 'bailleur'] },
+    { id: 'paiements',               label: 'Paiements',            icon: CreditCard,      roles: ['admin', 'agent', 'comptable', 'bailleur'] },
+    { id: 'depenses',                label: 'Dépenses',             icon: TrendingDown,    roles: ['admin'] },
+    { id: 'loyers-impayes',          label: 'Loyers impayés',       icon: AlertCircle,     roles: ['admin', 'agent', 'comptable'] },
+    { id: 'tableau-de-bord-financier', label: 'Rapports Financiers', icon: Calculator,    roles: ['admin'] },
+    { id: 'filtres-avances',         label: 'Filtres avancés',      icon: Filter,          roles: ['admin', 'agent', 'comptable'] },
+    { id: 'parametres',              label: 'Paramètres',           icon: Settings,        roles: ['admin'] },
   ];
 
   const filteredItems = menuItems.filter(
-    (item) => profile && item.roles.includes(profile.role)
+    (item) => profile && profile.role !== 'super_admin' && item.roles.includes(profile.role)
   );
 
   return (

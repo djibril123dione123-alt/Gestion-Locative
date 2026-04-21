@@ -4,7 +4,7 @@ export interface UserProfile {
   nom: string;
   prenom: string;
   telephone: string | null;
-  role: 'admin' | 'agent' | 'comptable' | 'bailleur';
+  role: 'super_admin' | 'admin' | 'agent' | 'comptable' | 'bailleur';
   bailleur_id: string | null;
   agency_id: string | null;
   actif: boolean;

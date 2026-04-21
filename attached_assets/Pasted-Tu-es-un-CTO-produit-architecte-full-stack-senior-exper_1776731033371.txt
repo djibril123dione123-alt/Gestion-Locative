@@ -1,0 +1,634 @@
+Tu es un CTO produit + architecte full-stack senior + expert SaaS B2B multi-tenant.
+
+Tu travailles sur le repo ACTUEL de mon logiciel de gestion immobilière SaaS multi-tenant.
+Je suis le propriétaire du logiciel.
+Je veux que tu réalises une mission complète de niveau “préparation production + scalabilité + qualité totale + vision long terme”.
+
+IMPORTANT :
+- Tu dois te baser sur le code réel du repo actuel.
+- Tu dois vérifier, analyser, croiser front + backend + SQL + RLS + UX + architecture + documentation.
+- Tu ne dois pas supposer.
+- Tu dois distinguer :
+  1. ce qui existe déjà,
+  2. ce qui existe partiellement,
+  3. ce qui manque,
+  4. ce qui est risqué,
+  5. ce qu’il faut faire maintenant,
+  6. ce qu’il faut planifier ensuite.
+- Tu ne dois PAS faire de réponse vague.
+- Je veux un audit exploitable comme plan directeur du logiciel.
+
+MISSION GLOBALE :
+Je veux savoir tout ce qu’il reste à faire pour rendre ce logiciel “ultra prêt”, au niveau :
+- produit
+- technique
+- UX
+- sécurité
+- qualité
+- maintenabilité
+- reporting
+- exploitation
+- administration
+- supervision
+- facturation
+- support
+- scalabilité
+- gouvernance propriétaire
+
+Je veux aussi que tu définisses la “page de gestion ultime” ou “console propriétaire ultime” du logiciel :
+c’est la console du propriétaire du SaaS, donc moi, qui supervise toutes les agences, tous les utilisateurs, tous les plans, toutes les métriques, les incidents, la facturation, la santé du système, les fraudes, la croissance, le support, les logs, les configurations globales, et les actions critiques.
+
+==================================================
+PARTIE 1 — AUDIT TOTAL DU PROJET ACTUEL
+==================================================
+
+Analyse le repo et établis un état factuel du projet.
+
+Tu dois inspecter :
+- l’arborescence complète
+- les pages existantes
+- les composants
+- les hooks
+- les utilitaires
+- les types
+- les migrations SQL
+- les policies RLS
+- les triggers / fonctions SQL
+- les flows auth / onboarding
+- la logique billing / subscriptions
+- la génération PDF
+- les logs / debug
+- les documents markdown du projet
+- la cohérence front ↔ DB
+
+Je veux un audit très structuré des dimensions suivantes :
+
+1. PRODUIT ACTUEL
+- Quelles fonctionnalités existent réellement ?
+- Quelles pages sont vraiment opérationnelles ?
+- Quels modules sont présents mais incomplets ?
+- Quels modules sont seulement préparés côté DB mais pas encore exposés côté front ?
+- Quels modules annoncés dans la roadmap ne sont pas encore faits ?
+
+2. ARCHITECTURE TECHNIQUE
+- solidité de l’architecture frontend
+- solidité de l’architecture backend/Supabase
+- qualité du découpage
+- duplication de code
+- dette technique
+- clarté des couches
+- centralisation des types
+- mapping front ↔ DB
+- état des services, helpers, contexts, pages
+
+3. BASE DE DONNÉES
+- cohérence du schéma
+- qualité des conventions de nommage
+- agencyid / agency_id
+- cohérence des colonnes métiers
+- qualité des relations
+- index
+- contraintes
+- enums
+- seeds
+- dette des migrations historiques
+- besoin d’un schéma canonique
+
+4. SÉCURITÉ
+- auth
+- RLS
+- isolation multi-tenant
+- permissions par rôle
+- onboarding sécurisé
+- protections d’accès
+- actions sensibles
+- risques de fuite inter-tenant
+- zones de danger
+
+5. QUALITÉ LOGICIELLE
+- types dupliqués
+- any / as any / assertions faibles
+- code mort
+- logs de debug
+- helpers dupliqués
+- gros fichiers monolithiques
+- fichiers difficiles à maintenir
+- risques de régression
+- manque de tests
+- cohérence des erreurs utilisateur
+
+6. UX / UI
+- clarté des parcours
+- onboarding
+- navigation
+- cohérence visuelle
+- feedback utilisateur
+- empty states
+- états loading/error
+- workflows lourds
+- fonctionnalités critiques trop enfouies
+- lisibilité des dashboards
+- perception premium / pro / fiable
+
+7. GO-TO-MARKET / SAAS
+- plans
+- essais
+- activation agence
+- gestion des abonnements
+- valeur perçue
+- modules premium possibles
+- points bloquants avant vente réelle
+- éléments manquants pour commercialiser sérieusement
+
+==================================================
+PARTIE 2 — VÉRIFICATION DE TOUT CE QUI MANQUE POUR LE RENDRE “100000% PRÊT”
+==================================================
+
+Je veux que tu identifies TOUT ce qu’il reste à faire pour rendre le logiciel prêt à un niveau très élevé.
+
+Tu dois produire une checklist exhaustive organisée par catégories :
+
+A. BLOQUANTS PRODUCTION
+Exemples :
+- bugs critiques possibles
+- mismatches DB/front
+- sécurité
+- RLS incohérentes
+- dette de types dangereuse
+- logique billing fragile
+- absence de supervision
+- pages clés absentes
+- actions destructives mal protégées
+
+B. AMÉLIORATIONS PRIORITAIRES
+Exemples :
+- centralisation des types
+- refactor PDF
+- standardisation des helpers
+- nettoyage migrations
+- refonte de certains formulaires
+- ajout d’audit UX
+- export/import
+- notifications visibles
+- gestion documentaire complète
+
+C. FONCTIONNALITÉS MÉTIER À AJOUTER OU FINALISER
+Analyse tout ce qui manque pour faire de la plateforme un excellent logiciel immobilier pro, par exemple :
+- inventaires complets
+- interventions SAV / maintenance
+- calendrier / événements
+- notifications internes
+- centre documentaire
+- relances automatiques
+- quittances avancées
+- suivi des impayés plus intelligent
+- reporting propriétaire / agence / bailleur
+- exports comptables
+- rapprochement paiements
+- historique des actions
+- rapprochement contrats / unités / locataires
+- modèles de documents
+- modèles d’emails / WhatsApp / SMS si pertinent
+- archivage
+- corbeille / restauration
+- recherche globale
+- filtres transversaux
+
+D. FONCTIONNALITÉS SAAS / BUSINESS À AJOUTER
+Exemples :
+- gestion abonnements complète
+- restrictions par plan
+- essais / expiration / suspension
+- page facturation
+- paiement en ligne
+- invoices / reçus / historique
+- coupons / remises
+- upsell
+- limitation modules par plan
+- indicateurs MRR / churn / activation
+- activation commerciale
+
+E. QUALITÉ / EXPLOITATION
+Exemples :
+- tests unitaires
+- tests E2E
+- monitoring
+- alerting
+- logs structurés
+- erreurs centralisées
+- analytics produit
+- observabilité
+- backups
+- scripts de migration sûrs
+- seeds propres
+- documentation technique
+- documentation support
+- runbooks incident
+
+==================================================
+PARTIE 3 — DÉFINIS UNE ROADMAP PAR PHASES
+==================================================
+
+Je veux un plan d’exécution par ordre intelligent.
+
+Découpe en phases réalistes :
+
+Phase 0 — Vérifications et sécurisation
+Phase 1 — Corrections structurelles
+Phase 2 — Stabilisation produit
+Phase 3 — Complétude métier
+Phase 4 — Complétude SaaS business
+Phase 5 — Console propriétaire ultime
+Phase 6 — Qualité, monitoring, tests, industrialisation
+Phase 7 — Pré-lancement commercial
+Phase 8 — Scalabilité / optimisation continue
+
+Pour chaque phase, donne :
+- objectif
+- livrables précis
+- dépendances
+- priorité
+- complexité
+- impact business
+- impact technique
+- risques
+- quick wins
+- ce qui peut être différé
+
+Je veux aussi :
+- un ordre recommandé semaine par semaine
+- ce qui doit être fait avant toute nouvelle feature
+- ce qui peut être lancé en parallèle
+- ce qui ne doit surtout pas être repoussé
+
+==================================================
+PARTIE 4 — CONSOLE PROPRIÉTAIRE ULTIME (MOI = PROPRIÉTAIRE DU SAAS)
+==================================================
+
+Je veux que tu conçoives la page / espace de gestion ultime du propriétaire du logiciel.
+
+Cette console n’est PAS une simple page admin d’agence.
+C’est la console “owner / super-admin / propriétaire SaaS global”.
+
+Tu dois définir :
+- son objectif
+- son périmètre
+- ses sections
+- ses KPIs
+- ses pouvoirs
+- ses garde-fous
+- ses pages filles
+- son modèle de permissions
+- les tables / vues / fonctions / policies nécessaires
+- ses actions critiques
+- son UX idéale
+
+Je veux une conception ultra complète.
+
+### La console propriétaire doit inclure au minimum :
+
+1. DASHBOARD GLOBAL SAAS
+- nombre total d’agences
+- agences actives
+- agences en essai
+- agences expirées
+- utilisateurs totaux
+- utilisateurs actifs
+- contrats totaux
+- paiements totaux
+- volume financier global
+- MRR
+- churn
+- conversions essai → payant
+- nouveaux comptes sur 7/30/90 jours
+- usage par module
+- agences les plus actives
+- agences à risque
+- croissance
+
+2. GESTION DES AGENCES
+- liste de toutes les agences
+- recherche
+- filtres
+- détail agence
+- état abonnement
+- plan
+- date création
+- activité récente
+- nombre utilisateurs
+- nombre biens / unités / contrats / paiements
+- santé de l’agence
+- actions :
+  - suspendre
+  - réactiver
+  - prolonger essai
+  - changer plan
+  - forcer activation
+  - désactiver modules
+  - voir logs
+  - impersonation sécurisée si pertinent
+  - contacter agence
+  - marquer “VIP”, “à risque”, “fraude”, “support renforcé”
+
+3. GESTION DES UTILISATEURS GLOBAUX
+- tous les utilisateurs de toutes les agences
+- recherche
+- filtres par rôle / agence / état
+- statut actif / inactif
+- dernière activité
+- volume d’usage
+- actions :
+  - désactiver
+  - réactiver
+  - réinitialiser onboarding
+  - forcer rôle si autorisé
+  - voir historique
+  - détecter doublons / comptes suspects
+
+4. ABONNEMENTS / FACTURATION
+- tous les abonnements
+- plans
+- dates de renouvellement
+- essais
+- paiements reçus
+- paiements en retard
+- agences à relancer
+- upgrades / downgrades
+- coupons
+- remises
+- état de facturation
+- incidents de paiement
+- exports financiers
+- logique de suspension automatique ou manuelle
+
+5. SUPPORT / OPÉRATIONS
+- tickets ou pseudo-tickets si pas encore existants
+- incidents ouverts
+- agences en difficulté
+- logs d’erreurs majeures
+- anomalies de flux onboarding
+- problèmes de paiement
+- problèmes de PDF
+- problèmes de permissions
+- centre d’intervention interne
+- journal des actions de support
+
+6. AUDIT / SÉCURITÉ
+- audit logs globaux
+- actions sensibles
+- connexions suspectes
+- changements de plan
+- suppressions
+- exports
+- actions super-admin
+- erreurs critiques
+- historique des impersonations
+- détection de comportements anormaux
+
+7. CONFIGURATION GLOBALE DU SAAS
+- paramètres globaux
+- branding global
+- templates globaux
+- variables globales
+- limites par défaut
+- textes légaux globaux
+- options de maintenance
+- feature flags
+- activation de modules
+- réglages pays/devise/langue
+- paramètres de notifications système
+
+8. OBSERVABILITÉ / SANTÉ SYSTÈME
+- statut des services
+- erreurs JS/front remontées
+- erreurs backend connues
+- jobs échoués
+- webhooks échoués si existants
+- métriques de performance
+- latence des pages critiques
+- volume des requêtes
+- santé du stockage documentaire
+- alertes
+
+9. CROISSANCE / BUSINESS INTELLIGENCE
+- cohortes d’activation
+- agences inactives
+- comptes à réengager
+- usage par plan
+- top fonctionnalités utilisées
+- fonctionnalités peu utilisées
+- opportunités upsell
+- agences prêtes pour Enterprise
+- rétention
+
+10. CENTRE D’ACTIONS CRITIQUES
+- actions dangereuses encadrées
+- confirmation forte
+- journalisation obligatoire
+- double validation pour certaines opérations
+- raison obligatoire
+- trace complète
+
+### Je veux aussi que tu définisses :
+- le modèle de rôle exact de cette console (owner, super_admin, support_admin, billing_admin, ops_admin, read_only_audit, etc.)
+- quelles actions chaque rôle peut ou ne peut pas faire
+- quelles actions doivent nécessiter une confirmation renforcée
+- quelles actions doivent être interdites même au support
+- quelles actions doivent déclencher un audit log obligatoire
+
+==================================================
+PARTIE 5 — CE QUI DOIT ÊTRE AJOUTÉ EN BASE DE DONNÉES POUR CETTE CONSOLE
+==================================================
+
+Détermine les besoins DB pour supporter cette console propriétaire ultime.
+
+Je veux que tu proposes :
+- nouvelles tables éventuelles
+- vues SQL
+- materialized views si utile
+- fonctions SQL
+- triggers
+- logs d’admin
+- événements système
+- tables de support
+- tables d’incident
+- tables de feature flags
+- tables de configuration globale
+- tables de métriques agrégées
+- tables / vues pour billing analytics
+- journal des impersonations
+- journal des actions owner
+
+Pour chaque proposition :
+- nom
+- but
+- colonnes
+- relations
+- RLS / non-RLS
+- qui peut y accéder
+- index nécessaires
+- justification
+
+==================================================
+PARTIE 6 — CE QUI DOIT ÊTRE AJOUTÉ CÔTÉ FRONT
+==================================================
+
+Je veux une proposition complète du frontend nécessaire, avec :
+- nouvelles pages
+- nouvelles sous-pages
+- nouvelles modales
+- tableaux
+- filtres
+- KPIs
+- graphiques
+- flows critiques
+- états vides
+- loading
+- erreurs
+- permissions UI
+- composants réutilisables
+- structure de navigation
+- composants owner-only
+- conventions d’affichage des actions critiques
+- UX de recherche globale
+- drill-down vers agences / users / abonnements / incidents
+
+==================================================
+PARTIE 7 — QUALITÉ, TESTS, INDUSTRIALISATION
+==================================================
+
+Je veux que tu détailles tout ce qu’il faut pour passer à un niveau pro élevé :
+
+- stratégie de tests unitaires
+- stratégie de tests E2E
+- scénarios critiques à couvrir
+- tests RLS / sécurité
+- tests d’onboarding
+- tests billing
+- tests PDF
+- tests exports
+- tests permissions
+- tests de non-régression
+- CI/CD
+- lint
+- typecheck
+- quality gates
+- scripts de vérification
+- scripts de seed
+- environnements dev / staging / prod
+- procédure de release
+- rollback
+- migration database sans casse
+- runbooks incidents
+- sauvegardes
+- plan de restauration
+
+==================================================
+PARTIE 8 — FORMAT DE SORTIE OBLIGATOIRE
+==================================================
+
+Je veux une réponse structurée exactement comme suit :
+
+# Audit stratégique complet du logiciel
+
+## 1. Résumé exécutif
+- état réel du projet
+- niveau de maturité
+- points forts
+- points faibles
+- verdict global
+
+## 2. Inventaire de l’existant
+- fonctionnalités réellement présentes
+- pages présentes
+- tables / modules présents
+- modules partiels
+- modules absents
+
+## 3. Analyse des écarts
+- ce qui manque pour être “très prêt”
+- ce qui bloque la prod sérieuse
+- ce qui manque pour commercialiser
+- ce qui manque pour industrialiser
+
+## 4. Priorités absolues
+- top 10 des chantiers
+- ordre recommandé
+- justification
+
+## 5. Roadmap détaillée par phases
+- phase par phase
+- objectifs
+- tâches
+- impacts
+- dépendances
+
+## 6. Console propriétaire ultime
+- vision
+- objectifs
+- rôles
+- sections
+- écrans
+- actions
+- KPIs
+- permissions
+- garde-fous
+- UX
+
+## 7. Besoins base de données
+- tables
+- vues
+- fonctions
+- triggers
+- policies
+- index
+
+## 8. Besoins frontend
+- pages
+- composants
+- navigation
+- dashboards
+- flows
+
+## 9. Qualité / sécurité / exploitation
+- tests
+- monitoring
+- logs
+- alerting
+- sauvegardes
+- CI/CD
+- procédures
+
+## 10. Plan d’action concret
+- ce qu’il faut faire cette semaine
+- ce qu’il faut faire ce mois-ci
+- ce qu’il faut faire avant vente à de vrais clients
+- ce qu’il faut faire avant scale
+
+## 11. Tableau final des chantiers
+Un tableau avec colonnes :
+- Chantier
+- Catégorie
+- Priorité
+- Impact business
+- Impact technique
+- Complexité
+- Risque si non fait
+- Dépendances
+- Statut actuel estimé
+
+==================================================
+PARTIE 9 — EXIGENCES DE QUALITÉ DE TA RÉPONSE
+==================================================
+
+- Ne fais pas une réponse générique.
+- Base-toi sur le repo réel.
+- Cite les fichiers et modules actuels quand c’est pertinent.
+- Distingue bien “existant”, “partiel”, “absent”, “à corriger”.
+- Sois aussi concret que possible.
+- Quand tu proposes une fonctionnalité, explique son intérêt business ET technique.
+- Quand tu proposes la console propriétaire ultime, pense comme le fondateur du SaaS.
+- Pense supervision, sécurité, croissance, support, rentabilité, anti-fraude, gouvernance et maîtrise produit.
+- Ne code rien pour l’instant.
+- Ne modifie rien pour l’instant.
+- Commence par inspecter le repo actuel puis rends un rapport ultra complet.

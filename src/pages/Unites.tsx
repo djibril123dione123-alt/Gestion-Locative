@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { ToastContainer } from '../components/ui/Toast';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
 
 interface Unite {
@@ -25,7 +28,10 @@ export function Unites() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUnite, setEditingUnite] = useState<Unite | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Unite | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const toast = useToast();
   const [formData, setFormData] = useState({
     nom: '',
     numero: '',
@@ -108,9 +114,10 @@ export function Unites() {
 
       closeModal();
       loadData();
-    } catch (error) {
-      console.error('Error saving unite:', error);
-      alert('Erreur lors de l\'enregistrement');
+      toast.success(editingUnite ? 'Produit mis à jour' : 'Produit créé');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de l\'enregistrement';
+      toast.error(msg);
     }
   };
 
@@ -128,20 +135,25 @@ export function Unites() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (unite: Unite) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette produit ?')) return;
+  const handleDelete = (unite: Unite) => setDeleteTarget(unite);
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
       const { error } = await supabase
         .from('unites')
         .update({ actif: false })
-        .eq('id', unite.id);
-
+        .eq('id', deleteTarget.id);
       if (error) throw error;
+      toast.success('Produit supprimé');
+      setDeleteTarget(null);
       loadData();
-    } catch (error) {
-      console.error('Error deleting unite:', error);
-      alert('Erreur lors de la suppression');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+      toast.error(msg);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -321,6 +333,19 @@ export function Unites() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Supprimer ce produit ?"
+        message={`Voulez-vous vraiment supprimer "${deleteTarget?.nom ?? ''}" ?`}
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        isDestructive
+        isLoading={deleting}
+      />
+      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
     </div>
   );
 }

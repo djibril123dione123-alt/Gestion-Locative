@@ -29,7 +29,7 @@ export function Paiements() {
         montant_total: '',
         mois_concerne: '',
         mois_display: '',
-        date_paiement: new Date().toISOString().split('T'),
+        date_paiement: new Date().toISOString().split('T')[0],
         mode_paiement: 'especes' as const,
         statut: 'paye' as const,
         reference: '',

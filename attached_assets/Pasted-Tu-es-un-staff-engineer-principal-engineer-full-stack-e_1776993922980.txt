@@ -1,0 +1,470 @@
+Tu es un staff engineer / principal engineer full-stack expert React 18 + TypeScript + Vite + Supabase + PostgreSQL + SaaS multi-tenant. Tu travailles sur Samay Këur, une application SaaS sénégalaise de gestion immobilière DÉJÀ LARGEMENT DÉVELOPPÉE. Tu NE PARS PAS DE ZÉRO.
+
+==========================================================
+CONTEXTE CRITIQUE — LIS TOUT AVANT DE TOUCHER QUOI QUE CE SOIT
+==========================================================
+
+Stack : React 18 + TypeScript + Vite + Tailwind CSS + Supabase + jsPDF + Recharts + XLSX
+Rôles : super_admin (propriétaire SaaS), admin, agent, comptable, bailleur
+Multi-tenant : isolation par agency_id sur toutes les tables métier
+Couleur primaire : #F58220 (orange) — NE PAS CHANGER LE DESIGN EXISTANT
+Auth : Supabase Auth + triggers auto-création user_profiles
+
+Pages existantes et FONCTIONNELLES (NE PAS RÉÉCRIRE) :
+Dashboard, Bailleurs, Immeubles, Unites, Locataires, Contrats, Paiements, Depenses, Commissions, LoyersImpayes, FiltresAvances, TableauDeBordFinancierGlobal, Parametres, Auth, Welcome, Agences, Console (partielle)
+
+Composants existants (NE PAS DUPLIQUER) :
+- useToast() hook → { success, error, warning, toasts, removeToast, showToast }
+- <ToastContainer> — notifications visuelles
+- <ConfirmModal> — confirmations destructives
+- <Modal> — modales génériques
+- <Table> — tableau générique
+- formatCurrency() depuis src/lib/formatters.ts
+- translateSupabaseError() depuis src/lib/errorMessages.ts
+- supabase client depuis src/lib/supabase.ts
+- useAuth() → { user, profile, loading, signIn, signOut } — profile contient agency_id et role
+
+Pattern OBLIGATOIRE pour toute page/composant qui lit des données :
+```typescript
+const { profile } = useAuth();
+
+useEffect(() => {
+  if (profile?.agency_id) loadData();
+}, [profile?.agency_id]);
+
+const loadData = async () => {
+  if (!profile?.agency_id) return;
+  const { data } = await supabase
+    .from('table')
+    .select('*')
+    .eq('agency_id', profile.agency_id);
+};
+```
+
+INTERDICTIONS ABSOLUES :
+- Ne jamais utiliser window.alert() ou window.confirm() → utiliser useToast + ConfirmModal
+- Ne jamais redéfinir formatCurrency localement → importer depuis src/lib/formatters.ts
+- Ne jamais créer une nouvelle interface AgencySettings → utiliser src/types/agency.ts
+- Ne jamais casser les pages existantes
+- Ne jamais supprimer de migration SQL existante
+- Ne jamais modifier le design global (palette orange, sidebar, layout)
+
+==========================================================
+MISSION — 8 CHANTIERS À EXÉCUTER DANS L'ORDRE
+==========================================================
+
+==== CHANTIER 1 — BUGS CRITIQUES (FAIRE EN PREMIER) ====
+
+1.1 — Fix vue SQL console owner
+Créer la migration : supabase/migrations/20260425000001_fix_vw_owner_agency_stats.sql
+
+```sql
+CREATE OR REPLACE VIEW vw_owner_agency_stats AS
+SELECT
+  a.id, a.name, a.status, a.plan, a.trial_ends_at, a.created_at,
+  COUNT(DISTINCT up.id) AS nb_users,
+  COUNT(DISTINCT b.id) AS nb_bailleurs,
+  COUNT(DISTINCT i.id) AS nb_immeubles,
+  COUNT(DISTINCT u.id) AS nb_unites,
+  COUNT(DISTINCT c.id) AS nb_contrats,
+  COUNT(DISTINCT p.id) AS nb_paiements,
+  COALESCE(SUM(p.montant_total) FILTER (WHERE p.statut = 'paye'), 0) AS volume_paiements,
+  MAX(up.updated_at) AS derniere_activite
+FROM agencies a
+LEFT JOIN user_profiles up ON up.agency_id = a.id
+LEFT JOIN bailleurs b ON b.agency_id = a.id
+LEFT JOIN immeubles i ON i.agency_id = a.id
+LEFT JOIN unites u ON u.agency_id = a.id
+LEFT JOIN contrats c ON c.agency_id = a.id
+LEFT JOIN paiements p ON p.agency_id = a.id
+GROUP BY a.id, a.name, a.status, a.plan, a.trial_ends_at, a.created_at;
+
+REVOKE ALL ON vw_owner_agency_stats FROM PUBLIC;
+GRANT SELECT ON vw_owner_agency_stats TO authenticated;
+```
+
+1.2 — Fix bug date_paiement dans src/pages/Paiements.tsx
+Ligne dans initialFormData :
+AVANT : `date_paiement: new Date().toISOString().split('T'),`
+APRÈS : `date_paiement: new Date().toISOString().split('T')[0],`
+
+1.3 — Fix stale closure dans src/pages/Contrats.tsx
+Trouver le useCallback de loadData qui a `[]` comme dépendances.
+APRÈS : `}, [profile?.agency_id]);`
+
+1.4 — Implémenter handleConfirmPaiement dans src/pages/LoyersImpayes.tsx
+Remplacer le console.log par une vraie création de paiement :
+```typescript
+const handleConfirmPaiement = async () => {
+  if (!selectedLoyer || !profile?.agency_id) return;
+  try {
+    const contratId = selectedLoyer.id.split('-')[0];
+    const commission = 10; // fallback
+    const montant = selectedLoyer.montant_du;
+    const partAgence = Math.round(montant * commission / 100);
+    const { error } = await supabase.from('paiements').insert({
+      contrat_id: contratId,
+      montant_total: montant,
+      mois_concerne: selectedLoyer.mois_concerne,
+      date_paiement: new Date().toISOString().split('T')[0],
+      mode_paiement: 'especes',
+      statut: 'paye',
+      part_agence: partAgence,
+      part_bailleur: montant - partAgence,
+      agency_id: profile.agency_id,
+    });
+    if (error) throw error;
+    success('Paiement enregistré avec succès');
+    setShowModal(false);
+    setSelectedLoyer(null);
+    loadData();
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Erreur lors du paiement';
+    showError(msg);
+  }
+};
+```
+Ajouter les imports useToast manquants si besoin.
+
+1.5 — Remplacer TOUS les alert() et confirm() natifs
+Dans : Immeubles.tsx, Unites.tsx, Locataires.tsx, Depenses.tsx, Contrats.tsx
+- `alert('Erreur...')` → toast.error(...)
+- `alert('✅ ...')` → toast.success(...)
+- `confirm('...')` → remplacer par state + <ConfirmModal> (pattern identique à Bailleurs.tsx)
+Ajouter les imports et states nécessaires dans chaque fichier.
+
+==== CHANTIER 2 — INFRASTRUCTURE SaaS (RESTRICTIONS PAR PLAN) ====
+
+2.1 — Créer src/hooks/usePlanLimits.ts
+```typescript
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+
+interface PlanLimits {
+  canAddImmeuble: boolean;
+  canAddUnite: boolean;
+  canAddUser: boolean;
+  planName: string;
+  loading: boolean;
+}
+
+export function usePlanLimits(): PlanLimits {
+  const { profile } = useAuth();
+  const [limits, setLimits] = useState<PlanLimits>({
+    canAddImmeuble: true,
+    canAddUnite: true,
+    canAddUser: true,
+    planName: 'pro',
+    loading: true,
+  });
+
+  useEffect(() => {
+    if (!profile?.agency_id) return;
+    checkLimits();
+  }, [profile?.agency_id]);
+
+  const checkLimits = async () => {
+    if (!profile?.agency_id) return;
+    try {
+      const { data } = await supabase.rpc('check_plan_limits', {
+        p_agency_id: profile.agency_id,
+      });
+      if (data) {
+        setLimits({
+          canAddImmeuble: data.can_add_immeuble,
+          canAddUnite: data.can_add_unite,
+          canAddUser: data.can_add_user,
+          planName: data.limits?.plan ?? 'pro',
+          loading: false,
+        });
+      }
+    } catch {
+      setLimits(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  return limits;
+}
+```
+
+2.2 — Créer src/components/ui/PlanGate.tsx
+Composant wrapper qui affiche un CTA upgrade si la feature est bloquée par le plan :
+```typescript
+interface PlanGateProps {
+  allowed: boolean;
+  featureName: string;
+  children: React.ReactNode;
+}
+// Si allowed=false → afficher un banner orange avec message "Cette fonctionnalité nécessite le plan Pro" + bouton "Passer au Pro"
+// Si allowed=true → render children
+```
+
+2.3 — Intégrer usePlanLimits dans Immeubles.tsx et Unites.tsx
+Avant le handleSubmit (création), vérifier la limite. Si dépassée, afficher toast.error avec message "Limite atteinte sur votre plan actuel. Passez au plan Pro pour continuer."
+
+==== CHANTIER 3 — GESTION D'ÉQUIPE (INVITATIONS) ====
+
+3.1 — Créer src/pages/Equipe.tsx
+Page complète de gestion d'équipe avec :
+- Liste des membres actuels (from user_profiles where agency_id = ...)
+- Tableau : nom, email, rôle, statut, date création, actions (désactiver)
+- Section invitations en attente (from invitations where agency_id = ... and status = 'pending')
+- Bouton "Inviter un collaborateur" → modal avec champs : email, rôle (select: agent/comptable/admin)
+- À la soumission : INSERT dans invitations avec token = crypto.randomUUID(), expires_at = now() + 7 jours
+- Afficher le lien d'invitation généré (à copier) car pas encore d'email automatique
+- Toast succès/erreur avec useToast
+- Pattern agency_id obligatoire
+- Accessible uniquement si profile.role === 'admin'
+
+3.2 — Ajouter "Équipe" dans la Sidebar (src/components/layout/Sidebar.tsx)
+Ajouter l'item après "Paramètres" :
+```typescript
+{ id: 'equipe', label: 'Équipe', icon: UserPlus, roles: ['admin'] }
+```
+Ajouter dans App.tsx le case 'equipe' → <Equipe />
+
+3.3 — Page d'acceptation d'invitation
+Créer src/pages/AcceptInvitation.tsx
+Lire le token depuis l'URL (?token=xxx), vérifier en DB, mettre à jour le user_profile avec agency_id et role correspondant, marquer invitation comme 'accepted'.
+Intégrer dans App.tsx : si URL contient ?token=, afficher AcceptInvitation avant Auth.
+
+==== CHANTIER 4 — NOTIFICATIONS ====
+
+4.1 — Créer src/components/ui/NotificationBell.tsx
+- Badge avec compteur notifications non lues
+- Dropdown au clic : liste des 10 dernières notifications
+- Chaque notification : icône selon type, titre, message, date relative ("il y a 2h")
+- Actions : "Tout marquer comme lu", "Voir toutes"
+- Requête : supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', {ascending: false}).limit(10)
+- Realtime subscription : supabase.channel('notifications').on('postgres_changes', ...) pour badge en temps réel
+
+4.2 — Intégrer NotificationBell dans Sidebar.tsx
+Ajouter en bas de la section navigation, avant le profil utilisateur.
+
+4.3 — Créer src/pages/Notifications.tsx
+Page liste complète des notifications avec filtres (type, lu/non lu), marquage individuel et groupé, suppression.
+
+==== CHANTIER 5 — ABONNEMENT & BILLING ====
+
+5.1 — Créer src/pages/Abonnement.tsx
+Page accessible via Sidebar (item "Abonnement" avec icône CreditCard, roles: ['admin']) :
+- Card plan actuel : nom, prix, date expiration, statut (badge coloré)
+- Barre de progression utilisation (immeubles utilisés / max)
+- Section "Fonctionnalités incluses" selon plan
+- Bouton "Passer au plan Pro" (si pas déjà Pro) — pour l'instant affiche un modal "Contactez-nous à [email]" ou un lien WhatsApp
+- Historique abonnements (from subscriptions where agency_id = ...)
+- Si status = 'trial' : countdown jours restants en rouge/orange
+Pattern agency_id obligatoire.
+
+5.2 — Fix TrialBanner.tsx
+Rendre le bouton "Passer au plan Pro" fonctionnel :
+```typescript
+onClick={() => onNavigate?.('abonnement')}
+// TrialBanner reçoit onNavigate en prop
+```
+Modifier App.tsx pour passer onNavigate à TrialBanner.
+Ajouter le case 'abonnement' dans renderPage() → <Abonnement />.
+
+==== CHANTIER 6 — PAGES MÉTIER MANQUANTES ====
+
+6.1 — Créer src/pages/Inventaires.tsx
+Page complète d'états des lieux :
+- Liste des inventaires (from inventaires, jointure avec contrats/locataires/unites)
+- Filtres : type (entrée/sortie), statut (en_cours/termine/litige), immeuble
+- Bouton "Nouvel inventaire" → modal avec :
+  - Sélection contrat actif (locataire + unité)
+  - Type : entrée ou sortie
+  - Date
+  - Présence : locataire_present, proprietaire_present, agent_present (checkboxes)
+  - Liste de pièces : tableau dynamique (ajouter/supprimer pièce) avec colonnes : nom pièce, état (bon/moyen/mauvais), observations
+  - Observations générales
+  - Caution retenue (si sortie)
+- Actions sur liste : voir détail, modifier statut, exporter PDF (jsPDF simple)
+- Pattern agency_id obligatoire
+- Accessible roles: ['admin', 'agent']
+
+6.2 — Créer src/pages/Interventions.tsx
+Page Kanban de maintenance :
+- 3 colonnes : "À faire" / "En cours" / "Terminé"
+- Chaque carte : titre, urgence (badge coloré : urgente=rouge, normale=orange, basse=gris), catégorie, immeuble/unité
+- Bouton "Nouvelle intervention" → modal avec tous les champs de la table interventions (titre, description, immeuble_id, unite_id, categorie select, urgence select, demande_par select, date_demande, date_souhaitee, prestataire_nom, prestataire_telephone, cout_estime)
+- Drag conceptuel simplifié : boutons "→ En cours" / "→ Terminé" sur chaque carte
+- Filtres : urgence, catégorie, immeuble
+- Pattern agency_id obligatoire
+- Accessible roles: ['admin', 'agent']
+
+6.3 — Créer src/pages/Calendrier.tsx
+Vue agenda :
+- Affichage mensuel par défaut (grille 7 colonnes)
+- Navigation mois précédent/suivant
+- Événements colorés par type : paiement=vert, contrat=bleu, intervention=orange, rendez_vous=violet, autre=gris
+- Clic sur jour → liste des événements du jour
+- Bouton "Ajouter événement" → modal : titre, type select, date, heure, description, lien optionnel (bailleur/immeuble/unite/locataire)
+- Chargement depuis table evenements avec agency_id filter
+- Accessible roles: ['admin', 'agent']
+
+6.4 — Créer src/pages/Documents.tsx
+Centre documentaire :
+- Liste des documents avec filtres : dossier (contrat/immeuble/locataire/autre), type fichier
+- Upload via Supabase Storage bucket 'documents' (créer si absent)
+- Chaque document : nom, type, taille, date upload, entité liée, bouton télécharger, bouton supprimer
+- Modal upload : choisir fichier, nommer, sélectionner dossier, lier à une entité (optionnel : contrat_id OU immeuble_id OU unite_id OU locataire_id)
+- Pattern agency_id obligatoire
+- Accessible roles: ['admin', 'agent']
+
+6.5 — Ajouter ces 4 pages dans Sidebar.tsx et App.tsx
+```typescript
+// Sidebar items à ajouter (roles: ['admin', 'agent'])
+{ id: 'inventaires', label: 'États des lieux', icon: ClipboardList, roles: ['admin', 'agent'] }
+{ id: 'interventions', label: 'Maintenance', icon: Wrench, roles: ['admin', 'agent'] }
+{ id: 'calendrier', label: 'Calendrier', icon: CalendarDays, roles: ['admin', 'agent'] }
+{ id: 'documents', label: 'Documents', icon: FolderOpen, roles: ['admin', 'agent'] }
+```
+
+==== CHANTIER 7 — CONSOLE PROPRIÉTAIRE COMPLÈTE ====
+
+7.1 — Corriger et enrichir src/pages/Console.tsx
+
+Onglet Dashboard existant :
+- Ajouter KPIs manquants : MRR calculé (agencies avec status=active × prix plan depuis subscription_plans), taux conversion essai→payant, nb nouvelles agences ce mois
+- Corriger l'affichage du volume (la vue SQL est maintenant fixée)
+
+Onglet Agences existant :
+- Ajouter : modal "Détail agence" au clic sur une ligne avec toutes les stats + historique abonnement
+- Ajouter tag badges : VIP (doré), À risque (rouge), Fraude (rouge foncé) — stocker dans agencies.tags (colonne jsonb, à créer si absente via migration)
+- Ajouter action "Prolonger essai de 30 jours" (en plus du +14 existant)
+- Améliorer le menu d'actions : confirmation renforcée pour Suspendre (modal avec raison obligatoire)
+
+Ajouter onglet "Support" (nouveau) :
+- Table pseudo-tickets : list depuis owner_actions_log filtré sur action='support_*' + possibilité de créer une note manuelle
+- Section "Anomalies détectées" : agences créées il y a >7j sans aucun immeuble (requête directe)
+- Section "Agences inactives" : pas d'activité depuis 14j (from vw_owner_agency_stats where derniere_activite < now() - interval '14 days')
+
+Ajouter onglet "Configuration" (nouveau) :
+- Affichage/édition de saas_config (si table créée) ou valeurs hardcodées éditables
+- Feature flags par agence : toggle pour activer/désactiver modules
+- Bouton "Mode maintenance" (met un flag dans la DB)
+
+Ajouter onglet "BI / Croissance" (nouveau) :
+- Graphique LineChart : nouvelles agences par mois (12 derniers mois)
+- Graphique BarChart : répartition par plan (basic/pro/enterprise)
+- Top 5 agences par volume de paiements
+- Agences sans activité depuis 30j (liste avec bouton "Relancer")
+
+7.2 — Créer la migration pour les colonnes manquantes :
+supabase/migrations/20260425000002_add_console_owner_features.sql
+```sql
+-- Tags pour les agences
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='agencies' AND column_name='tags') THEN
+    ALTER TABLE agencies ADD COLUMN tags text[] DEFAULT ARRAY[]::text[];
+  END IF;
+END $$;
+
+-- Table saas_config
+CREATE TABLE IF NOT EXISTS saas_config (
+  key text PRIMARY KEY,
+  value jsonb NOT NULL DEFAULT '{}',
+  description text,
+  updated_by uuid REFERENCES auth.users(id),
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE saas_config ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "super_admin_saas_config_all" ON saas_config FOR ALL TO authenticated USING (
+  EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND role = 'super_admin')
+);
+
+-- Valeurs par défaut
+INSERT INTO saas_config (key, value, description) VALUES
+  ('maintenance_mode', 'false', 'Mode maintenance global'),
+  ('max_trial_days', '30', 'Durée essai gratuit en jours'),
+  ('default_plan', '"basic"', 'Plan par défaut à la création')
+ON CONFLICT (key) DO NOTHING;
+
+-- Table feature_flags
+CREATE TABLE IF NOT EXISTS feature_flags (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL UNIQUE,
+  description text,
+  enabled_by_default boolean DEFAULT true,
+  plans_enabled text[] DEFAULT ARRAY['basic','pro','enterprise'],
+  agency_overrides jsonb DEFAULT '{}',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE feature_flags ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "feature_flags_read_all" ON feature_flags FOR SELECT TO authenticated USING (true);
+CREATE POLICY "feature_flags_write_superadmin" ON feature_flags FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND role = 'super_admin'));
+
+INSERT INTO feature_flags (name, description, plans_enabled) VALUES
+  ('module_inventaires', 'États des lieux', ARRAY['pro','enterprise']),
+  ('module_interventions', 'Gestion maintenance', ARRAY['pro','enterprise']),
+  ('module_documents', 'Centre documentaire', ARRAY['pro','enterprise']),
+  ('module_calendrier', 'Calendrier événements', ARRAY['basic','pro','enterprise'])
+ON CONFLICT (name) DO NOTHING;
+```
+
+==== CHANTIER 8 — QUALITÉ FINALE ====
+
+8.1 — Unifier AgencySettings
+Dans src/lib/templates/helpers.ts, supprimer l'interface locale AgencySettings et importer depuis src/types/agency.ts :
+```typescript
+import { AgencySettings } from '../../types/agency';
+```
+Ajuster les champs si certains sont manquants dans le type central.
+
+8.2 — Typer les useState([]) critiques
+Dans Paiements.tsx : `useState([])` → `useState<any[]>([])`  (tolérance TypeScript)
+Dans Depenses.tsx, Commissions.tsx : même chose
+Idéalement créer des types de vue locaux mais au minimum enlever les erreurs TypeScript silencieuses.
+
+8.3 — Ajouter dans src/lib/errorMessages.ts les messages manquants
+```typescript
+'duplicate key value violates unique constraint "invitations_token_key"': 'Cette invitation existe déjà',
+'violates check constraint "check_commission_valide"': 'La commission doit être entre 0 et 100%',
+'violates check constraint "check_loyer_positif"': 'Le loyer doit être supérieur à 0',
+```
+
+8.4 — Supprimer tous les console.log et console.error de debug non nécessaires
+Remplacer les console.error dans les catch par une gestion propre via toast.
+Garder uniquement les logs dans agencyHelper.ts (ils sont intentionnels pour le debug auth).
+
+==========================================================
+RÈGLES D'EXÉCUTION OBLIGATOIRES
+==========================================================
+
+1. EXÉCUTER DANS L'ORDRE EXACT : Chantier 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+2. Après chaque chantier, vérifier que le build TypeScript passe sans erreur
+3. Ne JAMAIS modifier un composant existant fonctionnel sauf pour corriger un bug listé
+4. Toujours utiliser les composants UI existants (Modal, Table, ToastContainer, ConfirmModal)
+5. Toujours filtrer par agency_id dans chaque requête Supabase
+6. Toujours utiliser useToast pour les feedbacks (jamais alert/confirm)
+7. Toujours typer les paramètres de fonctions (pas de `any` dans les nouvelles fonctions)
+8. Toutes les nouvelles pages doivent avoir : état loading, état erreur, état vide (EmptyState component)
+9. Toutes les actions destructives doivent passer par ConfirmModal
+10. Chaque nouvelle migration SQL doit utiliser IF NOT EXISTS / IF EXISTS / DO $$ BEGIN...END $$
+
+==========================================================
+RÉSULTAT ATTENDU
+==========================================================
+
+Après exécution de tous les chantiers, le logiciel doit :
+- ✅ 0 alert() / confirm() natif
+- ✅ 0 bug critique identifié
+- ✅ Console propriétaire 100% fonctionnelle
+- ✅ Restrictions plan actives (check_plan_limits appelé)
+- ✅ 4 nouvelles pages métier (Inventaires, Interventions, Calendrier, Documents)
+- ✅ Page Équipe avec invitations fonctionnelles
+- ✅ Page Abonnement avec plan actuel visible
+- ✅ Notifications en temps réel
+- ✅ TrialBanner avec CTA fonctionnel
+- ✅ Build TypeScript sans erreur
+- ✅ Toutes les migrations idempotentes
+
+Commence par le Chantier 1. Confirme chaque fix avant de passer au suivant. Affiche un résumé des modifications effectuées à la fin de chaque chantier.

@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { ToastContainer } from '../components/ui/Toast';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 
 interface Locataire {
   id: string;
@@ -22,7 +25,10 @@ export function Locataires() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<Locataire | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Locataire | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const toast = useToast();
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
@@ -76,9 +82,10 @@ export function Locataires() {
       }
       closeModal();
       loadData();
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Erreur');
+      toast.success(editing ? 'Locataire mis à jour' : 'Locataire créé');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur';
+      toast.error(msg);
     }
   };
 
@@ -96,13 +103,22 @@ export function Locataires() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (item: Locataire) => {
-    if (!confirm('Supprimer ?')) return;
+  const handleDelete = (item: Locataire) => setDeleteTarget(item);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await supabase.from('locataires').update({ actif: false }).eq('id', item.id);
+      const { error } = await supabase.from('locataires').update({ actif: false }).eq('id', deleteTarget.id);
+      if (error) throw error;
+      toast.success('Locataire supprimé');
+      setDeleteTarget(null);
       loadData();
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+      toast.error(msg);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -192,6 +208,19 @@ export function Locataires() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Supprimer ce locataire ?"
+        message={`Voulez-vous vraiment supprimer "${deleteTarget?.prenom ?? ''} ${deleteTarget?.nom ?? ''}" ?`}
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        isDestructive
+        isLoading={deleting}
+      />
+      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
     </div>
   );
 }

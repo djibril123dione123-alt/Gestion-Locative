@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { ToastContainer } from '../components/ui/Toast';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 
 interface Immeuble {
   id: string;
@@ -32,7 +35,10 @@ export function Immeubles() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingImmeuble, setEditingImmeuble] = useState<Immeuble | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Immeuble | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const toast = useToast();
   const [formData, setFormData] = useState({
     nom: '',
     adresse: '',
@@ -109,9 +115,10 @@ export function Immeubles() {
 
       closeModal();
       loadData();
-    } catch (error) {
-      console.error('Error saving immeuble:', error);
-      alert('Erreur lors de l\'enregistrement');
+      toast.success(editingImmeuble ? 'Immeuble mis à jour' : 'Immeuble créé');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de l\'enregistrement';
+      toast.error(msg);
     }
   };
 
@@ -128,20 +135,27 @@ export function Immeubles() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (immeuble: Immeuble) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet immeuble ?')) return;
+  const handleDelete = (immeuble: Immeuble) => {
+    setDeleteTarget(immeuble);
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
       const { error } = await supabase
         .from('immeubles')
         .update({ actif: false })
-        .eq('id', immeuble.id);
-
+        .eq('id', deleteTarget.id);
       if (error) throw error;
+      toast.success('Immeuble supprimé');
+      setDeleteTarget(null);
       loadData();
-    } catch (error) {
-      console.error('Error deleting immeuble:', error);
-      alert('Erreur lors de la suppression');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression';
+      toast.error(msg);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -309,6 +323,19 @@ export function Immeubles() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Supprimer cet immeuble ?"
+        message={`Voulez-vous vraiment supprimer "${deleteTarget?.nom ?? ''}" ? Cette action est irréversible.`}
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        isDestructive
+        isLoading={deleting}
+      />
+      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
     </div>
   );
 }

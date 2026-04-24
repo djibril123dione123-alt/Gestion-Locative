@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
+import { ToastContainer } from '../components/ui/Toast';
 import { Search, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
 
 interface LoyerImpaye {
@@ -28,6 +30,8 @@ export function LoyersImpayes() {
   const [bailleurs, setBailleurs] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedLoyer, setSelectedLoyer] = useState<LoyerImpaye | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -143,14 +147,47 @@ export function LoyersImpayes() {
   };
 
   const handleConfirmPaiement = async () => {
-    if (!selectedLoyer) return;
+    if (!selectedLoyer || !profile?.agency_id) return;
+    setSubmitting(true);
     try {
-      // 🔸 Ici tu pourras ajouter ta logique Supabase
-      console.log('Paiement confirmé pour:', selectedLoyer);
+      // L'id est de la forme "<uuid 36 chars>-YYYY-MM" → on retire les 8 derniers chars
+      const contratId = selectedLoyer.id.slice(0, 36);
+
+      // Récupérer la commission réelle depuis le bailleur du contrat
+      const { data: contratRow } = await supabase
+        .from('contrats')
+        .select('unites(immeubles(bailleurs(commission)))')
+        .eq('id', contratId)
+        .maybeSingle();
+      const commission =
+        ((contratRow as { unites?: { immeubles?: { bailleurs?: { commission?: number } } } })
+          ?.unites?.immeubles?.bailleurs?.commission) ?? 10;
+
+      const montant = selectedLoyer.montant_du;
+      const partAgence = Math.round((montant * commission) / 100);
+
+      const { error } = await supabase.from('paiements').insert({
+        contrat_id: contratId,
+        montant_total: montant,
+        mois_concerne: selectedLoyer.mois_concerne,
+        date_paiement: new Date().toISOString().split('T')[0],
+        mode_paiement: 'especes',
+        statut: 'paye',
+        part_agence: partAgence,
+        part_bailleur: montant - partAgence,
+        agency_id: profile.agency_id,
+      });
+      if (error) throw error;
+
+      toast.success('Paiement enregistré avec succès');
       setShowModal(false);
       setSelectedLoyer(null);
-    } catch (error) {
-      console.error('Erreur lors du paiement:', error);
+      loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors du paiement';
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -315,11 +352,12 @@ export function LoyersImpayes() {
                   background: 'linear-gradient(135deg, #F58220, #C0392B)',
                 }}
               >
-                Oui, confirmer
+                {submitting ? 'Enregistrement…' : 'Oui, confirmer'}
               </button>
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 sm:px-6 sm:py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-slate-800 font-semibold transition text-sm sm:text-base"
+                disabled={submitting}
+                className="px-4 py-2 sm:px-6 sm:py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-slate-800 font-semibold transition text-sm sm:text-base disabled:opacity-50"
               >
                 Annuler
               </button>
@@ -327,6 +365,7 @@ export function LoyersImpayes() {
           </div>
         </div>
       )}
+      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
     </div>
   );
 }

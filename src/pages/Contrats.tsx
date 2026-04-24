@@ -6,6 +6,8 @@ import { Table } from '../components/ui/Table';
 import { Plus, Search, Download, AlertCircle, TrendingUp } from 'lucide-react';
 import { generateContratPDF } from '../lib/pdf';
 import { formatCurrency } from '../lib/formatters';
+import { ToastContainer } from '../components/ui/Toast';
+import { useToast } from '../hooks/useToast';
 
 // =========================
 // 🎨 PALETTE CONFORT IMMO ARCHI
@@ -117,6 +119,7 @@ export function Contrats() {
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
   const [submitting, setSubmitting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const toast = useToast();
 
   // =========================
   // 🔁 CHARGEMENT DES DONNÉES
@@ -182,7 +185,7 @@ export function Contrats() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [profile?.agency_id]);
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -283,7 +286,7 @@ export function Contrats() {
 
       const validationError = validateForm();
       if (validationError) {
-        alert(validationError);
+        toast.warning(validationError);
         return;
       }
 
@@ -299,7 +302,7 @@ export function Contrats() {
         if (uniteError) throw uniteError;
 
         if (uniteCheck && uniteCheck.statut === 'loue') {
-          alert('Ce produit est déjà occupé. Veuillez en sélectionner un autre.');
+          toast.warning('Ce produit est déjà occupé. Veuillez en sélectionner un autre.');
           return;
         }
 
@@ -331,10 +334,10 @@ export function Contrats() {
 
         closeModal();
         await loadData();
-        alert('✅ Contrat créé avec succès!');
+        toast.success('Contrat créé avec succès');
       } catch (err: any) {
         console.error('Erreur création:', err);
-        alert(`❌ Erreur: ${err.message}`);
+        toast.error(`Erreur : ${err.message}`);
       } finally {
         setSubmitting(false);
       }
@@ -380,10 +383,10 @@ export function Contrats() {
 
         closeEditModal();
         await loadData();
-        alert('✅ Contrat modifié avec succès!');
+        toast.success('Contrat modifié avec succès');
       } catch (err: any) {
         console.error('Erreur modification:', err);
-        alert(`❌ Erreur: ${err.message}`);
+        toast.error(`Erreur : ${err.message}`);
       } finally {
         setSubmitting(false);
       }
@@ -443,11 +446,11 @@ export function Contrats() {
       }
     } catch (err: any) {
       console.error('Erreur PDF:', err);
-      alert(`❌ Erreur lors de la génération du PDF: ${err.message}`);
+      toast.error(`Erreur lors de la génération du PDF : ${err.message}`);
     } finally {
       setDownloadingId(null);
     }
-  }, [profile?.agency_id]);
+  }, [profile?.agency_id, toast]);
 
   // =========================
   // 🚪 FERMETURE DES MODALS

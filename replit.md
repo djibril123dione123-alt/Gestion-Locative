@@ -1,4 +1,15 @@
-# Samay Këur – Gestion Locative
+# Samay Këur
+
+## Récents ajouts (avril 2026)
+- **Chantier 2** : `usePlanLimits` + `PlanGate` ; garde plan dans Immeubles/Unites.
+- **Chantier 3** : page Équipe (membres, invitations) + `AcceptInvitation` (token URL).
+- **Chantier 4** : `NotificationBell` (realtime Supabase) + page Notifications.
+- **Chantier 5** : page Abonnement (plan, usage, historique, contact upgrade) + TrialBanner navigable.
+- **Chantier 6** : pages Inventaires (états des lieux + PDF), Interventions (kanban), Calendrier (mensuel), Documents (storage `documents`).
+- **Chantier 7** : Console super_admin enrichie (Configuration, Support broadcast). Migration `20260425000002_add_console_owner_features.sql` ajoute `agencies.tags`, `saas_config`, `feature_flags`. **À appliquer manuellement sur Supabase.**
+
+## Migrations en attente
+- `supabase/migrations/20260425000002_add_console_owner_features.sql` – Gestion Locative
 
 ## Overview
 A real estate property management SaaS application (Gestion Locative) built with React, TypeScript, Vite and Tailwind CSS. It provides multi-tenant agency management with roles (admin, agent, comptable, bailleur), covering bailleurs, immeubles, unités, locataires, contrats, paiements, dépenses, and reporting.

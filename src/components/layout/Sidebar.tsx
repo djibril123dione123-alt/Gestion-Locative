@@ -15,9 +15,15 @@ import {
   ChevronRight,
   X,
   Settings,
+  UserPlus,
+  ClipboardList,
+  Wrench,
+  CalendarDays,
+  FolderOpen,
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
+import { NotificationBell } from '../ui/NotificationBell';
 
 interface SidebarProps {
   currentPage: string;
@@ -48,7 +54,13 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
     { id: 'loyers-impayes',          label: 'Loyers impayés',       icon: AlertCircle,     roles: ['admin', 'agent', 'comptable'] },
     { id: 'tableau-de-bord-financier', label: 'Rapports Financiers', icon: Calculator,    roles: ['admin'] },
     { id: 'filtres-avances',         label: 'Filtres avancés',      icon: Filter,          roles: ['admin', 'agent', 'comptable'] },
+    { id: 'inventaires',             label: 'États des lieux',      icon: ClipboardList,   roles: ['admin', 'agent'] },
+    { id: 'interventions',           label: 'Maintenance',          icon: Wrench,          roles: ['admin', 'agent'] },
+    { id: 'calendrier',              label: 'Calendrier',           icon: CalendarDays,    roles: ['admin', 'agent'] },
+    { id: 'documents',               label: 'Documents',            icon: FolderOpen,      roles: ['admin', 'agent'] },
     { id: 'parametres',              label: 'Paramètres',           icon: Settings,        roles: ['admin'] },
+    { id: 'equipe',                  label: 'Équipe',               icon: UserPlus,        roles: ['admin'] },
+    { id: 'abonnement',              label: 'Abonnement',           icon: CreditCard,      roles: ['admin'] },
   ];
 
   const filteredItems = menuItems.filter(
@@ -131,6 +143,10 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
               );
             })}
           </ul>
+
+          <div className="px-3 mt-2">
+            <NotificationBell onNavigate={handleNavigate} />
+          </div>
         </nav>
 
         {/* Profil utilisateur */}

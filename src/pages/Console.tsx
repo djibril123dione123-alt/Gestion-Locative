@@ -80,7 +80,7 @@ interface OwnerLog {
   created_at: string;
 }
 
-type Tab = 'dashboard' | 'agences' | 'utilisateurs' | 'abonnements' | 'logs';
+type Tab = 'dashboard' | 'agences' | 'utilisateurs' | 'abonnements' | 'logs' | 'configuration' | 'support';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -97,6 +97,201 @@ const PLAN_LABELS: Record<string, { label: string; color: string }> = {
   pro:        { label: 'Pro',        color: 'text-orange-300 bg-orange-900/40' },
   enterprise: { label: 'Enterprise', color: 'text-purple-300 bg-purple-900/40' },
 };
+
+interface SaasConfigRow { key: string; value: unknown; description: string | null; updated_at: string }
+
+function ConfigurationPanel() {
+  const [rows, setRows] = useState<SaasConfigRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase.from('saas_config').select('*').order('key');
+    if (data) {
+      setRows(data as SaasConfigRow[]);
+      const initial: Record<string, string> = {};
+      (data as SaasConfigRow[]).forEach((r) => {
+        initial[r.key] = JSON.stringify(r.value, null, 2);
+      });
+      setEdits(initial);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async (key: string) => {
+    setSaving(key);
+    try {
+      const parsed = JSON.parse(edits[key]);
+      const { error } = await supabase.from('saas_config').update({ value: parsed, updated_at: new Date().toISOString() }).eq('key', key);
+      if (error) throw error;
+      await load();
+    } catch {
+      // noop, keep value invalid
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-white">Configuration globale</h2>
+        <p className="text-gray-500 text-sm">Paramètres SaaS partagés (JSON)</p>
+      </div>
+      {loading ? (
+        <div className="text-gray-500">Chargement…</div>
+      ) : rows.length === 0 ? (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 text-gray-500 text-sm">
+          Aucune configuration. Appliquez la migration <code className="text-orange-300">20260425000002_add_console_owner_features.sql</code>.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {rows.map((r) => (
+            <div key={r.key} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <p className="font-mono text-orange-300 text-sm">{r.key}</p>
+                  {r.description && <p className="text-xs text-gray-500 mt-1">{r.description}</p>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => save(r.key)}
+                  disabled={saving === r.key}
+                  data-testid={`button-save-config-${r.key}`}
+                  className="px-3 py-1.5 text-xs rounded bg-orange-600 hover:bg-orange-500 text-white disabled:opacity-50"
+                >
+                  {saving === r.key ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+              <textarea
+                value={edits[r.key] ?? ''}
+                onChange={(e) => setEdits({ ...edits, [r.key]: e.target.value })}
+                rows={4}
+                data-testid={`textarea-config-${r.key}`}
+                className="w-full px-3 py-2 bg-gray-950 border border-gray-700 rounded text-sm font-mono text-gray-200"
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SupportPanel({ agencies, actorId }: { agencies: AgencyStat[]; actorId: string | undefined }) {
+  const [agencyId, setAgencyId] = useState('all');
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const send = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setSending(true);
+    setFeedback(null);
+    try {
+      let userQuery = supabase.from('user_profiles').select('id, agency_id').eq('actif', true);
+      if (agencyId !== 'all') userQuery = userQuery.eq('agency_id', agencyId);
+      const { data: users, error: usersErr } = await userQuery;
+      if (usersErr) throw usersErr;
+      if (!users || users.length === 0) {
+        setFeedback('Aucun destinataire trouvé.');
+        setSending(false);
+        return;
+      }
+      const rows = users
+        .filter((u) => u.agency_id)
+        .map((u) => ({
+          user_id: u.id,
+          agency_id: u.agency_id,
+          type: 'support',
+          title: title.trim(),
+          message: message.trim() || null,
+          read: false,
+        }));
+      const { error } = await supabase.from('notifications').insert(rows);
+      if (error) throw error;
+      if (actorId) {
+        await supabase.from('owner_actions_log').insert({
+          actor_id: actorId,
+          action: 'support_broadcast',
+          target_type: 'agency',
+          target_label: agencyId === 'all' ? 'Toutes les agences' : agencies.find((a) => a.id === agencyId)?.name ?? agencyId,
+          details: { recipients: rows.length, title: title.trim() },
+        });
+      }
+      setFeedback(`Message envoyé à ${rows.length} utilisateur${rows.length > 1 ? 's' : ''}.`);
+      setTitle('');
+      setMessage('');
+    } catch (err: unknown) {
+      setFeedback(err instanceof Error ? err.message : 'Erreur');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h2 className="text-2xl font-bold text-white">Support et communication</h2>
+        <p className="text-gray-500 text-sm">Diffusez une notification à toutes les agences ou à une agence ciblée</p>
+      </div>
+      <form onSubmit={send} className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Cible</label>
+          <select
+            value={agencyId}
+            onChange={(e) => setAgencyId(e.target.value)}
+            data-testid="select-support-agency"
+            className="w-full px-3 py-2 bg-gray-950 border border-gray-700 rounded text-gray-200"
+          >
+            <option value="all">Toutes les agences</option>
+            {agencies.map((a) => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Titre</label>
+          <input
+            type="text"
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            data-testid="input-support-title"
+            className="w-full px-3 py-2 bg-gray-950 border border-gray-700 rounded text-gray-200"
+          />
+        </div>
+        <div>
+          <label className="block text-sm text-gray-400 mb-1">Message</label>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={4}
+            data-testid="textarea-support-message"
+            className="w-full px-3 py-2 bg-gray-950 border border-gray-700 rounded text-gray-200"
+          />
+        </div>
+        {feedback && <p className="text-sm text-orange-300">{feedback}</p>}
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={sending}
+            data-testid="button-send-support"
+            className="px-4 py-2 rounded bg-orange-600 hover:bg-orange-500 text-white font-semibold disabled:opacity-50"
+          >
+            {sending ? 'Envoi…' : 'Envoyer'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
 
 function StatusBadge({ status }: { status: string }) {
   const s = STATUS_LABELS[status] ?? { label: status, color: 'text-slate-400 bg-slate-700', icon: Activity };
@@ -311,6 +506,8 @@ export function Console() {
     { id: 'utilisateurs',  label: 'Utilisateurs',   icon: Users },
     { id: 'abonnements',   label: 'Abonnements',    icon: CreditCard },
     { id: 'logs',          label: 'Audit',          icon: ShieldCheck },
+    { id: 'configuration', label: 'Configuration',  icon: Activity },
+    { id: 'support',       label: 'Support',        icon: AlertTriangle },
   ];
 
   return (
@@ -751,6 +948,12 @@ export function Console() {
                 </div>
               </div>
             )}
+
+            {/* ── Tab: Configuration ── */}
+            {tab === 'configuration' && <ConfigurationPanel />}
+
+            {/* ── Tab: Support ── */}
+            {tab === 'support' && <SupportPanel agencies={agencies} actorId={profile?.id} />}
           </>
         )}
       </main>

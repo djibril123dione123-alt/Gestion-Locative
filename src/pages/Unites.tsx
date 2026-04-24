@@ -7,6 +7,7 @@ import { ToastContainer } from '../components/ui/Toast';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
+import { usePlanLimits } from '../hooks/usePlanLimits';
 import { formatCurrency } from '../lib/formatters';
 
 interface Unite {
@@ -32,6 +33,7 @@ export function Unites() {
   const [deleting, setDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const toast = useToast();
+  const planLimits = usePlanLimits();
   const [formData, setFormData] = useState({
     nom: '',
     numero: '',
@@ -90,6 +92,12 @@ export function Unites() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!editingUnite && !planLimits.canAddUnite) {
+      toast.error('Limite atteinte sur votre plan actuel. Passez au plan Pro pour continuer.');
+      return;
+    }
+
 
     try {
       const data = {

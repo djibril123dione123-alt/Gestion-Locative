@@ -3,7 +3,11 @@ import { Clock, Zap, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
-export function TrialBanner() {
+interface TrialBannerProps {
+  onNavigate?: (page: string) => void;
+}
+
+export function TrialBanner({ onNavigate }: TrialBannerProps = {}) {
   const { profile } = useAuth();
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
   const [isExpired, setIsExpired] = useState(false);
@@ -71,7 +75,8 @@ export function TrialBanner() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => {}}
+                onClick={() => onNavigate?.('abonnement')}
+                data-testid="button-upgrade-expired"
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-semibold whitespace-nowrap"
               >
                 Passer au plan Pro
@@ -135,7 +140,8 @@ export function TrialBanner() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => {}}
+              onClick={() => onNavigate?.('abonnement')}
+              data-testid="button-upgrade-trial"
               className={`px-4 py-2 ${colors.button} text-white rounded-lg transition-colors text-sm font-semibold whitespace-nowrap`}
             >
               Passer au plan Pro

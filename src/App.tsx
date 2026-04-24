@@ -23,12 +23,44 @@ const FiltresAvances = lazy(() => import('./pages/FiltresAvances').then(m => ({ 
 const TableauDeBordFinancierGlobal = lazy(() => import('./pages/TableauDeBordFinancierGlobal').then(m => ({ default: m.TableauDeBordFinancierGlobal })));
 const Parametres = lazy(() => import('./pages/Parametres').then(m => ({ default: m.Parametres })));
 const Console = lazy(() => import('./pages/Console').then(m => ({ default: m.Console })));
+const Equipe = lazy(() => import('./pages/Equipe').then(m => ({ default: m.Equipe })));
+const Abonnement = lazy(() => import('./pages/Abonnement').then(m => ({ default: m.Abonnement })));
+const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })));
+const Inventaires = lazy(() => import('./pages/Inventaires').then(m => ({ default: m.Inventaires })));
+const Interventions = lazy(() => import('./pages/Interventions').then(m => ({ default: m.Interventions })));
+const Calendrier = lazy(() => import('./pages/Calendrier').then(m => ({ default: m.Calendrier })));
+const Documents = lazy(() => import('./pages/Documents').then(m => ({ default: m.Documents })));
+const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation').then(m => ({ default: m.AcceptInvitation })));
 
 function AppContent() {
     const { user, profile, loading } = useAuth();
     const [currentPage, setCurrentPage] = useState('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [showWelcomeAnyway, setShowWelcomeAnyway] = useState(false);
+    const [invitationToken, setInvitationToken] = useState<string | null>(() => {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('token');
+    });
+
+    if (invitationToken) {
+        return (
+            <Suspense fallback={
+                <div className="flex items-center justify-center min-h-screen">
+                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600"></div>
+                </div>
+            }>
+                <AcceptInvitation
+                    token={invitationToken}
+                    onDone={() => {
+                        const url = new URL(window.location.href);
+                        url.searchParams.delete('token');
+                        window.history.replaceState({}, '', url.toString());
+                        setInvitationToken(null);
+                    }}
+                />
+            </Suspense>
+        );
+    }
 
     React.useEffect(() => {
         if (!loading && user && !profile) {
@@ -130,6 +162,20 @@ function AppContent() {
                 return <FiltresAvances />;
             case 'parametres':
                 return <Parametres />;
+            case 'equipe':
+                return <Equipe />;
+            case 'abonnement':
+                return <Abonnement />;
+            case 'notifications':
+                return <Notifications />;
+            case 'inventaires':
+                return <Inventaires />;
+            case 'interventions':
+                return <Interventions />;
+            case 'calendrier':
+                return <Calendrier />;
+            case 'documents':
+                return <Documents />;
             default:
                 return <Dashboard />;
         }
@@ -161,7 +207,7 @@ function AppContent() {
                 </div>
 
                 {/* Trial Banner */}
-                <TrialBanner />
+                <TrialBanner onNavigate={setCurrentPage} />
 
                 {/* Contenu défilable */}
                 <main className="flex-1 overflow-y-auto">

@@ -66,6 +66,8 @@ CREATE POLICY "user_profiles_update"
 -- 4) INSERT : un utilisateur peut créer son propre profil (signup)
 DROP POLICY IF EXISTS "Users can insert own profile" ON user_profiles;
 DROP POLICY IF EXISTS "Admins can insert user profiles" ON user_profiles;
+DROP POLICY IF EXISTS "user_profiles_insert_self" ON user_profiles;
+DROP POLICY IF EXISTS "user_profiles_insert_admin" ON user_profiles;
 
 CREATE POLICY "user_profiles_insert_self"
   ON user_profiles FOR INSERT

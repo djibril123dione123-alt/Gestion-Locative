@@ -32,6 +32,13 @@ The app runs on port 5000 in development.
 - `VITE_SUPABASE_URL` — Supabase project URL
 - `VITE_SUPABASE_ANON_KEY` — Supabase anonymous/public key
 
+Both are set via the Replit Secrets store (Tools → Secrets), not committed to code or `.env` files.
+
+## Replit setup notes
+- Vite dev server runs on `0.0.0.0:5000` with `allowedHosts: 'all'` so the Replit preview iframe proxy can reach it.
+- Workflow `Start application` runs `npm run dev` and waits for port 5000.
+- Backend is Supabase (auth, Postgres + RLS, storage bucket `documents`, realtime). The Replit Postgres database created by the environment is currently unused — the app talks directly to Supabase.
+
 ## Key Pages
 - `Dashboard` — Stats overview with charts
 - `Bailleurs` — Property owner management

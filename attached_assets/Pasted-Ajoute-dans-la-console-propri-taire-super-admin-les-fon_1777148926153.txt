@@ -1,0 +1,77 @@
+Ajoute dans la console propriétaire / super admin les fonctionnalités permettant de gérer globalement le SaaS :
+création de nouvelles agences, création de nouveaux utilisateurs, modification des abonnements, et plus largement l’administration centrale des tenants depuis un seul espace. Dans un modèle multi-tenant, ce type de console doit permettre au super admin de créer et administrer les organisations, les utilisateurs et leurs abonnements depuis une vue unifiée.
+
+Ta mission :
+
+analyser l’état réel de la console propriétaire existante ;
+
+identifier ce qui existe déjà côté front, routes, tables, policies, types et services ;
+
+ajouter les fonctionnalités manquantes sans casser la séparation entre console propriétaire et espace d’agence ;
+
+conserver un modèle où le super admin peut gérer toutes les agences, tandis que les admins d’agence ne gèrent que leur propre organisation.
+
+Fonctionnalités à ajouter dans la console propriétaire :
+
+créer une nouvelle agence ;
+
+créer un nouvel utilisateur global ou un utilisateur rattaché à une agence ;
+
+affecter un utilisateur à une agence ;
+
+définir ou modifier le rôle d’un utilisateur ;
+
+modifier l’abonnement d’une agence ;
+
+changer le plan, prolonger un essai, suspendre ou réactiver une agence ;
+
+afficher clairement l’état de l’abonnement, du plan, du statut agence et du nombre d’utilisateurs.
+
+Contraintes importantes :
+
+commence par vérifier les fichiers réellement existants ;
+
+ne suppose pas qu’un écran, une table ou une API existe si ce n’est pas confirmé dans le code ;
+
+respecte la logique multi-tenant actuelle ;
+
+garde la console propriétaire séparée des admins d’agence ;
+
+n’accorde jamais à un admin d’agence des pouvoirs globaux sur toutes les agences ;
+
+vérifie les policies RLS, les rôles, les relations entre auth.users, user_profiles, agencies, subscriptions et toute table liée ;
+
+si une action nécessite une migration SQL, fournis-la proprement ;
+
+si une action nécessite une Edge Function ou un appel backend sécurisé, dis-le clairement au lieu de faire semblant que le front seul suffit.
+
+Livrables attendus :
+
+diagnostic de l’existant côté console propriétaire ;
+
+liste précise des fonctionnalités déjà présentes et manquantes ;
+
+plan d’implémentation ;
+
+fichiers front à modifier ;
+
+migrations SQL à ajouter si nécessaire ;
+
+policies RLS à créer ou corriger ;
+
+types TypeScript à mettre à jour ;
+
+résumé final des ajouts réalisés et des limites restantes.
+
+Règles strictes :
+
+ne pas halluciner ;
+
+ne pas inventer de tables non présentes sans les proposer explicitement comme nouvelles créations ;
+
+sécuriser toutes les actions sensibles ;
+
+ajouter des confirmations fortes pour les actions critiques comme suppression, suspension, changement de plan ou création d’utilisateur privilégié ;
+
+garder SQL en snake_case et front en camelCase avec mapping explicite.
+

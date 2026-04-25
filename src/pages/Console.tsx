@@ -18,14 +18,26 @@ import {
   Play,
   Pause,
   Edit3,
-  Eye,
   Calendar,
   Activity,
   Globe,
+  Plus,
+  Trash2,
+  UserPlus,
+  UserCog,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../lib/formatters';
+import {
+  CreateAgencyModal,
+  InviteUserModal,
+  EditUserModal,
+  EditSubscriptionModal,
+  DarkConfirmModal,
+  type UserRow,
+  type SubscriptionRow,
+} from '../components/console/ConsoleModals';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -350,6 +362,21 @@ export function Console() {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [actionMenuId, setActionMenuId] = useState<string | null>(null);
 
+  // ── États modales ──
+  const [showCreateAgency, setShowCreateAgency] = useState(false);
+  const [showInviteUser, setShowInviteUser] = useState(false);
+  const [editUser, setEditUser] = useState<UserRow | null>(null);
+  const [editSub, setEditSub] = useState<SubscriptionRow | null>(null);
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    message: string;
+    confirmText?: string;
+    destructive?: boolean;
+    requireText?: string;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -411,7 +438,7 @@ export function Console() {
     });
   };
 
-  const updateAgencyStatus = async (
+  const doUpdateAgencyStatus = async (
     agencyId: string,
     agencyName: string,
     newStatus: 'active' | 'suspended'
@@ -433,19 +460,72 @@ export function Console() {
     setActionMenuId(null);
   };
 
-  const updateAgencyPlan = async (agencyId: string, agencyName: string, newPlan: string) => {
+  const updateAgencyStatus = (agencyId: string, agencyName: string, newStatus: 'active' | 'suspended') => {
+    setActionMenuId(null);
+    if (newStatus === 'suspended') {
+      setConfirm({
+        title: 'Suspendre l\'agence',
+        message: `Tous les utilisateurs de "${agencyName}" perdront l'accès à l'application jusqu'à la réactivation. Les données restent intactes.`,
+        confirmText: 'Suspendre',
+        destructive: true,
+        onConfirm: async () => { await doUpdateAgencyStatus(agencyId, agencyName, 'suspended'); },
+      });
+    } else {
+      setConfirm({
+        title: 'Réactiver l\'agence',
+        message: `Réactiver "${agencyName}" rétablit l'accès pour tous ses utilisateurs.`,
+        confirmText: 'Réactiver',
+        destructive: false,
+        onConfirm: async () => { await doUpdateAgencyStatus(agencyId, agencyName, 'active'); },
+      });
+    }
+  };
+
+  const doUpdateAgencyPlan = async (agencyId: string, agencyName: string, newPlan: string) => {
+    // Met à jour agencies.plan ET subscriptions.plan_id pour rester cohérent
     const { error } = await supabase
       .from('agencies')
       .update({ plan: newPlan })
       .eq('id', agencyId);
 
     if (!error) {
+      await supabase.from('subscriptions').update({ plan_id: newPlan }).eq('agency_id', agencyId);
       await logOwnerAction('agency_plan_changed', 'agency', agencyId, agencyName, { new_plan: newPlan });
       setAgencies(prev =>
         prev.map(a => a.id === agencyId ? { ...a, plan: newPlan as AgencyStat['plan'] } : a)
       );
+      setSubscriptions(prev => prev.map(s => s.agency_id === agencyId ? { ...s, plan_id: newPlan } : s));
     }
     setActionMenuId(null);
+  };
+
+  const updateAgencyPlan = (agencyId: string, agencyName: string, newPlan: string) => {
+    setActionMenuId(null);
+    setConfirm({
+      title: 'Changer le plan',
+      message: `Passer "${agencyName}" en plan ${newPlan}. Les limites d'usage (utilisateurs, immeubles, unités) seront ajustées immédiatement.`,
+      confirmText: `Passer en ${newPlan}`,
+      destructive: false,
+      onConfirm: async () => { await doUpdateAgencyPlan(agencyId, agencyName, newPlan); },
+    });
+  };
+
+  const deleteAgency = (agencyId: string, agencyName: string) => {
+    setActionMenuId(null);
+    setConfirm({
+      title: 'Supprimer l\'agence',
+      message: `Cette action supprime définitivement "${agencyName}" et TOUTES ses données (bailleurs, immeubles, contrats, paiements, utilisateurs rattachés). Action irréversible.`,
+      confirmText: 'Supprimer définitivement',
+      destructive: true,
+      requireText: agencyName,
+      onConfirm: async () => {
+        const { error } = await supabase.from('agencies').delete().eq('id', agencyId);
+        if (error) throw error;
+        await logOwnerAction('agency_deleted', 'agency', agencyId, agencyName, {});
+        setAgencies(prev => prev.filter(a => a.id !== agencyId));
+        setSubscriptions(prev => prev.filter(s => s.agency_id !== agencyId));
+      },
+    });
   };
 
   const extendTrial = async (agencyId: string, agencyName: string, days: number) => {
@@ -646,6 +726,15 @@ export function Console() {
                     <p className="text-gray-500 text-sm">{filteredAgencies.length} agence{filteredAgencies.length !== 1 ? 's' : ''}</p>
                   </div>
                   <div className="sm:ml-auto flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateAgency(true)}
+                      data-testid="button-new-agency"
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Nouvelle agence
+                    </button>
                     {/* Filtre statut */}
                     <div className="relative">
                       <select
@@ -765,6 +854,15 @@ export function Console() {
                                       </button>
                                     )
                                   ))}
+                                  <div className="h-px bg-gray-700 my-1" />
+                                  <button
+                                    onClick={() => deleteAgency(a.id, a.name)}
+                                    data-testid={`button-delete-agency-${a.id}`}
+                                    className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-400/10 flex items-center gap-2"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    Supprimer l'agence
+                                  </button>
                                 </div>
                               )}
                             </td>
@@ -792,7 +890,16 @@ export function Console() {
                     <h2 className="text-2xl font-bold text-white">Utilisateurs globaux</h2>
                     <p className="text-gray-500 text-sm">{filteredUsers.filter(u => u.role !== 'super_admin').length} utilisateurs métier</p>
                   </div>
-                  <div className="sm:ml-auto">
+                  <div className="sm:ml-auto flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowInviteUser(true)}
+                      data-testid="button-invite-user"
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      Inviter un utilisateur
+                    </button>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                       <input
@@ -816,6 +923,7 @@ export function Console() {
                           <th className="text-center px-4 py-3 text-gray-500 font-medium">Rôle</th>
                           <th className="text-center px-4 py-3 text-gray-500 font-medium">Statut</th>
                           <th className="text-right px-4 py-3 text-gray-500 font-medium">Créé</th>
+                          <th className="text-center px-4 py-3 text-gray-500 font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -846,6 +954,20 @@ export function Console() {
                                 }
                               </td>
                               <td className="px-4 py-3 text-right text-xs text-gray-500">{formatDate(u.created_at)}</td>
+                              <td className="px-4 py-3 text-center">
+                                <button
+                                  onClick={() => setEditUser({
+                                    id: u.id, email: u.email, nom: u.nom, prenom: u.prenom,
+                                    role: u.role, actif: u.actif, agency_id: u.agency_id,
+                                    agency_name: u.agency_name,
+                                  })}
+                                  data-testid={`button-edit-user-${u.id}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-gray-300"
+                                >
+                                  <UserCog className="w-3 h-3" />
+                                  Modifier
+                                </button>
+                              </td>
                             </tr>
                           ))}
                       </tbody>
@@ -873,6 +995,7 @@ export function Console() {
                           <th className="text-center px-4 py-3 text-gray-500 font-medium">Statut</th>
                           <th className="text-right px-4 py-3 text-gray-500 font-medium">Début</th>
                           <th className="text-right px-4 py-3 text-gray-500 font-medium">Fin</th>
+                          <th className="text-center px-4 py-3 text-gray-500 font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -887,11 +1010,21 @@ export function Console() {
                             <td className="px-4 py-3 text-right text-gray-400 text-xs">
                               {s.current_period_end ? formatDate(s.current_period_end) : '—'}
                             </td>
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => setEditSub(s as SubscriptionRow)}
+                                data-testid={`button-edit-sub-${s.id}`}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 text-gray-300"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                                Modifier
+                              </button>
+                            </td>
                           </tr>
                         ))}
                         {subscriptions.length === 0 && (
                           <tr>
-                            <td colSpan={5} className="px-4 py-12 text-center text-gray-500">
+                            <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
                               Aucun abonnement
                             </td>
                           </tr>
@@ -965,6 +1098,62 @@ export function Console() {
           onClick={() => setActionMenuId(null)}
         />
       )}
+
+      {/* ── Modales ── */}
+      <CreateAgencyModal
+        open={showCreateAgency}
+        onClose={() => setShowCreateAgency(false)}
+        actorId={profile?.id}
+        actorEmail={profile?.email}
+        onCreated={loadAll}
+      />
+      <InviteUserModal
+        open={showInviteUser}
+        onClose={() => setShowInviteUser(false)}
+        agencies={agencies.map(a => ({ id: a.id, name: a.name, status: a.status, plan: a.plan }))}
+        actorId={profile?.id}
+        actorEmail={profile?.email}
+        onInvited={loadAll}
+      />
+      <EditUserModal
+        open={editUser !== null}
+        onClose={() => setEditUser(null)}
+        user={editUser}
+        agencies={agencies.map(a => ({ id: a.id, name: a.name }))}
+        actorId={profile?.id}
+        actorEmail={profile?.email}
+        onSaved={loadAll}
+      />
+      <EditSubscriptionModal
+        open={editSub !== null}
+        onClose={() => setEditSub(null)}
+        subscription={editSub}
+        actorId={profile?.id}
+        actorEmail={profile?.email}
+        onSaved={loadAll}
+      />
+      <DarkConfirmModal
+        open={confirm !== null}
+        onClose={() => { setConfirm(null); setConfirmBusy(false); }}
+        onConfirm={async () => {
+          if (!confirm) return;
+          setConfirmBusy(true);
+          try {
+            await confirm.onConfirm();
+            setConfirm(null);
+          } catch (e) {
+            console.error('Confirm action error', e);
+          } finally {
+            setConfirmBusy(false);
+          }
+        }}
+        title={confirm?.title ?? ''}
+        message={confirm?.message ?? ''}
+        confirmText={confirm?.confirmText}
+        destructive={confirm?.destructive}
+        requireText={confirm?.requireText}
+        busy={confirmBusy}
+      />
     </div>
   );
 }

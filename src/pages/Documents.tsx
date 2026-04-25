@@ -113,11 +113,10 @@ export function Documents() {
         upsert: false,
       });
       if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from('documents').getPublicUrl(path);
       const { error: insertError } = await supabase.from('documents').insert({
         agency_id: profile.agency_id,
         name: form.name || form.file.name,
-        file_url: urlData.publicUrl,
+        file_url: path,
         file_type: form.file.type || ext,
         file_size: form.file.size,
         folder: form.folder,
@@ -154,6 +153,9 @@ export function Documents() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
+      if (deleteTarget.file_url && !deleteTarget.file_url.startsWith('http')) {
+        await supabase.storage.from('documents').remove([deleteTarget.file_url]);
+      }
       const { error } = await supabase.from('documents').delete().eq('id', deleteTarget.id);
       if (error) throw error;
       toast.success('Document supprimé');
@@ -164,6 +166,23 @@ export function Documents() {
       toast.error(msg);
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const downloadDoc = async (d: Document) => {
+    try {
+      if (d.file_url.startsWith('http')) {
+        window.open(d.file_url, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(d.file_url, 60);
+      if (error || !data?.signedUrl) throw error ?? new Error('URL non disponible');
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Téléchargement impossible';
+      toast.error(msg);
     }
   };
 
@@ -206,15 +225,14 @@ export function Documents() {
       label: 'Actions',
       render: (d: Document) => (
         <div className="flex gap-2">
-          <a
-            href={d.file_url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={() => downloadDoc(d)}
             data-testid={`button-download-${d.id}`}
             className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-slate-300 hover:bg-slate-50"
           >
             <Download className="w-3 h-3" /> Télécharger
-          </a>
+          </button>
           <button
             type="button"
             onClick={() => setDeleteTarget(d)}

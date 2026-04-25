@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { ToastType } from '../components/ui/Toast';
 
 interface Toast {
@@ -32,13 +32,16 @@ export function useToast() {
     return addToast(message, 'warning');
   }, [addToast]);
 
-  return {
-    toasts,
-    addToast,
-    showToast: addToast,
-    removeToast,
-    success,
-    error,
-    warning,
-  };
+  return useMemo(
+    () => ({
+      toasts,
+      addToast,
+      showToast: addToast,
+      removeToast,
+      success,
+      error,
+      warning,
+    }),
+    [toasts, addToast, removeToast, success, error, warning],
+  );
 }

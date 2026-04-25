@@ -1,0 +1,56 @@
+Corrige le problème de chargement des données dans les pages États des lieux, Maintenance, Documents, Équipe, Abonnement et toute autre page concernée.
+Actuellement, les données semblent bloquées, ne se chargent pas, ou il existe peut-être un conflit entre le front-end, les requêtes Supabase, les policies RLS, l’état React, ou les relations SQL.
+
+Ta mission :
+
+auditer le comportement réel de chaque page concernée ;
+
+identifier précisément pourquoi les données ne s’affichent pas ;
+
+vérifier s’il s’agit d’un problème de requête, de filtre agency_id, de policy RLS, de relation SQL, de state React, de hook useEffect, de dépendances manquantes, de mauvaise table, de mauvais champ, ou d’un conflit de types ;
+
+corriger les bugs trouvés sans casser le reste ;
+
+conserver l’architecture multi-tenant existante ;
+
+ne rien inventer si un fichier, une table ou une route n’existe pas.
+
+Contraintes importantes :
+
+commence par lire l’état réel du code avant de proposer une correction ;
+
+vérifie page par page les requêtes Supabase, les conditions eq, in, single, maybeSingle, les jointures, les colonnes utilisées, et les filtres liés à l’agence courante ;
+
+vérifie que auth.uid() et user_profiles.agency_id sont bien cohérents avec les policies RLS ;
+
+vérifie que les tables existent vraiment et que leurs colonnes correspondent au code front ;
+
+vérifie que les données ne sont pas masquées par un loader infini, un setState incorrect, une erreur silencieuse, une dépendance manquante dans un hook, ou une condition de rendu trop stricte ;
+
+si une page est vide parce que le backend ou la table est incomplet, dis-le clairement au lieu d’inventer une correction.
+
+Pour chaque page concernée, fournis :
+
+le diagnostic exact ;
+
+la cause racine ;
+
+les fichiers impactés ;
+
+la correction précise à appliquer ;
+
+les éventuels risques de régression ;
+
+un court résumé final de ce qui a été corrigé et de ce qui reste bloquant.
+
+Règles de sortie :
+
+ne fais pas d’hypothèse non vérifiée ;
+
+ne dis pas “c’est probablement…” sans preuve dans le code ;
+
+privilégie des corrections concrètes et minimales ;
+
+respecte les conventions existantes du projet ;
+
+garde snake_case côté SQL et camelCase côté front avec mapping explicite si nécessaire.

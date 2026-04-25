@@ -1,0 +1,112 @@
+2026-04-24 02:11:37.25
+887aa407
+User
+Error: Cannot find module '/home/runner/workspace/dist/index.cjs'
+2026-04-24 02:11:37.25
+887aa407
+User
+Node.js v20.20.0
+2026-04-24 02:11:37.25
+887aa407
+User
+code: 'MODULE_NOT_FOUND',
+2026-04-24 02:11:37.26
+887aa407
+System
+command finished with error [node ./dist/index.cjs]: exit status 1
+2026-04-24 02:11:38.59
+887aa407
+User
+throw err;
+2026-04-24 02:11:38.59
+887aa407
+User
+at Module._load (node:internal/modules/cjs/loader:1038:27)
+2026-04-24 02:11:38.59
+887aa407
+User
+code: 'MODULE_NOT_FOUND',
+2026-04-24 02:11:38.59
+887aa407
+User
+at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+2026-04-24 02:11:38.59
+887aa407
+User
+at node:internal/main/run_main_module:28:49 {
+2026-04-24 02:11:38.59
+887aa407
+User
+Error: Cannot find module '/home/runner/workspace/dist/index.cjs'
+2026-04-24 02:11:38.59
+887aa407
+User
+at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+2026-04-24 02:11:38.59
+887aa407
+User
+^
+2026-04-24 02:11:38.59
+887aa407
+User
+requireStack: []
+2026-04-24 02:11:38.59
+887aa407
+User
+node:internal/modules/cjs/loader:1210
+2026-04-24 02:11:44.90
+887aa407
+User
+at node:internal/main/run_main_module:28:49 {
+2026-04-24 02:11:44.90
+887aa407
+User
+at Module._resolveFilename (node:internal/modules/cjs/loader:1207:15)
+2026-04-24 02:11:44.90
+887aa407
+User
+requireStack: []
+2026-04-24 02:11:44.90
+887aa407
+User
+^
+2026-04-24 02:11:44.90
+887aa407
+User
+Error: Cannot find module '/home/runner/workspace/dist/index.cjs'
+2026-04-24 02:11:44.90
+887aa407
+User
+node:internal/modules/cjs/loader:1210
+2026-04-24 02:11:44.90
+887aa407
+User
+code: 'MODULE_NOT_FOUND',
+2026-04-24 02:11:44.90
+887aa407
+User
+throw err;
+2026-04-24 02:11:44.90
+887aa407
+User
+at Module._load (node:internal/modules/cjs/loader:1038:27)
+2026-04-24 02:11:44.90
+887aa407
+User
+Node.js v20.20.0
+2026-04-24 02:11:44.90
+887aa407
+User
+}
+2026-04-24 02:11:44.90
+887aa407
+User
+at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12)
+2026-04-24 02:11:44.91
+887aa407
+System
+command finished with error [node ./dist/index.cjs]: exit status 1
+2026-04-24 02:11:45.11
+887aa407
+System
+crash loop detected

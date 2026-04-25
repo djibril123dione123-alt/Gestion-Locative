@@ -21,6 +21,7 @@ GRANT EXECUTE ON FUNCTION current_user_agency_id() TO authenticated;
 -- 2) Recréer la politique SELECT sans auto-référence récursive
 DROP POLICY IF EXISTS "super_admin_profiles_select" ON user_profiles;
 DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
+DROP POLICY IF EXISTS "user_profiles_select" ON user_profiles;
 
 CREATE POLICY "user_profiles_select"
   ON user_profiles FOR SELECT
@@ -35,6 +36,7 @@ CREATE POLICY "user_profiles_select"
 DROP POLICY IF EXISTS "super_admin_profiles_update" ON user_profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
 DROP POLICY IF EXISTS "Admins can update user profiles" ON user_profiles;
+DROP POLICY IF EXISTS "user_profiles_update" ON user_profiles;
 
 CREATE POLICY "user_profiles_update"
   ON user_profiles FOR UPDATE

@@ -6,10 +6,27 @@
 - **Chantier 4** : `NotificationBell` (realtime Supabase) + page Notifications.
 - **Chantier 5** : page Abonnement (plan, usage, historique, contact upgrade) + TrialBanner navigable.
 - **Chantier 6** : pages Inventaires (états des lieux + PDF), Interventions (kanban), Calendrier (mensuel), Documents (storage `documents`).
-- **Chantier 7** : Console super_admin enrichie (Configuration, Support broadcast). Migration `20260425000002_add_console_owner_features.sql` ajoute `agencies.tags`, `saas_config`, `feature_flags`. **À appliquer manuellement sur Supabase.**
+- **Chantier 7** : Console super_admin enrichie (Configuration, Support broadcast). Migration `20260425000002_add_console_owner_features.sql` ajoute `agencies.tags`, `saas_config`, `feature_flags`.
+- **Pass déploiement (avril 2026)** :
+  - `ConfirmModal` accepte les alias `confirmLabel`/`cancelLabel`/`isDestructive`.
+  - `AuthContext.signUp` : sleep arbitraire 1.5s remplacé par retry pattern (5 tentatives × 600ms).
+  - `errorMessages.ts` typé strictement (`unknown` + narrowing).
+  - `lib/templates/helpers.ts` : interface `AgencySettings` dupliquée supprimée, alias `Partial<AgencySettings>` depuis `types/agency.ts`.
+  - `LoyersImpayes` : extraction d'UUID via regex (au lieu de `slice(0, 36)`).
+  - `Calendrier` : protection contre les réponses obsolètes via `requestIdRef` (évite les états "zombies" lors d'une navigation rapide).
+  - `TableauDeBordFinancierGlobal` + `Commissions` : passage à `import autoTable from 'jspdf-autotable'` + `autoTable(doc, ...)` ; suppression de l'import `Dollar` doublon.
+  - `pdf.ts` : cache TTL 5 min des `agency_settings` par `agency_id` (+ helper `invalidateAgencySettingsCache`).
+  - `SetupWizard` : champ `type_logement` retiré du formulaire (la colonne n'existe pas dans `unites`, déjà filtré côté insert).
+  - `FiltresAvances` : élimination du N+1 sur les paiements via `.in(contrat_id, [...])` + map du dernier statut.
+  - `Agences` : trace `owner_actions_log` après suppression d'une agence.
+  - Bannière `MaintenanceBanner` (lecture `saas_config.maintenance_mode`) câblée dans `App.tsx`.
+  - Hook `useFeatureFlag(flag)` (lecture `feature_flags` avec fallback global).
+  - `vite.config.ts` enrichi (preview server, build chunkSizeWarningLimit, sourcemap off).
+  - `.env.example` créé, `README.md` réécrit complet.
 
 ## Migrations en attente
 - `supabase/migrations/20260425000002_add_console_owner_features.sql` – Gestion Locative
+- `supabase/migrations/20260425000006_cleanup_agencies_insert_policies.sql` – nettoie ~7 policies INSERT historiques cumulées sur `agencies` et en crée deux propres (auth + super_admin).
 
 ## Overview
 A real estate property management SaaS application (Gestion Locative) built with React, TypeScript, Vite and Tailwind CSS. It provides multi-tenant agency management with roles (admin, agent, comptable, bailleur), covering bailleurs, immeubles, unités, locataires, contrats, paiements, dépenses, and reporting.

@@ -150,8 +150,14 @@ export function LoyersImpayes() {
     if (!selectedLoyer || !profile?.agency_id) return;
     setSubmitting(true);
     try {
-      // L'id est de la forme "<uuid 36 chars>-YYYY-MM" → on retire les 8 derniers chars
-      const contratId = selectedLoyer.id.slice(0, 36);
+      // L'id est de la forme "<uuid>-YYYY-MM". On extrait l'UUID via regex
+      // plutôt qu'un slice fragile.
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+      const match = selectedLoyer.id.match(UUID_REGEX);
+      if (!match) {
+        throw new Error('Identifiant de loyer invalide');
+      }
+      const contratId = match[0];
 
       // Récupérer la commission réelle depuis le bailleur du contrat
       const { data: contratRow } = await supabase

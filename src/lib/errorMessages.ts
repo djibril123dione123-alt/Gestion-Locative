@@ -1,8 +1,21 @@
-export function translateSupabaseError(error: any): string {
+interface SupabaseLikeError {
+  message?: unknown;
+  error_description?: unknown;
+  code?: unknown;
+  error?: unknown;
+}
+
+function asString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+export function translateSupabaseError(error: unknown): string {
   if (!error) return 'Une erreur est survenue';
 
-  const errorMessage = error.message || error.error_description || String(error);
-  const errorCode = error.code || error.error || '';
+  const e = (typeof error === 'object' ? (error as SupabaseLikeError) : {}) ?? {};
+  const errorMessage =
+    asString(e.message) || asString(e.error_description) || String(error);
+  const errorCode = asString(e.code) || asString(e.error) || '';
 
   const errorMap: Record<string, string> = {
     'Invalid login credentials': 'Email ou mot de passe incorrect',

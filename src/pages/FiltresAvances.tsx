@@ -196,26 +196,33 @@ export function FiltresAvances() {
       if (error) throw error;
 
       if (filters.statut_paiement) {
-        const contratsWithPaiements = await Promise.all(
-          (data || []).map(async (contrat) => {
-            const { data: paiements } = await supabase
-              .from('paiements')
-              .select('statut')
-              .eq('agency_id', profile.agency_id)
-              .eq('contrat_id', contrat.id)
-              .order('created_at', { ascending: false })
-              .limit(1);
+        // Une seule requête pour tous les contrats (au lieu de N+1)
+        const contratIds = (data || []).map((c: { id: string }) => c.id);
+        const latestByContrat = new Map<string, string>();
 
-            return {
-              ...contrat,
-              dernier_statut_paiement: paiements?.[0]?.statut || 'aucun',
-            };
-          })
-        );
+        if (contratIds.length > 0) {
+          const { data: allPaiements } = await supabase
+            .from('paiements')
+            .select('contrat_id, statut, created_at')
+            .eq('agency_id', profile.agency_id)
+            .in('contrat_id', contratIds)
+            .order('created_at', { ascending: false });
 
-        const filtered = contratsWithPaiements.filter(
-          c => c.dernier_statut_paiement === filters.statut_paiement
-        );
+          (allPaiements || []).forEach((p: { contrat_id: string; statut: string }) => {
+            if (!latestByContrat.has(p.contrat_id)) {
+              latestByContrat.set(p.contrat_id, p.statut);
+            }
+          });
+        }
+
+        const filtered = (data || [])
+          .map((c: { id: string }) => ({
+            ...c,
+            dernier_statut_paiement: latestByContrat.get(c.id) || 'aucun',
+          }))
+          .filter((c: { dernier_statut_paiement: string }) =>
+            c.dernier_statut_paiement === filters.statut_paiement
+          );
         setResults(filtered);
       } else {
         setResults(data || []);

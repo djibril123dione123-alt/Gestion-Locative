@@ -295,6 +295,9 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
         );
 
       case 3:
+        // Note : le champ `type_logement` est volontairement absent du formulaire.
+        // Il est filtré côté insert (cf. ligne ~100) car la colonne n'existe pas
+        // dans le schéma `unites`. À réactiver si la colonne est ajoutée.
         return (
           <div className="space-y-4">
             <div>
@@ -310,23 +313,6 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="Appartement 101"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Type *</label>
-              <select
-                value={formData.unite.type_logement}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  unite: { ...formData.unite, type_logement: e.target.value }
-                })}
-                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              >
-                <option value="appartement">Appartement</option>
-                <option value="studio">Studio</option>
-                <option value="maison">Maison</option>
-                <option value="bureau">Bureau</option>
-                <option value="commerce">Commerce</option>
-              </select>
             </div>
           </div>
         );

@@ -121,20 +121,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     console.log('✅ Auth user created:', authData.user.id);
     console.log('⏳ Waiting for trigger to create profile...');
 
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Retry pattern : on poll le profil jusqu'à 5 fois (max ~3s) au lieu d'un sleep arbitraire
+    const MAX_PROFILE_RETRIES = 5;
+    const PROFILE_RETRY_DELAY = 600;
+    let newProfile = null;
 
-    const { data: newProfile, error: profileError } = await supabase
-      .from('user_profiles')
-      .select()
-      .eq('id', authData.user.id)
-      .maybeSingle();
+    for (let attempt = 0; attempt < MAX_PROFILE_RETRIES; attempt++) {
+      if (attempt > 0) {
+        await new Promise(resolve => setTimeout(resolve, PROFILE_RETRY_DELAY));
+      }
 
-    if (profileError) {
-      console.error('❌ Error fetching profile:', profileError);
+      const { data, error: profileError } = await supabase
+        .from('user_profiles')
+        .select()
+        .eq('id', authData.user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error(`❌ Error fetching profile (attempt ${attempt + 1}):`, profileError);
+        continue;
+      }
+
+      if (data) {
+        newProfile = data;
+        console.log(`✅ Profile found after ${attempt + 1} attempt(s):`, data.id);
+        break;
+      }
     }
 
     if (newProfile) {
-      console.log('✅ Profile found:', newProfile.id);
       setProfile(newProfile);
     } else {
       console.warn('⚠️ Profile not found yet, will be loaded by AuthContext');

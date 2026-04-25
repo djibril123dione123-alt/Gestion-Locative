@@ -50,6 +50,22 @@ const PDF_SETTINGS_FALLBACK: Partial<AgencySettings> = {
 // Private helpers
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Cache des paramètres d'agence (TTL 5 min) pour éviter de refaire 2 requêtes
+// (user → profile → settings) à chaque génération de PDF.
+// ---------------------------------------------------------------------------
+type CacheEntry = { settings: Partial<AgencySettings>; expiresAt: number };
+const settingsCache = new Map<string, CacheEntry>();
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
+export function invalidateAgencySettingsCache(agencyId?: string) {
+  if (agencyId) {
+    settingsCache.delete(agencyId);
+  } else {
+    settingsCache.clear();
+  }
+}
+
 async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
   try {
     const {
@@ -66,6 +82,11 @@ async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
 
     if (!profile?.agency_id) return PDF_SETTINGS_FALLBACK;
 
+    const cached = settingsCache.get(profile.agency_id);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.settings;
+    }
+
     const { data, error } = await supabase
       .from('agency_settings')
       .select(
@@ -80,7 +101,12 @@ async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
       .maybeSingle();
 
     if (error) throw error;
-    return data ?? PDF_SETTINGS_FALLBACK;
+    const settings = (data ?? PDF_SETTINGS_FALLBACK) as Partial<AgencySettings>;
+    settingsCache.set(profile.agency_id, {
+      settings,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
+    return settings;
   } catch (error) {
     console.error('Erreur chargement paramètres agence:', error);
     return PDF_SETTINGS_FALLBACK;

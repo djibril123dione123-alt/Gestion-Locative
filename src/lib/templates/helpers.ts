@@ -1,30 +1,10 @@
 import { supabase } from '../supabase';
+import type { AgencySettings as FullAgencySettings } from '../../types/agency';
 
-export interface AgencySettings {
-  nom_agence: string;
-  adresse: string;
-  telephone: string;
-  email: string;
-  site_web?: string;
-  ninea?: string;
-  rc?: string;
-  representant_nom?: string;
-  representant_fonction?: string;
-  manager_id_type?: string;
-  manager_id_number?: string;
-  city?: string;
-  logo_url?: string;
-  logo_position?: 'left' | 'center' | 'right';
-  couleur_primaire?: string;
-  couleur_secondaire?: string;
-  mention_tribunal?: string;
-  mention_penalites?: string;
-  pied_page_personnalise?: string;
-  frais_huissier?: number;
-  penalite_retard_montant?: number;
-  penalite_retard_delai_jours?: number;
-  devise?: string;
-}
+// Source unique de vérité : src/types/agency.ts
+// On ré-exporte un alias compatible (Partial) pour les modules templates qui n'ont
+// besoin que d'un sous-ensemble des champs.
+export type AgencySettings = Partial<FullAgencySettings>;
 
 export async function getAgencySettings(agencyId: string): Promise<AgencySettings | null> {
   try {

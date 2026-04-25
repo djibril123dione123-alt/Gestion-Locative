@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase'; // Supposons que le chemin soit correct
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { TrendingUp, TrendingDown, DollarSign, Download, Calendar, Building2, DollarSign as Dollar } from 'lucide-react'; // Imports d'icônes unifiés [3-6]
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'; // Imports graphiques unifiés [3, 6]
+import { TrendingUp, TrendingDown, DollarSign, Download, Calendar, Building2 } from 'lucide-react';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '../lib/formatters';
 
 // -------------------------------------------------------------------------
@@ -339,7 +339,7 @@ export function TableauDeBordFinancierGlobal() {
         doc.setFontSize(12); // [12]
         doc.text(`Période: ${monthName}`, 14, 30); // [12]
 
-        doc.autoTable({
+        autoTable(doc, {
             head: [['Élément', 'Montant']], // [12]
             body: [
                 ['Total loyers perçus', formatCurrency(bilanEntreprise.totalLoyers)], // [12]
@@ -367,7 +367,7 @@ export function TableauDeBordFinancierGlobal() {
             42
         ); 
 
-        doc.autoTable({
+        autoTable(doc, {
             head: [['Immeuble', 'Loyers perçus', 'Impayés', 'Frais gestion', 'Montant net']], // [13]
             body: bilan.immeubles.map(i => [ // CORRIGÉ : Assurez-vous des virgules après head
                 i.immeuble_nom,
@@ -380,7 +380,7 @@ export function TableauDeBordFinancierGlobal() {
             styles: { fontSize: 10 }, // [13]
         });
 
-        const finalY = doc.lastAutoTable.finalY + 10;
+        const finalY = (doc as any).lastAutoTable.finalY + 10;
         doc.setFontSize(12); // [13]
         doc.setFont(undefined, 'bold');
         doc.text('TOTAUX:', 14, finalY);
@@ -409,7 +409,7 @@ export function TableauDeBordFinancierGlobal() {
             formatCurrency(r.resultat_net),
         ]);
 
-        doc.autoTable({
+        autoTable(doc, {
             head: [['Immeuble', 'Bailleur', 'Loyers perçus', 'Impayés', 'Frais', 'Résultat net']], // [14]
             body: data,
             startY: 35,
@@ -426,7 +426,7 @@ export function TableauDeBordFinancierGlobal() {
         doc.text(`Total Depenses: ${formatCurrency(statsAnnuel.totalDepenses)}`, 14, 32); // [15]
         doc.text(`Solde Net: ${formatCurrency(statsAnnuel.soldeNet)}`, 14, 39); // [15]
         
-        doc.autoTable({
+        autoTable(doc, {
             head: [['Mois', 'Revenus', 'Depenses', 'Solde']], // [15]
             body: monthlyData.map(m => [
                 m.month, 

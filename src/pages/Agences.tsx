@@ -136,9 +136,34 @@ export default function Agences() {
     if (!deleteTargetId) return;
     setIsDeleting(true);
     try {
-      const { error } = await supabase.from('agencies').delete().eq('id', deleteTargetId);
+      // Récupérer les infos de l'agence avant suppression pour l'audit log
+      const targetAgency = agencies.find((a) => a.id === deleteTargetId);
 
+      const { error } = await supabase.from('agencies').delete().eq('id', deleteTargetId);
       if (error) throw error;
+
+      // Trace de l'action dans owner_actions_log (best-effort, ne bloque pas)
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from('owner_actions_log').insert({
+          actor_id: user?.id ?? null,
+          actor_email: user?.email ?? null,
+          action: 'agency.delete',
+          target_type: 'agency',
+          target_id: deleteTargetId,
+          target_label: targetAgency?.name ?? null,
+          details: targetAgency
+            ? {
+                plan: targetAgency.plan,
+                status: targetAgency.status,
+                email: targetAgency.email,
+              }
+            : {},
+        });
+      } catch (logErr) {
+        console.warn('owner_actions_log insert failed:', logErr);
+      }
+
       showToast('Agence supprimée avec succès', 'success');
       setDeleteTargetId(null);
       loadAgencies();

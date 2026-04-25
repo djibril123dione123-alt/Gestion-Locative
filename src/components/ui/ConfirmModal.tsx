@@ -9,7 +9,10 @@ interface ConfirmModalProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
   variant?: 'danger' | 'warning' | 'info';
+  isDestructive?: boolean;
   isLoading?: boolean;
 }
 
@@ -19,11 +22,18 @@ export function ConfirmModal({
   onConfirm,
   title,
   message,
-  confirmText = 'Confirmer',
-  cancelText = 'Annuler',
-  variant = 'danger',
+  confirmText,
+  cancelText,
+  confirmLabel,
+  cancelLabel,
+  variant,
+  isDestructive,
   isLoading = false,
 }: ConfirmModalProps) {
+  const resolvedConfirm = confirmLabel ?? confirmText ?? 'Confirmer';
+  const resolvedCancel = cancelLabel ?? cancelText ?? 'Annuler';
+  const resolvedVariant: 'danger' | 'warning' | 'info' =
+    variant ?? (isDestructive ? 'danger' : 'info');
   if (!isOpen) return null;
 
   const variantStyles = {
@@ -47,7 +57,7 @@ export function ConfirmModal({
     },
   };
 
-  const styles = variantStyles[variant];
+  const styles = variantStyles[resolvedVariant];
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -81,7 +91,7 @@ export function ConfirmModal({
                 className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg
                          hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {cancelText}
+                {resolvedCancel}
               </button>
               <button
                 onClick={onConfirm}
@@ -95,7 +105,7 @@ export function ConfirmModal({
                     En cours...
                   </>
                 ) : (
-                  confirmText
+                  resolvedConfirm
                 )}
               </button>
             </div>

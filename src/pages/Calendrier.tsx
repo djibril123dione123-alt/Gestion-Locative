@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -60,8 +60,13 @@ export function Calendrier() {
   const monthStart = useMemo(() => new Date(cursor.getFullYear(), cursor.getMonth(), 1), [cursor]);
   const monthEnd = useMemo(() => new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0), [cursor]);
 
+  // Tracking de la requête courante pour ignorer les réponses obsolètes
+  // si l'utilisateur navigue rapidement de mois en mois.
+  const requestIdRef = useRef(0);
+
   const load = useCallback(async () => {
     if (!profile?.agency_id) return;
+    const myRequestId = ++requestIdRef.current;
     try {
       const startStr = monthStart.toISOString().split('T')[0];
       const endStr = monthEnd.toISOString().split('T')[0];
@@ -77,12 +82,15 @@ export function Calendrier() {
         supabase.from('unites').select('id, nom').eq('agency_id', profile.agency_id),
         supabase.from('locataires').select('id, nom, prenom').eq('agency_id', profile.agency_id),
       ]);
+      // Si une requête plus récente a été lancée entre-temps, on jette ces résultats.
+      if (myRequestId !== requestIdRef.current) return;
       if (evRes.data) setItems(evRes.data as Evenement[]);
       if (bRes.data) setBailleurs(bRes.data);
       if (iRes.data) setImmeubles(iRes.data);
       if (uRes.data) setUnites(uRes.data);
       if (lRes.data) setLocataires(lRes.data);
     } catch (err: unknown) {
+      if (myRequestId !== requestIdRef.current) return;
       const msg = err instanceof Error ? err.message : 'Erreur';
       toast.error(msg);
     }
@@ -90,6 +98,10 @@ export function Calendrier() {
 
   useEffect(() => {
     if (profile?.agency_id) load();
+    return () => {
+      // Au démontage, on incrémente pour invalider toute requête en cours.
+      requestIdRef.current++;
+    };
   }, [profile?.agency_id, load]);
 
   const submit = async (e: React.FormEvent) => {

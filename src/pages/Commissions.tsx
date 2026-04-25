@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { TrendingUp, BarChart3, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '../lib/formatters';
 
 export function Commissions() {
@@ -108,7 +108,7 @@ export function Commissions() {
     doc.text(`Période: ${monthName}`, 14, 30);
 
     // Statistiques
-    doc.autoTable({
+    autoTable(doc, {
       head: [['Élément', 'Valeur']],
       body: [
         ['Total commissions', formatCurrency(stats.totalCommission)],
@@ -119,7 +119,7 @@ export function Commissions() {
     });
 
     // Détails
-    doc.autoTable({
+    autoTable(doc, {
       head: [['Locataire', 'Unité', 'Immeuble', 'Montant', 'Commission']],
       body: commissions.map((c) => [
         c.locataire,
@@ -128,7 +128,7 @@ export function Commissions() {
         formatCurrency(c.montant_total),
         formatCurrency(c.part_agence),
       ]),
-      startY: doc.lastAutoTable.finalY + 10,
+      startY: (doc as any).lastAutoTable.finalY + 10,
       styles: { fontSize: 9 },
     });
 

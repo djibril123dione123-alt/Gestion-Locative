@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Auth } from './pages/Auth';
 import { Sidebar } from './components/layout/Sidebar';
 import { TrialBanner } from './components/ui/TrialBanner';
+import { MaintenanceBanner } from './components/ui/MaintenanceBanner';
 import { supabase } from './lib/supabase';
 import Welcome from './pages/Welcome';
 
@@ -189,6 +190,8 @@ function AppContent() {
 
     return (
         <div className="flex h-screen overflow-hidden bg-gray-50">
+            {/* Bannière de maintenance globale (au-dessus de tout) */}
+            <MaintenanceBanner />
             {/* Sidebar */}
             <Sidebar
                 currentPage={currentPage}

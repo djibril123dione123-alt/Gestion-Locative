@@ -146,8 +146,13 @@ export default function Welcome() {
         return (
           <div className="max-w-4xl w-full animate-fadeIn">
             <div className="text-center mb-12 animate-slideInUp">
+              <img
+                src="/logo-full.png"
+                alt="Samay Këur"
+                className="h-20 md:h-24 w-auto object-contain mx-auto mb-6"
+              />
               <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-4">
-                Bienvenue sur Gestion Locative
+                Bienvenue sur Samay Këur
               </h1>
               <p className="text-lg md:text-xl text-gray-700">
                 Choisissez le type de compte qui vous correspond

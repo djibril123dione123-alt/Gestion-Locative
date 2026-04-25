@@ -56,13 +56,10 @@ export function Auth() {
           <div className="p-8">
             <div className="text-center mb-8">
               <img
-                src="/templates/Logo confort immo archi neutre.png"
-                alt="Logo Confort Immo Archi"
-                className="h-30 w-auto object-contain mx-auto mb-1"
+                src="/logo-full.png"
+                alt="Samay Këur — Plateforme de gestion immobilière"
+                className="h-24 w-auto object-contain mx-auto mb-3"
               />
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
-                Samay Këur
-              </h1>
               <p className="text-slate-600">Votre gestion locative, simplifiée et automatisée</p>
             </div>
 

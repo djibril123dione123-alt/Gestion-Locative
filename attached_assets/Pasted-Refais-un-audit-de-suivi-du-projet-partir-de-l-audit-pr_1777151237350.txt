@@ -1,0 +1,155 @@
+Refais un audit de suivi du projet à partir de l’audit précédent que je vais coller après ce message.
+Ton objectif n’est pas de refaire un audit théorique depuis zéro, mais de comparer l’ancien audit avec l’état actuel réel du code, pour montrer clairement :
+
+ce qui a été fait ;
+
+ce qui a été partiellement fait ;
+
+ce qui n’a pas été fait ;
+
+le niveau réel d’avancement global du projet. Un audit d’avancement doit mesurer l’écart entre ce qui était prévu et ce qui a réellement été exécuté, sur une base factuelle.
+
+Prompt amélioré
+Analyse l’ancien audit que je vais te fournir, puis compare-le avec l’état actuel réel du projet.
+Je veux un audit d’avancement fidèle, précis et sans hallucination, centré sur les écarts entre :
+
+ce qui était recommandé dans l’ancien audit ;
+
+ce qui a réellement été implémenté dans le code aujourd’hui ;
+
+ce qui reste non fait, incomplet, bloqué ou seulement partiellement traité.
+
+Mission
+relire l’ancien audit en entier ;
+
+identifier chaque point, bug, recommandation, chantier, page manquante, migration, dette technique ou amélioration qui y était mentionné ;
+
+vérifier dans le code actuel si ce point a été :
+
+totalement fait,
+
+partiellement fait,
+
+non fait,
+
+ou impossible à confirmer ;
+
+produire ensuite un nouvel audit comparatif d’avancement.
+
+Contraintes strictes
+commence par vérifier l’état réel des fichiers avant de conclure ;
+
+ne te contente pas de répéter l’ancien audit ;
+
+n’invente aucun correctif, aucune page, aucune migration, aucune feature si tu ne la vois pas réellement ;
+
+si un point n’est pas vérifiable, marque-le explicitement comme “non vérifiable avec certitude” ;
+
+distingue toujours les éléments confirmés dans le code des éléments seulement supposés ;
+
+ne fais pas un résumé vague : je veux un audit de suivi concret, exploitable et orienté exécution. Les audits de qualité doivent s’appuyer sur des éléments vérifiables et limiter les faux positifs ou les conclusions non confirmées.
+
+Format attendu
+1. Vue d’ensemble
+niveau d’avancement global estimé du projet ;
+
+évolution par rapport à l’ancien audit ;
+
+ce qui s’est réellement amélioré ;
+
+ce qui reste critique.
+
+2. Tableau de suivi complet
+Pour chaque point mentionné dans l’ancien audit, donne :
+
+intitulé du point ;
+
+catégorie : bug / sécurité / front / backend / SQL / RLS / UX / billing / console owner / page manquante / dette technique / tests / industrialisation ;
+
+statut actuel : fait / partiel / non fait / non vérifiable ;
+
+preuve ou fichier concerné ;
+
+commentaire court expliquant pourquoi ce statut a été donné.
+
+3. Tout ce qui n’a pas été fait
+Je veux une section dédiée listant tous les éléments encore non réalisés, regroupés par priorité :
+
+P0 critique ;
+
+P1 important ;
+
+P2 utile ;
+
+P3 amélioration / industrialisation.
+
+4. Éléments partiellement traités
+Liste séparée de tout ce qui a commencé mais n’est pas encore correctement finalisé.
+
+5. Régressions ou incohérences
+Signale les cas où :
+
+un correctif annoncé n’est pas réellement complet ;
+
+un problème a été déplacé ailleurs ;
+
+une feature semble présente mais ne fonctionne pas de bout en bout ;
+
+une migration existe mais n’est pas correctement reliée au front.
+
+6. Avancement par zone
+Donne un état clair pour chaque grande zone du projet :
+
+schéma SQL / migrations ;
+
+RLS / sécurité multi-tenant ;
+
+onboarding / auth ;
+
+paiements / loyers / contrats ;
+
+documents ;
+
+inventaires / états des lieux ;
+
+interventions / maintenance ;
+
+équipe / invitations ;
+
+abonnement / billing ;
+
+console propriétaire / super admin ;
+
+qualité / tests / monitoring / CI-CD.
+
+7. Plan de suite
+Termine par :
+
+les 10 prochaines actions les plus importantes ;
+
+celles à faire immédiatement ;
+
+celles qui bloquent encore la mise en production sérieuse.
+
+Règles de sortie
+base-toi sur le code actuel, pas sur des suppositions ;
+
+si l’ancien audit contenait une erreur, corrige-la explicitement ;
+
+si un point ancien n’est plus pertinent, dis-le ;
+
+si un point a été résolu seulement en surface, ne le marque pas comme “fait” ;
+
+sois sévère mais juste ;
+
+privilégie un rendu structuré, lisible et orienté décision. Le suivi d’avancement utile repose sur une lecture factuelle des écarts, pas sur une impression générale.
+
+Version plus directe
+Tu peux aussi utiliser cette version plus courte :
+
+Refais un audit d’avancement en comparant l’ancien audit que je vais coller avec l’état actuel réel du code.
+Je veux voir précisément tout ce qui a été fait, tout ce qui reste non fait, tout ce qui est partiel, et le pourcentage d’avancement par grand chantier.
+Ne répète pas simplement l’ancien audit. Vérifie réellement les fichiers, les pages, les migrations, les policies, les routes, les composants et les types avant de conclure.
+Pour chaque point de l’ancien audit, donne un statut : fait / partiel / non fait / non vérifiable, avec preuve à l’appui.
+Ajoute une section spéciale : “tout ce qui n’a pas été fait”.
+N’invente rien, ne suppose rien, et corrige explicitement les erreurs éventuelles de l’ancien audit.

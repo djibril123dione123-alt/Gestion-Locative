@@ -1,0 +1,267 @@
+# Audit total Samay Keur — Rapport complet
+
+Je vais auditer systématiquement tous les fichiers fournis dans le contexte de la conversation.
+
+---
+
+## A. Vision globale du projet
+
+**Niveau de maturité : MVP fonctionnel avancé — pré-prod fragile**
+
+**Forces réelles :**
+- Architecture multi-tenant cohérente avec `agency_id` sur toutes les tables métier
+- RLS bien pensé structurellement, migrations idempotentes
+- Refactorisation des types partiellement faite (`src/types/`, `src/lib/formatters.ts`)
+- Console super_admin existante et fonctionnelle
+- 16+ pages métier présentes, onboarding complet
+- PDF génération fonctionnelle avec templates texte
+
+**Faiblesses structurelles :**
+- Logique métier mélangée dans les pages (pas de couche service)
+- Types `any` nombreux dans les pages critiques (Paiements, Depenses, Commissions, TableauDeBordFinancierGlobal)
+- Bugs de données silencieux confirmés (split T, onClose vs onRemove)
+- Zéro test automatisé
+- Zéro monitoring / observabilité
+- Zéro CI/CD
+- Pages métier nouvelles (Inventaires, Interventions, Calendrier, Documents) non battle-tested
+
+**Verdict honnête : pré-prod fragile.** Vendable en démo, pas vendable en production sérieuse avec des clients payants.
+
+---
+
+## B. Carte complète des problèmes restants
+
+| # | Domaine | Problème | Type | Gravité | Impact business | Impact technique | Preuve | Recommandation |
+|---|---------|----------|------|---------|----------------|-----------------|--------|----------------|
+| 1 | Paiements | `split('T')` sans `[0]` → `mois_concerne` inséré comme tableau `string[]` en DB | Bug | 🔴 Critique | Corruption données silencieuse | Tous les paiements créés/modifiés ont une date invalide | `Paiements.tsx` `handleSubmit` | Ajouter `[0]` immédiatement |
+| 2 | Paiements | `confirm()` natif dans `handleDelete` | Bug/UX | 🟠 Important | UX non conforme, bloqué mobile | Incohérence avec le reste de l'app | `Paiements.tsx` `handleDelete` | Remplacer par `ConfirmModal` |
+| 3 | Toast system | `onClose` au lieu de `onRemove` dans `Equipe.tsx` et `LoyersImpayes.tsx` | Bug | 🟠 Important | Les toasts ne se ferment jamais dans ces pages | Prop inconnue ignorée silencieusement | `Equipe.tsx` fin JSX, `LoyersImpayes.tsx` fin JSX | Renommer en `onRemove` |
+| 4 | Paiements | `moisConcerne` dans `data` utilise le résultat du split — si corrigé isolément sans corriger la variable, le bug persiste | Bug | 🔴 Critique | Même corruption | Dépendance sur la correction 1 | `Paiements.tsx` `const data` | Vérifier que `moisConcerne` (après fix) est bien passé à `mois_concerne` |
+| 5 | Plan limits | `check_plan_limits` retourne `can_add_immeuble: false` pour agences sans subscription → agences legacy bloquées | Bug/Données | 🔴 Critique | Agences existantes ne peuvent plus créer de biens | Silencieux, pas d'erreur visible | `check_plan_limits` SQL doc 101, fallback `max_immeubles: 3` | Mettre un fallback Pro pour les agences sans subscription, ou créer une subscription automatiquement |
+| 6 | Types | `useState([])` non typé dans `Paiements.tsx`, `Depenses.tsx`, `Commissions.tsx` | Dette | 🟡 Moyen | Aucun immédiat | Masque les erreurs TypeScript runtime | `Paiements.tsx` `setPaiements([])` etc. | Typer avec les interfaces existantes |
+| 7 | Types | `any[]` omniprésent dans `TableauDeBordFinancierGlobal.tsx` (variables locales, données immeuble, paiements) | Dette | 🟡 Moyen | Risque calcul financier silencieux | Aucune protection si schéma DB change | `TableauDeBordFinancierGlobal.tsx` ligne 100+ | Créer des interfaces locales ou réutiliser les types entities |
+| 8 | Architecture | Logique métier complexe dans les pages : `TableauDeBordFinancierGlobal.tsx` ~550 lignes, `Contrats.tsx` ~600 lignes, `Console.tsx` ~900 lignes | Architecture | 🟡 Moyen | Maintenabilité dégradée | Impossible à tester unitairement | Fichiers concernés | Extraire en services/hooks dédiés |
+| 9 | Console owner | `vw_owner_agency_stats` utilisait `p.montant` (inexistant) → migration `20260425000001` corrige en `montant_total`. Mais si la migration n'est pas appliquée dans l'ordre, la vue est cassée | Données | 🟠 Important | Console owner affiche volume = 0 | Vue SQL silencieusement incorrecte | Migration 20260425000001 | Vérifier que la migration est bien appliquée avant la migration 20260425000002 |
+| 10 | Console owner | `saas_config` et `feature_flags` créés mais pas consommés réellement dans le produit côté agences | Incomplet | 🟡 Moyen | Feature flags sans effet réel | Infrastructure sans branchement | `Console.tsx` ConfigurationPanel, `feature_flags` table | Brancher la lecture des feature flags dans les composants concernés |
+| 11 | Sécurité | `invitations` : la policy RLS SELECT est restreinte aux admins, mais le flux `AcceptInvitation` lit l'invitation via token sans être connecté (user peut être `null`) | Sécurité | 🔴 Critique | Tokens d'invitation inaccessibles à l'utilisateur non connecté | L'invitation ne peut pas être lue → flux cassé | `AcceptInvitation.tsx` + policy `invitations` | Ajouter une policy SELECT publique filtrée sur le token, ou lire via service role |
+| 12 | Sécurité | `notifications` INSERT policy : pas de policy INSERT explicite pour les users. `create_notification()` est `SECURITY DEFINER` donc bypass RLS → OK, mais la Console SupportPanel fait un INSERT direct dans `notifications` depuis le frontend | Sécurité | 🟠 Important | Insertion possible depuis le frontend sans vérification | Contourne la RLS intentionnellement | `Console.tsx` SupportPanel `supabase.from('notifications').insert(rows)` | Vérifier qu'une policy INSERT existe pour le super_admin ou créer une fonction RPC |
+| 13 | Sécurité | `agencies` a des policies INSERT contradictoires : plusieurs migrations ajoutent et suppriment des policies. La dernière en date (`20260113195044`) crée "Authenticated users can create agency". Mais `20260420000002` crée `agency_super_admin_insert` réservée au super_admin. Conflit probable | Sécurité | 🔴 Critique | Soit n'importe quel user peut créer une agence, soit personne ne peut lors de l'onboarding | Ambiguïté RLS | Migrations 20260113195044 vs 20260420000002 | Auditer les policies actives en DB, s'assurer qu'une seule policy INSERT claire existe |
+| 14 | Sécurité | `owner_actions_log` : la policy INSERT exige `is_super_admin()`. Mais `SupportPanel` dans Console fait un INSERT via le client frontend avec `actor_id: profile?.id`. Si le profile n'est pas super_admin, ça fail silencieusement | Sécurité | 🟡 Moyen | Logs d'audit manquants | Silencieux | `Console.tsx` `logOwnerAction` | Ajouter gestion d'erreur ou passer par une fonction RPC SECURITY DEFINER |
+| 15 | Auth | `AcceptInvitation.tsx` : si l'utilisateur est non connecté, `status` passe à `awaiting_auth`. Mais après connexion, le composant ne reprend pas le flux automatiquement — l'utilisateur doit re-naviguer vers l'URL avec token | UX/Bug | 🟠 Important | Utilisateurs perdus à l'étape d'invitation | Le `useEffect` dépend de `[token, user, profile]` → se relance quand `user` change, mais si l'URL a changé (redirect vers `/`), le token est perdu | `AcceptInvitation.tsx` `useEffect` | Stocker le token en sessionStorage avant redirect Auth |
+| 16 | Auth | `AuthContext.tsx` utilise `setLoading(false)` dans `signUp` sans recharger le profil de manière fiable — attend 1500ms hardcodé | Dette | 🟡 Moyen | Race condition possible sur les comptes lents | Timer arbitraire | `AuthContext.tsx` `signUp` | Remplacer par un retry pattern ou utiliser `reloadUserProfile` de `agencyHelper.ts` |
+| 17 | Onboarding | `Welcome.tsx` : si la création de `agency_settings` échoue (constraint violation car trigger auto-crée déjà les settings), l'onboarding s'arrête avec une erreur | Bug | 🟠 Important | Nouveaux utilisateurs bloqués à l'onboarding | La migration `20260127184444` crée un trigger qui insère agency_settings automatiquement → double insertion → conflit | `Welcome.tsx` `handleSubmit` + trigger `create_agency_settings_on_agency_insert` | Le INSERT de settings dans Welcome.tsx doit être `ON CONFLICT DO NOTHING` ou supprimé car le trigger le gère |
+| 18 | Onboarding | `SetupWizard.tsx` dans Dashboard : l'id du contrat-mois est construit comme `${contrat.id}-${mois}` dans `LoyersImpayes` mais lu dans `handleConfirmPaiement` comme `selectedLoyer.id.slice(0, 36)`. Si l'UUID a un format différent ou contient des tirets, le slice peut être incorrect | Bug | 🟠 Important | Paiement associé au mauvais contrat | Fragile mais probable | `LoyersImpayes.tsx` `handleConfirmPaiement` | Extraire `contrat_id` depuis le split sur `-` avec un UUID regex, pas un slice arbitraire |
+| 19 | PDF | `generateContratPDF` et `generateMandatBailleurPDF` appellent `loadAgencySettings()` qui fait 2 requêtes Supabase (user → profile → settings) à chaque génération PDF | Performance | 🟡 Moyen | Lenteur PDF notable | Refetch inutile si le profil est déjà chargé | `src/lib/pdf.ts` `loadAgencySettings` | Passer les settings en paramètre depuis le contexte Auth déjà chargé |
+| 20 | PDF | `TableauDeBordFinancierGlobal.tsx` utilise `doc.autoTable` et `doc.lastAutoTable` sans les imports propres — importe `'jspdf-autotable'` comme side-effect | Dette | 🟡 Moyen | Build peut casser si l'ordre des imports change | Dépendance sur side-effect | `TableauDeBordFinancierGlobal.tsx` ligne imports | Utiliser `autoTable(doc, ...)` comme dans `pdf.ts` |
+| 21 | Données | `Paiements.tsx` `handleDelete` supprime aussi les revenus `paiement_id` — mais la table `revenus` n'est pas auto-alimentée à la création d'un paiement (pas de trigger). Ce DELETE est probablement inutile mais inoffensif | Dette/Données | 🟡 Moyen | Logique fantôme | Confusion sur le flux revenus | `Paiements.tsx` `handleDelete` | Vérifier si les revenus sont créés automatiquement ou manuellement, nettoyer le code |
+| 22 | Données | `unites.type_logement` est utilisé dans `SetupWizard.tsx` mais n'existe pas dans la table `unites` selon les migrations. La table a `nom` et `statut` mais pas `type_logement` | Bug/Données | 🟠 Important | Insertion silencieusement ignorée ou erreur DB | `SetupWizard.tsx` ligne `type_logement: 'appartement'` + migrations `create_immobilier_schema.sql` | Vérifier si la colonne existe, sinon supprimer ce champ de l'insert | 
+| 23 | Documents | `Documents.tsx` upload vers bucket `'documents'` — ce bucket n'est pas créé dans les migrations SQL. L'upload échouera si le bucket n'existe pas | Bug | 🔴 Critique | Upload de documents impossible | Aucune migration ne crée le bucket `documents` | `Documents.tsx` `supabase.storage.from('documents').upload(...)` | Créer le bucket via migration ou dashboard Supabase |
+| 24 | Documents | Pas de policy Storage sur le bucket `documents` — tout accès serait public ou bloqué selon la config par défaut Supabase | Sécurité | 🔴 Critique | Documents accessibles publiquement ou inaccessibles | Aucune policy storage dans les migrations | Migrations : aucune référence à storage policies | Créer les policies RLS Storage par agence |
+| 25 | Realtime | `NotificationBell.tsx` : le channel `notifications-${user.id}` n'est pas nettoyé si `user.id` change (changement de compte) | Performance | 🟡 Moyen | Fuite mémoire / double subscription | `supabase.removeChannel` appelé dans le cleanup du `useEffect`, mais si `user.id` change sans démontage | `NotificationBell.tsx` | Pattern correct si le composant est démonté, mais à vérifier avec hot reload |
+| 26 | Multi-tenant | `Agences.tsx` (page admin) permet à un `super_admin` de supprimer une agence via `supabase.from('agencies').delete()`. Aucune confirmation renforcée, aucun audit log | Sécurité | 🟠 Important | Suppression accidentelle d'une agence entière avec CASCADE | `Agences.tsx` `handleDelete` avec `confirm()` natif | Remplacer par ConfirmModal + INSERT dans owner_actions_log |
+| 27 | Multi-tenant | `FiltresAvances.tsx` : le filtre `statut_paiement` fait N+1 requêtes (une par contrat) pour trouver le dernier paiement | Performance | 🟠 Important | Freeze UI avec 50+ contrats | `FiltresAvances.tsx` `Promise.all(data.map(async contrat => ...))` | Restructurer en une seule requête avec subquery |
+| 28 | Console | `Console.tsx` : `formatDate` est importé depuis `../lib/formatters` mais la fonction prend `string | null | undefined` — si `created_at` est null (edge case), retourne `'—'` ce qui est OK | Ambigu | 🟢 OK | — | — | Confirmé propre |
+| 29 | UX | `Interventions.tsx` Kanban : les boutons "→ En cours" / "→ Terminé" ne sont pas du drag & drop. Pour une Kanban board annoncée, c'est une dégradation d'expérience notable | UX | 🟡 Moyen | Perception outil moins professionnel | — | `Interventions.tsx` | Acceptable en MVP, à améliorer |
+| 30 | UX | `Calendrier.tsx` : les événements chargés uniquement pour le mois courant. En naviguant vite, les requêtes ne sont pas annulées (AbortController absent) | Performance | 🟡 Moyen | Requêtes zombies si navigation rapide | `Calendrier.tsx` `load` dans `useCallback` | Ajouter AbortController ou debounce |
+| 31 | Architecture | `src/lib/errorMessages.ts` : la fonction `translateSupabaseError` prend `error: any` — la première ligne à résoudre | Dette | 🟡 Moyen | — | `errorMessages.ts` ligne 1 | Typer en `unknown` avec narrowing |
+| 32 | Architecture | `AgencySettings` existe en 3 endroits : `src/types/agency.ts`, `src/lib/templates/helpers.ts` (interface locale), `src/lib/pdf.ts` (import depuis `../types`). `helpers.ts` a sa propre interface non alignée | Dette | 🟠 Important | Divergence silencieuse si un champ est ajouté à un endroit | `helpers.ts` ligne 1-20 | Supprimer l'interface locale de helpers.ts, importer depuis types/agency.ts |
+| 33 | Architecture | `ConfirmModal.tsx` a des props `confirmText`/`cancelText` mais certaines pages utilisent `confirmLabel`/`cancelLabel` — incohérence d'API | Bug | 🟠 Important | Les boutons du modal affichent "Confirmer"/"Annuler" par défaut même si on passe `confirmLabel` | `Equipe.tsx` `confirmLabel="Désactiver"`, `ConfirmModal.tsx` prop `confirmText` | Choisir un nom et unifier |
+| 34 | Architecture | `ConfirmModal.tsx` a une prop `isDestructive` mais pas de `variant` — et l'autre version dans `Bailleurs.tsx` utilise `variant="danger"`. Deux implémentations de ConfirmModal coexistent | Bug | 🟠 Important | Confusion API, comportement imprévisible | `ConfirmModal.tsx` doc 21 vs appels avec `variant=` dans `Bailleurs.tsx` | Il y a deux variantes : l'une avec `variant`, l'autre avec `isDestructive`. Unifier |
+| 35 | Compilation | `Commissions.tsx` importe `'jspdf-autotable'` comme side-effect (`import 'jspdf-autotable'`) et utilise `doc.autoTable` + `doc.lastAutoTable` directement sur l'instance — sans le type augmenté de `jspdf-autotable.d.ts` | Dette | 🟡 Moyen | TypeScript peut lever une erreur selon tsconfig | `Commissions.tsx` imports | Utiliser `autoTable(doc, ...)` pattern standardisé |
+| 36 | Compilation | `TableauDeBordFinancierGlobal.tsx` importe `Dollar as Dollar` depuis lucide-react — alias inutile, et `DollarSign as Dollar` est déclaré deux fois dans les imports | Dette | 🟢 Faible | Warning import dupliqué | `TableauDeBordFinancierGlobal.tsx` ligne imports | Nettoyer les imports dupliqués |
+| 37 | Données | `Bailleurs.tsx` : la colonne `type_logement` n'est pas dans `Unites.tsx` form (elle utilise un select de type) mais la DB ne l'a pas non plus selon les migrations initiales — `SetupWizard` l'insère | Données | 🟠 Important | Voir point 22 | Cohérence DB nécessaire | — |
+| 38 | Prod | Aucun fichier `.env.example`, aucune documentation des variables d'environnement requises | Exploitation | 🟠 Important | Déploiement impossible sans connaître les variables | — | `.gitignore` mentionne `.env` mais aucun `.env.example` | Créer `.env.example` |
+| 39 | Prod | Aucun `README.md`, aucune documentation technique | Exploitation | 🟠 Important | Onboarding développeur impossible | — | Pas dans le contexte | Créer README minimal |
+| 40 | Prod | `vite.config.ts` expose `host: '0.0.0.0'` et `allowedHosts: 'all'` — configuration dev, pas prod | Sécurité | 🟡 Moyen | Acceptable en dev, à corriger en prod | `vite.config.ts` | Utiliser une config prod séparée |
+
+---
+
+## C. Ce qui est incomplet
+
+**Partiellement branché mais non fiabilisé :**
+- `feature_flags` : table créée, données insérées, mais **aucune page ne lit ces flags** pour conditionner l'affichage de modules
+- `saas_config` : éditable en Console, mais `maintenance_mode` n'est jamais lu par l'app pour afficher une bannière
+- `revenus` : table existante, DELETE dans Paiements, mais **aucun INSERT automatique** à la création d'un paiement (ni trigger, ni code)
+- `bilans_mensuels` : table créée, jamais remplie automatiquement, jamais consommée dans le front
+- `owner_actions_log` : table et policy créées, appelée dans `Console.tsx` `logOwnerAction`, mais **si la policy exige super_admin et que les logs sont silencieux en cas d'erreur**, l'audit est vide
+
+**Présent en DB mais non exploité :**
+- `audit_logs` (trigger SQL) : les triggers existent sur toutes les tables critiques, mais la Console ne propose aucune vue de ces logs par agence
+- `invitations.message` : champ prévu pour un message personnalisé, jamais exposé dans le formulaire
+- `subscription_plans.features` jsonb : présent mais jamais lu pour conditionner des features
+- `agencies.tags` : créé dans migration 20260425000002, utilisé dans Console pour badger VIP/À risque, mais non persisté (l'action "marquer VIP" n'existe pas dans le code Console fourni)
+- `interventions.assigne_a` : champ UUID, présent en DB, pas dans le formulaire de création
+
+**Pensé mais non industrialisé :**
+- Système de relances automatiques (loyers impayés) : détection présente, action manuelle seulement
+- Export comptable : export Excel de `FiltresAvances` seulement, pas de vrai export comptable
+- Archivage / corbeille / restauration : soft delete avec `actif=false`, mais aucune interface pour voir / restaurer les éléments supprimés
+- Recherche globale : absente
+- WhatsApp/SMS notifications : `wave_actif`, `orange_money_actif` en DB, affichés dans Paramètres, jamais branchés sur du code réel
+
+---
+
+## D. Risques cachés
+
+1. **Migration conflicts sur agencies INSERT** : plusieurs migrations créent/suppriment des policies INSERT sur `agencies`. La dernière appliquée gagne — mais l'ordre d'application en prod peut diverger de l'ordre chronologique si les timestamps sont identiques ou mal ordonnés.
+
+2. **Trigger double-insert agency_settings** : `create_agency_settings_on_agency_insert` crée automatiquement un row dans `agency_settings`. `Welcome.tsx` en crée aussi un. En prod, le premier à s'exécuter gagne, le second échoue. Si `Welcome.tsx` s'exécute avant le trigger (race condition async), la ligne est créée avec les bonnes données mais le trigger échoue silencieusement — ou l'inverse. Données de settings potentiellement vides.
+
+3. **`check_plan_limits` bloque les agences legacy** : toute agence sans row dans `subscriptions` se voit appliquer les limites Basic (1 user, 3 immeubles, 10 unités). Si des données de test existent sans subscription associée, les admins ne peuvent plus créer de contenu.
+
+4. **`AcceptInvitation` token perdu** : si l'utilisateur clique sur un lien d'invitation sans être connecté, il est redirigé vers Auth. Une fois connecté, l'app charge sur `/` sans token → invitation jamais acceptée.
+
+5. **Realtime notifications fuite** : si `NotificationBell` est monté/démonté rapidement (ex: lors du chargement initial), plusieurs channels peuvent coexister momentanément avant le cleanup. Avec Supabase Realtime, les channels orphelins consomment des connexions.
+
+6. **`Console.tsx` N+1 sur les KPIs** : `Promise.all([agRes, userRes, subRes, logRes])` charge jusqu'à 200 users + toutes les agences + subscriptions en une fois. À l'échelle (50+ agences), ce sera lent.
+
+7. **PDF settings non mis en cache** : chaque clic "Générer PDF" déclenche 2 requêtes Supabase. Avec 10 PDF générés en séquence, c'est 20 requêtes inutiles.
+
+8. **`slice(0, 36)` pour extraire contrat_id dans LoyersImpayes** : un UUID v4 fait 36 caractères, mais ce découpage est fragile. Si l'ID change de format (ex: CUID, nanoid), le bug est silencieux.
+
+9. **`Depenses.tsx` aucun guard agency_id sur le DELETE** : `handleDelete` vérifie `if (!profile?.agency_id) return` mais le delete lui-même ne filtre pas par `agency_id` — uniquement par `id`. La RLS protège en théorie, mais si la RLS est trop permissive temporairement, cross-tenant delete possible.
+
+10. **Bucket Storage non créé** : le bucket `documents` n'est pas créé programmatiquement. En prod fresh, le premier upload échoue sans message d'erreur explicite.
+
+---
+
+## E. Ce qu'il faut pour atteindre la phase finale
+
+### P0 — Bloqueurs absolus
+- Corriger `split('T')[0]` dans Paiements (corruption DB active)
+- Corriger le conflit de policies INSERT sur `agencies` (onboarding potentiellement cassé)
+- Corriger le flux `AcceptInvitation` quand token perdu après redirect Auth
+- Créer le bucket `documents` et ses policies Storage
+- Corriger `ConfirmModal` props incohérentes (`isDestructive` vs `variant`, `confirmLabel` vs `confirmText`)
+
+### P1 — Critiques avant vrais clients
+- Corriger `check_plan_limits` pour les agences legacy (migration ou fallback Pro)
+- Corriger la double-insertion `agency_settings` (Welcome + trigger)
+- Corriger `onClose` → `onRemove` dans Equipe et LoyersImpayes
+- Corriger `confirm()` natif dans Paiements et Agences
+- Supprimer l'interface locale `AgencySettings` de `helpers.ts`
+- Corriger `SetupWizard` si `type_logement` n'existe pas en DB
+- Brancher `feature_flags` sur les modules qu'ils sont censés contrôler
+- Brancher `maintenance_mode` de `saas_config` sur une bannière globale
+
+### P2 — Nécessaire pour pré-prod sérieuse
+- Ajouter `.env.example`
+- Ajouter README minimal avec setup instructions
+- Corriger le N+1 dans `FiltresAvances` pour le filtre statut paiement
+- Typer les `useState([])` non typés dans Paiements, Depenses, Commissions
+- Unifier `ConfirmModal` API complètement
+- Créer une interface pour restaurer les éléments soft-deleted
+- Ajouter AbortController sur les requêtes de Calendrier
+- Corriger imports dupliqués dans TableauDeBordFinancierGlobal
+
+### P3 — Pour production propre et scalable
+- Extraire la logique métier de TableauDeBordFinancierGlobal, Console, Contrats en services/hooks
+- Mettre en cache les agency settings dans le contexte Auth
+- Ajouter des tests E2E sur les flux critiques (onboarding, paiement, invitation)
+- Ajouter Sentry ou équivalent
+- Mettre en place CI/CD (au minimum lint + typecheck + build)
+- Créer des runbooks pour les incidents courants
+- Audit final des policies RLS avec un outil dédié
+
+---
+
+## F. Plan final de fermeture
+
+### Phase 1 — Stabilisation immédiate (1-2 jours)
+1. Fix `split('T')[0]` Paiements
+2. Fix `onClose` → `onRemove` Toast (Equipe, LoyersImpayes)
+3. Fix `confirm()` → ConfirmModal (Paiements, Agences)
+4. Fix `ConfirmModal` API unification (`isDestructive` + `confirmLabel`)
+5. Créer bucket `documents` + policies Storage
+6. Fix double-insert `agency_settings` dans Welcome
+
+### Phase 2 — Complétude fonctionnelle (3-5 jours)
+1. Fix `AcceptInvitation` token persistence après redirect
+2. Fix `check_plan_limits` fallback pour agences legacy
+3. Brancher `feature_flags` sur les modules concernés
+4. Brancher `maintenance_mode` sur une bannière globale
+5. Supprimer interface locale `AgencySettings` de helpers.ts
+6. Vérifier + corriger `type_logement` dans SetupWizard vs DB schema
+
+### Phase 3 — Sécurité / multi-tenant / permissions (2-3 jours)
+1. Audit et nettoyage des policies `agencies` INSERT (une seule policy claire)
+2. Vérifier policy INSERT notifications pour le super_admin (Console SupportPanel)
+3. Audit complet des policies Storage bucket `documents`
+4. Ajouter audit log sur les actions destructives (suppression agence, désactivation user)
+5. Ajouter confirmation renforcée sur suppression agence dans `Agences.tsx`
+
+### Phase 4 — Qualité / tests / monitoring (3-5 jours)
+1. Typer tous les `useState([])` non typés
+2. Fix imports dupliqués
+3. Unifier pattern `autoTable` dans tous les PDFs
+4. Ajouter `.env.example` + README
+5. Mettre en place typecheck dans CI (GitHub Actions minimal)
+6. Intégrer Sentry en mode basique
+7. Fix N+1 FiltresAvances
+
+### Phase 5 — Finalisation produit / go-live (5-7 jours)
+1. Mettre en cache agency settings dans AuthContext
+2. Tests E2E manuels documentés sur les 5 flux critiques
+3. Extraire logique métier en services (au moins pdf.ts, paiements)
+4. Vérification complète des migrations en environnement fresh
+5. Test de charge basique sur la console owner
+6. Documentation support minimale (guide admin)
+
+---
+
+## G. Top 20 priorités réelles
+
+| # | Action | Justification |
+|---|--------|---------------|
+| 1 | Fix `split('T')[0]` dans Paiements | Corruption de données active en production |
+| 2 | Auditer et nettoyer les policies INSERT `agencies` | Onboarding potentiellement cassé ou trop ouvert |
+| 3 | Créer bucket `documents` + policies Storage | Fonctionnalité Documents entièrement non fonctionnelle |
+| 4 | Fix flux `AcceptInvitation` token perdu | Invitations d'équipe cassées pour nouveaux utilisateurs |
+| 5 | Fix double-insert `agency_settings` Welcome + trigger | Onboarding crashe pour de nouveaux clients |
+| 6 | Fix `check_plan_limits` agences sans subscription | Agences legacy bloquées à la création de contenu |
+| 7 | Fix `onClose` → `onRemove` Toast dans Equipe + LoyersImpayes | Toasts ne se ferment jamais dans ces pages |
+| 8 | Unifier API `ConfirmModal` (isDestructive vs variant, confirmLabel vs confirmText) | Bug silencieux dans 5+ pages |
+| 9 | Fix `confirm()` natif Paiements + Agences | UX cassée mobile, incohérente |
+| 10 | Supprimer interface locale `AgencySettings` dans helpers.ts | Divergence type silencieuse à risque |
+| 11 | Vérifier `type_logement` SetupWizard vs DB schema | Insert silencieux ou erreur DB possible |
+| 12 | Brancher `feature_flags` sur les modules concernés | Infrastructure créée pour rien si non branchée |
+| 13 | Fix N+1 FiltresAvances statut paiement | Performance critique avec vraies données |
+| 14 | Typer `useState([])` dans Paiements/Depenses/Commissions | Masque des bugs TypeScript |
+| 15 | Ajouter `.env.example` + README | Déploiement impossible sans documentation |
+| 16 | Brancher `maintenance_mode` de saas_config | Console owner incomplète |
+| 17 | Mettre en cache agency settings dans AuthContext | 2 requêtes par PDF généré évitables |
+| 18 | Ajouter AbortController sur Calendrier | Requêtes zombies en navigation rapide |
+| 19 | Mettre en place typecheck CI minimal | Empêcher les régressions de compilation |
+| 20 | Intégrer Sentry basique | Zéro visibilité sur les erreurs prod actuellement |
+
+---
+
+## H. Verdict final sans langue de bois
+
+**Non, ce projet n'est pas finalisé.**
+
+Il est dans un état qu'on peut appeler **"MVP démontrable mais non déployable sérieusement"**.
+
+**Ce qui bloque concrètement :**
+
+1. **Un bug de corruption de données actif** (split T) — chaque paiement créé ou modifié depuis la mise en place de cette page est potentiellement corrompu en DB.
+
+2. **L'onboarding peut crasher** sur de nouveaux comptes à cause du double-insert `agency_settings` (Welcome + trigger auto).
+
+3. **La fonctionnalité Documents est entièrement morte** en prod (bucket non créé).
+
+4. **Les invitations d'équipe sont cassées** pour les utilisateurs non connectés (token perdu après redirect).
+
+5. **Zéro visibilité en production** : pas de Sentry, pas de logs structurés, pas de monitoring. Un bug en prod est invisible.
+
+6. **Zéro filet de sécurité** : pas de tests, pas de CI/CD, chaque modification peut casser silencieusement n'importe quoi.
+
+**Ce qu'il faut pour dire "on peut lancer proprement" :**
+- Phase 1 (stabilisation) complétée : ~2 jours
+- Phase 2 (complétude fonctionnelle) complétée : ~5 jours
+- Sentry + `.env.example` + README : ~1 jour
+- Un test E2E manuel documenté des 5 flux critiques : ~1 jour
+
+**Total réaliste : 10-15 jours de travail ciblé avant un lancement client sérieux.**
+
+Le code est de bonne qualité globale pour un MVP rapide. L'architecture multi-tenant est saine. Mais la distance entre "ça marche en démo" et "c'est fiable pour de vrais clients" est encore significative.

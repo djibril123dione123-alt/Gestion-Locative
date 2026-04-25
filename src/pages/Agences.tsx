@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Building2, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 
@@ -40,6 +41,8 @@ export default function Agences() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAgency, setEditingAgency] = useState<Agency | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<AgencyFormData>({
     name: '',
     ninea: '',
@@ -125,20 +128,25 @@ export default function Agences() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette agence ? Cette action est irréversible.')) {
-      return;
-    }
+  const handleDelete = (id: string) => {
+    setDeleteTargetId(id);
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteTargetId) return;
+    setIsDeleting(true);
     try {
-      const { error } = await supabase.from('agencies').delete().eq('id', id);
+      const { error } = await supabase.from('agencies').delete().eq('id', deleteTargetId);
 
       if (error) throw error;
       showToast('Agence supprimée avec succès', 'success');
+      setDeleteTargetId(null);
       loadAgencies();
     } catch (error) {
       console.error('Error deleting agency:', error);
       showToast('Erreur lors de la suppression', 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -430,6 +438,18 @@ export default function Agences() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        isOpen={!!deleteTargetId}
+        onClose={() => setDeleteTargetId(null)}
+        onConfirm={confirmDelete}
+        title="Supprimer cette agence"
+        message="Êtes-vous sûr de vouloir supprimer cette agence ? Cette action est irréversible et supprimera toutes les données associées."
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        variant="danger"
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

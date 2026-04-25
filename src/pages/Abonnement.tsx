@@ -299,7 +299,7 @@ export function Abonnement() {
         </div>
       </Modal>
 
-      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>
   );
 }

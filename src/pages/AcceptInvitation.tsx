@@ -48,6 +48,9 @@ export function AcceptInvitation({ token, onDone }: Props) {
         setRole(invitation.role);
 
         if (!user) {
+          try {
+            sessionStorage.setItem('invite_token', token);
+          } catch {}
           setStatus('awaiting_auth');
           return;
         }

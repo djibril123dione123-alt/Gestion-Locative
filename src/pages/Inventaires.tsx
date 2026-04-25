@@ -424,7 +424,7 @@ export function Inventaires() {
         isDestructive
         isLoading={deleting}
       />
-      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>
   );
 }

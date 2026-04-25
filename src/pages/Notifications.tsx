@@ -192,7 +192,7 @@ export function Notifications() {
         cancelLabel="Annuler"
         isDestructive
       />
-      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>
   );
 }

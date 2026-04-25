@@ -365,7 +365,7 @@ export function LoyersImpayes() {
           </div>
         </div>
       )}
-      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>
   );
 }

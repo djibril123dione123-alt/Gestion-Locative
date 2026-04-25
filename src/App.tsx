@@ -39,7 +39,13 @@ function AppContent() {
     const [showWelcomeAnyway, setShowWelcomeAnyway] = useState(false);
     const [invitationToken, setInvitationToken] = useState<string | null>(() => {
         const params = new URLSearchParams(window.location.search);
-        return params.get('token');
+        const fromUrl = params.get('token');
+        if (fromUrl) return fromUrl;
+        try {
+            return sessionStorage.getItem('invite_token');
+        } catch {
+            return null;
+        }
     });
 
     if (invitationToken) {

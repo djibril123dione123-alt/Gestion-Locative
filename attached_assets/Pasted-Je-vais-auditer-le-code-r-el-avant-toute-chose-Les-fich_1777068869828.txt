@@ -1,0 +1,190 @@
+Je vais auditer le code réel avant toute chose.Les fichiers sont dans le contexte de la conversation, pas uploadés sur disque. Je vais auditer directement depuis les documents fournis.
+
+---
+
+## 1. Audit rapide du code réel
+
+**`Paiements.tsx` — split('T')**
+
+Document index 121, ligne dans `handleSubmit` :
+```typescript
+const moisConcerne = new Date(formData.mois_display + '-01')
+    .toISOString()
+    .split('T'); // ← pas de [0]
+```
+Et plus bas dans `data` :
+```typescript
+mois_concerne: moisConcerne, // tableau string[], pas string
+```
+**BUG CONFIRMÉ.** `moisConcerne` est `string[]`, pas `string`. Ça insère un tableau en DB → la contrainte `date NOT NULL` ou le type `date` dans PostgreSQL va soit rejeter, soit stocker `["2024-01-01"]`.
+
+**`Paiements.tsx` — confirm() natif**
+
+```typescript
+if (!confirm('Êtes-vous sûr de vouloir supprimer ce paiement ?')) return;
+```
+**CONFIRMÉ**, ligne dans `handleDelete`.
+
+**`Equipe.tsx` — ToastContainer props**
+
+Doc index 7, fin du fichier :
+```typescript
+<ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+```
+Doc index 2, `ToastContainer` signature :
+```typescript
+interface ToastContainerProps {
+  toasts: Array<...>;
+  onRemove: (id: string) => void;
+}
+```
+La prop s'appelle `onRemove`, pas `onClose`. **BUG CONFIRMÉ** — TypeScript devrait normalement le détecter si `strict` est activé... mais le fichier dit que ça compile. Vérifions `useToast`.
+
+Doc index 122, `useToast` retourne :
+```typescript
+return { toasts, addToast, showToast: addToast, removeToast, success, error, warning };
+```
+Pas de `onClose`. Donc `toast.removeToast` existe, mais la prop de `ToastContainer` s'appelle `onRemove`. Si TypeScript compile quand même, c'est que soit le composant a une prop alternative non documentée, soit il y a un type `any` quelque part.
+
+**`LoyersImpayes.tsx` — ToastContainer**
+
+Doc index 20 :
+```typescript
+<ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+```
+**MÊME BUG**, `onClose` au lieu de `onRemove`.
+
+**`usePlanLimits` — agences sans subscription**
+
+Doc index 61, `usePlanLimits.ts` actuel :
+```typescript
+const { data } = await supabase.rpc('check_plan_limits', {
+  p_agency_id: profile.agency_id,
+});
+if (data) {
+  setLimits({
+    canAddImmeuble: data.can_add_immeuble,
+    ...
+  });
+} else {
+  setState(prev => ({ ...prev, loading: false }));
+}
+```
+
+Doc index 101, SQL `check_plan_limits` : si pas de subscription → retourne `can_add_immeuble: false`. Donc agence legacy sans subscription = bloquée. **CONFIRMÉ comme risque**, mais comportement intentionnel de la fonction SQL.
+
+---
+
+## 2. Tableau de bord
+
+| Sujet | Statut | Preuve | Priorité |
+|---|---|---|---|
+| `Paiements.tsx` split('T') sans [0] | **Confirmé** | Doc 121, `handleSubmit`, `moisConcerne` = tableau | 🔴 Critique |
+| `Paiements.tsx` confirm() natif | **Confirmé** | Doc 121, `handleDelete` | 🟠 Important |
+| `Equipe.tsx` onClose vs onRemove | **Confirmé** | Doc 7 vs Doc 2 | 🟡 Moyen (silencieux si any) |
+| `LoyersImpayes.tsx` onClose vs onRemove | **Confirmé** | Doc 20 vs Doc 2 | 🟡 Moyen |
+| `check_plan_limits` agences legacy | **Confirmé comme risque** | Doc 101 SQL | 🟡 Moyen (comportement voulu ?) |
+
+---
+
+## 3. Décision argumentée
+
+**On traite le split('T') en priorité absolue.** C'est le seul bug qui cause une **corruption de données silencieuse** : chaque paiement créé ou modifié insère un `mois_concerne` invalide en base. Les autres bugs sont gênants (UX) mais ne corrompent pas la DB.
+
+**Ensuite** dans le même commit : corriger `onClose → onRemove` dans `Equipe.tsx` et `LoyersImpayes.tsx` car c'est une ligne chacun et ça ne risque rien.
+
+**Le confirm() de Paiements** sera un mini-chantier suivant car il demande d'ajouter un state + ConfirmModal.
+
+---
+
+## 4. Modifications effectuéesLes fichiers ne sont pas sur le filesystem — ils sont dans les documents de la conversation. Je vais produire les corrections précises avec les diffs exacts à appliquer.
+
+---
+
+### Correction 1 — `src/pages/Paiements.tsx` : split('T') sans [0]
+
+**Fichier :** `src/pages/Paiements.tsx`  
+**Fonction :** `handleSubmit`
+
+**AVANT :**
+```typescript
+const moisConcerne = new Date(formData.mois_display + '-01')
+    .toISOString()
+    .split('T'); // Conversion du mois au format YYYY-MM-DD [20, 22]
+
+const data = {
+    montant_total: montantTotal,
+    mois_concerne: moisConcerne,
+    ...
+```
+
+**APRÈS :**
+```typescript
+const moisConcerne = new Date(formData.mois_display + '-01')
+    .toISOString()
+    .split('T')[0]; // string "YYYY-MM-DD"
+
+const data = {
+    montant_total: montantTotal,
+    mois_concerne: moisConcerne,
+    ...
+```
+
+---
+
+### Correction 2 — `src/pages/Equipe.tsx` : onClose → onRemove
+
+**AVANT :**
+```typescript
+<ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+```
+
+**APRÈS :**
+```typescript
+<ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+```
+
+---
+
+### Correction 3 — `src/pages/LoyersImpayes.tsx` : onClose → onRemove
+
+**AVANT :**
+```typescript
+<ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
+```
+
+**APRÈS :**
+```typescript
+<ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+```
+
+---
+
+## 5. Vérifications à lancer après application
+
+```bash
+npx tsc --noEmit
+```
+
+Ce que tu dois voir après les 3 corrections :
+- `moisConcerne` inféré comme `string` → plus d'erreur potentielle sur `mois_concerne: string[]`
+- `onClose` n'est pas dans `ToastContainerProps` → TypeScript aurait dû lever une erreur, donc après correction le typecheck confirme que c'était un bug silencieux (prop inconnue ignorée → toasts ne se fermaient jamais dans Equipe et LoyersImpayes)
+
+**Test fonctionnel manuel prioritaire :**
+1. Créer un paiement → vérifier en DB que `mois_concerne` est `2024-01-01` et non `["2024-01-01"]`
+2. Dans Équipe, vérifier qu'un toast de succès disparaît bien après 5s (prouvant que `onRemove` est bien appelé)
+
+---
+
+## 6. Prochain mini-chantier recommandé
+
+**`Paiements.tsx` — remplacer confirm() par ConfirmModal**
+
+C'est le seul `confirm()` natif confirmé restant critique (les autres pages comme Immeubles, Unites ont déjà leur ConfirmModal selon les chantiers précédents). Plan :
+
+1. Ajouter `const [deleteTarget, setDeleteTarget] = useState<any>(null)`
+2. `handleDelete` fait `setDeleteTarget(paiement)` seulement
+3. `confirmDelete` fait le DELETE + `success()` + `loadData()` + `setDeleteTarget(null)`
+4. Ajouter `<ConfirmModal>` en bas du JSX
+
+C'est ~15 lignes, zéro risque de régression, et ça clôt le chantier 1.5 complètement.

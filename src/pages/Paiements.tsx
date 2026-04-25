@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Plus, Search, Download } from 'lucide-react';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
@@ -11,17 +12,40 @@ import { generatePaiementFacturePDF } from '../lib/pdf';
 import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
 
+interface PaiementRow {
+    id: string;
+    contrat_id: string;
+    montant_total: number;
+    mois_concerne: string;
+    date_paiement: string;
+    mode_paiement: string;
+    statut: string;
+    reference: string | null;
+    contrats?: any;
+}
+
+interface ContratRow {
+    id: string;
+    loyer_mensuel: number;
+    commission?: number;
+    pourcentage_agence?: number;
+    locataires?: { nom: string; prenom: string };
+    unites?: { nom: string; id?: string };
+}
+
 export function Paiements() {
     const { profile } = useAuth();
     const { success, error: showError, toasts, removeToast } = useToast();
 
-    const [paiements, setPaiements] = useState([]);
-    const [filtered, setFiltered] = useState([]);
-    const [contrats, setContrats] = useState([]);
+    const [paiements, setPaiements] = useState<PaiementRow[]>([]);
+    const [filtered, setFiltered] = useState<PaiementRow[]>([]);
+    const [contrats, setContrats] = useState<ContratRow[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [editingPaiement, setEditingPaiement] = useState(null);
+    const [editingPaiement, setEditingPaiement] = useState<PaiementRow | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<PaiementRow | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // État du formulaire [5-7]
     const initialFormData = {
@@ -133,7 +157,7 @@ export function Paiements() {
 
             const moisConcerne = new Date(formData.mois_display + '-01')
                 .toISOString()
-                .split('T'); // Conversion du mois au format YYYY-MM-DD [20, 22]
+                .split('T')[0]; // Conversion du mois au format YYYY-MM-DD
 
             const data = {
                 montant_total: montantTotal,
@@ -176,23 +200,29 @@ export function Paiements() {
         }
     };
 
-    const handleDelete = async (paiement: any) => {
+    const handleDelete = (paiement: PaiementRow) => {
         if (!profile?.agency_id) return;
+        setDeleteTarget(paiement);
+    };
 
-        if (!confirm('Êtes-vous sûr de vouloir supprimer ce paiement ?')) return;
-
+    const confirmDelete = async () => {
+        if (!profile?.agency_id || !deleteTarget) return;
+        setIsDeleting(true);
         try {
-            const { error } = await supabase.from('paiements').delete().eq('id', paiement.id);
+            const { error } = await supabase.from('paiements').delete().eq('id', deleteTarget.id);
             if (error) throw error;
 
-            if (paiement.statut === 'paye') {
-                await supabase.from('revenus').delete().eq('paiement_id', paiement.id);
+            if (deleteTarget.statut === 'paye') {
+                await supabase.from('revenus').delete().eq('paiement_id', deleteTarget.id);
             }
 
             success('Paiement supprimé avec succès');
+            setDeleteTarget(null);
             loadData();
         } catch (error: any) {
             showError(error.message || 'Impossible de supprimer ce paiement');
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -519,6 +549,18 @@ export function Paiements() {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmModal
+                isOpen={!!deleteTarget}
+                onClose={() => setDeleteTarget(null)}
+                onConfirm={confirmDelete}
+                title="Supprimer ce paiement"
+                message="Êtes-vous sûr de vouloir supprimer ce paiement ? Cette action est irréversible."
+                confirmText="Supprimer"
+                cancelText="Annuler"
+                variant="danger"
+                isLoading={isDeleting}
+            />
             </div>
         </>
     );

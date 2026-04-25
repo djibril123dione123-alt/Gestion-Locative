@@ -81,7 +81,7 @@ export default function Welcome() {
 
       const { error: settingsError } = await supabase
         .from('agency_settings')
-        .insert({
+        .upsert({
           agency_id: agency.id,
           nom_agence: formData.name,
           telephone: formData.phone,
@@ -89,7 +89,7 @@ export default function Welcome() {
           adresse: formData.address,
           ninea: formData.ninea || null,
           devise: formData.devise,
-        });
+        }, { onConflict: 'agency_id' });
 
       if (settingsError) {
         throw new Error(`Erreur lors de la configuration de votre compte : ${settingsError.message}`);

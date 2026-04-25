@@ -1,0 +1,190 @@
+# HYPER-PROMPT : Stabilisation Complète Samay Keur SaaS (P0 → P2)
+
+```
+TU ES UN INGENIEUR DEVOPS SENIOR SUPABASE + TYPESCRIPT. Ta mission : transformer l'audit en CODE EXECUTABLE.
+
+## CONTEXTE CRITIQUE 📋
+Projet SaaS immobilier multi-tenant "Samay Keur" - MVP avancé mais NON PROD-READY
+Architecture : Supabase + Next.js 14 + TypeScript + Tailwind
+Stack DB : PostgreSQL avec RLS strict par agency_id
+Problèmes identifiés : 40+ bugs/dettes/sécurité identifiés dans l'audit
+
+## MISSION ABSOLUE : Phase P0+P1 (3-5 jours max)
+Tu dois produire TOUS les fichiers pour passer de "MVP démo" → "pré-prod stable"
+✅ CORRIGER tous les bugs P0 (corruption DB active)
+✅ AJOUTER .env.example + README
+✅ FIXER bucket documents + RLS Storage
+✅ UNIFIER ConfirmModal API
+✅ SAISIR TOUS les quick wins de l'audit
+
+## REGLES D'OR - ZÉRO HALLUCINATION
+1. NE MODIFIE QUE les fichiers explicitement cités dans l'audit
+2. NE RÉINVENTE PAS l'architecture existante
+3. RESPECTE les conventions : snake_case DB, camelCase TS
+4. TOUS les useState doivent être typés
+5. TOUS les bugs cités = fix précis ligne par ligne
+6. Migrations = idempotentes (IF NOT EXISTS)
+7. RLS Storage = isolation stricte par agency_id
+
+## LIVRABLES OBLIGATOIRES (15+ fichiers)
+
+### 1. CORRECTIONS CRITIQUES P0 (Jour 1)
+```
+src/pages/Paiements.tsx
+```
+**BUG #1** Ligne `initialFormData` : `datepaiement: new Date().toISOString().split('T')` → `split('T')[0]`
+**BUG #2** `handleDelete` : `confirm()` → `ConfirmModal`
+**BUG #3** `useState([])` → `useState<Paiement[]>([])`
+
+```
+src/pages/LoyersImpayes.tsx
+```
+**BUG #4** `handleConfirmPaiement` : `console.log` → vraie création paiement DB
+
+```
+supabase/migrations/20260424000001_fix_agencies_policies.sql
+```
+```sql
+-- AUDIT policies agencies conflictuelles
+DROP POLICY IF EXISTS "Authenticated users can create agency" ON agencies;
+-- Une seule policy : super_admin uniquement
+CREATE POLICY "Super admin INSERT agencies" ON agencies
+FOR INSERT TO authenticated WITH CHECK (is_super_admin());
+```
+
+```
+supabase/migrations/20260424000002_create_documents_bucket.sql
+```
+```sql
+-- Bucket + RLS multi-tenant
+INSERT INTO storage.buckets (id, name, public) VALUES ('documents', 'documents', false);
+CREATE POLICY "Documents tenant isolation" ON storage.objects
+FOR ALL USING (bucket_id = 'documents' AND auth.jwt() ->> 'agency_id' = metadata->>'agency_id');
+```
+
+### 2. UNIFICATION ConfirmModal (Jour 2)
+```
+src/components/ConfirmModal.tsx
+```
+**API unifiée** : `isDestructive` + `confirmLabel` + `cancelLabel`
+Supprimer doublons `confirmText`/`variant`
+
+```
+TOUS les appels ConfirmModal dans :
+- Equipe.tsx (onClose → onRemove)
+- LoyersImpayes.tsx (onClose → onRemove) 
+- Paiements.tsx (confirm() → ConfirmModal)
+- Agences.tsx (confirm() → ConfirmModal)
+```
+
+### 3. INFRA PROD-READY (Jour 2)
+```
+.env.example
+```
+```
+NEXT_PUBLIC_SUPABASE_URL=your_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
+VITE_SUPABASE_SERVICE_ROLE_KEY=your_service_key
+NEXTAUTH_SECRET=your_secret
+NEXTAUTH_URL=http://localhost:3000
+```
+
+```
+README.md
+```
+```
+# Samay Keur - Gestion Immobilière SaaS
+## Quickstart
+1. cp .env.example .env
+2. supabase db push
+3. npm i
+4. npm run dev
+## Architecture
+- Multi-tenant : agency_id sur TOUTES tables métier
+- RLS : isolation stricte par agence
+- Console propriétaire : super_admin uniquement
+```
+
+### 4. TYPES + AUTH (Jour 3)
+```
+src/lib/templates/helpers.ts
+```
+**Supprimer** interface `AgencySettings` dupliquée → importer `src/types/agency.ts`
+
+```
+src/pages/Welcome.tsx
+```
+**Fix double-insert** agency_settings : `ON CONFLICT DO NOTHING`
+
+```
+src/pages/AcceptInvitation.tsx
+```
+**Fix token perdu** : `sessionStorage.setItem('invite_token', token)` avant redirect auth
+
+### 5. PLAN LIMITS + CONSOLE (Jour 3)
+```
+check_plan_limits.sql
+```
+**Fix agences legacy** : `COALESCE(sub.plan, 'pro') AS effective_plan`
+
+```
+supabase/migrations/20260424000003_fix_vw_owner_stats.sql
+```
+```sql
+-- CORRIGER montant → montant_total
+CREATE OR REPLACE VIEW vw_owner_agency_stats AS
+SELECT ..., COALESCE(SUM(p.montant_total) FILTER..., 0) AS volume_paiements
+```
+
+## FORMAT DE LIVRAISON STRICT
+
+```
+## 🛠️ FICHIER : chemin/complet/fichier.tsx
+
+**CHANGEMENTS** :
+- Ligne X : ANCIEN → NOUVEAU
+- Ligne Y : BUG FIX description
+- Ligne Z : Ajout type sécurité
+
+**CODE FINAL** :
+```tsx
+// Code complet du fichier modifié
+```
+
+**TEST À EFFECTUER** :
+- [ ] Test unitaire ajouté
+- [ ] DB migration idempotente  
+- [ ] RLS vérifié en prod
+```
+
+## ORDONNANCEMENT OBLIGATOIRE
+1. Paiements split('T')[0] → corruption active
+2. Bucket documents → fonctionnalité morte  
+3. Policies agencies → onboarding cassé
+4. ConfirmModal unification → 5+ pages cassées
+5. .env + README → déploiement impossible
+6. AcceptInvitation token → invitations cassées
+7. check_plan_limits → agences legacy bloquées
+
+## CRITÈRES DE SUCCÈS
+✅ [ ] TOUS les bugs P0 cités = fixés ligne par ligne
+✅ [ ] Nouvelles migrations = idempotentes  
+✅ [ ] TOUS useState = typés avec interfaces existantes
+✅ [ ] RLS Storage = isolation agency_id stricte
+✅ [ ] .env.example + README = prêts à copier/coller
+✅ [ ] Console owner = KPIs fonctionnels (montant_total)
+✅ [ ] ConfirmModal = API unifiée partout
+✅ [ ] 0 régression sur flux existants
+
+## TEMPS MAX : 3 JOURS
+Commence par P0 dans l'ordre ci-dessus. Chaque fichier = un commit atomique.
+SI DOUTE = DEMANDE CONFIRMATION, ne pas deviner.
+
+EXÉCUTE MAINTENANT.
+```
+
+***
+
+**Ce prompt est prêt à coller dans n'importe quelle IA codeuse.** Il est auto-suffisant, priorisé, et force l'exécution ligne par ligne sans déviation. [ppl-ai-file-upload.s3.amazonaws](https://ppl-ai-file-upload.s3.amazonaws.com/web/direct-files/collection_f50743cf-9d69-4112-a357-70897fb7902f/6f99f9e4-5c63-4503-87bd-44434c8c48f8/Audit-strategique-complet-Samay.txt)
+
+Tu veux que je génère un des livrables maintenant pour valider le format ?

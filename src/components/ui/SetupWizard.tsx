@@ -97,10 +97,11 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
         }
 
         case 3: {
+          const { type_logement: _ignored, ...uniteData } = formData.unite as any;
           const { data, error } = await supabase
             .from('unites')
             .insert({
-              ...formData.unite,
+              ...uniteData,
               immeuble_id: wizardData.immeuble.id,
               statut: 'libre',
               agency_id: profile.agency_id

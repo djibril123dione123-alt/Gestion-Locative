@@ -1,6 +1,13 @@
 # Samay Këur
 
 ## Récents ajouts (avril 2026)
+- **Consolidation Supabase (26 avril 2026, post-import)** :
+  - **9 migrations doublons strictes (md5 identiques) supprimées** : toutes les paires `20260107*` / `20260127*` (`corrections_critiques_01..03`, `multi_tenant_02..07`). Seules les versions `20260127*` sont conservées comme canoniques.
+  - **9 migrations historiques archivées** dans `supabase/migrations/_archive/` (avec `README.md`) : les 7 itérations successives de la policy INSERT sur `agencies` (recouvertes par `20260425000006_cleanup_agencies_insert_policies.sql` puis `20260425000007_onboarding_refonte.sql`), + les 2 policies temporaires de seed (`temp_allow_seed_insertions`, `temp_allow_anon_insertions`).
+  - **Effet sur la base Supabase prod : zéro** — Supabase ne rejoue jamais une migration déjà appliquée. Cette consolidation est purement source-level pour la lisibilité.
+  - `FiltresAvances.tsx` : remplacement du dernier `alert()` natif par `useToast`/`ToastContainer` (cohérence UX).
+  - Reste à traiter (P0/P1, voir audit) : restreindre la policy SELECT anon sur `invitations`, vérifier le bouton « payer ce loyer » dans `LoyersImpayes`, vérifier l'init de la date dans `Paiements.tsx`, appliquer le pattern `requestIdRef` à `Contrats.tsx`.
+
 - **Refonte onboarding & invitations (26 avril 2026)** :
   - Migration `supabase/migrations/20260425000007_onboarding_refonte.sql` :
     - Ajoute `bailleur` à `invitations.role_check`.

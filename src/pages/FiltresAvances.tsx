@@ -4,6 +4,8 @@ import { Search, Filter, X, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../lib/formatters';
+import { useToast } from '../hooks/useToast';
+import { ToastContainer } from '../components/ui/Toast';
 
 interface FiltersState {
   bailleur_id: string;
@@ -19,6 +21,7 @@ interface FiltersState {
 
 export function FiltresAvances() {
   const { profile } = useAuth();
+  const { error: showError, toasts, removeToast } = useToast();
   const [results, setResults] = useState<any[]>([]);
   const [bailleurs, setBailleurs] = useState<any[]>([]);
   const [immeubles, setImmeubles] = useState<any[]>([]);
@@ -229,7 +232,7 @@ export function FiltresAvances() {
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Erreur lors de la recherche');
+      showError('Erreur lors de la recherche');
     } finally {
       setLoading(false);
     }
@@ -506,6 +509,8 @@ export function FiltresAvances() {
           <p className="text-sm sm:text-base text-slate-600">Essayez de modifier vos critères de recherche</p>
         </div>
       )}
+
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

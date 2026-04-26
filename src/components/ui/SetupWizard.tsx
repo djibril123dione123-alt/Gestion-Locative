@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../hooks/useToast';
@@ -652,7 +652,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
 
             <div className="flex items-center justify-between mb-2">
               {steps.map((step, idx) => (
-                <React.Fragment key={step.id}>
+                <Fragment key={step.id}>
                   <div className="flex flex-col items-center">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
                       currentStep > step.id
@@ -678,7 +678,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
                       currentStep > step.id ? 'bg-green-500' : 'bg-slate-200'
                     }`} />
                   )}
-                </React.Fragment>
+                </Fragment>
               ))}
             </div>
           </div>

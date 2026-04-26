@@ -285,7 +285,7 @@ export function Bailleurs() {
    */
   const handleGenerateMandat = async (bailleur: Bailleur) => {
     try {
-      await generateMandatBailleurPDF(bailleur);
+      await generateMandatBailleurPDF(bailleur as unknown as Parameters<typeof generateMandatBailleurPDF>[0]);
     } catch (err) {
       console.error('Erreur génération PDF:', err);
       setError('Impossible de générer le mandat PDF.');

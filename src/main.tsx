@@ -39,7 +39,7 @@ createRoot(document.getElementById('root')!).render(
               <details className="mt-4">
                 <summary className="cursor-pointer text-sm text-gray-500">Détails de l'erreur (dev)</summary>
                 <pre className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded overflow-auto">
-                  {error.stack}
+                  {(error as Error)?.stack}
                 </pre>
               </details>
             )}

@@ -359,7 +359,11 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
 
   const settings = await loadAgencySettings();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-  const contrat = paiement.contrats ?? {};
+  const contrat = (paiement.contrats ?? {}) as {
+    locataires?: { prenom?: string; nom?: string };
+    unites?: { nom?: string; immeubles?: { nom?: string } };
+    loyer_mensuel?: number;
+  };
   const locataire = contrat.locataires ?? {};
   const unite = contrat.unites ?? {};
 

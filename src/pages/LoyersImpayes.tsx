@@ -103,7 +103,7 @@ export function LoyersImpayes() {
 
       const impayesList: LoyerImpaye[] = [];
 
-      contratsActifs?.forEach(contrat => {
+      (contratsActifs as any[] | null)?.forEach((contrat: any) => {
         lastSixMonths.forEach(mois => {
           const key = `${contrat.id}-${mois}`;
           const statut = paiementsMap.get(key);

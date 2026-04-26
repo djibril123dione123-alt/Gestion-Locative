@@ -176,9 +176,9 @@ export function Contrats() {
       if (locatairesRes.error) throw locatairesRes.error;
       if (unitesRes.error) throw unitesRes.error;
 
-      setContrats(contratsRes.data || []);
-      setLocataires(locatairesRes.data || []);
-      setUnites(unitesRes.data || []);
+      setContrats((contratsRes.data || []) as unknown as Contrat[]);
+      setLocataires((locatairesRes.data || []) as unknown as Locataire[]);
+      setUnites((unitesRes.data || []) as unknown as Unite[]);
     } catch (err: any) {
       if (myRequestId !== requestIdRef.current) return;
       console.error('Erreur chargement:', err);

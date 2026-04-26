@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { TrendingUp, BarChart3, Download } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '../lib/formatters';
@@ -56,7 +56,7 @@ export function Commissions() {
         .lt('mois_concerne', monthEndStr)
         .order('date_paiement', { ascending: false });
 
-      const commissionsData = (data || []).map((p) => ({
+      const commissionsData = (data || []).map((p: any) => ({
         ...p,
         locataire: p.contrats?.locataires ? `${p.contrats.locataires.prenom} ${p.contrats.locataires.nom}` : '-',
         unite: p.contrats?.unites?.nom || '-',

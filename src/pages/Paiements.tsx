@@ -95,7 +95,7 @@ export function Paiements() {
 
             setPaiements(paiementsRes.data || []);
             setFiltered(paiementsRes.data || []);
-            setContrats(contratsRes.data || []);
+            setContrats((contratsRes.data || []) as unknown as ContratRow[]);
         } catch (error) {
             showError('Impossible de charger les paiements');
         } finally {

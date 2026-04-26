@@ -141,7 +141,6 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
           setCurrentStep(4);
           break;
         }
-        }
 
         case 4: {
           const { data, error } = await supabase

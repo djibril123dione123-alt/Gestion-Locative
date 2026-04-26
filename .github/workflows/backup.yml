@@ -1,0 +1,62 @@
+name: Backup Database
+
+on:
+  schedule:
+    # Tous les jours à 2h du matin UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Permet de déclencher manuellement
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Create backups directory
+        run: mkdir -p .backups
+
+      - name: Run database backup
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: |
+          # Installer pg_dump si nécessaire
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          
+          # Exécuter le script de backup
+          bash scripts/backup-supabase.sh
+
+      - name: Upload backup to artifact storage
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup
+          path: .backups/
+          retention-days: 30
+
+      - name: Upload to S3 (optionnel)
+        if: env.AWS_ACCESS_KEY_ID != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          aws s3 cp .backups/ s3://${{ secrets.BACKUP_BUCKET }}/samay-keur/ --recursive
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ Database backup failed'
+            })

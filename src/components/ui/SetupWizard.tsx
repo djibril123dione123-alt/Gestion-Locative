@@ -55,7 +55,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
   const [formData, setFormData] = useState({
     bailleur: { nom: '', prenom: '', telephone: '', email: '' },
     immeuble: { nom: '', adresse: '', ville: '', quartier: '' },
-    unite: { nom: '', type_logement: 'appartement' },
+    unite: { nom: '' },
     locataire: { nom: '', prenom: '', telephone: '', email: '' },
     contrat: { loyer_mensuel: '', commission: '10', date_debut: new Date().toISOString().split('T')[0] },
     paiement: { date_paiement: new Date().toISOString().split('T')[0], mode_paiement: 'especes' }
@@ -121,11 +121,10 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
         }
 
         case 3: {
-          const { type_logement: _ignored, ...uniteData } = formData.unite as any;
           const { data, error } = await supabase
             .from('unites')
             .insert({
-              ...uniteData,
+              ...formData.unite,
               immeuble_id: wizardData.immeuble.id,
               statut: 'libre',
               agency_id: profile.agency_id
@@ -133,11 +132,15 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
             .select()
             .single();
 
-          if (error) throw error;
+          if (error) {
+            console.error('Erreur création unité:', error);
+            throw new Error(`Erreur lors de la création de l'unité: ${error.message}`);
+          }
           setWizardData({ ...wizardData, unite: data });
           success('Unité créée avec succès');
           setCurrentStep(4);
           break;
+        }
         }
 
         case 4: {

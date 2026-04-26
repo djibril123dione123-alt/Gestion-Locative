@@ -481,4 +481,16 @@ CREATE POLICY "Authenticated users can insert audit logs"
 -- Pour les tables exposées via pg_graphql, ajouter des politiques de lecture restrictives
 -- (mais garder l'accès public pour les cas légitimes comme les invitations)
 
+-- Ajouter policy INSERT notifications pour super_admin (SupportPanel Console)
+CREATE POLICY "Super admin can insert notifications"
+  ON notifications FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM user_profiles
+      WHERE id = auth.uid()
+        AND role = 'super_admin'
+    )
+  );
+
 -- =============================================================================

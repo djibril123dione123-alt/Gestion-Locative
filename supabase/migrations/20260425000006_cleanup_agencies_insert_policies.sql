@@ -23,14 +23,13 @@ DROP POLICY IF EXISTS "temp_allow_all_insert_agencies"               ON agencies
 DROP POLICY IF EXISTS "agencies_insert_authenticated"                ON agencies;
 DROP POLICY IF EXISTS "Super admin can insert agencies"              ON agencies;
 
--- 2) Policy unique pour les utilisateurs authentifiés
---    (utilisée notamment lors de l'onboarding via la page Welcome)
-CREATE POLICY "agencies_insert_authenticated"
-  ON agencies FOR INSERT
-  TO authenticated
-  WITH CHECK (auth.uid() IS NOT NULL);
+-- 2) SUPPRESSION de la policy trop large pour les utilisateurs authentifiés
+--    Les agences sont créées UNIQUEMENT via :
+--    - RPC SECURITY DEFINER `approve_agency_request()` (onboarding normal)
+--    - Console super_admin (policy explicite ci-dessous)
+-- DROP POLICY IF EXISTS "agencies_insert_authenticated" ON agencies;
 
--- 3) Policy explicite pour le super_admin (Console propriétaire SaaS)
+-- 3) Policy EXCLUSIVE pour le super_admin (Console propriétaire SaaS)
 CREATE POLICY "Super admin can insert agencies"
   ON agencies FOR INSERT
   TO authenticated

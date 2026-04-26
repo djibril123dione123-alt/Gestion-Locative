@@ -1,0 +1,136 @@
+Tu es un expert Supabase/PostgreSQL/React/TypeScript chargé de corriger, nettoyer et consolider un projet SaaS devenu trop fragmenté.
+
+Contexte :
+- Le dossier Supabase contient trop de fichiers SQL/migrations dispersés.
+- Le schéma a été modifié par petites touches successives et contient probablement des doublons, incohérences et migrations redondantes.
+- Le front-end et la base de données ne sont pas parfaitement alignés.
+- Le projet est multi-tenant, avec séparation stricte entre admin d’agence et super_admin / owner console.
+- Il existe déjà une base fonctionnelle, mais elle doit être stabilisée, sécurisée et rendue maintenable.
+
+Mission globale :
+1. Fusionner proprement les migrations Supabase en une structure claire et canonique.
+2. Corriger tous les bugs bloquants identifiés dans le projet.
+3. Unifier le schéma SQL, les enums, les types TypeScript et les conventions de nommage.
+4. Sécuriser le multi-tenant, les RLS et les accès super_admin.
+5. Aligner le front-end avec la base de données.
+6. Supprimer les doublons, les fichiers obsolètes, les incohérences et les actions UI non branchées.
+7. Produire un plan de migration, de validation et de mise en production sans casse.
+
+Contraintes absolues :
+- Ne rien inventer.
+- Si une information manque, la signaler clairement.
+- Ne pas casser les migrations existantes sans stratégie de remplacement.
+- Ne pas supprimer de logique métier utile.
+- Ne pas faire de refactor cosmétique inutile.
+- Respecter :
+  - SQL en snake_case,
+  - front-end en camelCase,
+  - mapping explicite entre les deux.
+- RLS doit rester strict et cohérent.
+- Aucun rôle global non contrôlé ne doit accéder aux données d’agence.
+- Le super_admin doit rester totalement séparé des admins d’agence.
+- Aucune clé sensible ne doit être exposée côté client.
+- Toute action sensible doit être auditée.
+- Toute migration doit être idempotente ou correctement justifiée.
+
+Travail demandé :
+
+A. Audit complet du dossier Supabase
+- Lire toutes les migrations, fonctions, vues, triggers, policies, enums, seeds et fichiers liés.
+- Identifier :
+  - doublons,
+  - migrations contradictoires,
+  - fichiers obsolètes,
+  - tables / vues / fonctions redéfinies plusieurs fois,
+  - policies RLS fragiles ou incohérentes,
+  - éléments temporaires ou de seed qui seraient restés actifs,
+  - données ou triggers qui ne doivent pas être perdus lors d’une fusion.
+
+B. Fusion / squash du schéma
+- Définir le schéma canonique final.
+- Proposer une stratégie de consolidation du dossier Supabase :
+  - ce qui peut être fusionné,
+  - ce qui doit rester en migration séparée,
+  - ce qui doit être recréé manuellement,
+  - ce qui doit être archivé ou supprimé.
+- Si un squash global est possible, le préparer proprement.
+- Si un squash total est risqué, proposer une consolidation partielle par sous-domaine.
+- Garder une séparation nette entre :
+  - schéma structurel,
+  - migrations de données,
+  - policies,
+  - triggers,
+  - vues,
+  - seeds.
+
+C. Corriger les bugs bloquants
+- Corriger la vue console propriétaire qui utilise une mauvaise colonne de somme.
+- Corriger le bug de date de paiement mal initialisée.
+- Corriger le stale closure dans les chargements liés aux contrats.
+- Corriger la fonctionnalité “payer ce loyer” si elle ne crée pas réellement le paiement.
+- Remplacer les `alert()` natifs par le système de toast.
+- Vérifier que les restrictions par plan sont réellement appliquées.
+- Vérifier que les boutons d’action non branchés deviennent fonctionnels ou sont supprimés.
+
+D. Normalisation du schéma
+- Unifier les colonnes et conventions :
+  - agency_id / agencyid,
+  - created_at / createdat,
+  - updated_at / updatedat,
+  - trial_ends_at / trialendsat,
+  - montant / montanttotal,
+  - toute autre variante similaire.
+- Centraliser les enums :
+  - user_role,
+  - contrat_statut,
+  - mode_paiement,
+  - paiement_statut,
+  - unite_statut,
+  - autres enums métier.
+- Harmoniser les relations entre :
+  - auth.users,
+  - public.user_profiles,
+  - agencies,
+  - agency_settings,
+  - subscriptions,
+  - owner logs,
+  - audit logs,
+  - billing tables,
+  - tables métier.
+
+E. Sécurité et RLS
+- Revoir toutes les policies.
+- Vérifier les accès SELECT / INSERT / UPDATE / DELETE par rôle.
+- Vérifier l’isolation multi-tenant.
+- Vérifier les accès du super_admin et des sous-rôles owner.
+- Vérifier que les politiques temporaires, de seed ou de test ne sont pas restées actives en prod.
+- Documenter clairement les accès autorisés, interdits et sensibles.
+- Garder une journalisation stricte sur les actions critiques.
+
+F. Front-end
+- Identifier les pages ou composants créés mais pas reliés à la base.
+- Identifier les boutons ou écrans visibles mais non fonctionnels.
+- Corriger les formulaires, dates, montants, validations, et flux de soumission.
+- Unifier les types et helpers du front.
+- Vérifier la cohérence des protections de routes, redirections et guards de rôle.
+- Finaliser la séparation entre espace agence et console propriétaire.
+
+G. Livrables attendus
+Rends la réponse dans cet ordre :
+
+1. Résumé exécutif.
+2. Diagnostic des problèmes trouvés.
+3. Stratégie de fusion / squash des migrations.
+4. Schéma canonique proposé.
+5. Fichiers à garder, fusionner, archiver ou supprimer.
+6. Corrections prioritaires P0 / P1 / P2.
+7. Plan de migration pas à pas.
+8. Vérifications finales avant mise en prod.
+9. Risques et points de vigilance.
+
+Règles finales :
+- Ne donne pas une réponse vague.
+- Ne propose pas juste “merge tout”.
+- Explique clairement quoi fusionner, quoi garder séparé, et pourquoi.
+- Priorise la stabilité, la sécurité et la maintenabilité.
+- Si la fusion complète est trop risquée, propose une consolidation progressive et justifie-la.

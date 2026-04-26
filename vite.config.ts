@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react';
 // et est nécessaire pour que la preview Replit puisse proxifier l'app.
 // En production (npm run build), seul le contenu de `dist/` est servi en static.
 export default defineConfig({
+  base: './',
   plugins: [react()],
   optimizeDeps: {
     exclude: ['lucide-react'],

@@ -73,6 +73,8 @@ Both are set via the Replit Secrets store (Tools → Secrets), not committed to 
 - Vite dev server runs on `0.0.0.0:5000` with `allowedHosts: 'all'` so the Replit preview iframe proxy can reach it.
 - Workflow `Start application` runs `npm run dev` and waits for port 5000.
 - Backend is Supabase (auth, Postgres + RLS, storage bucket `documents`, realtime). The Replit Postgres database created by the environment is currently unused — the app talks directly to Supabase.
+- Supabase URL and anon key are provisioned via `.replit` `[userenv.shared]` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`). The anon key is the public client key, safe for browser use; multi-tenant isolation is enforced by Supabase RLS. The service-role key is never used from the frontend.
+- Import migration (Apr 2026): the project was imported from Replit Agent. Supabase backend is intentionally preserved (no Neon/Drizzle/Replit-Auth rewrite) because all server logic lives in Supabase RLS policies and SECURITY DEFINER RPCs — replacing it would require a full rewrite. See `.local/state/replit/agent/progress_tracker.md`.
 
 ## Key Pages
 - `Dashboard` — Stats overview with charts

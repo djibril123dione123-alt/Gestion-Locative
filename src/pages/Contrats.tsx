@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
@@ -6,7 +6,6 @@ import { Table } from '../components/ui/Table';
 import { Plus, Search, Download, AlertCircle, TrendingUp } from 'lucide-react';
 import { generateContratPDF } from '../lib/pdf';
 import { formatCurrency } from '../lib/formatters';
-import { ToastContainer } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
 
 // =========================
@@ -103,13 +102,12 @@ const INITIAL_FORM_DATA: FormData = {
 // =========================
 export function Contrats() {
   // Auth context
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
 
   // États
   const [contrats, setContrats] = useState<Contrat[]>([]);
   const [locataires, setLocataires] = useState<Locataire[]>([]);
   const [unites, setUnites] = useState<Unite[]>([]);
-  const [bailleurs, setBailleurs] = useState<Bailleur[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -121,17 +119,23 @@ export function Contrats() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const toast = useToast();
 
+  // Garde anti-race : si l'utilisateur change d'agence ou navigue
+  // rapidement, une réponse tardive ne doit pas écraser les données
+  // fraîches. Pattern identique à `Calendrier.tsx`.
+  const requestIdRef = useRef(0);
+
   // =========================
   // 🔁 CHARGEMENT DES DONNÉES
   // =========================
   const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
+    const myRequestId = ++requestIdRef.current;
 
     try {
       setLoading(true);
       setError(null);
 
-      const [contratsRes, locatairesRes, unitesRes, bailleursRes] = await Promise.all([
+      const [contratsRes, locatairesRes, unitesRes] = await Promise.all([
         supabase
           .from('contrats')
           .select(`
@@ -162,28 +166,27 @@ export function Contrats() {
           .eq('actif', true)
           .eq('statut', 'libre')
           .order('nom', { ascending: true }),
-        supabase
-          .from('bailleurs')
-          .select('id, nom, prenom, telephone, adresse, commission')
-          .eq('agency_id', profile.agency_id)
-          .eq('actif', true)
-          .order('nom', { ascending: true }),
       ]);
+
+      // Si une nouvelle requête a été lancée entre-temps, on ignore
+      // ce résultat pour ne pas écraser des données plus récentes.
+      if (myRequestId !== requestIdRef.current) return;
 
       if (contratsRes.error) throw contratsRes.error;
       if (locatairesRes.error) throw locatairesRes.error;
       if (unitesRes.error) throw unitesRes.error;
-      if (bailleursRes.error) throw bailleursRes.error;
 
       setContrats(contratsRes.data || []);
       setLocataires(locatairesRes.data || []);
       setUnites(unitesRes.data || []);
-      setBailleurs(bailleursRes.data || []);
     } catch (err: any) {
+      if (myRequestId !== requestIdRef.current) return;
       console.error('Erreur chargement:', err);
       setError(err.message || 'Erreur lors du chargement des données');
     } finally {
-      setLoading(false);
+      if (myRequestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [profile?.agency_id]);
 
@@ -191,6 +194,10 @@ export function Contrats() {
     if (profile?.agency_id) {
       loadData();
     }
+    // Cleanup : invalide les requêtes en vol au démontage / changement.
+    return () => {
+      requestIdRef.current++;
+    };
   }, [profile?.agency_id, loadData]);
 
   // =========================

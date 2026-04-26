@@ -39,7 +39,7 @@ export function Unites() {
     numero: '',
     etage: '',
     loyer_base: '',
-    statut: 'libre' as const,
+    statut: 'libre' as 'libre' | 'loue' | 'maintenance',
     immeuble_id: '',
     description: '',
   });

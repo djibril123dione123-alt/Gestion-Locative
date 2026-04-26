@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
@@ -80,7 +80,7 @@ export function LoyersImpayes() {
         .eq('agency_id', profile.agency_id);
 
       const currentDate = new Date();
-      const lastSixMonths = [];
+      const lastSixMonths: string[] = [];
       for (let i = 0; i < 6; i++) {
         const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
         lastSixMonths.push(d.toISOString().slice(0, 7) + '-01');

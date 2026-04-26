@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Circle, ChevronRight, X, Building2, Users, Home, FileText } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { CheckCircle2, ChevronRight, X, Building2, Users, Home, FileText } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -177,7 +177,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
 
       <div className="p-6">
         <div className="space-y-3">
-          {steps.map((step, index) => {
+          {steps.map((step) => {
             const Icon = step.icon;
             return (
               <button

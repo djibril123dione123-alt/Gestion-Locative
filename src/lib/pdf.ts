@@ -257,8 +257,16 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
   const settings = await loadAgencySettings();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
 
-  const bailleur = contrat.unites?.immeubles?.bailleurs ?? {};
-  const locataire = contrat.locataires ?? {};
+  const bailleur = (contrat.unites?.immeubles?.bailleurs ?? {}) as {
+    prenom?: string;
+    nom?: string;
+  };
+  const locataire = (contrat.locataires ?? {}) as {
+    prenom?: string;
+    nom?: string;
+    piece_identite?: string;
+    adresse_personnelle?: string;
+  };
 
   try {
     const tpl = await fetchTemplate('/templates/contrat_location.txt');

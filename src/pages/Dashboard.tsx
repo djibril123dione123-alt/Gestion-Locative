@@ -14,8 +14,6 @@ import {
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -23,7 +21,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer
 } from 'recharts';
 import { QuickStart } from '../components/ui/QuickStart';
@@ -330,7 +327,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
           value={stats.totalImmeubles}
           icon={Building2}
           color="orange"
-          delay="0"
+          delay={0}
         />
         <StatCard
           title="Unités totales"
@@ -338,7 +335,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
           subtitle={`${stats.unitesLibres} libres`}
           icon={DoorOpen}
           color="blue"
-          delay="100"
+          delay={100}
         />
         <StatCard
           title="Locataires actifs"
@@ -346,14 +343,14 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
           subtitle={`${stats.contratsActifs} contrats`}
           icon={Users}
           color="green"
-          delay="200"
+          delay={200}
         />
         <StatCard
           title="Taux d'occupation"
           value={`${stats.tauxOccupation.toFixed(1)}%`}
           icon={TrendingUp}
           color="emerald"
-          delay="300"
+          delay={300}
         />
       </div>
 
@@ -406,12 +403,12 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={(props: any) => `${props.name} ${((props.percent ?? 0) * 100).toFixed(0)}%`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
               >
-                {pieData.map((entry, index) => (
+                {pieData.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { TrendingUp, TrendingDown, DollarSign, Download, Calendar, Building2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Download, Calendar, Building2 } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -329,31 +329,9 @@ export function TableauDeBordFinancierGlobal() {
     // 5. FONCTIONS D'EXPORT PDF (Corrigées)
     // -------------------------------------------------------------------------
 
-    const exportBilanEntreprisePDF = () => {
-        if (!bilanEntreprise) return;
-        const doc = new jsPDF();
-        const monthName = new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
-        
-        doc.setFontSize(20); // [12]
-        doc.text('BILAN MENSUEL - ENTREPRISE', 105, 15, { align: 'center' }); // [12]
-        doc.setFontSize(12); // [12]
-        doc.text(`Période: ${monthName}`, 14, 30); // [12]
-
-        autoTable(doc, {
-            head: [['Élément', 'Montant']], // [12]
-            body: [
-                ['Total loyers perçus', formatCurrency(bilanEntreprise.totalLoyers)], // [12]
-                ['Loyers impayés', formatCurrency(bilanEntreprise.loyersImpayes)],
-                ['Commission agence', formatCurrency(bilanEntreprise.commission)],
-                ['Autres revenus', formatCurrency(bilanEntreprise.revenus_alt)],
-                ['Total revenus', formatCurrency(bilanEntreprise.totalRevenus)],
-                ['Total dépenses', formatCurrency(bilanEntreprise.totalDepenses)],
-                ['SOLDE NET', formatCurrency(bilanEntreprise.soldeNet)], // [17]
-            ],
-            startY: 40,
-        });
-        doc.save(`bilan-entreprise-${selectedMonth}.pdf`);
-    };
+    // Note : 3 fonctions d'export PDF historiques (bilan entreprise,
+    // rapports immeubles, comptabilité) ont été retirées car jamais
+    // câblées à un bouton. Voir l'historique git pour les récupérer.
 
     const exportBilanBailleurPDF = (bilan: BilanBailleur) => {
         const doc = new jsPDF(); // [1]
@@ -382,7 +360,7 @@ export function TableauDeBordFinancierGlobal() {
 
         const finalY = (doc as any).lastAutoTable.finalY + 10;
         doc.setFontSize(12); // [13]
-        doc.setFont(undefined, 'bold');
+        doc.setFont('helvetica', 'bold');
         doc.text('TOTAUX:', 14, finalY);
         doc.text(`Loyers perçus: ${formatCurrency(bilan.total_loyers_percus)}`, 14, finalY + 7); // [18]
         doc.text(`Loyers impayés: ${formatCurrency(bilan.total_impayes)}`, 14, finalY + 14); // [18]
@@ -390,53 +368,6 @@ export function TableauDeBordFinancierGlobal() {
         doc.setFontSize(14);
         doc.text(`MONTANT À VERSER: ${formatCurrency(bilan.total_net)}`, 14, finalY + 30); // [18]
         doc.save(`bilan-${bilan.bailleur_nom}-${selectedMonth}.pdf`);
-    };
-
-    const exportRapportsImmeublesPDF = () => {
-        const filteredRapports = getFilteredRapports();
-        const doc = new jsPDF();
-        doc.setFontSize(18);
-        doc.text('Rapports par Immeuble', 14, 20);
-        doc.setFontSize(10);
-        doc.text(`Période: ${new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}`, 14, 28); // [14]
-
-        const data = filteredRapports.map(r => [ // [14]
-            r.immeuble_nom,
-            `${r.bailleur_prenom} ${r.bailleur_nom}`,
-            formatCurrency(r.loyers_percus),
-            formatCurrency(r.loyers_impayes),
-            formatCurrency(r.frais_gestion),
-            formatCurrency(r.resultat_net),
-        ]);
-
-        autoTable(doc, {
-            head: [['Immeuble', 'Bailleur', 'Loyers perçus', 'Impayés', 'Frais', 'Résultat net']], // [14]
-            body: data,
-            startY: 35,
-            styles: { fontSize: 8 },
-        });
-
-        doc.save('rapports-immeubles.pdf');
-    };
-    
-    const exportComptabilitePDF = () => {
-        const doc = new jsPDF();
-        doc.text('Rapport Comptable', 14, 15); // [15]
-        doc.text(`Total Revenus: ${formatCurrency(statsAnnuel.totalRevenus)}`, 14, 25); // [15]
-        doc.text(`Total Depenses: ${formatCurrency(statsAnnuel.totalDepenses)}`, 14, 32); // [15]
-        doc.text(`Solde Net: ${formatCurrency(statsAnnuel.soldeNet)}`, 14, 39); // [15]
-        
-        autoTable(doc, {
-            head: [['Mois', 'Revenus', 'Depenses', 'Solde']], // [15]
-            body: monthlyData.map(m => [
-                m.month, 
-                formatCurrency(m.revenus || 0), 
-                formatCurrency(m.depenses), 
-                formatCurrency(m.solde)
-            ]),
-            startY: 45, // [20]
-        });
-        doc.save('comptabilite.pdf');
     };
 
     // -------------------------------------------------------------------------

@@ -1,6 +1,21 @@
 # Samay Këur
 
 ## Récents ajouts (avril 2026)
+- **Pass audit P0 → P1 → P2 (26 avril 2026, suite)** :
+  - **P0 — Sécurité invitations** : nouvelle migration `supabase/migrations/20260426000000_restrict_invitations_select.sql` qui drop la policy permissive `Invitations readable by token` (qui exposait toutes les colonnes au rôle `anon` dès qu'on connaissait un token) et la remplace par une policy restreinte aux super_admins et admins de l'agence émettrice. Le flux anonyme passe désormais exclusivement par la RPC `get_invitation_by_token` (SECURITY DEFINER, sortie sanitisée). **À appliquer sur Supabase prod via `supabase db push`.**
+  - **P1 — Bugs UX** :
+    - `Paiements.tsx` : `initialFormData` pré-remplit `mois_concerne` / `mois_display` avec le mois courant (au lieu d'une string vide → premier paiement valide).
+    - `Contrats.tsx` : ajout du pattern `requestIdRef` (race-guard, identique à `Calendrier.tsx`) sur `loadData`, plus cleanup `useEffect` qui incrémente le ref au démontage. Évite les états zombies après navigation rapide.
+    - Faux positifs vérifiés : le bouton « payer ce loyer » de `LoyersImpayes` et l'init `date_paiement` étaient en réalité corrects (audit obsolète).
+  - **P2 — Hygiène code & dépendances** :
+    - Code mort supprimé : `exportPDF` inutilisé dans `Paiements.tsx` ; trois `exportXxxPDF` jamais branchés dans `TableauDeBordFinancierGlobal.tsx` ; état `bailleurs` + sa requête associée jamais lus dans `Contrats.tsx`.
+    - **Vrai bug détecté** : `SetupWizard.tsx` utilisait `useEffect` ligne 51 sans l'importer (crash silencieux à l'ouverture du wizard) → corrigé.
+    - Imports React inutilisés retirés de 7 composants (Sidebar, ConfirmModal, EmptyState, NotificationBell, Toast, TrialBanner, QuickStart) — React 17+ JSX transform.
+    - Typage : `Unites.formData.statut` (union literal), `TableauDeBord.setFont('helvetica','bold')`, `Dashboard.delay` numéros (était string), `Dashboard.pieData.label` typed any (recharts), `LoyersImpayes.lastSixMonths: string[]`, `pdf.ts` cast `bailleur`/`locataire` après fallback `?? {}`.
+    - Imports `lucide-react` morts retirés (DollarSign, Circle, LineChart/Line/Legend).
+  - **P2 — Documentation** : 22 fichiers `.md` historiques (`AGENT_PROMPT*`, `INSTRUCTIONS*`, `MIGRATION_GUIDE*`, etc.) déplacés de la racine vers `docs/historique/` avec un `README.md` explicatif. La racine ne contient plus que `README.md`, `replit.md`, `SETUP.md`.
+  - **Dette typecheck restante (~13 erreurs, systémique)** : pattern Supabase v2 où les relations imbriquées (`select('id, immeubles(nom, bailleurs(...))')`) sont typées comme array (`{...}[]`) alors que le runtime renvoie l'objet/array selon la cardinalité. Concerne `LoyersImpayes` (7), `Commissions` (3), `Contrats` (1), `Paiements` (1). Fix correct = régénérer les types via `supabase gen types typescript --linked > src/lib/database.types.ts` puis `createClient<Database>(...)`. Demande Supabase CLI lié au projet — chantier dédié, hors scope de cette passe.
+
 - **Consolidation Supabase (26 avril 2026, post-import)** :
   - **9 migrations doublons strictes (md5 identiques) supprimées** : toutes les paires `20260107*` / `20260127*` (`corrections_critiques_01..03`, `multi_tenant_02..07`). Seules les versions `20260127*` sont conservées comme canoniques.
   - **9 migrations historiques archivées** dans `supabase/migrations/_archive/` (avec `README.md`) : les 7 itérations successives de la policy INSERT sur `agencies` (recouvertes par `20260425000006_cleanup_agencies_insert_policies.sql` puis `20260425000007_onboarding_refonte.sql`), + les 2 policies temporaires de seed (`temp_allow_seed_insertions`, `temp_allow_anon_insertions`).

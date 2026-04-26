@@ -5,9 +5,7 @@ import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
-import { Plus, Search, Download } from 'lucide-react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { Plus, Search } from 'lucide-react';
 import { generatePaiementFacturePDF } from '../lib/pdf';
 import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
@@ -48,14 +46,19 @@ export function Paiements() {
     const [isDeleting, setIsDeleting] = useState(false);
 
     // État du formulaire [5-7]
+    // mois_display et mois_concerne sont pré-remplis au mois courant
+    // pour éviter qu'un utilisateur clique « Nouveau paiement » et
+    // tombe sur un sélecteur vide.
+    const today = new Date();
+    const currentMonthYYYYMM = today.toISOString().slice(0, 7);
     const initialFormData = {
         contrat_id: '',
         montant_total: '',
-        mois_concerne: '',
-        mois_display: '',
-        date_paiement: new Date().toISOString().split('T')[0],
-        mode_paiement: 'especes' as const,
-        statut: 'paye' as const,
+        mois_concerne: currentMonthYYYYMM + '-01',
+        mois_display: currentMonthYYYYMM,
+        date_paiement: today.toISOString().split('T')[0],
+        mode_paiement: 'especes' as 'especes' | 'cheque' | 'virement' | 'mobile_money',
+        statut: 'paye' as 'paye' | 'en_attente' | 'impaye',
         reference: '',
     };
     const [formData, setFormData] = useState(initialFormData);
@@ -247,14 +250,33 @@ export function Paiements() {
                 .eq('id', paiementId)
                 .single(); // [26, 27]
 
-            if (e1 || !pmt || !pmt.contrats || !pmt.contrats.locataires || !pmt.contrats.unites) {
+            // Supabase v2 type les relations imbriquées comme array
+            // mais le runtime retourne un objet quand la FK pointe vers
+            // une seule ligne. On caste vers la forme runtime réelle.
+            const paiement = pmt as unknown as {
+                id: string;
+                created_at: string;
+                date_paiement: string;
+                mois_concerne: string;
+                montant_total: number;
+                reference: string | null;
+                contrats: {
+                    id: string;
+                    loyer_mensuel: number;
+                    commission: number;
+                    locataires: { nom: string; prenom: string } | null;
+                    unites: { id: string; nom: string } | null;
+                } | null;
+            };
+
+            if (e1 || !paiement || !paiement.contrats || !paiement.contrats.locataires || !paiement.contrats.unites) {
                 throw new Error('Données de facturation incomplètes.');
             }
 
             // 2. Tenter de récupérer l'adresse de l'immeuble séparément (pour tolérer les RLS) [27, 28]
             let adresse = '—';
             try {
-                const uniteId = pmt.contrats.unites.id;
+                const uniteId = paiement.contrats.unites.id;
                 const { data: u } = await supabase
                     .from('unites')
                     .select('immeubles(adresse)')
@@ -262,24 +284,25 @@ export function Paiements() {
                     .eq('id', uniteId)
                     .maybeSingle();
 
-                if (u?.immeubles?.adresse) adresse = u.immeubles.adresse;
+                const uniteRow = u as unknown as { immeubles: { adresse: string } | null } | null;
+                if (uniteRow?.immeubles?.adresse) adresse = uniteRow.immeubles.adresse;
             } catch (e) {
                 // Adresse non disponible, utilisation du fallback
             }
 
             // 3. Préparer le payload et générer le PDF [28]
             const payload = {
-                ...pmt,
+                ...paiement,
                 contrats: {
-                    ...pmt.contrats,
+                    ...paiement.contrats,
                     unites: {
-                        ...pmt.contrats.unites,
+                        ...paiement.contrats.unites,
                         immeubles: { adresse },
                     },
                 },
             };
 
-            await generatePaiementFacturePDF(payload);
+            await generatePaiementFacturePDF(payload as any);
             success('Facture générée avec succès');
 
         } catch (err: any) {
@@ -287,28 +310,9 @@ export function Paiements() {
         }
     };
     
-    // Fonction d'export de la liste des paiements au format PDF [14, 26]
-    const exportPDF = () => {
-        // Multi-tenant guard [NEW]
-        if (!profile?.agency_id) return;
-
-        const doc = new jsPDF();
-        doc.text('Liste des Paiements', 14, 15);
-        doc.autoTable({
-            head: [['Locataire', 'Montant', 'Date', 'Statut']],
-            body: filtered.map((p: any) => [
-                p.contrats?.locataires
-                    ? `${p.contrats.locataires.prenom} ${p.contrats.locataires.nom}`
-                    : '-',
-                formatCurrency(p.montant_total),
-                p.date_paiement,
-                p.statut,
-            ]),
-            startY: 20,
-        });
-        doc.save('paiements.pdf');
-    };
-
+    // Note : un export PDF de la liste a existé ici puis a été retiré
+    // (jamais câblé à un bouton). Si on veut le ré-introduire, voir
+    // l'historique git ou `generatePaiementFacturePDF` pour le format.
 
     // Définition des colonnes de la table [8, 10, 29-32]
     const columns = [

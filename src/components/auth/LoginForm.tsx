@@ -35,8 +35,8 @@ export function LoginForm() {
           <div className="relative p-4 rounded-xl shadow-lg" 
                style={{  backgroundColor: 'white' }}>
             <img
-              src="/templates/Logo confort immo archi neutre.png"
-              alt="Logo Confort Immo Archi"
+              src="/logo-icon.png"
+              alt="Samay Këur"
               className="h-20 w-auto object-contain"
             />
           </div>
@@ -44,14 +44,12 @@ export function LoginForm() {
 
         {/* --- Titre --- */}
         <h1 className="text-3xl font-bold text-center mb-2">
-          <span style={{ color: '#C0392B' }}>CONFORT</span>{' '}
           <span style={{ 
             background: 'linear-gradient(135deg, #F58220 0%, #FFA64D 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             backgroundClip: 'text'
-          }}>IMMO</span>{' '}
-          <span style={{ color: '#C0392B' }}>ARCHI</span>
+          }}>Samay Këur</span>
         </h1>
         <p className="text-center text-sm font-medium mb-3" style={{ color: '#555555' }}>
           Gestion immobilière professionnelle

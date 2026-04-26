@@ -451,11 +451,34 @@ $$;
 GRANT EXECUTE ON FUNCTION public.reject_agency_request(uuid, text) TO authenticated;
 
 -- =============================================================================
--- 7) Vérifications utiles (manuelles)
+-- 8) Corrections de sécurité RLS
 -- =============================================================================
--- SELECT policyname FROM pg_policies WHERE tablename = 'agencies' AND cmd = 'INSERT';
--- SELECT policyname FROM pg_policies WHERE tablename = 'agency_creation_requests';
--- SELECT proname, prosecdef FROM pg_proc WHERE proname IN
---   ('get_invitation_by_token', 'accept_invitation',
---    'approve_agency_request', 'reject_agency_request');
+
+-- Supprimer les politiques trop permissives
+DROP POLICY IF EXISTS "Authenticated users can insert agency settings" ON agency_settings;
+DROP POLICY IF EXISTS "Authenticated users can insert audit logs" ON audit_logs;
+
+-- Recréer avec des restrictions appropriées
+CREATE POLICY "Agency users can insert agency settings"
+  ON agency_settings FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    agency_id IN (
+      SELECT agency_id FROM user_profiles WHERE id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Authenticated users can insert audit logs"
+  ON audit_logs FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    agency_id IN (
+      SELECT agency_id FROM user_profiles WHERE id = auth.uid()
+    ) OR
+    agency_id IS NULL  -- Pour les logs système
+  );
+
+-- Pour les tables exposées via pg_graphql, ajouter des politiques de lecture restrictives
+-- (mais garder l'accès public pour les cas légitimes comme les invitations)
+
 -- =============================================================================

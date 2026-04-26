@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../hooks/useToast';
 import { ToastContainer } from './Toast';
+import { reloadUserProfile } from '../../lib/agencyHelper';
 import {
   CheckCircle2,
   Building2,
@@ -46,6 +47,11 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
   const [wizardData, setWizardData] = useState<WizardData>({});
   const [loading, setLoading] = useState(false);
 
+  // Reload profile when wizard opens to ensure fresh data
+  useEffect(() => {
+    reloadUserProfile();
+  }, []);
+
   const [formData, setFormData] = useState({
     bailleur: { nom: '', prenom: '', telephone: '', email: '' },
     immeuble: { nom: '', adresse: '', ville: '', quartier: '' },
@@ -56,7 +62,15 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
   });
 
   const handleStepSubmit = async (step: number) => {
-    if (!profile?.agency_id) return;
+    if (!profile?.agency_id) {
+      showError('Votre profil n\'est pas correctement chargé. Veuillez rafraîchir la page.');
+      return;
+    }
+
+    if (!profile.role || !['admin', 'agent'].includes(profile.role)) {
+      showError('Vous n\'avez pas les permissions nécessaires pour créer des données.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -71,7 +85,10 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
             .select()
             .single();
 
-          if (error) throw error;
+          if (error) {
+            console.error('Erreur création bailleur:', error);
+            throw new Error(`Erreur lors de la création du bailleur: ${error.message}`);
+          }
           setWizardData({ ...wizardData, bailleur: data });
           success('Bailleur créé avec succès');
           setCurrentStep(2);
@@ -79,6 +96,10 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
         }
 
         case 2: {
+          if (!wizardData.bailleur?.id) {
+            throw new Error('Le bailleur n\'a pas été créé correctement. Veuillez recommencer.');
+          }
+
           const { data, error } = await supabase
             .from('immeubles')
             .insert({
@@ -89,7 +110,10 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
             .select()
             .single();
 
-          if (error) throw error;
+          if (error) {
+            console.error('Erreur création immeuble:', error);
+            throw new Error(`Erreur lors de la création de l'immeuble: ${error.message}`);
+          }
           setWizardData({ ...wizardData, immeuble: data });
           success('Immeuble créé avec succès');
           setCurrentStep(3);

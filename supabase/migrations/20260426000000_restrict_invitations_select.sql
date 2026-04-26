@@ -37,9 +37,9 @@ CREATE POLICY "super_admin_can_read_all_invitations"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-        AND profiles.role = 'super_admin'
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+        AND user_profiles.role = 'super_admin'
     )
   );
 
@@ -49,10 +49,10 @@ CREATE POLICY "agency_admin_can_read_own_invitations"
   TO authenticated
   USING (
     EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-        AND profiles.role = 'admin'
-        AND profiles.agency_id = invitations.agency_id
+      SELECT 1 FROM user_profiles
+      WHERE user_profiles.id = auth.uid()
+        AND user_profiles.role = 'admin'
+        AND user_profiles.agency_id = invitations.agency_id
     )
   );
 

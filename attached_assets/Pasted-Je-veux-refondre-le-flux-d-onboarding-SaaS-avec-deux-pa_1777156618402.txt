@@ -1,0 +1,70 @@
+Je veux refondre le flux d’onboarding SaaS avec deux parcours distincts.
+
+Invitation à une agence existante
+
+Le super admin doit pouvoir, depuis la console propriétaire, inviter un utilisateur ou créer directement son user_profile avec rôle + agency_id, puis le rattacher à une agence.
+
+Quand l’utilisateur clique sur le lien d’invitation :
+
+s’il n’a pas encore de compte, on lui montre la page d’inscription ;
+
+s’il a déjà un compte, on lui montre la page de connexion.
+
+Après authentification, il doit être automatiquement rattaché à l’agence qui l’a invité.
+
+Il ne doit jamais voir la page de création d’agence dans ce flux.
+
+Son entrée dans user_profiles doit être créée automatiquement, il ne doit pas rester seulement dans auth.users.
+
+Inscription pour créer une nouvelle agence
+
+Si un nouvel utilisateur s’inscrit pour créer sa propre agence, cela doit créer une demande pending et non une agence active immédiate.
+
+Depuis la console du propriétaire, le super admin doit pouvoir approuver ou rejeter cette demande en 1 à 2 clics.
+
+Si la demande est approuvée, le système doit automatiquement : créer l’agence, créer les settings par défaut, rattacher l’utilisateur à cette agence, créer ou compléter son user_profile, et activer son accès sans manipulation manuelle dans le back-end.
+
+Si la demande est rejetée, l’utilisateur doit être informé proprement et ne pas accéder à une agence active.
+
+Corrections supplémentaires obligatoires
+
+Corriger le problème où la Configuration guidée recommandée se bloque sur l’étape immeuble.
+
+Identifier précisément pourquoi ce blocage arrive, puis le corriger côté front, validation, état local, requête backend ou schéma SQL selon la vraie cause.
+
+Vérifier que le parcours complet va jusqu’au bout sans blocage pour un nouvel utilisateur. Les assistants pas à pas doivent permettre d’avancer d’une étape à l’autre sans friction ni blocage injustifié.
+servicenow
++1
+
+Dans la sidebar, remplacer l’image ou le texte générique “Logo” par le vrai logo Samay Keur. Un logo de dashboard doit refléter la marque réelle du produit, être lisible à petite taille, et remplacer tout placeholder générique.
+oneminutebranding
++2
+
+Vérifier que ce logo fonctionne bien en desktop et mobile, ainsi qu’en thème clair et sombre.
+ailogocreator
++1
+
+Livrables attendus
+Je veux une proposition complète incluant :
+
+schéma SQL / nouvelles tables si nécessaire ;
+
+statuts et transitions ;
+
+logique front-end de redirection ;
+
+triggers, RPC ou fonctions backend nécessaires ;
+
+règles RLS ;
+
+audit logs ;
+
+gestion des cas limites ;
+
+correctif du blocage de la configuration guidée sur immeuble ;
+
+intégration du logo Samay Keur dans la sidebar ;
+
+liste exacte des fichiers modifiés ;
+
+résumé final de ce qui a été implémenté.

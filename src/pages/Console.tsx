@@ -38,6 +38,7 @@ import {
   type UserRow,
   type SubscriptionRow,
 } from '../components/console/ConsoleModals';
+import { AgencyRequestsPanel } from '../components/console/AgencyRequestsPanel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,7 +93,7 @@ interface OwnerLog {
   created_at: string;
 }
 
-type Tab = 'dashboard' | 'agences' | 'utilisateurs' | 'abonnements' | 'logs' | 'configuration' | 'support';
+type Tab = 'dashboard' | 'agences' | 'demandes' | 'utilisateurs' | 'abonnements' | 'logs' | 'configuration' | 'support';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -581,13 +582,14 @@ export function Console() {
   // ─── UI ─────────────────────────────────────────────────────────────────────
 
   const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: 'dashboard',     label: 'Vue globale',   icon: LayoutDashboard },
-    { id: 'agences',       label: 'Agences',        icon: Building2 },
-    { id: 'utilisateurs',  label: 'Utilisateurs',   icon: Users },
-    { id: 'abonnements',   label: 'Abonnements',    icon: CreditCard },
-    { id: 'logs',          label: 'Audit',          icon: ShieldCheck },
-    { id: 'configuration', label: 'Configuration',  icon: Activity },
-    { id: 'support',       label: 'Support',        icon: AlertTriangle },
+    { id: 'dashboard',     label: 'Vue globale',     icon: LayoutDashboard },
+    { id: 'agences',       label: 'Agences',          icon: Building2 },
+    { id: 'demandes',      label: 'Demandes',         icon: Clock },
+    { id: 'utilisateurs',  label: 'Utilisateurs',     icon: Users },
+    { id: 'abonnements',   label: 'Abonnements',      icon: CreditCard },
+    { id: 'logs',          label: 'Audit',            icon: ShieldCheck },
+    { id: 'configuration', label: 'Configuration',    icon: Activity },
+    { id: 'support',       label: 'Support',          icon: AlertTriangle },
   ];
 
   return (
@@ -1081,6 +1083,9 @@ export function Console() {
                 </div>
               </div>
             )}
+
+            {/* ── Tab: Demandes de création d'agence ── */}
+            {tab === 'demandes' && <AgencyRequestsPanel />}
 
             {/* ── Tab: Configuration ── */}
             {tab === 'configuration' && <ConfigurationPanel />}

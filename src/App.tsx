@@ -78,6 +78,19 @@ function AppContent() {
         }
     }, [loading, user, profile]);
 
+    // Re-détection du token d'invitation après authentification
+    // (cas : user clique "Se connecter" sur AcceptInvitation puis revient connecté)
+    React.useEffect(() => {
+        if (user && !invitationToken) {
+            try {
+                const stored = sessionStorage.getItem('invite_token');
+                if (stored) setInvitationToken(stored);
+            } catch {
+                /* noop */
+            }
+        }
+    }, [user, invitationToken]);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">

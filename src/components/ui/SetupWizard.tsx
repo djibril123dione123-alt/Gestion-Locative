@@ -48,7 +48,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
 
   const [formData, setFormData] = useState({
     bailleur: { nom: '', prenom: '', telephone: '', email: '' },
-    immeuble: { nom: '', adresse: '' },
+    immeuble: { nom: '', adresse: '', ville: '', quartier: '' },
     unite: { nom: '', type_logement: 'appartement' },
     locataire: { nom: '', prenom: '', telephone: '', email: '' },
     contrat: { loyer_mensuel: '', commission: '10', date_debut: new Date().toISOString().split('T')[0] },
@@ -288,8 +288,37 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
                   immeuble: { ...formData.immeuble, adresse: e.target.value }
                 })}
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="Mermoz, Dakar, Sénégal"
+                placeholder="Rue 12 x 13"
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Ville *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.immeuble.ville}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    immeuble: { ...formData.immeuble, ville: e.target.value }
+                  })}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="Dakar"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Quartier</label>
+                <input
+                  type="text"
+                  value={formData.immeuble.quartier}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    immeuble: { ...formData.immeuble, quartier: e.target.value }
+                  })}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="Mermoz"
+                />
+              </div>
             </div>
           </div>
         );
@@ -550,7 +579,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
       case 1:
         return formData.bailleur.nom && formData.bailleur.prenom && formData.bailleur.telephone;
       case 2:
-        return formData.immeuble.nom && formData.immeuble.adresse;
+        return formData.immeuble.nom && formData.immeuble.adresse && formData.immeuble.ville;
       case 3:
         return formData.unite.nom;
       case 4:

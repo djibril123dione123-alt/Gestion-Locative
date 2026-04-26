@@ -1,6 +1,23 @@
 # Samay Këur
 
 ## Récents ajouts (avril 2026)
+- **Refonte onboarding & invitations (26 avril 2026)** :
+  - Migration `supabase/migrations/20260425000007_onboarding_refonte.sql` :
+    - Ajoute `bailleur` à `invitations.role_check`.
+    - Drop la policy `agencies_insert_authenticated` (trop large) → seul le super_admin peut INSERT directement (les autres passent par la RPC d'approbation, SECURITY DEFINER).
+    - RPC `get_invitation_by_token(text)` (anon + auth, SECURITY DEFINER) : lecture sanitisée de l'invitation pour AcceptInvitation pré-auth.
+    - RPC `accept_invitation(text)` (auth, SECURITY DEFINER) : auto-rattachement `user_profiles` + close invitation + audit `owner_actions_log`.
+    - Table `agency_creation_requests` (+ RLS user/super_admin, unique partial index pending par user, trigger `updated_at`).
+    - RPC `approve_agency_request(uuid)` : crée agence + met à jour `agency_settings`, ajoute `subscriptions`, INSERT/UPDATE `user_profiles` (`admin` ou `bailleur` selon `is_bailleur_account`), audit log.
+    - RPC `reject_agency_request(uuid, text)` : motif obligatoire, audit log.
+  - Front :
+    - `src/pages/Welcome.tsx` réécrit : insère dans `agency_creation_requests`, gère vues `pending` (polling 8 s) / `rejected` (motif + nouvelle demande) / `approved` (race condition profile).
+    - `src/pages/AcceptInvitation.tsx` réécrit : utilise les RPC, conserve le token en `sessionStorage` pour reprise post-login, reload profil après acceptation.
+    - `src/App.tsx` : `useEffect` qui re-détecte `sessionStorage.invite_token` après authentification (cas du flux Auth puis retour sur AcceptInvitation).
+    - `src/components/console/AgencyRequestsPanel.tsx` (nouveau) : filtres pending/all/approved/rejected/cancelled, bouton Approuver, modale Rejet (motif requis), auto-refresh 30 s.
+    - `src/pages/Console.tsx` : nouvel onglet « Demandes » (icône Clock).
+    - `src/components/ui/SetupWizard.tsx` : champs `ville` (requis) et `quartier` (optionnel) ajoutés à l'étape immeuble (corrige le blocage).
+- **Cleanup policies INSERT agencies (24 avril 2026)** : migration `20260425000006_cleanup_agencies_insert_policies.sql` (remplacée partiellement par 20260425000007 qui retire la policy authentifiée trop large).
 - **Chantier 2** : `usePlanLimits` + `PlanGate` ; garde plan dans Immeubles/Unites.
 - **Chantier 3** : page Équipe (membres, invitations) + `AcceptInvitation` (token URL).
 - **Chantier 4** : `NotificationBell` (realtime Supabase) + page Notifications.
@@ -27,6 +44,7 @@
 ## Migrations en attente
 - `supabase/migrations/20260425000002_add_console_owner_features.sql` – Gestion Locative
 - `supabase/migrations/20260425000006_cleanup_agencies_insert_policies.sql` – nettoie ~7 policies INSERT historiques cumulées sur `agencies` et en crée deux propres (auth + super_admin).
+- `supabase/migrations/20260425000007_onboarding_refonte.sql` – refonte complète onboarding/invitations : RPC `get_invitation_by_token`, `accept_invitation`, table `agency_creation_requests`, RPC `approve_agency_request`/`reject_agency_request`, drop de la policy `agencies_insert_authenticated` (resserrement sécurité).
 
 ## Overview
 A real estate property management SaaS application (Gestion Locative) built with React, TypeScript, Vite and Tailwind CSS. It provides multi-tenant agency management with roles (admin, agent, comptable, bailleur), covering bailleurs, immeubles, unités, locataires, contrats, paiements, dépenses, and reporting.

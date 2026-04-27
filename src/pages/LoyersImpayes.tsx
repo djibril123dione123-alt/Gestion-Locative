@@ -20,7 +20,12 @@ interface LoyerImpaye {
   telephone_locataire: string;
 }
 
-export function LoyersImpayes() {
+interface LoyersImpayesProps {
+  embedded?: boolean;
+}
+
+export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
+  const { embedded = false } = _props;
   const { profile } = useAuth();
   const [impayes, setImpayes] = useState<LoyerImpaye[]>([]);
   const [filtered, setFiltered] = useState<LoyerImpaye[]>([]);
@@ -255,12 +260,14 @@ export function LoyersImpayes() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Loyers Impayés</h1>
-          <p className="text-sm sm:text-base text-slate-600">Suivi des loyers en retard</p>
+      {!embedded && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Loyers Impayés</h1>
+            <p className="text-sm sm:text-base text-slate-600">Suivi des loyers en retard</p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">

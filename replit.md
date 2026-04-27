@@ -113,15 +113,42 @@ Both are set via the Replit Secrets store (Tools → Secrets), not committed to 
 
 ## Key Pages
 - `Dashboard` — Stats overview with charts
+- `Encaissements` — Tabbed wrapper merging Paiements (received) + LoyersImpayes (overdue)
+- `Paiements` — Payment recording (now embedded inside Encaissements; KPI strip + status filters + redesigned modal)
+- `LoyersImpayes` — Overdue rents (embedded inside Encaissements)
+- `Depenses` — Expense tracking
+- `Commissions` — Agency commissions
+- `Analyses` — Tabbed wrapper merging financial reports + advanced filters
 - `Bailleurs` — Property owner management
 - `Immeubles` — Building management
 - `Unites` — Unit/apartment management
 - `Locataires` — Tenant management
 - `Contrats` — Lease contract management
-- `Paiements` — Payment recording
-- `Depenses` — Expense tracking
-- `Parametres` — Agency settings
+- `Calendrier`, `Interventions`, `Inventaires`, `Documents` — Operations
+- `ParametresHub` — Tabbed wrapper for Mon agence + Équipe + Abonnement
 - `Welcome` — Onboarding flow for new agencies
+
+### Information architecture (Apr 2026 refactor)
+The sidebar was reduced from **18 flat entries to 6 collapsible top-level groups** to match real estate manager workflows:
+- 🏠 **Tableau de bord** (direct link)
+- 💰 **Finances** ▾ Encaissements · Dépenses · Commissions · Analyses
+- 👥 **Locations** ▾ Locataires · Contrats
+- 🏢 **Patrimoine** ▾ Bailleurs · Immeubles · Produits
+- 🛠 **Activité** ▾ Calendrier · Maintenance · États des lieux · Documents
+- ⚙ **Paramètres** (single link → tabbed page Mon agence | Équipe | Abonnement)
+
+Three pages were merged using **internal tabs** to keep related workflows together:
+- `Encaissements` = Paiements + Loyers impayés (the two faces of cash flow)
+- `Analyses` = Rapports financiers + Filtres avancés (all analytics in one place)
+- `ParametresHub` = Mon agence + Équipe + Abonnement (config moved out of main menu)
+
+**Backward compatibility**: legacy page IDs (`paiements`, `loyers-impayes`, `tableau-de-bord-financier`, `filtres-avances`, `equipe`, `abonnement`) still work — they route to the new tabbed wrappers with the correct initial tab. This preserves all notification deep-links.
+
+### Design system
+- `src/components/ui/Button.tsx` — Variants: primary (orange→red gradient), secondary, ghost, danger, success. With loading/disabled states.
+- `src/components/ui/Tabs.tsx` — Generic tab bar with badges + active gradient underline.
+- `src/components/ui/Skeleton.tsx` — Skeleton loaders (`SkeletonCards`, `SkeletonTable`, etc).
+- `src/components/ui/EmptyState.tsx` — Empty state with optional CTA.
 
 ## Code Architecture
 

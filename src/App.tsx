@@ -16,16 +16,12 @@ const Immeubles = lazy(() => import('./pages/Immeubles').then(m => ({ default: m
 const Unites = lazy(() => import('./pages/Unites').then(m => ({ default: m.Unites })));
 const Locataires = lazy(() => import('./pages/Locataires').then(m => ({ default: m.Locataires })));
 const Contrats = lazy(() => import('./pages/Contrats').then(m => ({ default: m.Contrats })));
-const Paiements = lazy(() => import('./pages/Paiements').then(m => ({ default: m.Paiements })));
+const Encaissements = lazy(() => import('./pages/Encaissements').then(m => ({ default: m.Encaissements })));
 const Depenses = lazy(() => import('./pages/Depenses').then(m => ({ default: m.Depenses })));
 const Commissions = lazy(() => import('./pages/Commissions').then(m => ({ default: m.Commissions })));
-const LoyersImpayes = lazy(() => import('./pages/LoyersImpayes').then(m => ({ default: m.LoyersImpayes })));
-const FiltresAvances = lazy(() => import('./pages/FiltresAvances').then(m => ({ default: m.FiltresAvances })));
-const TableauDeBordFinancierGlobal = lazy(() => import('./pages/TableauDeBordFinancierGlobal').then(m => ({ default: m.TableauDeBordFinancierGlobal })));
-const Parametres = lazy(() => import('./pages/Parametres').then(m => ({ default: m.Parametres })));
+const Analyses = lazy(() => import('./pages/Analyses').then(m => ({ default: m.Analyses })));
+const ParametresHub = lazy(() => import('./pages/ParametresHub').then(m => ({ default: m.ParametresHub })));
 const Console = lazy(() => import('./pages/Console').then(m => ({ default: m.Console })));
-const Equipe = lazy(() => import('./pages/Equipe').then(m => ({ default: m.Equipe })));
-const Abonnement = lazy(() => import('./pages/Abonnement').then(m => ({ default: m.Abonnement })));
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })));
 const Inventaires = lazy(() => import('./pages/Inventaires').then(m => ({ default: m.Inventaires })));
 const Interventions = lazy(() => import('./pages/Interventions').then(m => ({ default: m.Interventions })));
@@ -168,24 +164,27 @@ function AppContent() {
                 return <Locataires />;
             case 'contrats':
                 return <Contrats />;
+            // Encaissements (fusion Paiements + Loyers impayés)
             case 'paiements':
-                return <Paiements />;
+                return <Encaissements initialTab="recus" />;
+            case 'loyers-impayes':
+                return <Encaissements initialTab="impayes" />;
             case 'depenses':
                 return <Depenses />;
             case 'commissions':
                 return <Commissions />;
-            case 'loyers-impayes':
-                return <LoyersImpayes />;
+            // Analyses (fusion Rapports + Filtres avancés)
             case 'tableau-de-bord-financier':
-                return <TableauDeBordFinancierGlobal />;
+                return <Analyses initialTab="rapports" />;
             case 'filtres-avances':
-                return <FiltresAvances />;
+                return <Analyses initialTab="filtres" />;
+            // Paramètres (fusion Mon agence + Équipe + Abonnement)
             case 'parametres':
-                return <Parametres />;
+                return <ParametresHub initialTab="agence" />;
             case 'equipe':
-                return <Equipe />;
+                return <ParametresHub initialTab="equipe" />;
             case 'abonnement':
-                return <Abonnement />;
+                return <ParametresHub initialTab="abonnement" />;
             case 'notifications':
                 return <Notifications />;
             case 'inventaires':

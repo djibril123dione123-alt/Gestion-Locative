@@ -1,0 +1,46 @@
+Mets-toi à la place d’un gestionnaire d’agence immobilière qui utilise l’application tous les jours pour gagner du temps, éviter les erreurs et piloter son activité simplement.
+Je ne veux pas juste des retouches visuelles isolées : je veux une amélioration réelle de l’expérience utilisateur, de la structure de navigation et de la cohérence produit.lollypop+1
+1. Page Paiements
+Sur la page Paiements, le bouton principal n’a pas été correctement amélioré.
+Corrige cela pour qu’il soit au même niveau de qualité que les meilleurs boutons de l’app, avec une vraie cohérence visuelle, un bon contraste, un état hover, focus, disabled, loading et une hiérarchie claire de l’action principale.legacy.worldline-solutions+1
+Je veux aussi que tu revoies toute la page Paiements comme un vrai écran métier :
+2. Sidebar à repenser
+Le sidebar contient trop de pages et donne une impression de dispersion.
+Il faut repenser l’architecture de navigation pour réduire la charge mentale, améliorer la découverte des fonctions importantes et éviter d’avoir trop d’entrées au même niveau.alfdesigngroup+1
+Je veux que tu analyses toutes les pages existantes et que tu proposes une navigation plus intelligente avec cette logique :
+garder visibles dans le sidebar seulement les sections les plus utilisées et les plus critiques ;lollypop
+fusionner certaines pages proches dans une même section avec onglets ou sous-navigation si c’est plus logique ;uxplanet+1
+déplacer les éléments secondaires, techniques ou rarement utilisés dans Paramètres si cela améliore l’expérience ;uxplanet
+regrouper les écrans par logique métier réelle, pas juste par ancienne page technique.alfdesigngroup+1
+3. Réflexion métier obligatoire
+Je veux que tu raisonnes comme un gestionnaire locatif / responsable d’agence immobilière.
+Pose-toi ces questions avant de modifier :
+Quelles sont les actions qu’il fait tous les jours ?
+Quelles informations doit-il retrouver en 1 clic ?
+Quelles pages peuvent être fusionnées sans perdre en clarté ?
+Quelles pages sont secondaires et devraient être dans Paramètres ou dans des onglets internes ?
+Comment réduire la sensation d’outil “chargé” tout en gardant la puissance fonctionnelle ?lollypop+1
+4. Ce que j’attends concrètement
+Je veux une amélioration forte de la structure produit, pas juste un changement cosmétique.
+Travail attendu :
+corriger le bouton et l’UX de la page Paiements ;
+auditer tout le sidebar ;
+proposer puis implémenter une nouvelle organisation plus simple ;
+fusionner les pages pertinentes avec onglets/sous-sections quand c’est utile ;cxl
+déplacer certaines fonctions dans Paramètres si cela a du sens ;uxplanet
+améliorer la clarté générale de l’application pour un usage quotidien intensif.lollypop
+5. Règles
+Ne garde pas une page séparée si elle pourrait être mieux intégrée ailleurs.
+Ne multiplie pas les onglets inutilement : utilise-les seulement quand plusieurs contenus appartiennent clairement à la même famille.eleken+1
+Garde une navigation stable, lisible et orientée tâches métier.lollypop
+Priorise ce qui est fréquent, important et rentable en temps utilisateur.lollypop
+L’objectif est une app plus simple, plus premium, plus logique et plus agréable à utiliser tous les jours.alfdesigngroup
+6. Livrable final
+À la fin, je veux obligatoirement :
+la nouvelle structure proposée du sidebar ;
+quelles pages ont été fusionnées ;
+quelles pages ont été déplacées dans Paramètres ;
+ce qui a été changé sur la page Paiements ;
+pourquoi ces choix sont meilleurs du point de vue d’un gestionnaire d’agence immobilière ;
+les fichiers modifiés ;
+les éventuels points restants à améliorer.

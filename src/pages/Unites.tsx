@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { Button } from '../components/ui/Button';
 import { ToastContainer } from '../components/ui/Toast';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -208,13 +209,9 @@ export function Unites() {
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Produit</h1>
           <p className="text-slate-600 text-sm lg:text-base">Gestion des appartements et locaux</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg text-sm sm:text-base hover:bg-blue-700 transition w-full sm:w-auto"
-        >
-          <Plus className="w-5 h-5" />
+        <Button onClick={() => setIsModalOpen(true)} icon={Plus} className="w-full sm:w-auto">
           Nouveau produit
-        </button>
+        </Button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">

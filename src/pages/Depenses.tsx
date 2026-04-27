@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
+import { Button } from '../components/ui/Button';
 import { ToastContainer } from '../components/ui/Toast';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -155,13 +156,9 @@ export function Depenses() {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Dépenses</h1>
           <p className="text-sm sm:text-base text-slate-600">Gestion des frais d'exploitation</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base whitespace-nowrap"
-        >
-          <Plus className="w-5 h-5" />
+        <Button onClick={() => setIsModalOpen(true)} icon={Plus}>
           Nouvelle dépense
-        </button>
+        </Button>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">

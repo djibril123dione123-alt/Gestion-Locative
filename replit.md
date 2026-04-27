@@ -1,6 +1,16 @@
 # Samay Këur
 
 ## Récents ajouts (avril 2026)
+- **Design system v1 + migrations idempotentes (27 avril 2026)** :
+  - **`src/components/ui/Button.tsx`** : composant partagé inspiré du bouton « Nouveau contrat » (gradient orange→rouge, shadow, hover scale). Variants `primary` (gradient brand), `secondary` (border slate), `ghost`, `danger`, `success`. Tailles `sm`/`md`/`lg`. Props `icon` (Lucide), `iconPosition`, `loading` (spinner), `fullWidth`. Focus-visible ring conforme a11y.
+  - **`src/components/ui/Skeleton.tsx`** : `Skeleton` (shimmer pulse), `SkeletonTable(rows, cols)`, `SkeletonCards(count)` pour remplacer les loaders pauvres.
+  - **Migration boutons primaires** : `Bailleurs` (déjà gradient orange, conservé), `Immeubles`, `Locataires`, `Unites`, `Depenses` (étaient `bg-blue-600`, désormais gradient orange uniforme). `EmptyState.tsx` migré sur `<Button>`.
+  - **Migrations Supabase idempotentes** :
+    - `20260426000001_create_agency_assets_bucket.sql` réécrit : `INSERT ... ON CONFLICT (id) DO UPDATE` pour le bucket ; les 4 policies storage (`Public read`, upload/update/delete admin) enrobées dans un `DO $$ ... EXCEPTION WHEN insufficient_privilege` qui émet juste un NOTICE si le rôle n'est pas propriétaire de `storage.objects` (cas Supabase prod où `supabase_storage_admin` est seul propriétaire — créer alors via Dashboard → Storage → Policies).
+    - `20260426000002_security_warnings_fixes.sql` réécrit : chaque `ALTER FUNCTION` enrobé `EXCEPTION WHEN undefined_function THEN NULL` (skip silencieux si la fonction n'existe pas) ; le bloc `storage.objects` (drop des anciennes policies + create `agency_assets_authenticated_read` tenant-scoped) enrobé `EXCEPTION WHEN insufficient_privilege` avec NOTICE et instruction Dashboard.
+    - **Effet** : les deux fichiers peuvent être ré-exécutés N fois sans erreur 23505 (duplicate bucket) ni 42501 (must be owner of relation objects). Les opérations storage critiques émettent un NOTICE explicite si non applicables, à reprendre via Dashboard.
+  - `npm run typecheck` → **0 erreur** ; `npm run build` → **OK** (25s).
+
 - **Pass audit P0 → P1 → P2 (26 avril 2026, suite)** :
   - **P0 — Sécurité invitations** : nouvelle migration `supabase/migrations/20260426000000_restrict_invitations_select.sql` qui drop la policy permissive `Invitations readable by token` (qui exposait toutes les colonnes au rôle `anon` dès qu'on connaissait un token) et la remplace par une policy restreinte aux super_admins et admins de l'agence émettrice. Le flux anonyme passe désormais exclusivement par la RPC `get_invitation_by_token` (SECURITY DEFINER, sortie sanitisée). **À appliquer sur Supabase prod via `supabase db push`.**
   - **P1 — Bugs UX** :

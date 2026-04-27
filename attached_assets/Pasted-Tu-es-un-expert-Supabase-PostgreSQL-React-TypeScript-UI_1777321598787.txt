@@ -1,0 +1,103 @@
+Tu es un expert Supabase / PostgreSQL / React / TypeScript / UI SaaS.
+Ta mission est de corriger les erreurs SQL ci-dessous, puis de continuer l’amélioration de l’application jusqu’à obtenir un résultat propre, cohérent, esthétique et prêt à déployer.
+
+1. Corrige d’abord les erreurs SQL bloquantes
+Corrige proprement ces erreurs sans casser l’existant :
+
+text
+Failed to run sql query: ERROR: 23505: duplicate key value violates unique constraint "buckets_pkey"
+DETAIL: Key (id)=(agency-assets) already exists.
+
+Failed to run sql query: ERROR: 42501: must be owner of relation objects
+Contraintes obligatoires :
+
+N’ajoute pas de solution fragile ou temporaire.
+
+Si le bucket agency-assets existe déjà, rends la migration idempotente : ne pas recréer ce qui existe déjà, vérifier avant création, et corriger la logique SQL en conséquence.
+
+Pour l’erreur must be owner of relation objects, identifie exactement quelle instruction essaie de modifier storage.objects ou une policy liée sans les droits requis, puis remplace-la par une approche compatible Supabase, propre et exécutable.
+
+Ne fais aucune supposition hasardeuse : lis les migrations existantes, détecte les conflits, corrige les doublons, et garde une seule logique canonique.
+
+Si une migration existante est mauvaise, corrige-la ou remplace-la par une nouvelle migration consolidée, mais sans casser une base déjà partiellement migrée.
+
+2. Continue la progression de l’application
+Après les corrections SQL, continue les améliorations de l’app de manière concrète et soignée.
+
+UI / Design system
+Homogénéise les boutons dans toute l’application.
+
+Utilise comme référence le style du bouton orange de “Nouveau contrat” dans la page Contrats, puis applique cette qualité visuelle aux autres boutons importants quand c’est cohérent.
+
+Si certains boutons bleus sont moins bons visuellement, harmonise-les pour qu’ils aient le même niveau de finition, de taille, d’alignement, de contraste, d’hover, de focus et de disabled state.
+
+Crée une vraie cohérence visuelle globale : boutons, badges, inputs, cartes, modales, tableaux, filtres, onglets, titres, espaces, ombres, rayons, transitions.
+
+Chargements / UX
+Améliore les états de chargement sur toutes les pages.
+
+Remplace les chargements pauvres ou brutaux par des loaders propres : skeletons, spinners cohérents, états vides élégants, feedback utilisateur clair.
+
+Chaque page doit avoir un comportement propre pour :
+
+loading initial,
+
+refetch,
+
+empty state,
+
+error state,
+
+success feedback.
+
+Vérifie qu’aucune page ne “saute”, ne clignote inutilement, ou n’affiche un écran vide sans explication.
+
+Esthétique générale
+N’ignore aucun petit détail visuel.
+
+Améliore les couleurs partout où cela peut réellement embellir l’app sans la surcharger.
+
+Garde une identité visuelle SaaS premium, propre, moderne, cohérente et rassurante.
+
+Travaille les contrastes, accents, hiérarchie visuelle, fonds, hover states, bordures, ombres, alignements, respirations, cohérence des icônes, et lisibilité générale.
+
+Ne fais pas un design fade : apporte du relief, de la personnalité et une meilleure finition globale.
+
+3. Méthode de travail obligatoire
+Travaille dans cet ordre strict :
+
+P0 : corriger les erreurs SQL bloquantes et tout problème de migration/base de données.
+
+P1 : corriger les problèmes UX visibles et les incohérences d’interface prioritaires.
+
+P2 : améliorer l’esthétique générale, la cohérence du design system, les détails de chargement, et la finition visuelle.
+
+4. Règles strictes
+Ne te contente pas d’un patch minimal.
+
+Ne dis pas “c’est fait” sans vérifier réellement les fichiers concernés.
+
+Ne laisse pas de dette évidente derrière toi si elle est simple à corriger.
+
+Si tu trouves des duplications, migrations contradictoires, composants incohérents, styles dispersés ou logique répétée, nettoie-les intelligemment.
+
+Garde le code lisible, maintenable et homogène.
+
+Si tu modifies un style, propage la cohérence aux endroits voisins au lieu de corriger un seul écran isolé.
+
+5. Livrables attendus
+À la fin, fournis obligatoirement :
+
+la liste précise des fichiers modifiés ;
+
+ce qui a été corrigé côté SQL ;
+
+ce qui a été corrigé côté sécurité / policies / bucket ;
+
+ce qui a été amélioré côté UI/UX ;
+
+ce qui a été homogénéisé côté design ;
+
+les éventuels points restants à surveiller ;
+
+un état final honnête : est-ce réellement prêt à déployer ou non.

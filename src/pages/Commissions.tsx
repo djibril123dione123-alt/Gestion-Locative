@@ -225,32 +225,70 @@ export function Commissions() {
 
       <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200">
         <h3 className="text-base lg:text-lg font-semibold text-slate-900 mb-4">Détail des commissions</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b-2 border-slate-200">
-                <th className="text-left py-3 px-4 text-slate-700">Date</th>
-                <th className="text-left py-3 px-4 text-slate-700">Locataire</th>
-                <th className="text-left py-3 px-4 text-slate-700">Unité</th>
-                <th className="text-left py-3 px-4 text-slate-700">Immeuble</th>
-                <th className="text-right py-3 px-4 text-slate-700">Montant loyer</th>
-                <th className="text-right py-3 px-4 text-slate-700">Commission</th>
-              </tr>
-            </thead>
-            <tbody>
+
+        {commissions.length === 0 ? (
+          <p className="text-center text-slate-500 py-8">Aucune commission pour cette période.</p>
+        ) : (
+          <>
+            {/* Mobile: card view */}
+            <div className="sm:hidden space-y-3">
               {commissions.map((c) => (
-                <tr key={c.id} className="border-b border-slate-100">
-                  <td className="py-3 px-4 text-slate-700">{c.date_paiement}</td>
-                  <td className="py-3 px-4 text-slate-700">{c.locataire}</td>
-                  <td className="py-3 px-4 text-slate-700">{c.unite}</td>
-                  <td className="py-3 px-4 text-slate-700">{c.immeuble}</td>
-                  <td className="py-3 px-4 text-right text-slate-700 font-medium">{formatCurrency(c.montant_total)}</td>
-                  <td className="py-3 px-4 text-right text-blue-600 font-semibold">{formatCurrency(c.part_agence)}</td>
-                </tr>
+                <div key={c.id} className="rounded-xl border border-slate-100 overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                    <span className="text-xs font-semibold text-slate-700">{c.locataire}</span>
+                    <span className="text-xs text-slate-500">{c.date_paiement}</span>
+                  </div>
+                  <div className="divide-y divide-slate-50">
+                    <div className="flex justify-between px-4 py-2 text-sm">
+                      <span className="text-slate-500">Unité</span>
+                      <span className="text-slate-800 font-medium">{c.unite}</span>
+                    </div>
+                    <div className="flex justify-between px-4 py-2 text-sm">
+                      <span className="text-slate-500">Immeuble</span>
+                      <span className="text-slate-800">{c.immeuble}</span>
+                    </div>
+                    <div className="flex justify-between px-4 py-2 text-sm">
+                      <span className="text-slate-500">Loyer</span>
+                      <span className="text-slate-800 font-medium">{formatCurrency(c.montant_total)}</span>
+                    </div>
+                    <div className="flex justify-between px-4 py-2.5 text-sm bg-blue-50">
+                      <span className="text-blue-700 font-semibold">Commission</span>
+                      <span className="text-blue-700 font-bold">{formatCurrency(c.part_agence)}</span>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            {/* Desktop: table view */}
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b-2 border-slate-200">
+                    <th className="text-left py-3 px-4 text-slate-700">Date</th>
+                    <th className="text-left py-3 px-4 text-slate-700">Locataire</th>
+                    <th className="text-left py-3 px-4 text-slate-700">Unité</th>
+                    <th className="text-left py-3 px-4 text-slate-700">Immeuble</th>
+                    <th className="text-right py-3 px-4 text-slate-700">Montant loyer</th>
+                    <th className="text-right py-3 px-4 text-slate-700">Commission</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {commissions.map((c) => (
+                    <tr key={c.id} className="border-b border-slate-100">
+                      <td className="py-3 px-4 text-slate-700">{c.date_paiement}</td>
+                      <td className="py-3 px-4 text-slate-700">{c.locataire}</td>
+                      <td className="py-3 px-4 text-slate-700">{c.unite}</td>
+                      <td className="py-3 px-4 text-slate-700">{c.immeuble}</td>
+                      <td className="py-3 px-4 text-right text-slate-700 font-medium">{formatCurrency(c.montant_total)}</td>
+                      <td className="py-3 px-4 text-right text-blue-600 font-semibold">{formatCurrency(c.part_agence)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

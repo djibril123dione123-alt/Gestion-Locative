@@ -56,6 +56,7 @@ export function Interventions() {
   const [filterUrgence, setFilterUrgence] = useState<'all' | Urgence>('all');
   const [filterCategorie, setFilterCategorie] = useState<'all' | Categorie>('all');
   const [filterImmeuble, setFilterImmeuble] = useState<string>('all');
+  const [activeColumn, setActiveColumn] = useState<Statut>('a_faire');
 
   const [form, setForm] = useState({
     titre: '',
@@ -215,11 +216,34 @@ export function Interventions() {
           <EmptyState icon={Wrench} title="Aucune intervention" description="Créez votre première fiche de maintenance." />
         </div>
       ) : (
+        <>
+          {/* Mobile column tabs */}
+          <div className="flex lg:hidden gap-1 bg-slate-100 p-1 rounded-xl mb-4">
+            {colonnes.map((col) => {
+              const count = filtered.filter((i) => i.statut === col.id).length;
+              return (
+                <button
+                  key={col.id}
+                  type="button"
+                  onClick={() => setActiveColumn(col.id)}
+                  className={`flex-1 text-xs font-semibold py-2 px-1 rounded-lg transition-all ${
+                    activeColumn === col.id ? 'bg-white shadow text-slate-900' : 'text-slate-500'
+                  }`}
+                >
+                  {col.label}
+                  <span className={`ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] ${
+                    activeColumn === col.id ? 'bg-orange-100 text-orange-700' : 'bg-slate-200 text-slate-500'
+                  }`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {colonnes.map((col) => {
             const list = filtered.filter((i) => i.statut === col.id);
             return (
-              <div key={col.id} className={`${col.bg} rounded-xl border border-slate-200 p-4`} data-testid={`column-${col.id}`}>
+              <div key={col.id} className={`${col.bg} rounded-xl border border-slate-200 p-4 ${activeColumn === col.id ? 'block' : 'hidden'} lg:block`} data-testid={`column-${col.id}`}>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-semibold text-slate-800">{col.label}</h3>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600">{list.length}</span>
@@ -272,6 +296,7 @@ export function Interventions() {
             );
           })}
         </div>
+        </>
       )}
 
       <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Nouvelle intervention">

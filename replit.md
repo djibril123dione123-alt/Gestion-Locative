@@ -149,6 +149,16 @@ Three pages were merged using **internal tabs** to keep related workflows togeth
 - `src/components/ui/Tabs.tsx` — Generic tab bar with badges + active gradient underline.
 - `src/components/ui/Skeleton.tsx` — Skeleton loaders (`SkeletonCards`, `SkeletonTable`, etc).
 - `src/components/ui/EmptyState.tsx` — Empty state with optional CTA.
+- `src/components/ui/Modal.tsx` — **Responsive**: bottom-sheet on mobile (slides up, drag handle, body-scroll lock), centered dialog on desktop. Uses `animate-slideUp` / `animate-scaleIn`.
+- `src/components/ui/Table.tsx` — **Responsive**: mobile card view (`< sm`, hidden columns collapsed) + full table (`sm+`). All pages using `<Table>` get mobile cards automatically.
+- `src/components/layout/BottomNav.tsx` — **NEW** fixed bottom navigation bar for mobile (4 quick items + "Plus" menu button). Hidden on `lg+`.
+
+### Mobile-first responsive redesign (May 2026)
+- `src/index.css` — Added `scrollbar-hide` utility, `animate-slideUp` keyframe, `touch-action: manipulation` on interactive elements, `font-size: 16px` on inputs (prevents iOS auto-zoom).
+- `src/App.tsx` — Integrated `BottomNav`; shows current page name in mobile top bar (`PAGE_LABELS` map); main content has `pb-16 lg:pb-0` for BottomNav clearance.
+- `src/pages/Interventions.tsx` — Mobile kanban: column tab pill selector (shows active column count); columns hidden on mobile unless active; all 3 shown on `lg+`.
+- `src/pages/Calendrier.tsx` — Smaller cells on mobile (`min-h-14 sm:min-h-20`); colored dots only on `< sm` (no text); text labels on `sm+`.
+- `src/pages/Commissions.tsx` — Detail rows: mobile card view (`sm:hidden`) + desktop table (`hidden sm:block`); empty state added.
 
 ## Code Architecture
 

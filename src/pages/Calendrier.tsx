@@ -207,9 +207,9 @@ export function Calendrier() {
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
           {cells.map((cell, idx) => {
-            if (!cell) return <div key={idx} className="min-h-20" />;
+            if (!cell) return <div key={idx} className="min-h-14 sm:min-h-20" />;
             const dateStr = cell.toISOString().split('T')[0];
             const events = eventsByDate.get(dateStr) ?? [];
             const isToday = dateStr === todayStr;
@@ -220,12 +220,28 @@ export function Calendrier() {
                 type="button"
                 onClick={() => setSelectedDate(dateStr)}
                 data-testid={`day-${dateStr}`}
-                className={`min-h-20 p-1.5 rounded-lg border text-left transition ${isSelected ? 'border-orange-400 bg-orange-50' : 'border-slate-200 hover:bg-slate-50'}`}
+                className={`min-h-14 sm:min-h-20 p-1 sm:p-1.5 rounded-lg border text-left transition ${isSelected ? 'border-orange-400 bg-orange-50' : 'border-slate-200 hover:bg-slate-50'}`}
               >
-                <div className={`text-xs font-semibold mb-1 ${isToday ? 'text-orange-600' : 'text-slate-700'}`}>
+                <div className={`text-[11px] sm:text-xs font-semibold mb-0.5 sm:mb-1 ${isToday ? 'text-orange-600' : 'text-slate-700'}`}>
                   {cell.getDate()}
                 </div>
-                <div className="space-y-0.5">
+                {/* Mobile: coloured dots only */}
+                {events.length > 0 && (
+                  <div className="flex sm:hidden flex-wrap gap-0.5">
+                    {events.slice(0, 4).map((e) => (
+                      <span
+                        key={e.id}
+                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: typeColors[e.type].dot }}
+                      />
+                    ))}
+                    {events.length > 4 && (
+                      <span className="text-[9px] text-slate-400 leading-none">+{events.length - 4}</span>
+                    )}
+                  </div>
+                )}
+                {/* Desktop: text labels */}
+                <div className="hidden sm:block space-y-0.5">
                   {events.slice(0, 3).map((e) => (
                     <div key={e.id} className={`text-[10px] px-1 py-0.5 rounded truncate ${typeColors[e.type].bg} ${typeColors[e.type].text}`}>
                       {e.titre}

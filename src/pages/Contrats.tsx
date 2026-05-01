@@ -7,6 +7,7 @@ import { Plus, Search, Download, AlertCircle, TrendingUp } from 'lucide-react';
 import { generateContratPDF } from '../lib/pdf';
 import { formatCurrency } from '../lib/formatters';
 import { useToast } from '../hooks/useToast';
+import { useTracking } from '../hooks/useTracking';
 
 // =========================
 // 🎨 PALETTE CONFORT IMMO ARCHI
@@ -118,6 +119,7 @@ export function Contrats() {
   const [submitting, setSubmitting] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const toast = useToast();
+  const { track } = useTracking();
 
   // Garde anti-race : si l'utilisateur change d'agence ou navigue
   // rapidement, une réponse tardive ne doit pas écraser les données
@@ -338,6 +340,12 @@ export function Contrats() {
           .eq('id', formData.unite_id);
 
         if (updateError) throw updateError;
+
+        track({
+          action: 'contrat_create',
+          entity_type: 'contrats',
+          metadata: { loyer: data.loyer_mensuel, statut: data.statut, destination: data.destination },
+        });
 
         closeModal();
         await loadData();

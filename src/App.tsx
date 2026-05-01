@@ -7,6 +7,7 @@ import { Sidebar } from './components/layout/Sidebar';
 import { BottomNav } from './components/layout/BottomNav';
 import { TrialBanner } from './components/ui/TrialBanner';
 import { MaintenanceBanner } from './components/ui/MaintenanceBanner';
+import { NetworkBanner } from './components/ui/NetworkBanner';
 import { supabase } from './lib/supabase';
 import Welcome from './pages/Welcome';
 
@@ -249,6 +250,7 @@ function AppContent() {
                     />
                 </div>
 
+                <NetworkBanner />
                 <TrialBanner onNavigate={setCurrentPage} />
 
                 {/* Scrollable content — extra bottom padding on mobile for BottomNav */}

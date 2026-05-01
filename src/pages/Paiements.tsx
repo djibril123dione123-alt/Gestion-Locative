@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { generatePaiementFacturePDF } from '../lib/pdf';
 import { useToast } from '../hooks/useToast';
+import { useTracking } from '../hooks/useTracking';
 import { formatCurrency } from '../lib/formatters';
 
 interface PaiementRow {
@@ -69,6 +70,7 @@ const MODE_LABELS: Record<string, string> = {
 export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const { profile } = useAuth();
   const { success, error: showError, toasts, removeToast } = useToast();
+  const { track } = useTracking();
 
   const [paiements, setPaiements] = useState<PaiementRow[]>([]);
   const [contrats, setContrats] = useState<ContratRow[]>([]);
@@ -245,6 +247,14 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       }
 
       if (error) throw error;
+
+      if (!editingPaiement) {
+        track({
+          action: 'paiement_create',
+          entity_type: 'paiements',
+          metadata: { montant: data.montant_total, mois: data.mois_concerne, mode: data.mode_paiement },
+        });
+      }
 
       success(editingPaiement ? 'Paiement modifié avec succès' : 'Paiement enregistré avec succès');
       closeModal();

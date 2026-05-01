@@ -1,5 +1,40 @@
 # Samay Këur
 
+## Récents ajouts (mai 2026) — 7 features
+
+- **1. Dashboard valeurs financières (Dashboard.tsx)** :
+  - Ajout de `nbPaiementsMois` / `nbImpayesMois` dans `DashboardStats`.
+  - Bande de 4 cartes KPI : encaissés du mois, impayés, contrats actifs, taux d'occupation.
+  - Bannière rouge cliquable quand `nbImpayesMois > 0` → navigation vers `loyers-impayes`.
+
+- **2. Paiement Wave / Orange Money simulé (`src/components/ui/PaymentModal.tsx`)** :
+  - Nouveau composant modal 4 étapes : choisir le moyen → numéro de téléphone → traitement (2 s) → succès.
+  - Simulation pure (pas d'API externe) : upsert `subscriptions` + update `agencies.status = 'active'`.
+  - Intégré dans `Abonnement.tsx` : bouton "Payer l'abonnement" avec gradient orange, place le modal au-dessus du bouton d'upgrade.
+
+- **3. Gestion des erreurs réseau (`src/hooks/useRetry.ts` + `src/components/ui/NetworkBanner.tsx`)** :
+  - `useRetry(fn, { maxAttempts, baseDelay })` : exponential backoff configurable, retourne `{ data, error, loading, retry }`.
+  - `NetworkBanner` : détecte `window.onfline/offline`, s'affiche en orange-rouge "Mode hors ligne" / vert "Connexion rétablie". Monté dans `App.tsx` avant la `TrialBanner`.
+
+- **4. Pagination Locataires (`src/pages/Locataires.tsx`)** :
+  - `ITEMS_PER_PAGE = 10` ; état `currentPage` remis à 1 à chaque changement de recherche.
+  - UI pagination complète : ‹ Préc. · N pages · Suiv. › + sauts début/fin, bouton page active en orange.
+  - Compteur "X locataires enregistrés" + compteur de résultats lors d'une recherche.
+
+- **5. Numéros de quittance uniques (`src/lib/pdf.ts`)** :
+  - Nouvelle fonction `generateQuittanceRef(p)` : format `QIT-AAAAMM-{4 chars ID}{4 chars random}`.
+  - Distincte de `generateFactureRef` (`FAC-…`), utilisée dans `generatePaiementFacturePDF`.
+  - Validation préalable des champs critiques (locataire, unité, montant, mois) avec `console.warn` si manquants mais génération continue.
+
+- **6. Audit RLS** :
+  - Toutes les tables métier ont `agency_id` FK + policies RLS tenant-scoped (confirmé dans les migrations en attente).
+  - P0 déjà corrigé (avril 2026) : policy `invitations` anon restreinte à la RPC SECURITY DEFINER.
+  - Recommandation en attente : appliquer `supabase/migrations/20260426000002_security_warnings_fixes.sql` via Dashboard pour corriger les warnings Advisor (`search_path`, policies `WITH CHECK (true)` sur `agency_settings`/`audit_logs`).
+
+- **7. Système de tracking / usage (`src/hooks/useTracking.ts`)** :
+  - Hook `useTracking()` → `{ track }` : insère dans `audit_logs { user_id, agency_id, action, entity_type, entity_id, metadata }`. Fail silencieux (pas de throw).
+  - Intégré dans `Paiements.tsx` (action `paiement_create`) et `Contrats.tsx` (action `contrat_create`) après succès de l'opération.
+
 ## Récents ajouts (avril 2026)
 - **Design system v1 + migrations idempotentes (27 avril 2026)** :
   - **`src/components/ui/Button.tsx`** : composant partagé inspiré du bouton « Nouveau contrat » (gradient orange→rouge, shadow, hover scale). Variants `primary` (gradient brand), `secondary` (border slate), `ghost`, `danger`, `success`. Tailles `sm`/`md`/`lg`. Props `icon` (Lucide), `iconPosition`, `loading` (spinner), `fullWidth`. Focus-visible ring conforme a11y.

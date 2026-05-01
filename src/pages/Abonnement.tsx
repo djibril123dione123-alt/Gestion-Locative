@@ -3,8 +3,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
-import { Modal } from '../components/ui/Modal';
-import { CreditCard, CheckCircle2, Clock, AlertTriangle, TrendingUp } from 'lucide-react';
+import { PaymentModal } from '../components/ui/PaymentModal';
+import { CreditCard, CheckCircle2, Clock, TrendingUp, Zap } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
 
 interface Plan {
@@ -55,6 +55,7 @@ export function Abonnement() {
   const [usage, setUsage] = useState<Usage>({ users: 0, immeubles: 0, unites: 0 });
   const [loading, setLoading] = useState(true);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile?.agency_id) return;
@@ -189,18 +190,29 @@ export function Abonnement() {
                 Période en cours : {new Date(subscription.current_period_end).toLocaleDateString('fr-FR')}
               </p>
             )}
-            {currentPlan?.id !== 'pro' && currentPlan?.id !== 'enterprise' && (
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 type="button"
-                onClick={() => setUpgradeOpen(true)}
-                data-testid="button-upgrade"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold transition hover:opacity-90"
-                style={{ backgroundColor: '#F58220' }}
+                onClick={() => setPaymentOpen(true)}
+                data-testid="button-pay"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold transition hover:opacity-90 shadow-md"
+                style={{ background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)' }}
               >
-                <TrendingUp className="w-4 h-4" />
-                Passer au plan Pro
+                <Zap className="w-4 h-4" />
+                Payer l'abonnement
               </button>
-            )}
+              {currentPlan?.id !== 'pro' && currentPlan?.id !== 'enterprise' && (
+                <button
+                  type="button"
+                  onClick={() => setUpgradeOpen(true)}
+                  data-testid="button-upgrade"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-medium transition hover:bg-slate-50"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  Passer au plan Pro
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -259,45 +271,46 @@ export function Abonnement() {
         )}
       </div>
 
-      {/* Upgrade modal */}
-      <Modal isOpen={upgradeOpen} onClose={() => setUpgradeOpen(false)} title="Passer au plan Pro">
-        <div className="space-y-4">
-          <div className="flex items-start gap-3 p-4 rounded-lg bg-orange-50 border border-orange-200">
-            <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-orange-900">
-              Le paiement en ligne n'est pas encore disponible. Contactez-nous pour activer votre plan Pro.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <a
-              href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je souhaite passer au plan Pro Samay Këur')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="link-whatsapp"
-              className="block w-full text-center px-4 py-3 rounded-lg text-white font-semibold transition hover:opacity-90"
-              style={{ backgroundColor: '#25D366' }}
-            >
-              Contacter sur WhatsApp
-            </a>
-            <a
-              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Passage au plan Pro')}`}
-              data-testid="link-email"
-              className="block w-full text-center px-4 py-3 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-slate-50"
-            >
-              Envoyer un email
-            </a>
-          </div>
-          <div className="text-right">
-            <button
-              type="button"
-              onClick={() => setUpgradeOpen(false)}
-              className="text-sm text-slate-600 hover:text-slate-900"
-            >
-              Fermer
-            </button>
+      {/* Upgrade modal — contact commercial */}
+      {upgradeOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={() => setUpgradeOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-slate-900">Passer au plan Pro</h3>
+            <div className="space-y-2">
+              <a
+                href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je souhaite passer au plan Pro Samay Këur')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                data-testid="link-whatsapp"
+                className="block w-full text-center px-4 py-3 rounded-xl text-white font-semibold transition hover:opacity-90"
+                style={{ backgroundColor: '#25D366' }}
+              >
+                Contacter sur WhatsApp
+              </a>
+              <a
+                href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Passage au plan Pro')}`}
+                data-testid="link-email"
+                className="block w-full text-center px-4 py-3 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-50"
+              >
+                Envoyer un email
+              </a>
+            </div>
+            <button type="button" onClick={() => setUpgradeOpen(false)} className="w-full text-sm text-slate-500 hover:text-slate-800 py-1">Fermer</button>
           </div>
         </div>
-      </Modal>
+      )}
+
+      {/* Payment modal — Wave / Orange Money */}
+      <PaymentModal
+        isOpen={paymentOpen}
+        onClose={() => setPaymentOpen(false)}
+        planName={currentPlan?.name ?? 'Pro'}
+        priceXof={currentPlan?.price_xof ?? 15000}
+        onSuccess={() => {
+          toast.success('Abonnement activé pour 30 jours !');
+          load();
+        }}
+      />
 
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>

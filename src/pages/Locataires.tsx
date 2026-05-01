@@ -19,6 +19,8 @@ interface Locataire {
   piece_identite: string | null;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export function Locataires() {
   const { user, profile } = useAuth();
   const [locataires, setLocataires] = useState<Locataire[]>([]);
@@ -29,6 +31,7 @@ export function Locataires() {
   const [deleteTarget, setDeleteTarget] = useState<Locataire | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const toast = useToast();
   const [formData, setFormData] = useState({
     nom: '',
@@ -48,9 +51,10 @@ export function Locataires() {
 
   useEffect(() => {
     const f = locataires.filter(l =>
-      `${l.nom} ${l.prenom} ${l.telephone}`.toLowerCase().includes(searchTerm.toLowerCase())
+      `${l.nom} ${l.prenom} ${l.telephone} ${l.email ?? ''}`.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFiltered(f);
+    setCurrentPage(1);
   }, [searchTerm, locataires]);
 
   const loadData = async () => {
@@ -129,6 +133,9 @@ export function Locataires() {
     setFormData({ nom: '', prenom: '', telephone: '', email: '', adresse_personnelle: '', piece_identite: '', notes: '' });
   };
 
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+
   const columns = [
     { key: 'nom', label: 'Nom' },
     { key: 'prenom', label: 'Prénom' },
@@ -143,7 +150,7 @@ export function Locataires() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
         <div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Locataires</h1>
-          <p className="text-slate-600">Gestion des locataires</p>
+          <p className="text-slate-600">Gestion des locataires · {locataires.length} enregistré{locataires.length > 1 ? 's' : ''}</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)} icon={Plus}>
           Nouveau locataire
@@ -156,16 +163,66 @@ export function Locataires() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
               type="text"
-              placeholder="Rechercher..."
+              placeholder="Rechercher par nom, téléphone, email…"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+          {searchTerm && (
+            <p className="mt-2 text-sm text-slate-500">{filtered.length} résultat{filtered.length > 1 ? 's' : ''}</p>
+          )}
         </div>
         <div className="overflow-x-auto">
-          <Table columns={columns} data={filtered} onEdit={handleEdit} onDelete={handleDelete} />
+          <Table columns={columns} data={paginated} onEdit={handleEdit} onDelete={handleDelete} />
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-100">
+            <p className="text-sm text-slate-500">
+              Page {currentPage} / {totalPages} · {filtered.length} locataire{filtered.length > 1 ? 's' : ''}
+            </p>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="px-2 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >«</button>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >‹ Préc.</button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const start = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                const page = start + i;
+                if (page > totalPages) return null;
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-9 h-9 text-sm rounded-lg border transition font-medium ${
+                      page === currentPage
+                        ? 'bg-orange-500 border-orange-500 text-white'
+                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >{page}</button>
+                );
+              })}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >Suiv. ›</button>
+              <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="px-2 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >»</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editing ? 'Modifier' : 'Nouveau locataire'}>

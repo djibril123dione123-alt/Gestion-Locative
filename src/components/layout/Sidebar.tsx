@@ -86,7 +86,7 @@ const NAV: Array<MenuLeaf | MenuGroup> = [
     items: [
       { id: 'paiements', label: 'Encaissements', icon: CreditCard, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
       { id: 'depenses', label: 'Dépenses', icon: TrendingDown, roles: ['admin'] },
-      { id: 'commissions', label: 'Commissions', icon: Calculator, roles: ['admin'] },
+      //{ id: 'commissions', label: 'Commissions', icon: Calculator, roles: ['admin'] },
       { id: 'tableau-de-bord-financier', label: 'Analyses', icon: BarChart3, roles: ['admin'] },
     ],
   },

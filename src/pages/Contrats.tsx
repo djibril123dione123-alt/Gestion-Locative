@@ -3,11 +3,13 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
-import { Plus, Search, Download, AlertCircle, TrendingUp } from 'lucide-react';
+import { Plus, Search, Download, AlertCircle, TrendingUp, Sheet } from 'lucide-react';
 import { generateContratPDF } from '../lib/pdf';
 import { formatCurrency } from '../lib/formatters';
 import { useToast } from '../hooks/useToast';
 import { useTracking } from '../hooks/useTracking';
+import { useExport } from '../hooks/useExport';
+import { useBackup } from '../hooks/useBackup';
 
 // =========================
 // 🎨 PALETTE CONFORT IMMO ARCHI
@@ -120,6 +122,8 @@ export function Contrats() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const toast = useToast();
   const { track } = useTracking();
+  const { exportContrats, exporting: exportingXlsx } = useExport();
+  const { save: saveBackup } = useBackup();
 
   // Garde anti-race : si l'utilisateur change d'agence ou navigue
   // rapidement, une réponse tardive ne doit pas écraser les données
@@ -178,9 +182,11 @@ export function Contrats() {
       if (locatairesRes.error) throw locatairesRes.error;
       if (unitesRes.error) throw unitesRes.error;
 
-      setContrats((contratsRes.data || []) as unknown as Contrat[]);
+      const contratsData = (contratsRes.data || []) as unknown as Contrat[];
+      setContrats(contratsData);
       setLocataires((locatairesRes.data || []) as unknown as Locataire[]);
       setUnites((unitesRes.data || []) as unknown as Unite[]);
+      saveBackup('contrats', contratsData).catch(() => {});
     } catch (err: any) {
       if (myRequestId !== requestIdRef.current) return;
       console.error('Erreur chargement:', err);
@@ -631,14 +637,35 @@ export function Contrats() {
           </h1>
           <p className="text-slate-600">Gestion des contrats de location</p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base text-white rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-105"
-          style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.primary}, ${BRAND_COLORS.red})` }}
-        >
-          <Plus className="w-5 h-5" />
-          Nouveau contrat
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => exportContrats(contrats.map((c) => ({
+              locataire_nom: `${(c.locataires as any)?.prenom ?? ''} ${(c.locataires as any)?.nom ?? ''}`.trim(),
+              unite_nom: (c.unites as any)?.nom ?? '',
+              immeuble_nom: (c.unites as any)?.immeubles?.nom ?? '',
+              date_debut: c.date_debut,
+              date_fin: c.date_fin,
+              loyer_mensuel: c.loyer_mensuel,
+              statut: c.statut,
+              destination: c.destination,
+            })))}
+            disabled={exportingXlsx || contrats.length === 0}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-sm font-medium transition disabled:opacity-50"
+            title="Exporter en Excel"
+          >
+            <Sheet className="w-4 h-4" />
+            Exporter Excel
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base text-white rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-105"
+            style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.primary}, ${BRAND_COLORS.red})` }}
+          >
+            <Plus className="w-5 h-5" />
+            Nouveau contrat
+          </button>
+        </div>
       </div>
 
       {/* Statistiques */}

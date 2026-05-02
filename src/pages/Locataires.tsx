@@ -5,9 +5,11 @@ import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Button } from '../components/ui/Button';
 import { ToastContainer } from '../components/ui/Toast';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Sheet } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
+import { useExport } from '../hooks/useExport';
+import { useBackup } from '../hooks/useBackup';
 
 interface Locataire {
   id: string;
@@ -23,6 +25,8 @@ const ITEMS_PER_PAGE = 10;
 
 export function Locataires() {
   const { user, profile } = useAuth();
+  const { exportLocataires, exporting: exportingXlsx } = useExport();
+  const { save: saveBackup } = useBackup();
   const [locataires, setLocataires] = useState<Locataire[]>([]);
   const [filtered, setFiltered] = useState<Locataire[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,6 +74,7 @@ export function Locataires() {
       if (error) throw error;
       setLocataires(data || []);
       setFiltered(data || []);
+      saveBackup('locataires', data || []).catch(() => {});
     } catch (error) {
       console.error('Error:', error);
     } finally {
@@ -152,9 +157,27 @@ export function Locataires() {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Locataires</h1>
           <p className="text-slate-600">Gestion des locataires · {locataires.length} enregistré{locataires.length > 1 ? 's' : ''}</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} icon={Plus}>
-          Nouveau locataire
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => exportLocataires(locataires.map((l) => ({
+              nom: l.nom,
+              prenom: l.prenom,
+              telephone: l.telephone,
+              email: l.email,
+              adresse_personnelle: l.adresse_personnelle,
+            })))}
+            disabled={exportingXlsx || loading || locataires.length === 0}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-sm font-medium transition disabled:opacity-50"
+            title="Exporter en Excel"
+          >
+            <Sheet className="w-4 h-4" />
+            Exporter Excel
+          </button>
+          <Button onClick={() => setIsModalOpen(true)} icon={Plus}>
+            Nouveau locataire
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">

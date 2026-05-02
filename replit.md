@@ -1,5 +1,35 @@
 # Samay Këur
 
+## Récents ajouts (mai 2026) — 3 piliers de résilience (offline-first)
+
+### Architecture ajoutée
+
+**Services IndexedDB (src/services/)**
+- `db.ts` — wrapper IndexedDB minimal sans lib externe (`openDB`, `dbPut`, `dbGet`, `dbGetAll`, `dbDelete`, `dbClear`, `dbGetByIndex`). 2 stores : `snapshots` (backups) + `pending_mutations` (queue offline).
+- `localBackup.ts` — `saveSnapshot(key, data)` / `loadSnapshot(key)` / `downloadBackup()` (JSON) / `restoreFromFile(file)` / `clearAllSnapshots()`. Timestamp en localStorage.
+- `offlineQueue.ts` — `enqueueMutation` / `getPendingMutations` / `syncPendingMutations` (replay contre Supabase, last-write-wins) / `clearDoneMutations`. Actions : `locataire_create/update`, `paiement_create/update`, `contrat_create/update`.
+
+**Hooks (src/hooks/)**
+- `useBackup.ts` — `{ save, download, restore, getSnapshot, saving, downloading, lastBackupTime }`. Auto-save IndexedDB après chaque mutation/fetch.
+- `useOfflineSync.ts` — `{ isOnline, pendingCount, syncing, enqueue, syncNow }`. Replay auto sur `window.online`. Ref-guard pour éviter les doubles syncs.
+- `useExport.ts` — `{ exportLocataires, exportPaiements, exportContrats, exportAll, exporting }`. Génération Excel côté client via SheetJS (xlsx déjà installé). Colonnes typées, largeurs configurées.
+
+**Composant BackupIndicator (src/components/ui/BackupIndicator.tsx)**
+- Badge flottant bas-droit (au-dessus de BottomNav sur mobile).
+- 3 états visuels : vert "sauvegardé il y a X min" / bleu spinner "synchronisation" / orange "X actions en attente".
+- Clic → panel expandable avec boutons "Télécharger sauvegarde" + "Restaurer sauvegarde".
+
+**NetworkBanner amélioré**
+- Offline : compte les actions en attente (`pending_mutations`).
+- Reconnexion : flush automatique de la queue + message "X actions synchronisées".
+- Synchronisation en cours : barre bleue avec spinner.
+
+**Intégrations pages**
+- `App.tsx` : `useOfflineSync` + `<BackupIndicator syncing pendingCount>`.
+- `Paiements.tsx` : bouton "Exporter Excel", auto-backup après loadData, queue offline si `!isOnline` au moment du submit.
+- `Locataires.tsx` : bouton "Exporter Excel", auto-backup après loadData.
+- `Contrats.tsx` : bouton "Exporter Excel", auto-backup après loadData.
+
 ## Récents ajouts (mai 2026) — 7 features
 
 - **1. Dashboard valeurs financières (Dashboard.tsx)** :

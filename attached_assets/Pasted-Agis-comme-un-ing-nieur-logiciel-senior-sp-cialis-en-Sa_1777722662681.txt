@@ -1,0 +1,133 @@
+Agis comme un ingénieur logiciel senior spécialisé en SaaS offline-first (React + Supabase ou Firebase).
+
+Objectif : améliorer mon application de gestion locative pour intégrer 3 piliers critiques de confiance et de résilience :
+
+1. Cloud + backup local
+2. Mode offline léger (offline-first)
+3. Export des données (Excel / PDF)
+
+⚠️ Contraintes importantes :
+
+* L’application reste 100% SaaS (cloud principal)
+* Le local est un support, pas une source principale
+* L’expérience utilisateur doit rester simple (niveau non-technique)
+* Pas de complexité inutile ni sur-engineering
+
+---
+
+# 1. CLOUD + BACKUP LOCAL
+
+Implémente un système de sauvegarde locale automatique :
+
+Fonctionnalités attendues :
+
+* Sauvegarde automatique des données critiques (locataires, paiements, contrats)
+* Stockage local via IndexedDB ou localStorage
+* Fréquence : à chaque mutation + backup journalier
+* Bouton manuel : "Télécharger une sauvegarde"
+
+Sécurité :
+
+* Données sérialisées en JSON
+* Option de chiffrement simple (facultatif mais recommandé)
+
+UX :
+
+* Message discret : "Vos données sont sauvegardées automatiquement"
+* Bouton : "Restaurer une sauvegarde"
+
+---
+
+# 2. MODE OFFLINE LÉGER (OFFLINE-FIRST)
+
+Objectif : permettre l’utilisation même sans connexion internet.
+
+Fonctionnalités attendues :
+
+* Détection online/offline (navigator.onLine)
+* Stockage temporaire des actions offline (queue)
+* Synchronisation automatique dès retour de connexion
+
+Cas à gérer :
+
+* Création locataire offline
+* Enregistrement paiement offline
+* Mise à jour contrat offline
+
+Technique :
+
+* File d’attente locale (IndexedDB)
+* Sync avec backend dès connexion rétablie
+* Gestion des conflits simple (last-write-wins)
+
+UX :
+
+* Badge visible : "Mode hors ligne"
+* Message : "Les données seront synchronisées automatiquement"
+
+---
+
+# 3. EXPORT DES DONNÉES
+
+Objectif : renforcer la confiance et le contrôle utilisateur.
+
+Fonctionnalités :
+
+* Export Excel (.xlsx) :
+
+  * locataires
+  * paiements
+  * contrats
+
+* Export PDF :
+
+  * quittances
+  * rapports simples
+
+Technique :
+
+* Génération côté client
+* Librairies recommandées :
+
+  * xlsx / SheetJS pour Excel
+  * jsPDF pour PDF
+
+UX :
+
+* Bouton visible : "Exporter mes données"
+* Choix du format (Excel / PDF)
+* Feedback : téléchargement immédiat
+
+---
+
+# 4. STRUCTURE TECHNIQUE ATTENDUE
+
+Propose :
+
+* Architecture des hooks (useOfflineSync, useBackup, useExport)
+* Schéma de stockage local (IndexedDB)
+* Gestion des erreurs réseau
+* Logs simples pour debug
+
+---
+
+# 5. PRIORITÉ
+
+Implémenter dans cet ordre :
+
+1. Backup local
+2. Export
+3. Offline sync
+
+---
+
+# 6. LIVRABLE ATTENDU
+
+* Code structuré (React hooks + services)
+* Explication rapide des choix techniques
+* Exemple concret d’utilisation dans une page (Dashboard ou Paiements)
+
+---
+
+Objectif final :
+Créer une application SaaS fiable, utilisable sans internet, et qui inspire confiance immédiatement à un utilisateur non technique en Afrique de l’Ouest.

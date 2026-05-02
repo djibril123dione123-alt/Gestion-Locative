@@ -8,6 +8,8 @@ import { BottomNav } from './components/layout/BottomNav';
 import { TrialBanner } from './components/ui/TrialBanner';
 import { MaintenanceBanner } from './components/ui/MaintenanceBanner';
 import { NetworkBanner } from './components/ui/NetworkBanner';
+import { BackupIndicator } from './components/ui/BackupIndicator';
+import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
 import Welcome from './pages/Welcome';
 
@@ -59,6 +61,7 @@ function AppContent() {
     const { user, profile, loading } = useAuth();
     const [currentPage, setCurrentPage] = useState('dashboard');
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const { pendingCount, syncing } = useOfflineSync();
     const [showWelcomeAnyway, setShowWelcomeAnyway] = useState(false);
     const [invitationToken, setInvitationToken] = useState<string | null>(() => {
         const params = new URLSearchParams(window.location.search);
@@ -277,6 +280,9 @@ function AppContent() {
                 }}
                 onOpenMenu={() => setSidebarOpen(true)}
             />
+
+            {/* Backup + offline status indicator — floating badge */}
+            <BackupIndicator syncing={syncing} pendingCount={pendingCount} />
         </div>
     );
 }

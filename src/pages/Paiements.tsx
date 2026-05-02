@@ -21,10 +21,14 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  Sheet,
 } from 'lucide-react';
 import { generatePaiementFacturePDF } from '../lib/pdf';
 import { useToast } from '../hooks/useToast';
 import { useTracking } from '../hooks/useTracking';
+import { useExport } from '../hooks/useExport';
+import { useBackup } from '../hooks/useBackup';
+import { useOfflineSync } from '../hooks/useOfflineSync';
 import { formatCurrency } from '../lib/formatters';
 
 interface PaiementRow {
@@ -71,6 +75,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const { profile } = useAuth();
   const { success, error: showError, toasts, removeToast } = useToast();
   const { track } = useTracking();
+  const { exportPaiements, exporting: exportingXlsx } = useExport();
+  const { save: saveBackup } = useBackup();
+  const { isOnline, enqueue: queueMutation } = useOfflineSync();
 
   const [paiements, setPaiements] = useState<PaiementRow[]>([]);
   const [contrats, setContrats] = useState<ContratRow[]>([]);
@@ -122,8 +129,11 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           .eq('statut', 'actif'),
       ]);
 
-      setPaiements(paiementsRes.data || []);
+      const data = paiementsRes.data || [];
+      setPaiements(data);
       setContrats((contratsRes.data || []) as unknown as ContratRow[]);
+      // Sauvegarde locale automatique après chaque chargement
+      saveBackup('paiements', data).catch(() => {});
     } catch (error) {
       showError('Impossible de charger les paiements');
     } finally {
@@ -236,6 +246,19 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         part_bailleur: partBailleur,
         agency_id: profile.agency_id,
       };
+
+      // ── Mode hors ligne : on met en file d'attente, on ne touche pas Supabase ──
+      if (!isOnline && !editingPaiement) {
+        await queueMutation({
+          action: 'paiement_create',
+          entity_type: 'paiements',
+          payload: { ...data, contrat_id: formData.contrat_id },
+          timestamp: Date.now(),
+        });
+        success('Paiement enregistré localement — il sera synchronisé dès le retour de connexion');
+        closeModal();
+        return;
+      }
 
       let error;
       if (editingPaiement) {
@@ -451,14 +474,57 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
               <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800">Paiements</h1>
               <p className="text-slate-500 text-sm mt-1">Encaissement des loyers</p>
             </div>
-            <Button icon={Plus} onClick={() => setIsModalOpen(true)}>
-              Nouveau paiement
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => exportPaiements(
+                  paiements.map((p) => ({
+                    reference: p.reference,
+                    date_paiement: p.date_paiement,
+                    mois_concerne: p.mois_concerne,
+                    montant_total: p.montant_total,
+                    statut: p.statut,
+                    mode_paiement: p.mode_paiement,
+                    locataire_nom: `${(p.contrats as any)?.locataires?.prenom ?? ''} ${(p.contrats as any)?.locataires?.nom ?? ''}`.trim(),
+                    unite_nom: (p.contrats as any)?.unites?.nom ?? '',
+                  }))
+                )}
+                disabled={exportingXlsx || loading || paiements.length === 0}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Exporter en Excel"
+              >
+                <Sheet className="w-4 h-4" />
+                Exporter Excel
+              </button>
+              <Button icon={Plus} onClick={() => setIsModalOpen(true)}>
+                Nouveau paiement
+              </Button>
+            </div>
           </header>
         )}
 
         {embedded && (
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => exportPaiements(
+                paiements.map((p) => ({
+                  reference: p.reference,
+                  date_paiement: p.date_paiement,
+                  mois_concerne: p.mois_concerne,
+                  montant_total: p.montant_total,
+                  statut: p.statut,
+                  mode_paiement: p.mode_paiement,
+                  locataire_nom: `${(p.contrats as any)?.locataires?.prenom ?? ''} ${(p.contrats as any)?.locataires?.nom ?? ''}`.trim(),
+                  unite_nom: (p.contrats as any)?.unites?.nom ?? '',
+                }))
+              )}
+              disabled={exportingXlsx || loading || paiements.length === 0}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Sheet className="w-4 h-4" />
+              Exporter Excel
+            </button>
             <Button icon={Plus} onClick={() => setIsModalOpen(true)}>
               Nouveau paiement
             </Button>

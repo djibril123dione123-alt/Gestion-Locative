@@ -395,14 +395,6 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
           color="blue"
           delay={100}
         />
-        <StatCard
-          title="Locataires actifs"
-          value={stats.totalLocataires}
-          subtitle={`${stats.contratsActifs} contrats`}
-          icon={Users}
-          color="green"
-          delay={200}
-        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">

@@ -347,13 +347,11 @@ BEGIN
 
     -- Worker notifications : toutes les 5 minutes
     IF NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'notification_queue_worker') THEN
-      PERFORM cron.schedule('notification_queue_worker', '*/5 * * * *', $$
-        SELECT net.http_post(
-          url := current_setting('app.supabase_url') || '/functions/v1/send-email',
-          headers := jsonb_build_object('Authorization', 'Bearer ' || current_setting('app.service_role_key')),
-          body := '{}'::jsonb
-        )
-      $$);
+      PERFORM cron.schedule(
+        'notification_queue_worker',
+        '*/5 * * * *',
+        'SELECT net.http_post(url := current_setting(''app.supabase_url'') || ''/functions/v1/send-email'', headers := jsonb_build_object(''Authorization'', ''Bearer '' || current_setting(''app.service_role_key'')), body := ''{}''::jsonb)'
+      );
     END IF;
 
     RAISE NOTICE 'pg_cron : relances renouvellement planifiées.';

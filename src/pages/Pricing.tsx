@@ -212,8 +212,25 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
           <div className="flex flex-wrap items-center justify-center gap-5 mt-8 text-sm text-slate-500">
             <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-green-500" />Données chiffrées</span>
             <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-orange-400" />Activation instantanée</span>
-            <span className="flex items-center gap-1.5"><Smartphone className="w-4 h-4 text-blue-500" />Mobile Money accepté</span>
             <span className="flex items-center gap-1.5"><TrendingUp className="w-4 h-4 text-purple-500" />Montée en gamme libre</span>
+          </div>
+
+          {/* Logos paiements */}
+          <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
+            <span className="text-xs text-slate-400 mr-1">Paiements acceptés :</span>
+            {[
+              { src: '/logo-orange-money.png', alt: 'Orange Money', bg: '#FFF4EE' },
+              { src: '/logo-wave.png',         alt: 'Wave',         bg: '#EFF9FF' },
+              { src: '/logo-djamo.png',        alt: 'Djamo',        bg: '#F5F5F5' },
+            ].map(({ src, alt, bg }) => (
+              <div key={alt} className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shadow-sm border border-slate-100"
+                style={{ backgroundColor: bg }}>
+                <img src={src} alt={alt} className="w-7 h-7 object-contain" />
+              </div>
+            ))}
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 shadow-sm border border-slate-100">
+              <span className="text-xs font-bold text-blue-700 leading-tight text-center">VISA<br/>MC</span>
+            </div>
           </div>
         </div>
       )}
@@ -452,9 +469,21 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
                 Parler à l'équipe
               </a>
             </div>
-            <p className="text-slate-600 text-xs mt-5">
-              Paiements acceptés : 🟠 Orange Money · 🌊 Wave · 💜 Djamo · 💳 Carte bancaire
-            </p>
+            <div className="flex items-center justify-center gap-4 mt-5 flex-wrap">
+              <span className="text-slate-600 text-xs">Paiements acceptés :</span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center overflow-hidden">
+                  <img src="/logo-orange-money.png" alt="Orange Money" className="w-6 h-6 object-contain" />
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center overflow-hidden">
+                  <img src="/logo-wave.png" alt="Wave" className="w-6 h-6 object-contain" />
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center overflow-hidden">
+                  <img src="/logo-djamo.png" alt="Djamo" className="w-6 h-6 object-contain" />
+                </div>
+                <span className="text-slate-500 text-xs border border-slate-600 rounded px-1.5 py-0.5 font-medium">VISA · MC</span>
+              </div>
+            </div>
           </div>
         )}
       </div>

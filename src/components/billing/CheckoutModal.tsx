@@ -36,10 +36,10 @@ const POLL_MAX_ATTEMPTS = 36; // 3 minutes
 
 const CONTACT_WHATSAPP = '221774000000';
 
-const PROVIDERS: { id: Provider; label: string; sub: string; emoji: string; color: string; bg: string }[] = [
-  { id: 'orange_money', label: 'Orange Money',    sub: 'Sénégal',                 emoji: '🟠', color: '#F58220', bg: '#FFF7ED' },
-  { id: 'wave',         label: 'Wave',             sub: 'Sénégal / Côte d\'Ivoire', emoji: '🌊', color: '#00A6ED', bg: '#EFF9FF' },
-  { id: 'djamo',        label: 'Djamo',            sub: 'Côte d\'Ivoire',           emoji: '💜', color: '#7C3AED', bg: '#FAF5FF' },
+const PROVIDERS: { id: Provider; label: string; sub: string; logo?: string; emoji: string; color: string; bg: string }[] = [
+  { id: 'orange_money', label: 'Orange Money',    sub: 'Sénégal',                  logo: '/logo-orange-money.png', emoji: '🟠', color: '#FF6600', bg: '#FFF4EE' },
+  { id: 'wave',         label: 'Wave',             sub: 'Sénégal / Côte d\'Ivoire', logo: '/logo-wave.png',         emoji: '🌊', color: '#00AEEF', bg: '#EFF9FF' },
+  { id: 'djamo',        label: 'Djamo',            sub: 'Côte d\'Ivoire',           logo: '/logo-djamo.png',         emoji: '💜', color: '#1A1A1A', bg: '#F5F5F5' },
   { id: 'card',         label: 'Carte bancaire',   sub: 'Visa / Mastercard',        emoji: '💳', color: '#1D4ED8', bg: '#EFF6FF' },
 ];
 
@@ -232,14 +232,15 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
             <button
               key={p.id}
               onClick={() => handleSelectProvider(p.id)}
-              className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 hover:border-current transition-all group text-left"
-              style={{ '--hover-color': p.color } as React.CSSProperties}
+              className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 transition-all text-left"
               onMouseEnter={(e) => (e.currentTarget.style.borderColor = p.color)}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#E2E8F0')}
             >
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden"
                 style={{ backgroundColor: p.bg }}>
-                {p.emoji}
+                {p.logo
+                  ? <img src={p.logo} alt={p.label} className="w-8 h-8 object-contain" />
+                  : <span className="text-2xl">{p.emoji}</span>}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-bold text-slate-900">{p.label}</p>
@@ -272,7 +273,11 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
           </button>
 
           <div className="flex items-center gap-3 p-4 rounded-xl" style={{ backgroundColor: selectedProvider.bg, border: `1.5px solid ${selectedProvider.color}30` }}>
-            <span className="text-2xl">{selectedProvider.emoji}</span>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0" style={{ backgroundColor: selectedProvider.bg }}>
+              {selectedProvider.logo
+                ? <img src={selectedProvider.logo} alt={selectedProvider.label} className="w-7 h-7 object-contain" />
+                : <span className="text-xl">{selectedProvider.emoji}</span>}
+            </div>
             <div>
               <p className="font-bold text-slate-900">{selectedProvider.label}</p>
               <p className="text-xs text-slate-500">{selectedProvider.sub}</p>
@@ -337,9 +342,11 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
       {step === 'polling' && selectedProvider && (
         <div className="flex flex-col items-center gap-6 py-8">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full flex items-center justify-center text-4xl"
+            <div className="w-24 h-24 rounded-full flex items-center justify-center overflow-hidden"
               style={{ backgroundColor: selectedProvider.bg }}>
-              {selectedProvider.emoji}
+              {selectedProvider.logo
+                ? <img src={selectedProvider.logo} alt={selectedProvider.label} className="w-14 h-14 object-contain" />
+                : <span className="text-4xl">{selectedProvider.emoji}</span>}
             </div>
             <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center"
               style={{ backgroundColor: selectedProvider.color }}>

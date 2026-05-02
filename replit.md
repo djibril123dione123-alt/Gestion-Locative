@@ -1,5 +1,62 @@
 # Samay Këur
 
+## Récents ajouts (mai 2026) — Autopilot Engine v2 : Self-Healing + Rule Engine + Observabilité
+
+### Migration `20260506000002_autopilot_v2_self_healing.sql`
+
+#### Upgrades tables existantes
+| Table | Colonnes ajoutées |
+|---|---|
+| `event_outbox` | `trace_id uuid` (propagé aux jobs), `error_class` (transient / business_rule / system_failure / data_inconsistency) |
+| `job_queue` | `trace_id uuid`, `weight_cost int`, `tenant_load_score numeric`, `retry_strategy` (linear / exponential / dead_letter) |
+| `kpi_monthly` | `ltv`, `cac`, `ltv_cac_ratio`, `revenue_quality_score`, `recurring_ratio`, `churn_risk`, `payment_consistency` |
+
+#### Nouvelle table `system_health`
+- Snapshot d'observabilité : queue_backlog, failed_jobs, orphan_events, stale_jobs, drift_agencies, worker_latency_ms, failure_rate, health_score (0–1)
+- Inséré automatiquement par `fn_self_heal()` à chaque exécution
+- Auto-cleanup pg_cron : snapshots > 7 jours supprimés à 3h
+
+#### `fn_rule_engine(job_id)` — Orchestration intelligente
+- Appelé via trigger AFTER INSERT sur job_queue (appliqué à chaque nouveau job automatiquement)
+- Règles : `RECONCILE_FINANCE` → priorité 1 toujours · MRR > 500k FCFA → priorité 2 · RECALCUL_KPI avec backlog > 200 → différé prio 8 (backpressure)
+- Calcule `weight_cost` (1–4), `tenant_load_score` (0.3–0.9), `retry_strategy` (linear/exponential/dead_letter)
+
+#### `fn_self_heal()` — Auto-réparation système
+1. **Orphan events** : events pending > 10 min sans job → re-enqueue automatique
+2. **Stale jobs** : jobs en status `processing` depuis > 30 min (crash) → reset à `pending`
+3. **Drift financier** : agences avec `financial_snapshots.status = 'drift'` → enqueue `RECONCILE_FINANCE` priorité 1
+4. **Dead letter classification** : jobs failed max_retries → `error_class` auto-classifié (transient/business_rule/system_failure/data_inconsistency)
+5. **Health score** : calcul automatique 0–1, snapshot dans `system_health`
+
+#### `fn_compute_revenue_quality(agency_id, period)` — Unit Economics
+- `recurring_ratio` = MRR / total encaissé
+- `payment_consistency` = 1 − taux impayés
+- `churn_risk` = contrats résiliés / (actifs + résiliés) ce mois
+- `revenue_quality_score` = recurring × 0.4 + consistency × 0.4 + (1−churn) × 0.2
+- `ltv` = MRR × mois de rétention réels (depuis first_payment_at)
+- Upsert dans `kpi_monthly`, appelé par pg_cron toutes les heures
+
+#### Trace ID — Observabilité bout-en-bout
+- Chaque `event_outbox` génère un `trace_id` UUID
+- `fn_enqueue_jobs_from_outbox` propage ce `trace_id` à tous les jobs dérivés
+- Visible dans le Control Tower pour suivre event → job → ledger → KPI
+
+#### pg_cron v2 (en plus des jobs v1)
+| Job | Schedule | Action |
+|---|---|---|
+| `self-heal` | `*/30 * * * *` | fn_self_heal() auto-réparation |
+| `revenue-quality` | `0 * * * *` | fn_compute_revenue_quality() pour toutes agences actives |
+| `cleanup-health` | `0 3 * * *` | DELETE system_health > 7 jours |
+
+### AuditDashboard.tsx — Investor Mode (réécriture complète)
+- **Real-time Supabase subscriptions** : channel `autopilot-live` sur event_outbox + job_queue (INSERT + UPDATE) — badge LIVE animé
+- **System Health Banner** : health score 0–100%, queue backlog, failed jobs, orphelins, taux d'échec — couleur verte/ambre/rouge selon seuils
+- **Métriques Investisseur** : MRR, ARR, LTV, LTV/CAC (> 3× → vert), Revenue Quality Score avec barres recurring/consistency/churn
+- **Bouton Self-Heal** : appelle `fn_self_heal()` via supabase.rpc, affiche le résultat (orphelins fixés, stale resets, drifts requeueés)
+- **Trace ID** visible dans le flux Event Outbox (8 premiers caractères)
+- **Risk summary** intégré dans section Anomalies : taux impayés, churn risk, contrats actifs
+- **Pipeline status** : visualisation de la chaîne complète Outbox → Rule Engine → Job Queue → Workers → Self-Heal → Ledger/KPI → Dashboard
+
 ## Récents ajouts (mai 2026) — Autopilot Engine Série A
 
 ### event_outbox — Source unique de vérité

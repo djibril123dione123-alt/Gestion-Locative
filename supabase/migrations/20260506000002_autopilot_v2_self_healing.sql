@@ -68,6 +68,8 @@ CREATE TABLE IF NOT EXISTS system_health (
 CREATE INDEX IF NOT EXISTS idx_health_snapshot ON system_health(snapshot_at DESC);
 
 ALTER TABLE system_health ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "health_admin"  ON system_health;
+DROP POLICY IF EXISTS "health_insert" ON system_health;
 CREATE POLICY "health_admin" ON system_health
   FOR SELECT USING (
     (SELECT role FROM public.user_profiles WHERE id = auth.uid() LIMIT 1) IN ('admin','super_admin')

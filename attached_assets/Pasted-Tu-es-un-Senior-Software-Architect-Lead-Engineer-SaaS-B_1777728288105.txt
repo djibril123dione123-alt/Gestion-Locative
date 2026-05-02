@@ -1,0 +1,261 @@
+Tu es un **Senior Software Architect + Lead Engineer SaaS B2B + Expert Supabase + React + Fintech/Immobilier**.
+
+Ta mission : **auditer, corriger, sécuriser et professionnaliser complètement mon application de gestion immobilière “Samay Këur”**.
+
+⚠️ Contexte critique :
+L’application est déjà fonctionnelle (React + Supabase + TypeScript + Tailwind), mais elle présente :
+
+* des failles de conception
+* des risques de perte de données
+* une logique métier fragile
+* des limites fortes en scalabilité et multi-utilisateur
+
+Je veux une **version PRODUCTION READY**, utilisable par de vraies agences immobilières en Afrique.
+
+---
+
+# 🎯 OBJECTIF GLOBAL
+
+Transformer cette application en :
+
+* SaaS robuste multi-agences
+* fiable (aucune perte de données)
+* scalable (1000+ agences)
+* maintenable (code propre)
+* sécurisée (niveau production)
+
+---
+
+# ⚙️ RÈGLES STRICTES
+
+1. ❌ NE JAMAIS proposer des solutions théoriques vagues
+2. ✅ TOUJOURS donner du code concret (TypeScript / SQL / architecture)
+3. ✅ Structurer les réponses par PRIORITÉ
+4. ✅ Expliquer brièvement MAIS agir directement
+5. ❌ PAS de refactor inutile — uniquement ce qui apporte de la valeur réelle
+
+---
+
+# 🧨 PRIORITÉ 1 — SÉCURITÉ & BACKUP (CRITIQUE)
+
+Corriger totalement :
+
+* Backup incomplet (seulement 3 tables)
+* Aucun chiffrement local
+* Restore destructif (overwrite)
+* Pas de preview
+
+À faire :
+
+1. Étendre le backup à TOUTES les tables critiques :
+
+   * agences
+   * bailleurs
+   * immeubles
+   * unites
+   * locataires
+   * contrats
+   * paiements
+
+2. Implémenter :
+
+   * preview avant restore (diff + count)
+   * stratégie MERGE intelligente (pas overwrite)
+   * gestion erreurs robuste
+
+3. Ajouter chiffrement AES pour IndexedDB
+
+4. Ajouter backup automatique :
+
+   * au login
+   * toutes les 24h
+
+---
+
+# 💰 PRIORITÉ 2 — LOGIQUE MÉTIER (IMMOBILIER)
+
+Corriger :
+
+* commission par défaut = 10% (ERREUR critique)
+* absence de paiement partiel
+* suppression sans trace
+
+Implémenter :
+
+1. commissionService.ts
+
+   * validation obligatoire
+   * aucune valeur par défaut silencieuse
+
+2. paiementService.ts
+
+   * support paiement partiel
+   * montant_recu
+   * solde_restant
+   * statut dynamique
+
+3. Soft delete + audit trail :
+
+   * deleted_at
+   * deleted_by
+   * historique complet
+
+---
+
+# 🔄 PRIORITÉ 3 — OFFLINE & SYNCHRONISATION
+
+Corriger :
+
+* pas de DELETE dans queue
+* état "syncing" bloqué
+* perte silencieuse de données
+
+Implémenter :
+
+1. Support complet des actions :
+
+   * CREATE / UPDATE / DELETE
+
+2. Système robuste :
+
+   * retry automatique (exponential backoff)
+   * récupération des états bloqués
+   * gestion erreurs visibles
+
+3. Synchronisation fiable :
+
+   * timestamp serveur (pas client)
+   * gestion conflits (versioning ou warning UI)
+
+4. Feedback utilisateur :
+
+   * succès / erreur après sync
+   * indicateur clair
+
+---
+
+# 🧱 PRIORITÉ 4 — ARCHITECTURE
+
+Corriger :
+
+* fichiers de 800+ lignes
+* logique métier dans les composants
+
+Refactor :
+
+1. Créer structure claire :
+   /services/domain
+   /repositories
+   /hooks
+   /components
+
+2. Implémenter pattern :
+
+UI → Hook → Service → Repository → Supabase
+
+3. Refactor Paiements.tsx comme exemple
+
+---
+
+# 📄 PRIORITÉ 5 — FIABILITÉ DOCUMENTS
+
+Corriger :
+
+* numéro de quittance non légal
+* dépendance image signature fragile
+
+Implémenter :
+
+1. Numérotation séquentielle garantie (DB)
+2. Fallback signature robuste
+3. Gestion erreurs PDF (fail-safe)
+
+---
+
+# 🚩 PRIORITÉ 6 — FEATURE FLAGS
+
+Corriger :
+
+* types non stricts
+* valeurs incohérentes
+
+Implémenter :
+
+* typage strict boolean
+* valeurs par défaut définies
+* validation backend
+
+---
+
+# 🧠 PRIORITÉ 7 — UX TERRAIN
+
+Corriger :
+
+* onboarding bloquant (validation admin)
+* recherche inefficace
+* manque de feedback
+
+Implémenter :
+
+1. Création agence instantanée
+2. Recherche optimisée (SQL ou filtres propres)
+3. Feedback clair (sync, erreurs)
+
+---
+
+# 🚀 PRIORITÉ 8 — SCALABILITÉ
+
+Corriger :
+
+* calculs côté client
+* chargement massif
+
+Implémenter :
+
+1. Pagination serveur
+
+2. Fonctions RPC Supabase :
+
+   * dashboard stats
+   * revenus mensuels
+
+3. Optimisation queries
+
+---
+
+# 📦 LIVRABLE ATTENDU
+
+Je veux :
+
+1. ✔ Code complet (TS + SQL)
+2. ✔ Fichiers créés/modifiés
+3. ✔ Architecture finale claire
+4. ✔ Explication rapide par bloc
+
+---
+
+# 🧠 NIVEAU D’EXIGENCE
+
+Tu dois réfléchir comme :
+
+* un CTO SaaS
+* un expert en systèmes critiques
+* un développeur qui prépare une levée de fonds
+
+Chaque décision doit viser :
+→ robustesse
+→ scalabilité
+→ fiabilité réelle terrain
+
+---
+
+# ⚠️ IMPORTANT
+
+Ne me donne PAS une réponse globale.
+
+👉 Travaille par PRIORITÉ
+👉 Implémente complètement chaque bloc
+👉 Passe au suivant
+
+Commence par :
+👉 PRIORITÉ 1 — BACKUP & SÉCURITÉ

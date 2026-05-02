@@ -1,0 +1,204 @@
+AUTOPILOT V3.1 — ARCHITECTURE SÉRIE A READY (STABLE)
+🎯 OBJECTIF
+
+Transformer ton système en :
+
+🔒 Ledger-grade finance system (type Stripe / Adyen light)
+⚡ Event-driven mais sans complexité inutile
+📊 KPI auditables et non manipulables
+🧠 Workers simples, prévisibles, stateless
+📈 Dashboard investisseur fiable en temps réel
+🧱 1. ARCHITECTURE FINALE (CLEAN LAYERS)
+🟦 LAYER 1 — CORE (EDGE FUNCTIONS ONLY)
+
+👉 Aucune logique métier ailleurs
+
+create-paiement
+update-paiement
+cancel-paiement
+create-contrat
+update-contrat
+
+⚠️ Règles :
+
+validation + écriture uniquement
+aucune agrégation
+aucun KPI
+aucun “auto fix”
+🟩 LAYER 2 — EVENT LEDGER (SOURCE OF TRUTH)
+Tables :
+event_outbox (stream brut)
+event_log (audit humain)
+ledger_entries (finance immutable)
+Règle absolue :
+
+❌ jamais update / delete
+✅ uniquement append
+
+🟨 LAYER 3 — JOB SYSTEM (SIMPLE QUEUE)
+job_queue (version stable V3.1)
+id
+type
+payload
+status (pending | processing | done | failed)
+priority (1-8)
+retry_count
+max_retries
+trace_id
+created_at
+❌ supprimé :
+weight_cost
+tenant_load_score
+retry_strategy complexe
+auto-rule engine
+
+👉 simplification volontaire = scalabilité + debug facile
+
+🟧 LAYER 4 — WORKERS (STATLESS)
+
+3 workers uniquement :
+
+1. finance-worker
+ledger reconciliation
+paiement → ledger_entries
+2. analytics-worker
+KPI daily/monthly batch
+MRR, ARR
+3. notification-worker (NEW important)
+quittances
+alertes impayés
+notifications agence
+🟪 LAYER 5 — KPI ENGINE (BATCH ONLY)
+Tables :
+kpi_daily
+kpi_monthly
+KPI standard Série A :
+MRR
+ARR
+churn_rate
+impayés %
+active contracts
+revenue per agency
+
+⚠️ PAS DE :
+
+LTV complexe live
+CAC dynamique
+scoring opaque
+
+👉 Tout est recalculable + vérifiable
+
+🟫 LAYER 6 — OBSERVABILITY (CLEAN)
+Tables :
+system_health (simple snapshot)
+métriques :
+queue_size
+failed_jobs
+processing_time_avg
+ledger_drift (important)
+uptime workers
+🧠 2. EVENT FLOW FINAL (ULTRA STABLE)
+Frontend action
+   ↓
+Edge Function
+   ↓
+event_outbox (append)
+   ↓
+job_queue (enqueue simple)
+   ↓
+worker (stateless execution)
+   ↓
+ledger / KPI update (batch only)
+
+👉 aucun cycle automatique caché
+👉 tout est traçable
+
+⚙️ 3. CE QUI EST SUPPRIMÉ (IMPORTANT)
+
+Tu stabilises en supprimant :
+
+❌ supprimé V3 beta
+self_heal()
+rule_engine()
+revenue_quality_score temps réel
+auto retry intelligent
+complex priority system
+KPI realtime subscriptions
+📊 4. DASHBOARD INVESTISSEUR (VERSION FINALE)
+3 blocs ONLY
+🟦 SYSTEM HEALTH
+queue size
+failure rate
+worker latency
+🟩 FINANCE
+MRR
+cash collected
+ledger balance
+drift check
+🟨 GROWTH
+agences actives
+contrats actifs
+churn
+croissance MRR
+🔴 SUPPRIMÉ :
+self-heal button
+AI scoring
+“revenue quality score”
+complex charts inutiles
+⚡ 5. CE QUI FAIT QUE CETTE ARCHI EST “SÉRIE A READY”
+💡 1. Auditability totale
+
+Tout est :
+
+traceable (trace_id)
+reconstructible
+immutable
+💡 2. Debug instantané
+
+Un bug = tu lis :
+
+event_outbox → job_queue → ledger
+💡 3. Scalabilité horizontale
+
+Workers indépendants :
+
+tu peux multiplier finance-worker x10
+aucun lock global
+💡 4. Finance-grade integrity
+
+ledger_entries = vérité absolue
+
+💡 5. Investisseur-friendly
+
+Tu peux répondre à :
+
+“Pourquoi ton MRR est fiable ?”
+
+👉 tu montres :
+
+event_outbox
+ledger
+kpi_monthly batch
+🚀 6. PROCHAINE ÉVOLUTION (V4 — OPTIONNEL)
+
+Quand tu veux scaler encore :
+
+V4 = Microservices migration
+worker séparés par domaine
+event streaming (Kafka-like)
+read replica analytics DB
+BI layer (Metabase / Superset)
+🧭 CONCLUSION CLAIRE
+
+Tu es maintenant sur :
+
+👉 V3.1 = “Stripe-like architecture simplifiée”
+
+Pas une usine à gaz. Pas un prototype.
+
+👉 Un système :
+
+stable
+lisible
+scalable
+investissable

@@ -65,7 +65,7 @@ serve(async (req: Request) => {
     );
 
     const { data: profile, error: profileErr } = await supabaseAdmin
-      .from("profiles")
+      .from("user_profiles")
       .select("agency_id, role, actif")
       .eq("id", user.id)
       .single();

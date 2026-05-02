@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   Activity, AlertTriangle, CheckCircle2, Clock, Cpu, Database,
   RefreshCw, TrendingUp, XCircle, BarChart3, ShieldCheck,
-  Radio, Users, Layers,
+  Radio, Users, Layers, Bell,
 } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
 import { ToastContainer } from '../components/ui/Toast';
@@ -29,17 +29,26 @@ interface JobStats {
   failed: number;
 }
 
+interface HealthBlock {
+  queue_size: number;
+  failure_rate: number;
+  processing_time_avg: number;
+  ledger_drift: number;
+}
+
 interface FinanceBlock {
+  mrr: number;
+  cash_collected: number;
   ledger_balance: number;
-  revenue_month: number;
   drift_count: number;
 }
 
 interface GrowthBlock {
-  mrr: number;
   arr: number;
   agencies_active: number;
   contrats_actifs: number;
+  churn_rate: number;
+  mrr_growth: number;
   impayes_rate: number;
 }
 
@@ -61,22 +70,29 @@ function Badge({ status }: { status: string }) {
   );
 }
 
-function SectionTitle({ icon: Icon, label, color = 'text-slate-700' }: {
-  icon: React.ElementType; label: string; color?: string;
+function BlockTitle({ icon: Icon, label, accent }: {
+  icon: React.ElementType; label: string; accent: string;
 }) {
   return (
-    <h2 className={`text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2 ${color}`}>
+    <div className={`flex items-center gap-2 mb-4 pb-2 border-b ${accent}`}>
       <Icon className="w-4 h-4" />
-      {label}
-    </h2>
+      <span className="text-xs font-bold uppercase tracking-widest">{label}</span>
+    </div>
   );
 }
 
-function StatRow({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
+function Metric({ label, value, highlight, sub }: {
+  label: string; value: string | number; highlight?: boolean; sub?: string;
+}) {
   return (
-    <div className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-      <span className="text-sm text-slate-500">{label}</span>
-      <span className={`text-sm font-semibold ${highlight ? 'text-red-600' : 'text-slate-900'}`}>{value}</span>
+    <div className="flex items-start justify-between py-2 border-b border-slate-50 last:border-0">
+      <div>
+        <p className="text-sm text-slate-500">{label}</p>
+        {sub && <p className="text-xs text-slate-300">{sub}</p>}
+      </div>
+      <span className={`text-sm font-bold tabular-nums ${highlight ? 'text-red-600' : 'text-slate-900'}`}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -89,10 +105,11 @@ export function AuditDashboard() {
 
   const [outboxEvents, setOutboxEvents] = useState<OutboxEvent[]>([]);
   const [jobStats, setJobStats]         = useState<JobStats>({ pending: 0, processing: 0, done: 0, failed: 0 });
+  const [health, setHealth]             = useState<HealthBlock | null>(null);
   const [finance, setFinance]           = useState<FinanceBlock | null>(null);
   const [growth, setGrowth]             = useState<GrowthBlock | null>(null);
   const [loading, setLoading]           = useState(true);
-  const [runningWorker, setRunningWorker] = useState<'finance' | 'analytics' | null>(null);
+  const [runningWorker, setRunningWorker] = useState<'finance' | 'analytics' | 'notification' | null>(null);
   const [isLive, setIsLive]             = useState(false);
   const [lastRefresh, setLastRefresh]   = useState(new Date());
   const channelRef                      = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -110,10 +127,11 @@ export function AuditDashboard() {
       const [
         { data: outbox },
         { data: jobs },
-        { data: ledger },
+        { data: systemSnap },
+        { data: ledgerCredits },
         { data: drifts },
         { data: kpi },
-        { data: agencies },
+        agenciesRes,
       ] = await Promise.all([
         supabase
           .from('event_outbox')
@@ -123,10 +141,18 @@ export function AuditDashboard() {
 
         supabase.from('job_queue').select('status'),
 
-        // Ledger balance : somme des crédits de paiement
+        // Dernier snapshot de santé
+        supabase
+          .from('system_health')
+          .select('queue_backlog,failure_rate,processing_time_avg,ledger_drift')
+          .order('snapshot_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+
+        // Ledger balance (somme crédits)
         supabase
           .from('ledger_entries')
-          .select('amount,type')
+          .select('amount')
           .eq('type', 'credit'),
 
         // Drifts financiers
@@ -135,19 +161,23 @@ export function AuditDashboard() {
           .select('id')
           .eq('status', 'drift'),
 
-        // KPI mensuel agence courante
-        profile?.agency_id ? supabase
-          .from('kpi_monthly')
-          .select('mrr,arr,contrats_actifs,impayes_rate,paiements_total')
-          .eq('agency_id', profile.agency_id)
-          .eq('period', period)
-          .maybeSingle() : { data: null },
+        // KPI mensuel
+        profile?.agency_id
+          ? supabase
+              .from('kpi_monthly')
+              .select('mrr,arr,contrats_actifs,impayes_rate,paiements_total,churn_rate,mrr_growth')
+              .eq('agency_id', profile.agency_id)
+              .eq('period', period)
+              .maybeSingle()
+          : Promise.resolve({ data: null }),
 
-        // Nombre d'agences actives (super_admin seulement)
-        profile?.role === 'super_admin' ? supabase
-          .from('agencies')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'active') : { data: null, count: 0 },
+        // Agences actives (super_admin seulement)
+        profile?.role === 'super_admin'
+          ? supabase
+              .from('agencies')
+              .select('id', { count: 'exact', head: true })
+              .eq('status', 'active')
+          : Promise.resolve({ data: null, count: 0 }),
       ]);
 
       // Outbox
@@ -160,21 +190,33 @@ export function AuditDashboard() {
       });
       setJobStats(stats);
 
+      // Health block — live depuis jobs si pas de snapshot
+      const failRate = stats.done + stats.failed > 0
+        ? Math.round((stats.failed / (stats.done + stats.failed)) * 100)
+        : 0;
+      setHealth({
+        queue_size:          systemSnap?.queue_backlog ?? stats.pending,
+        failure_rate:        systemSnap?.failure_rate  ?? failRate,
+        processing_time_avg: systemSnap?.processing_time_avg ?? 0,
+        ledger_drift:        systemSnap?.ledger_drift ?? 0,
+      });
+
       // Finance block
-      const ledgerTotal = (ledger ?? []).reduce((sum: number, e: { amount: number }) => sum + (e.amount ?? 0), 0);
-      const revenueMonth = kpi?.paiements_total ?? 0;
+      const ledgerBalance = (ledgerCredits ?? []).reduce((s: number, e: { amount: number }) => s + (e.amount ?? 0), 0);
       setFinance({
-        ledger_balance: ledgerTotal,
-        revenue_month:  revenueMonth,
+        mrr:            kpi?.mrr ?? 0,
+        cash_collected: kpi?.paiements_total ?? 0,
+        ledger_balance: ledgerBalance,
         drift_count:    (drifts ?? []).length,
       });
 
       // Growth block
       setGrowth({
-        mrr:             kpi?.mrr ?? 0,
         arr:             kpi?.arr ?? 0,
-        agencies_active: (agencies as unknown as { count: number } | null)?.count ?? 0,
+        agencies_active: (agenciesRes as { count: number }).count ?? 0,
         contrats_actifs: kpi?.contrats_actifs ?? 0,
+        churn_rate:      kpi?.churn_rate ?? 0,
+        mrr_growth:      kpi?.mrr_growth ?? 0,
         impayes_rate:    kpi?.impayes_rate ?? 0,
       });
 
@@ -188,18 +230,16 @@ export function AuditDashboard() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // ── Realtime — uniquement event_outbox + job_queue ───────────────────────
+  // ── Realtime — event_outbox + job_queue uniquement ───────────────────────
 
   useEffect(() => {
     if (!isAdmin) return;
 
     const ch = supabase
-      .channel('v3-audit-live')
+      .channel('v31-audit-live')
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'event_outbox' },
-        (payload) => {
-          setOutboxEvents(prev => [payload.new as OutboxEvent, ...prev.slice(0, 39)]);
-        }
+        (payload) => setOutboxEvents(prev => [payload.new as OutboxEvent, ...prev.slice(0, 39)])
       )
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'job_queue' },
@@ -218,15 +258,15 @@ export function AuditDashboard() {
           });
         }
       )
-      .subscribe(status => setIsLive(status === 'SUBSCRIBED'));
+      .subscribe(st => setIsLive(st === 'SUBSCRIBED'));
 
     channelRef.current = ch;
     return () => { supabase.removeChannel(ch); setIsLive(false); };
   }, [isAdmin]);
 
-  // ── Worker triggers ──────────────────────────────────────────────────────
+  // ── Worker invocations ───────────────────────────────────────────────────
 
-  const runWorker = async (type: 'finance' | 'analytics') => {
+  const runWorker = async (type: 'finance' | 'analytics' | 'notification') => {
     setRunningWorker(type);
     try {
       const { error } = await supabase.functions.invoke(`${type}-worker`, { body: {} });
@@ -253,12 +293,10 @@ export function AuditDashboard() {
     );
   }
 
-  const failureRate = jobStats.done + jobStats.failed > 0
-    ? Math.round((jobStats.failed / (jobStats.done + jobStats.failed)) * 100)
-    : 0;
+  const hasAlerts = jobStats.failed > 0 || (finance?.drift_count ?? 0) > 0 || (health?.ledger_drift ?? 0) > 0;
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       {/* ── Header ── */}
@@ -272,38 +310,37 @@ export function AuditDashboard() {
               {isLive ? 'LIVE' : 'Statique'}
             </span>
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Synchro : {lastRefresh.toLocaleTimeString('fr-FR')}
-          </p>
+          <p className="text-xs text-slate-400 mt-0.5">Synchro : {lastRefresh.toLocaleTimeString('fr-FR')}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button onClick={() => runWorker('finance')} disabled={runningWorker !== null}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-60 transition">
-            {runningWorker === 'finance'
-              ? <RefreshCw className="w-4 h-4 animate-spin" />
-              : <Database className="w-4 h-4" />}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 transition">
+            {runningWorker === 'finance' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
             Finance
           </button>
           <button onClick={() => runWorker('analytics')} disabled={runningWorker !== null}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition">
-            {runningWorker === 'analytics'
-              ? <RefreshCw className="w-4 h-4 animate-spin" />
-              : <BarChart3 className="w-4 h-4" />}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition">
+            {runningWorker === 'analytics' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
             Analytics
           </button>
+          <button onClick={() => runWorker('notification')} disabled={runningWorker !== null}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition">
+            {runningWorker === 'notification' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+            Notifs
+          </button>
           <button onClick={loadData} disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-60 transition">
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* ── Alertes rapides ── */}
-      {(jobStats.failed > 0 || (finance?.drift_count ?? 0) > 0) && (
-        <div className="flex flex-wrap gap-3">
+      {hasAlerts && (
+        <div className="flex flex-wrap gap-2">
           {jobStats.failed > 0 && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2">
               <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
               <span className="text-sm font-semibold text-red-700">
                 {jobStats.failed} job{jobStats.failed > 1 ? 's' : ''} en échec
@@ -311,104 +348,90 @@ export function AuditDashboard() {
             </div>
           )}
           {(finance?.drift_count ?? 0) > 0 && (
-            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
               <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0" />
               <span className="text-sm font-semibold text-amber-700">
-                {finance!.drift_count} écart{finance!.drift_count > 1 ? 's' : ''} comptable{finance!.drift_count > 1 ? 's' : ''}
+                {finance!.drift_count} écart{finance!.drift_count > 1 ? 's' : ''} ledger
+              </span>
+            </div>
+          )}
+          {(health?.ledger_drift ?? 0) > 0 && (
+            <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2">
+              <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
+              <span className="text-sm font-semibold text-orange-700">
+                Drift {formatCurrency(health!.ledger_drift)} ce mois
               </span>
             </div>
           )}
         </div>
       )}
 
-      {/* ── 3 Blocs principaux ── */}
+      {/* ── 3 Blocs Série A ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
         {/* BLOC 1 — SYSTEM HEALTH */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <SectionTitle icon={Cpu} label="System Health" color="text-slate-600" />
-          <div>
-            <StatRow
-              label="Queue size"
-              value={jobStats.pending}
-              highlight={jobStats.pending > 50}
-            />
-            <StatRow
-              label="En cours"
-              value={jobStats.processing}
-            />
-            <StatRow
-              label="Terminés"
-              value={jobStats.done}
-            />
-            <StatRow
-              label="En échec"
-              value={jobStats.failed}
-              highlight={jobStats.failed > 0}
-            />
-            <StatRow
-              label="Failure rate"
-              value={`${failureRate}%`}
-              highlight={failureRate > 5}
-            />
-          </div>
-          <div className="mt-3 pt-3 border-t border-slate-100">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-400">Outbox en attente</span>
-              <span className="text-xs font-semibold text-slate-700">
-                {outboxEvents.filter(e => e.status === 'pending').length}
-              </span>
-            </div>
+          <BlockTitle icon={Cpu} label="System Health" accent="border-slate-200 text-slate-500" />
+          <Metric label="Queue size"     value={health?.queue_size ?? jobStats.pending}
+            highlight={(health?.queue_size ?? jobStats.pending) > 50} />
+          <Metric label="Failure rate"   value={`${health?.failure_rate ?? 0}%`}
+            highlight={(health?.failure_rate ?? 0) > 5} />
+          <Metric label="Temps traitement" value={health?.processing_time_avg ? `${health.processing_time_avg} ms` : '—'} />
+          <Metric label="Ledger drift"   value={health?.ledger_drift ? formatCurrency(health.ledger_drift) : '✓ 0'}
+            highlight={(health?.ledger_drift ?? 0) > 0} />
+          <div className="mt-3 pt-2 border-t border-slate-50 grid grid-cols-2 gap-2">
+            {[
+              { label: 'Attente', count: jobStats.pending,    color: 'text-amber-600 bg-amber-50' },
+              { label: 'Échec',   count: jobStats.failed,     color: 'text-red-600 bg-red-50' },
+            ].map(({ label, count, color }) => (
+              <div key={label} className={`rounded-lg p-2 text-center ${color}`}>
+                <p className="text-lg font-bold">{count}</p>
+                <p className="text-xs font-medium">{label}</p>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* BLOC 2 — FINANCE */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <SectionTitle icon={Database} label="Finance" color="text-orange-600" />
+          <BlockTitle icon={Database} label="Finance" accent="border-orange-100 text-orange-500" />
           {finance ? (
-            <div>
-              <StatRow
-                label="Solde ledger"
-                value={formatCurrency(finance.ledger_balance)}
-              />
-              <StatRow
-                label="Revenus du mois"
-                value={formatCurrency(finance.revenue_month)}
-              />
-              <StatRow
-                label="Écarts comptables"
-                value={finance.drift_count === 0 ? '✓ Aucun' : `${finance.drift_count} drift${finance.drift_count > 1 ? 's' : ''}`}
-                highlight={finance.drift_count > 0}
-              />
-            </div>
+            <>
+              <Metric label="MRR"             value={formatCurrency(finance.mrr)} />
+              <Metric label="Cash collecté"   value={formatCurrency(finance.cash_collected)}
+                sub="paiements ce mois" />
+              <Metric label="Solde ledger"    value={formatCurrency(finance.ledger_balance)} />
+              <Metric label="Drift check"
+                value={finance.drift_count === 0 ? '✓ Équilibré' : `${finance.drift_count} écart${finance.drift_count > 1 ? 's' : ''}`}
+                highlight={finance.drift_count > 0} />
+            </>
           ) : (
-            <div className="py-6 text-center text-sm text-slate-400">
-              {loading ? 'Chargement…' : 'Aucune donnée'}
-            </div>
+            <p className="text-sm text-slate-400 text-center py-6">{loading ? 'Chargement…' : '—'}</p>
           )}
         </div>
 
         {/* BLOC 3 — GROWTH */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-          <SectionTitle icon={TrendingUp} label="Growth" color="text-blue-600" />
+          <BlockTitle icon={TrendingUp} label="Growth" accent="border-blue-100 text-blue-500" />
           {growth ? (
-            <div>
-              <StatRow label="MRR"     value={formatCurrency(growth.mrr)} />
-              <StatRow label="ARR"     value={formatCurrency(growth.arr)} />
+            <>
+              <Metric label="ARR"             value={formatCurrency(growth.arr)} sub="MRR × 12" />
+              <Metric label="Croissance MRR"
+                value={growth.mrr_growth >= 0 ? `+${growth.mrr_growth.toFixed(1)}%` : `${growth.mrr_growth.toFixed(1)}%`}
+                highlight={growth.mrr_growth < 0} />
               {profile?.role === 'super_admin' && (
-                <StatRow label="Agences actives" value={growth.agencies_active} />
+                <Metric label="Agences actives" value={growth.agencies_active} />
               )}
-              <StatRow label="Contrats actifs" value={growth.contrats_actifs} />
-              <StatRow
-                label="Taux impayés"
+              <Metric label="Contrats actifs" value={growth.contrats_actifs} />
+              <Metric label="Churn rate"
+                value={`${growth.churn_rate.toFixed(1)}%`}
+                highlight={growth.churn_rate > 5} />
+              <Metric label="Taux impayés"
                 value={`${growth.impayes_rate.toFixed(1)}%`}
-                highlight={growth.impayes_rate > 10}
-              />
-            </div>
+                highlight={growth.impayes_rate > 10} />
+            </>
           ) : (
-            <div className="py-6 text-center text-sm text-slate-400">
-              {loading ? 'Chargement…' : 'Aucune donnée'}
-            </div>
+            <p className="text-sm text-slate-400 text-center py-6">{loading ? 'Chargement…' : '—'}</p>
           )}
         </div>
       </div>
@@ -426,11 +449,11 @@ export function AuditDashboard() {
             </h3>
             <span className="text-xs text-slate-400">{outboxEvents.length} récents</span>
           </div>
-          <div className="divide-y divide-slate-50 max-h-64 overflow-y-auto">
+          <div className="divide-y divide-slate-50 max-h-60 overflow-y-auto">
             {outboxEvents.length === 0 ? (
-              <div className="p-6 text-center text-sm text-slate-400">
+              <p className="p-6 text-center text-sm text-slate-400">
                 {loading ? 'Chargement…' : 'Aucun événement récent'}
-              </div>
+              </p>
             ) : outboxEvents.map(ev => (
               <div key={ev.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-slate-50">
                 <div className="flex-1 min-w-0">
@@ -458,37 +481,33 @@ export function AuditDashboard() {
             </h3>
             <span className="text-xs text-slate-400">Temps réel</span>
           </div>
-          <div className="p-4 space-y-2">
+          <div className="p-4 space-y-3">
             {[
-              { label: 'En attente',  count: jobStats.pending,    icon: Clock,         color: 'text-amber-600',   bar: 'bg-amber-400' },
-              { label: 'En cours',   count: jobStats.processing,  icon: RefreshCw,     color: 'text-blue-600',    bar: 'bg-blue-400' },
-              { label: 'Terminés',   count: jobStats.done,        icon: CheckCircle2,  color: 'text-emerald-600', bar: 'bg-emerald-400' },
-              { label: 'En échec',   count: jobStats.failed,      icon: XCircle,       color: 'text-red-600',     bar: 'bg-red-400' },
+              { label: 'En attente',  count: jobStats.pending,    icon: Clock,        color: 'text-amber-600',   bar: 'bg-amber-400' },
+              { label: 'En cours',   count: jobStats.processing,  icon: RefreshCw,    color: 'text-blue-600',    bar: 'bg-blue-400' },
+              { label: 'Terminés',   count: jobStats.done,        icon: CheckCircle2, color: 'text-emerald-600', bar: 'bg-emerald-400' },
+              { label: 'En échec',   count: jobStats.failed,      icon: XCircle,      color: 'text-red-600',     bar: 'bg-red-400' },
             ].map(({ label, count, icon: Icon, color, bar }) => {
               const total = jobStats.pending + jobStats.processing + jobStats.done + jobStats.failed || 1;
               return (
                 <div key={label} className="flex items-center gap-3">
                   <Icon className={`w-4 h-4 flex-shrink-0 ${color}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-0.5">
                       <span className="text-xs text-slate-500">{label}</span>
                       <span className={`text-xs font-bold ${color}`}>{count}</span>
                     </div>
                     <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
-                      <div className={`h-full ${bar} rounded-full transition-all`} style={{ width: `${(count / total) * 100}%` }} />
+                      <div className={`h-full ${bar} rounded-full transition-all duration-300`}
+                        style={{ width: `${(count / total) * 100}%` }} />
                     </div>
                   </div>
                 </div>
               );
             })}
-
-            <div className="pt-2 mt-2 border-t border-slate-100">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-slate-400" />
-                <span className="text-xs text-slate-400">
-                  Workers actifs : finance · analytics
-                </span>
-              </div>
+            <div className="pt-2 border-t border-slate-50 flex items-center gap-2">
+              <Users className="w-4 h-4 text-slate-300" />
+              <span className="text-xs text-slate-400">Workers : finance · analytics · notification</span>
             </div>
           </div>
         </div>

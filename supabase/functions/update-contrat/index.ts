@@ -117,6 +117,24 @@ serve(async (req: Request) => {
       return err("Contrat introuvable ou accès refusé.", 404, "NOT_FOUND");
     }
 
+    // ── 4b. State machine — validation transition ─────────────────────────────
+    const CONTRAT_TRANSITIONS: Record<string, string[]> = {
+      actif:   ["expire", "resilie"],
+      expire:  ["actif"],
+      resilie: [],
+    };
+
+    if (input.statut && input.statut !== existing.statut) {
+      const allowed = CONTRAT_TRANSITIONS[existing.statut as string] ?? [];
+      if (!allowed.includes(input.statut)) {
+        return err(
+          `Transition invalide : "${existing.statut}" → "${input.statut}". Autorisées depuis "${existing.statut}" : ${allowed.join(", ") || "aucune"}.`,
+          422,
+          "INVALID_TRANSITION",
+        );
+      }
+    }
+
     // ── 5. Construction du patch ─────────────────────────────────────────────
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (input.statut !== undefined) patch.statut = input.statut;

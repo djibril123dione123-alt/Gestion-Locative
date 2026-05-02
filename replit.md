@@ -1,5 +1,32 @@
 # Samay Këur
 
+## Récents ajouts (mai 2026) — Revenue-Grade Architecture : Réconciliation + Event Bus + State Machine
+
+### financial_snapshots — Couche de réconciliation investisseur
+- `supabase/migrations/20260505000001_financial_snapshots_reconciliation.sql`
+- Table `financial_snapshots` : `total_paiements`, `total_ledger_credits`, `diff` (GENERATED ALWAYS), `status` (ok/drift/error)
+- UNIQUE(agency_id, period) — une snapshot par agence par mois
+- `fn_compute_financial_snapshots(period)` — compare SUM(paiements) vs SUM(ledger credits), insère/met à jour
+- Vue `vw_financial_drift_report` — toutes les agences avec écart non nul
+- pg_cron : `financial-reconciliation` (0 2 2 * * — 2h le 2 de chaque mois)
+
+### eventBus.ts — Émetteur d'événements universel
+- `src/lib/eventBus.ts` — UNE seule fonction `emitEvent({type, agency_id, entity_type, entity_id, payload})`
+  - Persiste en SQL (`event_log`) fire-and-forget si `agency_id` présent
+  - Envoie à PostHog via `trackEvent()`
+  - `emitPaiementEvent()` et `emitContratEvent()` — helpers typés
+- Remplacement de `trackEvent()` par `emitEvent()` dans : `Paiements.tsx`, `Contrats.tsx`, `LoyersImpayes.tsx`
+- Nomenclature normalisée : `paiement.created`, `paiement.updated`, `paiement.cancelled`, `contrat.created`, `contrat.updated`
+
+### stateMachine.ts — Machines d'état business
+- `src/services/domain/stateMachine.ts` — source de vérité des transitions autorisées
+- Paiement : `impaye → [paye|partiel|annule]`, `partiel → [paye|annule]`, `paye → [annule]`, `annule → ∅`
+- Contrat : `actif → [expire|resilie]`, `expire → [actif]`, `resilie → ∅`
+- `validatePaiementTransition(from, to)` — lève erreur si transition interdite
+- `validateContratTransition(from, to)` — idem contrats
+- Helpers : `isPaiementTerminal()`, `isContratTerminal()`, `getAllowedTransitions()`
+- **Appliquée côté Edge Functions (Deno inline)** : `update-paiement` et `update-contrat` refusent les transitions invalides (code `INVALID_TRANSITION`)
+
 ## Récents ajouts (mai 2026) — Architecture Série A : 100% Edge Functions + Ledger + Job System
 
 ### Zéro write direct Supabase sur paiements/contrats

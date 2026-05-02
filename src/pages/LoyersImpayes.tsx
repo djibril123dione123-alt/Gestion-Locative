@@ -8,7 +8,7 @@ import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
 import { formatPaiementError } from '../services/domain/paiementService';
 import { createPaiementViaEdge, PaiementApiError } from '../services/api/paiementApi';
-import { trackEvent } from '../lib/analytics';
+import { emitEvent } from '../lib/eventBus';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -191,11 +191,11 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         reference: null,
       });
 
-      trackEvent('paiement_created', {
-        source: 'loyers_impayes',
-        montant: selectedLoyer.montant_du,
-        mois: selectedLoyer.mois_concerne,
+      emitEvent({
+        type: 'paiement.created',
         agency_id: profile.agency_id,
+        entity_type: 'paiements',
+        payload: { source: 'loyers_impayes', montant: selectedLoyer.montant_du, mois: selectedLoyer.mois_concerne },
       });
 
       toast.success('Paiement enregistré avec succès');

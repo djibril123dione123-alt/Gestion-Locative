@@ -42,7 +42,7 @@ import {
   cancelPaiementViaEdge,
   PaiementApiError,
 } from '../services/api/paiementApi';
-import { trackEvent } from '../lib/analytics';
+import { emitEvent } from '../lib/eventBus';
 
 interface PaiementRow {
   id: string;
@@ -296,9 +296,12 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           date_paiement: formData.date_paiement,
           reference: formData.reference || null,
         });
-        trackEvent('paiement_updated', {
-          paiement_id: editingPaiement.id,
+        emitEvent({
+          type: 'paiement.updated',
           agency_id: profile?.agency_id,
+          entity_type: 'paiements',
+          entity_id: editingPaiement.id,
+          payload: { montant: parseFloat(formData.montant_total), mode: formData.mode_paiement },
         });
       } else {
         // Création : passe par l'Edge Function (validation Zod + agency_id serveur)
@@ -316,11 +319,11 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           entity_type: 'paiements',
           metadata: { montant: data.montant_total, mois: data.mois_concerne, mode: data.mode_paiement },
         });
-        trackEvent('paiement_created', {
-          montant: data.montant_total,
-          mois: data.mois_concerne,
-          mode: data.mode_paiement,
+        emitEvent({
+          type: 'paiement.created',
           agency_id: profile?.agency_id,
+          entity_type: 'paiements',
+          payload: { montant: data.montant_total, mois: data.mois_concerne, mode: data.mode_paiement },
         });
       }
 
@@ -349,10 +352,12 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     try {
       // Annulation sécurisée via Edge Function (soft-cancel + ledger reversal côté serveur)
       await cancelPaiementViaEdge({ id: deleteTarget.id });
-      trackEvent('paiement_cancelled', {
-        paiement_id: deleteTarget.id,
-        montant: deleteTarget.montant_total,
+      emitEvent({
+        type: 'paiement.cancelled',
         agency_id: profile?.agency_id,
+        entity_type: 'paiements',
+        entity_id: deleteTarget.id,
+        payload: { montant: deleteTarget.montant_total },
       });
       success('Paiement annulé avec succès');
       setDeleteTarget(null);

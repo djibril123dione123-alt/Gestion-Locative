@@ -140,6 +140,25 @@ serve(async (req: Request) => {
       return err("Impossible de modifier un paiement annulé.", 422, "ALREADY_CANCELLED");
     }
 
+    // ── 4b. State machine — validation transition ─────────────────────────────
+    const PAIEMENT_TRANSITIONS: Record<string, string[]> = {
+      impaye:  ["paye", "partiel", "annule"],
+      partiel: ["paye", "annule"],
+      paye:    ["annule"],
+      annule:  [],
+    };
+
+    if (input.statut && input.statut !== existing.statut) {
+      const allowed = PAIEMENT_TRANSITIONS[existing.statut as string] ?? [];
+      if (!allowed.includes(input.statut)) {
+        return err(
+          `Transition invalide : "${existing.statut}" → "${input.statut}". Autorisées depuis "${existing.statut}" : ${allowed.join(", ") || "aucune"}.`,
+          422,
+          "INVALID_TRANSITION",
+        );
+      }
+    }
+
     // ── 5. Construction du patch ─────────────────────────────────────────────
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
 

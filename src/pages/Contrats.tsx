@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { createContratViaEdge, updateContratViaEdge, ContratApiError } from '../services/api/contratApi';
-import { trackEvent } from '../lib/analytics';
+import { emitEvent } from '../lib/eventBus';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
@@ -326,10 +326,11 @@ export function Contrats() {
           entity_type: 'contrats',
           metadata: { loyer: parseFloat(formData.loyer_mensuel), statut: formData.statut, destination: formData.destination },
         });
-        trackEvent('contract_created', {
-          loyer: parseFloat(formData.loyer_mensuel),
-          statut: formData.statut,
+        emitEvent({
+          type: 'contrat.created',
           agency_id: profile?.agency_id,
+          entity_type: 'contrats',
+          payload: { loyer: parseFloat(formData.loyer_mensuel), statut: formData.statut },
         });
 
         closeModal();
@@ -367,10 +368,12 @@ export function Contrats() {
           caution: formData.caution ? parseFloat(formData.caution) : null,
         });
 
-        trackEvent('contract_updated', {
-          contrat_id: editing.id,
-          new_statut: formData.statut,
+        emitEvent({
+          type: 'contrat.updated',
           agency_id: profile?.agency_id,
+          entity_type: 'contrats',
+          entity_id: editing.id,
+          payload: { new_statut: formData.statut },
         });
 
         closeEditModal();

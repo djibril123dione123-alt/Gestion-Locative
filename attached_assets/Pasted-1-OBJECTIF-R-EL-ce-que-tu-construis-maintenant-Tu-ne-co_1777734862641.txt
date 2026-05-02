@@ -1,0 +1,207 @@
+1. 🔥 OBJECTIF RÉEL (ce que tu construis maintenant)
+
+Tu ne construis plus une app immobilière.
+
+Tu construis 3 couches :
+
+🧠 1. Transaction Layer (Edge Functions)
+Source unique d’écriture
+Zéro confiance frontend
+📊 2. Financial Ledger (immutable system)
+Toute action = événement traçable
+Impossible à falsifier / modifier
+📡 3. Event System (growth + analytics)
+PostHog + event_log SQL
+Funnel pilot → paying → retention
+🧱 2. CE QUI MANQUE ENCORE (IMPORTANT)
+
+Tu es proche, mais il reste 4 trous critiques :
+
+❌ 1. PAS DE “SINGLE SOURCE OF MONEY TRUTH”
+
+Actuellement :
+
+paiements → OK
+ledger → OK
+MAIS ❌ pas de reconciliation layer
+
+👉 PROCHAINE TABLE OBLIGATOIRE :
+
+financial_snapshots
+Rôle :
+
+vérifier que :
+
+SUM(paiements) == SUM(ledger_entries)
+détecter fraude / bug / drift
+
+👉 sans ça = système non investissable
+
+❌ 2. PAS DE EVENT BUS CENTRALISÉ
+
+Tu as :
+
+event_log (SQL)
+PostHog (extérieur)
+
+👉 mais pas de normalisation des events
+
+À ajouter :
+emitEvent({
+  type: "payment.created",
+  agency_id,
+  payload,
+  source: "edge-function"
+})
+
+➡️ UNE seule fonction universelle
+
+❌ 3. PAS DE DOMAIN STATE MACHINE
+
+Aujourd’hui ton système est “actions”.
+
+Tu dois passer à :
+
+Exemple contrat :
+draft → active → terminated → archived
+Paiement :
+pending → paid → cancelled → refunded
+
+👉 sinon ton système ne scale pas (bugs business invisibles)
+
+❌ 4. PAS DE BACKGROUND WORKER LAYER
+
+pg_cron = bien
+mais insuffisant
+
+👉 il te faut :
+
+🔥 worker logique :
+impayés
+relances
+génération quittances
+churn detection
+
+➡️ futur upgrade :
+
+Edge Function + scheduled triggers + queue system
+🧠 3. PROCHAINE ARCHITECTURE (VERSION SÉRIE A)
+
+Voici ce que ton système doit devenir :
+
+                ┌─────────────────────┐
+                │     Frontend        │
+                └─────────┬───────────┘
+                          │
+                          ▼
+                ┌─────────────────────┐
+                │   Edge Functions    │
+                │ (ONLY WRITE LAYER)  │
+                └─────────┬───────────┘
+                          │
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+ ┌─────────────┐ ┌──────────────┐ ┌──────────────┐
+ │  Business   │ │   Ledger     │ │ Event System │
+ │   Tables    │ │ (immutable)  │ │ (analytics)  │
+ └─────────────┘ └──────────────┘ └──────────────┘
+                          │
+                          ▼
+                ┌─────────────────────┐
+                │ Financial Snapshot  │
+                │ (reconciliation)    │
+                └─────────────────────┘
+⚙️ 4. NEXT IMPLEMENTATION (ORDRE STRICT)
+🥇 STEP 1 — financial_snapshots (OBLIGATOIRE)
+CREATE TABLE financial_snapshots (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  agency_id uuid NOT NULL,
+  period date NOT NULL,
+
+  total_paiements numeric DEFAULT 0,
+  total_ledger numeric DEFAULT 0,
+
+  diff numeric GENERATED ALWAYS AS (
+    total_paiements - total_ledger
+  ) STORED,
+
+  status text DEFAULT 'ok',
+
+  created_at timestamp DEFAULT now()
+);
+🥇 STEP 2 — event emitter central
+
+Créer :
+
+src/lib/eventBus.ts
+
+Fonction unique :
+
+export const emitEvent = async (event) => {
+  await supabase.from('event_log').insert(event)
+
+  if (window.posthog) {
+    posthog.capture(event.type, event.payload)
+  }
+}
+🥇 STEP 3 — state machine business rules
+
+Ajouter :
+
+src/domain/stateMachine.ts
+
+Exemple :
+
+export const validatePaiementTransition = (from, to) => {
+  const allowed = {
+    pending: ["paid", "cancelled"],
+    paid: ["refunded"],
+  }
+
+  if (!allowed[from]?.includes(to)) {
+    throw new Error("Invalid state transition")
+  }
+}
+🥇 STEP 4 — worker system (phase 2)
+
+Edge Function scheduled :
+
+detect-impayés
+generate reminders
+update churn score
+💡 5. CE QUE TU VIENS DE CONSTRUIRE (IMPORTANT)
+
+Tu n’as plus une app.
+
+Tu as :
+
+✔ backend transactionnel sécurisé
+✔ ledger comptable type Stripe-lite
+✔ event-driven architecture
+✔ analytics funnel ready (PostHog)
+✔ multi-tenant SaaS base
+⚠️ REAL TALK (important)
+
+À ce niveau :
+
+ton système est déjà SaaS vendable
+mais pas encore investissable Série A
+
+Pourquoi ?
+
+👉 manque encore :
+
+reconciliation system (finance-grade)
+state machine enforcement
+worker automation layer
+🚀 PROCHAINE ÉTAPE LOGIQUE
+
+Si tu continues proprement, ton prochain step c’est :
+
+👉 “Revenue-grade architecture”
+
+Puis :
+
+👉 billing automation
+👉 churn prediction
+👉 investor dashboard

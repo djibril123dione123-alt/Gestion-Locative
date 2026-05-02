@@ -1,5 +1,62 @@
 # Samay Këur
 
+## Récents ajouts (mai 2026) — Autopilot Engine Série A
+
+### event_outbox — Source unique de vérité
+- `supabase/migrations/20260506000001_autopilot_engine.sql`
+- Table `event_outbox` (id, agency_id, event_type, entity_type, entity_id, payload, status, source, retry_count, error, processed_at)
+- Statuts : `pending → processing → processed | failed`
+- **Triggers** sur `paiements` et `contrats` : chaque INSERT/UPDATE critique écrit dans event_outbox automatiquement
+- RLS activé : SELECT par agency_id ou admin, INSERT libre (service role)
+
+### job_queue — Orchestration asynchrone
+- Table `job_queue` (id, type, agency_id, payload, status, priority, retry_count, max_retries, next_retry_at, source_event_id, started_at, completed_at, error)
+- Statuts : `pending → processing → done | failed`
+- Types de jobs : `GENERATE_LEDGER`, `RECONCILE_FINANCE`, `RECALCUL_KPI`, `SYNC_POSTHOG`, `SEND_NOTIFICATION`, `UPDATE_COHORT`
+- Retry exponentiel : `5 min × retry_count` entre chaque tentative, max 3 retries
+- `fn_enqueue_jobs_from_outbox(limit)` — traduit chaque événement outbox en 1-3 jobs spécialisés
+
+### KPI Tables — Investor-ready metrics
+- `kpi_daily` : MRR, paiements (count + total), impayés (count + montant), contrats new/actifs — UNIQUE(agency_id, date)
+- `kpi_monthly` : MRR, ARR (GENERATED × 12), impayes_rate, new/cancelled contracts — UNIQUE(agency_id, period)
+- `agency_cohort` : signup_week, first_contract_week, first_payment_week, conversion_time_days, retention 30/60/90d, churn_score
+- `cache_store` : key, value jsonb, agency_id, ttl_seconds, expires_at (GENERATED), avec auto-cleanup pg_cron
+
+### SQL Workers — Exécution inline pg_cron
+- `fn_worker_finance(batch)` — traite GENERATE_LEDGER + RECONCILE_FINANCE, retry automatique
+- `fn_worker_analytics(batch)` — traite RECALCUL_KPI + UPDATE_COHORT, DISTINCT ON pour déduplication
+- `fn_aggregate_kpi_daily(agency_id, date)` — upsert kpi_daily depuis paiements + contrats
+- `fn_aggregate_kpi_monthly(agency_id, period)` — upsert kpi_monthly avec calcul taux impayés
+
+### Autopilot Loop — pg_cron (activer pg_cron dans Supabase Dashboard)
+| Job cron | Schedule | Action |
+|---|---|---|
+| `enqueue-jobs-from-outbox` | `*/5 * * * *` | Outbox → jobs |
+| `finance-worker` | `*/10 * * * *` | GENERATE_LEDGER + RECONCILE_FINANCE |
+| `analytics-worker` | `*/15 * * * *` | RECALCUL_KPI + UPDATE_COHORT |
+| `cleanup-cache` | `0 * * * *` | DELETE cache_store expiré |
+
+### Edge Function Workers — Invocation manuelle (Audit Dashboard)
+- `supabase/functions/finance-worker/index.ts` — POST endpoint, requiert rôle admin/super_admin
+- `supabase/functions/analytics-worker/index.ts` — flush outbox + RECALCUL_KPI, POST endpoint
+
+### vw_system_anomalies — Vue anomalies
+- `paiement_sans_contrat` — paiements non annulés sans contrat référencé
+- `unite_loue_sans_contrat_actif` — unités en statut 'loué' sans contrat actif
+- `pilot_inactif` — agences trial depuis >30j sans aucun paiement
+
+### AuditDashboard.tsx — Control Tower
+- Route : `/audit` (lazy, réservé admin/super_admin)
+- 4 sections : Event Outbox live, Job Queue stats, Finance Integrity, Anomalies système
+- Boutons "Finance Worker" + "Analytics Worker" → invoke Edge Functions en direct
+- KPI du jour : MRR, encaissé, impayés, contrats actifs, jobs en file
+- Alertes rapides : outbox en attente, jobs en échec, écarts comptables
+
+### eventBus.ts — Triple-write pattern
+1. `event_outbox` (source primaire, fire-and-forget)
+2. `event_log` (audit trail, fire-and-forget)
+3. PostHog analytics
+
 ## Récents ajouts (mai 2026) — Revenue-Grade Architecture : Réconciliation + Event Bus + State Machine
 
 ### financial_snapshots — Couche de réconciliation investisseur

@@ -36,6 +36,7 @@ const Interventions = lazy(() => import('./pages/Interventions').then(m => ({ de
 const Calendrier = lazy(() => import('./pages/Calendrier').then(m => ({ default: m.Calendrier })));
 const Documents = lazy(() => import('./pages/Documents').then(m => ({ default: m.Documents })));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation').then(m => ({ default: m.AcceptInvitation })));
+const AuditDashboard = lazy(() => import('./pages/AuditDashboard').then(m => ({ default: m.AuditDashboard })));
 
 const PAGE_LABELS: Record<string, string> = {
     dashboard: 'Tableau de bord',
@@ -59,6 +60,7 @@ const PAGE_LABELS: Record<string, string> = {
     interventions: 'Maintenance',
     calendrier: 'Calendrier',
     documents: 'Documents',
+    audit: 'Control Tower',
 };
 
 function AppContent() {
@@ -263,6 +265,8 @@ function AppContent() {
                 return <Calendrier />;
             case 'documents':
                 return <Documents />;
+            case 'audit':
+                return <AuditDashboard />;
             default:
                 return <Dashboard onNavigate={handleNavigate} />;
         }

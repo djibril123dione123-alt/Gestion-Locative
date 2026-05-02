@@ -1,16 +1,22 @@
 /**
  * NetworkBanner — barre de statut réseau + sync offline.
  * - Hors ligne : rouge, compte les actions en attente de sync
- * - Connexion rétablie : vert 3 s + "synchronisation en cours" pendant le flush de la queue
+ * - Connexion rétablie : vert 3 s + résultat du sync
  * - En sync : bleu avec spinner
+ * - Erreurs de sync : orange avec détail
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { WifiOff, Wifi, RefreshCw } from 'lucide-react';
-import { getPendingCount, syncPendingMutations } from '../../services/offlineQueue';
+import { WifiOff, Wifi, RefreshCw, AlertTriangle } from 'lucide-react';
+import {
+  getPendingCount,
+  getErrorMutations,
+  syncPendingMutations,
+  type SyncResult,
+} from '../../services/offlineQueue';
 
 interface NetworkBannerProps {
-  onSyncComplete?: (synced: number) => void;
+  onSyncComplete?: (result: SyncResult) => void;
 }
 
 export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
@@ -18,16 +24,21 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
   const [showRestored, setShowRestored] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
-  const [syncedCount, setSyncedCount] = useState<number | null>(null);
+  const [errorCount, setErrorCount] = useState(0);
+  const [lastResult, setLastResult] = useState<SyncResult | null>(null);
 
-  const refreshPending = useCallback(async () => {
-    const count = await getPendingCount();
+  const refreshCounts = useCallback(async () => {
+    const [count, errMutations] = await Promise.all([
+      getPendingCount(),
+      getErrorMutations(),
+    ]);
     setPendingCount(count);
+    setErrorCount(errMutations.length);
   }, []);
 
   useEffect(() => {
-    refreshPending();
-  }, [refreshPending]);
+    refreshCounts();
+  }, [refreshCounts]);
 
   const doSync = useCallback(async () => {
     const count = await getPendingCount();
@@ -35,28 +46,28 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
     setSyncing(true);
     try {
       const result = await syncPendingMutations();
-      setSyncedCount(result.synced);
-      onSyncComplete?.(result.synced);
-      await refreshPending();
+      setLastResult(result);
+      onSyncComplete?.(result);
+      await refreshCounts();
     } finally {
       setSyncing(false);
     }
-  }, [refreshPending, onSyncComplete]);
+  }, [refreshCounts, onSyncComplete]);
 
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
       setShowRestored(true);
-      setSyncedCount(null);
+      setLastResult(null);
       doSync().then(() => {
-        setTimeout(() => setShowRestored(false), 4000);
+        setTimeout(() => setShowRestored(false), 5000);
       });
     };
     const handleOffline = () => {
       setIsOnline(false);
       setShowRestored(false);
-      setSyncedCount(null);
-      refreshPending();
+      setLastResult(null);
+      refreshCounts();
     };
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -64,9 +75,9 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [doSync, refreshPending]);
+  }, [doSync, refreshCounts]);
 
-  if (isOnline && !showRestored && !syncing) return null;
+  if (isOnline && !showRestored && !syncing && errorCount === 0) return null;
 
   if (!isOnline) {
     return (
@@ -77,6 +88,17 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
           {pendingCount > 0
             ? ` — ${pendingCount} action${pendingCount > 1 ? 's' : ''} seront synchronisées automatiquement`
             : ' — les données seront synchronisées dès le retour de connexion'}
+        </span>
+      </div>
+    );
+  }
+
+  if (errorCount > 0 && !syncing) {
+    return (
+      <div className="bg-amber-600 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-medium z-50 flex-shrink-0">
+        <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+        <span>
+          {errorCount} action{errorCount > 1 ? 's' : ''} n'ont pas pu être synchronisée{errorCount > 1 ? 's' : ''} — ouvrez le panneau de sauvegarde pour voir le détail.
         </span>
       </div>
     );
@@ -96,8 +118,11 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
       <Wifi className="w-4 h-4 flex-shrink-0" />
       <span>
         Connexion rétablie
-        {syncedCount !== null && syncedCount > 0
-          ? ` — ${syncedCount} action${syncedCount > 1 ? 's' : ''} synchronisée${syncedCount > 1 ? 's' : ''}`
+        {lastResult && lastResult.synced > 0
+          ? ` — ${lastResult.synced} action${lastResult.synced > 1 ? 's' : ''} synchronisée${lastResult.synced > 1 ? 's' : ''}`
+          : ''}
+        {lastResult && lastResult.errors > 0
+          ? ` — ${lastResult.errors} erreur${lastResult.errors > 1 ? 's' : ''}`
           : ''}
       </span>
     </div>

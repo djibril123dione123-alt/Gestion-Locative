@@ -2,8 +2,10 @@
  * useOfflineSync — gère la file d'attente offline et la synchronisation
  * automatique dès que la connexion est rétablie.
  *
- * Usage:
- *   const { isOnline, pendingCount, enqueue, syncNow, syncing } = useOfflineSync();
+ * Nouveautés v2 :
+ *   - Récupération des entrées 'syncing' bloquées au montage
+ *   - lastSyncResult exposé pour afficher un feedback post-sync à l'UI
+ *   - Compteur d'erreurs de sync exposé
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -11,38 +13,52 @@ import {
   enqueueMutation,
   getPendingCount,
   syncPendingMutations,
+  recoverStaleSyncing,
+  getErrorMutations,
   type MutationAction,
   type PendingMutation,
+  type SyncResult,
 } from '../services/offlineQueue';
 
 export interface UseOfflineSyncReturn {
   isOnline: boolean;
   pendingCount: number;
+  errorCount: number;
   syncing: boolean;
   syncProgress: { done: number; total: number } | null;
-  enqueue: (mutation: Omit<PendingMutation, 'id' | 'status'>) => Promise<void>;
-  syncNow: () => Promise<{ synced: number; errors: number }>;
+  lastSyncResult: SyncResult | null;
+  enqueue: (mutation: Omit<PendingMutation, 'id' | 'status' | 'retries'>) => Promise<void>;
+  syncNow: () => Promise<SyncResult>;
   refreshPendingCount: () => Promise<void>;
 }
 
 export function useOfflineSync(): UseOfflineSyncReturn {
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [pendingCount, setPendingCount] = useState(0);
+  const [errorCount, setErrorCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<{ done: number; total: number } | null>(null);
+  const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
   const syncingRef = useRef(false);
 
   const refreshPendingCount = useCallback(async () => {
-    const count = await getPendingCount();
+    const [count, errMutations] = await Promise.all([
+      getPendingCount(),
+      getErrorMutations(),
+    ]);
     setPendingCount(count);
+    setErrorCount(errMutations.length);
   }, []);
 
   useEffect(() => {
+    recoverStaleSyncing().then((recovered) => {
+      if (recovered > 0) refreshPendingCount();
+    });
     refreshPendingCount();
   }, [refreshPendingCount]);
 
-  const doSync = useCallback(async (): Promise<{ synced: number; errors: number }> => {
-    if (syncingRef.current) return { synced: 0, errors: 0 };
+  const doSync = useCallback(async (): Promise<SyncResult> => {
+    if (syncingRef.current) return { synced: 0, errors: 0, errorMessages: [] };
     syncingRef.current = true;
     setSyncing(true);
     setSyncProgress({ done: 0, total: 0 });
@@ -50,6 +66,7 @@ export function useOfflineSync(): UseOfflineSyncReturn {
       const result = await syncPendingMutations((done, total) => {
         setSyncProgress({ done, total });
       });
+      setLastSyncResult(result);
       await refreshPendingCount();
       return result;
     } finally {
@@ -75,7 +92,7 @@ export function useOfflineSync(): UseOfflineSyncReturn {
   }, [doSync]);
 
   const enqueue = useCallback(
-    async (mutation: Omit<PendingMutation, 'id' | 'status'>) => {
+    async (mutation: Omit<PendingMutation, 'id' | 'status' | 'retries'>) => {
       await enqueueMutation({ ...mutation, action: mutation.action as MutationAction });
       await refreshPendingCount();
     },
@@ -85,8 +102,10 @@ export function useOfflineSync(): UseOfflineSyncReturn {
   return {
     isOnline,
     pendingCount,
+    errorCount,
     syncing,
     syncProgress,
+    lastSyncResult,
     enqueue,
     syncNow: doSync,
     refreshPendingCount,

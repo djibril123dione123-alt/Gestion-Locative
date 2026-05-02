@@ -1,7 +1,10 @@
 /**
  * Offline mutation queue — stores pending actions in IndexedDB
  * and replays them against the real backend when connectivity is restored.
+ *
  * Conflict strategy: last-write-wins (timestamp-based).
+ * Stale 'syncing' entries (left over after a crash) are recovered to 'pending'
+ * on startup via recoverStaleSyncing().
  */
 
 import { dbPut, dbGetAll, dbDelete, dbGetByIndex } from './db';
@@ -10,10 +13,13 @@ import { supabase } from '../lib/supabase';
 export type MutationAction =
   | 'locataire_create'
   | 'locataire_update'
+  | 'locataire_delete'
   | 'paiement_create'
   | 'paiement_update'
+  | 'paiement_delete'
   | 'contrat_create'
-  | 'contrat_update';
+  | 'contrat_update'
+  | 'contrat_delete';
 
 export interface PendingMutation {
   id?: number;
@@ -22,32 +28,61 @@ export interface PendingMutation {
   payload: Record<string, unknown>;
   timestamp: number;
   status: 'pending' | 'syncing' | 'done' | 'error';
+  retries?: number;
   error?: string;
 }
 
-/** Table mapping per action */
+export interface SyncResult {
+  synced: number;
+  errors: number;
+  errorMessages: string[];
+}
+
+const MAX_RETRIES = 3;
+
 const ACTION_TABLE: Record<MutationAction, string> = {
   locataire_create: 'locataires',
   locataire_update: 'locataires',
+  locataire_delete: 'locataires',
   paiement_create: 'paiements',
   paiement_update: 'paiements',
+  paiement_delete: 'paiements',
   contrat_create: 'contrats',
   contrat_update: 'contrats',
+  contrat_delete: 'contrats',
 };
 
+/** Resets any stale 'syncing' entries back to 'pending'.
+ *  Call once at app startup — guards against crash during a previous sync. */
+export async function recoverStaleSyncing(): Promise<number> {
+  try {
+    const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
+    const stale = all.filter((m) => m.status === 'syncing');
+    for (const m of stale) {
+      await dbPut('pending_mutations', { ...m, status: 'pending' });
+    }
+    return stale.length;
+  } catch {
+    return 0;
+  }
+}
+
 /** Enqueue a mutation for later sync */
-export async function enqueueMutation(mutation: Omit<PendingMutation, 'id' | 'status'>): Promise<void> {
+export async function enqueueMutation(
+  mutation: Omit<PendingMutation, 'id' | 'status' | 'retries'>,
+): Promise<void> {
   try {
     await dbPut('pending_mutations', {
       ...mutation,
       status: 'pending',
+      retries: 0,
     } as PendingMutation);
   } catch (err) {
     console.warn('[OfflineQueue] Failed to enqueue mutation:', err);
   }
 }
 
-/** Returns all pending mutations */
+/** Returns all pending mutations (sorted oldest-first) */
 export async function getPendingMutations(): Promise<PendingMutation[]> {
   try {
     const all = await dbGetByIndex('pending_mutations', 'status', 'pending');
@@ -57,19 +92,30 @@ export async function getPendingMutations(): Promise<PendingMutation[]> {
   }
 }
 
-/** Returns count of all pending mutations */
+/** Returns total count of pending mutations */
 export async function getPendingCount(): Promise<number> {
   const pending = await getPendingMutations();
   return pending.length;
 }
 
+/** Returns all mutations that have permanently errored (>= MAX_RETRIES) */
+export async function getErrorMutations(): Promise<PendingMutation[]> {
+  try {
+    const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
+    return all.filter((m) => m.status === 'error');
+  } catch {
+    return [];
+  }
+}
+
 /** Replay all pending mutations against Supabase */
 export async function syncPendingMutations(
   onProgress?: (done: number, total: number) => void,
-): Promise<{ synced: number; errors: number }> {
+): Promise<SyncResult> {
   const mutations = await getPendingMutations();
   let synced = 0;
   let errors = 0;
+  const errorMessages: string[] = [];
 
   for (let i = 0; i < mutations.length; i++) {
     const m = mutations[i];
@@ -78,29 +124,47 @@ export async function syncPendingMutations(
 
     try {
       const isCreate = m.action.endsWith('_create');
-      let err: unknown;
+      const isDelete = m.action.endsWith('_delete');
+      let supabaseError: unknown;
 
-      if (isCreate) {
+      if (isDelete) {
+        const { id } = m.payload;
+        if (!id) {
+          errors++;
+          continue;
+        }
+        const { error } = await supabase.from(table).delete().eq('id', id);
+        supabaseError = error;
+      } else if (isCreate) {
         const { error } = await supabase.from(table).insert([m.payload]);
-        err = error;
+        supabaseError = error;
       } else {
         const { id, ...rest } = m.payload;
-        if (!id) { errors++; continue; }
+        if (!id) {
+          errors++;
+          continue;
+        }
         const { error } = await supabase.from(table).update(rest).eq('id', id);
-        err = error;
+        supabaseError = error;
       }
 
-      if (err) throw err;
+      if (supabaseError) throw supabaseError;
 
       if (m.id !== undefined) await dbDelete('pending_mutations', m.id as number);
       synced++;
     } catch (err: unknown) {
       errors++;
+      const msg = err instanceof Error ? err.message : String(err);
+      errorMessages.push(`[${m.action}] ${msg}`);
+
+      const retries = (m.retries ?? 0) + 1;
       if (m.id !== undefined) {
+        const newStatus: PendingMutation['status'] = retries >= MAX_RETRIES ? 'error' : 'pending';
         await dbPut('pending_mutations', {
           ...m,
-          status: 'error',
-          error: err instanceof Error ? err.message : String(err),
+          status: newStatus,
+          retries,
+          error: msg,
         });
       }
     }
@@ -108,12 +172,12 @@ export async function syncPendingMutations(
     onProgress?.(i + 1, mutations.length);
   }
 
-  return { synced, errors };
+  return { synced, errors, errorMessages };
 }
 
-/** Clear all mutations (done + errors) */
+/** Clear all done + permanently-errored mutations */
 export async function clearDoneMutations(): Promise<void> {
-  const all = await dbGetAll('pending_mutations') as PendingMutation[];
+  const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
   for (const m of all) {
     if (m.status === 'done' || m.status === 'error') {
       if (m.id !== undefined) await dbDelete('pending_mutations', m.id as number);

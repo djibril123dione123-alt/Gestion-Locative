@@ -1,5 +1,33 @@
 # Samay Këur
 
+## Récents ajouts (mai 2026) — Audit P3→P7 (logique métier, offline, architecture, PDF, UX)
+
+### Services domaine (src/services/domain/)
+- `commissionService.ts` — `validateCommission`, `calculateCommission`, `CommissionRequiredError`, `isCommissionMissing`. Suppression définitive du fallback `|| 10` silencieux.
+- `paiementService.ts` — `buildPaiementPayload` (calcul part_agence/part_bailleur via commissionService), `formatPaiementError` (type-safe). Utilisé dans `Paiements.tsx` handleSubmit.
+- `contratService.ts` — `validateContrat`, `isStatutTransitionValid`, `computeDateFin`, `isContratExpire`, `formatContratError`, `ContratValidationError`.
+
+### Couche repository (src/repositories/)
+- `paiementsRepository.ts` — Pattern repository complet : `list` (pagination), `listActiveContrats`, `findForPDF`, `insert`, `update`, `softDelete` (soft delete avec `deleted_at`/`actif`), `hardDelete`. Séparation totale DB ↔ logique métier.
+
+### Offline & sync (améliorations P3)
+- `offlineQueue.ts` — DELETE actions, `recoverStaleSyncing` (recovery des mutations bloquées en "syncing"), `MAX_RETRIES=3`, `SyncResult` avec `errorMessages`, `getErrorMutations`.
+- `useOfflineSync.ts` — recovery stale au montage, `lastSyncResult`, `errorCount` exposés.
+- `App.tsx` — `recoverStaleSyncing()` appelé au montage ; backup complet quotidien `runFullBackup(agencyId)` déclenché si `isDue` (> 24h depuis le dernier backup) avec fail silencieux.
+
+### Backup complet (P1 finalisation)
+- `localBackup.ts` — `runFullBackup(agencyId)` depuis Supabase : 7 tables (agences/bailleurs/immeubles/unites/locataires/contrats/paiements), `parseBackupPreview()` (lecture sans écriture), `restoreFromFile(strategy: merge|overwrite)`.
+- `BackupIndicator.tsx` v2 — preview de restauration (comptage par table, date export, warning mutations hors-ligne) avec choix merge/overwrite avant confirmation.
+- `NetworkBanner.tsx` v2 — 4 états : hors-ligne (rouge + count pending), erreurs sync (orange), en sync (bleu spinner), connexion rétablie (vert + count synchronisé).
+
+### Paiements.tsx (P2 logique métier)
+- Recherche : remplacé `JSON.stringify(p)` par filtre explicite sur nom/prénom locataire, nom unité, référence, mois, mode, statut.
+- handleSubmit : utilise `buildPaiementPayload` + `formatPaiementError` — plus aucun fallback commission silencieux.
+- Formulaire : avertissement `AlertTriangle` si le contrat sélectionné n'a pas de commission configurée (`isCommissionMissing`).
+
+### Migration SQL (P8 Dashboard RPC)
+- `supabase/migrations/20260502000001_add_dashboard_stats_rpc.sql` — RPC `get_dashboard_stats(agency_id, year_month)` : 1 seule requête SQL au lieu de 8 en parallèle. RPC `get_monthly_revenue(agency_id, year)` : agrégats mensuels côté Postgres, pas de chargement en mémoire. Les deux fonctions ont `SECURITY DEFINER` + vérification multi-tenant + `REVOKE/GRANT` correct.
+
 ## Récents ajouts (mai 2026) — 3 piliers de résilience (offline-first)
 
 ### Architecture ajoutée

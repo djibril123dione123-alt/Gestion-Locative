@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense } from 'react';
+import React, { useState, lazy, Suspense, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -12,6 +12,8 @@ import { BackupIndicator } from './components/ui/BackupIndicator';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
 import Welcome from './pages/Welcome';
+import { runFullBackup, getLastBackupTimestamp } from './services/localBackup';
+import { recoverStaleSyncing } from './services/offlineQueue';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Agences = lazy(() => import('./pages/Agences'));
@@ -135,6 +137,23 @@ function AppContent() {
             }
         }
     }, [user, invitationToken]);
+
+    // ── Backup complet quotidien depuis Supabase ──
+    useEffect(() => {
+        if (!profile?.agency_id || !navigator.onLine) return;
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+        const lastTs = getLastBackupTimestamp();
+        const isDue = !lastTs || (Date.now() - lastTs) > ONE_DAY_MS;
+        if (!isDue) return;
+        runFullBackup(profile.agency_id).catch(() => {
+            // Fail silencieux — le prochain démarrage réessaiera
+        });
+    }, [profile?.agency_id]);
+
+    // ── Récupération des mutations bloquées en "syncing" ──
+    useEffect(() => {
+        recoverStaleSyncing().catch(() => { /* noop */ });
+    }, []);
 
     if (loading) {
         return (

@@ -22,6 +22,7 @@ import {
   Clock,
   XCircle,
   Sheet,
+  AlertTriangle,
 } from 'lucide-react';
 import { generatePaiementFacturePDF } from '../lib/pdf';
 import { useToast } from '../hooks/useToast';
@@ -30,6 +31,11 @@ import { useExport } from '../hooks/useExport';
 import { useBackup } from '../hooks/useBackup';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { formatCurrency } from '../lib/formatters';
+import {
+  buildPaiementPayload,
+  formatPaiementError,
+} from '../services/domain/paiementService';
+import { isCommissionMissing } from '../services/domain/commissionService';
 
 interface PaiementRow {
   id: string;
@@ -154,7 +160,22 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     }
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
-      list = list.filter((p) => JSON.stringify(p).toLowerCase().includes(q));
+      list = list.filter((p) => {
+        const loc = (p as any).contrats?.locataires;
+        const searchable = [
+          loc?.prenom,
+          loc?.nom,
+          (p as any).contrats?.unites?.nom,
+          p.reference,
+          p.mois_concerne,
+          p.mode_paiement,
+          p.statut,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return searchable.includes(q);
+      });
     }
     return list;
   }, [paiements, statusFilter, searchTerm]);
@@ -229,30 +250,28 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       const contrat = contrats.find((c) => c.id === formData.contrat_id);
       if (!contrat) throw new Error('Contrat non trouvé');
 
-      const montantTotal = parseFloat(formData.montant_total);
-      const partAgence = (montantTotal * (contrat.commission || contrat.pourcentage_agence || 10)) / 100;
-      const partBailleur = montantTotal - partAgence;
-
       const moisConcerne = new Date(formData.mois_display + '-01').toISOString().split('T')[0];
 
-      const data = {
-        montant_total: montantTotal,
-        mois_concerne: moisConcerne,
-        date_paiement: formData.date_paiement,
-        mode_paiement: formData.mode_paiement,
-        statut: formData.statut,
-        reference: formData.reference || null,
-        part_agence: partAgence,
-        part_bailleur: partBailleur,
-        agency_id: profile.agency_id,
-      };
+      const data = buildPaiementPayload(
+        {
+          contrat_id: formData.contrat_id,
+          montant_total: parseFloat(formData.montant_total),
+          mois_concerne: moisConcerne,
+          date_paiement: formData.date_paiement,
+          mode_paiement: formData.mode_paiement,
+          statut: formData.statut,
+          reference: formData.reference || null,
+        },
+        { id: contrat.id, commission: contrat.commission ?? contrat.pourcentage_agence ?? null, loyer_mensuel: contrat.loyer_mensuel },
+        profile.agency_id,
+      );
 
       // ── Mode hors ligne : on met en file d'attente, on ne touche pas Supabase ──
       if (!isOnline && !editingPaiement) {
         await queueMutation({
           action: 'paiement_create',
           entity_type: 'paiements',
-          payload: { ...data, contrat_id: formData.contrat_id },
+          payload: { ...data },
           timestamp: Date.now(),
         });
         success('Paiement enregistré localement — il sera synchronisé dès le retour de connexion');
@@ -265,7 +284,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         const result = await supabase.from('paiements').update(data).eq('id', editingPaiement.id);
         error = result.error;
       } else {
-        const result = await supabase.from('paiements').insert([{ ...data, contrat_id: formData.contrat_id }]);
+        const result = await supabase.from('paiements').insert([data]);
         error = result.error;
       }
 
@@ -282,8 +301,8 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       success(editingPaiement ? 'Paiement modifié avec succès' : 'Paiement enregistré avec succès');
       closeModal();
       loadData();
-    } catch (error: any) {
-      showError(error.message || "Une erreur est survenue lors de l'enregistrement du paiement");
+    } catch (error: unknown) {
+      showError(formatPaiementError(error));
     } finally {
       setIsSaving(false);
     }
@@ -679,6 +698,16 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                   </option>
                 ))}
               </select>
+              {formData.contrat_id && (() => {
+                const sel = contrats.find((c) => c.id === formData.contrat_id);
+                const commission = sel?.commission ?? (sel as any)?.pourcentage_agence ?? null;
+                return isCommissionMissing(commission) ? (
+                  <div className="flex items-start gap-2 mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-600" />
+                    <span>Ce contrat n'a pas de commission configurée. Veuillez la définir dans la fiche contrat avant d'enregistrer.</span>
+                  </div>
+                ) : null;
+              })()}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

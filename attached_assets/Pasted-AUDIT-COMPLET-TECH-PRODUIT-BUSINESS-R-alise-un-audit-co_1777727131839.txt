@@ -1,0 +1,218 @@
+AUDIT COMPLET (TECH + PRODUIT + BUSINESS)
+
+Réalise un audit complet, critique et sans concession de cette application SaaS.
+
+L’objectif n’est pas de valider, mais d’identifier :
+
+les failles
+les risques
+les incohérences
+les limites de scalabilité
+les blocages à la vente terrain
+
+Structure ta réponse par sections claires avec priorisation (critique / important / amélioration).
+
+1. 🏗️ ARCHITECTURE GLOBALE
+
+Analyse :
+
+Structure du projet (frontend, services, hooks)
+Séparation des responsabilités
+Couplage entre UI, logique métier et data
+Réutilisabilité du code
+Présence de dette technique
+
+Questions clés :
+
+Le projet peut-il scaler à 100+ agences ?
+Y a-t-il des points de rupture ?
+Le code est-il maintenable par un autre dev ?
+2. 🌐 DATA & SYNCHRONISATION
+
+Analyser en profondeur :
+
+Gestion du offline (queue, sync, conflits)
+Stratégie de synchronisation (last-write-wins ?)
+Risque de perte de données
+Cohérence entre local (IndexedDB) et serveur (Supabase)
+
+Points critiques :
+
+Que se passe-t-il en cas de conflit ?
+En cas de crash ?
+Si l’utilisateur change d’appareil ?
+Si 2 utilisateurs modifient la même donnée ?
+3. 💾 BACKUP & SÉCURITÉ DES DONNÉES
+
+Évaluer :
+
+Fiabilité du backup local
+Fréquence de sauvegarde
+Process de restauration
+Risques de corruption
+Sécurité (données sensibles stockées localement ?)
+
+Critique :
+
+Peut-on perdre toutes les données ?
+Le système est-il acceptable pour un usage professionnel réel ?
+4. 💰 LOGIQUE MÉTIER (IMMOBILIER)
+
+Auditer :
+
+Gestion des locataires
+Contrats
+Paiements
+Loyers impayés
+bilans_mensuels
+
+Vérifier :
+
+Cohérence des calculs
+Cas limites (paiement partiel, retard, annulation)
+Risque d’erreurs financières
+
+Question clé :
+👉 Peut-on faire confiance aux chiffres affichés ?
+
+5. 📄 PDF & DOCUMENTS
+
+Analyser :
+
+Génération des quittances / contrats / mandats
+Stabilité du rendu (fonts, encoding, caractères spéciaux)
+QR code
+Cache PDF
+
+Points critiques :
+
+Risque de documents faux ou corrompus ?
+Données toujours à jour ?
+Problèmes d’encodage (comme le bug /) ?
+6. ⚙️ FEATURE FLAGS & CONFIGURATION
+
+Évaluer :
+
+Implémentation des feature flags
+Risque de bugs liés à des flags incohérents
+Gestion par agence
+
+Question :
+👉 Peut-on activer/désactiver des features sans casser l’app ?
+
+7. 🌍 EXPÉRIENCE UTILISATEUR (UX TERRAIN)
+
+Analyser avec un prisme réel :
+
+Utilisateur non technique
+Connexion instable
+Pression métier
+
+Points à auditer :
+
+Temps pour comprendre l’app
+Nombre d’actions pour faire une tâche simple
+Clarté des erreurs
+Friction à l’usage
+
+Question clé :
+👉 Est-ce qu’un agent immobilier peut utiliser ça sans formation ?
+
+8. 📶 OFFLINE & CONDITIONS RÉELLES
+
+Tester mentalement :
+
+Perte de connexion en plein paiement
+Reconnexion lente
+Utilisation sur mobile bas de gamme
+
+Évaluer :
+
+Robustesse réelle
+UX en mode offline
+9. 🚨 GESTION DES ERREURS
+
+Analyser :
+
+États d’erreur (UI)
+Retry
+Silent fail
+
+Question :
+👉 L’utilisateur comprend-il ce qui se passe quand ça casse ?
+
+10. 🔐 SÉCURITÉ
+
+Évaluer :
+
+Accès aux données
+Multi-agence isolation
+Risques de fuite
+Authentification
+
+Critique :
+👉 Une agence peut-elle voir les données d’une autre ?
+
+11. 📈 SCALABILITÉ
+
+Projeter :
+
+10 agences → OK
+100 agences → ?
+1000 agences → ?
+
+Analyser :
+
+Performances
+Requêtes
+Structure base de données
+12. 💸 MONÉTISATION & BUSINESS
+
+Analyser :
+
+Proposition de valeur
+Différenciation
+Points bloquants à la vente
+
+Questions :
+
+Pourquoi un client paierait ?
+Qu’est-ce qui peut le faire fuir ?
+Qu’est-ce qui manque pour closer ?
+13. 🧨 RISQUES CRITIQUES
+
+Liste claire :
+
+Bugs bloquants potentiels
+Risques business
+Risques techniques majeurs
+14. 🛠️ PLAN D’ACTION
+
+Donne :
+
+Top 5 corrections prioritaires
+Quick wins (impact élevé, effort faible)
+Améliorations long terme
+15. 🎯 VERDICT FINAL
+
+Donne un avis clair :
+
+❌ Pas vendable
+⚠️ Vendable avec risques
+✅ Vendable maintenant
+justification directe
+🔥 IMPORTANT
+
+Sois direct, critique, sans filtre.
+Ne cherche pas à être gentil.
+Le but est d’améliorer le produit pour un usage réel et une vente terrain.
+
+💣 Bonus (si tu veux aller encore plus loin)
+
+Je peux te faire :
+
+audit spécial closing (ce qui bloque la vente)
+audit UX terrain Afrique
+audit architecture SaaS scalable (niveau startup)
+
+Tu es à un niveau où les détails vont faire la différence.

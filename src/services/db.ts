@@ -20,6 +20,7 @@ export interface DBSchema {
       payload: Record<string, unknown>;
       timestamp: number;
       status: 'pending' | 'syncing' | 'done' | 'error';
+      retries?: number;
       error?: string;
     };
   };

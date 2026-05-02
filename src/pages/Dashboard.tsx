@@ -1,15 +1,14 @@
-import React, { useEffect, useState, useCallback, useMemo, memo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../lib/formatters';
 import {
   Building2,
-  Users,
   TrendingUp,
   DollarSign,
   AlertCircle,
   DoorOpen,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 import {
   BarChart,
@@ -21,11 +20,13 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from 'recharts';
 import { QuickStart } from '../components/ui/QuickStart';
 import { EmptyState } from '../components/ui/EmptyState';
 import { SetupWizard } from '../components/ui/SetupWizard';
+
+const FR_MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
 interface DashboardStats {
   totalBailleurs: number;
@@ -62,7 +63,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
     nbImpayesMois: 0,
     tauxOccupation: 0,
   });
-  const [monthlyRevenue, setMonthlyRevenue] = useState<any[]>([]);
+  const [monthlyRevenue, setMonthlyRevenue] = useState<{ month: string; revenus: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
@@ -76,77 +77,66 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
 
     try {
       const agencyId = profile.agency_id;
+      const yearMonth = new Date().toISOString().slice(0, 7);
+      const year = new Date().getFullYear();
 
-      const [
-        { count: bailleursCount },
-        { count: immeublesCount },
-        { count: unitesCount },
-        { count: unitesLibresCount },
-        { count: unitesLoueesCount },
-        { count: locatairesCount },
-        { count: contratsCount },
-        { data: paiementsData },
-      ] = await Promise.all([
-        supabase.from('bailleurs').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId),
-        supabase.from('immeubles').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId),
-        supabase.from('unites').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId),
-        supabase.from('unites').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId).eq('statut', 'libre'),
-        supabase.from('unites').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId).eq('statut', 'loue'),
-        supabase.from('locataires').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId),
-        supabase.from('contrats').select('*', { count: 'exact', head: true }).eq('agency_id', agencyId).eq('statut', 'actif'),
-        supabase
-          .from('paiements')
-          .select('montant_total, mois_concerne, statut')
-          .eq('agency_id', agencyId)
-          .gte('mois_concerne', new Date(new Date().getFullYear(), 0, 1).toISOString()),
+      // Une seule RPC au lieu de 8 requêtes parallèles
+      const [statsRes, monthlyRes] = await Promise.all([
+        supabase.rpc('get_dashboard_stats', {
+          p_agency_id: agencyId,
+          p_year_month: yearMonth,
+        }),
+        supabase.rpc('get_monthly_revenue', {
+          p_agency_id: agencyId,
+          p_year: year,
+        }),
       ]);
 
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      const payesMois = paiementsData?.filter(
-        (p) => p.mois_concerne.startsWith(currentMonth) && p.statut === 'paye'
-      ) ?? [];
-      const impayesMoisList = paiementsData?.filter(
-        (p) => p.mois_concerne.startsWith(currentMonth) && p.statut === 'impaye'
-      ) ?? [];
+      if (statsRes.error) throw statsRes.error;
 
-      const revenusMois = payesMois.reduce((sum, p) => sum + Number(p.montant_total), 0);
-      const impayesMois = impayesMoisList.reduce((sum, p) => sum + Number(p.montant_total), 0);
-      const nbPaiementsMois = payesMois.length;
-      const nbImpayesMois = impayesMoisList.length;
-
-      const monthlyData = processMonthlyRevenue(paiementsData || []);
-
-      const tauxOccupation = unitesCount ? ((unitesLoueesCount || 0) / unitesCount) * 100 : 0;
-
-      const newStats = {
-        totalBailleurs: bailleursCount || 0,
-        totalImmeubles: immeublesCount || 0,
-        totalUnites: unitesCount || 0,
-        unitesLibres: unitesLibresCount || 0,
-        unitesLouees: unitesLoueesCount || 0,
-        totalLocataires: locatairesCount || 0,
-        contratsActifs: contratsCount || 0,
-        revenusMois,
-        impayesMois,
-        nbPaiementsMois,
-        nbImpayesMois,
-        tauxOccupation,
+      const d = statsRes.data as Record<string, unknown>;
+      const newStats: DashboardStats = {
+        totalBailleurs:  Number(d.bailleurs       ?? 0),
+        totalImmeubles:  Number(d.immeubles        ?? 0),
+        totalUnites:     Number(d.unites           ?? 0),
+        unitesLibres:    Number(d.unites_libres    ?? 0),
+        unitesLouees:    Number(d.unites_louees    ?? 0),
+        totalLocataires: Number(d.locataires       ?? 0),
+        contratsActifs:  Number(d.contrats_actifs  ?? 0),
+        revenusMois:     Number(d.revenus_mois     ?? 0),
+        impayesMois:     Number(d.impayes_mois     ?? 0),
+        nbPaiementsMois: Number(d.nb_payes_mois    ?? 0),
+        nbImpayesMois:   Number(d.nb_impayes_mois  ?? 0),
+        tauxOccupation:
+          Number(d.unites ?? 0) > 0
+            ? (Number(d.unites_louees ?? 0) / Number(d.unites ?? 0)) * 100
+            : 0,
       };
 
       setStats(newStats);
-
-      const hasNoData =
+      setIsNewUser(
         newStats.totalBailleurs === 0 &&
         newStats.totalImmeubles === 0 &&
         newStats.totalUnites === 0 &&
-        newStats.totalLocataires === 0;
+        newStats.totalLocataires === 0,
+      );
 
-      setIsNewUser(hasNoData);
+      // Revenus mensuels — fallback vers tableau vide si l'extension pg_cron ou la RPC échoue
+      if (!monthlyRes.error && monthlyRes.data) {
+        const monthly = (monthlyRes.data as { month_num: number; revenus: number }[]).map(
+          (row) => ({
+            month: FR_MONTHS[(row.month_num ?? 1) - 1] ?? String(row.month_num),
+            revenus: Math.round(Number(row.revenus ?? 0)),
+          }),
+        );
+        setMonthlyRevenue(monthly);
+      }
 
-      setMonthlyRevenue(monthlyData);
       setError(null);
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'Une erreur est survenue lors du chargement du tableau de bord.');
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error ? err.message : 'Une erreur est survenue lors du chargement du tableau de bord.',
+      );
     } finally {
       setLoading(false);
     }
@@ -164,28 +154,13 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
     }
   }, [profile?.agency_id, authLoading, profile, loadDashboardData]);
 
-  const processMonthlyRevenue = (paiements: any[]) => {
-    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-    const currentYear = new Date().getFullYear();
-
-    const data = months.map((month, index) => {
-      const monthStr = `${currentYear}-${String(index + 1).padStart(2, '0')}`;
-      const revenus = paiements
-        .filter(p => p.mois_concerne.startsWith(monthStr) && p.statut === 'paye')
-        .reduce((sum, p) => sum + Number(p.montant_total), 0);
-
-      return { month, revenus: Math.round(revenus) };
-    });
-
-    return data;
-  };
-
-
-
-  const pieData = useMemo(() => [
-    { name: 'Louées', value: stats.unitesLouees },
-    { name: 'Libres', value: stats.unitesLibres },
-  ], [stats.unitesLouees, stats.unitesLibres]);
+  const pieData = useMemo(
+    () => [
+      { name: 'Louées', value: stats.unitesLouees },
+      { name: 'Libres', value: stats.unitesLibres },
+    ],
+    [stats.unitesLouees, stats.unitesLibres],
+  );
 
   const COLORS = ['#F58220', '#94a3b8'];
 
@@ -193,7 +168,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-orange-200 border-t-orange-600 mb-4"></div>
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-orange-200 border-t-orange-600 mb-4" />
           <p className="text-lg text-slate-600 animate-pulse-soft">Chargement du tableau de bord...</p>
         </div>
       </div>
@@ -210,7 +185,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
           <button
             onClick={() => {
               if (!profile?.agency_id) {
-                setError('Votre compte n\'a pas d\'agence associée. Veuillez contacter le support.');
+                setError("Votre compte n'a pas d'agence associée.");
                 return;
               }
               setError(null);
@@ -244,7 +219,9 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
               Bienvenue sur Gestion Locative
             </h1>
-            <p className="text-slate-600 text-base lg:text-lg">Commencez par configurer votre plateforme en quelques étapes simples</p>
+            <p className="text-slate-600 text-base lg:text-lg">
+              Commencez par configurer votre plateforme en quelques étapes simples
+            </p>
           </div>
 
           <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200 animate-slideInUp">
@@ -267,55 +244,50 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
 
           <QuickStart onNavigate={onNavigate} />
 
-        <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
-          <EmptyState
-            icon={Sparkles}
-            title="Votre tableau de bord est prêt !"
-            description="Une fois que vous aurez ajouté vos premiers bailleurs, immeubles et locataires, vous verrez apparaître ici toutes vos statistiques et graphiques en temps réel."
-            action={{
-              label: "Commencer la configuration",
-              onClick: () => onNavigate?.('bailleurs'),
-            }}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="font-bold text-orange-900">Gestion complète</h3>
-            </div>
-            <p className="text-sm text-orange-800">
-              Gérez vos bailleurs, immeubles, unités et locataires dans une seule plateforme intuitive
-            </p>
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
+            <EmptyState
+              icon={Sparkles}
+              title="Votre tableau de bord est prêt !"
+              description="Une fois que vous aurez ajouté vos premiers bailleurs, immeubles et locataires, vous verrez apparaître ici toutes vos statistiques et graphiques en temps réel."
+              action={{ label: 'Commencer la configuration', onClick: () => onNavigate?.('bailleurs') }}
+            />
           </div>
 
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-2 border-blue-200">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-6 h-6 text-white" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-bold text-orange-900">Gestion complète</h3>
               </div>
-              <h3 className="font-bold text-blue-900">Suivi financier</h3>
+              <p className="text-sm text-orange-800">
+                Gérez vos bailleurs, immeubles, unités et locataires dans une seule plateforme intuitive
+              </p>
             </div>
-            <p className="text-sm text-blue-800">
-              Encaissements, rapports mensuels, détection des impayés automatique et exports PDF
-            </p>
-          </div>
-
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-white" />
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-2 border-blue-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                  <DollarSign className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-bold text-blue-900">Suivi financier</h3>
               </div>
-              <h3 className="font-bold text-green-900">Rapports intelligents</h3>
+              <p className="text-sm text-blue-800">
+                Encaissements, rapports mensuels, détection des impayés automatique et exports PDF
+              </p>
             </div>
-            <p className="text-sm text-green-800">
-              Statistiques en temps réel, graphiques mensuels et bilans automatisés pour chaque bailleur
-            </p>
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="font-bold text-green-900">Rapports intelligents</h3>
+              </div>
+              <p className="text-sm text-green-800">
+                Statistiques en temps réel, graphiques mensuels et bilans automatisés pour chaque bailleur
+              </p>
+            </div>
           </div>
-        </div>
         </div>
       </>
     );
@@ -330,7 +302,6 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
         <p className="text-slate-600 text-base lg:text-lg">Vue d'ensemble de votre activité immobilière</p>
       </div>
 
-      {/* === Bannière alerte impayés === */}
       {stats.nbImpayesMois > 0 && (
         <button
           onClick={() => onNavigate?.('loyers-impayes')}
@@ -342,7 +313,8 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
             </div>
             <div className="min-w-0">
               <p className="font-bold text-red-900 text-base sm:text-lg">
-                {stats.nbImpayesMois} loyer{stats.nbImpayesMois > 1 ? 's' : ''} impayé{stats.nbImpayesMois > 1 ? 's' : ''} ce mois
+                {stats.nbImpayesMois} loyer{stats.nbImpayesMois > 1 ? 's' : ''} impayé
+                {stats.nbImpayesMois > 1 ? 's' : ''} ce mois
               </p>
               <p className="text-sm text-red-700 font-medium truncate">
                 {formatCurrency(stats.impayesMois)} en attente de recouvrement
@@ -355,17 +327,25 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
         </button>
       )}
 
-      {/* === Résumé financier rapide === */}
+      {/* Résumé financier rapide */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-4 border border-emerald-200">
           <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1">Encaissés ce mois</p>
           <p className="text-xl sm:text-2xl font-bold text-emerald-900 truncate">{formatCurrency(stats.revenusMois)}</p>
-          <p className="text-xs text-emerald-600 mt-1">{stats.nbPaiementsMois} paiement{stats.nbPaiementsMois > 1 ? 's' : ''}</p>
+          <p className="text-xs text-emerald-600 mt-1">
+            {stats.nbPaiementsMois} paiement{stats.nbPaiementsMois > 1 ? 's' : ''}
+          </p>
         </div>
         <div className={`rounded-xl p-4 border ${stats.impayesMois > 0 ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200' : 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200'}`}>
-          <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${stats.impayesMois > 0 ? 'text-red-700' : 'text-slate-500'}`}>Impayés ce mois</p>
-          <p className={`text-xl sm:text-2xl font-bold truncate ${stats.impayesMois > 0 ? 'text-red-900' : 'text-slate-400'}`}>{formatCurrency(stats.impayesMois)}</p>
-          <p className={`text-xs mt-1 ${stats.impayesMois > 0 ? 'text-red-600' : 'text-slate-400'}`}>{stats.nbImpayesMois} dossier{stats.nbImpayesMois > 1 ? 's' : ''}</p>
+          <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${stats.impayesMois > 0 ? 'text-red-700' : 'text-slate-500'}`}>
+            Impayés ce mois
+          </p>
+          <p className={`text-xl sm:text-2xl font-bold truncate ${stats.impayesMois > 0 ? 'text-red-900' : 'text-slate-400'}`}>
+            {formatCurrency(stats.impayesMois)}
+          </p>
+          <p className={`text-xs mt-1 ${stats.impayesMois > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+            {stats.nbImpayesMois} dossier{stats.nbImpayesMois > 1 ? 's' : ''}
+          </p>
         </div>
         <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
           <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-1">Contrats actifs</p>
@@ -375,18 +355,15 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
           <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Occupation</p>
           <p className="text-xl sm:text-2xl font-bold text-blue-900">{stats.tauxOccupation.toFixed(0)}%</p>
-          <p className="text-xs text-blue-600 mt-1">{stats.unitesLouees}/{stats.totalUnites} unités</p>
+          <p className="text-xs text-blue-600 mt-1">
+            {stats.unitesLouees}/{stats.totalUnites} unités
+          </p>
         </div>
       </div>
 
+      {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        <StatCard
-          title="Immeubles"
-          value={stats.totalImmeubles}
-          icon={Building2}
-          color="orange"
-          delay={0}
-        />
+        <StatCard title="Immeubles" value={stats.totalImmeubles} icon={Building2} color="orange" delay={0} />
         <StatCard
           title="Unités totales"
           value={stats.totalUnites}
@@ -404,15 +381,18 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
             <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl transition-all duration-300 hover:scale-105">
               <div className="flex-1 min-w-0">
                 <p className="text-xs sm:text-sm text-green-700 font-medium">Revenus perçus</p>
-                <p className="text-lg sm:text-2xl font-bold text-green-900 truncate">{formatCurrency(stats.revenusMois)}</p>
+                <p className="text-lg sm:text-2xl font-bold text-green-900 truncate">
+                  {formatCurrency(stats.revenusMois)}
+                </p>
               </div>
               <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
             </div>
-
             <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl transition-all duration-300 hover:scale-105">
               <div className="flex-1 min-w-0">
                 <p className="text-xs sm:text-sm text-red-700 font-medium">Loyers impayés</p>
-                <p className="text-lg sm:text-2xl font-bold text-red-900 truncate">{formatCurrency(stats.impayesMois)}</p>
+                <p className="text-lg sm:text-2xl font-bold text-red-900 truncate">
+                  {formatCurrency(stats.impayesMois)}
+                </p>
               </div>
               <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600 flex-shrink-0" />
             </div>
@@ -446,7 +426,9 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={(props: any) => `${props.name} ${((props.percent ?? 0) * 100).toFixed(0)}%`}
+                label={(props: { name: string; percent?: number }) =>
+                  `${props.name} ${(((props.percent ?? 0) * 100).toFixed(0))}%`
+                }
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
@@ -475,50 +457,54 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
   );
 }
 
+// ─── Composants internes ──────────────────────────────────────────────────────
+
 interface StatCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
   icon: React.ElementType;
   color: 'orange' | 'blue' | 'slate' | 'green' | 'emerald';
-  delay: number;
+  delay?: number;
 }
 
-const StatCard = memo(({ title, value, subtitle, icon: Icon, color, delay }: StatCardProps) => {
-  const colorClasses: Record<StatCardProps['color'], string> = {
-    orange: 'bg-gradient-to-br from-orange-50 to-orange-100 text-orange-600',
-    blue: 'bg-gradient-to-br from-blue-50 to-blue-100 text-blue-600',
-    slate: 'bg-gradient-to-br from-slate-50 to-slate-100 text-slate-600',
-    green: 'bg-gradient-to-br from-green-50 to-green-100 text-green-600',
-    emerald: 'bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-600',
-  };
+const COLOR_MAP: Record<StatCardProps['color'], { bg: string; icon: string; text: string }> = {
+  orange:  { bg: 'bg-orange-50',  icon: 'text-orange-600',  text: 'text-orange-900'  },
+  blue:    { bg: 'bg-blue-50',    icon: 'text-blue-600',    text: 'text-blue-900'    },
+  slate:   { bg: 'bg-slate-100',  icon: 'text-slate-600',   text: 'text-slate-900'   },
+  green:   { bg: 'bg-green-50',   icon: 'text-green-600',   text: 'text-green-900'   },
+  emerald: { bg: 'bg-emerald-50', icon: 'text-emerald-600', text: 'text-emerald-900' },
+};
 
+function StatCard({ title, value, subtitle, icon: Icon, color, delay = 0 }: StatCardProps) {
+  const c = COLOR_MAP[color];
   return (
     <div
-      className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 animate-slideInUp"
+      className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn"
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-center justify-between mb-3 sm:mb-4">
-        <div className={`p-2 sm:p-3 rounded-xl ${colorClasses[color]} transition-transform duration-300 hover:scale-110`}>
-          <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+      <div className="flex items-center justify-between mb-3">
+        <div className={`p-2.5 rounded-xl ${c.bg}`}>
+          <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${c.icon}`} />
         </div>
       </div>
-      <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-1">{title}</h3>
-      <p className="text-2xl sm:text-3xl font-bold text-slate-900 truncate">{value}</p>
-      {subtitle && <p className="text-xs sm:text-sm text-slate-500 mt-1">{subtitle}</p>}
+      <p className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">{value}</p>
+      <p className="text-sm font-medium text-slate-600">{title}</p>
+      {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
     </div>
   );
-});
+}
 
-StatCard.displayName = 'StatCard';
+interface StatRowProps {
+  label: string;
+  value: number;
+}
 
-const StatRow = memo(({ label, value }: { label: string; value: number }) => {
+function StatRow({ label, value }: StatRowProps) {
   return (
     <div className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
-      <span className="text-slate-600">{label}</span>
-      <span className="font-semibold text-slate-900">{value}</span>
+      <span className="text-sm text-slate-600">{label}</span>
+      <span className="text-sm font-semibold text-slate-900">{value}</span>
     </div>
   );
-});
-
-StatRow.displayName = 'StatRow';
+}

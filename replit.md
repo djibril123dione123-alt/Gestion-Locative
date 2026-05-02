@@ -32,6 +32,49 @@
 
 ---
 
+## Phase 1 — Fondations Solides (mai 2026)
+
+### Semaine 1 — Intégrité financière
+
+**Migration `20260508000001_phase1_integrity.sql`** :
+- UNIQUE(contrat_id, mois_concerne) sur `paiements` — empêche le double paiement
+- commission > 0 (change `>= 0` → `> 0`) sur contrats et bailleurs, migrate commission=0 → NULL
+- Correction `get_monthly_revenue` : bug `to_char(gs, 'Mon', 'fr_FR')` (3 args invalides) → retourne `(month_num int, revenus numeric)`, frontend formate en français
+- Scheduling pg_cron des workers Autopilot (finance/15min, analytics/1h, health/30min) — nécessite pg_cron activé dans Supabase Dashboard
+
+**offlineQueue.ts** : paiement_create/update/delete routés via Edge Functions (createPaiementViaEdge, updatePaiementViaEdge, cancelPaiementViaEdge) au lieu d'inserts directs → garantit commission calculation serveur, ledger entries, event_outbox
+
+**Paiements.tsx queueMutation** : payload offline stocke uniquement les champs d'entrée Edge Function (contrat_id, montant_total, mois_concerne, date_paiement, mode_paiement, statut, reference) — plus de part_agence/part_bailleur pré-calculés
+
+### Semaine 2 — Qualité du code
+
+- **UserProfile unifié** : source de vérité dans `src/types/database.ts`, `src/lib/supabase.ts` ré-exporte uniquement
+- **Types stricts** : `contrats?: any` → `PaiementContrats` (interface typée) dans PaiementRow
+- **`src/types/entities.ts`** : PaiementStatut inclut désormais `'en_attente'` pour aligner avec le schéma DB
+- **`src/services/db.ts`** : DBSchema.pending_mutations inclut `retries?: number`
+- **Vitest** installé, `npm run test:unit` — 2 suites, 31 tests, tous verts
+  - `src/services/domain/__tests__/commissionService.test.ts`
+  - `src/services/domain/__tests__/paiementService.test.ts`
+- **`vitest.config.ts`** créé
+- **`package.json`** : scripts `test:unit` (vitest run) et `test:unit:watch` (vitest) ajoutés
+
+### Semaine 3 — Stabilisation / Composants
+
+**Paiements.tsx refactoré** : 907 → 716 lignes (−21%)
+- `KpiCard` extrait → `src/components/paiements/KpiCard.tsx` (79 lignes)
+- `PaiementFormModal` extrait → `src/components/paiements/PaiementFormModal.tsx` (178 lignes)
+- Types partagés → `src/components/paiements/paiementTypes.ts` (STATUS_LABELS, MODE_LABELS, PaiementRow, ContratRow, PaiementFormData, etc.)
+
+**Dashboard.tsx refactoré** : remplace 8 requêtes parallèles par 2 RPCs
+- `get_dashboard_stats(p_agency_id, p_year_month)` → tous les compteurs + données financières du mois
+- `get_monthly_revenue(p_agency_id, p_year)` → graphique mensuel (month_num mappé en noms FR côté frontend)
+
+**Docs** :
+- `docs/autopilot-v31.md` — Architecture, tables, workers, diagnostics pg_cron
+- `CONVENTIONS.md` — Nommage, structure fichiers, règles services/repositories, mutations financières
+
+---
+
 ## Récents ajouts (mai 2026) — Autopilot Engine v2 : Self-Healing + Rule Engine + Observabilité
 
 ### Migration `20260506000002_autopilot_v2_self_healing.sql`

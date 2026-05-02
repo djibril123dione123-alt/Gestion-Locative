@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -15,14 +14,11 @@ import {
   TrendingUp,
   Wallet,
   Percent,
+  Clock,
   FileDown,
   Pencil,
   Trash2,
-  CheckCircle2,
-  Clock,
-  XCircle,
   Sheet,
-  AlertTriangle,
 } from 'lucide-react';
 import { generatePaiementFacturePDF } from '../lib/pdf';
 import { useToast } from '../hooks/useToast';
@@ -35,7 +31,6 @@ import {
   buildPaiementPayload,
   formatPaiementError,
 } from '../services/domain/paiementService';
-import { isCommissionMissing } from '../services/domain/commissionService';
 import {
   createPaiementViaEdge,
   updatePaiementViaEdge,
@@ -43,46 +38,20 @@ import {
   PaiementApiError,
 } from '../services/api/paiementApi';
 import { emitEvent } from '../lib/eventBus';
-
-interface PaiementRow {
-  id: string;
-  contrat_id: string;
-  montant_total: number;
-  mois_concerne: string;
-  date_paiement: string;
-  mode_paiement: string;
-  statut: string;
-  reference: string | null;
-  contrats?: any;
-}
-
-interface ContratRow {
-  id: string;
-  loyer_mensuel: number;
-  commission?: number;
-  pourcentage_agence?: number;
-  locataires?: { nom: string; prenom: string };
-  unites?: { nom: string; id?: string };
-}
-
-type StatusFilter = 'tous' | 'paye' | 'en_attente' | 'impaye';
+import { KpiCard } from '../components/paiements/KpiCard';
+import { PaiementFormModal } from '../components/paiements/PaiementFormModal';
+import {
+  STATUS_LABELS,
+  MODE_LABELS,
+  type PaiementRow,
+  type ContratRow,
+  type StatusFilter,
+  type PaiementFormData,
+} from '../components/paiements/paiementTypes';
 
 interface PaiementsProps {
   embedded?: boolean;
 }
-
-const STATUS_LABELS: Record<string, { label: string; classes: string; icon: typeof CheckCircle2 }> = {
-  paye: { label: 'Payé', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
-  en_attente: { label: 'En attente', classes: 'bg-amber-100 text-amber-700 border-amber-200', icon: Clock },
-  impaye: { label: 'Impayé', classes: 'bg-red-100 text-red-700 border-red-200', icon: XCircle },
-};
-
-const MODE_LABELS: Record<string, string> = {
-  especes: 'Espèces',
-  cheque: 'Chèque',
-  virement: 'Virement',
-  mobile_money: 'Mobile Money',
-};
 
 export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const { profile } = useAuth();
@@ -107,47 +76,46 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const today = new Date();
   const currentMonthYYYYMM = today.toISOString().slice(0, 7);
 
-  const initialFormData = {
+  const makeInitialForm = (): PaiementFormData => ({
     contrat_id: '',
     montant_total: '',
     mois_concerne: currentMonthYYYYMM + '-01',
     mois_display: currentMonthYYYYMM,
     date_paiement: today.toISOString().split('T')[0],
-    mode_paiement: 'especes' as 'especes' | 'cheque' | 'virement' | 'mobile_money',
-    statut: 'paye' as 'paye' | 'en_attente' | 'impaye',
+    mode_paiement: 'especes',
+    statut: 'paye',
     reference: '',
-  };
-  const [formData, setFormData] = useState(initialFormData);
+  });
+
+  const [formData, setFormData] = useState<PaiementFormData>(makeInitialForm);
 
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingPaiement(null);
-    setFormData(initialFormData);
+    setFormData(makeInitialForm());
   };
 
   const loadData = async () => {
     if (!profile?.agency_id) return;
-
     try {
       const [paiementsRes, contratsRes] = await Promise.all([
         supabase
           .from('paiements')
-          .select('*, contrats(loyer_mensuel, commission, locataires(nom, prenom), unites(nom,id))')
+          .select('*, contrats(loyer_mensuel, commission, pourcentage_agence, locataires(nom, prenom), unites(nom,id))')
           .eq('agency_id', profile.agency_id)
           .order('created_at', { ascending: false }),
         supabase
           .from('contrats')
-          .select('id, loyer_mensuel, commission, locataires(nom, prenom), unites(nom)')
+          .select('id, loyer_mensuel, commission, pourcentage_agence, locataires(nom, prenom), unites(nom)')
           .eq('agency_id', profile.agency_id)
           .eq('statut', 'actif'),
       ]);
 
-      const data = paiementsRes.data || [];
+      const data = (paiementsRes.data || []) as unknown as PaiementRow[];
       setPaiements(data);
       setContrats((contratsRes.data || []) as unknown as ContratRow[]);
-      // Sauvegarde locale automatique après chaque chargement
       saveBackup('paiements', data).catch(() => {});
-    } catch (error) {
+    } catch {
       showError('Impossible de charger les paiements');
     } finally {
       setLoading(false);
@@ -159,7 +127,6 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.agency_id]);
 
-  // ===== Filtrage par statut + recherche (mémoïsé) =====
   const filtered = useMemo(() => {
     let list = paiements;
     if (statusFilter !== 'tous') {
@@ -168,11 +135,11 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       list = list.filter((p) => {
-        const loc = (p as any).contrats?.locataires;
+        const loc = p.contrats?.locataires;
         const searchable = [
           loc?.prenom,
           loc?.nom,
-          (p as any).contrats?.unites?.nom,
+          p.contrats?.unites?.nom,
           p.reference,
           p.mois_concerne,
           p.mode_paiement,
@@ -187,9 +154,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     return list;
   }, [paiements, statusFilter, searchTerm]);
 
-  // ===== KPIs métier =====
   const kpis = useMemo(() => {
-    const currentMonth = currentMonthYYYYMM;
     const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
     const prevMonth = prevMonthDate.toISOString().slice(0, 7);
 
@@ -201,7 +166,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     paiements.forEach((p) => {
       const moisP = (p.mois_concerne || '').slice(0, 7);
       if (p.statut === 'paye') {
-        if (moisP === currentMonth) {
+        if (moisP === currentMonthYYYYMM) {
           encaisseMois += Number(p.montant_total || 0);
           nbPaiementsMois++;
         } else if (moisP === prevMonth) {
@@ -212,28 +177,28 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       }
     });
 
-    // Loyer attendu ce mois (somme loyer_mensuel des contrats actifs)
     const attenduMois = contrats.reduce((s, c) => s + Number(c.loyer_mensuel || 0), 0);
     const tauxRecouvrement = attenduMois > 0 ? Math.round((encaisseMois / attenduMois) * 100) : 0;
-    const variation = encaissePrev > 0 ? Math.round(((encaisseMois - encaissePrev) / encaissePrev) * 100) : null;
+    const variation =
+      encaissePrev > 0
+        ? Math.round(((encaisseMois - encaissePrev) / encaissePrev) * 100)
+        : null;
 
     return { encaisseMois, encaissePrev, nbPaiementsMois, enAttente, attenduMois, tauxRecouvrement, variation };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paiements, contrats]);
 
   const counts = useMemo(() => {
-    const c = { tous: paiements.length, paye: 0, en_attente: 0, impaye: 0 };
+    const c: Record<StatusFilter, number> = { tous: paiements.length, paye: 0, en_attente: 0, impaye: 0 };
     paiements.forEach((p) => {
-      if (p.statut in c) (c as any)[p.statut]++;
+      if (p.statut === 'paye') c.paye++;
+      else if (p.statut === 'en_attente') c.en_attente++;
+      else if (p.statut === 'impaye') c.impaye++;
     });
     return c;
   }, [paiements]);
 
-  const handleMoisChange = (monthValue: string) => {
-    setFormData({ ...formData, mois_display: monthValue, mois_concerne: monthValue + '-01' });
-  };
-
-  const handleEdit = (paiement: any) => {
+  const handleEdit = (paiement: PaiementRow) => {
     setEditingPaiement(paiement);
     setFormData({
       contrat_id: paiement.contrat_id,
@@ -241,8 +206,8 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       mois_display: paiement.mois_concerne.slice(0, 7),
       mois_concerne: paiement.mois_concerne,
       date_paiement: paiement.date_paiement,
-      mode_paiement: paiement.mode_paiement,
-      statut: paiement.statut,
+      mode_paiement: paiement.mode_paiement as PaiementFormData['mode_paiement'],
+      statut: paiement.statut as PaiementFormData['statut'],
       reference: paiement.reference || '',
     });
     setIsModalOpen(true);
@@ -269,16 +234,28 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           statut: formData.statut,
           reference: formData.reference || null,
         },
-        { id: contrat.id, commission: contrat.commission ?? contrat.pourcentage_agence ?? null, loyer_mensuel: contrat.loyer_mensuel },
+        {
+          id: contrat.id,
+          commission: contrat.commission ?? contrat.pourcentage_agence ?? null,
+          loyer_mensuel: contrat.loyer_mensuel,
+        },
         profile.agency_id,
       );
 
-      // ── Mode hors ligne : on met en file d'attente, on ne touche pas Supabase ──
+      // ── Mode hors ligne : on stocke uniquement les champs d'entrée de l'Edge Function
       if (!isOnline && !editingPaiement) {
         await queueMutation({
           action: 'paiement_create',
           entity_type: 'paiements',
-          payload: { ...data },
+          payload: {
+            contrat_id: formData.contrat_id,
+            montant_total: parseFloat(formData.montant_total),
+            mois_concerne: moisConcerne,
+            date_paiement: formData.date_paiement,
+            mode_paiement: formData.mode_paiement,
+            statut: formData.statut,
+            reference: formData.reference || null,
+          },
           timestamp: Date.now(),
         });
         success('Paiement enregistré localement — il sera synchronisé dès le retour de connexion');
@@ -287,7 +264,6 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       }
 
       if (editingPaiement) {
-        // Mise à jour via Edge Function (validation + recalcul parts côté serveur)
         await updatePaiementViaEdge({
           id: editingPaiement.id,
           montant_total: parseFloat(formData.montant_total),
@@ -298,20 +274,19 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         });
         emitEvent({
           type: 'paiement.updated',
-          agency_id: profile?.agency_id,
+          agency_id: profile.agency_id,
           entity_type: 'paiements',
           entity_id: editingPaiement.id,
           payload: { montant: parseFloat(formData.montant_total), mode: formData.mode_paiement },
         });
       } else {
-        // Création : passe par l'Edge Function (validation Zod + agency_id serveur)
         await createPaiementViaEdge({
           contrat_id: formData.contrat_id,
           montant_total: parseFloat(formData.montant_total),
           mois_concerne: moisConcerne,
           date_paiement: formData.date_paiement,
-          mode_paiement: formData.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'carte',
-          statut: formData.statut as 'paye' | 'en_attente' | 'partiel',
+          mode_paiement: formData.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre',
+          statut: formData.statut as 'paye' | 'partiel' | 'impaye',
           reference: formData.reference || null,
         });
         track({
@@ -321,7 +296,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         });
         emitEvent({
           type: 'paiement.created',
-          agency_id: profile?.agency_id,
+          agency_id: profile.agency_id,
           entity_type: 'paiements',
           payload: { montant: data.montant_total, mois: data.mois_concerne, mode: data.mode_paiement },
         });
@@ -342,7 +317,6 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   };
 
   const handleDelete = (paiement: PaiementRow) => {
-    if (!profile?.agency_id) return;
     setDeleteTarget(paiement);
   };
 
@@ -350,11 +324,10 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     if (!profile?.agency_id || !deleteTarget) return;
     setIsDeleting(true);
     try {
-      // Annulation sécurisée via Edge Function (soft-cancel + ledger reversal côté serveur)
       await cancelPaiementViaEdge({ id: deleteTarget.id });
       emitEvent({
         type: 'paiement.cancelled',
-        agency_id: profile?.agency_id,
+        agency_id: profile.agency_id,
         entity_type: 'paiements',
         entity_id: deleteTarget.id,
         payload: { montant: deleteTarget.montant_total },
@@ -366,7 +339,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       if (error instanceof PaiementApiError) {
         showError(error.message);
       } else {
-        showError(error instanceof Error ? error.message : 'Impossible d\'annuler ce paiement');
+        showError(
+          error instanceof Error ? error.message : "Impossible d'annuler ce paiement",
+        );
       }
     } finally {
       setIsDeleting(false);
@@ -388,10 +363,16 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         .single();
 
       const paiement = pmt as unknown as {
-        id: string; created_at: string; date_paiement: string; mois_concerne: string;
-        montant_total: number; reference: string | null;
+        id: string;
+        created_at: string;
+        date_paiement: string;
+        mois_concerne: string;
+        montant_total: number;
+        reference: string | null;
         contrats: {
-          id: string; loyer_mensuel: number; commission: number;
+          id: string;
+          loyer_mensuel: number;
+          commission: number;
           locataires: { nom: string; prenom: string } | null;
           unites: { id: string; nom: string } | null;
         } | null;
@@ -412,7 +393,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         const uniteRow = u as unknown as { immeubles: { adresse: string } | null } | null;
         if (uniteRow?.immeubles?.adresse) adresse = uniteRow.immeubles.adresse;
       } catch {
-        /* fallback */
+        /* fallback silencieux uniquement pour l'adresse */
       }
 
       const payload = {
@@ -423,55 +404,69 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         },
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await generatePaiementFacturePDF(payload as any);
       success('Facture générée avec succès');
-    } catch (err: any) {
-      showError(err?.message || 'Impossible de générer la facture PDF');
+    } catch (err: unknown) {
+      showError(
+        err instanceof Error ? err.message : 'Impossible de générer la facture PDF',
+      );
     } finally {
       setExportingId(null);
     }
   };
 
-  // ============ Colonnes du tableau ============
   const columns = [
     {
       key: 'locataire',
       label: 'Locataire',
-      render: (p: any) =>
+      render: (p: PaiementRow) =>
         p.contrats?.locataires
           ? `${p.contrats.locataires.prenom} ${p.contrats.locataires.nom}`
           : '-',
     },
-    { key: 'unite', label: 'Produit', render: (p: any) => p.contrats?.unites?.nom || '-' },
+    {
+      key: 'unite',
+      label: 'Produit',
+      render: (p: PaiementRow) => p.contrats?.unites?.nom || '-',
+    },
     {
       key: 'mois_concerne',
       label: 'Mois',
-      render: (p: any) =>
+      render: (p: PaiementRow) =>
         new Date(p.mois_concerne).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' }),
     },
     {
       key: 'montant_total',
       label: 'Montant',
-      render: (p: any) => <span className="font-semibold tabular-nums">{formatCurrency(p.montant_total)}</span>,
+      render: (p: PaiementRow) => (
+        <span className="font-semibold tabular-nums">{formatCurrency(p.montant_total)}</span>
+      ),
     },
     {
       key: 'date_paiement',
       label: 'Date paiement',
-      render: (p: any) => new Date(p.date_paiement).toLocaleDateString('fr-FR'),
+      render: (p: PaiementRow) => new Date(p.date_paiement).toLocaleDateString('fr-FR'),
     },
     {
       key: 'mode',
       label: 'Mode',
-      render: (p: any) => <span className="text-slate-600 text-sm">{MODE_LABELS[p.mode_paiement] || p.mode_paiement}</span>,
+      render: (p: PaiementRow) => (
+        <span className="text-slate-600 text-sm">
+          {MODE_LABELS[p.mode_paiement] || p.mode_paiement}
+        </span>
+      ),
     },
     {
       key: 'statut',
       label: 'Statut',
-      render: (p: any) => {
-        const s = STATUS_LABELS[p.statut] || STATUS_LABELS.en_attente;
+      render: (p: PaiementRow) => {
+        const s = STATUS_LABELS[p.statut] ?? STATUS_LABELS.en_attente;
         const Icon = s.icon;
         return (
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${s.classes}`}>
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${s.classes}`}
+          >
             <Icon className="w-3.5 h-3.5" />
             {s.label}
           </span>
@@ -481,7 +476,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     {
       key: 'actions',
       label: 'Actions',
-      render: (p: any) => (
+      render: (p: PaiementRow) => (
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -491,7 +486,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
             title="Télécharger la facture PDF"
           >
             <FileDown className="w-3.5 h-3.5" />
-            {exportingId === p.id ? '...' : 'Facture'}
+            {exportingId === p.id ? '…' : 'Facture'}
           </button>
           <button
             type="button"
@@ -517,17 +512,27 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   ];
 
   const statusFilters: { id: StatusFilter; label: string; count: number }[] = [
-    { id: 'tous', label: 'Tous', count: counts.tous },
-    { id: 'paye', label: 'Payés', count: counts.paye },
-    { id: 'en_attente', label: 'En attente', count: counts.en_attente },
-    { id: 'impaye', label: 'Impayés', count: counts.impaye },
+    { id: 'tous',        label: 'Tous',       count: counts.tous        },
+    { id: 'paye',        label: 'Payés',      count: counts.paye        },
+    { id: 'en_attente',  label: 'En attente', count: counts.en_attente  },
+    { id: 'impaye',      label: 'Impayés',    count: counts.impaye      },
   ];
+
+  const exportRows = paiements.map((p) => ({
+    reference:      p.reference,
+    date_paiement:  p.date_paiement,
+    mois_concerne:  p.mois_concerne,
+    montant_total:  p.montant_total,
+    statut:         p.statut,
+    mode_paiement:  p.mode_paiement,
+    locataire_nom:  `${p.contrats?.locataires?.prenom ?? ''} ${p.contrats?.locataires?.nom ?? ''}`.trim(),
+    unite_nom:      p.contrats?.unites?.nom ?? '',
+  }));
 
   return (
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Header — masqué quand intégré dans Encaissements (qui fournit son propre h1) */}
         {!embedded && (
           <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -537,21 +542,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => exportPaiements(
-                  paiements.map((p) => ({
-                    reference: p.reference,
-                    date_paiement: p.date_paiement,
-                    mois_concerne: p.mois_concerne,
-                    montant_total: p.montant_total,
-                    statut: p.statut,
-                    mode_paiement: p.mode_paiement,
-                    locataire_nom: `${(p.contrats as any)?.locataires?.prenom ?? ''} ${(p.contrats as any)?.locataires?.nom ?? ''}`.trim(),
-                    unite_nom: (p.contrats as any)?.unites?.nom ?? '',
-                  }))
-                )}
+                onClick={() => exportPaiements(exportRows)}
                 disabled={exportingXlsx || loading || paiements.length === 0}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Exporter en Excel"
               >
                 <Sheet className="w-4 h-4" />
                 Exporter Excel
@@ -567,18 +560,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           <div className="flex flex-wrap justify-end gap-2">
             <button
               type="button"
-              onClick={() => exportPaiements(
-                paiements.map((p) => ({
-                  reference: p.reference,
-                  date_paiement: p.date_paiement,
-                  mois_concerne: p.mois_concerne,
-                  montant_total: p.montant_total,
-                  statut: p.statut,
-                  mode_paiement: p.mode_paiement,
-                  locataire_nom: `${(p.contrats as any)?.locataires?.prenom ?? ''} ${(p.contrats as any)?.locataires?.nom ?? ''}`.trim(),
-                  unite_nom: (p.contrats as any)?.unites?.nom ?? '',
-                }))
-              )}
+              onClick={() => exportPaiements(exportRows)}
               disabled={exportingXlsx || loading || paiements.length === 0}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -591,7 +573,6 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           </div>
         )}
 
-        {/* KPIs */}
         {loading ? (
           <SkeletonCards count={4} />
         ) : (
@@ -632,7 +613,6 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           </div>
         )}
 
-        {/* Toolbar : recherche + filtres rapides */}
         <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-4">
           <div className="flex flex-col lg:flex-row gap-3">
             <div className="relative flex-1">
@@ -674,7 +654,6 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           </div>
         </div>
 
-        {/* Tableau ou empty/loader */}
         {loading ? (
           <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
             <SkeletonTable rows={6} cols={6} />
@@ -708,141 +687,17 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           </div>
         )}
 
-        {/* Modal nouveau / édition */}
-        <Modal
+        <PaiementFormModal
           isOpen={isModalOpen}
           onClose={closeModal}
-          title={editingPaiement ? 'Modifier le paiement' : 'Nouveau paiement'}
-        >
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Contrat <span className="text-red-500">*</span>
-              </label>
-              <select
-                required
-                value={formData.contrat_id}
-                onChange={(e) => {
-                  const sel = contrats.find((c) => c.id === e.target.value);
-                  setFormData({
-                    ...formData,
-                    contrat_id: e.target.value,
-                    montant_total: sel?.loyer_mensuel?.toString() || '',
-                  });
-                }}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
-              >
-                <option value="">Sélectionner un contrat</option>
-                {contrats.map((c: any) => (
-                  <option key={c.id} value={c.id}>
-                    {c.locataires?.prenom} {c.locataires?.nom} — {c.unites?.nom}
-                  </option>
-                ))}
-              </select>
-              {formData.contrat_id && (() => {
-                const sel = contrats.find((c) => c.id === formData.contrat_id);
-                const commission = sel?.commission ?? (sel as any)?.pourcentage_agence ?? null;
-                return isCommissionMissing(commission) ? (
-                  <div className="flex items-start gap-2 mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-amber-600" />
-                    <span>Ce contrat n'a pas de commission configurée. Veuillez la définir dans la fiche contrat avant d'enregistrer.</span>
-                  </div>
-                ) : null;
-              })()}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Montant <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="0"
-                  step="any"
-                  value={formData.montant_total}
-                  onChange={(e) => setFormData({ ...formData, montant_total: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Mois concerné <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="month"
-                  required
-                  value={formData.mois_display}
-                  onChange={(e) => handleMoisChange(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Date paiement <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.date_paiement}
-                  onChange={(e) => setFormData({ ...formData, date_paiement: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Mode <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.mode_paiement}
-                  onChange={(e) =>
-                    setFormData({ ...formData, mode_paiement: e.target.value as any })
-                  }
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
-                >
-                  <option value="especes">Espèces</option>
-                  <option value="cheque">Chèque</option>
-                  <option value="virement">Virement</option>
-                  <option value="mobile_money">Mobile Money</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Statut</label>
-                <select
-                  value={formData.statut}
-                  onChange={(e) => setFormData({ ...formData, statut: e.target.value as any })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
-                >
-                  <option value="paye">Payé</option>
-                  <option value="en_attente">En attente</option>
-                  <option value="impaye">Impayé</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Référence (facultatif)
-                </label>
-                <input
-                  type="text"
-                  value={formData.reference}
-                  onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                  placeholder="N° de chèque, transaction…"
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-slate-200">
-              <Button type="button" variant="secondary" onClick={closeModal} disabled={isSaving}>
-                Annuler
-              </Button>
-              <Button type="submit" loading={isSaving}>
-                {editingPaiement ? 'Enregistrer les modifications' : 'Créer le paiement'}
-              </Button>
-            </div>
-          </form>
-        </Modal>
+          editingPaiement={editingPaiement}
+          formData={formData}
+          setFormData={setFormData}
+          contrats={contrats}
+          isSaving={isSaving}
+          onSubmit={handleSubmit}
+          isOnline={isOnline}
+        />
 
         <ConfirmModal
           isOpen={!!deleteTarget}
@@ -857,50 +712,5 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         />
       </div>
     </>
-  );
-}
-
-// ============== Composant interne KPI ==============
-type Accent = 'orange' | 'emerald' | 'amber' | 'slate';
-
-const ACCENT_STYLES: Record<Accent, { iconBg: string; iconText: string; valueText: string; progressBg: string }> = {
-  orange: { iconBg: 'bg-orange-50', iconText: 'text-orange-600', valueText: 'text-slate-900', progressBg: 'bg-gradient-to-r from-orange-500 to-red-600' },
-  emerald: { iconBg: 'bg-emerald-50', iconText: 'text-emerald-600', valueText: 'text-emerald-700', progressBg: 'bg-emerald-500' },
-  amber: { iconBg: 'bg-amber-50', iconText: 'text-amber-600', valueText: 'text-amber-700', progressBg: 'bg-amber-500' },
-  slate: { iconBg: 'bg-slate-100', iconText: 'text-slate-600', valueText: 'text-slate-800', progressBg: 'bg-slate-400' },
-};
-
-interface KpiCardProps {
-  icon: typeof Wallet;
-  label: string;
-  value: string;
-  subtitle?: string;
-  accent?: Accent;
-  progress?: number;
-}
-
-function KpiCard({ icon: Icon, label, value, subtitle, accent = 'orange', progress }: KpiCardProps) {
-  const styles = ACCENT_STYLES[accent];
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide truncate">{label}</p>
-          <p className={`text-xl sm:text-2xl font-bold mt-1 truncate tabular-nums ${styles.valueText}`}>{value}</p>
-        </div>
-        <div className={`p-2.5 rounded-xl flex-shrink-0 ${styles.iconBg}`}>
-          <Icon className={`w-5 h-5 ${styles.iconText}`} />
-        </div>
-      </div>
-      {subtitle && <p className="text-xs text-slate-500 truncate">{subtitle}</p>}
-      {progress !== undefined && (
-        <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all duration-500 ${styles.progressBg}`}
-            style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-          />
-        </div>
-      )}
-    </div>
   );
 }

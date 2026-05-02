@@ -5,9 +5,18 @@
  * Conflict strategy: last-write-wins (timestamp-based).
  * Stale 'syncing' entries (left over after a crash) are recovered to 'pending'
  * on startup via recoverStaleSyncing().
+ *
+ * IMPORTANT: paiement mutations are routed through Edge Functions to ensure
+ * server-side commission calculation, ledger writes, and event_outbox entries.
+ * Direct table inserts for paiements would bypass all financial integrity logic.
  */
 
 import { dbPut, dbGetAll, dbDelete, dbGetByIndex } from './db';
+import {
+  createPaiementViaEdge,
+  updatePaiementViaEdge,
+  cancelPaiementViaEdge,
+} from './api/paiementApi';
 import { supabase } from '../lib/supabase';
 
 export type MutationAction =
@@ -108,7 +117,13 @@ export async function getErrorMutations(): Promise<PendingMutation[]> {
   }
 }
 
-/** Replay all pending mutations against Supabase */
+/**
+ * Replay all pending mutations against Supabase.
+ *
+ * Paiement mutations (create/update/delete) are routed through Edge Functions
+ * to guarantee server-side commission calculation, ledger entries, and
+ * event_outbox population. All other mutations use direct table operations.
+ */
 export async function syncPendingMutations(
   onProgress?: (done: number, total: number) => void,
 ): Promise<SyncResult> {
@@ -123,32 +138,72 @@ export async function syncPendingMutations(
     if (!table) continue;
 
     try {
-      const isCreate = m.action.endsWith('_create');
-      const isDelete = m.action.endsWith('_delete');
-      let supabaseError: unknown;
+      // ── Paiement mutations → Edge Functions (financial integrity) ──────────
+      if (m.action === 'paiement_create') {
+        await createPaiementViaEdge({
+          contrat_id: m.payload.contrat_id as string,
+          montant_total: m.payload.montant_total as number,
+          mois_concerne: m.payload.mois_concerne as string,
+          date_paiement: m.payload.date_paiement as string,
+          mode_paiement: m.payload.mode_paiement as
+            | 'especes'
+            | 'virement'
+            | 'cheque'
+            | 'mobile_money'
+            | 'autre',
+          statut: m.payload.statut as 'paye' | 'partiel' | 'impaye',
+          reference: (m.payload.reference as string | null) ?? null,
+        });
+      } else if (m.action === 'paiement_update') {
+        await updatePaiementViaEdge({
+          id: m.payload.id as string,
+          ...(m.payload.montant_total != null && {
+            montant_total: m.payload.montant_total as number,
+          }),
+          ...(m.payload.mode_paiement != null && {
+            mode_paiement: m.payload.mode_paiement as
+              | 'especes'
+              | 'virement'
+              | 'cheque'
+              | 'mobile_money'
+              | 'autre',
+          }),
+          ...(m.payload.statut != null && {
+            statut: m.payload.statut as 'paye' | 'partiel' | 'impaye' | 'annule',
+          }),
+          ...(m.payload.date_paiement != null && {
+            date_paiement: m.payload.date_paiement as string,
+          }),
+          ...(m.payload.reference !== undefined && {
+            reference: m.payload.reference as string | null,
+          }),
+        });
+      } else if (m.action === 'paiement_delete') {
+        await cancelPaiementViaEdge({ id: m.payload.id as string });
 
-      if (isDelete) {
-        const { id } = m.payload;
-        if (!id) {
-          errors++;
-          continue;
-        }
-        const { error } = await supabase.from(table).delete().eq('id', id);
-        supabaseError = error;
-      } else if (isCreate) {
-        const { error } = await supabase.from(table).insert([m.payload]);
-        supabaseError = error;
+      // ── Autres mutations → opérations Supabase directes ───────────────────
       } else {
-        const { id, ...rest } = m.payload;
-        if (!id) {
-          errors++;
-          continue;
-        }
-        const { error } = await supabase.from(table).update(rest).eq('id', id);
-        supabaseError = error;
-      }
+        const isCreate = m.action.endsWith('_create');
+        const isDelete = m.action.endsWith('_delete');
+        let supabaseError: unknown;
 
-      if (supabaseError) throw supabaseError;
+        if (isDelete) {
+          const { id } = m.payload;
+          if (!id) { errors++; continue; }
+          const { error } = await supabase.from(table).delete().eq('id', id);
+          supabaseError = error;
+        } else if (isCreate) {
+          const { error } = await supabase.from(table).insert([m.payload]);
+          supabaseError = error;
+        } else {
+          const { id, ...rest } = m.payload;
+          if (!id) { errors++; continue; }
+          const { error } = await supabase.from(table).update(rest).eq('id', id);
+          supabaseError = error;
+        }
+
+        if (supabaseError) throw supabaseError;
+      }
 
       if (m.id !== undefined) await dbDelete('pending_mutations', m.id as number);
       synced++;

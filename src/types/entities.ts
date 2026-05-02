@@ -84,7 +84,7 @@ export interface Contrat {
 }
 
 export type ModePayment = 'especes' | 'cheque' | 'virement' | 'mobile_money' | 'autre';
-export type PaiementStatut = 'paye' | 'partiel' | 'impaye' | 'annule';
+export type PaiementStatut = 'paye' | 'partiel' | 'en_attente' | 'impaye' | 'annule';
 
 export interface Paiement {
   id: string;

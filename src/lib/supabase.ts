@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import type { UserProfile } from '../types/database';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -11,16 +12,4 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export type UserRole = 'super_admin' | 'admin' | 'agent' | 'comptable' | 'bailleur';
 
-export interface UserProfile {
-  id: string;
-  email: string;
-  nom: string;
-  prenom: string;
-  telephone: string | null;
-  role: UserRole;
-  bailleur_id: string | null;
-  agency_id: string | null;
-  actif: boolean;
-  created_at: string;
-  updated_at: string;
-}
+export type { UserProfile };

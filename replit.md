@@ -216,6 +216,71 @@
 - Helpers : `isPaiementTerminal()`, `isContratTerminal()`, `getAllowedTransitions()`
 - **Appliquée côté Edge Functions (Deno inline)** : `update-paiement` et `update-contrat` refusent les transitions invalides (code `INVALID_TRANSITION`)
 
+## Phase 2 — Produit Self-Serve (mai 2026)
+
+### Edge Functions nouvelles (Phase 2)
+
+| Edge Function | Rôle |
+|---|---|
+| `initiate-payment` | Crée une facture PayDunya + transaction en DB (pending) |
+| `paydunya-webhook` | Reçoit l'IPN PayDunya, vérifie master key, appelle `activate_subscription` RPC |
+| `send-email` | Worker email : dépile `notification_queue` (channel=email) via Resend API |
+| `send-sms` | Worker SMS : dépile `notification_queue` (channel=sms) via Orange SMS API |
+| `subscription-scheduler` | Orchestrateur : relances J-3, suspension J0, recovery J+7, rappels locataires |
+
+### Paiement PayDunya (Orange Money)
+- `src/components/billing/CheckoutModal.tsx` — modal de paiement avec polling du statut transaction (pooling 5s × 36 = 3 min)
+- `src/components/ui/PaymentModal.tsx` — ancienne mock conservée pour rétrocompatibilité
+- Flux : saisie numéro → `initiate-payment` → PayDunya envoie notification mobile → webhook → `activate_subscription` → email confirmation
+- Mode test/live contrôlé par env var `PAYDUNYA_ENV=live`
+- Secrets : `PAYDUNYA_MASTER_KEY`, `PAYDUNYA_TEST_*`, `PAYDUNYA_LIVE_*`
+
+### Migration `20260509000001_phase2_selfserve.sql`
+- Colonnes `agencies` : `payment_provider`, `payment_phone`, `last_payment_at`, `next_renewal_at`, `suspension_at`, `welcome_email_sent`, `demo_data_loaded`
+- Table `payment_transactions` : historique audit des paiements PayDunya
+- Table `notification_queue` : file d'attente emails + SMS sortants (channel email/sms)
+- RPC `activate_subscription(agency_id, plan_id, transaction_id, amount_xof, phone)` — service role uniquement
+- RPC `queue_renewal_reminders()` — relances J-3/J0/J+7 — appelable via pg_cron
+- RPC `queue_loyer_encaisse_notification(paiement_id, agency_id)` — notification bailleur après encaissement
+- pg_cron : `renewal_reminders_daily` (0 8 * * *), `notification_queue_worker` (*/5 * * * *)
+
+### Emails automatiques (Resend)
+- `welcome_email` — après inscription (14j trial)
+- `payment_confirmed` — après paiement PayDunya confirmé
+- `renewal_reminder` — J-3 avant expiration abonnement
+- `suspension_warning` — J0 expiration (24h de grâce)
+- `recovery_email` — J+7 récupération compte suspendu
+- `loyer_encaisse_bailleur` — notifie le bailleur après chaque encaissement loyer
+- `impaye_agent_alerte` — alerte agents sur impayés > 10 jours
+- Secret : `RESEND_API_KEY`, expéditeur `no-reply@samaykeur.sn`
+
+### SMS automatiques (Orange SMS API)
+- `rappel_locataire` — J-5 avant échéance loyer
+- `impaye_agent_alerte` — alerte SMS agent
+- `renewal_reminder` — rappel renouvellement abonnement
+- Auth : OAuth2 Client Credentials (ORANGE_SMS_CLIENT_ID + ORANGE_SMS_CLIENT_SECRET)
+
+### Page Pricing publique
+- `src/pages/Pricing.tsx` — page tarifs (Basic gratuit, Pro 15000 XOF/mois, Enterprise devis)
+- Route `/pricing` accessible authentifié ou non
+- Intègre `CheckoutModal` pour le plan Pro
+
+### Composant DemoDataLoader
+- `src/components/billing/DemoDataLoader.tsx` — charge 1 bailleur + 1 immeuble + 3 unités + 2 locataires + 2 contrats + 1 paiement de démo
+- Bouton compact ou banner complet
+- Marque `agencies.demo_data_loaded = true` pour éviter le rechargement
+
+### Déploiement Edge Functions Phase 2
+```
+supabase functions deploy initiate-payment
+supabase functions deploy paydunya-webhook
+supabase functions deploy send-email
+supabase functions deploy send-sms
+supabase functions deploy subscription-scheduler
+```
+
+---
+
 ## Récents ajouts (mai 2026) — Architecture Série A : 100% Edge Functions + Ledger + Job System
 
 ### Zéro write direct Supabase sur paiements/contrats

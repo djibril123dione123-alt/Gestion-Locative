@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
-import { PaymentModal } from '../components/ui/PaymentModal';
+import { CheckoutModal } from '../components/billing/CheckoutModal';
 import { CreditCard, CheckCircle2, Clock, TrendingUp, Zap } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
 
@@ -358,13 +358,15 @@ export function Abonnement() {
         </div>
       )}
 
-      {/* Payment modal — Wave / Orange Money */}
-      <PaymentModal
+      {/* Payment modal — Orange Money via PayDunya */}
+      <CheckoutModal
         isOpen={paymentOpen}
         onClose={() => setPaymentOpen(false)}
+        planId={currentPlan?.id !== 'enterprise' ? 'pro' : 'enterprise'}
         planName={currentPlan?.name ?? 'Pro'}
         priceXof={currentPlan?.price_xof ?? 15000}
         onSuccess={() => {
+          setPaymentOpen(false);
           toast.success('Abonnement activé pour 30 jours !');
           load();
         }}

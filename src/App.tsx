@@ -37,6 +37,7 @@ const Calendrier = lazy(() => import('./pages/Calendrier').then(m => ({ default:
 const Documents = lazy(() => import('./pages/Documents').then(m => ({ default: m.Documents })));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation').then(m => ({ default: m.AcceptInvitation })));
 const AuditDashboard = lazy(() => import('./pages/AuditDashboard').then(m => ({ default: m.AuditDashboard })));
+const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
 
 const PAGE_LABELS: Record<string, string> = {
     dashboard: 'Tableau de bord',
@@ -61,6 +62,7 @@ const PAGE_LABELS: Record<string, string> = {
     calendrier: 'Calendrier',
     documents: 'Documents',
     audit: 'Control Tower',
+    pricing: 'Tarifs',
 };
 
 function AppContent() {
@@ -267,6 +269,8 @@ function AppContent() {
                 return <Documents />;
             case 'audit':
                 return <AuditDashboard />;
+            case 'pricing':
+                return <Pricing onNavigate={handleNavigate} />;
             default:
                 return <Dashboard onNavigate={handleNavigate} />;
         }

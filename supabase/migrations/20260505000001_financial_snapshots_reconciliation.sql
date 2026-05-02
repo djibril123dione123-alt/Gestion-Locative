@@ -154,7 +154,7 @@ COMMENT ON FUNCTION fn_compute_financial_snapshots(date) IS
 CREATE OR REPLACE VIEW vw_financial_drift_report AS
 SELECT
   fs.agency_id,
-  a.nom          AS agency_nom,
+  a.name         AS agency_nom,
   fs.period,
   fs.total_paiements,
   fs.total_ledger_credits,

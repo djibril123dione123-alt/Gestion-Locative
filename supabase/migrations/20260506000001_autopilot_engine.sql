@@ -187,7 +187,7 @@ CREATE TABLE IF NOT EXISTS cache_store (
   ttl_seconds  int         NOT NULL DEFAULT 3600,
   created_at   timestamptz NOT NULL DEFAULT now(),
   expires_at   timestamptz GENERATED ALWAYS AS
-                 (created_at + (ttl_seconds || ' seconds')::interval) STORED
+                 (created_at + (ttl_seconds * interval '1 second')) STORED
 );
 
 CREATE INDEX IF NOT EXISTS idx_cache_expires ON cache_store(expires_at);
@@ -586,7 +586,7 @@ CREATE OR REPLACE VIEW vw_system_anomalies AS
     a.id,
     'pilot_inactif',
     a.id,
-    jsonb_build_object('agency_id', a.id, 'nom', a.nom, 'since_days',
+    jsonb_build_object('agency_id', a.id, 'nom', a.name, 'since_days',
       EXTRACT(DAY FROM now() - a.created_at)::int)
   FROM agencies a
   WHERE a.pilot_status = 'trial'

@@ -14,6 +14,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { AgencySettings, DEFAULT_AGENCY_SETTINGS } from '../types/agency';
 import { ToastContainer } from '../components/ui/Toast';
+import { invalidateAgencySettingsCache } from '../lib/pdf';
 
 type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
   created_at?: string;
@@ -224,6 +225,7 @@ export function Parametres() {
       }
 
       setSettings(savedData as SettingsState);
+      invalidateAgencySettingsCache(profile.agency_id);
       showToast('Paramètres enregistrés avec succès', 'success');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erreur inconnue';

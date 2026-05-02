@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import QRCode from 'qrcode';
 import { supabase } from './supabase';
 import {
   AgencySettings,
@@ -494,6 +495,34 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     doc.setTextColor(100);
     const footerLines = doc.splitTextToSize(settings.pied_page_personnalise, usableWidth) as string[];
     doc.text(footerLines, leftMargin, pageHeight - 25);
+  }
+
+  // QR code — si activé dans les paramètres agence
+  if (settings.qr_code_quittances !== false) {
+    try {
+      const qrPayload = JSON.stringify({
+        ref,
+        locataire: `${locataire.prenom ?? ''} ${locataire.nom ?? ''}`.trim(),
+        montant: paye,
+        mois: paiement.mois_concerne ?? '',
+      });
+      const qrDataUrl = await QRCode.toDataURL(qrPayload, {
+        width: 120,
+        margin: 1,
+        errorCorrectionLevel: 'M',
+      });
+      const qrSize = 24;
+      const ph = doc.internal.pageSize.getHeight();
+      const qrX = pageWidth - rightMargin - qrSize;
+      const qrY = ph - 48;
+      doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
+      doc.setFontSize(7);
+      doc.setTextColor(120);
+      doc.text('Vérifier la quittance', qrX + qrSize / 2, qrY + qrSize + 3, { align: 'center' });
+      doc.setTextColor(0);
+    } catch {
+      // QR code generation failure is non-blocking
+    }
   }
 
   addFooter(doc);

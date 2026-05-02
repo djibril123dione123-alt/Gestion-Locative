@@ -57,9 +57,14 @@ const PAGE_LABELS: Record<string, string> = {
     documents: 'Documents',
 };
 
+function getPageFromHash(): string {
+    const hash = window.location.hash.replace(/^#\/?/, '');
+    return hash || 'dashboard';
+}
+
 function AppContent() {
     const { user, profile, loading } = useAuth();
-    const [currentPage, setCurrentPage] = useState('dashboard');
+    const [currentPage, setCurrentPage] = useState(getPageFromHash);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { pendingCount, syncing } = useOfflineSync();
     const [showWelcomeAnyway, setShowWelcomeAnyway] = useState(false);
@@ -93,6 +98,23 @@ function AppContent() {
             </Suspense>
         );
     }
+
+    // Sync URL hash ↔ currentPage (history API)
+    React.useEffect(() => {
+        const newHash = `#/${currentPage}`;
+        if (window.location.hash !== newHash) {
+            window.history.pushState(null, '', newHash);
+        }
+    }, [currentPage]);
+
+    React.useEffect(() => {
+        const onHashChange = () => {
+            const page = getPageFromHash();
+            setCurrentPage(page);
+        };
+        window.addEventListener('hashchange', onHashChange);
+        return () => window.removeEventListener('hashchange', onHashChange);
+    }, []);
 
     React.useEffect(() => {
         if (!loading && user && !profile) {

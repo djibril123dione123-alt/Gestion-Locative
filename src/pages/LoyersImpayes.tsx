@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
-import { Search, AlertCircle } from 'lucide-react';
+import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
+
+const ITEMS_PER_PAGE = 20;
 
 interface LoyerImpaye {
   id: string;
@@ -30,12 +32,15 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   const [impayes, setImpayes] = useState<LoyerImpaye[]>([]);
   const [filtered, setFiltered] = useState<LoyerImpaye[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBailleur, setSelectedBailleur] = useState('');
   const [bailleurs, setBailleurs] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedLoyer, setSelectedLoyer] = useState<LoyerImpaye | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [page, setPage] = useState(1);
+  const requestIdRef = useRef(0);
   const toast = useToast();
 
   useEffect(() => {
@@ -66,6 +71,9 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
   const loadData = async () => {
     if (!profile?.agency_id) return;
+    const reqId = ++requestIdRef.current;
+    setLoading(true);
+    setError(null);
     try {
       const { data: contratsActifs } = await supabase
         .from('contrats')
@@ -130,18 +138,22 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         });
       });
 
+      if (reqId !== requestIdRef.current) return;
+
       setImpayes(impayesList);
       setFiltered(impayesList);
+      setPage(1);
 
       const uniqueBailleurs = Array.from(
         new Set(impayesList.map(i => `${i.bailleur_prenom} ${i.bailleur_nom}`))
       ).filter(b => b.trim());
       setBailleurs(uniqueBailleurs.map(b => ({ label: b })));
 
-    } catch (error) {
-      console.error('Error:', error);
+    } catch (err) {
+      if (reqId !== requestIdRef.current) return;
+      setError(err instanceof Error ? err.message : 'Erreur lors du chargement des loyers impayés');
     } finally {
-      setLoading(false);
+      if (reqId === requestIdRef.current) setLoading(false);
     }
   };
 
@@ -190,6 +202,34 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       });
       if (error) throw error;
 
+      // Mise à jour bilans_mensuels (best-effort)
+      try {
+        const moisKey = selectedLoyer.mois_concerne.slice(0, 7);
+        const { data: existingBilan } = await supabase
+          .from('bilans_mensuels')
+          .select('id, total_encaisse, nb_paiements')
+          .eq('agency_id', profile.agency_id)
+          .eq('mois', moisKey)
+          .maybeSingle();
+        if (existingBilan) {
+          await supabase
+            .from('bilans_mensuels')
+            .update({
+              total_encaisse: (existingBilan.total_encaisse ?? 0) + montant,
+              nb_paiements: (existingBilan.nb_paiements ?? 0) + 1,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingBilan.id);
+        } else {
+          await supabase.from('bilans_mensuels').insert({
+            agency_id: profile.agency_id,
+            mois: moisKey,
+            total_encaisse: montant,
+            nb_paiements: 1,
+          });
+        }
+      } catch { /* non-bloquant */ }
+
       toast.success('Paiement enregistré avec succès');
       setShowModal(false);
       setSelectedLoyer(null);
@@ -203,6 +243,9 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   };
 
   const totalImpaye = filtered.reduce((sum, i) => sum + i.montant_du, 0);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const columns = [
     {
@@ -252,8 +295,32 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-lg text-slate-600">Chargement...</div>
+      <div className="flex items-center justify-center h-full p-8">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-orange-200 border-t-orange-600 mb-3"></div>
+          <p className="text-slate-600">Chargement des loyers impayés…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex flex-col items-center gap-4 text-center">
+          <AlertCircle className="w-10 h-10 text-red-500" />
+          <div>
+            <p className="font-semibold text-red-800 mb-1">Erreur de chargement</p>
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+          <button
+            onClick={loadData}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-medium transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Réessayer
+          </button>
+        </div>
       </div>
     );
   }
@@ -327,8 +394,53 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         </div>
 
         <div className="overflow-x-auto">
-          <Table columns={columns} data={filtered} />
+          <Table columns={columns} data={paginated} />
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
+            <p className="text-sm text-slate-500">
+              {filtered.length} résultat{filtered.length > 1 ? 's' : ''} — page {page} / {totalPages}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                <ChevronLeft className="w-4 h-4 text-slate-600" />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                  if (idx > 0 && typeof arr[idx - 1] === 'number' && (p as number) - (arr[idx - 1] as number) > 1) {
+                    acc.push('...');
+                  }
+                  acc.push(p);
+                  return acc;
+                }, [])
+                .map((p, idx) =>
+                  p === '...'
+                    ? <span key={`e${idx}`} className="px-2 text-slate-400 text-sm">…</span>
+                    : <button
+                        key={p}
+                        onClick={() => setPage(p as number)}
+                        className={`w-8 h-8 rounded-lg text-sm font-medium transition ${page === p ? 'bg-orange-500 text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-700'}`}
+                      >
+                        {p}
+                      </button>
+                )}
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              >
+                <ChevronRight className="w-4 h-4 text-slate-600" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MODAL DE CONFIRMATION */}

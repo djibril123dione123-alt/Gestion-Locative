@@ -93,7 +93,7 @@ interface OwnerLog {
   created_at: string;
 }
 
-type Tab = 'dashboard' | 'agences' | 'demandes' | 'utilisateurs' | 'abonnements' | 'logs' | 'configuration' | 'support';
+type Tab = 'dashboard' | 'agences' | 'demandes' | 'utilisateurs' | 'abonnements' | 'logs' | 'feature_flags' | 'configuration' | 'support';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -112,6 +112,184 @@ const PLAN_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 interface SaasConfigRow { key: string; value: unknown; description: string | null; updated_at: string }
+
+// ─── Panel Feature Flags ──────────────────────────────────────────────────────
+
+interface FeatureFlag {
+  id: string;
+  agency_id: string | null;
+  flag_name: string;
+  enabled: boolean;
+  description: string | null;
+  updated_at: string;
+  agencies?: { name: string } | null;
+}
+
+function FeatureFlagsPanel({ agencies }: { agencies: AgencyStat[] }) {
+  const [flags, setFlags] = useState<FeatureFlag[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState<string | null>(null);
+  const [filterAgency, setFilterAgency] = useState<string>('all');
+  const [newFlag, setNewFlag] = useState({ agency_id: '', flag_name: '', description: '' });
+  const [creating, setCreating] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('feature_flags')
+      .select('*, agencies(name)')
+      .order('flag_name');
+    if (!error && data) setFlags(data as FeatureFlag[]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const toggle = async (flag: FeatureFlag) => {
+    setToggling(flag.id);
+    try {
+      const { error } = await supabase
+        .from('feature_flags')
+        .update({ enabled: !flag.enabled, updated_at: new Date().toISOString() })
+        .eq('id', flag.id);
+      if (error) throw error;
+      await load();
+    } catch { /* noop */ } finally {
+      setToggling(null);
+    }
+  };
+
+  const createFlag = async () => {
+    if (!newFlag.flag_name.trim()) return;
+    setCreating(true);
+    try {
+      const { error } = await supabase.from('feature_flags').insert({
+        agency_id: newFlag.agency_id || null,
+        flag_name: newFlag.flag_name.trim(),
+        description: newFlag.description.trim() || null,
+        enabled: false,
+      });
+      if (error) throw error;
+      setNewFlag({ agency_id: '', flag_name: '', description: '' });
+      await load();
+    } catch { /* noop */ } finally {
+      setCreating(false);
+    }
+  };
+
+  const deleteFlag = async (id: string) => {
+    if (!window.confirm('Supprimer ce feature flag ?')) return;
+    await supabase.from('feature_flags').delete().eq('id', id);
+    await load();
+  };
+
+  const displayed = filterAgency === 'all'
+    ? flags
+    : filterAgency === 'global'
+      ? flags.filter(f => !f.agency_id)
+      : flags.filter(f => f.agency_id === filterAgency);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Feature Flags</h2>
+          <p className="text-gray-500 text-sm">Activez ou désactivez des fonctionnalités par agence</p>
+        </div>
+        <div className="sm:ml-auto">
+          <select
+            value={filterAgency}
+            onChange={e => setFilterAgency(e.target.value)}
+            className="px-3 py-2 bg-gray-950 border border-gray-700 rounded text-gray-200 text-sm"
+          >
+            <option value="all">Tous</option>
+            <option value="global">Global (sans agence)</option>
+            {agencies.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+        </div>
+      </div>
+
+      {/* Formulaire de création */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+        <p className="text-sm font-medium text-gray-400">Nouveau flag</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <input
+            placeholder="Nom du flag (ex: module_xyz)"
+            value={newFlag.flag_name}
+            onChange={e => setNewFlag(f => ({ ...f, flag_name: e.target.value }))}
+            className="px-3 py-2 bg-gray-950 border border-gray-700 rounded text-gray-200 text-sm font-mono"
+          />
+          <select
+            value={newFlag.agency_id}
+            onChange={e => setNewFlag(f => ({ ...f, agency_id: e.target.value }))}
+            className="px-3 py-2 bg-gray-950 border border-gray-700 rounded text-gray-200 text-sm"
+          >
+            <option value="">Global (toutes agences)</option>
+            {agencies.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          </select>
+          <input
+            placeholder="Description (facultatif)"
+            value={newFlag.description}
+            onChange={e => setNewFlag(f => ({ ...f, description: e.target.value }))}
+            className="px-3 py-2 bg-gray-950 border border-gray-700 rounded text-gray-200 text-sm"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={createFlag}
+          disabled={creating || !newFlag.flag_name.trim()}
+          className="px-4 py-2 text-sm rounded bg-orange-600 hover:bg-orange-500 text-white disabled:opacity-50"
+        >
+          {creating ? 'Création…' : '+ Créer le flag'}
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-gray-500 text-sm">Chargement…</div>
+      ) : displayed.length === 0 ? (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 text-gray-500 text-sm">
+          Aucun feature flag trouvé. Appliquez les migrations ou créez-en un ci-dessus.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {displayed.map(flag => (
+            <div key={flag.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="font-mono text-orange-300 text-sm truncate">{flag.flag_name}</p>
+                {flag.description && <p className="text-xs text-gray-500 mt-0.5">{flag.description}</p>}
+                <p className="text-xs text-gray-600 mt-1">
+                  {flag.agency_id
+                    ? (flag.agencies as { name: string } | null)?.name ?? flag.agency_id
+                    : 'Global'}
+                </p>
+              </div>
+              <span className={`text-xs px-2 py-1 rounded-full font-medium ${flag.enabled ? 'bg-emerald-400/10 text-emerald-400' : 'bg-gray-700 text-gray-400'}`}>
+                {flag.enabled ? 'Actif' : 'Inactif'}
+              </span>
+              <button
+                type="button"
+                onClick={() => toggle(flag)}
+                disabled={toggling === flag.id}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${flag.enabled ? 'bg-orange-500' : 'bg-gray-700'}`}
+                title={flag.enabled ? 'Désactiver' : 'Activer'}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${flag.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteFlag(flag.id)}
+                className="p-1.5 rounded hover:bg-red-900/30 text-gray-500 hover:text-red-400 transition-colors"
+                title="Supprimer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ConfigurationPanel() {
   const [rows, setRows] = useState<SaasConfigRow[]>([]);
@@ -588,6 +766,7 @@ export function Console() {
     { id: 'utilisateurs',  label: 'Utilisateurs',     icon: Users },
     { id: 'abonnements',   label: 'Abonnements',      icon: CreditCard },
     { id: 'logs',          label: 'Audit',            icon: ShieldCheck },
+    { id: 'feature_flags', label: 'Feature Flags',    icon: Play },
     { id: 'configuration', label: 'Configuration',    icon: Activity },
     { id: 'support',       label: 'Support',          icon: AlertTriangle },
   ];
@@ -1086,6 +1265,9 @@ export function Console() {
 
             {/* ── Tab: Demandes de création d'agence ── */}
             {tab === 'demandes' && <AgencyRequestsPanel />}
+
+            {/* ── Tab: Feature Flags ── */}
+            {tab === 'feature_flags' && <FeatureFlagsPanel agencies={agencies} />}
 
             {/* ── Tab: Configuration ── */}
             {tab === 'configuration' && <ConfigurationPanel />}

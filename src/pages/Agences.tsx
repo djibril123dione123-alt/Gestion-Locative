@@ -136,6 +136,40 @@ export default function Agences() {
     if (!deleteTargetId) return;
     setIsDeleting(true);
     try {
+      // Vérification des données orphelines avant suppression
+      const [
+        { count: nbUsers },
+        { count: nbBailleurs },
+        { count: nbImmeubles },
+        { count: nbContrats },
+        { count: nbPaiements },
+      ] = await Promise.all([
+        supabase.from('user_profiles').select('id', { count: 'exact', head: true }).eq('agency_id', deleteTargetId),
+        supabase.from('bailleurs').select('id', { count: 'exact', head: true }).eq('agency_id', deleteTargetId),
+        supabase.from('immeubles').select('id', { count: 'exact', head: true }).eq('agency_id', deleteTargetId),
+        supabase.from('contrats').select('id', { count: 'exact', head: true }).eq('agency_id', deleteTargetId),
+        supabase.from('paiements').select('id', { count: 'exact', head: true }).eq('agency_id', deleteTargetId),
+      ]);
+
+      const total = (nbUsers ?? 0) + (nbBailleurs ?? 0) + (nbImmeubles ?? 0) + (nbContrats ?? 0) + (nbPaiements ?? 0);
+      if (total > 0) {
+        const details = [
+          nbUsers    ? `${nbUsers} utilisateur(s)` : null,
+          nbBailleurs ? `${nbBailleurs} bailleur(s)` : null,
+          nbImmeubles ? `${nbImmeubles} immeuble(s)` : null,
+          nbContrats  ? `${nbContrats} contrat(s)` : null,
+          nbPaiements ? `${nbPaiements} paiement(s)` : null,
+        ].filter(Boolean).join(', ');
+        const confirmed = window.confirm(
+          `⚠️ Cette agence contient des données liées : ${details}.\n\nSupprimer quand même ? Toutes ces données seront perdues définitivement.`
+        );
+        if (!confirmed) {
+          setIsDeleting(false);
+          setDeleteTargetId(null);
+          return;
+        }
+      }
+
       // Récupérer les infos de l'agence avant suppression pour l'audit log
       const targetAgency = agencies.find((a) => a.id === deleteTargetId);
 

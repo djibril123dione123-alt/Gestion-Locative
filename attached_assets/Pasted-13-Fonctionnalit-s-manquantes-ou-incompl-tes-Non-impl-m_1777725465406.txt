@@ -1,0 +1,42 @@
+13. Fonctionnalités manquantes ou incomplètes
+Non implémenté
+Paiement en ligne (Stripe, Wave Business, Orange Money Business) — modal de contact uniquement
+QR code sur les quittances — paramètre présent, code absent
+Envoi email/SMS automatique (rappels loyers, envoi quittances, notifications échéance)
+Export comptable (FEC, intégration logiciel comptable)
+Rapports exportables par bailleur automatisés (bilan mensuel envoyé par email)
+Application mobile native — application web responsive uniquement
+Portail locataire — pas d'accès locataire à ses quittances/contrats
+Signature électronique des contrats et mandats
+OCR / reconnaissance de documents pour import automatique
+Interface super-admin incomplète
+Pas de gestion des feature_flags depuis la console (table présente, pas d'UI dédiée)
+La suppression d'agence ne vérifie pas les données orphelines potentielles au niveau Storage
+Gestion des erreurs
+Les pages n'ont pas toutes une gestion d'erreur réseau (certaines affichent juste un loading infini si la requête échoue)
+Pas de mécanisme de retry automatique côté client
+14. Bugs connus et points de vigilance
+⚠️ Critiques
+Récursion RLS sur user_profiles — Historiquement présent, corrigé par 20260425000003 via current_user_agency_id(). Si des politiques sont recréées manuellement sans utiliser cette fonction, la récursion peut réapparaître.
+
+Doublons de policies — L'historique des migrations montre de nombreux correctifs de policies en doublon sur agencies. Le dossier _archive/ contient les anciennes versions. Sur une BDD neuve, appliquer les migrations dans l'ordre résout tout, mais une BDD ancienne peut avoir des états intermédiaires.
+
+Calcul loyers impayés — Le calcul dans LoyersImpayes.tsx effectue 2 requêtes supplémentaires par contrat (batch optimisé dans la version actuelle). Sur de grands volumes, la performance peut dégrader. La pagination n'est pas implémentée.
+
+⚠️ Importants
+State-based routing sans history API — L'application ne supporte pas les URLs directes ni le bouton retour du navigateur. Rafraîchir la page ramène toujours au dashboard.
+
+Cache PDF non invalidé — Le cache settingsCache de src/lib/pdf.ts a un TTL de 5 minutes en mémoire. Si un utilisateur modifie les paramètres agence et génère immédiatement un PDF, les anciens paramètres peuvent être utilisés. invalidateAgencySettingsCache() est disponible mais pas appelé automatiquement après sauvegarde.
+
+bilans_mensuels jamais alimentée — La table existe, les politiques RLS existent, mais aucun code ne l'écrit. Ne pas se fier à cette table pour des exports/rapports.
+
+Seed et données de test — Les scripts seed-*.mjs nécessitent SUPABASE_SERVICE_ROLE_KEY (bypass RLS). Avec ANON_KEY uniquement, l'insertion échoue sur les agences. Les scripts ne gèrent pas les conflits (à relancer sur une BDD propre).
+
+Template PDF vides — Si agency_settings n'est pas renseigné (agence nouvellement créée), les variables {{...}} dans les templates produisent des chaînes vides sans avertissement.
+
+ℹ️ Vigilance
+Appel N+1 historique — FiltresAvances.tsx effectuait historiquement N+1 requêtes pour le filtre statut_paiement. Corrigé dans la version actuelle par un batch. Surveiller les évolutions futures.
+
+Race condition Calendrier — Gérée par requestIdRef dans Calendrier.tsx et Contrats.tsx. Pattern de bonne pratique à reproduire dans les nouvelles pages à fort volume de requêtes.
+
+localStorage dans QuickStart — QuickStart.tsx utilise localStorage pour persister l'état "dismissed". Les artefacts Claude.ai interdisent localStorage, mais dans l'app principale ce n'est pas un problème. À noter pour les tests.

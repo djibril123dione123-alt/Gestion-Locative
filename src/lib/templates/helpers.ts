@@ -127,7 +127,10 @@ export function numberToFrenchWords(num: number): string {
 }
 
 export function formatCurrency(amount: number, devise: string = 'FCFA'): string {
-  return `${amount.toLocaleString('fr-FR')} ${devise}`;
+  const formatted = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 })
+    .format(amount)
+    .replace(/[\u00A0\u202F\u2009\u2007]/g, '\u0020');
+  return `${formatted} ${devise}`;
 }
 
 export function formatDate(date: Date | string): string {

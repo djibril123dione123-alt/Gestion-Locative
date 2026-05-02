@@ -1,4 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
+import { formatCurrency } from '../../lib/formatters';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../hooks/useToast';
@@ -514,8 +515,8 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
             </div>
             <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
               <p className="text-sm text-orange-800">
-                <strong>Montant:</strong> {parseInt(formData.contrat.loyer_mensuel || '0').toLocaleString()} F CFA<br/>
-                <strong>Commission agence:</strong> {((parseInt(formData.contrat.loyer_mensuel || '0') * parseFloat(formData.contrat.commission)) / 100).toLocaleString()} F CFA
+                <strong>Montant:</strong> {formatCurrency(parseInt(formData.contrat.loyer_mensuel || '0'))}<br/>
+                <strong>Commission agence:</strong> {formatCurrency(Math.round((parseInt(formData.contrat.loyer_mensuel || '0') * parseFloat(formData.contrat.commission)) / 100))}
               </p>
             </div>
           </div>
@@ -569,7 +570,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
                   <CheckCircle2 className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold text-orange-900">Contrat actif</p>
-                    <p className="text-orange-700">{parseInt(formData.contrat.loyer_mensuel).toLocaleString()} F CFA/mois</p>
+                    <p className="text-orange-700">{formatCurrency(parseInt(formData.contrat.loyer_mensuel) || 0)}/mois</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">

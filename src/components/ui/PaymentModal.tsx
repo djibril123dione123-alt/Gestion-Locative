@@ -4,6 +4,7 @@ import { CheckCircle2, Loader2, Smartphone, CreditCard, ArrowLeft } from 'lucide
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTracking } from '../../hooks/useTracking';
+import { formatCurrency } from '../../lib/formatters';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -97,7 +98,7 @@ export function PaymentModal({ isOpen, onClose, planName, priceXof, onSuccess }:
           <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
             <p className="text-sm text-orange-900">
               Activez le plan <strong>{planName}</strong> —{' '}
-              <strong>{priceXof.toLocaleString('fr-FR')} FCFA / mois</strong> · Activation instantanée · 30 jours
+              <strong>{formatCurrency(priceXof)} / mois</strong> · Activation instantanée · 30 jours
             </p>
           </div>
 
@@ -161,7 +162,7 @@ export function PaymentModal({ isOpen, onClose, planName, priceXof, onSuccess }:
             )}
             <div>
               <p className="font-semibold text-slate-900">{providerLabel}</p>
-              <p className="text-xs text-slate-500">{priceXof.toLocaleString('fr-FR')} FCFA · 30 jours</p>
+              <p className="text-xs text-slate-500">{formatCurrency(priceXof)} · 30 jours</p>
             </div>
           </div>
 
@@ -189,7 +190,7 @@ export function PaymentModal({ isOpen, onClose, planName, priceXof, onSuccess }:
             className="w-full px-4 py-3 text-white rounded-xl font-semibold transition text-base shadow-lg hover:shadow-xl"
             style={{ background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)' }}
           >
-            Payer {priceXof.toLocaleString('fr-FR')} FCFA
+            Payer {formatCurrency(priceXof)}
           </button>
         </div>
       )}

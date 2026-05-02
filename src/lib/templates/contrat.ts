@@ -111,11 +111,11 @@ ARTICLE 5 : OBLIGATIONS DU LOCATAIRE
 12) Satisfaire à toutes les charges de ville ou de police habituelles.
 
 ARTICLE 6 : MONTANT DU LOYER
-Le montant du loyer initial est fixé à la somme de ${data.contrat.loyer_mensuel.toLocaleString('fr-FR')} FCFA (${data.contrat.loyer_lettres}).
+Le montant du loyer initial est fixé à la somme de ${String(data.contrat.loyer_mensuel).replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')} FCFA (${data.contrat.loyer_lettres}).
 Le loyer est payé mensuellement d'avance avant le 05 du mois, chez le mandataire.
 
 ARTICLE 7 : DÉPÔT DE GARANTIE
-Le dépôt de garantie est fixé à la somme de ${data.contrat.depot_garantie.toLocaleString('fr-FR')} FCFA (${data.contrat.depot_lettres}) correspondant à un mois de loyer payé d'avance et un mois de caution.
+Le dépôt de garantie est fixé à la somme de ${String(data.contrat.depot_garantie).replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')} FCFA (${data.contrat.depot_lettres}) correspondant à un mois de loyer payé d'avance et un mois de caution.
 
 ARTICLE 8 : PÉNALITÉS
 ${penalites}
@@ -133,7 +133,7 @@ ARTICLE 11 : ÉLECTION DE DOMICILE
 Pour l'exécution des obligations, le bailleur fait élection de domicile en sa demeure et le locataire dans les lieux loués.
 
 ARTICLE 12 : IMPORTANT
-En cas de non-paiement du loyer dans les délais impartis, une somme de ${fraisHuissier.toLocaleString('fr-FR')} FCFA est prélevée sur la caution pour les frais d'huissier afin d'assignation en expulsion, conformément à la loi sénégalaise.
+En cas de non-paiement du loyer dans les délais impartis, une somme de ${String(fraisHuissier).replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')} FCFA est prélevée sur la caution pour les frais d'huissier afin d'assignation en expulsion, conformément à la loi sénégalaise.
 
 Fait à ${city}, le ${data.contrat.date_du_jour} en deux originaux.
 

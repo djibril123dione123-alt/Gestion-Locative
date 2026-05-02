@@ -1,0 +1,43 @@
+🗓️ PHASE 1 — FONDATIONS SOLIDES (Semaines 1–3)
+Objectif : Zéro bug financier en production. Dormir tranquille.
+
+Semaine 1 — Intégrité financière
+ Corriger le sync offline : les mutations du queue doivent appeler les Edge Functions (create-paiement, etc.) et non insérer directement dans les tables
+ Ajouter UNIQUE(contrat_id, mois_concerne) sur la table paiements + gestion de l'erreur côté UI
+ Activer Sentry avec un vrai DSN pour voir les erreurs en production
+ Vérifier pg_cron : s'assurer que les workers Autopilot sont bien déclenchés automatiquement (sinon les jobs restent bloqués)
+ Gérer le cas commission = 0 : distinguer "non définie" (NULL) de "0%" au niveau DB avec une contrainte CHECK (commission > 0)
+Semaine 2 — Qualité du code
+ Unifier UserProfile : un seul fichier source de vérité, supprimer le doublon
+ Typer contrats?: any dans PaiementRow → type correct
+ Écrire des tests unitaires sur commissionService et paiementService (les deux modules les plus critiques)
+ Utiliser le RPC dashboard déjà créé dans la migration — supprimer les 8 requêtes séparées dans Dashboard.tsx
+ Geler le schéma Autopilot — stopper les réécritures, documenter le fonctionnement de v3.1
+Semaine 3 — Stabilisation
+ Splitter Paiements.tsx (907 lignes) en 3–4 composants lisibles
+ Supprimer les migrations archivées et nettoyer les tables orphelines laissées par les réécritures Autopilot
+ Tester end-to-end : créer un contrat → ajouter un paiement → vérifier ledger → vérifier event_outbox → vérifier job traité
+ Documenter les conventions de code (1 page, pas plus) pour préparer le recrutement
+
+===============================================================================================================
+
+
+🗓️ PHASE 2 — PRODUIT SELF-SERVE (Semaines 4–7)
+Objectif : Un client peut s'inscrire, payer et utiliser seul, sans intervention humaine.
+
+Semaine 4–5 — Checkout automatisé
+ Intégrer Wave Business API (ou Orange Money) pour les paiements d'abonnement
+ Webhook de confirmation : dès le paiement reçu → activer automatiquement le plan → envoyer email de bienvenue
+ Gestion des relances : J-3 avant expiration → email/SMS → J0 → suspension automatique → J+7 → email récupération
+ Supprimer le WhatsApp comme seul canal de paiement (le garder comme support, pas comme checkout)
+ Page pricing publique claire avec les 3 plans (Basic / Pro / Enterprise) et un bouton "Essai gratuit 14 jours"
+Semaine 6 — Expérience d'onboarding
+ Onboarding guidé en 5 étapes : Créer agence → Ajouter immeuble → Ajouter unité → Créer locataire → Premier contrat
+ Email de bienvenue automatique avec lien vers tutoriel vidéo (même une vidéo Loom de 5 min)
+ Compléter le SetupWizard existant pour couvrir tous les cas (actuellement partiel)
+ Demo data : option "charger des données de démonstration" pour tester sans partir de zéro
+Semaine 7 — Notifications & communication
+ Notification bailleur : email automatique à chaque encaissement de loyer (la feature à la plus haute valeur perçue)
+ Rappel automatique locataire : SMS/email J-5 avant échéance loyer
+ Rapport mensuel bailleur : PDF auto-généré et envoyé en fin de mois (récapitulatif encaissements + commission déduite)
+ Alertes internes : notification agent quand un loyer est impayé depuis N jours

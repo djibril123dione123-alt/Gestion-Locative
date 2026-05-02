@@ -175,7 +175,7 @@ COMMENT ON VIEW vw_financial_drift_report IS
 -- 4. PG_CRON — Réconciliation mensuelle automatique
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
 
@@ -185,9 +185,9 @@ BEGIN
     PERFORM cron.schedule(
       'financial-reconciliation',
       '0 2 2 * *',
-      $$SELECT fn_compute_financial_snapshots(date_trunc('month', CURRENT_DATE - interval '1 month')::date)$$
+      'SELECT fn_compute_financial_snapshots(date_trunc(''month'', CURRENT_DATE - interval ''1 month'')::date)'
     );
 
   END IF;
 END;
-$$;
+$do$;

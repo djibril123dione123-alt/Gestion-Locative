@@ -1,19 +1,19 @@
 /**
- * CheckoutModal — Paiement PayDunya (Orange Money)
+ * CheckoutModal — Paiement PayDunya multi-provider
  *
  * Flux :
- *   1. Saisie numéro Orange Money
- *   2. Appel Edge Function initiate-payment → crée invoice PayDunya + transaction DB
- *   3. PayDunya envoie une demande de paiement sur le téléphone
- *   4. Polling statut transaction (max 3 min)
+ *   1. Sélection du moyen de paiement (Orange Money, Wave, Djamo, Carte)
+ *   2. Saisie numéro (mobile) ou redirection (carte)
+ *   3. Appel Edge Function initiate-payment
+ *   4. Polling statut transaction (max 3 min) ou attente retour carte
  *   5. Webhook PayDunya → activate_subscription (côté serveur)
- *   6. Success screen
+ *   6. Écran succès
  */
 import { useState, useEffect, useRef } from 'react';
 import { Modal } from '../ui/Modal';
 import {
   CheckCircle2, Loader2, Smartphone, ArrowLeft,
-  AlertCircle, Phone, Shield, Clock,
+  AlertCircle, Shield, Clock, CreditCard, ExternalLink,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -28,30 +28,35 @@ interface CheckoutModalProps {
   onSuccess: () => void;
 }
 
-type Step = 'enter_phone' | 'processing' | 'polling' | 'success' | 'error';
+type Provider = 'orange_money' | 'wave' | 'djamo' | 'card';
+type Step = 'select_provider' | 'enter_phone' | 'processing' | 'polling' | 'card_redirect' | 'success' | 'error';
 
 const POLL_INTERVAL_MS = 5000;
-const POLL_MAX_ATTEMPTS = 36;
+const POLL_MAX_ATTEMPTS = 36; // 3 minutes
 
 const CONTACT_WHATSAPP = '221774000000';
 
+const PROVIDERS: { id: Provider; label: string; sub: string; emoji: string; color: string; bg: string }[] = [
+  { id: 'orange_money', label: 'Orange Money',    sub: 'Sénégal',                 emoji: '🟠', color: '#F58220', bg: '#FFF7ED' },
+  { id: 'wave',         label: 'Wave',             sub: 'Sénégal / Côte d\'Ivoire', emoji: '🌊', color: '#00A6ED', bg: '#EFF9FF' },
+  { id: 'djamo',        label: 'Djamo',            sub: 'Côte d\'Ivoire',           emoji: '💜', color: '#7C3AED', bg: '#FAF5FF' },
+  { id: 'card',         label: 'Carte bancaire',   sub: 'Visa / Mastercard',        emoji: '💳', color: '#1D4ED8', bg: '#EFF6FF' },
+];
+
 function isCorsOrNetworkError(msg: string): boolean {
-  return (
-    msg.toLowerCase().includes('failed to send') ||
-    msg.toLowerCase().includes('cors') ||
-    msg.toLowerCase().includes('network') ||
-    msg.toLowerCase().includes('fetch') ||
-    msg.toLowerCase().includes('edge function')
-  );
+  const m = msg.toLowerCase();
+  return m.includes('failed to send') || m.includes('cors') || m.includes('network') || m.includes('fetch') || m.includes('edge function');
 }
 
 export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onSuccess }: CheckoutModalProps) {
   const { profile } = useAuth();
-  const [step, setStep] = useState<Step>('enter_phone');
+  const [step, setStep] = useState<Step>('select_provider');
+  const [provider, setProvider] = useState<Provider | null>(null);
   const [phone, setPhone] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isEdgeFunctionDown, setIsEdgeFunctionDown] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -63,32 +68,45 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
   useEffect(() => {
     if (!isOpen) {
       stopPolling();
-      setStep('enter_phone');
+      setStep('select_provider');
+      setProvider(null);
       setPhone('');
       setPhoneError('');
       setErrorMsg('');
       setIsEdgeFunctionDown(false);
+      setCheckoutUrl(null);
       setTransactionId(null);
       setPollCount(0);
     }
   }, [isOpen]);
 
-  useEffect(() => { return () => stopPolling(); }, []);
+  useEffect(() => () => stopPolling(), []);
 
-  const handlePay = async () => {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length < 8) {
-      setPhoneError('Entrez un numéro valide (8 chiffres minimum).');
-      return;
+  const handleSelectProvider = (p: Provider) => {
+    setProvider(p);
+    if (p === 'card') {
+      setStep('processing');
+      initiatePayment(p, undefined);
+    } else {
+      setStep('enter_phone');
     }
+  };
+
+  const handlePay = () => {
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length < 8) { setPhoneError('Numéro invalide (8 chiffres minimum).'); return; }
     setPhoneError('');
     setStep('processing');
+    initiatePayment(provider!, cleaned);
+  };
 
+  const initiatePayment = async (prov: Provider, phoneNum: string | undefined) => {
     try {
       const { data, error } = await supabase.functions.invoke('initiate-payment', {
         body: {
           plan_id: planId,
-          phone: cleaned,
+          provider: prov,
+          phone: phoneNum,
           amount_xof: priceXof,
           agency_id: profile?.agency_id,
         },
@@ -98,9 +116,8 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
         const rawMsg = error.message ?? '';
         if (isCorsOrNetworkError(rawMsg)) {
           setIsEdgeFunctionDown(true);
-          setErrorMsg('Le service de paiement en ligne est en cours de déploiement. Contactez-nous sur WhatsApp pour activer votre abonnement maintenant.');
+          setErrorMsg('Le service de paiement est en cours de déploiement. Contactez-nous sur WhatsApp pour activer votre abonnement maintenant.');
         } else {
-          setIsEdgeFunctionDown(false);
           setErrorMsg(rawMsg || 'Impossible d\'initier le paiement.');
         }
         setStep('error');
@@ -114,15 +131,39 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
       }
 
       setTransactionId(data.transaction_id);
+
+      // Softpay mobile push échoué → fallback carte
+      if (data.softpay_error && data.checkout_url) {
+        setCheckoutUrl(data.checkout_url);
+        setStep('card_redirect');
+        startPolling(data.transaction_id);
+        return;
+      }
+
+      // Carte : ouvrir la page PayDunya dans un onglet
+      if (prov === 'card' && data.checkout_url) {
+        setCheckoutUrl(data.checkout_url);
+        window.open(data.checkout_url, '_blank', 'noopener,noreferrer');
+        setStep('card_redirect');
+        startPolling(data.transaction_id);
+        return;
+      }
+
+      // Mode test : simuler succès
+      if (data.test_mode) {
+        setStep('success');
+        setTimeout(() => onSuccess(), 2000);
+        return;
+      }
+
       setStep('polling');
       startPolling(data.transaction_id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur inconnue.';
       if (isCorsOrNetworkError(msg)) {
         setIsEdgeFunctionDown(true);
-        setErrorMsg('Le service de paiement en ligne est en cours de déploiement. Contactez-nous sur WhatsApp pour activer votre abonnement maintenant.');
+        setErrorMsg('Le service de paiement est en cours de déploiement. Contactez-nous sur WhatsApp pour activer votre abonnement.');
       } else {
-        setIsEdgeFunctionDown(false);
         setErrorMsg(msg);
       }
       setStep('error');
@@ -137,7 +178,6 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
 
       if (attempts > POLL_MAX_ATTEMPTS) {
         stopPolling();
-        setIsEdgeFunctionDown(false);
         setErrorMsg('Délai dépassé. Si vous avez payé, votre compte sera activé automatiquement dans quelques minutes.');
         setStep('error');
         return;
@@ -155,8 +195,7 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
         setTimeout(() => onSuccess(), 2500);
       } else if (data?.status === 'failed' || data?.status === 'cancelled') {
         stopPolling();
-        setIsEdgeFunctionDown(false);
-        setErrorMsg('Le paiement a échoué ou a été annulé. Veuillez réessayer.');
+        setErrorMsg('Le paiement a échoué ou a été annulé.');
         setStep('error');
       }
     }, POLL_INTERVAL_MS);
@@ -168,29 +207,81 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
     onClose();
   };
 
+  const selectedProvider = PROVIDERS.find((p) => p.id === provider);
   const timeLeft = Math.max(0, POLL_MAX_ATTEMPTS - pollCount) * (POLL_INTERVAL_MS / 1000);
   const minutesLeft = Math.floor(timeLeft / 60);
   const secondsLeft = timeLeft % 60;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={`Activer le plan ${planName}`}>
-      {step === 'enter_phone' && (
+
+      {/* ── Récapitulatif toujours visible ── */}
+      {step !== 'success' && step !== 'error' && (
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl mb-5 text-sm"
+          style={{ backgroundColor: '#FFF7ED', border: '1px solid #FED7AA' }}>
+          <span className="font-semibold text-slate-800">Plan {planName}</span>
+          <span className="font-extrabold" style={{ color: '#F58220' }}>{formatCurrency(priceXof)}<span className="font-normal text-slate-400 text-xs">/mois</span></span>
+        </div>
+      )}
+
+      {/* ─── Étape 1 : Choix du moyen de paiement ─── */}
+      {step === 'select_provider' && (
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-slate-700 mb-3">Choisissez votre moyen de paiement</p>
+          {PROVIDERS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => handleSelectProvider(p.id)}
+              className="w-full flex items-center gap-4 p-4 rounded-xl border-2 border-slate-200 hover:border-current transition-all group text-left"
+              style={{ '--hover-color': p.color } as React.CSSProperties}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = p.color)}
+              onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#E2E8F0')}
+            >
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                style={{ backgroundColor: p.bg }}>
+                {p.emoji}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-slate-900">{p.label}</p>
+                <p className="text-xs text-slate-400">{p.sub}</p>
+              </div>
+              {p.id === 'card' && (
+                <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: p.bg, color: p.color }}>
+                  Visa · MC
+                </span>
+              )}
+            </button>
+          ))}
+          <div className="flex items-center justify-center gap-4 pt-2 text-xs text-slate-400">
+            <span className="flex items-center gap-1"><Shield className="w-3 h-3" />Sécurisé PayDunya</span>
+            <span>·</span>
+            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />Activation instantanée</span>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Étape 2 : Saisie numéro (mobile money) ─── */}
+      {step === 'enter_phone' && selectedProvider && (
         <div className="space-y-5">
-          <div className="rounded-2xl p-5" style={{ background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)', border: '1px solid #FED7AA' }}>
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#F58220' }}>
-                <Smartphone className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="font-bold text-slate-900 text-base">{planName}</p>
-                <p className="text-2xl font-extrabold" style={{ color: '#F58220' }}>{formatCurrency(priceXof)}<span className="text-sm font-normal text-slate-500 ml-1">/ mois</span></p>
-              </div>
+          <button
+            onClick={() => setStep('select_provider')}
+            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-700 transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Changer de moyen
+          </button>
+
+          <div className="flex items-center gap-3 p-4 rounded-xl" style={{ backgroundColor: selectedProvider.bg, border: `1.5px solid ${selectedProvider.color}30` }}>
+            <span className="text-2xl">{selectedProvider.emoji}</span>
+            <div>
+              <p className="font-bold text-slate-900">{selectedProvider.label}</p>
+              <p className="text-xs text-slate-500">{selectedProvider.sub}</p>
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Numéro Orange Money <span className="text-red-500">*</span>
+              Numéro {selectedProvider.label} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-sm">🇸🇳 +221</span>
@@ -198,81 +289,73 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
                 type="tel"
                 value={phone}
                 onChange={(e) => { setPhone(e.target.value); setPhoneError(''); }}
+                onKeyDown={(e) => e.key === 'Enter' && handlePay()}
                 placeholder="77 123 45 67"
                 maxLength={14}
                 autoFocus
-                className="w-full pl-24 pr-4 py-3.5 border border-slate-300 rounded-xl text-lg tracking-wider focus:ring-2 focus:outline-none"
-                style={{ '--tw-ring-color': '#F58220' } as React.CSSProperties}
-                onFocus={(e) => e.target.style.borderColor = '#F58220'}
-                onBlur={(e) => e.target.style.borderColor = '#CBD5E1'}
+                className="w-full pl-24 pr-4 py-3.5 border-2 border-slate-200 rounded-xl text-lg tracking-wider focus:outline-none transition"
+                onFocus={(e) => (e.target.style.borderColor = selectedProvider.color)}
+                onBlur={(e) => (e.target.style.borderColor = '#E2E8F0')}
               />
             </div>
-            {phoneError && <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1"><AlertCircle className="w-4 h-4" />{phoneError}</p>}
-            <p className="mt-1.5 text-xs text-slate-400">Vous recevrez une notification de confirmation sur ce numéro.</p>
-          </div>
-
-          <div className="bg-slate-50 rounded-xl p-4 space-y-2.5">
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Récapitulatif</p>
-            <div className="flex justify-between text-sm"><span className="text-slate-600">Plan {planName}</span><span className="font-semibold">{formatCurrency(priceXof)}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-slate-600">Durée</span><span className="font-semibold">30 jours</span></div>
-            <div className="flex justify-between text-sm"><span className="text-slate-600">Renouvellement</span><span className="font-semibold">Automatique</span></div>
-            <div className="flex justify-between text-sm font-bold border-t border-slate-200 pt-2.5">
-              <span className="text-slate-900">Total à payer</span>
-              <span style={{ color: '#F58220' }}>{formatCurrency(priceXof)}</span>
-            </div>
+            {phoneError && (
+              <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1.5">
+                <AlertCircle className="w-4 h-4" />{phoneError}
+              </p>
+            )}
+            <p className="mt-1.5 text-xs text-slate-400">Vous recevrez une notification sur ce numéro pour confirmer.</p>
           </div>
 
           <button
             onClick={handlePay}
-            className="w-full py-4 text-white rounded-xl font-bold text-base transition-all shadow-lg hover:shadow-xl active:scale-95"
-            style={{ background: 'linear-gradient(135deg, #F58220 0%, #C2410C 100%)' }}
+            className="w-full py-4 rounded-xl font-bold text-base text-white transition-all shadow-lg hover:shadow-xl active:scale-95"
+            style={{ background: `linear-gradient(135deg, ${selectedProvider.color} 0%, ${selectedProvider.color}CC 100%)` }}
           >
-            Payer {formatCurrency(priceXof)} via Orange Money
+            {selectedProvider.emoji} Payer {formatCurrency(priceXof)}
           </button>
 
-          <div className="flex items-center justify-center gap-4 text-xs text-slate-400">
-            <span className="flex items-center gap-1"><Shield className="w-3 h-3" />100 % sécurisé</span>
-            <span>·</span>
-            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />Activation instantanée</span>
-            <span>·</span>
-            <span>Sans carte bancaire</span>
-          </div>
+          <p className="text-xs text-center text-slate-400">
+            100 % sécurisé · Sans carte bancaire · Annulable à tout moment
+          </p>
         </div>
       )}
 
+      {/* ─── Processing ─── */}
       {step === 'processing' && (
         <div className="flex flex-col items-center gap-6 py-12">
-          <div className="relative">
-            <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FFF7ED' }}>
-              <Loader2 className="w-10 h-10 animate-spin" style={{ color: '#F58220' }} />
-            </div>
+          <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FFF7ED' }}>
+            <Loader2 className="w-10 h-10 animate-spin" style={{ color: '#F58220' }} />
           </div>
           <div className="text-center">
-            <p className="text-lg font-bold text-slate-900">Initialisation du paiement…</p>
-            <p className="text-sm text-slate-500 mt-1">Connexion à Orange Money en cours</p>
+            <p className="text-lg font-bold text-slate-900">Connexion à PayDunya…</p>
+            <p className="text-sm text-slate-400 mt-1">Création de votre facture de paiement</p>
           </div>
         </div>
       )}
 
-      {step === 'polling' && (
+      {/* ─── Polling (mobile money push) ─── */}
+      {step === 'polling' && selectedProvider && (
         <div className="flex flex-col items-center gap-6 py-8">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FFF7ED' }}>
-              <Phone className="w-12 h-12" style={{ color: '#F58220' }} />
+            <div className="w-24 h-24 rounded-full flex items-center justify-center text-4xl"
+              style={{ backgroundColor: selectedProvider.bg }}>
+              {selectedProvider.emoji}
             </div>
-            <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F58220' }}>
+            <div className="absolute -top-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: selectedProvider.color }}>
               <Loader2 className="w-4 h-4 text-white animate-spin" />
             </div>
           </div>
           <div className="text-center space-y-2">
             <p className="text-xl font-bold text-slate-900">Confirmez sur votre téléphone</p>
             <p className="text-sm text-slate-600 max-w-xs">
-              Une notification Orange Money a été envoyée au <strong>+221 {phone}</strong>.
-              Ouvrez l'app Orange Money et confirmez le paiement.
+              Une notification <strong>{selectedProvider.label}</strong> a été envoyée au{' '}
+              <strong>+221 {phone}</strong>. Ouvrez l'application et confirmez le paiement.
             </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium" style={{ backgroundColor: '#FFF7ED', color: '#C2410C' }}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
+              style={{ backgroundColor: '#FFF7ED', color: '#C2410C' }}>
               <Clock className="w-4 h-4" />
-              Attente {minutesLeft > 0 ? `${minutesLeft}m ` : ''}{String(secondsLeft).padStart(2, '0')}s
+              {minutesLeft > 0 ? `${minutesLeft}m ` : ''}{String(secondsLeft).padStart(2, '0')}s restantes
             </div>
           </div>
           <button
@@ -285,21 +368,63 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
         </div>
       )}
 
+      {/* ─── Carte : redirection PayDunya ─── */}
+      {step === 'card_redirect' && (
+        <div className="flex flex-col items-center gap-6 py-8">
+          <div className="w-24 h-24 rounded-full flex items-center justify-center" style={{ backgroundColor: '#EFF6FF' }}>
+            <CreditCard className="w-12 h-12" style={{ color: '#1D4ED8' }} />
+          </div>
+          <div className="text-center space-y-2">
+            <p className="text-xl font-bold text-slate-900">Paiement par carte</p>
+            <p className="text-sm text-slate-600 max-w-xs">
+              Une page de paiement sécurisée a été ouverte dans un nouvel onglet.
+              Complétez le paiement puis revenez ici.
+            </p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
+              style={{ backgroundColor: '#FFF7ED', color: '#C2410C' }}>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              En attente de confirmation…
+            </div>
+          </div>
+          {checkoutUrl && (
+            <a
+              href={checkoutUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition"
+              style={{ backgroundColor: '#1D4ED8', color: 'white' }}
+            >
+              <ExternalLink className="w-4 h-4" />
+              Rouvrir la page de paiement
+            </a>
+          )}
+          <button
+            onClick={() => { stopPolling(); setStep('select_provider'); }}
+            className="text-sm text-slate-400 hover:text-slate-700 transition flex items-center gap-1.5"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Choisir un autre moyen
+          </button>
+        </div>
+      )}
+
+      {/* ─── Succès ─── */}
       {step === 'success' && (
         <div className="flex flex-col items-center gap-5 py-10">
           <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center">
             <CheckCircle2 className="w-14 h-14 text-green-600" />
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-slate-900">Abonnement activé !</p>
+            <p className="text-2xl font-extrabold text-slate-900">Abonnement activé !</p>
             <p className="text-sm text-slate-600 mt-2">
-              Le plan <strong>{planName}</strong> est maintenant actif pour 30 jours.<br />
-              Un email de confirmation a été envoyé.
+              Le plan <strong>{planName}</strong> est actif pour 30 jours.<br />
+              Un email de confirmation vous a été envoyé.
             </p>
           </div>
         </div>
       )}
 
+      {/* ─── Erreur ─── */}
       {step === 'error' && (
         <div className="flex flex-col items-center gap-5 py-6">
           <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
@@ -307,7 +432,7 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
           </div>
           <div className="text-center">
             <p className="text-lg font-bold text-slate-900">
-              {isEdgeFunctionDown ? 'Paiement en ligne indisponible' : 'Paiement non confirmé'}
+              {isEdgeFunctionDown ? 'Service temporairement indisponible' : 'Paiement non confirmé'}
             </p>
             <p className="text-sm text-slate-500 mt-2 max-w-xs">{errorMsg}</p>
           </div>
@@ -315,27 +440,27 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
             {isEdgeFunctionDown ? (
               <>
                 <a
-                  href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je souhaite activer le plan ${planName} sur Samay Këur (${formatCurrency(priceXof)}/mois).`)}`}
+                  href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je veux activer le plan ${planName} sur Samay Këur (${formatCurrency(priceXof)}/mois).`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-bold transition hover:opacity-90"
                   style={{ backgroundColor: '#25D366' }}
                 >
                   <Smartphone className="w-5 h-5" />
-                  Contacter sur WhatsApp
+                  Activer via WhatsApp
                 </a>
                 <button
-                  onClick={() => { setStep('enter_phone'); setErrorMsg(''); setIsEdgeFunctionDown(false); }}
-                  className="w-full py-2.5 border border-slate-300 rounded-xl text-slate-600 text-sm font-medium hover:bg-slate-50 transition"
+                  onClick={() => { setStep('select_provider'); setErrorMsg(''); setIsEdgeFunctionDown(false); }}
+                  className="w-full py-2.5 border-2 border-slate-200 rounded-xl text-slate-600 text-sm font-medium hover:bg-slate-50 transition"
                 >
                   Réessayer quand même
                 </button>
               </>
             ) : (
               <button
-                onClick={() => { setStep('enter_phone'); setErrorMsg(''); }}
-                className="w-full py-3 rounded-xl text-white font-bold transition"
-                style={{ backgroundColor: '#F58220' }}
+                onClick={() => { setStep('select_provider'); setErrorMsg(''); }}
+                className="w-full py-3 rounded-xl text-white font-bold transition active:scale-95"
+                style={{ background: 'linear-gradient(135deg, #F58220 0%, #C2410C 100%)' }}
               >
                 Réessayer
               </button>

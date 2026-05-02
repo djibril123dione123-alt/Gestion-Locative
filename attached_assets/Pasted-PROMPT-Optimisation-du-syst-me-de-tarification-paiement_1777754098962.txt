@@ -1,0 +1,89 @@
+PROMPT — Optimisation du système de tarification + paiement SaaS Afrique (PayDunya multi-provider)
+
+Tu es un expert en stratégie SaaS, fintech et pricing pour produits digitaux en Afrique de l’Ouest (Sénégal, Côte d’Ivoire, Mali).
+
+Je développe une application SaaS de gestion immobilière (bailleurs + agences immobilières) avec abonnements mensuels et paiements via PayDunya.
+
+🏗️ Contexte produit
+
+Le SaaS permet :
+
+Gestion de loyers et contrats
+Suivi des paiements locataires
+Notifications automatiques (email + SMS)
+Automatisation des relances et impayés
+Dashboard financier et reporting
+Multi-agents pour agences
+Génération de rapports PDF
+💳 Système de paiement
+
+Les paiements sont gérés via PayDunya (agrégateur de paiement).
+
+Moyens disponibles :
+Orange Money Sénégal
+Wave Sénégal
+Djamo Sénégal
+Carte bancaire (Visa / Mastercard)
+
+👉 L’utilisateur choisit librement son moyen de paiement dans PayDunya.
+
+🎯 Objectif
+
+Je veux que tu optimises :
+
+1. Le plan de tarification SaaS
+Starter / Pro / Business / Enterprise
+Prix adaptés au marché Afrique francophone
+Bonne montée en gamme naturelle
+2. La logique de conversion
+Essai gratuit → conversion payante
+Starter → Pro (objectif principal)
+Réduction du churn
+3. Le positionnement produit
+Simplicité pour petits bailleurs
+Puissance pour agences immobilières
+Valeur claire par plan
+4. La stratégie de paiement
+Expérience utilisateur fluide
+Utilisation optimale de PayDunya multi-paiement
+Réduction des abandons de paiement
+📦 Plans actuels à analyser et améliorer :
+Plan	Prix	Cible	Limite principale	Valeur perçue
+Essai	7 jours gratuit	Nouveaux utilisateurs	Temps limité	Tester sans risque
+Starter	5 000 FCFA/mois	Petits bailleurs	10 unités, 1 utilisateur	Gestion simple des loyers
+Pro	15 000 FCFA/mois	Bailleurs sérieux / petites agences	100 unités, 3–5 utilisateurs	Automatisation complète
+Business	50 000 FCFA/mois	Agences structurées	500 unités	Gestion d’équipe + reporting
+Enterprise	Sur devis	Gros comptes	Custom	SLA + personnalisation
+🔍 Tâches demandées
+Analyse la structure actuelle des plans
+Identifier les incohérences de pricing ou de valeur perçue
+Optimiser les prix si nécessaire pour le marché local
+Rééquilibrer les limites (unités, utilisateurs, fonctionnalités)
+Améliorer la différenciation entre Starter / Pro / Business
+Construire une logique de montée en gamme naturelle (upgrade funnel)
+Optimiser la stratégie de conversion vers Pro (plan principal)
+Proposer une version finale optimisée du tableau
+⚙️ Contraintes importantes
+Marché Afrique francophone (Sénégal, Côte d’Ivoire, Mali)
+Paiement mobile dominant (Orange Money + Wave)
+Simplification maximale de l’expérience utilisateur
+PRO doit être le plan principal de conversion
+Starter doit être facile à adopter mais limité
+Business doit cibler agences réelles (pas juste plus de quotas)
+💡 Bonus (très important)
+
+Propose aussi :
+
+Une stratégie pour augmenter le passage Starter → Pro
+Une stratégie pour réduire le churn
+Une stratégie pour augmenter rapidement le MRR
+Une logique UX pour intégrer PayDunya (Wave / Orange / Djamo / Carte) sans friction
+🚀 Résultat attendu
+
+Une version :
+
+claire
+rentable
+adaptée au marché africain
+optimisée pour conversion SaaS
+prête à être utilisée en production

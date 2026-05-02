@@ -38,8 +38,8 @@ ALTER TABLE event_outbox ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "outbox_select_agency"   ON event_outbox;
 CREATE POLICY "outbox_select_agency" ON event_outbox
   FOR SELECT USING (
-    agency_id = (SELECT agency_id FROM profiles WHERE id = auth.uid() LIMIT 1)
-    OR (SELECT role FROM profiles WHERE id = auth.uid() LIMIT 1) IN ('admin', 'super_admin')
+    agency_id = (SELECT agency_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
+    OR (SELECT role FROM public.profiles WHERE id = auth.uid() LIMIT 1) IN ('admin', 'super_admin')
   );
 
 DROP POLICY IF EXISTS "outbox_insert_all" ON event_outbox;
@@ -82,8 +82,8 @@ ALTER TABLE job_queue ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "jobs_select_admin" ON job_queue;
 CREATE POLICY "jobs_select_admin" ON job_queue
   FOR SELECT USING (
-    (SELECT role FROM profiles WHERE id = auth.uid() LIMIT 1) IN ('admin', 'super_admin')
-    OR agency_id = (SELECT agency_id FROM profiles WHERE id = auth.uid() LIMIT 1)
+    (SELECT role FROM public.profiles WHERE id = auth.uid() LIMIT 1) IN ('admin', 'super_admin')
+    OR agency_id = (SELECT agency_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
   );
 
 DROP POLICY IF EXISTS "jobs_insert_service" ON job_queue;
@@ -114,7 +114,7 @@ CREATE INDEX IF NOT EXISTS idx_kpi_daily_agency_date ON kpi_daily(agency_id, dat
 
 ALTER TABLE kpi_daily ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "kpi_daily_agency" ON kpi_daily
-  FOR SELECT USING (agency_id = (SELECT agency_id FROM profiles WHERE id = auth.uid() LIMIT 1));
+  FOR SELECT USING (agency_id = (SELECT agency_id FROM public.profiles WHERE id = auth.uid() LIMIT 1));
 CREATE POLICY "kpi_daily_insert" ON kpi_daily FOR INSERT WITH CHECK (true);
 CREATE POLICY "kpi_daily_update" ON kpi_daily FOR UPDATE USING (true);
 
@@ -142,7 +142,7 @@ CREATE INDEX IF NOT EXISTS idx_kpi_monthly_agency_period ON kpi_monthly(agency_i
 
 ALTER TABLE kpi_monthly ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "kpi_monthly_agency" ON kpi_monthly
-  FOR SELECT USING (agency_id = (SELECT agency_id FROM profiles WHERE id = auth.uid() LIMIT 1));
+  FOR SELECT USING (agency_id = (SELECT agency_id FROM public.profiles WHERE id = auth.uid() LIMIT 1));
 CREATE POLICY "kpi_monthly_insert" ON kpi_monthly FOR INSERT WITH CHECK (true);
 CREATE POLICY "kpi_monthly_update" ON kpi_monthly FOR UPDATE USING (true);
 
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS agency_cohort (
 
 ALTER TABLE agency_cohort ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "cohort_super_admin" ON agency_cohort
-  FOR ALL USING ((SELECT role FROM profiles WHERE id = auth.uid() LIMIT 1) = 'super_admin');
+  FOR ALL USING ((SELECT role FROM public.profiles WHERE id = auth.uid() LIMIT 1) = 'super_admin');
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -189,7 +189,7 @@ CREATE INDEX IF NOT EXISTS idx_cache_agency  ON cache_store(agency_id);
 
 ALTER TABLE cache_store ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "cache_agency" ON cache_store
-  FOR SELECT USING (agency_id = (SELECT agency_id FROM profiles WHERE id = auth.uid() LIMIT 1)
+  FOR SELECT USING (agency_id = (SELECT agency_id FROM public.profiles WHERE id = auth.uid() LIMIT 1)
                     OR agency_id IS NULL);
 CREATE POLICY "cache_insert" ON cache_store FOR INSERT WITH CHECK (true);
 CREATE POLICY "cache_update" ON cache_store FOR UPDATE USING (true);

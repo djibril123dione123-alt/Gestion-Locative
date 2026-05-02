@@ -85,6 +85,11 @@ DROP POLICY IF EXISTS "Users can update own bilans"     ON bilans_mensuels;
 DROP POLICY IF EXISTS "Users can delete own bilans"     ON bilans_mensuels;
 
 -- Recréer avec isolation multi-tenant correcte
+DROP POLICY IF EXISTS "bilans_select_own_agency"  ON bilans_mensuels;
+DROP POLICY IF EXISTS "bilans_insert_own_agency"  ON bilans_mensuels;
+DROP POLICY IF EXISTS "bilans_update_own_agency"  ON bilans_mensuels;
+DROP POLICY IF EXISTS "bilans_delete_own_agency"  ON bilans_mensuels;
+
 CREATE POLICY "bilans_select_own_agency"
   ON bilans_mensuels FOR SELECT
   TO authenticated

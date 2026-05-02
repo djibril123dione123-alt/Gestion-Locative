@@ -70,7 +70,7 @@ CREATE INDEX IF NOT EXISTS idx_health_snapshot ON system_health(snapshot_at DESC
 ALTER TABLE system_health ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "health_admin" ON system_health
   FOR SELECT USING (
-    (SELECT role FROM profiles WHERE id = auth.uid() LIMIT 1) IN ('admin','super_admin')
+    (SELECT role FROM public.profiles WHERE id = auth.uid() LIMIT 1) IN ('admin','super_admin')
   );
 CREATE POLICY "health_insert" ON system_health FOR INSERT WITH CHECK (true);
 
@@ -437,7 +437,7 @@ END; $$;
 -- 9. PG_CRON — Self-heal + Revenue Quality automatiques
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DO $$
+DO $do$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
 
@@ -451,10 +451,7 @@ BEGIN
     PERFORM cron.unschedule('revenue-quality')
       WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'revenue-quality');
     PERFORM cron.schedule('revenue-quality', '0 * * * *',
-      $$
-      SELECT fn_compute_revenue_quality(id, date_trunc('month', CURRENT_DATE)::date)
-      FROM agencies WHERE pilot_status IN ('active','trial')
-      $$);
+      'SELECT fn_compute_revenue_quality(id, date_trunc(''month'', CURRENT_DATE)::date) FROM agencies WHERE pilot_status IN (''active'',''trial'')');
 
     -- Nettoyage snapshots santé vieux > 7 jours
     PERFORM cron.unschedule('cleanup-health')
@@ -463,4 +460,4 @@ BEGIN
       'DELETE FROM system_health WHERE snapshot_at < now() - interval ''7 days''');
 
   END IF;
-END; $$;
+END; $do$;

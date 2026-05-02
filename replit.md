@@ -1,4 +1,36 @@
-# Samay Këur
+# Samay Këur — Plateforme de Gestion Locative
+
+## Replit Environment
+
+- **Stack**: React + Vite SPA (TypeScript), Tailwind CSS, React Router v6
+- **Backend**: Supabase (auth, PostgreSQL database, storage, edge functions)
+- **Run command**: `npm run dev` → serves on port 5000
+- **Build**: `npm run build` → outputs to `dist/`
+
+### Environment Variables (set via Replit Secrets/Env Vars)
+- `VITE_SUPABASE_URL` — Supabase project URL (shared env var)
+- `VITE_SUPABASE_ANON_KEY` — Supabase anon public key (shared env var)
+- `VITE_ENV` — Environment name: `development` | `production`
+- `VITE_POSTHOG_KEY` — PostHog analytics key (optional, no-op if missing)
+- `VITE_POSTHOG_HOST` — PostHog host (optional, defaults to eu.posthog.com)
+- `VITE_SENTRY_DSN` — Sentry DSN for error monitoring (optional, no-op if missing)
+
+### Key Dependencies
+- `@supabase/supabase-js` — Supabase client (auth + db queries)
+- `react-router-dom` v6 — Client-side routing via HashRouter
+- `jspdf` v2 + `jspdf-autotable` v3 — PDF generation
+- `recharts` v2 — Charts and analytics
+- `posthog-js` — Optional product analytics
+- `@sentry/react` — Optional error monitoring
+
+### Architecture Notes
+- Multi-tenant SaaS: all data scoped by `agency_id`
+- Roles: `super_admin`, `admin`, `agent`, `comptable`, `bailleur`
+- Supabase RLS enforces tenant isolation at the DB level
+- Offline support via IndexedDB (snapshots + mutation queue)
+- Edge Functions on Supabase for business-critical operations
+
+---
 
 ## Récents ajouts (mai 2026) — Autopilot Engine v2 : Self-Healing + Rule Engine + Observabilité
 

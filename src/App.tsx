@@ -339,7 +339,7 @@ function AppContent() {
 
 function App() {
     return (
-        <HashRouter>
+        <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
                 <AppContent />
             </AuthProvider>

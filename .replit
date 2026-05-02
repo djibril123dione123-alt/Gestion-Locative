@@ -50,3 +50,4 @@ externalPort = 3001
 [userenv.shared]
 VITE_SUPABASE_URL = "https://znvcfjelmikprjeoxrug.supabase.co"
 VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpudmNmamVsbWlrcHJqZW94cnVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NDAyODUsImV4cCI6MjA4NTExNjI4NX0.B14X6qAaLhxSnbfNd40xqI7FO0WWdFaOMqoY_-WMTYY"
+VITE_ENV = "development"

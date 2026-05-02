@@ -145,9 +145,8 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
 
       setMonthlyRevenue(monthlyData);
       setError(null);
-    } catch (error: any) {
-      console.error('Error loading dashboard:', error);
-      setError(error.message || 'Une erreur est survenue lors du chargement du tableau de bord.');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'Une erreur est survenue lors du chargement du tableau de bord.');
     } finally {
       setLoading(false);
     }

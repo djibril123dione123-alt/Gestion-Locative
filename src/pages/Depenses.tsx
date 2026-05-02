@@ -41,7 +41,21 @@ export function Depenses() {
   }, [profile?.agency_id]);
 
   useEffect(() => {
-    setFiltered(depenses.filter((d) => JSON.stringify(d).toLowerCase().includes(searchTerm.toLowerCase())));
+    const q = searchTerm.toLowerCase();
+    setFiltered(
+      depenses.filter((d) => {
+        const searchable = [
+          d.description,
+          d.categorie,
+          (d as any).immeubles?.nom,
+          d.montant != null ? String(d.montant) : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return searchable.includes(q);
+      }),
+    );
   }, [searchTerm, depenses]);
 
   const loadData = async () => {

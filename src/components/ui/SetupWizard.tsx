@@ -87,7 +87,6 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
             .single();
 
           if (error) {
-            console.error('Erreur création bailleur:', error);
             throw new Error(`Erreur lors de la création du bailleur: ${error.message}`);
           }
           setWizardData({ ...wizardData, bailleur: data });
@@ -112,7 +111,6 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
             .single();
 
           if (error) {
-            console.error('Erreur création immeuble:', error);
             throw new Error(`Erreur lors de la création de l'immeuble: ${error.message}`);
           }
           setWizardData({ ...wizardData, immeuble: data });
@@ -134,7 +132,6 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
             .single();
 
           if (error) {
-            console.error('Erreur création unité:', error);
             throw new Error(`Erreur lors de la création de l'unité: ${error.message}`);
           }
           setWizardData({ ...wizardData, unite: data });
@@ -190,9 +187,11 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
 
         case 6: {
           const montant = parseFloat(formData.contrat.loyer_mensuel);
-          const commission = parseFloat(formData.contrat.commission);
-          const partAgence = (montant * commission) / 100;
-          const partBailleur = montant - partAgence;
+          const commission = parseFloat(formData.contrat.commission) || null;
+          const { calculateCommission } = await import('../../services/domain/commissionService');
+          const { partAgence, partBailleur } = commission != null
+            ? calculateCommission(montant, commission)
+            : { partAgence: 0, partBailleur: montant };
 
           const { data, error } = await supabase
             .from('paiements')
@@ -217,8 +216,8 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
           break;
         }
       }
-    } catch (error: any) {
-      showError(error.message || 'Une erreur est survenue');
+    } catch (error: unknown) {
+      showError(error instanceof Error ? error.message : 'Une erreur est survenue');
     } finally {
       setLoading(false);
     }

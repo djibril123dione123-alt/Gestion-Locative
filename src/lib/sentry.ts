@@ -37,5 +37,4 @@ export const initSentry = () => {
     },
   });
 
-  console.log(`Sentry initialized for ${environment} environment`);
 };

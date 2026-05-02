@@ -325,8 +325,8 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       success('Paiement supprimé avec succès');
       setDeleteTarget(null);
       loadData();
-    } catch (error: any) {
-      showError(error.message || 'Impossible de supprimer ce paiement');
+    } catch (error: unknown) {
+      showError(error instanceof Error ? error.message : 'Impossible de supprimer ce paiement');
     } finally {
       setIsDeleting(false);
     }

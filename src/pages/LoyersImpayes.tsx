@@ -6,6 +6,7 @@ import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucid
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
+import { buildPaiementPayload, formatPaiementError } from '../services/domain/paiementService';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -176,30 +177,30 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       }
       const contratId = match[0];
 
-      // Récupérer la commission réelle depuis le bailleur du contrat
+      // Récupérer la commission depuis le contrat (champ commission direct)
       const { data: contratRow } = await supabase
         .from('contrats')
-        .select('unites(immeubles(bailleurs(commission)))')
+        .select('id, loyer_mensuel, commission')
         .eq('id', contratId)
         .maybeSingle();
-      const commission =
-        ((contratRow as { unites?: { immeubles?: { bailleurs?: { commission?: number } } } })
-          ?.unites?.immeubles?.bailleurs?.commission) ?? 10;
 
-      const montant = selectedLoyer.montant_du;
-      const partAgence = Math.round((montant * commission) / 100);
+      if (!contratRow) throw new Error('Contrat introuvable');
 
-      const { error } = await supabase.from('paiements').insert({
-        contrat_id: contratId,
-        montant_total: montant,
-        mois_concerne: selectedLoyer.mois_concerne,
-        date_paiement: new Date().toISOString().split('T')[0],
-        mode_paiement: 'especes',
-        statut: 'paye',
-        part_agence: partAgence,
-        part_bailleur: montant - partAgence,
-        agency_id: profile.agency_id,
-      });
+      const payload = buildPaiementPayload(
+        {
+          contrat_id: contratId,
+          montant_total: selectedLoyer.montant_du,
+          mois_concerne: selectedLoyer.mois_concerne,
+          date_paiement: new Date().toISOString().split('T')[0],
+          mode_paiement: 'especes',
+          statut: 'paye',
+          reference: null,
+        },
+        { id: contratRow.id, commission: contratRow.commission ?? null, loyer_mensuel: contratRow.loyer_mensuel },
+        profile.agency_id,
+      );
+
+      const { error } = await supabase.from('paiements').insert(payload);
       if (error) throw error;
 
       // Mise à jour bilans_mensuels (best-effort)
@@ -235,8 +236,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       setSelectedLoyer(null);
       loadData();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors du paiement';
-      toast.error(msg);
+      toast.error(formatPaiementError(err));
     } finally {
       setSubmitting(false);
     }

@@ -1,0 +1,128 @@
+HYPER PROMPT — FINALISATION 1000% (PRODUCTION READY)
+
+Tu es un Lead Software Architect + Senior Full-Stack Engineer expert en SaaS multi-tenant (React + Supabase + Offline-first).
+
+Ton objectif est de transformer cette application en produit SaaS 100% production-ready, ultra robuste, scalable et propre, sans ajouter de complexité inutile.
+
+🎯 CONTEXTE APP
+
+Application : Samay Këur
+Stack :
+
+React 18 + TypeScript + Vite
+Supabase (PostgreSQL + RLS + RPC)
+IndexedDB (offline-first)
+Architecture domain-driven (/services/domain, /repositories)
+Multi-tenant (agency_id partout)
+⚠️ OBJECTIF FINAL
+
+Amener l’application à :
+
+🟢 Niveau 1 — Production Ready
+Zéro bug critique
+Zéro logique métier dans les pages React
+Zéro fallback dangereux (ex: commission)
+Gestion d’erreurs complète partout
+🟢 Niveau 2 — Architecture parfaite
+Domain services propres
+Repositories 100% isolés
+Hooks uniquement pour orchestration UI
+Supabase uniquement via couche repository
+🟢 Niveau 3 — Robustesse SaaS
+Offline-first fiable à 100%
+Sync sans perte de données
+Recovery automatique après crash
+Idempotence sur toutes opérations
+🟢 Niveau 4 — Performance
+Réduction des requêtes Supabase
+Utilisation RPC pour agrégats
+Pagination serveur partout
+Cache intelligent (PDF + settings + data)
+🟢 Niveau 5 — UX professionnelle
+États loading/skeleton partout
+Feedback utilisateur systématique
+Messages d’erreurs propres et actionnables
+Aucun écran “vide technique”
+🔧 TRAVAIL ATTENDU
+
+Tu dois effectuer une audit + refactor complet intelligent :
+
+1. 🧠 Architecture
+Vérifie séparation :
+UI / hooks / services / repositories
+Corrige toute violation du pattern :
+UI → Hook → Service → Repository → Supabase
+2. 💰 Logique métier
+Commission :
+aucune valeur par défaut silencieuse
+erreur obligatoire si absente
+Paiements :
+recalcul propre systématique
+Contrats :
+validation stricte + transitions contrôlées
+3. 🔁 Offline-first
+Vérifie queue IndexedDB :
+retry fiable
+suppression safe
+recovery crash OK
+Ajoute protection contre :
+doublons sync
+conflits de version
+4. 💾 Backup system
+Vérifie :
+backup complet 7 tables
+restore merge safe
+preview fiable
+Empêche perte de données en restauration
+5. 🧱 Supabase / Backend
+Remplace requêtes multiples par RPC si possible
+Vérifie RLS :
+aucune fuite multi-tenant possible
+Optimise requêtes dashboard
+6. ⚡ Performance
+Supprime re-renders inutiles
+Optimise hooks lourds
+Lazy loading pages non critiques
+7. 🧼 Clean code final
+Supprime :
+console.log inutiles
+code mort
+duplications
+Harmonise naming
+8. 📱 UX finale
+Chaque action doit avoir :
+loading state
+success feedback
+error feedback clair
+Aucun “silence UI”
+🧠 RÈGLE ABSOLUE
+
+Ne casse pas l’existant fonctionnel.
+
+Priorité :
+
+stabilité
+cohérence architecture
+sécurité données
+performance
+UX
+🏁 OBJECTIF FINAL
+
+À la fin :
+
+✔ App sans bug critique
+✔ Architecture SaaS propre niveau production
+✔ Offline-first fiable
+✔ Backend optimisé Supabase
+✔ UX professionnelle
+✔ Code prêt pour scale ou investisseur
+
+🚀 OUTPUT ATTENDU
+
+Donne :
+
+liste des problèmes trouvés
+corrections appliquées
+fichiers modifiés
+risques restants (s’il y en a)
+score final de qualité (0–100)

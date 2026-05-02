@@ -73,8 +73,7 @@ export function FiltresAvances() {
         .order('nom');
 
       setBailleurs(bailleursData || []);
-    } catch (error) {
-      console.error('Error:', error);
+    } catch {
     }
   };
 
@@ -90,8 +89,7 @@ export function FiltresAvances() {
         .order('nom');
 
       setImmeubles(data || []);
-    } catch (error) {
-      console.error('Error:', error);
+    } catch {
     }
   };
 
@@ -107,8 +105,7 @@ export function FiltresAvances() {
         .order('nom');
 
       setUnites(data || []);
-    } catch (error) {
-      console.error('Error:', error);
+    } catch {
     }
   };
 
@@ -230,9 +227,8 @@ export function FiltresAvances() {
       } else {
         setResults(data || []);
       }
-    } catch (error) {
-      console.error('Error:', error);
-      showError('Erreur lors de la recherche');
+    } catch (error: unknown) {
+      showError(error instanceof Error ? error.message : 'Erreur lors de la recherche');
     } finally {
       setLoading(false);
     }

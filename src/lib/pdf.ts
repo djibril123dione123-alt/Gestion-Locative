@@ -554,7 +554,7 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
       bailleur_adresse: bailleur.adresse ?? '',
       bien_adresse: bailleur.bien_adresse ?? '',
       bien_composition: bailleur.bien_composition ?? '',
-      taux_honoraires: bailleur.commission != null ? String(bailleur.commission) : '10',
+      taux_honoraires: bailleur.commission != null ? String(bailleur.commission) : '',
       date_debut: bailleur.debut_contrat
         ? new Date(bailleur.debut_contrat).toLocaleDateString('fr-FR')
         : new Date().toLocaleDateString('fr-FR'),

@@ -187,10 +187,9 @@ export function Contrats() {
       setLocataires((locatairesRes.data || []) as unknown as Locataire[]);
       setUnites((unitesRes.data || []) as unknown as Unite[]);
       saveBackup('contrats', contratsData).catch(() => {});
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (myRequestId !== requestIdRef.current) return;
-      console.error('Erreur chargement:', err);
-      setError(err.message || 'Erreur lors du chargement des données');
+      setError(err instanceof Error ? err.message : 'Erreur lors du chargement des données');
     } finally {
       if (myRequestId === requestIdRef.current) {
         setLoading(false);
@@ -356,9 +355,8 @@ export function Contrats() {
         closeModal();
         await loadData();
         toast.success('Contrat créé avec succès');
-      } catch (err: any) {
-        console.error('Erreur création:', err);
-        toast.error(`Erreur : ${err.message}`);
+      } catch (err: unknown) {
+        toast.error(err instanceof Error ? err.message : 'Erreur lors de la création du contrat');
       } finally {
         setSubmitting(false);
       }

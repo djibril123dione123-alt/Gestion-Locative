@@ -4,7 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 import { CheckoutModal } from '../components/billing/CheckoutModal';
-import { CreditCard, CheckCircle2, Clock, TrendingUp, Zap } from 'lucide-react';
+import {
+  CreditCard, CheckCircle2, Clock, Zap, Building2, Crown,
+  TrendingUp, AlertTriangle, Calendar, Users, Home, DoorOpen,
+  ChevronRight, Smartphone, Mail,
+} from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
 
 interface Plan {
@@ -45,6 +49,51 @@ interface Usage {
 const CONTACT_WHATSAPP = '221774000000';
 const CONTACT_EMAIL = 'contact@samaykeur.sn';
 
+const PLANS_INFO = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    price_xof: 9900,
+    icon: Zap,
+    color: '#64748B',
+    max_users: 3,
+    max_immeubles: 10,
+    max_unites: 30,
+    features: ['Tableau de bord complet', 'Exports PDF & Excel', 'Support email', 'Rappels locataires'],
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price_xof: 19900,
+    icon: Building2,
+    color: '#F58220',
+    max_users: 10,
+    max_immeubles: 50,
+    max_unites: 150,
+    badge: 'Populaire',
+    features: ['Tout Starter', 'Notifications bailleurs auto', 'Rapports PDF mensuels', 'Alertes impayés', 'Gestion commissions', 'Paiement Orange Money'],
+  },
+  {
+    id: 'agence',
+    name: 'Agence',
+    price_xof: 39900,
+    icon: Crown,
+    color: '#7C3AED',
+    max_users: -1,
+    max_immeubles: -1,
+    max_unites: -1,
+    features: ['Tout Pro', 'Illimité partout', 'Onboarding dédié', 'API access', 'SLA 99,9 %', 'Account manager'],
+  },
+];
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  active:    { label: 'Actif',     color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
+  trial:     { label: 'Essai',     color: '#92400E', bg: '#FFFBEB', border: '#FDE68A' },
+  past_due:  { label: 'Impayé',   color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
+  suspended: { label: 'Suspendu', color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
+  cancelled: { label: 'Annulé',   color: '#475569', bg: '#F8FAFC', border: '#E2E8F0' },
+};
+
 export function Abonnement() {
   const { profile } = useAuth();
   const toast = useToast();
@@ -54,8 +103,9 @@ export function Abonnement() {
   const [history, setHistory] = useState<Subscription[]>([]);
   const [usage, setUsage] = useState<Usage>({ users: 0, immeubles: 0, unites: 0 });
   const [loading, setLoading] = useState(true);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('pro');
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile?.agency_id) return;
@@ -63,311 +113,440 @@ export function Abonnement() {
     try {
       const [agencyRes, subRes, limitsRes] = await Promise.all([
         supabase.from('agencies').select('id, name, status, plan, trial_ends_at').eq('id', profile.agency_id).single(),
-        supabase
-          .from('subscriptions')
-          .select('*, subscription_plans(*)')
-          .eq('agency_id', profile.agency_id)
-          .order('created_at', { ascending: false }),
+        supabase.from('subscriptions').select('*, subscription_plans(*)').eq('agency_id', profile.agency_id).order('created_at', { ascending: false }),
         supabase.rpc('check_plan_limits', { p_agency_id: profile.agency_id }),
       ]);
 
       if (agencyRes.data) setAgency(agencyRes.data as Agency);
+
       if (subRes.data && subRes.data.length > 0) {
         const subs = subRes.data as Subscription[];
         setSubscription(subs[0]);
         setCurrentPlan(subs[0].subscription_plans ?? null);
         setHistory(subs);
-      } else {
+      } else if (agencyRes.data?.plan) {
         const { data: planData } = await supabase
-          .from('subscription_plans')
-          .select('*')
-          .eq('id', agencyRes.data?.plan ?? 'basic')
-          .maybeSingle();
+          .from('subscription_plans').select('*').eq('id', agencyRes.data.plan).maybeSingle();
         if (planData) setCurrentPlan(planData as Plan);
       }
+
       if (limitsRes.data?.usage) setUsage(limitsRes.data.usage as Usage);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur';
-      toast.error(msg);
+      toast.error(err instanceof Error ? err.message : 'Erreur de chargement');
     } finally {
       setLoading(false);
     }
   }, [profile?.agency_id, toast]);
 
-  useEffect(() => {
-    if (profile?.agency_id) load();
-  }, [profile?.agency_id, load]);
+  useEffect(() => { if (profile?.agency_id) load(); }, [profile?.agency_id, load]);
 
   const trialDaysLeft = agency?.trial_ends_at
     ? Math.max(0, Math.ceil((new Date(agency.trial_ends_at).getTime() - Date.now()) / 86400000))
     : null;
-  const isTrial = agency?.status === 'trial';
 
-  const statusColor: Record<string, string> = {
-    active: 'bg-green-100 text-green-800',
-    trial: 'bg-orange-100 text-orange-800',
-    past_due: 'bg-red-100 text-red-800',
-    cancelled: 'bg-slate-200 text-slate-700',
-    suspended: 'bg-red-100 text-red-800',
+  const isTrial    = agency?.status === 'trial';
+  const isSuspended = agency?.status === 'suspended' || agency?.status === 'past_due';
+  const statusCfg  = STATUS_CONFIG[agency?.status ?? 'active'] ?? STATUS_CONFIG.active;
+
+  const planInfo = PLANS_INFO.find((p) => p.id === (currentPlan?.id ?? agency?.plan)) ?? PLANS_INFO[1];
+
+  const openPayment = (planId: string) => {
+    setSelectedPlanId(planId);
+    setPaymentOpen(true);
   };
 
-  const renderProgress = (label: string, used: number, max: number) => {
-    const isUnlimited = max === -1 || max === 999 || max === 9999;
-    const pct = isUnlimited ? 0 : Math.min(100, Math.round((used / Math.max(max, 1)) * 100));
+  const selectedPlanInfo = PLANS_INFO.find((p) => p.id === selectedPlanId) ?? PLANS_INFO[1];
+
+  if (loading) {
     return (
-      <div data-testid={`usage-${label.toLowerCase()}`}>
-        <div className="flex items-baseline justify-between mb-1">
-          <span className="text-sm font-medium text-slate-700">{label}</span>
-          <span className="text-sm text-slate-600">
-            {used} {isUnlimited ? '(illimité)' : `/ ${max}`}
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
+          <p className="text-sm text-slate-500">Chargement…</p>
+        </div>
+      </div>
+    );
+  }
+
+  const renderUsageBar = (
+    icon: React.ReactNode, label: string, used: number, max: number, testId?: string,
+  ) => {
+    const unlimited = max === -1 || max >= 999;
+    const pct = unlimited ? 0 : Math.min(100, Math.round((used / Math.max(max, 1)) * 100));
+    const danger = pct > 85;
+    const warn   = pct > 65;
+    const barColor = danger ? '#EF4444' : warn ? '#F59E0B' : '#F58220';
+
+    return (
+      <div className="flex flex-col gap-1.5" data-testid={testId}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="text-slate-400">{icon}</div>
+            <span className="text-sm font-medium text-slate-700">{label}</span>
+          </div>
+          <span className="text-sm font-semibold text-slate-700">
+            {used}{unlimited ? '' : ` / ${max}`}
+            {unlimited && <span className="ml-1 text-xs font-normal text-slate-400">(illimité)</span>}
           </span>
         </div>
-        {!isUnlimited && (
+        {!unlimited && (
           <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${pct}%`, backgroundColor: pct > 80 ? '#C0392B' : '#F58220' }}
-            />
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
           </div>
         )}
       </div>
     );
   };
 
-  if (loading) {
-    return <div className="p-12 text-center text-slate-500">Chargement…</div>;
-  }
-
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
-      <div className="mb-6">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
+
+      {/* Header */}
+      <div>
         <h1 className="text-2xl font-bold text-slate-900">Abonnement</h1>
-        <p className="text-sm text-slate-600 mt-1">Gérez votre plan et votre utilisation</p>
+        <p className="text-sm text-slate-500 mt-1">Gérez votre plan, votre utilisation et votre facturation</p>
       </div>
 
-      {/* Trial countdown */}
+      {/* ─── Bannière urgente ─── */}
       {isTrial && trialDaysLeft !== null && (
-        <div className={`mb-6 p-4 rounded-xl border ${trialDaysLeft <= 3 ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200'}`}>
-          <div className="flex items-center gap-3">
-            <Clock className={`w-6 h-6 ${trialDaysLeft <= 3 ? 'text-red-600' : 'text-orange-600'}`} />
-            <div className="flex-1">
-              <p className={`font-semibold ${trialDaysLeft <= 3 ? 'text-red-900' : 'text-orange-900'}`} data-testid="text-trial-days">
+        <div
+          className="rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+          style={{
+            background: trialDaysLeft <= 3 ? 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)' : 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+            border: `1.5px solid ${trialDaysLeft <= 3 ? '#FECACA' : '#FDE68A'}`,
+          }}
+        >
+          <div className="flex items-center gap-3 flex-1">
+            {trialDaysLeft <= 3
+              ? <AlertTriangle className="w-6 h-6 flex-shrink-0 text-red-500" />
+              : <Clock className="w-6 h-6 flex-shrink-0 text-amber-500" />}
+            <div>
+              <p className={`font-bold ${trialDaysLeft <= 3 ? 'text-red-900' : 'text-amber-900'}`} data-testid="text-trial-days">
                 {trialDaysLeft > 0
                   ? `Essai gratuit : ${trialDaysLeft} jour${trialDaysLeft > 1 ? 's' : ''} restant${trialDaysLeft > 1 ? 's' : ''}`
-                  : 'Essai expiré'}
+                  : 'Essai gratuit expiré'}
               </p>
-              <p className={`text-sm ${trialDaysLeft <= 3 ? 'text-red-700' : 'text-orange-700'}`}>
-                Passez au plan Pro pour conserver vos données et toutes les fonctionnalités.
+              <p className={`text-sm ${trialDaysLeft <= 3 ? 'text-red-700' : 'text-amber-700'}`}>
+                Passez au plan Pro pour conserver vos données et débloquer toutes les fonctionnalités.
               </p>
             </div>
           </div>
+          <button
+            onClick={() => openPayment('pro')}
+            className="flex-shrink-0 px-5 py-2.5 rounded-xl text-white font-bold text-sm transition hover:opacity-90 shadow"
+            style={{ background: 'linear-gradient(135deg, #F58220 0%, #C2410C 100%)' }}
+          >
+            Activer maintenant
+          </button>
         </div>
       )}
 
-      {/* Current plan card */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-          <div className="flex items-start gap-3">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#F58220' }}>
-              <CreditCard className="w-6 h-6 text-white" />
-            </div>
+      {isSuspended && (
+        <div className="rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4"
+          style={{ background: 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)', border: '1.5px solid #FECACA' }}>
+          <div className="flex items-center gap-3 flex-1">
+            <AlertTriangle className="w-6 h-6 flex-shrink-0 text-red-500" />
             <div>
-              <p className="text-xs uppercase font-semibold text-slate-500">Plan actuel</p>
-              <p className="text-xl font-bold text-slate-900" data-testid="text-current-plan">
-                {currentPlan?.name ?? agency?.plan ?? 'Basic'}
-              </p>
-              <p className="text-sm text-slate-600 mt-1">
-                {currentPlan ? `${formatCurrency(currentPlan.price_xof)} / mois` : '—'}
-              </p>
+              <p className="font-bold text-red-900">Compte suspendu</p>
+              <p className="text-sm text-red-700">Renouvelez votre abonnement pour retrouver l'accès complet.</p>
             </div>
           </div>
-          <div className="flex flex-col items-start sm:items-end gap-2">
-            <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold capitalize ${statusColor[agency?.status ?? 'active'] ?? 'bg-slate-100 text-slate-700'}`} data-testid="badge-status">
-              {agency?.status ?? '—'}
-            </span>
-            {subscription && (
-              <p className="text-xs text-slate-500">
-                Période en cours : {new Date(subscription.current_period_end).toLocaleDateString('fr-FR')}
-              </p>
-            )}
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                type="button"
-                onClick={() => setPaymentOpen(true)}
-                data-testid="button-pay"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold transition hover:opacity-90 shadow-md"
-                style={{ background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)' }}
-              >
-                <Zap className="w-4 h-4" />
-                Payer l'abonnement
-              </button>
-              {currentPlan?.id !== 'pro' && currentPlan?.id !== 'enterprise' && (
+          <button
+            onClick={() => openPayment('pro')}
+            className="flex-shrink-0 px-5 py-2.5 rounded-xl text-white font-bold text-sm bg-red-600 hover:bg-red-700 transition shadow"
+          >
+            Réactiver
+          </button>
+        </div>
+      )}
+
+      {/* ─── Plan actuel ─── */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="p-5 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: planInfo.color + '18' }}>
+                <planInfo.icon className="w-7 h-7" style={{ color: planInfo.color }} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xs uppercase font-bold text-slate-400 tracking-wider">Plan actuel</p>
+                  <span
+                    className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold"
+                    style={{ backgroundColor: statusCfg.bg, color: statusCfg.color, border: `1px solid ${statusCfg.border}` }}
+                    data-testid="badge-status"
+                  >
+                    {statusCfg.label}
+                  </span>
+                </div>
+                <p className="text-2xl font-extrabold text-slate-900 mt-0.5" data-testid="text-current-plan">
+                  {currentPlan?.name ?? planInfo.name}
+                </p>
+                <p className="text-sm text-slate-500 mt-0.5">
+                  {currentPlan
+                    ? <>{formatCurrency(currentPlan.price_xof)} <span className="text-slate-400">/ mois</span></>
+                    : planInfo.price_xof > 0
+                    ? <>{formatCurrency(planInfo.price_xof)} <span className="text-slate-400">/ mois</span></>
+                    : <span className="text-green-600 font-semibold">Gratuit</span>}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-start sm:items-end gap-2">
+              {subscription && (
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Calendar className="w-3.5 h-3.5" />
+                  Renouvellement le {new Date(subscription.current_period_end).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => openPayment(currentPlan?.id !== 'agence' ? 'pro' : 'agence')}
+                  data-testid="button-pay"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-bold text-sm transition hover:opacity-90 shadow-md"
+                  style={{ background: 'linear-gradient(135deg, #F58220 0%, #C2410C 100%)' }}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  Renouveler
+                </button>
                 <button
                   type="button"
                   onClick={() => setUpgradeOpen(true)}
                   data-testid="button-upgrade"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 font-medium transition hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium text-sm transition hover:bg-slate-50"
                 >
                   <TrendingUp className="w-4 h-4" />
-                  Passer au plan Pro
+                  Changer de plan
                 </button>
-              )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Usage bars */}
-        {currentPlan && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
-            {renderProgress('Utilisateurs', usage.users, currentPlan.max_users)}
-            {renderProgress('Immeubles', usage.immeubles, currentPlan.max_immeubles)}
-            {renderProgress('Produits', usage.unites, currentPlan.max_unites)}
+          {/* Utilisation */}
+          <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-5">
+            {renderUsageBar(<Users className="w-4 h-4" />, 'Utilisateurs', usage.users, currentPlan?.max_users ?? planInfo.max_users, 'usage-utilisateurs')}
+            {renderUsageBar(<Home className="w-4 h-4" />, 'Immeubles', usage.immeubles, currentPlan?.max_immeubles ?? planInfo.max_immeubles, 'usage-immeubles')}
+            {renderUsageBar(<DoorOpen className="w-4 h-4" />, 'Unités', usage.unites, currentPlan?.max_unites ?? planInfo.max_unites, 'usage-produits')}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Features */}
-      {currentPlan && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-          <h2 className="font-semibold text-slate-900 mb-4">Fonctionnalités incluses</h2>
-          <ul className="space-y-2">
-            {Object.entries(currentPlan.features ?? {}).map(([key, value]) => (
-              <li key={key} className="flex items-center gap-2 text-sm text-slate-700">
-                <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-                <span className="capitalize">{key.replace(/_/g, ' ')}</span>
-                <span className="text-slate-500">: {String(value)}</span>
-              </li>
-            ))}
-            <li className="flex items-center gap-2 text-sm text-slate-700">
-              <CheckCircle2 className="w-4 h-4 text-green-600 flex-shrink-0" />
-              <span>Stockage : {currentPlan.storage_gb} Go</span>
-            </li>
-          </ul>
-        </div>
-      )}
+      {/* ─── Comparer les plans ─── */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
+        <h2 className="font-bold text-slate-900 text-lg mb-1">Comparer les plans</h2>
+        <p className="text-sm text-slate-500 mb-5">Évoluez quand vous êtes prêt, sans engagement.</p>
 
-      {/* History */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h2 className="font-semibold text-slate-900 mb-4">Historique des abonnements</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {PLANS_INFO.map((plan) => {
+            const isCurrentPlan = (currentPlan?.id ?? agency?.plan) === plan.id;
+            const Icon = plan.icon;
+            return (
+              <div
+                key={plan.id}
+                className="relative rounded-2xl border-2 p-4 flex flex-col gap-4 transition-all"
+                style={{
+                  borderColor: isCurrentPlan ? plan.color : '#E2E8F0',
+                  backgroundColor: isCurrentPlan ? plan.color + '08' : '#FAFAFA',
+                }}
+              >
+                {plan.badge && !isCurrentPlan && (
+                  <div
+                    className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold text-white"
+                    style={{ backgroundColor: plan.color }}
+                  >
+                    {plan.badge}
+                  </div>
+                )}
+                {isCurrentPlan && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold text-white"
+                    style={{ backgroundColor: plan.color }}>
+                    Plan actuel
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: plan.color + '18' }}>
+                    <Icon className="w-5 h-5" style={{ color: plan.color }} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">{plan.name}</p>
+                    <p className="text-sm font-semibold" style={{ color: plan.color }}>
+                      {formatCurrency(plan.price_xof)}<span className="text-xs text-slate-400 font-normal">/mois</span>
+                    </p>
+                  </div>
+                </div>
+
+                <ul className="space-y-1.5 flex-1">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-xs text-slate-600">
+                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: plan.color }} />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                {isCurrentPlan ? (
+                  <div className="text-center py-2 rounded-xl text-xs font-bold" style={{ backgroundColor: plan.color + '18', color: plan.color }}>
+                    Plan actuel
+                  </div>
+                ) : plan.id === 'agence' ? (
+                  <a
+                    href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux passer au plan Agence sur Samay Këur.')}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-white transition hover:opacity-90"
+                    style={{ backgroundColor: plan.color }}
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                    Contacter l'équipe
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => openPayment(plan.id)}
+                    className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold text-white transition hover:opacity-90"
+                    style={{ backgroundColor: plan.color }}
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                    Passer au {plan.name}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ─── Historique ─── */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
+        <h2 className="font-bold text-slate-900 text-lg mb-4">Historique des paiements</h2>
         {history.length === 0 ? (
-          <p className="text-sm text-slate-500">Aucun historique disponible.</p>
+          <div className="text-center py-8">
+            <CreditCard className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <p className="text-sm text-slate-400">Aucun paiement enregistré pour l'instant.</p>
+          </div>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {history.map((s) => (
-              <li key={s.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div>
-                  <p className="font-medium text-slate-900">{s.subscription_plans?.name ?? s.plan_id}</p>
-                  <p className="text-xs text-slate-500">
-                    Du {new Date(s.current_period_start).toLocaleDateString('fr-FR')} au{' '}
-                    {new Date(s.current_period_end).toLocaleDateString('fr-FR')}
-                  </p>
-                </div>
-                <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${statusColor[s.status] ?? 'bg-slate-100'}`}>
-                  {s.status}
-                </span>
-              </li>
-            ))}
+            {history.map((s) => {
+              const cfg = STATUS_CONFIG[s.status] ?? STATUS_CONFIG.active;
+              return (
+                <li key={s.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <p className="font-semibold text-slate-900">{s.subscription_plans?.name ?? s.plan_id}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {new Date(s.current_period_start).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {' → '}
+                      {new Date(s.current_period_end).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <span
+                    className="inline-flex px-2.5 py-1 rounded-full text-xs font-bold self-start sm:self-auto"
+                    style={{ backgroundColor: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}` }}
+                  >
+                    {cfg.label}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
 
-      {/* Programme Pilote — 10 clients fondateurs */}
-      <div className="mb-6 rounded-2xl border-2 p-6 relative overflow-hidden" style={{ borderColor: '#F58220', background: 'linear-gradient(135deg, #fffbf5 0%, #fff7ed 100%)' }}>
-        <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
-          <svg viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="50" fill="#F58220"/></svg>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-          <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#F58220' }}>
-            <Zap className="w-6 h-6 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-lg font-bold text-slate-900">Programme Pilote — 10 agences fondatrices</h3>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{ backgroundColor: '#F58220' }}>Limité</span>
+      {/* ─── Aide et contact ─── */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
+        <h2 className="font-bold text-slate-900 text-lg mb-4">Besoin d'aide ?</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <a
+            href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, j\'ai une question concernant mon abonnement Samay Këur.')}`}
+            target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-green-300 hover:bg-green-50 transition group"
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-green-100 group-hover:bg-green-200 transition">
+              <Smartphone className="w-5 h-5 text-green-600" />
             </div>
-            <p className="text-sm text-slate-600 mb-4">
-              Rejoignez les 10 premières agences à adopter Samay Këur et bénéficiez d'un accès fondateur à tarif préférentiel, avec accompagnement personnalisé et influence directe sur la roadmap.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-              {[
-                { label: 'Starter Pilote', price: '9 900 XOF/mois', features: ['Jusqu\'à 30 unités', '3 utilisateurs', 'Support WhatsApp'] },
-                { label: 'Pro Pilote', price: '19 900 XOF/mois', features: ['Jusqu\'à 100 unités', '10 utilisateurs', 'Support prioritaire', 'PDF illimités'] },
-                { label: 'Agence Pilote', price: '39 900 XOF/mois', features: ['Unités illimitées', 'Utilisateurs illimités', 'Onboarding dédié', 'Accès API'] },
-              ].map((plan) => (
-                <div key={plan.label} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-                  <p className="font-bold text-slate-900 text-sm mb-1">{plan.label}</p>
-                  <p className="text-orange-600 font-semibold text-sm mb-2">{plan.price}</p>
-                  <ul className="space-y-1">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-center gap-1.5 text-xs text-slate-600">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+            <div>
+              <p className="font-semibold text-slate-900 text-sm">WhatsApp</p>
+              <p className="text-xs text-slate-500">Réponse rapide · Support humain</p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <a
-                href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux rejoindre le programme pilote Samay Këur (10 agences fondatrices)')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition hover:opacity-90"
-                style={{ backgroundColor: '#25D366' }}
-              >
-                Rejoindre sur WhatsApp
-              </a>
-              <a
-                href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Programme Pilote Samay Këur')}&body=${encodeURIComponent("Bonjour,\n\nJe souhaite rejoindre le programme pilote Samay Këur.\n\nNom de l'agence : \nNombre de biens gérés : \nVille : ")}`}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-sm text-slate-700 font-medium hover:bg-slate-50"
-              >
-                Demander par email
-              </a>
+          </a>
+          <a
+            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Question abonnement Samay Këur')}`}
+            className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-orange-300 hover:bg-orange-50 transition group"
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-orange-100 group-hover:bg-orange-200 transition">
+              <Mail className="w-5 h-5 text-orange-600" />
             </div>
-          </div>
+            <div>
+              <p className="font-semibold text-slate-900 text-sm">Email</p>
+              <p className="text-xs text-slate-500">{CONTACT_EMAIL}</p>
+            </div>
+          </a>
         </div>
       </div>
 
-      {/* Upgrade modal — contact commercial */}
+      {/* ─── Modal changement de plan ─── */}
       {upgradeOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={() => setUpgradeOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={() => setUpgradeOpen(false)}>
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-slate-900">Passer au plan Pro</h3>
-            <div className="space-y-2">
-              <a
-                href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je souhaite passer au plan Pro Samay Këur')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="link-whatsapp"
-                className="block w-full text-center px-4 py-3 rounded-xl text-white font-semibold transition hover:opacity-90"
-                style={{ backgroundColor: '#25D366' }}
-              >
-                Contacter sur WhatsApp
-              </a>
-              <a
-                href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Passage au plan Pro')}`}
-                data-testid="link-email"
-                className="block w-full text-center px-4 py-3 rounded-xl border border-slate-300 text-slate-700 font-medium hover:bg-slate-50"
-              >
-                Envoyer un email
-              </a>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Changer de plan</h3>
+              <p className="text-sm text-slate-500 mt-1">Choisissez le plan qui correspond à votre activité.</p>
             </div>
-            <button type="button" onClick={() => setUpgradeOpen(false)} className="w-full text-sm text-slate-500 hover:text-slate-800 py-1">Fermer</button>
+            <div className="space-y-2">
+              {PLANS_INFO.map((plan) => {
+                const Icon = plan.icon;
+                const isCurrent = (currentPlan?.id ?? agency?.plan) === plan.id;
+                return (
+                  <button
+                    key={plan.id}
+                    disabled={isCurrent}
+                    onClick={() => {
+                      setUpgradeOpen(false);
+                      if (plan.id === 'agence') {
+                        window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux passer au plan Agence sur Samay Këur.')}`, '_blank');
+                      } else {
+                        openPayment(plan.id);
+                      }
+                    }}
+                    className="w-full flex items-center justify-between p-4 rounded-xl border-2 transition text-left disabled:opacity-50 disabled:cursor-default hover:enabled:shadow-md"
+                    style={{
+                      borderColor: isCurrent ? plan.color : '#E2E8F0',
+                      backgroundColor: isCurrent ? plan.color + '08' : 'white',
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: plan.color + '18' }}>
+                        <Icon className="w-5 h-5" style={{ color: plan.color }} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">{plan.name}</p>
+                        <p className="text-xs" style={{ color: plan.color }}>{formatCurrency(plan.price_xof)}/mois</p>
+                      </div>
+                    </div>
+                    {isCurrent
+                      ? <span className="text-xs font-bold px-2 py-1 rounded-full text-white" style={{ backgroundColor: plan.color }}>Actuel</span>
+                      : <ChevronRight className="w-4 h-4 text-slate-400" />}
+                  </button>
+                );
+              })}
+            </div>
+            <button type="button" onClick={() => setUpgradeOpen(false)} className="w-full text-sm text-slate-400 hover:text-slate-700 py-1 transition">
+              Fermer
+            </button>
           </div>
         </div>
       )}
 
-      {/* Payment modal — Orange Money via PayDunya */}
+      {/* ─── Checkout Modal ─── */}
       <CheckoutModal
         isOpen={paymentOpen}
         onClose={() => setPaymentOpen(false)}
-        planId={currentPlan?.id !== 'enterprise' ? 'pro' : 'enterprise'}
-        planName={currentPlan?.name ?? 'Pro'}
-        priceXof={currentPlan?.price_xof ?? 15000}
+        planId={selectedPlanId}
+        planName={selectedPlanInfo.name}
+        priceXof={selectedPlanInfo.price_xof}
         onSuccess={() => {
           setPaymentOpen(false);
-          toast.success('Abonnement activé pour 30 jours !');
+          toast.success(`Plan ${selectedPlanInfo.name} activé pour 30 jours !`);
           load();
         }}
       />

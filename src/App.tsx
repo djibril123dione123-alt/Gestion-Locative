@@ -177,6 +177,13 @@ function AppContent() {
     }
 
     if (!user) {
+        if (currentPage === 'pricing') {
+            return (
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600" /></div>}>
+                    <Pricing onNavigate={(p) => navigate('/' + p)} />
+                </Suspense>
+            );
+        }
         return <Auth />;
     }
 

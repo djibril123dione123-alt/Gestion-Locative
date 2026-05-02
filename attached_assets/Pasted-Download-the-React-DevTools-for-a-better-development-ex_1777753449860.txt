@@ -1,0 +1,35 @@
+Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+sentry.ts:8 Sentry DSN not configured, error monitoring disabled
+(anonymous) @ sentry.ts:8Understand this warning
+/#/parametres:1 Access to fetch at 'https://znvcfjelmikprjeoxrug.supabase.co/functions/v1/initiate-payment' from origin 'https://de0b5c39-64b0-4093-abfa-d8f081b0b98d-00-erffhp2t9nzj.riker.replit.dev' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status.Understand this error
+znvcfjelmikprjeoxrug.supabase.co/functions/v1/initiate-payment:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+/#/parametres:1 Access to fetch at 'https://znvcfjelmikprjeoxrug.supabase.co/functions/v1/initiate-payment' from origin 'https://de0b5c39-64b0-4093-abfa-d8f081b0b98d-00-erffhp2t9nzj.riker.replit.dev' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status.Understand this error
+znvcfjelmikprjeoxrug.supabase.co/functions/v1/initiate-payment:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+/#/parametres:1 Access to fetch at 'https://znvcfjelmikprjeoxrug.supabase.co/functions/v1/initiate-payment' from origin 'https://de0b5c39-64b0-4093-abfa-d8f081b0b98d-00-erffhp2t9nzj.riker.replit.dev' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status.Understand this error
+znvcfjelmikprjeoxrug.supabase.co/functions/v1/initiate-payment:1  Failed to load resource: net::ERR_FAILEDUnderstand this error
+/#/parametres:1 Access to fetch at 'https://znvcfjelmikprjeoxrug.supabase.co/functions/v1/initiate-payment' from origin 'https://de0b5c39-64b0-4093-abfa-d8f081b0b98d-00-erffhp2t9nzj.riker.replit.dev' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: It does not have HTTP ok status.Understand this error
+CheckoutModal.tsx:70  POST https://znvcfjelmikprjeoxrug.supabase.co/functions/v1/initiate-payment net::ERR_FAILED
+(anonymous) @ @supabase_supabase-js.js?v=cc6c8d61:19991
+(anonymous) @ @supabase_supabase-js.js?v=cc6c8d61:20005
+await in (anonymous)
+(anonymous) @ @supabase_supabase-js.js?v=cc6c8d61:46
+(anonymous) @ @supabase_supabase-js.js?v=cc6c8d61:319
+(anonymous) @ @supabase_supabase-js.js?v=cc6c8d61:39
+__awaiter @ @supabase_supabase-js.js?v=cc6c8d61:21
+invoke @ @supabase_supabase-js.js?v=cc6c8d61:271
+(anonymous) @ CheckoutModal.tsx:70
+callCallback2 @ chunk-GKJBSOWT.js?v=cc6c8d61:3674
+invokeGuardedCallbackDev @ chunk-GKJBSOWT.js?v=cc6c8d61:3699
+invokeGuardedCallback @ chunk-GKJBSOWT.js?v=cc6c8d61:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-GKJBSOWT.js?v=cc6c8d61:3736
+executeDispatch @ chunk-GKJBSOWT.js?v=cc6c8d61:7014
+processDispatchQueueItemsInOrder @ chunk-GKJBSOWT.js?v=cc6c8d61:7034
+processDispatchQueue @ chunk-GKJBSOWT.js?v=cc6c8d61:7043
+dispatchEventsForPlugins @ chunk-GKJBSOWT.js?v=cc6c8d61:7051
+(anonymous) @ chunk-GKJBSOWT.js?v=cc6c8d61:7174
+batchedUpdates$1 @ chunk-GKJBSOWT.js?v=cc6c8d61:18913
+batchedUpdates @ chunk-GKJBSOWT.js?v=cc6c8d61:3579
+dispatchEventForPluginEventSystem @ chunk-GKJBSOWT.js?v=cc6c8d61:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-GKJBSOWT.js?v=cc6c8d61:5478
+dispatchEvent @ chunk-GKJBSOWT.js?v=cc6c8d61:5472
+dispatchDiscreteEvent @ chunk-GKJBSOWT.js?v=cc6c8d61:5449Understand this error

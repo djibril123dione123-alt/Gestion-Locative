@@ -403,13 +403,6 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
           color="green"
           delay={200}
         />
-        <StatCard
-          title="Taux d'occupation"
-          value={`${stats.tauxOccupation.toFixed(1)}%`}
-          icon={TrendingUp}
-          color="emerald"
-          delay={300}
-        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
@@ -482,7 +475,6 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
             <StatRow label="Immeubles gérés" value={stats.totalImmeubles} />
             <StatRow label="Unités disponibles" value={stats.unitesLibres} />
             <StatRow label="Unités louées" value={stats.unitesLouees} />
-            <StatRow label="Locataires actifs" value={stats.totalLocataires} />
             <StatRow label="Contrats en cours" value={stats.contratsActifs} />
           </div>
         </div>

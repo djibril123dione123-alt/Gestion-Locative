@@ -3,10 +3,11 @@ import { createRoot } from 'react-dom/client';
 import * as Sentry from '@sentry/react';
 import App from './App.tsx';
 import { initSentry } from './lib/sentry';
+import { initAnalytics } from './lib/analytics';
 import './index.css';
 
-// Initialize Sentry for error monitoring
 initSentry();
+initAnalytics();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

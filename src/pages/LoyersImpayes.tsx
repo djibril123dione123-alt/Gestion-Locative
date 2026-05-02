@@ -6,7 +6,9 @@ import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucid
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
-import { buildPaiementPayload, formatPaiementError } from '../services/domain/paiementService';
+import { formatPaiementError } from '../services/domain/paiementService';
+import { createPaiementViaEdge, PaiementApiError } from '../services/api/paiementApi';
+import { trackEvent } from '../lib/analytics';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -177,66 +179,35 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       }
       const contratId = match[0];
 
-      // Récupérer la commission depuis le contrat (champ commission direct)
-      const { data: contratRow } = await supabase
-        .from('contrats')
-        .select('id, loyer_mensuel, commission')
-        .eq('id', contratId)
-        .maybeSingle();
+      // Création via Edge Function (validation Zod + commission + agency_id côté serveur)
+      // Le trigger trg_update_bilan_mensuel met à jour bilans_mensuels automatiquement.
+      await createPaiementViaEdge({
+        contrat_id: contratId,
+        montant_total: selectedLoyer.montant_du,
+        mois_concerne: selectedLoyer.mois_concerne,
+        date_paiement: new Date().toISOString().split('T')[0],
+        mode_paiement: 'especes',
+        statut: 'paye',
+        reference: null,
+      });
 
-      if (!contratRow) throw new Error('Contrat introuvable');
-
-      const payload = buildPaiementPayload(
-        {
-          contrat_id: contratId,
-          montant_total: selectedLoyer.montant_du,
-          mois_concerne: selectedLoyer.mois_concerne,
-          date_paiement: new Date().toISOString().split('T')[0],
-          mode_paiement: 'especes',
-          statut: 'paye',
-          reference: null,
-        },
-        { id: contratRow.id, commission: contratRow.commission ?? null, loyer_mensuel: contratRow.loyer_mensuel },
-        profile.agency_id,
-      );
-
-      const { error } = await supabase.from('paiements').insert(payload);
-      if (error) throw error;
-
-      // Mise à jour bilans_mensuels (best-effort)
-      try {
-        const moisKey = selectedLoyer.mois_concerne.slice(0, 7);
-        const { data: existingBilan } = await supabase
-          .from('bilans_mensuels')
-          .select('id, total_encaisse, nb_paiements')
-          .eq('agency_id', profile.agency_id)
-          .eq('mois', moisKey)
-          .maybeSingle();
-        if (existingBilan) {
-          await supabase
-            .from('bilans_mensuels')
-            .update({
-              total_encaisse: (existingBilan.total_encaisse ?? 0) + montant,
-              nb_paiements: (existingBilan.nb_paiements ?? 0) + 1,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', existingBilan.id);
-        } else {
-          await supabase.from('bilans_mensuels').insert({
-            agency_id: profile.agency_id,
-            mois: moisKey,
-            total_encaisse: montant,
-            nb_paiements: 1,
-          });
-        }
-      } catch { /* non-bloquant */ }
+      trackEvent('paiement_created', {
+        source: 'loyers_impayes',
+        montant: selectedLoyer.montant_du,
+        mois: selectedLoyer.mois_concerne,
+        agency_id: profile.agency_id,
+      });
 
       toast.success('Paiement enregistré avec succès');
       setShowModal(false);
       setSelectedLoyer(null);
       loadData();
     } catch (err: unknown) {
-      toast.error(formatPaiementError(err));
+      if (err instanceof PaiementApiError) {
+        toast.error(err.message);
+      } else {
+        toast.error(formatPaiementError(err));
+      }
     } finally {
       setSubmitting(false);
     }

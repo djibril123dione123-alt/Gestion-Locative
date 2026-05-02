@@ -1,4 +1,5 @@
 import React, { useState, lazy, Suspense, useEffect } from 'react';
+import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -14,6 +15,7 @@ import { supabase } from './lib/supabase';
 import Welcome from './pages/Welcome';
 import { runFullBackup, getLastBackupTimestamp } from './services/localBackup';
 import { recoverStaleSyncing } from './services/offlineQueue';
+import { identifyUser, trackPageView } from './lib/analytics';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Agences = lazy(() => import('./pages/Agences'));
@@ -59,14 +61,10 @@ const PAGE_LABELS: Record<string, string> = {
     documents: 'Documents',
 };
 
-function getPageFromHash(): string {
-    const hash = window.location.hash.replace(/^#\/?/, '');
-    return hash || 'dashboard';
-}
-
 function AppContent() {
     const { user, profile, loading } = useAuth();
-    const [currentPage, setCurrentPage] = useState(getPageFromHash);
+    const navigate = useNavigate();
+    const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { pendingCount, syncing } = useOfflineSync();
     const [showWelcomeAnyway, setShowWelcomeAnyway] = useState(false);
@@ -80,6 +78,31 @@ function AppContent() {
             return null;
         }
     });
+
+    // Derive current page from URL (React Router)
+    const currentPage = location.pathname.replace(/^\//, '') || 'dashboard';
+
+    // Navigation helper — compatible avec l'interface onNavigate existante
+    const handleNavigate = (page: string) => {
+        navigate('/' + page);
+        setSidebarOpen(false);
+    };
+
+    // ── PostHog : suivi de page à chaque changement de route ──
+    useEffect(() => {
+        trackPageView(currentPage);
+    }, [currentPage]);
+
+    // ── PostHog : identification utilisateur après connexion ──
+    useEffect(() => {
+        if (profile) {
+            identifyUser(profile.id, {
+                email: profile.email,
+                role: profile.role,
+                agency_id: profile.agency_id,
+            });
+        }
+    }, [profile?.id]);
 
     if (invitationToken) {
         return (
@@ -100,23 +123,6 @@ function AppContent() {
             </Suspense>
         );
     }
-
-    // Sync URL hash ↔ currentPage (history API)
-    React.useEffect(() => {
-        const newHash = `#/${currentPage}`;
-        if (window.location.hash !== newHash) {
-            window.history.pushState(null, '', newHash);
-        }
-    }, [currentPage]);
-
-    React.useEffect(() => {
-        const onHashChange = () => {
-            const page = getPageFromHash();
-            setCurrentPage(page);
-        };
-        window.addEventListener('hashchange', onHashChange);
-        return () => window.removeEventListener('hashchange', onHashChange);
-    }, []);
 
     React.useEffect(() => {
         if (!loading && user && !profile) {
@@ -182,7 +188,7 @@ function AppContent() {
                             try {
                                 await supabase.auth.signOut();
                                 window.location.reload();
-                            } catch (error) {
+                            } catch {
                                 // Erreur silencieuse
                             }
                         }}
@@ -216,7 +222,7 @@ function AppContent() {
     const renderPage = () => {
         switch (currentPage) {
             case 'dashboard':
-                return <Dashboard onNavigate={setCurrentPage} />;
+                return <Dashboard onNavigate={handleNavigate} />;
             case 'agences':
                 return profile?.role === 'super_admin' ? <Console /> : <Agences />;
             case 'bailleurs':
@@ -258,7 +264,7 @@ function AppContent() {
             case 'documents':
                 return <Documents />;
             default:
-                return <Dashboard />;
+                return <Dashboard onNavigate={handleNavigate} />;
         }
     };
 
@@ -269,7 +275,7 @@ function AppContent() {
             <MaintenanceBanner />
             <Sidebar
                 currentPage={currentPage}
-                onNavigate={setCurrentPage}
+                onNavigate={handleNavigate}
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
             />
@@ -295,7 +301,7 @@ function AppContent() {
                 </div>
 
                 <NetworkBanner />
-                <TrialBanner onNavigate={setCurrentPage} />
+                <TrialBanner onNavigate={handleNavigate} />
 
                 {/* Scrollable content — extra bottom padding on mobile for BottomNav */}
                 <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
@@ -307,7 +313,9 @@ function AppContent() {
                             </div>
                         </div>
                     }>
-                        {renderPage()}
+                        <Routes>
+                            <Route path="*" element={renderPage()} />
+                        </Routes>
                     </Suspense>
                 </main>
             </div>
@@ -315,10 +323,7 @@ function AppContent() {
             {/* Bottom navigation — mobile only */}
             <BottomNav
                 currentPage={currentPage}
-                onNavigate={(page) => {
-                    setCurrentPage(page);
-                    setSidebarOpen(false);
-                }}
+                onNavigate={handleNavigate}
                 onOpenMenu={() => setSidebarOpen(true)}
             />
 
@@ -330,9 +335,11 @@ function AppContent() {
 
 function App() {
     return (
-        <AuthProvider>
-            <AppContent />
-        </AuthProvider>
+        <HashRouter>
+            <AuthProvider>
+                <AppContent />
+            </AuthProvider>
+        </HashRouter>
     );
 }
 

@@ -271,6 +271,64 @@ export function Abonnement() {
         )}
       </div>
 
+      {/* Programme Pilote — 10 clients fondateurs */}
+      <div className="mb-6 rounded-2xl border-2 p-6 relative overflow-hidden" style={{ borderColor: '#F58220', background: 'linear-gradient(135deg, #fffbf5 0%, #fff7ed 100%)' }}>
+        <div className="absolute top-0 right-0 w-32 h-32 opacity-5">
+          <svg viewBox="0 0 100 100" fill="none"><circle cx="50" cy="50" r="50" fill="#F58220"/></svg>
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+          <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#F58220' }}>
+            <Zap className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-lg font-bold text-slate-900">Programme Pilote — 10 agences fondatrices</h3>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold text-white" style={{ backgroundColor: '#F58220' }}>Limité</span>
+            </div>
+            <p className="text-sm text-slate-600 mb-4">
+              Rejoignez les 10 premières agences à adopter Samay Këur et bénéficiez d'un accès fondateur à tarif préférentiel, avec accompagnement personnalisé et influence directe sur la roadmap.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+              {[
+                { label: 'Starter Pilote', price: '9 900 XOF/mois', features: ['Jusqu\'à 30 unités', '3 utilisateurs', 'Support WhatsApp'] },
+                { label: 'Pro Pilote', price: '19 900 XOF/mois', features: ['Jusqu\'à 100 unités', '10 utilisateurs', 'Support prioritaire', 'PDF illimités'] },
+                { label: 'Agence Pilote', price: '39 900 XOF/mois', features: ['Unités illimitées', 'Utilisateurs illimités', 'Onboarding dédié', 'Accès API'] },
+              ].map((plan) => (
+                <div key={plan.label} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                  <p className="font-bold text-slate-900 text-sm mb-1">{plan.label}</p>
+                  <p className="text-orange-600 font-semibold text-sm mb-2">{plan.price}</p>
+                  <ul className="space-y-1">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-center gap-1.5 text-xs text-slate-600">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <a
+                href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux rejoindre le programme pilote Samay Këur (10 agences fondatrices)')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-white text-sm font-semibold transition hover:opacity-90"
+                style={{ backgroundColor: '#25D366' }}
+              >
+                Rejoindre sur WhatsApp
+              </a>
+              <a
+                href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Programme Pilote Samay Këur')}&body=${encodeURIComponent("Bonjour,\n\nJe souhaite rejoindre le programme pilote Samay Këur.\n\nNom de l'agence : \nNombre de biens gérés : \nVille : ")}`}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-sm text-slate-700 font-medium hover:bg-slate-50"
+              >
+                Demander par email
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Upgrade modal — contact commercial */}
       {upgradeOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={() => setUpgradeOpen(false)}>

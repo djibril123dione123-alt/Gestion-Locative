@@ -36,6 +36,8 @@ import {
   formatPaiementError,
 } from '../services/domain/paiementService';
 import { isCommissionMissing } from '../services/domain/commissionService';
+import { createPaiementViaEdge, PaiementApiError } from '../services/api/paiementApi';
+import { trackEvent } from '../lib/analytics';
 
 interface PaiementRow {
   id: string;
@@ -279,22 +281,31 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         return;
       }
 
-      let error;
       if (editingPaiement) {
-        const result = await supabase.from('paiements').update(data).eq('id', editingPaiement.id);
-        error = result.error;
+        // Mise à jour : appel direct Supabase (les updates ne passent pas par l'Edge Function)
+        const { error } = await supabase.from('paiements').update(data).eq('id', editingPaiement.id);
+        if (error) throw error;
       } else {
-        const result = await supabase.from('paiements').insert([data]);
-        error = result.error;
-      }
-
-      if (error) throw error;
-
-      if (!editingPaiement) {
+        // Création : passe par l'Edge Function (validation Zod + agency_id serveur)
+        await createPaiementViaEdge({
+          contrat_id: formData.contrat_id,
+          montant_total: parseFloat(formData.montant_total),
+          mois_concerne: moisConcerne,
+          date_paiement: formData.date_paiement,
+          mode_paiement: formData.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'carte',
+          statut: formData.statut as 'paye' | 'en_attente' | 'partiel',
+          reference: formData.reference || null,
+        });
         track({
           action: 'paiement_create',
           entity_type: 'paiements',
           metadata: { montant: data.montant_total, mois: data.mois_concerne, mode: data.mode_paiement },
+        });
+        trackEvent('paiement_created', {
+          montant: data.montant_total,
+          mois: data.mois_concerne,
+          mode: data.mode_paiement,
+          agency_id: profile?.agency_id,
         });
       }
 
@@ -302,7 +313,11 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       closeModal();
       loadData();
     } catch (error: unknown) {
-      showError(formatPaiementError(error));
+      if (error instanceof PaiementApiError) {
+        showError(error.message);
+      } else {
+        showError(formatPaiementError(error));
+      }
     } finally {
       setIsSaving(false);
     }

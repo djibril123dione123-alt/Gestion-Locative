@@ -1,5 +1,49 @@
 # Samay Këur
 
+## Récents ajouts (mai 2026) — Architecture backend + Analytics
+
+### Edge Function Supabase — create-paiement
+- `supabase/functions/create-paiement/index.ts` — Source de vérité serveur pour la création de paiements.
+  - JWT vérifié, `agency_id` injecté côté serveur uniquement (jamais lu depuis le client)
+  - Payload validé avec **Zod** (types, bornes, formats)
+  - Propriété du contrat vérifiée via RLS (client JWT)
+  - Commission calculée serveur (identique à `commissionService.ts`)
+  - INSERT via service role avec `agency_id` injecté
+  - Déploiement : `supabase functions deploy create-paiement`
+
+### React Router (HashRouter)
+- `src/App.tsx` — Migré de hash-state manuel vers **React Router HashRouter**
+  - `currentPage` dérivé de `useLocation().pathname` (pas de useState)
+  - `handleNavigate(page)` utilise `useNavigate()` — compatible avec l'interface `onNavigate: (page: string) => void` existante sur tous les composants
+  - URLs : `/#/dashboard`, `/#/bailleurs`, etc. — aucune régression comportementale
+  - `<Routes><Route path="*" /></Routes>` — routage complet + browser history
+
+### PostHog Analytics
+- `src/lib/analytics.ts` — Wrapper PostHog configurable via `VITE_POSTHOG_KEY`
+  - No-op si clé non définie (0 erreur en développement sans clé)
+  - `initAnalytics()` → `main.tsx`
+  - `identifyUser()` → App.tsx après connexion
+  - `trackPageView(page)` → App.tsx à chaque changement de route
+  - `trackEvent(event, props)` → `Paiements.tsx` + `LoyersImpayes.tsx` sur `paiement_created`
+
+### API Service — paiementApi.ts
+- `src/services/api/paiementApi.ts` — Client pour l'Edge Function `create-paiement`
+  - `createPaiementViaEdge(input)` — appel via `supabase.functions.invoke()`
+  - `PaiementApiError` — classe d'erreur typée (code + message métier)
+  - Utilisé dans `Paiements.tsx` (CREATE) et `LoyersImpayes.tsx` (paiement impayé)
+
+### Infrastructure pilotes (10 clients fondateurs)
+- `src/pages/Abonnement.tsx` — Section "Programme Pilote" avec 3 tiers tarifaires (Starter/Pro/Agence)
+  - CTA WhatsApp + email pré-rempli pour rejoindre le programme
+
+### Intégrité financière — Migration SQL
+- `supabase/migrations/20260503000001_financial_integrity_constraints.sql`
+  - Fix schéma `bilans_mensuels` : `agency_id`, `total_encaisse`, `nb_paiements` (colonnes manquantes)
+  - 9 contraintes CHECK (idempotentes) sur paiements/contrats/bailleurs/depenses
+  - Trigger `trg_validate_paiement_integrite` — validation serveur BEFORE INSERT/UPDATE
+  - Trigger `trg_validate_contrat_commission` — commission obligatoire si statut='actif'
+  - Trigger `trg_update_bilan_mensuel` — alimentation automatique AFTER INSERT
+
 ## Récents ajouts (mai 2026) — Finalisation production SaaS
 
 ### Repositories ajoutés (src/repositories/)

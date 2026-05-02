@@ -1,0 +1,209 @@
+TRANSFORMATION SÉRIE A (SAMAY KËUR)
+
+Tu es un CTO senior + architecte SaaS + expert sécurité + product engineer.
+
+Tu travailles sur un SaaS multi-tenant de gestion locative (agences immobilières + bailleurs).
+
+🎯 OBJECTIF
+
+Transformer le produit actuel en :
+
+✔ SaaS sécurisé, scalable, audit-ready
+✔ architecture backend contrôlée (source de vérité serveur)
+✔ prêt pour levée Seed / Série A
+✔ sans réécrire tout le système
+
+⚠️ CONTEXTE ACTUEL (IMPORTANT)
+Frontend : React + TypeScript
+Backend : Supabase (PostgreSQL + RLS + RPC)
+Offline-first (IndexedDB + sync queue)
+Logique métier partiellement dans frontend (commission, paiements, contrats)
+Pas de backend central
+84+ requêtes Supabase directes dans les pages
+Calculs financiers côté client
+Pas de job system (cron / automation)
+RLS seule couche de sécurité critique
+🚨 PROBLÈMES À CORRIGER (PRIORITÉ ABSOLUE)
+1. ❌ Pas de source de vérité serveur
+
+Tous les calculs critiques (paiements, commissions, contrats) doivent être centralisés.
+
+👉 ACTION :
+
+déplacer toute logique financière vers backend (Edge Functions Supabase ou API layer)
+2. ❌ Sécurité multi-tenant uniquement basée sur RLS
+
+RLS ne doit plus être seule protection.
+
+👉 ACTION :
+
+ajouter validation serveur (agency_id injecté côté backend uniquement)
+ajouter CHECK constraints SQL
+ajouter middleware de validation
+3. ❌ Calculs financiers côté client
+
+Exemple : commissionService, paiementService dans frontend.
+
+👉 ACTION :
+
+déplacer calculs vers backend
+frontend = UI uniquement
+4. ❌ Offline sync sans contrôle de cohérence
+
+IndexedDB queue sans résolution de conflits robuste.
+
+👉 ACTION :
+
+ajouter versioning (updated_at / version number)
+stratégie last-write-wins contrôlée côté serveur
+5. ❌ Aucun job system (automation inexistante)
+
+Pas de cron, pas de notifications automatiques.
+
+👉 ACTION :
+
+ajouter pg_cron ou Edge Functions scheduled
+automatiser :
+impayés
+rappels
+quittances
+billing
+🧠 ARCHITECTURE CIBLE (OBLIGATOIRE)
+
+Construire cette architecture :
+
+FRONTEND (React)
+   ↓ (API calls only)
+API LAYER (Edge Functions / Backend léger)
+   ↓
+BUSINESS ENGINE (validation + calculs)
+   ↓
+DATABASE (Supabase + RLS + constraints)
+   ↓
+JOB SYSTEM (cron + workers)
+🏗️ PHASE 1 — STABILISATION (IMMÉDIAT)
+OBJECTIF : empêcher toute corruption financière
+ACTIONS :
+1. Ajouter contraintes SQL critiques
+ALTER TABLE paiements
+ADD CONSTRAINT chk_parts
+CHECK (part_agence + part_bailleur = montant_total);
+
+ALTER TABLE contrats
+ADD CONSTRAINT chk_commission
+CHECK (commission >= 0 AND commission <= 100);
+
+ALTER TABLE paiements
+ADD CONSTRAINT chk_montant
+CHECK (montant_total > 0);
+2. Stopper toute logique financière côté frontend
+identifier commissionService / paiementService
+marquer comme deprecated frontend logic
+déplacer vers backend
+3. Centraliser accès DB
+remplacer appels Supabase directs par repositories/services
+⚙️ PHASE 2 — BACKEND ENFORCEMENT
+OBJECTIF : rendre le système “trusted”
+1. Créer Edge Functions :
+/create-paiement
+/create-contrat
+/update-contrat
+/generate-pdf
+/process-notifications
+2. Chaque Edge Function doit :
+vérifier JWT
+extraire agency_id côté serveur uniquement
+valider payload avec Zod
+exécuter calculs métier
+écrire en base via service role
+retourner résultat
+3. Frontend devient :
+
+❌ supabase.from().insert()
+✅ fetch('/functions/v1/create-paiement')
+
+⚙️ PHASE 3 — JOB SYSTEM (AUTOMATION)
+OBJECTIF : rendre le SaaS autonome
+
+Ajouter :
+
+1. Cron jobs (pg_cron)
+détection impayés
+génération bilans mensuels
+nettoyage invitations
+relances automatiques
+2. Notifications system
+email (Resend)
+SMS (Africa’s Talking / Twilio)
+3. Event triggers DB
+INSERT paiement → update stats
+INSERT contrat → update bilans
+UPDATE statut → notifications
+📊 PHASE 4 — DATA & SaaS METRICS
+
+Ajouter :
+
+MRR tracking
+churn tracking
+activation funnel
+DAU / WAU
+time-to-first-payment
+
+Créer table :
+
+mrr_events
+audit_logs
+usage_events
+🔐 PHASE 5 — SECURITY HARDENING
+Obligatoire :
+JWT-based agency_id injection
+rate limiting par tenant
+audit logs complets
+service role only backend writes
+RLS = backup layer (pas primary layer)
+🧱 PHASE 6 — CLEAN ARCHITECTURE FINAL
+
+Frontend :
+
+UI only
+no business logic
+no financial calculation
+
+Backend :
+
+all rules
+all validation
+all calculations
+
+Database :
+
+constraints
+RLS
+integrity rules
+🚀 LIVRABLE ATTENDU (FORMAT SORTIE)
+
+Donne :
+
+1. 🚨 Audit critique (résumé des risques)
+2. 🧠 Architecture cible finale (diagramme clair)
+3. 🔧 Plan de refactor en étapes exécutables
+4. 🏗 Structure backend Edge Functions détaillée
+5. 🔐 Stratégie sécurité complète
+6. ⚙️ Design job system + automation
+7. 📊 Data layer SaaS (MRR, churn, analytics)
+8. 💰 Ce qui est nécessaire pour levée Seed / Série A
+9. ⚡ Plan 90 jours exécutable (priorités strictes)
+⚠️ CONTRAINTES IMPORTANTES
+pas de sur-engineering
+pas de rewrite total inutile
+priorité : sécurité + confiance + scalabilité
+garder Supabase (pas de migration inutile)
+optimiser effort vs impact
+🎯 OBJECTIF FINAL
+
+Transformer ce produit en :
+
+🔥 SaaS immobilier investissable Série A
+🔥 sécurisé pour données financières
+🔥 automatisé (zero manual ops)
+🔥 scalable multi-tenant robuste

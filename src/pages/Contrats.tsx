@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { createContratViaEdge, updateContratViaEdge, ContratApiError } from '../services/api/contratApi';
+import { trackEvent } from '../lib/analytics';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
@@ -306,21 +308,8 @@ export function Contrats() {
 
       setSubmitting(true);
       try {
-        const { data: uniteCheck, error: uniteError } = await supabase
-          .from('unites')
-          .select('statut')
-          .eq('id', formData.unite_id)
-          .eq('agency_id', profile.agency_id)
-          .single();
-
-        if (uniteError) throw uniteError;
-
-        if (uniteCheck && uniteCheck.statut === 'loue') {
-          toast.warning('Ce produit est déjà occupé. Veuillez en sélectionner un autre.');
-          return;
-        }
-
-        const data = {
+        // Création via Edge Function (vérification unité + agency_id + event_log côté serveur)
+        await createContratViaEdge({
           locataire_id: formData.locataire_id,
           unite_id: formData.unite_id,
           date_debut: formData.date_debut,
@@ -328,35 +317,29 @@ export function Contrats() {
           loyer_mensuel: parseFloat(formData.loyer_mensuel),
           commission: formData.commission ? parseFloat(formData.commission) : null,
           caution: formData.caution ? parseFloat(formData.caution) : null,
-          statut: formData.statut,
-          destination: formData.destination,
-          agency_id: profile.agency_id,
-        };
-
-        const { error: insertError } = await supabase
-          .from('contrats')
-          .insert([data]);
-
-        if (insertError) throw insertError;
-
-        const { error: updateError } = await supabase
-          .from('unites')
-          .update({ statut: 'loue' })
-          .eq('id', formData.unite_id);
-
-        if (updateError) throw updateError;
+          statut: formData.statut as 'actif' | 'expire' | 'resilie',
+          destination: formData.destination || null,
+        });
 
         track({
           action: 'contrat_create',
           entity_type: 'contrats',
-          metadata: { loyer: data.loyer_mensuel, statut: data.statut, destination: data.destination },
+          metadata: { loyer: parseFloat(formData.loyer_mensuel), statut: formData.statut, destination: formData.destination },
+        });
+        trackEvent('contract_created', {
+          loyer: parseFloat(formData.loyer_mensuel),
+          statut: formData.statut,
+          agency_id: profile?.agency_id,
         });
 
         closeModal();
         await loadData();
         toast.success('Contrat créé avec succès');
       } catch (err: unknown) {
-        toast.error(err instanceof Error ? err.message : 'Erreur lors de la création du contrat');
+        const msg = err instanceof ContratApiError
+          ? err.message
+          : err instanceof Error ? err.message : 'Erreur lors de la création du contrat';
+        toast.error(msg);
       } finally {
         setSubmitting(false);
       }
@@ -375,37 +358,30 @@ export function Contrats() {
 
       setSubmitting(true);
       try {
-        const data = {
-          statut: formData.statut,
+        // Mise à jour via Edge Function (libération unité si résiliation + event_log côté serveur)
+        await updateContratViaEdge({
+          id: editing.id,
+          statut: formData.statut as 'actif' | 'expire' | 'resilie',
           date_fin: formData.date_fin || null,
           commission: formData.commission ? parseFloat(formData.commission) : null,
           caution: formData.caution ? parseFloat(formData.caution) : null,
-        };
+        });
 
-        const { error: updateError } = await supabase
-          .from('contrats')
-          .update(data)
-          .eq('id', editing.id)
-          .eq('agency_id', profile.agency_id);
-
-        if (updateError) throw updateError;
-
-        if (formData.statut === 'resilie' || formData.statut === 'expire') {
-          const { error: uniteError } = await supabase
-            .from('unites')
-            .update({ statut: 'libre' })
-            .eq('id', editing.unite_id)
-            .eq('agency_id', profile.agency_id);
-
-          if (uniteError) throw uniteError;
-        }
+        trackEvent('contract_updated', {
+          contrat_id: editing.id,
+          new_statut: formData.statut,
+          agency_id: profile?.agency_id,
+        });
 
         closeEditModal();
         await loadData();
         toast.success('Contrat modifié avec succès');
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Erreur modification:', err);
-        toast.error(`Erreur : ${err.message}`);
+        const msg = err instanceof ContratApiError
+          ? err.message
+          : err instanceof Error ? err.message : 'Erreur inconnue';
+        toast.error(`Erreur : ${msg}`);
       } finally {
         setSubmitting(false);
       }

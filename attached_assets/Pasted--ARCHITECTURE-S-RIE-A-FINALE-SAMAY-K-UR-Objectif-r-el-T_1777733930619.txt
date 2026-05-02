@@ -1,0 +1,247 @@
+🧠 ARCHITECTURE SÉRIE A FINALE — SAMAY KËUR
+🎯 Objectif réel
+
+Transformer ton produit en :
+
+🔒 SaaS multi-tenant avec logique financière 100% serveur + auditabilité complète + automatisation native
+
+🏗️ 1. ARCHITECTURE CIBLE (VERSION FINALE)
+                    ┌────────────────────────────┐
+                    │        FRONTEND           │
+                    │ React (HashRouter ou SPA) │
+                    │ - UI only                │
+                    │ - No business logic      │
+                    └────────────┬───────────────┘
+                                 │ HTTPS
+                                 ▼
+
+        ┌──────────────────────────────────────────────┐
+        │          API LAYER (OBLIGATOIRE)            │
+        │       Supabase Edge Functions               │
+        │                                              │
+        │  /paiements/*                                │
+        │  /contrats/*                                 │
+        │  /locataires/*                               │
+        │  /comptabilite/*                             │
+        │  /documents/*                                │
+        │                                              │
+        │  🔒 Validation Zod                           │
+        │  🔒 Auth JWT (agency_id serveur)             │
+        │  🔒 Calculs financiers serveur               │
+        │  🔒 Anti-tampering                          │
+        └────────────┬─────────────────────────────────┘
+                     │
+                     ▼
+
+        ┌──────────────────────────────────────────────┐
+        │              POSTGRESQL                      │
+        │                                              │
+        │  ✔ RLS (2e couche sécurité)                  │
+        │  ✔ CHECK constraints                        │
+        │  ✔ Triggers comptables                      │
+        │  ✔ Ledger immutable                         │
+        └────────────┬─────────────────────────────────┘
+                     │
+                     ▼
+
+        ┌──────────────────────────────────────────────┐
+        │            EVENT ENGINE (CRITIQUE)           │
+        │                                              │
+        │  pg_cron + event_log table                  │
+        │                                              │
+        │  - impayés                                  │
+        │  - rappels                                  │
+        │  - quittances                               │
+        │  - bilans                                   │
+        │                                              │
+        └────────────┬─────────────────────────────────┘
+                     │
+                     ▼
+
+        ┌──────────────────────────────────────────────┐
+        │              EXTERNAL SERVICES               │
+        │                                              │
+        │  📧 Email (Resend)                          │
+        │  📲 SMS (Africa’s Talking)                  │
+        │  💳 Payments (Stripe / Wave)                │
+        │  📊 Analytics (PostHog)                     │
+        └──────────────────────────────────────────────┘
+🔥 2. PRINCIPES NON NÉGOCIABLES (SÉRIE A)
+❌ RÈGLE 1 — ZÉRO logique métier dans le frontend
+
+Frontend = uniquement :
+
+UI
+validation visuelle
+appels API
+
+👉 interdit :
+
+calcul commission
+calcul bilans
+transformation financière
+❌ RÈGLE 2 — ZÉRO écriture directe Supabase depuis React
+
+TOUT passe par Edge Functions.
+
+Donc suppression de :
+
+supabase.from('paiements').insert()
+
+Remplacé par :
+
+await api.createPaiement()
+❌ RÈGLE 3 — Serveur = seule vérité financière
+
+Edge Functions doivent gérer :
+
+commission
+part bailleur / agence
+validation contrat actif
+cohérence paiement
+❌ RÈGLE 4 — Event-driven accounting
+
+Chaque mutation produit un event :
+
+paiement.created
+paiement.cancelled
+contrat.created
+locataire.created
+
+Stocké dans :
+
+event_log
+🧱 3. NOUVELLE COUCHE CRITIQUE (MANQUANTE CHEZ TOI)
+🧠 A. LEDGER IMMUTABLE (OBLIGATOIRE SÉRIE A)
+Table nouvelle :
+ledger_entries
+
+Chaque mouvement financier écrit :
+
+debit
+credit
+agency_id
+reference_id
+type (paiement, commission, etc.)
+
+👉 Résultat :
+
+Impossible de trafiquer les chiffres sans laisser trace
+
+⚙️ B. EVENT ENGINE
+Trigger central :
+AFTER INSERT ON paiements
+AFTER INSERT ON contrats
+AFTER UPDATE ON paiements
+
+➡ génère event_log
+
+⏱ C. JOB SYSTEM (AUTOMATISATION SaaS)
+
+Via pg_cron :
+
+Jobs obligatoires :
+impayés quotidiens
+relances automatiques
+génération quittances
+bilans mensuels
+audit cohérence comptable
+🔐 4. SÉCURITÉ MULTI-TENANT (VERSION FINALE)
+Double blind security model :
+1. JWT Layer (Edge Function)
+agency_id = extractFromJWT()
+2. DB Layer (RLS)
+agency_id = auth.jwt()
+3. Hard constraints (NEW)
+CHECK financial integrity
+CHECK commission range
+CHECK invariants
+💰 5. ARCHITECTURE FINANCIÈRE (CRITIQUE INVESTISSEUR)
+Chaque paiement doit produire :
+Entrées automatiques :
+Type	Source
+Paiement brut	paiement.created
+Commission agence	auto calc serveur
+Part bailleur	auto calc serveur
+Ledger entry	trigger DB
+Résultat :
+
+👉 Impossible de falsifier :
+
+revenu agence
+MRR
+cashflow
+📊 6. ANALYTICS SÉRIE A (POSTHOG STRUCTURE)
+Events obligatoires :
+user_signed_up
+agency_created
+contract_created
+payment_created
+payment_failed
+pilot_activated
+Funnels :
+signup → contract → payment
+onboarding → first value
+pilot → conversion paid
+🚀 7. PILOT CLIENT SYSTEM (VRAI PAS UI)
+Table nouvelle :
+agency_status
+trial
+pilot
+active
+churned
+Metrics obligatoires :
+activation_time
+first_payment_date
+contracts_created_7d
+📦 8. STRUCTURE BACKEND FINALE
+supabase/functions/
+├── paiements/
+│   ├── create
+│   ├── update
+│   ├── cancel
+│
+├── contrats/
+│   ├── create
+│   ├── update
+│
+├── locataires/
+│
+├── billing/
+│
+├── documents/
+│   ├── generate-pdf
+│
+└── jobs/
+    ├── impayes
+    ├── relances
+    ├── bilans
+🧭 9. ROADMAP SÉRIE A (90 JOURS)
+PHASE 1 — CORE SAFETY (Semaine 1–3)
+100% API enforcement
+suppression inserts frontend
+Edge Functions complètes
+PHASE 2 — AUTOMATION (Semaine 4–8)
+job system pg_cron
+relances SMS/email
+bilans automatiques
+PHASE 3 — MRR & INVESTOR READINESS (Semaine 9–12)
+PostHog funnels
+dashboard MRR
+pilot conversion tracking
+10–20 agences payantes
+🧠 CONCLUSION CTO (TRÈS HONNÊTE)
+
+Tu es dans une situation rare :
+
+🔵 TU AS DÉJÀ :
+un vrai produit fonctionnel
+une base multi-tenant propre
+une logique métier cohérente
+une stack scalable
+🔴 MAIS IL MANQUE :
+backend enforcement total
+event system
+automation SaaS
+ledger comptable
+conversion pilot → MRR structuré

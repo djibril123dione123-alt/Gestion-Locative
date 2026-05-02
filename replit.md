@@ -1,5 +1,48 @@
 # Samay Këur
 
+## Récents ajouts (mai 2026) — Architecture Série A : 100% Edge Functions + Ledger + Job System
+
+### Zéro write direct Supabase sur paiements/contrats
+Toutes les mutations financières passent désormais par des Edge Functions Supabase :
+
+| Opération | Edge Function | Remplace |
+|-----------|--------------|---------|
+| Créer paiement | `create-paiement` ✅ | `supabase.from('paiements').insert()` |
+| Modifier paiement | `update-paiement` ✅ | `supabase.from('paiements').update()` |
+| Annuler paiement | `cancel-paiement` ✅ | `supabase.from('paiements').delete()` |
+| Créer contrat | `create-contrat` ✅ | `supabase.from('contrats').insert()` |
+| Modifier contrat | `update-contrat` ✅ | `supabase.from('contrats').update()` |
+
+### API Layer complet (`src/services/api/`)
+- `paiementApi.ts` — `createPaiementViaEdge`, `updatePaiementViaEdge`, `cancelPaiementViaEdge`
+- `contratApi.ts` — `createContratViaEdge`, `updateContratViaEdge`, `ContratApiError`
+
+### Migration SQL `20260504000001_ledger_event_system.sql`
+- **`ledger_entries`** — journal financier immutable (règle NO UPDATE/NO DELETE)
+  - Chaque paiement génère : credit brut + credit commission + debit part_bailleur
+  - Chaque annulation génère : debit reversal
+- **`event_log`** — bus d'événements métier (`paiement.created`, `contrat.created`, `paiement.cancelled`, `paiement.updated`, `contrat.updated`)
+- **Pilot tracking** sur `agencies` : `pilot_status` (trial/pilot/active/churned), `first_payment_at`, `first_contract_at`, `activation_at`
+- **Triggers PL/pgSQL** : `trg_after_paiement_insert`, `trg_after_contrat_insert`, `trg_after_paiement_cancel`
+- **Fonctions cron** : `fn_detect_impayes()`, `fn_generate_quittances_mensuelles()`
+- **pg_cron** : `detect-impayes` (0 6 * * *), `generate-quittances` (0 7 1 * *) — s'installe si l'extension est activée
+
+### PostHog events élargis
+- `paiement_created` (existant)
+- `paiement_updated` (nouveau)
+- `paiement_cancelled` (nouveau)
+- `contract_created` (nouveau)
+- `contract_updated` (nouveau)
+
+### Déploiement Edge Functions
+```
+supabase functions deploy create-paiement
+supabase functions deploy update-paiement
+supabase functions deploy cancel-paiement
+supabase functions deploy create-contrat
+supabase functions deploy update-contrat
+```
+
 ## Récents ajouts (mai 2026) — Architecture backend + Analytics
 
 ### Edge Function Supabase — create-paiement

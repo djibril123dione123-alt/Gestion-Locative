@@ -36,7 +36,12 @@ import {
   formatPaiementError,
 } from '../services/domain/paiementService';
 import { isCommissionMissing } from '../services/domain/commissionService';
-import { createPaiementViaEdge, PaiementApiError } from '../services/api/paiementApi';
+import {
+  createPaiementViaEdge,
+  updatePaiementViaEdge,
+  cancelPaiementViaEdge,
+  PaiementApiError,
+} from '../services/api/paiementApi';
 import { trackEvent } from '../lib/analytics';
 
 interface PaiementRow {
@@ -282,9 +287,19 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       }
 
       if (editingPaiement) {
-        // Mise à jour : appel direct Supabase (les updates ne passent pas par l'Edge Function)
-        const { error } = await supabase.from('paiements').update(data).eq('id', editingPaiement.id);
-        if (error) throw error;
+        // Mise à jour via Edge Function (validation + recalcul parts côté serveur)
+        await updatePaiementViaEdge({
+          id: editingPaiement.id,
+          montant_total: parseFloat(formData.montant_total),
+          mode_paiement: formData.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre',
+          statut: formData.statut as 'paye' | 'partiel' | 'impaye',
+          date_paiement: formData.date_paiement,
+          reference: formData.reference || null,
+        });
+        trackEvent('paiement_updated', {
+          paiement_id: editingPaiement.id,
+          agency_id: profile?.agency_id,
+        });
       } else {
         // Création : passe par l'Edge Function (validation Zod + agency_id serveur)
         await createPaiementViaEdge({
@@ -332,16 +347,22 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     if (!profile?.agency_id || !deleteTarget) return;
     setIsDeleting(true);
     try {
-      const { error } = await supabase.from('paiements').delete().eq('id', deleteTarget.id);
-      if (error) throw error;
-      if (deleteTarget.statut === 'paye') {
-        await supabase.from('revenus').delete().eq('paiement_id', deleteTarget.id);
-      }
-      success('Paiement supprimé avec succès');
+      // Annulation sécurisée via Edge Function (soft-cancel + ledger reversal côté serveur)
+      await cancelPaiementViaEdge({ id: deleteTarget.id });
+      trackEvent('paiement_cancelled', {
+        paiement_id: deleteTarget.id,
+        montant: deleteTarget.montant_total,
+        agency_id: profile?.agency_id,
+      });
+      success('Paiement annulé avec succès');
       setDeleteTarget(null);
       loadData();
     } catch (error: unknown) {
-      showError(error instanceof Error ? error.message : 'Impossible de supprimer ce paiement');
+      if (error instanceof PaiementApiError) {
+        showError(error.message);
+      } else {
+        showError(error instanceof Error ? error.message : 'Impossible d\'annuler ce paiement');
+      }
     } finally {
       setIsDeleting(false);
     }

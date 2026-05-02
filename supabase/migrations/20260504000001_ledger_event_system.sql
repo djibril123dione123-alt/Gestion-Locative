@@ -37,7 +37,7 @@ DROP POLICY IF EXISTS "ledger_select_agency" ON ledger_entries;
 CREATE POLICY "ledger_select_agency" ON ledger_entries
   FOR SELECT USING (
     agency_id = (
-      SELECT agency_id FROM profiles WHERE id = auth.uid() LIMIT 1
+      SELECT agency_id FROM public.user_profiles WHERE id = auth.uid() LIMIT 1
     )
   );
 
@@ -73,7 +73,7 @@ DROP POLICY IF EXISTS "event_select_agency" ON event_log;
 CREATE POLICY "event_select_agency" ON event_log
   FOR SELECT USING (
     agency_id = (
-      SELECT agency_id FROM profiles WHERE id = auth.uid() LIMIT 1
+      SELECT agency_id FROM public.user_profiles WHERE id = auth.uid() LIMIT 1
     )
   );
 

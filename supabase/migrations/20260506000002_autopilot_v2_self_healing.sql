@@ -70,7 +70,7 @@ CREATE INDEX IF NOT EXISTS idx_health_snapshot ON system_health(snapshot_at DESC
 ALTER TABLE system_health ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "health_admin" ON system_health
   FOR SELECT USING (
-    (SELECT role FROM public.profiles WHERE id = auth.uid() LIMIT 1) IN ('admin','super_admin')
+    (SELECT role FROM public.user_profiles WHERE id = auth.uid() LIMIT 1) IN ('admin','super_admin')
   );
 CREATE POLICY "health_insert" ON system_health FOR INSERT WITH CHECK (true);
 

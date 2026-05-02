@@ -38,7 +38,7 @@ ALTER TABLE financial_snapshots ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "snapshots_select_agency" ON financial_snapshots;
 CREATE POLICY "snapshots_select_agency" ON financial_snapshots
   FOR SELECT USING (
-    agency_id = (SELECT agency_id FROM profiles WHERE id = auth.uid() LIMIT 1)
+    agency_id = (SELECT agency_id FROM public.user_profiles WHERE id = auth.uid() LIMIT 1)
   );
 
 DROP POLICY IF EXISTS "snapshots_insert_service" ON financial_snapshots;

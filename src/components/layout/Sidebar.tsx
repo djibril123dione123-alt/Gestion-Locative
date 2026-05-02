@@ -246,7 +246,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
         {/* Logo */}
         <div className="p-3 border-b flex items-center justify-between" style={{ borderColor: '#3A3A3A' }}>
           <img
-            src="/logo-icon.png"
+            src="/logo-full.png"
             alt="Samay Këur"
             className="h-16 w-auto object-contain mx-auto"
           />

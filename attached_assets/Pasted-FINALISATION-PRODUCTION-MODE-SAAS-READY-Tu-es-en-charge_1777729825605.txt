@@ -1,0 +1,120 @@
+FINALISATION PRODUCTION (MODE SAAS READY)
+
+Tu es en charge de finaliser une application SaaS en production (Gestion locative multi-tenant).
+
+Objectif : transformer le code actuel en une version production-grade stable, maintenable et scalable, sans ajouter de nouvelles fonctionnalités métier.
+
+1. Objectif global
+
+Amener le projet à un état :
+
+0 logique métier fragile ou implicite
+0 fallback silencieux dans les règles métier critiques
+0 console.log / console.error inutiles en production
+100% des erreurs traitées via un système centralisé (toast + Sentry)
+100% des accès DB via repositories ou services domain
+100% des règles métier dans /services/domain
+2. Audit obligatoire (avant toute modification)
+
+Analyser et lister :
+
+Fallbacks cachés (ex: || 10, ?? 0, valeurs par défaut dangereuses)
+Couplage UI ↔ logique métier
+Requêtes Supabase directes hors repositories
+Gestion d’erreur incohérente (try/catch non typé, erreurs silencieuses)
+Log console en production
+Incohérences commission / paiement / contrat
+Code dupliqué dans calculs financiers
+3. Règles strictes de correction
+❌ Interdit
+Fallback silencieux sur données financières (commission, paiement, contrat)
+console.log / console.error en production
+logique métier dans les composants React
+requêtes Supabase directes dans les pages
+JSON.stringify utilisé pour recherche métier
+✅ Obligatoire
+Toute commission doit passer par commissionService
+Tout paiement doit passer par paiementService
+Toute logique contrat via contratService
+Toute erreur métier doit être typée (unknown, jamais any)
+Toute erreur utilisateur doit passer par toast + message centralisé
+Toute requête DB doit être dans /repositories
+4. Sécurité métier (CRITIQUE)
+Aucune valeur par défaut sur :
+commission
+taux agence
+calcul de paiement
+Si valeur manquante → erreur explicite (CommissionRequiredError)
+Jamais de fallback “10%” ou “0” implicite
+5. Fonctionnalités manquantes ou incomplètes
+
+Ces points ne doivent pas être “codés maintenant”, mais pris en compte dans l’architecture pour éviter dette technique future :
+
+Paiement en ligne (Stripe, Wave Business) — modal de contact uniquement
+QR code quittances — paramètre présent, génération absente
+Envoi email/SMS automatique (rappels, quittances, notifications échéance)
+Portail locataire — pas d'accès locataire à ses quittances/contrats
+Signature électronique des contrats et mandats
+Export comptable (FEC, logiciel comptable)
+Application mobile native — web responsive uniquement
+Gestion des feature flags depuis la console UI (table présente, pas d’UI)
+6. Bugs connus et points de vigilance (CRITIQUES ARCHITECTURAUX)
+Critiques
+Récursion RLS sur user_profiles
+→ Corrigée via current_user_agency_id() (SECURITY DEFINER)
+→ ⚠️ Ne jamais recréer de policies manuelles sans cette fonction
+Doublons de policies dans _archive/
+→ OK sur historique, mais migrations doivent être appliquées dans l’ordre strict
+Importants
+State-based routing (sans React Router)
+→ pas de URLs directes, pas de bouton retour navigateur
+→ migration vers React Router ou TanStack Router recommandée
+Cache PDF non invalidé automatiquement
+→ settingsCache TTL 5 min
+→ nécessite invalidateAgencySettingsCache(agencyId) après update
+bilans_mensuels jamais alimentée
+→ table inutilisable pour reporting fiable
+Template PDF vides
+→ si agency_settings incomplet, variables {{...}} vides
+Vigilance
+Race condition Calendrier / Contrats
+→ gérée via requestIdRef
+→ pattern obligatoire à reproduire sur toutes pages async critiques
+localStorage QuickStart
+→ utilisé uniquement pour "dismissed"
+→ acceptable, non critique
+7. Qualité attendue
+
+À la fin :
+
+TypeScript: 0 error
+aucun warning console navigateur
+aucun fallback métier caché
+architecture propre en 3 couches :
+UI → services → repositories → Supabase
+code prêt production SaaS réel
+8. Validation finale obligatoire
+
+Avant de terminer :
+
+run typecheck
+vérifier absence console.log
+vérifier absence fallback métier
+vérifier cohérence commission/paiement
+vérifier isolation multi-tenant (agency_id partout)
+vérifier cohérence des services domain
+9. Résultat attendu
+
+Une application :
+
+stable en production
+prévisible sur les calculs financiers
+sans logique cachée
+scalable SaaS réel
+⚠️ Conclusion importante
+
+Ce prompt te met dans un mode “finition SaaS sérieux”, pas juste “code propre”.
+
+La vraie différence ici :
+👉 tu passes de “projet fonctionnel”
+👉 à “produit exploitable en production réelle multi-clients”

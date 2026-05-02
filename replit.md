@@ -1,5 +1,31 @@
 # Samay Këur
 
+## Récents ajouts (mai 2026) — Finalisation production SaaS
+
+### Repositories ajoutés (src/repositories/)
+- `bailleursRepository.ts` — `list`, `findById`, `findWithImmeubles`, `insert`, `update`, `softDelete`
+- `contratsRepository.ts` — `list`, `findById`, `findCommission`, `listActive`, `insert`, `update`, `softDelete`
+- `paiementsRepository.ts` — existant, complété (voir ci-dessous)
+
+### Corrections qualité code
+- `LoyersImpayes.tsx` — suppression `?? 10` fallback commission, utilise `buildPaiementPayload` + `formatPaiementError`
+- `pdf.ts` — fallback `'10'` dans mandat remplacé par `''` (aucune valeur inventée dans document légal)
+- `Depenses.tsx` — `JSON.stringify(d)` remplacé par filtre explicite sur champs indexés
+- `agencyHelper.ts` — tous les `console.log` supprimés
+- `sentry.ts` — `console.log` d'initialisation supprimé
+- `Dashboard.tsx`, `Paiements.tsx` handleDelete, `SetupWizard.tsx` — `catch (error: any)` → `catch (error: unknown)`
+- `Contrats.tsx` — `catch (err: any)` → `catch (err: unknown)`, console.error supprimés
+- `FiltresAvances.tsx` — erreurs silencieuses corrigées, console.error nettoyés
+- `SetupWizard.tsx` — commission via `calculateCommission`, console.error redondants supprimés
+- `README.md` — restructuré en 12 sections orientées développeur (spec SAAS READY)
+
+### Règles absolues (production-grade)
+- 0 `console.log` / `console.error` inutile en production
+- 0 `catch (error: any)` — toujours `unknown`
+- 0 fallback financier silencieux (`?? 10`, `|| 10`)
+- TypeScript : 0 erreur confirmé à chaque étape
+- Architecture : UI → Hook → Service domain → Repository → Supabase
+
 ## Récents ajouts (mai 2026) — Audit P3→P7 (logique métier, offline, architecture, PDF, UX)
 
 ### Services domaine (src/services/domain/)

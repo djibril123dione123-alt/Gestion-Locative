@@ -186,9 +186,21 @@ CREATE TABLE IF NOT EXISTS cache_store (
   agency_id    uuid        REFERENCES agencies(id) ON DELETE CASCADE,
   ttl_seconds  int         NOT NULL DEFAULT 3600,
   created_at   timestamptz NOT NULL DEFAULT now(),
-  expires_at   timestamptz GENERATED ALWAYS AS
-                 (created_at + (ttl_seconds * interval '1 second')) STORED
+  expires_at   timestamptz
 );
+
+CREATE OR REPLACE FUNCTION fn_cache_set_expires()
+RETURNS trigger LANGUAGE plpgsql AS $do$
+BEGIN
+  NEW.expires_at := NEW.created_at + (NEW.ttl_seconds * interval '1 second');
+  RETURN NEW;
+END;
+$do$;
+
+DROP TRIGGER IF EXISTS trg_cache_expires ON cache_store;
+CREATE TRIGGER trg_cache_expires
+  BEFORE INSERT OR UPDATE OF ttl_seconds, created_at ON cache_store
+  FOR EACH ROW EXECUTE FUNCTION fn_cache_set_expires();
 
 CREATE INDEX IF NOT EXISTS idx_cache_expires ON cache_store(expires_at);
 CREATE INDEX IF NOT EXISTS idx_cache_agency  ON cache_store(agency_id);

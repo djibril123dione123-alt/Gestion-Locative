@@ -56,7 +56,10 @@ ALTER TABLE bailleurs
 --    Ancienne version : to_char(gs, 'Mon', 'fr_FR') — 3 arguments invalides en PG.
 --    Nouvelle version : retourne month_num (1–12) + revenus numeric.
 --    Le frontend formate le libellé en français via un tableau JS.
+--    DROP nécessaire : ON NE PEUT PAS changer le type de retour via CREATE OR REPLACE.
 -- ─────────────────────────────────────────────────────────────────────────────
+DROP FUNCTION IF EXISTS get_monthly_revenue(uuid, integer);
+DROP FUNCTION IF EXISTS get_monthly_revenue(uuid, int);
 CREATE OR REPLACE FUNCTION get_monthly_revenue(p_agency_id uuid, p_year int)
 RETURNS TABLE(month_num int, revenus numeric)
 LANGUAGE plpgsql

@@ -343,6 +343,7 @@ export function Contrats() {
         const msg = err instanceof ContratApiError
           ? err.message
           : err instanceof Error ? err.message : 'Erreur lors de la création du contrat';
+        setError(msg);
         toast.error(msg);
       } finally {
         setSubmitting(false);

@@ -76,6 +76,21 @@ async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<
   }
 
   if (fnName === 'create-contrat') {
+    const { data: profileData, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('agency_id')
+      .eq('id', sessionData.session.user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      throw new ContratApiError(profileError.message ?? 'Impossible de récupérer votre agence.', 'PROFILE_LOOKUP_ERROR');
+    }
+
+    const agencyId = profileData?.agency_id;
+    if (!agencyId) {
+      throw new ContratApiError('Aucune agence associée à ce compte.', 'NO_AGENCY');
+    }
+
     const { data: created, error: createError } = await supabase
       .from('contrats')
       .insert({
@@ -88,7 +103,7 @@ async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<
         caution: (body as CreateContratInput).caution ?? null,
         statut: (body as CreateContratInput).statut,
         destination: (body as CreateContratInput).destination ?? null,
-        agency_id: sessionData.session.user.id ? sessionData.session.user.id : undefined,
+        agency_id: agencyId,
       })
       .select('*')
       .single();

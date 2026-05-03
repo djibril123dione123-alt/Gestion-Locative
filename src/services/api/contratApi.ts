@@ -51,7 +51,7 @@ export class ContratApiError extends Error {
 
 function isEdgeFunctionUnavailable(error: { message?: string; status?: number } | null) {
   const message = error?.message ?? '';
-  return error?.status === 404 || error?.status === 409 || message.includes('Edge Function') || message.includes('Conflict');
+  return error?.status === 404 || message.includes('Edge Function');
 }
 
 async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<T> {
@@ -61,13 +61,42 @@ async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<
     code?: string;
   }>(fnName, { body: body as Record<string, unknown> });
 
-  if (error && !isEdgeFunctionUnavailable(error)) {
-    throw new ContratApiError(error.message ?? `Erreur Edge Function ${fnName}.`, 'EDGE_FUNCTION_ERROR');
+  if (error) {
+    if ((error.status === 409 || error.status === 422) && data) {
+      const payload = data as { error?: string; code?: string };
+      throw new ContratApiError(
+        payload.error ?? error.message ?? `Erreur Edge Function ${fnName}.`,
+        payload.code ?? 'EDGE_FUNCTION_CONFLICT',
+      );
+    }
+
+    if (!isEdgeFunctionUnavailable(error)) {
+      throw new ContratApiError(error.message ?? `Erreur Edge Function ${fnName}.`, 'EDGE_FUNCTION_ERROR');
+    }
+  }
+
+  if (data && (data as { error?: string }).error) {
+    const payload = data as { error?: string; code?: string };
+    throw new ContratApiError(
+      payload.error ?? `Erreur Edge Function ${fnName}.`,
+      payload.code ?? 'EDGE_FUNCTION_ERROR',
+    );
   }
 
   if (data && !(data as { error?: string }).error) {
     const result = (data as { data?: T }).data;
     if (result) return result;
+  }
+
+  if (error?.status === 409) {
+    throw new ContratApiError(
+      error.message ?? 'Conflit lors de la création du contrat.',
+      'EDGE_FUNCTION_CONFLICT',
+    );
+  }
+
+  if (error && !isEdgeFunctionUnavailable(error)) {
+    throw new ContratApiError(error.message ?? `Erreur Edge Function ${fnName}.`, 'EDGE_FUNCTION_ERROR');
   }
 
   throw new ContratApiError(

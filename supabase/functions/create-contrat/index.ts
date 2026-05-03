@@ -141,11 +141,6 @@ serve(async (req: Request) => {
     if (uniteErr || !unite) {
       return err("Unité introuvable ou n'appartient pas à cette agence.", 404, "UNITE_NOT_FOUND");
     }
-    if (unite.statut === "loue") {
-      return err("Ce produit est déjà occupé. Veuillez en sélectionner un autre.", 409, "UNITE_ALREADY_LOUE");
-    }
-
-    // ── 5. INSERT contrat ────────────────────────────────────────────────────
     const { data: existingContrat } = await supabaseAdmin
       .from("contrats")
       .select("id")
@@ -154,9 +149,17 @@ serve(async (req: Request) => {
       .eq("statut", "actif")
       .maybeSingle();
 
-    if (existingContrat) {
-      return err("Un contrat actif existe déjà pour cette unité.", 409, "CONTRAT_ALREADY_EXISTS");
+    if (unite.statut === "loue" || existingContrat) {
+      return err(
+        existingContrat
+          ? "Un contrat actif existe déjà pour cette unité."
+          : "Ce produit est déjà occupé. Veuillez en sélectionner un autre.",
+        409,
+        existingContrat ? "CONTRAT_ALREADY_EXISTS" : "UNITE_ALREADY_LOUE",
+      );
     }
+
+    // ── 5. INSERT contrat ────────────────────────────────────────────────────
 
     const { data: contrat, error: insertErr } = await supabaseAdmin
       .from("contrats")

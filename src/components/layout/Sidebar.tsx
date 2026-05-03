@@ -248,7 +248,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
           <img
             src="/logo-full.png"
             alt="Samay Këur"
-            className="h-16 w-auto object-contain mx-auto"
+            className="w-48 h-auto object-contain mx-auto"
           />
           {onClose && (
             <button

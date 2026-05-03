@@ -1,19 +1,19 @@
-import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { LogIn, UserPlus, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import React, { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
+import { LogIn, UserPlus, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 export function Auth() {
   const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    nom: '',
-    prenom: '',
+    email: "",
+    password: "",
+    confirmPassword: "",
+    nom: "",
+    prenom: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,28 +22,30 @@ export function Auth() {
     setLoading(true);
 
     try {
-      if (mode === 'login') {
+      if (mode === "login") {
         await signIn(formData.email, formData.password);
       } else {
         if (formData.password !== formData.confirmPassword) {
-          throw new Error('Les mots de passe ne correspondent pas');
+          throw new Error("Les mots de passe ne correspondent pas");
         }
         if (formData.password.length < 6) {
-          throw new Error('Le mot de passe doit contenir au moins 6 caractères');
+          throw new Error(
+            "Le mot de passe doit contenir au moins 6 caractères",
+          );
         }
         if (!formData.nom.trim() || !formData.prenom.trim()) {
-          throw new Error('Le nom et le prénom sont obligatoires');
+          throw new Error("Le nom et le prénom sont obligatoires");
         }
 
         await signUp(formData.email, formData.password, {
           nom: formData.nom,
           prenom: formData.prenom,
-          role: 'admin',
+          role: "admin",
         });
       }
     } catch (err: any) {
-      console.error('Auth error:', err);
-      setError(err.message || 'Une erreur est survenue');
+      console.error("Auth error:", err);
+      setError(err.message || "Une erreur est survenue");
     } finally {
       setLoading(false);
     }
@@ -58,21 +60,23 @@ export function Auth() {
               <img
                 src="/logo-full.png"
                 alt="Samay Këur — Plateforme de gestion immobilière"
-                className="h-24 w-auto object-contain mx-auto mb-3"
+                className="w-72 h-auto object-contain mx-auto mb-2"
               />
-              <p className="text-slate-600">Votre gestion locative, simplifiée et automatisée</p>
+              <p className="text-slate-600">
+                Votre gestion locative, simplifiée et automatisée
+              </p>
             </div>
 
             <div className="flex gap-2 mb-6 p-1 bg-slate-100 rounded-xl">
               <button
                 onClick={() => {
-                  setMode('login');
+                  setMode("login");
                   setError(null);
                 }}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
-                  mode === 'login'
-                    ? 'bg-white text-orange-600 shadow-md'
-                    : 'text-slate-600 hover:text-slate-900'
+                  mode === "login"
+                    ? "bg-white text-orange-600 shadow-md"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <LogIn className="w-5 h-5 inline-block mr-2" />
@@ -80,13 +84,13 @@ export function Auth() {
               </button>
               <button
                 onClick={() => {
-                  setMode('register');
+                  setMode("register");
                   setError(null);
                 }}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
-                  mode === 'register'
-                    ? 'bg-white text-orange-600 shadow-md'
-                    : 'text-slate-600 hover:text-slate-900'
+                  mode === "register"
+                    ? "bg-white text-orange-600 shadow-md"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <UserPlus className="w-5 h-5 inline-block mr-2" />
@@ -102,7 +106,7 @@ export function Auth() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {mode === 'register' && (
+              {mode === "register" && (
                 <div className="grid grid-cols-2 gap-4 animate-slideInLeft">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -112,7 +116,9 @@ export function Auth() {
                       type="text"
                       required
                       value={formData.prenom}
-                      onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, prenom: e.target.value })
+                      }
                       className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
                       placeholder="Amadou"
                     />
@@ -125,7 +131,9 @@ export function Auth() {
                       type="text"
                       required
                       value={formData.nom}
-                      onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, nom: e.target.value })
+                      }
                       className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
                       placeholder="Diop"
                     />
@@ -141,7 +149,9 @@ export function Auth() {
                   type="email"
                   required
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
                   className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
                   placeholder="votre@email.com"
                 />
@@ -153,10 +163,12 @@ export function Auth() {
                 </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     required
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, password: e.target.value })
+                    }
                     className="w-full px-4 py-3 pr-12 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
                     placeholder="••••••••"
                   />
@@ -165,26 +177,36 @@ export function Auth() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
-                {mode === 'register' && (
+                {mode === "register" && (
                   <p className="mt-2 text-xs text-slate-500">
                     Minimum 6 caractères
                   </p>
                 )}
               </div>
 
-              {mode === 'register' && (
+              {mode === "register" && (
                 <div className="animate-slideInRight">
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Confirmer le mot de passe <span className="text-red-500">*</span>
+                    Confirmer le mot de passe{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="password"
                     required
                     value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        confirmPassword: e.target.value,
+                      })
+                    }
                     className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
                     placeholder="••••••••"
                   />
@@ -195,29 +217,40 @@ export function Auth() {
                 type="submit"
                 disabled={loading}
                 className="w-full py-3 px-6 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transform hover:scale-105"
-                style={{ background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)' }}
+                style={{
+                  background:
+                    "linear-gradient(135deg, #F58220 0%, #E65100 100%)",
+                }}
               >
                 {loading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>{mode === 'login' ? 'Connexion...' : 'Inscription...'}</span>
+                    <span>
+                      {mode === "login" ? "Connexion..." : "Inscription..."}
+                    </span>
                   </>
                 ) : (
                   <>
-                    {mode === 'login' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
-                    <span>{mode === 'login' ? 'Se connecter' : "S'inscrire"}</span>
+                    {mode === "login" ? (
+                      <LogIn className="w-5 h-5" />
+                    ) : (
+                      <UserPlus className="w-5 h-5" />
+                    )}
+                    <span>
+                      {mode === "login" ? "Se connecter" : "S'inscrire"}
+                    </span>
                   </>
                 )}
               </button>
             </form>
 
             <div className="mt-6 text-center">
-              {mode === 'login' ? (
+              {mode === "login" ? (
                 <p className="text-sm text-slate-600">
-                  Pas encore de compte ?{' '}
+                  Pas encore de compte ?{" "}
                   <button
                     onClick={() => {
-                      setMode('register');
+                      setMode("register");
                       setError(null);
                     }}
                     className="text-orange-600 font-semibold hover:text-orange-700 hover:underline transition-colors"
@@ -227,10 +260,10 @@ export function Auth() {
                 </p>
               ) : (
                 <p className="text-sm text-slate-600">
-                  Vous avez déjà un compte ?{' '}
+                  Vous avez déjà un compte ?{" "}
                   <button
                     onClick={() => {
-                      setMode('login');
+                      setMode("login");
                       setError(null);
                     }}
                     className="text-orange-600 font-semibold hover:text-orange-700 hover:underline transition-colors"
@@ -242,10 +275,11 @@ export function Auth() {
             </div>
           </div>
 
-          {mode === 'register' && (
+          {mode === "register" && (
             <div className="px-8 py-6 bg-orange-50 border-t border-orange-100">
               <p className="text-xs text-slate-600 text-center">
-                En vous inscrivant, vous acceptez nos conditions d'utilisation et notre politique de confidentialité.
+                En vous inscrivant, vous acceptez nos conditions d'utilisation
+                et notre politique de confidentialité.
               </p>
             </div>
           )}

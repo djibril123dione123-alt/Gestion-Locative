@@ -183,46 +183,7 @@ CREATE TRIGGER trg_after_paiement_insert
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 5. TRIGGER — Event log + pilot tracking sur INSERT contrat
--- ─────────────────────────────────────────────────────────────────────────────
-
-CREATE OR REPLACE FUNCTION fn_after_contrat_insert()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  -- 5a. Event log
-  INSERT INTO event_log (agency_id, event_type, entity_type, entity_id, payload, created_by)
-  VALUES (
-    NEW.agency_id,
-    'contrat.created',
-    'contrats',
-    NEW.id,
-    jsonb_build_object('loyer', NEW.loyer_mensuel, 'statut', NEW.statut, 'commission', NEW.commission),
-    NEW.created_by
-  );
-
-  -- 5b. Pilot tracking : first_contract_at
-  UPDATE agencies
-    SET first_contract_at = now()
-  WHERE id = NEW.agency_id
-    AND first_contract_at IS NULL;
-
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_after_contrat_insert ON contrats;
-CREATE TRIGGER trg_after_contrat_insert
-  AFTER INSERT ON contrats
-  FOR EACH ROW
-  EXECUTE FUNCTION fn_after_contrat_insert();
-
-
--- ─────────────────────────────────────────────────────────────────────────────
--- 6. TRIGGER — Ledger reversal sur annulation paiement
+-- 5. TRIGGER — Ledger reversal sur annulation paiement
 -- ─────────────────────────────────────────────────────────────────────────────
 
 CREATE OR REPLACE FUNCTION fn_after_paiement_cancel()

@@ -193,21 +193,6 @@ serve(async (req: Request) => {
       .is("first_contract_at", null)
       .catch(() => {});
 
-    // ── 8. Log event ─────────────────────────────────────────────────────────
-    await supabaseAdmin.from("event_log").insert({
-      agency_id: agencyId,
-      event_type: "contrat.created",
-      entity_type: "contrats",
-      entity_id: contrat.id,
-      payload: {
-        loyer: input.loyer_mensuel,
-        commission: input.commission,
-        statut: input.statut,
-        created_by: user.id,
-      },
-      created_by: user.id,
-    }).catch(() => {});
-
     return json({ data: contrat }, 201);
   } catch (_err) {
     return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");

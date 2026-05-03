@@ -1,0 +1,142 @@
+🧾 1. LA COMMISSION (agence)
+🔹 Définition
+
+La commission est l’argent que l’agence immobilière gagne pour :
+
+trouver un locataire
+gérer le bien
+encaisser les loyers
+
+👉 C’est ta source de revenu principale dans ton SaaS.
+
+🔹 Types de commission
+1. Commission sur loyer (la plus courante)
+Exemple : 10% du loyer mensuel
+
+👉 Si loyer = 100 000 FCFA
+➡️ Commission = 10 000 FCFA
+➡️ Bailleur reçoit = 90 000 FCFA
+
+2. Commission fixe
+Exemple : 15 000 FCFA / mois
+3. Commission à l’entrée (one-shot)
+Exemple : 1 mois de loyer payé à l’agence lors de la signature
+🔹 Dans ton app (très important)
+
+Tu dois gérer :
+
+commission (pourcentage ou montant)
+part_agence
+part_bailleur
+
+👉 Calcul automatique côté serveur (tu l’as bien fait avec Edge Functions)
+
+🔹 Cas critiques à gérer
+❌ Commission = 0
+
+➡️ Interdit (tu l’as corrigé 👍)
+
+❌ Commission NULL
+
+➡️ Mauvais → veut dire “pas configuré”
+
+✅ Bon modèle
+NULL = erreur / non défini
+
+0 = valide
+
+🔹 Formule (cas standard)
+
+👉 Tu peux visualiser ça clairement :
+
+Commission=Loyer×
+100
+taux
+	​
+
+
+Puis :
+
+Part agence = Commission
+Part bailleur = Loyer − Commission
+💰 2. LA CAUTION (garantie locative)
+🔹 Définition
+
+La caution est une somme que le locataire paie au début pour couvrir :
+
+dégâts
+loyers impayés
+
+👉 Ce n’est PAS un revenu de l’agence.
+
+🔹 Exemple simple
+Loyer = 100 000 FCFA
+Caution = 2 mois → 200 000 FCFA
+
+👉 Le locataire paie :
+➡️ 300 000 FCFA (loyer + caution)
+
+🔹 Fonctionnement
+Pendant le contrat
+L’argent est “bloqué”
+Il n’est pas utilisé sauf problème
+Fin du contrat
+Cas 1 — tout est OK
+
+➡️ Caution remboursée au locataire
+
+Cas 2 — problème
+
+➡️ Une partie ou tout est retenu
+
+🔹 Dans ton app (très important)
+
+Tu dois séparer totalement :
+
+Élément	Nature
+Loyer	Revenu mensuel
+Commission	Revenu agence
+Caution	Dépôt temporaire
+
+👉 Ne mélange jamais caution et paiement mensuel
+
+🔹 Modélisation recommandée
+
+Dans ta DB :
+
+Table contrats
+caution_montant
+caution_statut (déposée, partielle, remboursée)
+Table paiements
+
+👉 NE PAS inclure la caution comme paiement normal
+
+➡️ Ou alors :
+
+type = "loyer"
+type = "caution"
+⚠️ ERREURS CLASSIQUES (à éviter absolument)
+
+❌ Mélanger caution et loyer
+❌ Appliquer commission sur la caution
+❌ Ne pas suivre le remboursement
+❌ Ne pas tracer les retenues
+
+💡 Vision produit (très important)
+
+👉 Ce que les agences veulent vraiment :
+
+voir combien elles gagnent → commission
+sécuriser leurs loyers → caution
+éviter les conflits → traçabilité
+🚀 Ce que tu peux ajouter (feature premium)
+
+👉 Très fort pour ton SaaS :
+
+suivi automatique des cautions
+rappel remboursement
+calcul des retenues
+reçu de caution PDF
+🧠 Résumé simple
+Commission = argent que TU gagnes
+Caution = argent que TU gardes temporairement

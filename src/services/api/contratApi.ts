@@ -20,6 +20,10 @@ export interface UpdateContratInput {
   caution?: number | null;
 }
 
+export interface DeleteContratInput {
+  id: string;
+}
+
 export interface ContratApiResult {
   id: string;
   locataire_id: string;
@@ -145,4 +149,24 @@ export async function createContratViaEdge(input: CreateContratInput): Promise<C
 
 export async function updateContratViaEdge(input: UpdateContratInput): Promise<ContratApiResult> {
   return invokeContratFunction<ContratApiResult>('update-contrat', input);
+}
+
+export async function deleteContrat(input: DeleteContratInput): Promise<void> {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    throw new ContratApiError('Session invalide. Veuillez vous reconnecter.', 'AUTH_SESSION_ERROR');
+  }
+
+  if (!sessionData.session) {
+    throw new ContratApiError('Vous devez être connecté pour supprimer un contrat.', 'NO_SESSION');
+  }
+
+  const { error } = await supabase
+    .from('contrats')
+    .delete()
+    .eq('id', input.id);
+
+  if (error) {
+    throw new ContratApiError(error.message ?? 'Suppression du contrat impossible.', 'DELETE_ERROR');
+  }
 }

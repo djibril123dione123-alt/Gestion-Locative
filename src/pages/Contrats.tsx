@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { createContratViaEdge, updateContratViaEdge, ContratApiError } from '../services/api/contratApi';
+import { createContratViaEdge, updateContratViaEdge, deleteContrat, ContratApiError } from '../services/api/contratApi';
 import { emitEvent } from '../lib/eventBus';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
@@ -123,6 +123,7 @@ export function Contrats() {
   const [submitting, setSubmitting] = useState(false);
   const submitLockRef = useRef(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const toast = useToast();
   const { track } = useTracking();
   const { exportContrats, exporting: exportingXlsx } = useExport();
@@ -459,6 +460,38 @@ export function Contrats() {
     }
   }, [profile?.agency_id, toast]);
 
+  const handleDelete = useCallback(
+    async (contrat: Contrat) => {
+      if (!profile?.agency_id) return;
+      if (deletingId) return;
+
+      const confirmed = window.confirm('Supprimer ce contrat ? Cette action est définitive.');
+      if (!confirmed) return;
+
+      setDeletingId(contrat.id);
+      try {
+        await deleteContrat({ id: contrat.id });
+        emitEvent({
+          type: 'contrat.deleted',
+          agency_id: profile.agency_id,
+          entity_type: 'contrats',
+          entity_id: contrat.id,
+        });
+        toast.success('Contrat supprimé');
+        await loadData();
+      } catch (err: unknown) {
+        const msg = err instanceof ContratApiError
+          ? err.message
+          : err instanceof Error ? err.message : 'Erreur lors de la suppression du contrat';
+        setError(msg);
+        toast.error(msg);
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [deletingId, loadData, profile?.agency_id, toast]
+  );
+
   // =========================
   // 🚪 FERMETURE DES MODALS
   // =========================
@@ -712,7 +745,12 @@ export function Contrats() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <Table columns={columns} data={filteredContrats} onEdit={handleEdit} />
+            <Table
+              columns={columns}
+              data={filteredContrats}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           </div>
         )}
       </div>

@@ -41,7 +41,7 @@ const CreatePaiementSchema = z.object({
   contrat_id: z
     .string()
     .uuid({ message: "contrat_id doit être un UUID valide" }),
-  montant_total: z
+  montant_total: z.coerce
     .number({ invalid_type_error: "montant_total doit être un nombre" })
     .positive({ message: "montant_total doit être strictement positif" }),
   mois_concerne: z
@@ -78,6 +78,14 @@ function json(body: unknown, status = 200) {
 
 function err(message: string, status = 400, code?: string) {
   return json({ error: message, ...(code ? { code } : {}) }, status);
+}
+
+async function readBody(req: Request): Promise<unknown> {
+  try {
+    return await req.json();
+  } catch {
+    return null;
+  }
 }
 
 // Commission calculation — identique à commissionService.ts frontend
@@ -158,10 +166,8 @@ serve(async (req: Request) => {
     }
 
     // ── 3. Validation Zod ────────────────────────────────────────────────────
-    let rawBody: unknown;
-    try {
-      rawBody = await req.json();
-    } catch {
+    const rawBody = await readBody(req);
+    if (!rawBody) {
       return err(
         "Corps de la requête invalide — JSON attendu.",
         400,

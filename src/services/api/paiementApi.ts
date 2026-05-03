@@ -74,21 +74,24 @@ async function invokePaiementFn<T>(fnName: string, body: unknown): Promise<T> {
     data?: T;
     error?: string;
     code?: string;
-  }>(fnName, { body });
+    details?: unknown;
+  }>(fnName, { body: body as Record<string, unknown> });
 
   if (error) {
+    const payload = data as { error?: string; code?: string; details?: unknown } | undefined;
     throw new PaiementApiError(
-      error.message ?? `Erreur Edge Function ${fnName}.`,
-      'EDGE_FUNCTION_ERROR',
+      payload?.error ?? error.message ?? `Erreur Edge Function ${fnName}.`,
+      payload?.code ?? 'EDGE_FUNCTION_ERROR',
     );
   }
   if (!data) {
     throw new PaiementApiError("Réponse vide de l'Edge Function.", 'EMPTY_RESPONSE');
   }
   if ((data as { error?: string }).error) {
+    const payload = data as { error: string; code?: string; details?: unknown };
     throw new PaiementApiError(
-      (data as { error: string; code?: string }).error,
-      (data as { code?: string }).code ?? 'API_ERROR',
+      payload.error,
+      payload.code ?? 'API_ERROR',
     );
   }
   const result = (data as { data?: T }).data;

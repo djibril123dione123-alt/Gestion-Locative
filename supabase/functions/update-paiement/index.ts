@@ -35,7 +35,7 @@ const StatutsPaiement = ["paye", "partiel", "impaye", "annule"] as const;
 
 const UpdatePaiementSchema = z.object({
   id: z.string().uuid({ message: "id doit être un UUID valide" }),
-  montant_total: z
+  montant_total: z.coerce
     .number({ invalid_type_error: "montant_total doit être un nombre" })
     .positive({ message: "montant_total doit être positif" })
     .optional(),
@@ -56,6 +56,13 @@ function json(body: unknown, status = 200) {
 }
 function err(message: string, status = 400, code?: string) {
   return json({ error: message, ...(code ? { code } : {}) }, status);
+}
+async function readBody(req: Request): Promise<unknown> {
+  try {
+    return await req.json();
+  } catch {
+    return null;
+  }
 }
 function calculateParts(montant: number, commission: number) {
   const partAgence = Math.round((montant * commission) / 100);
@@ -110,10 +117,8 @@ serve(async (req: Request) => {
     if (!agencyId) return err("Aucune agence associée.", 403, "NO_AGENCY");
 
     // ── 3. Validation Zod ────────────────────────────────────────────────────
-    let rawBody: unknown;
-    try { rawBody = await req.json(); } catch {
-      return err("Corps invalide — JSON attendu.", 400, "INVALID_JSON");
-    }
+    const rawBody = await readBody(req);
+    if (!rawBody) return err("Corps invalide — JSON attendu.", 400, "INVALID_JSON");
 
     const parsed = UpdatePaiementSchema.safeParse(rawBody);
     if (!parsed.success) {

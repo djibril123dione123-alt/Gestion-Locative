@@ -53,6 +53,12 @@ function isEdgeFunctionUnavailable(error: { message?: string; status?: number } 
   const message = error?.message ?? '';
   return error?.status === 404 || message.includes('Edge Function');
 }
+function normalizeEdgeError(payload: { error?: string; code?: string; details?: unknown } | undefined, fallback: string) {
+  return {
+    message: payload?.error ?? fallback,
+    code: payload?.code ?? 'EDGE_FUNCTION_ERROR',
+  };
+}
 
 async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<T> {
   const { data, error } = await supabase.functions.invoke<{
@@ -64,9 +70,10 @@ async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<
 
   if (error) {
     const payload = data as { error?: string; code?: string; details?: unknown } | undefined;
+    const normalized = normalizeEdgeError(payload, error.message ?? `Erreur Edge Function ${fnName}.`);
     throw new ContratApiError(
-      payload?.error ?? error.message ?? `Erreur Edge Function ${fnName}.`,
-      payload?.code ?? (error.status === 409 ? 'EDGE_FUNCTION_CONFLICT' : 'EDGE_FUNCTION_ERROR'),
+      normalized.message,
+      error.status === 409 ? 'EDGE_FUNCTION_CONFLICT' : normalized.code,
     );
   }
 

@@ -35,6 +35,13 @@ function json(body: unknown, status = 200) {
 function err(message: string, status = 400, code?: string) {
   return json({ error: message, ...(code ? { code } : {}) }, status);
 }
+async function readBody(req: Request): Promise<unknown> {
+  try {
+    return await req.json();
+  } catch {
+    return null;
+  }
+}
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -78,10 +85,8 @@ serve(async (req: Request) => {
     if (!agencyId) return err("Aucune agence associée.", 403, "NO_AGENCY");
 
     // ── 3. Validation Zod ────────────────────────────────────────────────────
-    let rawBody: unknown;
-    try { rawBody = await req.json(); } catch {
-      return err("JSON invalide.", 400, "INVALID_JSON");
-    }
+    const rawBody = await readBody(req);
+    if (!rawBody) return err("JSON invalide.", 400, "INVALID_JSON");
 
     const parsed = CancelPaiementSchema.safeParse(rawBody);
     if (!parsed.success) {

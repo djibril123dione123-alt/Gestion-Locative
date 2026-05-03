@@ -189,29 +189,19 @@ serve(async (req: Request) => {
       return err(insertErr.message, 422, insertErr.code ?? "DB_CONTRAT_ERROR");
     }
 
-    // ── 6. UPDATE unité → 'loue' ─────────────────────────────────────────────
+    // ── 6. UPDATE unité → 'loue' (non-fatal : le contrat est déjà créé) ───────
     const { error: uniteUpdateErr } = await supabaseAdmin
       .from("unites")
       .update({ statut: "loue" })
       .eq("id", input.unite_id)
       .eq("agency_id", agencyId);
 
+    // On ne fait plus de rollback : si la mise à jour de l'unité échoue, le
+    // contrat reste valide. Le statut de l'unité sera corrigé par le prochain
+    // rechargement ou une tâche de maintenance.
+    const warnings: string[] = [];
     if (uniteUpdateErr) {
-      // Rollback manuel : suppression du contrat créé
-      const { error: rollbackErr } = await supabaseAdmin.from("contrats").delete().eq("id", contrat.id);
-      if (rollbackErr) {
-        return err(
-          "Échec critique : le contrat a été créé mais le rollback a échoué.",
-          500,
-          "ROLLBACK_FAILED",
-          rollbackErr.message,
-        );
-      }
-      return err(
-        "Échec de la mise à jour du statut de l'unité. Contrat annulé.",
-        500,
-        "UNITE_UPDATE_FAILED",
-      );
+      warnings.push(`unite_statut_non_mis_a_jour: ${uniteUpdateErr.message}`);
     }
 
     // ── 7. Pilot tracking : first_contract_at ────────────────────────────────
@@ -222,9 +212,9 @@ serve(async (req: Request) => {
       .is("first_contract_at", null)
       .catch(() => {});
 
-    return json({ data: contrat }, 201);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Erreur serveur inattendue.";
-    return err(message, 500, "INTERNAL_ERROR");
+    return json({ data: contrat, ...(warnings.length ? { warnings } : {}) }, 201);
+  } catch (caughtErr) {
+    const message = caughtErr instanceof Error ? caughtErr.message : "Erreur serveur inattendue.";
+    return json({ error: message, code: "INTERNAL_ERROR" }, 500);
   }
 });

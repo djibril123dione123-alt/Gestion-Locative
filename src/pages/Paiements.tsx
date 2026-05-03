@@ -104,13 +104,12 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       const [paiementsRes, contratsRes] = await Promise.all([
         supabase
           .from('paiements')
-          .select('*, contrats(loyer_mensuel, commission, pourcentage_agence, locataires(nom, prenom), unites(nom,id))')
+          .select('*, contrats(loyer_mensuel, commission, locataires(nom, prenom), unites(nom,id))')
           .eq('agency_id', profile.agency_id)
-          .eq('actif', true)
           .order('created_at', { ascending: false }),
         supabase
           .from('contrats')
-          .select('id, loyer_mensuel, commission, pourcentage_agence, locataires(nom, prenom), unites(nom, id)')
+          .select('id, loyer_mensuel, commission, locataires(nom, prenom), unites(nom, id)')
           .eq('agency_id', profile.agency_id)
           .eq('statut', 'actif'),
       ]);

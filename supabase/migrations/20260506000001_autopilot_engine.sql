@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS cache_store (
 );
 
 CREATE OR REPLACE FUNCTION fn_cache_set_expires()
-RETURNS trigger LANGUAGE plpgsql AS $do$
+RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $do$
 BEGIN
   NEW.expires_at := NEW.created_at + (NEW.ttl_seconds * interval '1 second');
   RETURN NEW;

@@ -90,7 +90,7 @@ $do$;
 
 -- Trigger AFTER INSERT — classification pure, aucune exécution ni auto-correction
 CREATE OR REPLACE FUNCTION fn_trigger_evaluate_job()
-RETURNS TRIGGER LANGUAGE plpgsql AS $do$
+RETURNS TRIGGER LANGUAGE plpgsql SET search_path = public AS $do$
 BEGIN
   PERFORM fn_evaluate_job(NEW.id);
   RETURN NEW;

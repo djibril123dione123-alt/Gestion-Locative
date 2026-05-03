@@ -1,0 +1,74 @@
+-- =============================================================================
+-- 1. VUES — correction : security_invoker = on
+-- =============================================================================
+
+DROP VIEW IF EXISTS public.vw_financial_drift_report;
+
+CREATE VIEW public.vw_financial_drift_report
+WITH (security_invoker = on)
+AS
+SELECT
+  fs.agency_id,
+  a.name         AS agency_nom,
+  fs.period,
+  fs.total_paiements,
+  fs.total_ledger_credits,
+  fs.diff        AS ecart,
+  fs.status,
+  fs.drift_details,
+  fs.computed_at
+FROM public.financial_snapshots fs
+JOIN public.agencies a ON a.id = fs.agency_id
+WHERE fs.status = 'drift'
+ORDER BY ABS(fs.diff) DESC, fs.period DESC;
+
+COMMENT ON VIEW public.vw_financial_drift_report IS
+  'Rapports drift comptable — toutes les agences avec écart paiements ↔ ledger (SECURITY INVOKER)';
+
+-- ──
+
+DROP VIEW IF EXISTS public.vw_system_anomalies;
+
+CREATE VIEW public.vw_system_anomalies
+WITH (security_invoker = on)
+AS
+  -- Paiements sans contrat valide
+  SELECT
+    p.agency_id,
+    'paiement_sans_contrat'::text                                                AS anomaly_type,
+    p.id                                                                         AS entity_id,
+    jsonb_build_object('paiement_id', p.id, 'montant', p.montant_total, 'date', p.date_paiement) AS details
+  FROM public.paiements p
+  LEFT JOIN public.contrats c ON c.id = p.contrat_id AND c.agency_id = p.agency_id
+  WHERE c.id IS NULL AND p.statut != 'annule'
+
+  UNION ALL
+
+  -- Unités 'loue' sans contrat actif
+  SELECT
+    u.agency_id,
+    'unite_loue_sans_contrat_actif'::text,
+    u.id,
+    jsonb_build_object('unite_id', u.id, 'nom', u.nom)
+  FROM public.unites u
+  WHERE u.statut = 'loue'
+    AND NOT EXISTS (
+      SELECT 1 FROM public.contrats c WHERE c.unite_id = u.id AND c.statut = 'actif'
+    )
+
+  UNION ALL
+
+  -- Agences avec pilot_status=trial depuis > 30 jours et aucun paiement
+  SELECT
+    a.id,
+    'pilot_inactif'::text,
+    a.id,
+    jsonb_build_object('agency_id', a.id, 'nom', a.name, 'since_days',
+      EXTRACT(DAY FROM now() - a.created_at)::int)
+  FROM public.agencies a
+  WHERE a.pilot_status = 'trial'
+    AND a.created_at < now() - interval '30 days'
+    AND a.first_payment_at IS NULL;
+
+COMMENT ON VIEW public.vw_system_anomalies IS
+  'Anomalies système : paiements orphelins, unités incohérentes, pilotes inactifs (SECURITY INVOKER)';

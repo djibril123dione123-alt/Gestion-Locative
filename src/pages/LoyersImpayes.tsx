@@ -198,6 +198,9 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         payload: { source: 'loyers_impayes', montant: selectedLoyer.montant_du, mois: selectedLoyer.mois_concerne },
       });
 
+      // Notify sibling components (e.g. Paiements tab) to refresh their data
+      window.dispatchEvent(new CustomEvent('paiement:refresh'));
+
       toast.success('Paiement enregistré avec succès');
       setShowModal(false);
       setSelectedLoyer(null);

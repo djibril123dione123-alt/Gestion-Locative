@@ -33,9 +33,12 @@ const ModesPaiement = [
   "cheque",
   "mobile_money",
   "carte",
+  "autre",
 ] as const;
 
-const StatutsPaiement = ["paye", "en_attente", "partiel"] as const;
+// Statuts acceptés à la création — doit correspondre à l'ENUM DB paiement_statut
+// ('paye', 'partiel', 'impaye', 'annule', 'en_attente')
+const StatutsPaiement = ["paye", "en_attente", "partiel", "impaye"] as const;
 
 const CreatePaiementSchema = z.object({
   contrat_id: z

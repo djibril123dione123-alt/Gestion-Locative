@@ -1,0 +1,64 @@
+I need a full technical audit and bug fixing plan for my real estate SaaS application (Supabase + Edge Functions + React).
+
+🔴 Critical issues to investigate and fix:
+
+1. Payment history not displaying
+
+Saved payments are not showing in the dedicated “payment history” page.
+Verify data fetching, Supabase queries, and state updates.
+Check if the issue is related to RLS policies, joins, or incorrect filters.
+
+2. Disconnection between “paid rent” and “unpaid rent” flows
+
+When clicking “Pay this rent” from the unpaid rents page:
+The payment is not reflected in:
+the paid rent list
+the payment history
+Counters and dashboard stats are not updating
+Investigate:
+event flow (UI → Edge Function → DB → UI refresh)
+missing triggers or cache invalidation
+possible inconsistencies in statut fields
+
+3. Missing column visibility feature in tables
+
+Add a feature to allow users to:
+show/hide columns dynamically
+persist preferences (local storage or DB)
+Tables concerned: payments, contracts, tenants, dashboard tables
+
+4. PayDunya payment not working
+
+Investigate full flow:
+initiate-payment Edge Function
+PayDunya API request
+webhook (IPN) reception
+subscription activation
+Verify:
+API keys (test vs live)
+webhook URL configuration
+server logs and errors
+transaction status handling
+🧠 Global audit required
+
+Perform a full audit of the application:
+
+Financial integrity (no duplicated payments, correct commission split)
+Database constraints (UNIQUE, CHECK, foreign keys)
+Offline sync reliability
+Edge Functions robustness (error handling, retries)
+UI/UX inconsistencies
+Performance issues (multiple queries vs RPC)
+📦 Expected output
+
+Provide:
+
+A list of all detected issues (with severity: critical / high / medium)
+Root cause analysis for each issue
+Concrete fixes (code-level suggestions if possible)
+Recommended architecture improvements
+A prioritized action plan (what to fix first before production)
+⚠️ Context
+
+This is a production-oriented SaaS handling real financial transactions (rent, commission, subscriptions).
+Reliability and consistency are critical.

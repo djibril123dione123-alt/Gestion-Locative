@@ -146,6 +146,7 @@ export function PaiementFormModal({
               className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400"
             >
               <option value="paye">Payé</option>
+              <option value="partiel">Partiel</option>
               <option value="en_attente">En attente</option>
               <option value="impaye">Impayé</option>
             </select>

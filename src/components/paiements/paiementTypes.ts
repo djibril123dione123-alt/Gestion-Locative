@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle, MinusCircle, AlertTriangle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface PaiementContrats {
@@ -18,6 +18,8 @@ export interface PaiementRow {
   mode_paiement: string;
   statut: string;
   reference: string | null;
+  actif?: boolean;
+  deleted_at?: string | null;
   contrats?: PaiementContrats | null;
 }
 
@@ -30,10 +32,10 @@ export interface ContratRow {
   unites?: { nom: string; id?: string } | null;
 }
 
-export type StatusFilter = 'tous' | 'paye' | 'en_attente' | 'impaye';
+export type StatusFilter = 'tous' | 'paye' | 'en_attente' | 'impaye' | 'partiel';
 
 export type FormModePayment = 'especes' | 'cheque' | 'virement' | 'mobile_money';
-export type FormPaiementStatut = 'paye' | 'en_attente' | 'impaye';
+export type FormPaiementStatut = 'paye' | 'en_attente' | 'impaye' | 'partiel';
 
 export interface StatusLabel {
   label: string;
@@ -57,6 +59,22 @@ export const STATUS_LABELS: Record<string, StatusLabel> = {
     classes: 'bg-red-100 text-red-700 border-red-200',
     icon: XCircle,
   },
+  partiel: {
+    label: 'Partiel',
+    classes: 'bg-orange-100 text-orange-700 border-orange-200',
+    icon: AlertTriangle,
+  },
+  annule: {
+    label: 'Annulé',
+    classes: 'bg-slate-100 text-slate-500 border-slate-200',
+    icon: MinusCircle,
+  },
+};
+
+export const STATUS_LABEL_FALLBACK: StatusLabel = {
+  label: 'Inconnu',
+  classes: 'bg-slate-100 text-slate-500 border-slate-200',
+  icon: MinusCircle,
 };
 
 export const MODE_LABELS: Record<string, string> = {
@@ -64,6 +82,7 @@ export const MODE_LABELS: Record<string, string> = {
   cheque: 'Chèque',
   virement: 'Virement',
   mobile_money: 'Mobile Money',
+  autre: 'Autre',
 };
 
 export interface PaiementFormData {

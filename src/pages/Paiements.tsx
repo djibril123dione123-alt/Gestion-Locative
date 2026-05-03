@@ -7,6 +7,8 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Button } from '../components/ui/Button';
 import { SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import {
   Plus,
   Search,
@@ -42,6 +44,7 @@ import { KpiCard } from '../components/paiements/KpiCard';
 import { PaiementFormModal } from '../components/paiements/PaiementFormModal';
 import {
   STATUS_LABELS,
+  STATUS_LABEL_FALLBACK,
   MODE_LABELS,
   type PaiementRow,
   type ContratRow,
@@ -103,6 +106,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           .from('paiements')
           .select('*, contrats(loyer_mensuel, commission, pourcentage_agence, locataires(nom, prenom), unites(nom,id))')
           .eq('agency_id', profile.agency_id)
+          .eq('actif', true)
           .order('created_at', { ascending: false }),
         supabase
           .from('contrats')
@@ -124,6 +128,14 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
 
   useEffect(() => {
     if (profile?.agency_id) loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.agency_id]);
+
+  // Listen for cross-component payment creation events (e.g. from LoyersImpayes)
+  useEffect(() => {
+    const handler = () => { loadData(); };
+    window.addEventListener('paiement:refresh', handler);
+    return () => window.removeEventListener('paiement:refresh', handler);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.agency_id]);
 
@@ -189,11 +201,12 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   }, [paiements, contrats]);
 
   const counts = useMemo(() => {
-    const c: Record<StatusFilter, number> = { tous: paiements.length, paye: 0, en_attente: 0, impaye: 0 };
+    const c: Record<StatusFilter, number> = { tous: paiements.length, paye: 0, en_attente: 0, impaye: 0, partiel: 0 };
     paiements.forEach((p) => {
       if (p.statut === 'paye') c.paye++;
       else if (p.statut === 'en_attente') c.en_attente++;
       else if (p.statut === 'impaye') c.impaye++;
+      else if (p.statut === 'partiel') c.partiel++;
     });
     return c;
   }, [paiements]);
@@ -416,7 +429,10 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     }
   };
 
-  const columns = [
+  const ALL_COLUMN_KEYS = ['locataire', 'unite', 'mois_concerne', 'montant_total', 'date_paiement', 'mode', 'statut', 'actions'];
+  const { visibility, toggle, setAll, isVisible } = useColumnVisibility('paiements', ALL_COLUMN_KEYS, { actions: true });
+
+  const allColumns = [
     {
       key: 'locataire',
       label: 'Locataire',
@@ -461,7 +477,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       key: 'statut',
       label: 'Statut',
       render: (p: PaiementRow) => {
-        const s = STATUS_LABELS[p.statut] ?? STATUS_LABELS.en_attente;
+        const s = STATUS_LABELS[p.statut] ?? STATUS_LABEL_FALLBACK;
         const Icon = s.icon;
         return (
           <span
@@ -511,9 +527,12 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     },
   ];
 
+  const columns = allColumns.filter((c) => isVisible(c.key));
+
   const statusFilters: { id: StatusFilter; label: string; count: number }[] = [
     { id: 'tous',        label: 'Tous',       count: counts.tous        },
     { id: 'paye',        label: 'Payés',      count: counts.paye        },
+    { id: 'partiel',     label: 'Partiel',    count: counts.partiel     },
     { id: 'en_attente',  label: 'En attente', count: counts.en_attente  },
     { id: 'impaye',      label: 'Impayés',    count: counts.impaye      },
   ];
@@ -625,7 +644,13 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                 className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition"
               />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <ColumnPicker
+                columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
+                visibility={visibility}
+                onToggle={toggle}
+                onSetAll={setAll}
+              />
               {statusFilters.map((f) => {
                 const isActive = statusFilter === f.id;
                 return (

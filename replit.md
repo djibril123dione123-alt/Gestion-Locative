@@ -34,6 +34,34 @@
 
 ---
 
+## Bug Fixes — Audit critique (mai 2026)
+
+### Bugs corrigés
+
+| # | Bug | Fichier(s) | Statut |
+|---|-----|-----------|--------|
+| 1 | `en_attente` absent de l'ENUM `paiement_statut` → crash DB à l'INSERT | `supabase/migrations/20260503120000_add_en_attente_statut.sql` | ✅ |
+| 2 | `impaye` rejeté par Edge Function `create-paiement` (pas dans `StatutsPaiement`) | `supabase/functions/create-paiement/index.ts` | ✅ |
+| 3 | Statuts `annule` et `partiel` absents de `STATUS_LABELS` → affichage "En attente" incorrect | `src/components/paiements/paiementTypes.ts` | ✅ |
+| 4 | Pas de rafraîchissement croisé entre LoyersImpayes et Paiements après encaissement | `LoyersImpayes.tsx` (dispatch) + `Paiements.tsx` (listener) | ✅ |
+| 5 | Paiements soft-deletés non filtrés (`actif=false`) apparaissaient dans la liste | `src/pages/Paiements.tsx` — ajout `.eq('actif', true)` | ✅ |
+| 6 | Compteur `partiel` absent du `counts` et filtre `partiel` manquant dans les onglets | `src/pages/Paiements.tsx` | ✅ |
+| 7 | Fallback STATUS_LABELS usait `STATUS_LABELS.en_attente` au lieu d'un label "Inconnu" neutre | `paiementTypes.ts` + `Paiements.tsx` | ✅ |
+
+### Nouvelle fonctionnalité : visibilité des colonnes
+
+- `src/hooks/useColumnVisibility.ts` — hook persistant via localStorage
+- `src/components/ui/ColumnPicker.tsx` — dropdown "Colonnes" avec cases à cocher
+- Intégré dans `Paiements.tsx` — bouton Colonnes dans la barre de filtres
+- Option "Tout" / "Aucun" + case individuelle par colonne, colonne Actions verrouillée
+
+### Mode de rafraîchissement croisé (cross-tab)
+
+`LoyersImpayes.tsx` dispatche `window.dispatchEvent(new CustomEvent('paiement:refresh'))` après chaque encaissement réussi.  
+`Paiements.tsx` écoute cet événement via `window.addEventListener('paiement:refresh', loadData)` pour se rafraîchir automatiquement.
+
+---
+
 ## Phase 1 — Fondations Solides (mai 2026)
 
 ### Semaine 1 — Intégrité financière

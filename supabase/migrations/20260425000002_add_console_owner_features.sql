@@ -31,7 +31,7 @@ CREATE POLICY "Super admin manages saas_config"
 
 -- Valeurs par défaut
 INSERT INTO saas_config (key, value, description) VALUES
-  ('contact', '{"email":"contact@samaykeur.sn","whatsapp":"221774000000"}'::jsonb, 'Coordonnées de contact affichées dans l''app'),
+  ('contact', '{"email":"samaykeur@gmail.com","whatsapp":"221769010960"}'::jsonb, 'Coordonnées de contact affichées dans l''app'),
   ('trial_days', '30'::jsonb, 'Durée par défaut de l''essai gratuit (jours)'),
   ('maintenance_mode', 'false'::jsonb, 'Active une bannière de maintenance globale')
 ON CONFLICT (key) DO NOTHING;

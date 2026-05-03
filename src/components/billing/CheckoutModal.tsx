@@ -34,7 +34,8 @@ type Step = 'select_provider' | 'enter_phone' | 'processing' | 'polling' | 'card
 const POLL_INTERVAL_MS = 5000;
 const POLL_MAX_ATTEMPTS = 36; // 3 minutes
 
-const CONTACT_WHATSAPP = '221774000000';
+const CONTACT_WHATSAPP = '221769010960';
+const CONTACT_EMAIL    = 'samaykeur@gmail.com';
 
 const PROVIDERS: { id: Provider; label: string; sub: string; logo?: string; emoji: string; color: string; bg: string }[] = [
   { id: 'orange_money', label: 'Orange Money',    sub: 'Sénégal',                  logo: '/logo-orange-money.png', emoji: '🟠', color: '#FF6600', bg: '#FFF4EE' },
@@ -453,8 +454,15 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
                   className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white font-bold transition hover:opacity-90"
                   style={{ backgroundColor: '#25D366' }}
                 >
-                  <Smartphone className="w-5 h-5" />
-                  Activer via WhatsApp
+                  <img src="/logo-whatsapp.jpg" alt="WhatsApp" className="w-5 h-5 rounded object-cover" />
+                  Activer via WhatsApp · +221 76 901 09 60
+                </a>
+                <a
+                  href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Activation plan ${planName} - Samay Këur`)}&body=${encodeURIComponent(`Bonjour, je veux activer le plan ${planName} sur Samay Këur (${formatCurrency(priceXof)}/mois).`)}`}
+                  className="flex items-center justify-center gap-2 w-full py-3 rounded-xl border-2 border-slate-200 text-slate-700 font-bold text-sm transition hover:bg-slate-50"
+                >
+                  <img src="/logo-gmail.png" alt="Gmail" className="w-5 h-5 rounded object-cover" />
+                  Envoyer un email · {CONTACT_EMAIL}
                 </a>
                 <button
                   onClick={() => { setStep('select_provider'); setErrorMsg(''); setIsEdgeFunctionDown(false); }}

@@ -163,7 +163,8 @@ const FAQS = [
   { q: 'La facturation est-elle disponible pour Côte d\'Ivoire / Mali ?', r: 'Oui. Wave fonctionne en Côte d\'Ivoire et au Sénégal. Orange Money couvre le Sénégal. Nous ajoutons de nouveaux pays progressivement.' },
 ];
 
-const CONTACT_WHATSAPP = '221774000000';
+const CONTACT_WHATSAPP = '221769010960';
+const CONTACT_EMAIL    = 'samaykeur@gmail.com';
 
 interface PricingProps {
   embedded?: boolean;

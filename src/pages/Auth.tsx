@@ -60,7 +60,7 @@ export function Auth() {
               <img
                 src="/logo-full.png"
                 alt="Samay Këur — Plateforme de gestion immobilière"
-                className="h-30 w-28 object-contain mx-auto mb-0"
+                className="w-80 h-auto object-contain mx-auto mb-2"
               />
               <p className="text-slate-600">
                 Votre gestion locative, simplifiée et automatisée

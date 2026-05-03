@@ -186,7 +186,9 @@ export function Contrats() {
       if (locatairesRes.error) throw locatairesRes.error;
       if (unitesRes.error) throw unitesRes.error;
 
-      const contratsData = (contratsRes.data || []) as unknown as Contrat[];
+      const contratsData = Array.from(
+        new Map(((contratsRes.data || []) as unknown as Contrat[]).map((contrat) => [contrat.id, contrat])).values()
+      );
       setContrats(contratsData);
       setLocataires((locatairesRes.data || []) as unknown as Locataire[]);
       setUnites((unitesRes.data || []) as unknown as Unite[]);

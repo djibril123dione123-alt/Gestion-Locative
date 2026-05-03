@@ -46,8 +46,8 @@ interface Usage {
   unites: number;
 }
 
-const CONTACT_WHATSAPP = '221774000000';
-const CONTACT_EMAIL    = 'contact@samaykeur.sn';
+const CONTACT_WHATSAPP = '221769010960';
+const CONTACT_EMAIL    = 'samaykeur@gmail.com';
 
 // Plans canoniques — source de vérité pour l'UI
 const PLAN_CATALOG = [

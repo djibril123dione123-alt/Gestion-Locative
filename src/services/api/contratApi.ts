@@ -62,17 +62,11 @@ async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<
   }>(fnName, { body: body as Record<string, unknown> });
 
   if (error) {
-    if ((error.status === 409 || error.status === 422) && data) {
-      const payload = data as { error?: string; code?: string };
-      throw new ContratApiError(
-        payload.error ?? error.message ?? `Erreur Edge Function ${fnName}.`,
-        payload.code ?? 'EDGE_FUNCTION_CONFLICT',
-      );
-    }
-
-    if (!isEdgeFunctionUnavailable(error)) {
-      throw new ContratApiError(error.message ?? `Erreur Edge Function ${fnName}.`, 'EDGE_FUNCTION_ERROR');
-    }
+    const payload = data as { error?: string; code?: string } | undefined;
+    throw new ContratApiError(
+      payload?.error ?? error.message ?? `Erreur Edge Function ${fnName}.`,
+      payload?.code ?? (error.status === 409 ? 'EDGE_FUNCTION_CONFLICT' : 'EDGE_FUNCTION_ERROR'),
+    );
   }
 
   if (data && (data as { error?: string }).error) {
@@ -88,21 +82,7 @@ async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<
     if (result) return result;
   }
 
-  if (error?.status === 409) {
-    throw new ContratApiError(
-      error.message ?? 'Conflit lors de la création du contrat.',
-      'EDGE_FUNCTION_CONFLICT',
-    );
-  }
-
-  if (error && !isEdgeFunctionUnavailable(error)) {
-    throw new ContratApiError(error.message ?? `Erreur Edge Function ${fnName}.`, 'EDGE_FUNCTION_ERROR');
-  }
-
-  throw new ContratApiError(
-    `La fonction ${fnName} a échoué sans réponse exploitable.`,
-    'EDGE_FUNCTION_EMPTY_RESPONSE',
-  );
+  throw new ContratApiError(`La fonction ${fnName} a échoué.`, 'EDGE_FUNCTION_EMPTY_RESPONSE');
 }
 
 export async function createContratViaEdge(input: CreateContratInput): Promise<ContratApiResult> {

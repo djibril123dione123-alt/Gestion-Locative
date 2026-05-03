@@ -295,18 +295,21 @@ export function Contrats() {
   // 📝 CRÉATION DE CONTRAT
   // =========================
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
+    async (e?: React.FormEvent | React.MouseEvent) => {
+      e?.preventDefault();
+      e?.stopPropagation();
 
       if (!profile?.agency_id) return;
 
       const validationError = validateForm();
       if (validationError) {
+        setError(validationError);
         toast.warning(validationError);
         return;
       }
 
       setSubmitting(true);
+      setError(null);
       try {
         // Création via Edge Function (vérification unité + agency_id + event_log côté serveur)
         await createContratViaEdge({
@@ -869,6 +872,7 @@ export function Contrats() {
               Annuler
             </button>
             <button
+              type="button"
               onClick={handleSubmit}
               disabled={submitting}
               className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
@@ -877,6 +881,9 @@ export function Contrats() {
               {submitting ? 'Création...' : 'Créer le contrat'}
             </button>
           </div>
+          {error && (
+            <p className="text-sm text-red-600 mt-2">{error}</p>
+          )}
         </div>
       </Modal>
 

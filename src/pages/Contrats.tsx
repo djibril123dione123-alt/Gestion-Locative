@@ -187,7 +187,12 @@ export function Contrats() {
       if (unitesRes.error) throw unitesRes.error;
 
       const contratsData = Array.from(
-        new Map(((contratsRes.data || []) as unknown as Contrat[]).map((contrat) => [contrat.id, contrat])).values()
+        new Map(
+          ((contratsRes.data || []) as unknown as Contrat[]).map((contrat) => [
+            `${contrat.id}:${contrat.locataire_id}:${contrat.unite_id}:${contrat.date_debut}`,
+            contrat,
+          ])
+        ).values()
       );
       setContrats(contratsData);
       setLocataires((locatairesRes.data || []) as unknown as Locataire[]);
@@ -344,7 +349,6 @@ export function Contrats() {
         });
 
         closeModal();
-        await loadData();
         toast.success('Contrat créé avec succès');
       } catch (err: unknown) {
         const msg = err instanceof ContratApiError
@@ -389,7 +393,6 @@ export function Contrats() {
         });
 
         closeEditModal();
-        await loadData();
         toast.success('Contrat modifié avec succès');
       } catch (err: unknown) {
         console.error('Erreur modification:', err);

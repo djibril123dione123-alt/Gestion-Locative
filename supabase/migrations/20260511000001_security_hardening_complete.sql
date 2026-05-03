@@ -103,7 +103,7 @@ CREATE POLICY "jobs_insert_service" ON public.job_queue
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Administration / souscription
-REVOKE EXECUTE ON FUNCTION public.activate_subscription(uuid, text, text, date, date, int)         FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.activate_subscription(uuid, text, uuid, integer, text)         FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.approve_agency_request(uuid)                                      FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.reject_agency_request(uuid, text)                                 FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.check_plan_limits(uuid)                                           FROM anon, PUBLIC;
@@ -115,7 +115,7 @@ REVOKE EXECUTE ON FUNCTION public.create_agent_profile(uuid, text, text, uuid)  
 
 -- Triggers internes (ne doivent jamais être appelés via REST)
 REVOKE EXECUTE ON FUNCTION public.create_agency_settings_on_agency_insert()                         FROM anon, PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.create_notification(uuid, uuid, text, text, text, jsonb)          FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.create_notification(uuid, uuid, text, text, text, text)          FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.fn_after_contrat_insert()                                         FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.fn_after_paiement_cancel()                                        FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.fn_after_paiement_insert()                                        FROM anon, PUBLIC;
@@ -194,7 +194,7 @@ GRANT EXECUTE ON FUNCTION public.accept_invitation(text)             TO anon, au
 GRANT EXECUTE ON FUNCTION public.get_invitation_by_token(text)       TO anon, authenticated;
 
 -- Fonctions appelées par le frontend connecté
-GRANT EXECUTE ON FUNCTION public.activate_subscription(uuid, text, text, date, date, int) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.activate_subscription(uuid, text, uuid, integer, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.approve_agency_request(uuid)                              TO authenticated;
 GRANT EXECUTE ON FUNCTION public.reject_agency_request(uuid, text)                        TO authenticated;
 GRANT EXECUTE ON FUNCTION public.check_plan_limits(uuid)                                   TO authenticated;
@@ -209,7 +209,7 @@ GRANT EXECUTE ON FUNCTION public.is_agent_or_admin()       TO authenticated;
 GRANT EXECUTE ON FUNCTION public.is_super_admin()          TO authenticated;
 
 -- Notification loyer — appelée depuis Edge Functions (service_role) uniquement
-GRANT EXECUTE ON FUNCTION public.create_notification(uuid, uuid, text, text, text, jsonb) TO service_role;
+GRANT EXECUTE ON FUNCTION public.create_notification(uuid, uuid, text, text, text, text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.cleanup_expired_invitations()                              TO service_role;
 GRANT EXECUTE ON FUNCTION public.fn_aggregate_kpi_daily(uuid, date)                       TO service_role;
 GRANT EXECUTE ON FUNCTION public.fn_aggregate_kpi_monthly(uuid, text)                     TO service_role;

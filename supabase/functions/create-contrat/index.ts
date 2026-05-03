@@ -36,16 +36,16 @@ const CreateContratSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "date_fin format YYYY-MM-DD" })
     .nullable()
     .optional(),
-  loyer_mensuel: z
+  loyer_mensuel: z.coerce
     .number({ invalid_type_error: "loyer_mensuel doit être un nombre" })
     .positive({ message: "loyer_mensuel doit être strictement positif" }),
-  commission: z
+  commission: z.coerce
     .number()
     .min(0)
     .max(100, { message: "commission entre 0 et 100" })
     .nullable()
     .optional(),
-  caution: z
+  caution: z.coerce
     .number()
     .min(0)
     .nullable()
@@ -63,6 +63,14 @@ function json(body: unknown, status = 200) {
 }
 function err(message: string, status = 400, code?: string, details?: unknown) {
   return json({ error: message, ...(code ? { code } : {}), ...(details ? { details } : {}) }, status);
+}
+
+async function readBody(req: Request): Promise<unknown> {
+  try {
+    return await req.json();
+  } catch {
+    return null;
+  }
 }
 
 serve(async (req: Request) => {
@@ -105,10 +113,8 @@ serve(async (req: Request) => {
     if (!agencyId) return err("Aucune agence associée.", 403, "NO_AGENCY");
 
     // ── 3. Validation Zod ────────────────────────────────────────────────────
-    let rawBody: unknown;
-    try { rawBody = await req.json(); } catch {
-      return err("JSON invalide.", 400, "INVALID_JSON");
-    }
+    const rawBody = await readBody(req);
+    if (!rawBody) return err("JSON invalide.", 400, "INVALID_JSON");
 
     const parsed = CreateContratSchema.safeParse(rawBody);
     if (!parsed.success) {
@@ -219,6 +225,6 @@ serve(async (req: Request) => {
     return json({ data: contrat }, 201);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur serveur inattendue.";
-    return json({ error: message, code: "INTERNAL_ERROR" }, 500);
+    return err(message, 500, "INTERNAL_ERROR");
   }
 });

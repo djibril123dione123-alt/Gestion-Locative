@@ -110,8 +110,8 @@ REVOKE EXECUTE ON FUNCTION public.check_plan_limits(uuid)                       
 REVOKE EXECUTE ON FUNCTION public.cleanup_expired_invitations()                                     FROM anon, PUBLIC;
 
 -- Création de profils (déclenchée par auth hooks, pas par l'API REST)
-REVOKE EXECUTE ON FUNCTION public.create_admin_profile(uuid, text, text)                            FROM anon, PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.create_agent_profile(uuid, text, text, uuid)                     FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.create_admin_profile(uuid, text, text, text, text)              FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.create_agent_profile(uuid, text, text, text, text)               FROM anon, PUBLIC;
 
 -- Triggers internes (ne doivent jamais être appelés via REST)
 REVOKE EXECUTE ON FUNCTION public.create_agency_settings_on_agency_insert()                         FROM anon, PUBLIC;
@@ -180,8 +180,8 @@ REVOKE EXECUTE ON FUNCTION public.queue_loyer_encaisse_notification(uuid, uuid) 
 REVOKE EXECUTE ON FUNCTION public.queue_renewal_reminders()                    FROM authenticated;
 
 -- Création de profils — déclenchée uniquement par auth hooks (service_role)
-REVOKE EXECUTE ON FUNCTION public.create_admin_profile(uuid, text, text)       FROM authenticated;
-REVOKE EXECUTE ON FUNCTION public.create_agent_profile(uuid, text, text, uuid) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.create_admin_profile(uuid, text, text, text, text)       FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.create_agent_profile(uuid, text, text, text, text)       FROM authenticated;
 
 
 -- ─────────────────────────────────────────────────────────────────────────────

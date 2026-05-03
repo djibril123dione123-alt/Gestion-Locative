@@ -106,7 +106,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           .order('created_at', { ascending: false }),
         supabase
           .from('contrats')
-          .select('id, loyer_mensuel, commission, pourcentage_agence, locataires(nom, prenom), unites(nom)')
+          .select('id, loyer_mensuel, commission, pourcentage_agence, locataires(nom, prenom), unites(nom, id)')
           .eq('agency_id', profile.agency_id)
           .eq('statut', 'actif'),
       ]);

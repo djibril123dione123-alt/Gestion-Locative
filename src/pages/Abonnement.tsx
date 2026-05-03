@@ -441,21 +441,17 @@ export function Abonnement() {
           <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, j\'ai une question sur mon abonnement Samay Këur.')}`}
             target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-green-300 hover:bg-green-50 transition group">
-            <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center group-hover:bg-green-200 transition">
-              <Smartphone className="w-5 h-5 text-green-600" />
-            </div>
+            <img src="/logo-whatsapp.jpg" alt="WhatsApp" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
             <div>
-              <p className="font-semibold text-slate-900 text-sm">WhatsApp</p>
-              <p className="text-xs text-slate-400">Réponse rapide · Support humain</p>
+              <p className="font-semibold text-slate-900 text-sm">WhatsApp Business</p>
+              <p className="text-xs text-slate-400">+221 76 901 09 60 · Réponse rapide</p>
             </div>
           </a>
           <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Question abonnement Samay Këur')}`}
-            className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-orange-300 hover:bg-orange-50 transition group">
-            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center group-hover:bg-orange-200 transition">
-              <Mail className="w-5 h-5 text-orange-600" />
-            </div>
+            className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition group">
+            <img src="/logo-gmail.png" alt="Gmail" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
             <div>
-              <p className="font-semibold text-slate-900 text-sm">Email</p>
+              <p className="font-semibold text-slate-900 text-sm">Gmail</p>
               <p className="text-xs text-slate-400">{CONTACT_EMAIL}</p>
             </div>
           </a>

@@ -70,77 +70,10 @@ async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<
     if (result) return result;
   }
 
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) {
-    throw new ContratApiError('Session invalide. Veuillez vous reconnecter.', 'AUTH_SESSION_ERROR');
-  }
-
-  if (!sessionData.session) {
-    throw new ContratApiError('Vous devez être connecté pour créer un contrat.', 'NO_SESSION');
-  }
-
-  if (fnName === 'create-contrat') {
-    const { data: profileData, error: profileError } = await supabase
-      .from('user_profiles')
-      .select('agency_id')
-      .eq('id', sessionData.session.user.id)
-      .maybeSingle();
-
-    if (profileError) {
-      throw new ContratApiError(profileError.message ?? 'Impossible de récupérer votre agence.', 'PROFILE_LOOKUP_ERROR');
-    }
-
-    const agencyId = profileData?.agency_id;
-    if (!agencyId) {
-      throw new ContratApiError('Aucune agence associée à ce compte.', 'NO_AGENCY');
-    }
-
-    const { data: created, error: createError } = await supabase
-      .from('contrats')
-      .insert({
-        locataire_id: (body as CreateContratInput).locataire_id,
-        unite_id: (body as CreateContratInput).unite_id,
-        date_debut: (body as CreateContratInput).date_debut,
-        date_fin: (body as CreateContratInput).date_fin ?? null,
-        loyer_mensuel: (body as CreateContratInput).loyer_mensuel,
-        commission: (body as CreateContratInput).commission ?? null,
-        caution: (body as CreateContratInput).caution ?? null,
-        statut: (body as CreateContratInput).statut,
-        destination: (body as CreateContratInput).destination ?? null,
-        agency_id: agencyId,
-      })
-      .select('*')
-      .single();
-
-    if (createError || !created) {
-      throw new ContratApiError(createError?.message ?? 'Création du contrat impossible.', 'FALLBACK_CREATE_ERROR');
-    }
-
-    return created as T;
-  }
-
-  if (fnName === 'update-contrat') {
-    const input = body as UpdateContratInput;
-    const { data: updated, error: updateError } = await supabase
-      .from('contrats')
-      .update({
-        statut: input.statut,
-        date_fin: input.date_fin ?? null,
-        commission: input.commission ?? null,
-        caution: input.caution ?? null,
-      })
-      .eq('id', input.id)
-      .select('*')
-      .single();
-
-    if (updateError || !updated) {
-      throw new ContratApiError(updateError?.message ?? 'Mise à jour du contrat impossible.', 'FALLBACK_UPDATE_ERROR');
-    }
-
-    return updated as T;
-  }
-
-  throw new ContratApiError(`Fonction inconnue: ${fnName}`, 'UNKNOWN_FUNCTION');
+  throw new ContratApiError(
+    `La fonction ${fnName} a échoué sans réponse exploitable.`,
+    'EDGE_FUNCTION_EMPTY_RESPONSE',
+  );
 }
 
 export async function createContratViaEdge(input: CreateContratInput): Promise<ContratApiResult> {

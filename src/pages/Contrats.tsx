@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { createContratViaEdge, updateContratViaEdge, deleteContrat, ContratApiError } from '../services/api/contratApi';
-import { emitEvent } from '../lib/eventBus';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
@@ -335,18 +334,6 @@ export function Contrats() {
           destination: formData.destination || null,
         });
 
-        track({
-          action: 'contrat_create',
-          entity_type: 'contrats',
-          metadata: { loyer: parseFloat(formData.loyer_mensuel), statut: formData.statut, destination: formData.destination },
-        });
-        emitEvent({
-          type: 'contrat.created',
-          agency_id: profile?.agency_id,
-          entity_type: 'contrats',
-          payload: { loyer: parseFloat(formData.loyer_mensuel), statut: formData.statut },
-        });
-
         closeModal();
         toast.success('Contrat créé avec succès');
       } catch (err: unknown) {
@@ -381,14 +368,6 @@ export function Contrats() {
           date_fin: formData.date_fin || null,
           commission: formData.commission ? parseFloat(formData.commission) : null,
           caution: formData.caution ? parseFloat(formData.caution) : null,
-        });
-
-        emitEvent({
-          type: 'contrat.updated',
-          agency_id: profile?.agency_id,
-          entity_type: 'contrats',
-          entity_id: editing.id,
-          payload: { new_statut: formData.statut },
         });
 
         closeEditModal();
@@ -475,12 +454,6 @@ export function Contrats() {
       setDeletingId(contrat.id);
       try {
         await deleteContrat({ id: contrat.id });
-        emitEvent({
-          type: 'contrat.deleted',
-          agency_id: profile.agency_id,
-          entity_type: 'contrats',
-          entity_id: contrat.id,
-        });
         toast.success('Contrat supprimé');
         await loadData();
       } catch (err: unknown) {

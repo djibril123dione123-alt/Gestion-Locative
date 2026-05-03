@@ -146,6 +146,18 @@ serve(async (req: Request) => {
     }
 
     // ── 5. INSERT contrat ────────────────────────────────────────────────────
+    const { data: existingContrat } = await supabaseAdmin
+      .from("contrats")
+      .select("id")
+      .eq("agency_id", agencyId)
+      .eq("unite_id", input.unite_id)
+      .eq("statut", "actif")
+      .maybeSingle();
+
+    if (existingContrat) {
+      return err("Un contrat actif existe déjà pour cette unité.", 409, "CONTRAT_ALREADY_EXISTS");
+    }
+
     const { data: contrat, error: insertErr } = await supabaseAdmin
       .from("contrats")
       .insert({

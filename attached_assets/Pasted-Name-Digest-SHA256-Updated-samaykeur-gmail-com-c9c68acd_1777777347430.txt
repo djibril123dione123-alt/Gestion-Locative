@@ -1,0 +1,152 @@
+Name
+Digest
+SHA256
+Updated	
+
+samaykeur@gmail.com
+
+c9c68acd5f1bd228dbdb96ac9242276fa0dbd017b92517b42753d4df8cac5762
+
+03 May 2026 02:58:55 (+0000)	
+
+
+PAYDUNYA_MASTER_KEY
+
+be00ffbfa95dd33188c778cabe0b1691e35dfce5eea37252ce177b5cfc1c65f7
+
+03 May 2026 02:58:55 (+0000)	
+
+
+PAYDUNYA_TEST_PRIVATE_KEY
+
+5cc1d391670128d0879939a1b7ab33dfd4d79b9805eeec20df1107a46e1876fe
+
+03 May 2026 02:58:55 (+0000)	
+
+
+PAYDUNYA_TEST_PUBLIC_KEY
+
+fadf1ed53c2557d816b34ed1f8297fff3fac5d736d7ffdc2c8d1eb11f64e2900
+
+03 May 2026 02:58:55 (+0000)	
+
+
+PAYDUNYA_TEST_TOKEN
+
+eaba3932ece9a93c8c9ddaedccfd885c36a63f32d51404da56d5db36d626405c
+
+03 May 2026 02:58:55 (+0000)	
+
+
+PAYDUNYA_LIVE_PRIVATE_KEY
+
+821b63e8d219025c665b751d59ee1b4c1a84e231e8ac22ef43ea406b843861b5
+
+03 May 2026 02:58:55 (+0000)	
+
+
+PAYDUNYA_LIVE_PUBLIC_KEY
+
+46c6bfccbb4927d3572a02eed867fcbfbe46767390b4992cdfc206360344f5e4
+
+03 May 2026 02:58:55 (+0000)	
+
+
+PAYDUNYA_LIVE_TOKEN
+
+a4def318790e91e5c3a210b3092e5ace84478f76f784cebbd59435348e15b2ac
+
+03 May 2026 02:58:55 (+0000)	
+
+
+RESEND_API_KEY
+
+9b7dd92efbe098b9b574164998e23c64b8543b3735cbbb9c7e99d22831f2402c
+
+03 May 2026 02:58:55 (+0000)	
+
+
+ORANGE_SMS_CLIENT_ID
+
+82e4cdc60c067943b35f9eb9be4986aa576323575647db223c6437e2804e4e82
+
+03 May 2026 02:58:55 (+0000)	
+
+
+VITE_SENTRY_DSN
+
+9dc0c9fa7055cdfca3c78820fd0a5c0fa0ea13e29a1c1632b10513bd71c55bf1
+
+03 May 2026 02:58:55 (+0000)	
+
+
+VITE_SUPABASE_URL
+
+c20485343e13eb8127b02635915beacd6465543773345800b21a359c6ab15dec
+
+03 May 2026 02:58:55 (+0000)	
+
+
+VITE_SUPABASE_ANON_KEY
+
+ccb707c8216890034e6f4b4bc1a55cdc095a66f13f84b66a53d0ccd25c592b4e
+
+03 May 2026 02:58:55 (+0000)	
+
+Default secrets
+Reserved secrets available in every project
+
+Docs
+Name	Description
+
+SUPABASE_URL
+
+The API gateway for your Supabase project.
+
+
+SUPABASE_DB_URL
+
+The direct PostgreSQL connection URL. Should not be shared with anyone, only use it on the server.
+
+
+SUPABASE_PUBLISHABLE_KEYS
+
+JSON dictionary of publishable API keys. Safe to use in a browser if RLS is enabled.
+
+
+SUPABASE_SECRET_KEYS
+
+JSON dictionary of secret API keys. Should never be exposed to a browser.
+
+
+SUPABASE_ANON_KEY
+
+Deprecated
+Legacy anonymous key. Use SUPABASE_PUBLISHABLE_KEYS issued through JWT Signing Keys instead.
+
+
+SUPABASE_SERVICE_ROLE_KEY
+
+Deprecated
+Legacy service role key. Use SUPABASE_SECRET_KEYS issued through JWT Signing Keys instead.
+
+
+SUPABASE_JWKS
+
+JSON Web Key Set used to verify JWTs issued by your project's auth server.
+
+
+SB_REGION
+
+The region the function was invoked in. Set per request.
+
+
+SB_EXECUTION_ID
+
+A unique identifier for each function instance. Set per request.
+
+
+DENO_DEPLOYMENT_ID
+
+The version of the function code. Set when the function is deployed.
+

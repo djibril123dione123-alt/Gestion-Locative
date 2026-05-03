@@ -21,7 +21,7 @@ const CORS = {
 };
 
 const IS_LIVE = Deno.env.get("PAYDUNYA_ENV") === "live";
-const MASTER_KEY    = IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_TOKEN")       : Deno.env.get("PAYDUNYA_TEST_TOKEN");
+const MASTER_KEY    = Deno.env.get("PAYDUNYA_MASTER_KEY") ?? (IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_TOKEN") : Deno.env.get("PAYDUNYA_TEST_TOKEN"));
 const PRIVATE_KEY   = IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_PRIVATE_KEY") : Deno.env.get("PAYDUNYA_TEST_PRIVATE_KEY");
 const PUBLIC_KEY    = IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_PUBLIC_KEY")  : Deno.env.get("PAYDUNYA_TEST_PUBLIC_KEY");
 const TOKEN         = IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_TOKEN")       : Deno.env.get("PAYDUNYA_TEST_TOKEN");

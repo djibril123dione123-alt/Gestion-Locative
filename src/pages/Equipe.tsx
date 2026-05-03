@@ -8,6 +8,8 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
 import { UserPlus, Mail, Copy, Check, Shield, Users as UsersIcon } from 'lucide-react';
+import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 interface Member {
   id: string;
@@ -161,7 +163,10 @@ export function Equipe() {
     );
   }
 
-  const memberColumns = [
+  const ALL_COLUMN_KEYS_EQUIPE = ['nom', 'role', 'actif', 'created_at', 'actions'] as const;
+  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('equipe', [...ALL_COLUMN_KEYS_EQUIPE]);
+
+  const allMemberColumns = [
     {
       key: 'nom',
       label: 'Membre',
@@ -213,6 +218,7 @@ export function Equipe() {
         ),
     },
   ];
+  const memberColumns = allMemberColumns.filter((c) => c.key === 'actions' || colIsVisible(c.key));
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -237,6 +243,14 @@ export function Equipe() {
         <div className="px-6 py-4 border-b border-slate-200 flex items-center gap-2">
           <UsersIcon className="w-5 h-5 text-slate-500" />
           <h2 className="font-semibold text-slate-900">Membres actuels ({members.length})</h2>
+          <div className="ml-auto">
+            <ColumnPicker
+              columns={allMemberColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
+              visibility={colVis}
+              onToggle={colToggle}
+              onSetAll={colSetAll}
+            />
+          </div>
         </div>
         {loading ? (
           <div className="p-12 text-center text-slate-500">Chargement…</div>

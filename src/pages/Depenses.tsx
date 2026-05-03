@@ -9,6 +9,8 @@ import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
+import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 export function Depenses() {
   const { user, profile } = useAuth();
@@ -152,7 +154,10 @@ export function Depenses() {
     });
   };
 
-  const columns = [
+  const ALL_COLUMN_KEYS_DEPENSES = ['date_depense', 'categorie', 'description', 'beneficiaire', 'montant', 'immeuble'] as const;
+  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('depenses', [...ALL_COLUMN_KEYS_DEPENSES]);
+
+  const allColumns = [
     { key: 'date_depense', label: 'Date' },
     { key: 'categorie', label: 'Catégorie' },
     { key: 'description', label: 'Description' },
@@ -160,6 +165,7 @@ export function Depenses() {
     { key: 'montant', label: 'Montant', render: (d: any) => formatCurrency(d.montant) },
     { key: 'immeuble', label: 'Immeuble', render: (d: any) => d.immeubles?.nom || '-' },
   ];
+  const columns = allColumns.filter((c) => colIsVisible(c.key));
 
   if (loading) return <div className="flex items-center justify-center h-full"><div>Chargement...</div></div>;
 
@@ -177,14 +183,22 @@ export function Depenses() {
 
       <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
         <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Rechercher..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+              />
+            </div>
+            <ColumnPicker
+              columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
+              visibility={colVis}
+              onToggle={colToggle}
+              onSetAll={colSetAll}
             />
           </div>
         </div>

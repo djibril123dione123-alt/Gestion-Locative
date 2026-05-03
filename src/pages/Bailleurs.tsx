@@ -10,6 +10,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages';
 import { formatDate } from '../lib/formatters';
+import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 /**
  * Interface Bailleur avec les champs commission et debut_contrat
@@ -323,7 +325,10 @@ export function Bailleurs() {
   /**
    * Configuration des colonnes du tableau
    */
-  const columns = [
+  const ALL_COLUMN_KEYS_BAILLEURS = ['nom', 'prenom', 'telephone', 'email', 'commission', 'debut_contrat', 'mandat'] as const;
+  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('bailleurs', [...ALL_COLUMN_KEYS_BAILLEURS]);
+
+  const allColumns = [
     { 
       key: 'nom', 
       label: 'Nom',
@@ -401,6 +406,7 @@ export function Bailleurs() {
       )
     },
   ];
+  const columns = allColumns.filter((c) => c.key === 'mandat' || colIsVisible(c.key));
 
   /**
    * Affichage du loader
@@ -448,16 +454,24 @@ export function Bailleurs() {
       <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-xl">
         {/* Barre de recherche */}
         <div className="p-4 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-orange-50 to-orange-100">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-orange-500 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Rechercher par nom, prénom, téléphone, email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 sm:py-3 border-2 border-orange-200 rounded-xl text-sm sm:text-base
-                       focus:ring-2 focus:ring-orange-500 focus:border-orange-500
-                       transition-all duration-300 hover:border-orange-300"
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-orange-500 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Rechercher par nom, prénom, téléphone, email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 sm:py-3 border-2 border-orange-200 rounded-xl text-sm sm:text-base
+                         focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+                         transition-all duration-300 hover:border-orange-300"
+              />
+            </div>
+            <ColumnPicker
+              columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'mandat' }))}
+              visibility={colVis}
+              onToggle={colToggle}
+              onSetAll={colSetAll}
             />
           </div>
           {searchTerm && (

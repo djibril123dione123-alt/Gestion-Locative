@@ -8,6 +8,8 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
 import { FolderOpen, Upload, Download, Trash2 } from 'lucide-react';
+import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 interface Document {
   id: string;
@@ -194,7 +196,10 @@ export function Documents() {
     return true;
   });
 
-  const columns = [
+  const ALL_COLUMN_KEYS_DOCS = ['name', 'folder', 'file_size', 'created_at', 'actions'] as const;
+  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('documents', [...ALL_COLUMN_KEYS_DOCS]);
+
+  const allColumns = [
     {
       key: 'name',
       label: 'Nom',
@@ -245,6 +250,7 @@ export function Documents() {
       ),
     },
   ];
+  const columns = allColumns.filter((c) => c.key === 'actions' || colIsVisible(c.key));
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -264,7 +270,7 @@ export function Documents() {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <select value={filterFolder} onChange={(e) => setFilterFolder(e.target.value as any)} data-testid="filter-folder" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Tous dossiers</option>
           {FOLDERS.map((f) => (
@@ -277,6 +283,12 @@ export function Documents() {
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
+        <ColumnPicker
+          columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
+          visibility={colVis}
+          onToggle={colToggle}
+          onSetAll={colSetAll}
+        />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">

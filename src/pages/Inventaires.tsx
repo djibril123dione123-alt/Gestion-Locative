@@ -9,6 +9,8 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ClipboardList, Plus, Download, Trash2 } from 'lucide-react';
+import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 interface Piece {
   nom: string;
@@ -224,7 +226,10 @@ export function Inventaires() {
   const addPiece = () => setForm((f) => ({ ...f, pieces: [...f.pieces, { nom: '', etat: 'bon', observations: '' }] }));
   const removePiece = (idx: number) => setForm((f) => ({ ...f, pieces: f.pieces.filter((_, i) => i !== idx) }));
 
-  const columns = [
+  const ALL_COLUMN_KEYS_INVENTAIRES = ['date', 'type', 'contrat', 'statut', 'actions'] as const;
+  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('inventaires', [...ALL_COLUMN_KEYS_INVENTAIRES]);
+
+  const allColumns = [
     {
       key: 'date',
       label: 'Date',
@@ -290,6 +295,7 @@ export function Inventaires() {
       ),
     },
   ];
+  const columns = allColumns.filter((c) => c.key === 'actions' || colIsVisible(c.key));
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -309,7 +315,7 @@ export function Inventaires() {
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <select value={filterType} onChange={(e) => setFilterType(e.target.value as any)} data-testid="filter-type" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Tous types</option>
           <option value="entree">Entrée</option>
@@ -327,6 +333,12 @@ export function Inventaires() {
             <option key={im.id} value={im.id}>{im.nom}</option>
           ))}
         </select>
+        <ColumnPicker
+          columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
+          visibility={colVis}
+          onToggle={colToggle}
+          onSetAll={colSetAll}
+        />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">

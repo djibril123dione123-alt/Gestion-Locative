@@ -9,6 +9,8 @@ import { formatCurrency } from '../lib/formatters';
 import { formatPaiementError } from '../services/domain/paiementService';
 import { createPaiementViaEdge, PaiementApiError } from '../services/api/paiementApi';
 import { emitEvent } from '../lib/eventBus';
+import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -221,7 +223,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const columns = [
+  const ALL_COLUMN_KEYS_LOYERS = ['locataire', 'unite_nom', 'immeuble_nom', 'bailleur', 'mois_concerne', 'montant_du', 'telephone_locataire', 'actions'] as const;
+  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('loyersImpayes', [...ALL_COLUMN_KEYS_LOYERS]);
+
+  const allColumns = [
     {
       key: 'locataire',
       label: 'Locataire',
@@ -266,6 +271,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       ),
     },
   ];
+  const columns = allColumns.filter((c) => c.key === 'actions' || colIsVisible(c.key));
 
   if (loading) {
     return (
@@ -339,7 +345,8 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
       {/* Filtres + Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div className="flex flex-wrap items-start gap-4 mb-6">
+          <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
             <input
@@ -365,6 +372,13 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
               ))}
             </select>
           </div>
+          </div>
+          <ColumnPicker
+            columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
+            visibility={colVis}
+            onToggle={colToggle}
+            onSetAll={colSetAll}
+          />
         </div>
 
         <div className="overflow-x-auto">

@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { Plus, Search, Download, AlertCircle, TrendingUp, Sheet } from 'lucide-react';
+import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { generateContratPDF } from '../lib/pdf';
 import { formatCurrency } from '../lib/formatters';
 import { useToast } from '../hooks/useToast';
@@ -486,7 +488,10 @@ export function Contrats() {
   // =========================
   // 📋 COLONNES DU TABLEAU
   // =========================
-  const columns = useMemo(
+  const ALL_COLUMN_KEYS_CONTRATS = ['locataire', 'unite', 'immeuble', 'destination', 'date_debut', 'loyer_mensuel', 'revenue_total', 'statut', 'actions'] as const;
+  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('contrats', [...ALL_COLUMN_KEYS_CONTRATS]);
+
+  const allColumns = useMemo(
     () => [
       {
         key: 'locataire',
@@ -571,6 +576,10 @@ export function Contrats() {
       },
     ],
     [handleDownloadPDF, downloadingId]
+  );
+  const columns = useMemo(
+    () => allColumns.filter((c) => c.key === 'actions' || colIsVisible(c.key)),
+    [allColumns, colIsVisible]
   );
 
   // =========================
@@ -696,17 +705,25 @@ export function Contrats() {
       {/* Recherche et tableau */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
         <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Rechercher un locataire, produit, immeuble, destination..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 sm:py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:border-transparent transition-all"
-              style={{
-                boxShadow: searchTerm ? `0 0 0 3px rgba(245, 130, 32, 0.1)` : 'none'
-              }}
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Rechercher un locataire, produit, immeuble, destination..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 sm:py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:border-transparent transition-all"
+                style={{
+                  boxShadow: searchTerm ? `0 0 0 3px rgba(245, 130, 32, 0.1)` : 'none'
+                }}
+              />
+            </div>
+            <ColumnPicker
+              columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
+              visibility={colVis}
+              onToggle={colToggle}
+              onSetAll={colSetAll}
             />
           </div>
         </div>

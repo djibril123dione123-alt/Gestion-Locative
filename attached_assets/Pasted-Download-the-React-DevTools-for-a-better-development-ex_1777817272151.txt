@@ -1,0 +1,160 @@
+Download the React DevTools for a better development experience: https://reactjs.org/link/react-devtools
+sentry.ts:8 Sentry DSN not configured, error monitoring disabled
+@supabase_supabase-j…js?v=194c65f1:19991 
+ GET https://znvcfjelmikprjeoxrug.supabase.co/rest/v1/paiements?select=*%2Ccontr…q.14995519-9afa-4b0b-865b-5c655b41b021&actif=eq.true&order=created_at.desc 400 (Bad Request)
+@supabase_supabase-j…js?v=194c65f1:19991 
+ GET https://znvcfjelmikprjeoxrug.supabase.co/rest/v1/contrats?select=id%2Cloyer…%2Cid%29&agency_id=eq.14995519-9afa-4b0b-865b-5c655b41b021&statut=eq.actif 400 (Bad Request)
+@supabase_supabase-j…js?v=194c65f1:19991 
+ GET https://znvcfjelmikprjeoxrug.supabase.co/rest/v1/contrats?select=id%2Cloyer…%2Cid%29&agency_id=eq.14995519-9afa-4b0b-865b-5c655b41b021&statut=eq.actif 400 (Bad Request)
+@supabase_supabase-j…js?v=194c65f1:19991 
+ GET https://znvcfjelmikprjeoxrug.supabase.co/rest/v1/paiements?select=*%2Ccontr…q.14995519-9afa-4b0b-865b-5c655b41b021&actif=eq.true&order=created_at.desc 400 (Bad Request)
+(anonymous)	@	@supabase_supabase-j…js?v=194c65f1:19991
+(anonymous)	@	@supabase_supabase-j…js?v=194c65f1:20005
+await in (anonymous)		
+executeWithRetry	@	@supabase_supabase-js.js?v=194c65f1:591
+then	@	@supabase_supabase-js.js?v=194c65f1:620
+postMessage		
+schedulePerformWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:407
+performWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:387
+postMessage		
+schedulePerformWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:407
+performWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:387
+postMessage		
+schedulePerformWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:407
+performWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:387
+postMessage		
+schedulePerformWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:407
+performWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:387
+postMessage		
+schedulePerformWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:407
+performWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:387
+postMessage		
+schedulePerformWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:407
+requestHostCallback	@	chunk-GKJBSOWT.js?v=194c65f1:418
+unstable_scheduleCallback	@	chunk-GKJBSOWT.js?v=194c65f1:330
+scheduleCallback$1	@	chunk-GKJBSOWT.js?v=194c65f1:19826
+ensureRootIsScheduled	@	chunk-GKJBSOWT.js?v=194c65f1:18652
+retryTimedOutBoundary	@	chunk-GKJBSOWT.js?v=194c65f1:19619
+resolveRetryWakeable	@	chunk-GKJBSOWT.js?v=194c65f1:19650
+Promise.then		
+(anonymous)	@	chunk-GKJBSOWT.js?v=194c65f1:17654
+attachSuspenseRetryListeners	@	chunk-GKJBSOWT.js?v=194c65f1:17641
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17839
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17737
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17737
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17896
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17851
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17818
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17737
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17737
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17737
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17896
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17896
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17896
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17896
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17794
+commitMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17663
+commitRootImpl	@	chunk-GKJBSOWT.js?v=194c65f1:19347
+commitRoot	@	chunk-GKJBSOWT.js?v=194c65f1:19277
+setTimeout		
+finishConcurrentRender	@	chunk-GKJBSOWT.js?v=194c65f1:18779
+performConcurrentWorkOnRoot	@	chunk-GKJBSOWT.js?v=194c65f1:18718
+workLoop	@	chunk-GKJBSOWT.js?v=194c65f1:197
+flushWork	@	chunk-GKJBSOWT.js?v=194c65f1:176
+performWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:384
+postMessage		
+schedulePerformWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:407
+requestHostCallback	@	chunk-GKJBSOWT.js?v=194c65f1:418
+unstable_scheduleCallback	@	chunk-GKJBSOWT.js?v=194c65f1:330
+scheduleCallback$1	@	chunk-GKJBSOWT.js?v=194c65f1:19826
+ensureRootIsScheduled	@	chunk-GKJBSOWT.js?v=194c65f1:18652
+retryTimedOutBoundary	@	chunk-GKJBSOWT.js?v=194c65f1:19619
+resolveRetryWakeable	@	chunk-GKJBSOWT.js?v=194c65f1:19650
+Promise.then		
+(anonymous)	@	chunk-GKJBSOWT.js?v=194c65f1:17654
+attachSuspenseRetryListeners	@	chunk-GKJBSOWT.js?v=194c65f1:17641
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17839
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17737
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17737
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17737
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17896
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17896
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17896
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17699
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17896
+recursivelyTraverseMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17685
+commitMutationEffectsOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:17794
+commitMutationEffects	@	chunk-GKJBSOWT.js?v=194c65f1:17663
+commitRootImpl	@	chunk-GKJBSOWT.js?v=194c65f1:19347
+commitRoot	@	chunk-GKJBSOWT.js?v=194c65f1:19277
+finishConcurrentRender	@	chunk-GKJBSOWT.js?v=194c65f1:18783
+performConcurrentWorkOnRoot	@	chunk-GKJBSOWT.js?v=194c65f1:18718
+workLoop	@	chunk-GKJBSOWT.js?v=194c65f1:197
+flushWork	@	chunk-GKJBSOWT.js?v=194c65f1:176
+performWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:384
+postMessage		
+schedulePerformWorkUntilDeadline	@	chunk-GKJBSOWT.js?v=194c65f1:407
+requestHostCallback	@	chunk-GKJBSOWT.js?v=194c65f1:418
+unstable_scheduleCallback	@	chunk-GKJBSOWT.js?v=194c65f1:330
+scheduleCallback$1	@	chunk-GKJBSOWT.js?v=194c65f1:19826
+ensureRootIsScheduled	@	chunk-GKJBSOWT.js?v=194c65f1:18652
+scheduleUpdateOnFiber	@	chunk-GKJBSOWT.js?v=194c65f1:18562
+dispatchSetState	@	chunk-GKJBSOWT.js?v=194c65f1:12403
+(anonymous)	@	AuthContext.tsx:82
+await in (anonymous)		
+(anonymous)	@	AuthContext.tsx:47
+(anonymous)	@	AuthContext.tsx:52
+(anonymous)	@	@supabase_supabase-j…js?v=194c65f1:18765
+_notifyAllSubscribers	@	@supabase_supabase-j…js?v=194c65f1:18763
+_recoverAndRefresh	@	@supabase_supabase-j…js?v=194c65f1:18706
+await in _recoverAndRefresh		
+_initialize	@	@supabase_supabase-j…js?v=194c65f1:15298
+await in _initialize		
+(anonymous)	@	@supabase_supabase-j…js?v=194c65f1:15250
+(anonymous)	@	@supabase_supabase-j…js?v=194c65f1:17166
+(anonymous)	@	@supabase_supabase-j…js?v=194c65f1:14125

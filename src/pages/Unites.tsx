@@ -10,6 +10,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { usePlanLimits } from '../hooks/usePlanLimits';
 import { formatCurrency } from '../lib/formatters';
+import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 interface Unite {
   id: string;
@@ -189,7 +191,10 @@ export function Unites() {
     return <span className={`px-2 py-1 rounded-full text-xs font-medium ${badges[statut as keyof typeof badges]}`}>{statut}</span>;
   };
 
-  const columns = [
+  const ALL_COLUMN_KEYS_UNITES = ['nom', 'numero', 'etage', 'immeuble', 'loyer_base', 'statut'] as const;
+  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('unites', [...ALL_COLUMN_KEYS_UNITES]);
+
+  const allColumns = [
     { key: 'nom', label: 'Type' },
     { key: 'numero', label: 'Numéro', render: (u: Unite) => u.numero || '-' },
     { key: 'etage', label: 'Étage', render: (u: Unite) => u.etage || '-' },
@@ -197,6 +202,7 @@ export function Unites() {
     { key: 'loyer_base', label: 'Loyer', render: (u: Unite) => formatCurrency(u.loyer_base) },
     { key: 'statut', label: 'Statut', render: (u: Unite) => getStatutBadge(u.statut) },
   ];
+  const columns = allColumns.filter((c) => colIsVisible(c.key));
 
   if (loading) {
     return <div className="flex items-center justify-center h-full"><div className="text-lg text-slate-600">Chargement...</div></div>;
@@ -216,14 +222,22 @@ export function Unites() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
         <div className="mb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Rechercher un produit..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Rechercher un produit..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <ColumnPicker
+              columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
+              visibility={colVis}
+              onToggle={colToggle}
+              onSetAll={colSetAll}
             />
           </div>
         </div>

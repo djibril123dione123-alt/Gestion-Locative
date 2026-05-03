@@ -151,6 +151,7 @@ COMMENT ON FUNCTION fn_compute_financial_snapshots(date) IS
 -- 3. VUE — drift_report (alertes écarts non résolus)
 -- ─────────────────────────────────────────────────────────────────────────────
 
+DROP VIEW IF EXISTS vw_financial_drift_report;
 CREATE VIEW vw_financial_drift_report AS
 SELECT
   fs.agency_id,

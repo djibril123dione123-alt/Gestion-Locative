@@ -566,6 +566,7 @@ END; $$;
 -- 11. VUE — Anomalies système (audit dashboard)
 -- ─────────────────────────────────────────────────────────────────────────────
 
+DROP VIEW IF EXISTS vw_system_anomalies;
 CREATE VIEW vw_system_anomalies AS
   -- Paiements sans contrat valide
   SELECT

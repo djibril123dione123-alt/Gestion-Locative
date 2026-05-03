@@ -121,6 +121,7 @@ export function Contrats() {
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
   const [submitting, setSubmitting] = useState(false);
+  const submitLockRef = useRef(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const toast = useToast();
   const { track } = useTracking();
@@ -299,6 +300,9 @@ export function Contrats() {
       e?.preventDefault();
       e?.stopPropagation();
 
+      if (submitting || submitLockRef.current) return;
+      submitLockRef.current = true;
+
       if (!profile?.agency_id) return;
 
       const validationError = validateForm();
@@ -347,9 +351,10 @@ export function Contrats() {
         toast.error(msg);
       } finally {
         setSubmitting(false);
+        submitLockRef.current = false;
       }
     },
-    [formData, validateForm, loadData, profile?.agency_id]
+    [formData, validateForm, loadData, profile?.agency_id, submitting]
   );
 
   // =========================

@@ -8,13 +8,14 @@
 - **Build**: `npm run build` → outputs to `dist/`
 - **Migrated to Replit**: May 2026 — runs as a static React/Vite SPA on Replit
 
-### Environment Variables (set via Replit Secrets panel)
-- `VITE_SUPABASE_URL` — Supabase project URL (Replit shared env var)
-- `VITE_SUPABASE_ANON_KEY` — Supabase anon public key (Replit secret)
-- `VITE_ENV` — Environment name: `development` | `production` (Replit shared env var)
-- `VITE_POSTHOG_KEY` — PostHog analytics key (optional, no-op if missing)
+### Environment Variables & Secrets (Replit)
+- `VITE_SUPABASE_URL` — Supabase project URL (shared env var, non-sensitive)
+- `VITE_SUPABASE_ANON_KEY` — Supabase anon public key (**Replit Secret** — stored securely)
+- `VITE_ENV` — Environment name: `development` | `production` (shared env var)
+- `VITE_APP_URL` — App base URL (shared env var, auto-set to Replit dev domain)
+- `VITE_POSTHOG_KEY` — PostHog analytics key (optional Replit Secret, no-op if missing)
 - `VITE_POSTHOG_HOST` — PostHog host (optional, defaults to eu.posthog.com)
-- `VITE_SENTRY_DSN` — Sentry DSN for error monitoring (optional, no-op if missing)
+- `VITE_SENTRY_DSN` — Sentry DSN for error monitoring (optional Replit Secret, no-op if missing)
 
 ### Key Dependencies
 - `@supabase/supabase-js` — Supabase client (auth + db queries)

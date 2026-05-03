@@ -59,10 +59,11 @@ async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<
     data?: T;
     error?: string;
     code?: string;
+    details?: unknown;
   }>(fnName, { body: body as Record<string, unknown> });
 
   if (error) {
-    const payload = data as { error?: string; code?: string } | undefined;
+    const payload = data as { error?: string; code?: string; details?: unknown } | undefined;
     throw new ContratApiError(
       payload?.error ?? error.message ?? `Erreur Edge Function ${fnName}.`,
       payload?.code ?? (error.status === 409 ? 'EDGE_FUNCTION_CONFLICT' : 'EDGE_FUNCTION_ERROR'),
@@ -70,7 +71,7 @@ async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<
   }
 
   if (data && (data as { error?: string }).error) {
-    const payload = data as { error?: string; code?: string };
+    const payload = data as { error?: string; code?: string; details?: unknown };
     throw new ContratApiError(
       payload.error ?? `Erreur Edge Function ${fnName}.`,
       payload.code ?? 'EDGE_FUNCTION_ERROR',

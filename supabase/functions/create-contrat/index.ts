@@ -61,8 +61,8 @@ type CreateContratInput = z.infer<typeof CreateContratSchema>;
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: CORS });
 }
-function err(message: string, status = 400, code?: string) {
-  return json({ error: message, ...(code ? { code } : {}) }, status);
+function err(message: string, status = 400, code?: string, details?: unknown) {
+  return json({ error: message, ...(code ? { code } : {}), ...(details ? { details } : {}) }, status);
 }
 
 serve(async (req: Request) => {
@@ -192,7 +192,15 @@ serve(async (req: Request) => {
 
     if (uniteUpdateErr) {
       // Rollback manuel : suppression du contrat créé
-      await supabaseAdmin.from("contrats").delete().eq("id", contrat.id).catch(() => {});
+      const { error: rollbackErr } = await supabaseAdmin.from("contrats").delete().eq("id", contrat.id);
+      if (rollbackErr) {
+        return err(
+          "Échec critique : le contrat a été créé mais le rollback a échoué.",
+          500,
+          "ROLLBACK_FAILED",
+          rollbackErr.message,
+        );
+      }
       return err(
         "Échec de la mise à jour du statut de l'unité. Contrat annulé.",
         500,
@@ -209,7 +217,8 @@ serve(async (req: Request) => {
       .catch(() => {});
 
     return json({ data: contrat }, 201);
-  } catch (_err) {
-    return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Erreur serveur inattendue.";
+    return json({ error: message, code: "INTERNAL_ERROR" }, 500);
   }
 });

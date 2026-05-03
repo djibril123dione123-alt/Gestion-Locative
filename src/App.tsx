@@ -1,4 +1,4 @@
-import React, { useState, lazy, Suspense, useEffect } from 'react';
+import { useState, lazy, Suspense, useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 
@@ -108,6 +108,26 @@ function AppContent() {
         }
     }, [profile?.id]);
 
+    useEffect(() => {
+        if (!loading && user && !profile) {
+            const timer = setTimeout(() => {
+                setShowWelcomeAnyway(true);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [loading, user, profile]);
+
+    useEffect(() => {
+        if (user && !invitationToken) {
+            try {
+                const stored = sessionStorage.getItem('invite_token');
+                if (stored) setInvitationToken(stored);
+            } catch {
+                /* noop */
+            }
+        }
+    }, [user, invitationToken]);
+
     if (invitationToken) {
         return (
             <Suspense fallback={
@@ -127,26 +147,6 @@ function AppContent() {
             </Suspense>
         );
     }
-
-    React.useEffect(() => {
-        if (!loading && user && !profile) {
-            const timer = setTimeout(() => {
-                setShowWelcomeAnyway(true);
-            }, 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [loading, user, profile]);
-
-    React.useEffect(() => {
-        if (user && !invitationToken) {
-            try {
-                const stored = sessionStorage.getItem('invite_token');
-                if (stored) setInvitationToken(stored);
-            } catch {
-                /* noop */
-            }
-        }
-    }, [user, invitationToken]);
 
     // ── Backup complet quotidien depuis Supabase ──
     useEffect(() => {

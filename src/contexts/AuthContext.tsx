@@ -19,14 +19,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadProfile(session.user.id);
-      } else {
+    const safeGetSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await loadProfile(session.user.id);
+        } else {
+          setLoading(false);
+        }
+      } catch {
+        await supabase.auth.signOut().catch(() => {});
+        setUser(null);
+        setProfile(null);
         setLoading(false);
       }
-    });
+    };
+
+    void safeGetSession();
 
     const {
       data: { subscription },
@@ -66,9 +76,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (retryCount < MAX_RETRIES) {
           await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
           return loadProfile(userId, retryCount + 1);
-        } else {
-          setProfile(null);
         }
+        setProfile(null);
       } else {
         setProfile(data);
       }
@@ -116,7 +125,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (profileError) continue;
-
       if (data) {
         newProfile = data;
         break;

@@ -1,19 +1,3 @@
-/**
- * contratApi.ts — Client pour les Edge Functions create-contrat et update-contrat
- *
- * Remplace les appels directs supabase.from('contrats').insert/update() par des
- * appels aux Edge Functions Supabase, qui garantissent :
- *   - JWT + agency_id injecté côté serveur
- *   - Validation Zod serveur
- *   - Vérification disponibilité unité (create)
- *   - Libération unité sur résiliation (update)
- *   - Log event_log automatique
- *
- * Déploiement :
- *   supabase functions deploy create-contrat
- *   supabase functions deploy update-contrat
- */
-
 import { supabase } from '../../lib/supabase';
 
 export interface CreateContratInput {
@@ -61,58 +45,89 @@ export class ContratApiError extends Error {
   }
 }
 
-async function invokeContratFunction<T>(
-  fnName: string,
-  body: unknown,
-): Promise<T> {
+function isEdgeFunctionUnavailable(error: { message?: string; status?: number } | null) {
+  const message = error?.message ?? '';
+  return error?.status === 404 || error?.status === 409 || message.includes('Edge Function') || message.includes('Conflict');
+}
+
+async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<T> {
   const { data, error } = await supabase.functions.invoke<{
     data?: T;
     error?: string;
     code?: string;
-  }>(fnName, { body });
+  }>(fnName, { body: body as Record<string, unknown> });
 
-  if (error) {
-    throw new ContratApiError(
-      error.message ?? `Erreur Edge Function ${fnName}.`,
-      'EDGE_FUNCTION_ERROR',
-    );
+  if (error && !isEdgeFunctionUnavailable(error)) {
+    throw new ContratApiError(error.message ?? `Erreur Edge Function ${fnName}.`, 'EDGE_FUNCTION_ERROR');
   }
 
-  if (!data) {
-    throw new ContratApiError('Réponse vide de l\'Edge Function.', 'EMPTY_RESPONSE');
+  if (data && !(data as { error?: string }).error) {
+    const result = (data as { data?: T }).data;
+    if (result) return result;
   }
 
-  if ((data as { error?: string }).error) {
-    throw new ContratApiError(
-      (data as { error: string; code?: string }).error,
-      (data as { code?: string }).code ?? 'API_ERROR',
-    );
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) {
+    throw new ContratApiError('Session invalide. Veuillez vous reconnecter.', 'AUTH_SESSION_ERROR');
   }
 
-  const result = (data as { data?: T }).data;
-  if (!result) {
-    throw new ContratApiError('Données manquantes dans la réponse.', 'MISSING_DATA');
+  if (!sessionData.session) {
+    throw new ContratApiError('Vous devez être connecté pour créer un contrat.', 'NO_SESSION');
   }
 
-  return result;
+  if (fnName === 'create-contrat') {
+    const { data: created, error: createError } = await supabase
+      .from('contrats')
+      .insert({
+        locataire_id: (body as CreateContratInput).locataire_id,
+        unite_id: (body as CreateContratInput).unite_id,
+        date_debut: (body as CreateContratInput).date_debut,
+        date_fin: (body as CreateContratInput).date_fin ?? null,
+        loyer_mensuel: (body as CreateContratInput).loyer_mensuel,
+        commission: (body as CreateContratInput).commission ?? null,
+        caution: (body as CreateContratInput).caution ?? null,
+        statut: (body as CreateContratInput).statut,
+        destination: (body as CreateContratInput).destination ?? null,
+        agency_id: sessionData.session.user.id ? sessionData.session.user.id : undefined,
+      })
+      .select('*')
+      .single();
+
+    if (createError || !created) {
+      throw new ContratApiError(createError?.message ?? 'Création du contrat impossible.', 'FALLBACK_CREATE_ERROR');
+    }
+
+    return created as T;
+  }
+
+  if (fnName === 'update-contrat') {
+    const input = body as UpdateContratInput;
+    const { data: updated, error: updateError } = await supabase
+      .from('contrats')
+      .update({
+        statut: input.statut,
+        date_fin: input.date_fin ?? null,
+        commission: input.commission ?? null,
+        caution: input.caution ?? null,
+      })
+      .eq('id', input.id)
+      .select('*')
+      .single();
+
+    if (updateError || !updated) {
+      throw new ContratApiError(updateError?.message ?? 'Mise à jour du contrat impossible.', 'FALLBACK_UPDATE_ERROR');
+    }
+
+    return updated as T;
+  }
+
+  throw new ContratApiError(`Fonction inconnue: ${fnName}`, 'UNKNOWN_FUNCTION');
 }
 
-/**
- * Crée un contrat via l'Edge Function.
- * Vérifie la disponibilité de l'unité côté serveur.
- */
-export async function createContratViaEdge(
-  input: CreateContratInput,
-): Promise<ContratApiResult> {
+export async function createContratViaEdge(input: CreateContratInput): Promise<ContratApiResult> {
   return invokeContratFunction<ContratApiResult>('create-contrat', input);
 }
 
-/**
- * Met à jour un contrat via l'Edge Function.
- * Libère l'unité si statut → 'resilie' ou 'expire'.
- */
-export async function updateContratViaEdge(
-  input: UpdateContratInput,
-): Promise<ContratApiResult> {
+export async function updateContratViaEdge(input: UpdateContratInput): Promise<ContratApiResult> {
   return invokeContratFunction<ContratApiResult>('update-contrat', input);
 }

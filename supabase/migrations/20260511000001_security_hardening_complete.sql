@@ -128,7 +128,7 @@ REVOKE EXECUTE ON FUNCTION public.log_table_changes()                           
 
 -- Workers / cron (exécutés uniquement via service_role ou pg_cron)
 REVOKE EXECUTE ON FUNCTION public.fn_aggregate_kpi_daily(uuid, date)                               FROM anon, PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.fn_aggregate_kpi_monthly(uuid, text)                             FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.fn_aggregate_kpi_monthly(uuid, date)                             FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.fn_compute_financial_snapshots(text, uuid)                        FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.fn_detect_impayes()                                               FROM anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.fn_enqueue_jobs_from_outbox(int)                                  FROM anon, PUBLIC;
@@ -167,7 +167,7 @@ REVOKE EXECUTE ON FUNCTION public.log_table_changes()                          F
 
 -- Workers / cron — exécutés uniquement par pg_cron ou service_role
 REVOKE EXECUTE ON FUNCTION public.fn_aggregate_kpi_daily(uuid, date)          FROM authenticated;
-REVOKE EXECUTE ON FUNCTION public.fn_aggregate_kpi_monthly(uuid, text)        FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.fn_aggregate_kpi_monthly(uuid, date)        FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.fn_compute_financial_snapshots(text, uuid)  FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.fn_detect_impayes()                          FROM authenticated;
 REVOKE EXECUTE ON FUNCTION public.fn_enqueue_jobs_from_outbox(int)             FROM authenticated;
@@ -212,7 +212,7 @@ GRANT EXECUTE ON FUNCTION public.is_super_admin()          TO authenticated;
 GRANT EXECUTE ON FUNCTION public.create_notification(uuid, uuid, text, text, text, text) TO service_role;
 GRANT EXECUTE ON FUNCTION public.cleanup_expired_invitations()                              TO service_role;
 GRANT EXECUTE ON FUNCTION public.fn_aggregate_kpi_daily(uuid, date)                       TO service_role;
-GRANT EXECUTE ON FUNCTION public.fn_aggregate_kpi_monthly(uuid, text)                     TO service_role;
+GRANT EXECUTE ON FUNCTION public.fn_aggregate_kpi_monthly(uuid, date)                     TO service_role;
 GRANT EXECUTE ON FUNCTION public.fn_compute_financial_snapshots(text, uuid)               TO service_role;
 GRANT EXECUTE ON FUNCTION public.fn_detect_impayes()                                       TO service_role;
 GRANT EXECUTE ON FUNCTION public.fn_enqueue_jobs_from_outbox(int)                          TO service_role;

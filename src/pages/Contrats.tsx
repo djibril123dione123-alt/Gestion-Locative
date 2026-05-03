@@ -189,7 +189,7 @@ export function Contrats() {
       const contratsData = Array.from(
         new Map(
           ((contratsRes.data || []) as unknown as Contrat[]).map((contrat) => [
-            `${contrat.id}:${contrat.locataire_id}:${contrat.unite_id}:${contrat.date_debut}`,
+            contrat.id,
             contrat,
           ])
         ).values()
@@ -251,8 +251,7 @@ export function Contrats() {
     const actifs = contrats.filter((c) => c.statut === 'actif');
     const revenuTotal = actifs.reduce((sum, c) => {
       const partAgence = (c.loyer_mensuel * (c.commission || 0)) / 100;
-      const caution = c.caution || 0;
-      return sum + partAgence + caution;
+      return sum + partAgence;
     }, 0);
 
     return {
@@ -562,9 +561,8 @@ export function Contrats() {
         key: 'revenue_total',
         label: 'Revenue',
         render: (c: Contrat) => {
-          const partAgence = (c.loyer_mensuel * (c.commission || 0)) / 100;
-          const caution = c.caution || 0;
-          return formatCurrency(partAgence + caution);
+      const partAgence = (c.loyer_mensuel * (c.commission || 0)) / 100;
+      return formatCurrency(partAgence);
         },
       },
       {

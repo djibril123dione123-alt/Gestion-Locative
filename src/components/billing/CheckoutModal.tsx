@@ -12,7 +12,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Modal } from '../ui/Modal';
 import {
-  CheckCircle2, Loader2, Smartphone, ArrowLeft,
+  CheckCircle2, Loader2, ArrowLeft,
   AlertCircle, Shield, Clock, CreditCard, ExternalLink,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -69,9 +69,9 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
   const [errorMsg, setErrorMsg] = useState('');
   const [isEdgeFunctionDown, setIsEdgeFunctionDown] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
-  const [transactionId, setTransactionId] = useState<string | null>(null);
   const [pollCount, setPollCount] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const paymentAttemptKeyRef = useRef<string | null>(null);
 
   const stopPolling = () => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
@@ -87,8 +87,8 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
       setErrorMsg('');
       setIsEdgeFunctionDown(false);
       setCheckoutUrl(null);
-      setTransactionId(null);
       setPollCount(0);
+      paymentAttemptKeyRef.current = null;
     }
   }, [isOpen]);
 
@@ -114,18 +114,37 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
 
   const initiatePayment = async (prov: Provider, phoneNum: string | undefined) => {
     try {
-      const { data, error } = await supabase.functions.invoke('initiate-payment', {
-        body: {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+        setErrorMsg('Session expirée. Veuillez vous reconnecter.');
+        setStep('error');
+        return;
+      }
+
+      if (!paymentAttemptKeyRef.current) {
+        paymentAttemptKeyRef.current = crypto.randomUUID();
+      }
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/initiate-payment`, {
+        method: 'POST',
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
           plan_id: planId,
           provider: prov,
           phone: phoneNum,
           amount_xof: priceXof,
           agency_id: profile?.agency_id,
-        },
+          idempotency_key: paymentAttemptKeyRef.current,
+        }),
       });
+      const data = await response.json().catch(() => null);
 
-      if (error) {
-        const rawMsg = error.message ?? '';
+      if (!response.ok) {
+        const rawMsg = data?.error ?? `Paiement refusé (${response.status}).`;
         if (isCorsOrNetworkError(rawMsg)) {
           setIsEdgeFunctionDown(true);
           setErrorMsg('Le service de paiement est en cours de déploiement. Contactez-nous sur WhatsApp pour activer votre abonnement maintenant.');
@@ -141,8 +160,6 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
         setStep('error');
         return;
       }
-
-      setTransactionId(data.transaction_id);
 
       // Softpay mobile push échoué → fallback carte
       if (data.softpay_error && data.checkout_url) {
@@ -161,21 +178,9 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
         return;
       }
 
-      // Mode test : activer l'abonnement directement (PayDunya non disponible en dev)
       if (data.test_mode && data.transaction_id) {
-        try {
-          await supabase.rpc('activate_subscription', {
-            p_agency_id:      profile?.agency_id,
-            p_plan_id:        planId,
-            p_transaction_id: data.transaction_id,
-            p_amount_xof:     priceXof,
-            p_phone:          null,
-          });
-        } catch {
-          // Non bloquant en mode test — l'abonnement sera activé via webhook en production
-        }
-        setStep('success');
-        setTimeout(() => onSuccess(), 2000);
+        setErrorMsg('Paiement de test cree. Activation bloquee cote navigateur: utilisez un webhook verifie ou une validation admin.');
+        setStep('error');
         return;
       }
 

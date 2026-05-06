@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Clock, Zap, X } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,11 +14,7 @@ export function TrialBanner({ onNavigate }: TrialBannerProps = {}) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadTrialInfo();
-  }, [profile?.agency_id]);
-
-  const loadTrialInfo = async () => {
+  const loadTrialInfo = useCallback(async () => {
     if (!profile?.agency_id) {
       setLoading(false);
       return;
@@ -49,7 +45,11 @@ export function TrialBanner({ onNavigate }: TrialBannerProps = {}) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.agency_id]);
+
+  useEffect(() => {
+    loadTrialInfo();
+  }, [loadTrialInfo]);
 
   if (loading || daysLeft === null || isDismissed) {
     return null;

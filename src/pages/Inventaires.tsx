@@ -21,7 +21,7 @@ interface Piece {
 interface Contrat {
   id: string;
   locataires?: { nom: string; prenom: string };
-  unites?: { nom: string; immeubles?: { nom: string } };
+  unites?: { nom: string; immeubles?: { id?: string; nom: string } };
 }
 
 interface Inventaire {
@@ -60,8 +60,10 @@ export function Inventaires() {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [filterType, setFilterType] = useState<'all' | 'entree' | 'sortie'>('all');
-  const [filterStatut, setFilterStatut] = useState<'all' | 'en_cours' | 'termine' | 'litige'>('all');
+  type InventaireTypeFilter = 'all' | 'entree' | 'sortie';
+  type InventaireStatutFilter = 'all' | 'en_cours' | 'termine' | 'litige';
+  const [filterType, setFilterType] = useState<InventaireTypeFilter>('all');
+  const [filterStatut, setFilterStatut] = useState<InventaireStatutFilter>('all');
   const [filterImmeuble, setFilterImmeuble] = useState<string>('all');
   const [deleteTarget, setDeleteTarget] = useState<Inventaire | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -215,7 +217,7 @@ export function Inventaires() {
   const filtered = items.filter((i) => {
     if (filterType !== 'all' && i.type !== filterType) return false;
     if (filterStatut !== 'all' && i.statut !== filterStatut) return false;
-    if (filterImmeuble !== 'all' && (i.contrats?.unites as any)?.immeubles?.id !== filterImmeuble) return false;
+    if (filterImmeuble !== 'all' && i.contrats?.unites?.immeubles?.id !== filterImmeuble) return false;
     return true;
   });
 
@@ -316,12 +318,12 @@ export function Inventaires() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value as any)} data-testid="filter-type" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value as InventaireTypeFilter)} data-testid="filter-type" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Tous types</option>
           <option value="entree">Entrée</option>
           <option value="sortie">Sortie</option>
         </select>
-        <select value={filterStatut} onChange={(e) => setFilterStatut(e.target.value as any)} data-testid="filter-statut" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        <select value={filterStatut} onChange={(e) => setFilterStatut(e.target.value as InventaireStatutFilter)} data-testid="filter-statut" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Tous statuts</option>
           <option value="en_cours">En cours</option>
           <option value="termine">Terminé</option>

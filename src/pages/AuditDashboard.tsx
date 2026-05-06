@@ -186,7 +186,7 @@ export function AuditDashboard() {
       // Jobs
       const stats: JobStats = { pending: 0, processing: 0, done: 0, failed: 0 };
       (jobs ?? []).forEach((j: { status: string }) => {
-        if (j.status in stats) (stats as Record<string, number>)[j.status]++;
+        if (j.status in stats) (stats as unknown as Record<string, number>)[j.status]++;
       });
       setJobStats(stats);
 
@@ -226,7 +226,7 @@ export function AuditDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, profile?.agency_id, profile?.role]);
+  }, [isAdmin, profile?.agency_id, profile?.role, showError]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -252,8 +252,8 @@ export function AuditDashboard() {
           const prev_s = payload.old as { status: string };
           setJobStats(prev => {
             const s = { ...prev };
-            if (prev_s.status in s) (s as Record<string, number>)[prev_s.status] = Math.max(0, (s as Record<string, number>)[prev_s.status] - 1);
-            if (next.status in s) (s as Record<string, number>)[next.status]++;
+            if (prev_s.status in s) (s as unknown as Record<string, number>)[prev_s.status] = Math.max(0, (s as unknown as Record<string, number>)[prev_s.status] - 1);
+            if (next.status in s) (s as unknown as Record<string, number>)[next.status]++;
             return s;
           });
         }

@@ -106,7 +106,7 @@ function AppContent() {
                 agency_id: profile.agency_id,
             });
         }
-    }, [profile?.id]);
+    }, [profile]);
 
     useEffect(() => {
         if (!loading && user && !profile) {
@@ -128,6 +128,23 @@ function AppContent() {
         }
     }, [user, invitationToken]);
 
+    // ── Backup complet quotidien depuis Supabase ──
+    useEffect(() => {
+        if (!profile?.agency_id || !navigator.onLine) return;
+        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+        const lastTs = getLastBackupTimestamp();
+        const isDue = !lastTs || (Date.now() - lastTs) > ONE_DAY_MS;
+        if (!isDue) return;
+        runFullBackup(profile.agency_id).catch(() => {
+            // Fail silencieux — le prochain démarrage réessaiera
+        });
+    }, [profile?.agency_id]);
+
+    // ── Récupération des mutations bloquées en "syncing" ──
+    useEffect(() => {
+        recoverStaleSyncing().catch(() => { /* noop */ });
+    }, []);
+
     if (invitationToken) {
         return (
             <Suspense fallback={
@@ -147,23 +164,6 @@ function AppContent() {
             </Suspense>
         );
     }
-
-    // ── Backup complet quotidien depuis Supabase ──
-    useEffect(() => {
-        if (!profile?.agency_id || !navigator.onLine) return;
-        const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-        const lastTs = getLastBackupTimestamp();
-        const isDue = !lastTs || (Date.now() - lastTs) > ONE_DAY_MS;
-        if (!isDue) return;
-        runFullBackup(profile.agency_id).catch(() => {
-            // Fail silencieux — le prochain démarrage réessaiera
-        });
-    }, [profile?.agency_id]);
-
-    // ── Récupération des mutations bloquées en "syncing" ──
-    useEffect(() => {
-        recoverStaleSyncing().catch(() => { /* noop */ });
-    }, []);
 
     if (loading) {
         return (

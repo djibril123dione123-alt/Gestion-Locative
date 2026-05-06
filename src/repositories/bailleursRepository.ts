@@ -38,8 +38,7 @@ export interface BailleurInsert {
   agency_id: string;
 }
 
-export interface BailleurUpdate
-  extends Partial<Omit<BailleurInsert, 'agency_id'>> {}
+export type BailleurUpdate = Partial<Omit<BailleurInsert, 'agency_id'>>;
 
 const BAILLEUR_SELECT =
   'id, nom, prenom, telephone, email, adresse, piece_identite, notes, commission, debut_contrat, actif, created_at, updated_at' as const;

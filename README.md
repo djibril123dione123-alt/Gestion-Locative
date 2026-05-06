@@ -1,435 +1,454 @@
-# Samay Këur — Gestion Locative SaaS
+# Samay Keur - Gestion Locative SaaS
 
-Application web multi-tenant de gestion immobilière pour agences et bailleurs. Marché sénégalais et francophone.
+Samay Keur est une application SaaS multi-tenant de gestion immobiliere pour agences, bailleurs et equipes de gestion locative au Senegal et en Afrique francophone.
 
----
+Le produit couvre la gestion des bailleurs, immeubles, unites, locataires, contrats, paiements, commissions, quittances, exports comptables, notifications et abonnements SaaS.
 
-## 1. Présentation du projet
-
-**Samay Këur** (« mes maisons » en wolof) permet à une agence immobilière de gérer l'intégralité de son cycle locatif depuis une interface web unique.
-
-**Problème résolu** : les agences africaines gèrent leurs bailleurs, locataires, loyers et documents légaux manuellement ou sur des tableurs. Cette application centralise tout, fonctionne hors ligne, et isole chaque agence dans un tenant sécurisé.
-
-**Public cible** :
-- Agences immobilières (multi-bailleurs, multi-immeubles, équipe collaborative)
-- Bailleurs individuels (vue simplifiée sur leurs propres biens)
-- Propriétaire SaaS (console d'administration multi-agences)
+Production: https://samay-keur-gestion-locative.vercel.app
 
 ---
 
-## 2. Fonctionnalités principales
+## Etat Actuel
 
-**Gestion immobilière**
-- CRUD bailleurs → immeubles → unités (appartements, studios, bureaux, commerces)
-- Statuts unité : `libre` / `loué` / `maintenance`
+Statut produit: beta stable, pas encore SaaS robuste a 100%.
 
-**Contrats et locataires**
-- CRUD locataires et contrats avec commission obligatoire
-- Soft delete sur toutes les entités (`actif`, `deleted_at`)
-- Détection automatique des impayés (6 derniers mois glissants)
+Les flux critiques ont ete fortement durcis:
 
-**Paiements et finances**
-- Enregistrement des encaissements avec décomposition `part_agence` / `part_bailleur`
-- KPIs : encaissé ce mois, mois précédent, en attente, taux de recouvrement
-- Rapport commissions par bailleur/immeuble avec export PDF
-- Filtres avancés multi-critères + export Excel
-- Gestion des dépenses par catégorie
+- Creation de contrat via Edge Function serveur.
+- Creation, modification et annulation de paiements via Edge Functions, pas via insert client direct.
+- Ledger financier limite aux paiements reellement encaisses.
+- RLS multi-tenant durcie sur les tables coeur.
+- Webhook PayDunya avec verification de hash, montant, token et transaction pending.
+- Activation abonnement impossible depuis le frontend.
+- Export comptable CSV signe SHA-256 et archive dans Supabase Storage.
+- Defaults contrats:
+  - caution par defaut = 2x loyer mensuel.
+  - date de fin par defaut = date de debut + 2 ans.
+- Paiement abonnement idempotent contre double clic, refresh et retry.
+- Watchdog DB pour expirer les transactions PayDunya pending trop anciennes.
+- Worker analytics corrige: plus de crash Postgres `FOR UPDATE` + `DISTINCT ON`.
 
-**Documents PDF**
-- Contrat de location, mandat de gérance, quittance/facture
-- Variables dynamiques depuis `agency_settings`
-- Numérotation unique quittances : `QIT-AAAAMM-{id}{rand}`
+Dernieres verifications locales:
 
-**Dashboard financier**
-- Bilan mensuel agence (loyers, commissions, dépenses, solde)
-- Graphiques Recharts (bar, pie, line)
-- RPC SQL prêt : `get_dashboard_stats` / `get_monthly_revenue`
+- `npm run lint`: OK
+- `npm run typecheck`: OK
+- `npm run test:unit`: OK, 31 tests
+- `npm run build`: OK
 
-**Offline-first**
-- Queue IndexedDB (CREATE / UPDATE / DELETE)
-- Sync automatique au retour de connexion, retry 3× avec backoff
-- Backup quotidien automatique des 7 tables critiques
+Dernier audit live DB:
 
-**SaaS multi-tenant**
-- Console super-admin (agences, plans, utilisateurs, audit)
-- Onboarding : demande → approbation → création agence
-- Invitations par token (7 jours), rôles différenciés
-- Plans : `basic` (essai) / `pro` / `enterprise`
+- drift financier mois courant: `0`
+- jobs pending: `0`
+- jobs stuck: `0`
+- jobs failed: `0`
+- event_outbox ancien pending: `0`
+- pending PayDunya > 24h: `0`
 
----
-
-## 3. Architecture globale
-
-```
-┌────────────────────────────────────────────────────┐
-│  React 18 + Vite 5 + TypeScript + Tailwind CSS     │
-│  SPA offline-first (IndexedDB)                     │
-│  Routing par état React (pas de React Router)      │
-└───────────────────────┬────────────────────────────┘
-                        │ HTTPS + WebSocket (realtime)
-┌───────────────────────▼────────────────────────────┐
-│  SUPABASE                                          │
-│  PostgreSQL + RLS │ Auth JWT │ Storage │ RPC SQL   │
-└────────────────────────────────────────────────────┘
-```
-
-**Pattern d'architecture obligatoire** :
-
-```
-UI → Hook → Service (src/services/domain/) → Repository (src/repositories/) → Supabase
-                                                      ↓
-                                           IndexedDB (offline queue / backup)
-```
-
-Il n'y a pas de backend custom. La logique serveur se limite aux fonctions SQL `SECURITY DEFINER` et aux politiques RLS.
+Attention: des secrets Supabase ont ete exposes pendant les sessions de travail. Ils doivent etre rotates avant tout lancement commercial.
 
 ---
 
-## 4. Structure du projet
+## Stack Technique
 
-```
-src/
-├── App.tsx                      # Routing état + backup quotidien + recovery offline
-├── main.tsx                     # Point d'entrée, init Sentry
-│
-├── components/
-│   ├── auth/LoginForm.tsx
-│   ├── layout/Sidebar.tsx       # Navigation responsive (groupes pliables)
-│   └── ui/
-│       ├── BackupIndicator.tsx  # Badge backup (aperçu, merge/overwrite)
-│       ├── NetworkBanner.tsx    # Bannière réseau (4 états)
-│       ├── SetupWizard.tsx      # Assistant onboarding (6 étapes)
-│       └── ...                 # Button, Modal, Table, Toast, ConfirmModal…
-│
-├── contexts/AuthContext.tsx     # user, profile, signIn, signUp, signOut
-│
-├── hooks/
-│   ├── useOfflineSync.ts        # Sync queue, errorCount, syncNow
-│   ├── useBackup.ts             # save/download/restore/preview/isDailyDue
-│   ├── useToast.ts
-│   ├── useTracking.ts           # Audit trail (audit_logs)
-│   └── useFeatureFlag.ts
-│
-├── lib/
-│   ├── supabase.ts              # Client singleton
-│   ├── pdf.ts                   # Génération PDF + cache settings (TTL 5 min)
-│   ├── formatters.ts            # formatCurrency (XOF/EUR/USD), formatDate
-│   ├── errorMessages.ts         # Traduction erreurs Supabase → français
-│   └── sentry.ts
-│
-├── repositories/                # Accès DB uniquement — aucune logique métier
-│   ├── bailleursRepository.ts
-│   ├── contratsRepository.ts
-│   └── paiementsRepository.ts
-│
-├── services/
-│   ├── db.ts                    # Wrapper IndexedDB
-│   ├── localBackup.ts           # Backup 7 tables, preview, restore, runFullBackup
-│   ├── offlineQueue.ts          # Queue mutations (CREATE/UPDATE/DELETE, retry, recovery)
-│   └── domain/                  # Logique métier pure — jamais dans les composants
-│       ├── commissionService.ts
-│       ├── contratService.ts
-│       └── paiementService.ts
-│
-├── pages/                       # 25 pages, toutes lazy-loaded
-│   ├── Dashboard.tsx
-│   ├── Paiements.tsx
-│   ├── LoyersImpayes.tsx
-│   ├── Contrats.tsx
-│   ├── Bailleurs.tsx
-│   └── ...
-│
-└── types/                       # Entités domaine, formulaires, PDF, DB
-```
-
-```
-supabase/migrations/             # ~45 fichiers SQL — appliquer dans l'ordre alphabétique
-├── _archive/                    # ⚠️ Ne pas rejouer
-└── *.sql
-
-public/templates/                # Templates texte PDF (variables {{...}})
-```
+- React 18
+- Vite 5
+- TypeScript
+- TailwindCSS
+- Supabase Auth
+- Supabase PostgreSQL + RLS
+- Supabase Edge Functions Deno
+- Supabase Storage
+- IndexedDB offline-first
+- PayDunya pour Wave, Orange Money, Djamo et carte
+- Resend pour emails
+- Orange SMS API
+- Sentry
+- Vercel
 
 ---
 
-## 5. Logique métier critique
+## Architecture
 
-### Commission — règle absolue
+```text
+Frontend React
+  -> Hooks
+  -> Services API / Services domaine
+  -> Repositories
+  -> Supabase client
 
-La commission est **obligatoire** sur tout contrat. Aucun fallback silencieux n'est autorisé.
+Flux financiers sensibles
+  -> Edge Functions
+  -> Supabase service role
+  -> PostgreSQL constraints / triggers / RPC
+  -> ledger_entries / event_outbox / job_queue
 
-```typescript
-// commissionService.ts
-validateCommission(commission: number | null): void
-// → lance CommissionRequiredError si null / undefined
-// → lance CommissionRangeError si hors [0, 100]
-
-calculateCommission(montantTotal, commission): { partAgence, partBailleur, tauxCommission }
-isCommissionMissing(commission): boolean  // check UI, ne lance pas d'erreur
+Offline
+  -> IndexedDB pending_mutations
+  -> replay idempotent
+  -> Edge Functions pour paiements
 ```
 
-### Paiement
+Regle importante: tout ce qui touche aux paiements, aux contrats critiques, au ledger ou a l'abonnement doit passer par une Edge Function ou une RPC securisee.
 
-```typescript
-// paiementService.ts
-buildPaiementPayload(input, contrat, agencyId): PaiementInsert
-// Calcule part_agence / part_bailleur via commissionService
-// Lance CommissionRequiredError si commission absente
+---
 
-formatPaiementError(err: unknown): string
-// Gère CommissionRequiredError, PaiementValidationError, Error, unknown
-```
+## Fonctionnalites
 
-### Contrat
+### Gestion locative
 
-```typescript
-// contratService.ts
-validateContrat(contrat): void
-isStatutTransitionValid(from, to): boolean
-computeDateFin(dateDebut, dureeMois): string
-formatContratError(err: unknown): string
-```
+- Bailleurs
+- Immeubles
+- Unites
+- Locataires
+- Contrats
+- Paiements
+- Impayes
+- Commissions
+- Depenses
+- Documents
+- Calendrier
+- Inventaires
+- Interventions
 
-### Repositories disponibles
+### Finance
 
-| Repository | Méthodes clés |
+- Calcul serveur des parts agence / bailleur.
+- Ledger append-only avec corrections/reversals.
+- Snapshots financiers mensuels.
+- Dashboard financier.
+- Export livre comptable CSV signe SHA-256.
+- Archivage Storage dans le bucket prive `agency-archives`.
+
+### SaaS
+
+- Multi-agence.
+- Roles: `super_admin`, `admin`, `agent`, `comptable`, `bailleur`.
+- Abonnements PayDunya.
+- Plans: `starter`, `pro`, `business`, `enterprise`.
+- Console super-admin.
+- Audit dashboard.
+
+### Offline-first
+
+- Queue IndexedDB.
+- Recovery des mutations restees en `syncing`.
+- Replay paiements via Edge Functions.
+- Idempotency keys pour eviter les doublons.
+
+---
+
+## Edge Functions
+
+Fonctions principales:
+
+| Function | Role |
 |---|---|
-| `bailleursRepository` | `list`, `findById`, `findWithImmeubles`, `insert`, `update`, `softDelete` |
-| `contratsRepository` | `list`, `findById`, `findCommission`, `listActive`, `insert`, `update`, `softDelete` |
-| `paiementsRepository` | `list`, `findForPDF`, `listActiveContrats`, `insert`, `update`, `softDelete`, `hardDelete` |
+| `create-contrat` | Creation contrat serveur avec agency_id injecte |
+| `update-contrat` | Update contrat, transitions controlees |
+| `create-paiement` | Creation paiement serveur, commission et ledger |
+| `update-paiement` | Update paiement serveur |
+| `cancel-paiement` | Annulation paiement + reversal ledger |
+| `initiate-payment` | Creation transaction PayDunya |
+| `paydunya-webhook` | IPN PayDunya, validation hash/montant/token |
+| `export-accounting-ledger` | Export CSV comptable signe |
+| `analytics-worker` | KPI et cohortes |
+| `finance-worker` | Reconciliation finance |
+| `notification-worker` | Jobs notifications |
+| `send-email` | Envoi email |
+| `send-sms` | Envoi SMS |
+| `subscription-scheduler` | Suivi abonnements |
 
 ---
 
-## 6. Règles de développement
+## Securite
 
-**Interdits**
-- Requêtes Supabase directes dans les pages — utiliser les repositories
-- Logique métier dans les composants React — utiliser `src/services/domain/`
-- Fallback silencieux sur données financières : `|| 10`, `?? 0` sur commission/paiement/taux
-- `catch (error: any)` — toujours `catch (error: unknown)`
-- `console.log` / `console.error` en production
-- `JSON.stringify` pour filtrer des données métier
+Garanties actuellement en place:
 
-**Obligatoire**
-- Toute commission → `commissionService`
-- Tout paiement → `paiementService.buildPaiementPayload`
-- Toute erreur utilisateur → `useToast()` + message typé
-- `agency_id` dans tous les SELECT et INSERT
-- Pattern `requestIdRef` sur toutes les pages avec chargement asynchrone
+- RLS active sur les tables exposees critiques.
+- Policies multi-tenant strictes sur tables coeur.
+- `activate_subscription` reserve au `service_role`.
+- Pas d'activation abonnement depuis le frontend, meme en test mode.
+- Webhook PayDunya valide:
+  - hash PayDunya,
+  - invoice token,
+  - montant,
+  - statut transaction,
+  - idempotence via lock DB.
+- Paiements directs client interdits dans le repository.
+- Paiements offline replays via Edge Function.
+- Export comptable archive en bucket prive avec URL signee.
 
-**Pattern nouvelle page**
+Points critiques avant go-live:
 
-```tsx
-const requestIdRef = useRef(0);
-
-const loadData = useCallback(async () => {
-  const myId = ++requestIdRef.current;
-  try {
-    const { data, error } = await monRepository.list(profile.agency_id);
-    if (myId !== requestIdRef.current) return;  // requête obsolète
-    if (error) throw error;
-    setData(data);
-  } catch (err: unknown) {
-    if (myId !== requestIdRef.current) return;
-    showError(err instanceof Error ? err.message : 'Erreur de chargement');
-  }
-}, [profile?.agency_id]);
-
-useEffect(() => {
-  if (profile?.agency_id) loadData();
-  return () => { requestIdRef.current++; };
-}, [profile?.agency_id, loadData]);
-```
-
-**Nouvelle migration SQL**
-
-1. Nom : `YYYYMMDDHHMMSS_description.sql`
-2. Idempotente : `IF NOT EXISTS`, `CREATE OR REPLACE`, `ON CONFLICT DO NOTHING`
-3. Fonctions SECURITY DEFINER : toujours `SET search_path = public, pg_temp`
-4. Vérification multi-tenant : `EXISTS (SELECT 1 FROM user_profiles WHERE id = auth.uid() AND agency_id = p_agency_id)`
+- Rotater tous les secrets exposes.
+- Verifier que la cle `service_role` n'existe jamais dans le frontend ni dans Vercel public env.
+- Activer alertes Sentry paiement/ledger.
+- Ajouter rate limiting externe ou applicatif sur toutes les Edge Functions publiques.
+- Faire un audit Supabase Advisor complet avant vente.
 
 ---
 
-## 7. Offline-first et synchronisation
+## Base De Donnees Et Migrations Recentes
 
-L'app fonctionne intégralement hors ligne via IndexedDB (`samay-keur-local` v1).
+Migrations importantes recentes:
 
-| Store IndexedDB | Rôle |
+| Migration | Role |
 |---|---|
-| `snapshots` | Backups JSON des 7 tables critiques |
-| `pending_mutations` | Queue CREATE / UPDATE / DELETE en attente |
+| `20260506124617_phase3_payment_idempotency.sql` | Idempotence paiements loyers |
+| `20260506125353_default_contract_caution.sql` | Caution par defaut = 2x loyer |
+| `20260506130009_agency_archives_storage.sql` | Bucket Storage prive |
+| `20260506131514_rls_tenant_core_tables.sql` | RLS tenant strict tables coeur |
+| `20260506184449_default_contract_end_date.sql` | Date fin contrat = debut + 2 ans |
+| `20260506190110_phase3_subscription_payment_idempotency.sql` | Idempotence paiement abonnement |
+| `20260506190933_phase3_payment_watchdog.sql` | Watchdog pending PayDunya |
+| `20260506191057_fix_worker_analytics_locking.sql` | Fix worker analytics |
+| `20260512000001_phase3_finance_security_hardening.sql` | Durcissement finance/abonnement |
 
-**Cycle de sync**
-1. Action utilisateur → `queueMutation()` → écriture IndexedDB immédiate
-2. Connexion détectée → `syncNow()` → replay des mutations dans l'ordre
-3. Erreur → retry jusqu'à 3× (backoff exponentiel via `useRetry`)
-4. Au démarrage → `recoverStaleSyncing()` récupère les mutations bloquées en `syncing`
-
-**API `useOfflineSync`**
-```typescript
-{ isOnline, pendingCount, syncing, errorCount, lastSyncResult, queueMutation, syncNow }
-```
-
-**Backup automatique**
-
-Au démarrage (post-auth), si la dernière sauvegarde date de +24h : `runFullBackup(agencyId)` charge les 7 tables depuis Supabase et les persiste dans IndexedDB.
-
-Tables : `agences`, `bailleurs`, `immeubles`, `unites`, `locataires`, `contrats`, `paiements`
-
-**Restauration** : `BackupIndicator` → aperçu (date, comptages, alerte mutations) → merge ou overwrite.
-
----
-
-## 8. Installation
-
-### Prérequis
-
-- Node.js ≥ 18
-- Un projet Supabase actif
-
-### Étapes
+Appliquer les migrations avec prudence:
 
 ```bash
-# 1. Cloner
-git clone <url> && cd samay-keur
-
-# 2. Installer les dépendances
-npm install
-
-# 3. Configurer l'environnement
-cp .env.example .env
-# Renseigner VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY
-
-# 4. Appliquer les migrations
 supabase db push
-# ⚠️ Ne pas exécuter les fichiers dans _archive/
+```
 
-# 5. Créer le premier super_admin (SQL Editor Supabase)
-UPDATE user_profiles SET role = 'super_admin' WHERE email = 'admin@example.com';
+En production, verifier apres migration:
 
-# 6. Lancer
+```sql
+select count(*) from financial_snapshots
+where period = date_trunc('month', current_date)::date
+  and status <> 'ok';
+
+select count(*) from job_queue where status = 'failed';
+
+select count(*) from event_outbox
+where status = 'pending'
+  and created_at < now() - interval '15 minutes';
+```
+
+---
+
+## Installation Locale
+
+```bash
+npm install
+cp .env.example .env.local
 npm run dev
 ```
 
-Application disponible sur `http://localhost:5000`.
+Variables frontend obligatoires:
 
-**Scripts disponibles**
+```env
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<publishable-or-anon-key>
+VITE_APP_URL=http://localhost:5173
+```
+
+Variables serveur a configurer dans Supabase Edge Functions:
+
+```env
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+
+PAYDUNYA_ENV=test
+PAYDUNYA_MASTER_KEY=...
+PAYDUNYA_TEST_PRIVATE_KEY=...
+PAYDUNYA_TEST_PUBLIC_KEY=...
+PAYDUNYA_TEST_TOKEN=...
+PAYDUNYA_LIVE_PRIVATE_KEY=...
+PAYDUNYA_LIVE_PUBLIC_KEY=...
+PAYDUNYA_LIVE_TOKEN=...
+
+APP_URL=https://samay-keur-gestion-locative.vercel.app
+```
+
+Ne jamais commiter `.env.local`, service role, token Supabase Management API, cle PayDunya, cle Resend ou cle SMS.
+
+---
+
+## Scripts
 
 | Commande | Description |
 |---|---|
-| `npm run dev` | Vite dev server (port 5000, HMR) |
-| `npm run build` | Build production → `dist/` |
-| `npm run typecheck` | `tsc --noEmit` — doit retourner 0 erreur |
+| `npm run dev` | Serveur Vite |
+| `npm run build` | Build production |
+| `npm run vercel-build` | Build utilise par Vercel |
 | `npm run lint` | ESLint |
-| `npm run test` | Playwright (headless) |
+| `npm run typecheck` | TypeScript check |
+| `npm run test:unit` | Tests Vitest |
+| `npm run test` | Tests Playwright |
 
 ---
 
-## 9. Variables d'environnement
+## Deploiement
 
-```env
-# Obligatoires
-VITE_SUPABASE_URL=https://<project-ref>.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJ...
-
-# Optionnels — monitoring
-VITE_SENTRY_DSN=https://...@sentry.io/...
-SENTRY_ORG=your-org
-SENTRY_PROJECT=your-project
-SENTRY_AUTH_TOKEN=...
-
-# Optionnels — scripts CI/seed (jamais côté client)
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-SUPABASE_PROJECT_ID=<project-ref>
-
-# Optionnel — backup S3 (CI uniquement)
-AWS_ACCESS_KEY_ID=...
-AWS_SECRET_ACCESS_KEY=...
-AWS_REGION=...
-BACKUP_BUCKET=your-s3-bucket
-
-# Environnement
-VITE_ENV=development
-VITE_APP_URL=http://localhost:5000
-VITE_APP_VERSION=1.0.0
-```
-
-> Sur Replit : configurer via **Secrets** (icône cadenas). Ne jamais commiter `.env`.
-
-> `VITE_SUPABASE_ANON_KEY` est une clé publique — exposée côté client intentionnellement. La sécurité repose sur les politiques RLS de Supabase.
-
----
-
-## 10. Migrations Supabase
-
-Les migrations sont dans `supabase/migrations/`. Appliquer dans **l'ordre alphabétique strict**.
+Frontend:
 
 ```bash
-supabase db push
-# ou copier-coller chaque fichier *.sql dans le SQL Editor Supabase
+npx vercel deploy --prod --yes --scope seul
 ```
 
-**Fonctions SQL critiques**
+Supabase Edge Functions:
 
-| Fonction | Type | Rôle |
-|---|---|---|
-| `handle_new_user()` | Trigger SECURITY DEFINER | Création automatique `user_profiles` |
-| `current_user_agency_id()` | SQL SECURITY DEFINER | Retourne `agency_id` sans récursion RLS |
-| `is_super_admin()` / `is_admin()` | SQL SECURITY DEFINER | Tests de rôle pour les policies |
-| `check_plan_limits(agency_id)` | PL/pgSQL SECURITY DEFINER | Quotas plan |
-| `approve_agency_request(id)` | PL/pgSQL SECURITY DEFINER | Crée l'agence complète |
-| `accept_invitation(token)` | PL/pgSQL SECURITY DEFINER | Accepte une invitation |
-| `get_dashboard_stats(agency_id, month)` | PL/pgSQL SECURITY DEFINER | Agrégats dashboard |
-| `get_monthly_revenue(agency_id, year)` | PL/pgSQL SECURITY DEFINER | Revenus mensuels |
+```bash
+npx supabase functions deploy create-paiement --project-ref <project-ref> --use-api
+npx supabase functions deploy initiate-payment paydunya-webhook --project-ref <project-ref> --use-api
+```
 
-**Points d'attention**
-- Ne jamais recréer de policies sur `user_profiles` sans utiliser `current_user_agency_id()` — risque de récursion RLS.
-- Ne pas rejouer les fichiers dans `_archive/`.
-- Toutes les fonctions SECURITY DEFINER doivent inclure `SET search_path = public, pg_temp`.
+Verification minimale apres deploiement:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test:unit
+npm run build
+```
 
 ---
 
-## 11. Bugs connus et limites
+## Flux Paiement Abonnement
 
-**Critiques**
+1. Le frontend genere une `idempotency_key`.
+2. `initiate-payment` verifie la session et l'agence.
+3. La fonction refuse les plans non payables automatiquement.
+4. Une transaction `payment_transactions` pending est creee.
+5. PayDunya cree l'invoice.
+6. Le token PayDunya est stocke.
+7. Le client poll `payment_transactions.status`.
+8. Le webhook PayDunya valide hash, token et montant.
+9. `activate_subscription` active l'abonnement en service role uniquement.
+10. La transaction passe en `completed`.
 
-| # | Problème | Statut |
-|---|---|---|
-| 1 | Récursion RLS `user_profiles` | Corrigé via `current_user_agency_id()`. Ne pas recréer de policies manuelles. |
-| 2 | `bilans_mensuels` jamais alimentée | La table existe mais n'est pas renseignée automatiquement. Ne pas s'y fier pour les rapports — calculs à la volée dans `TableauDeBordFinancierGlobal`. |
+Cas controles:
 
-**Importants**
-
-| # | Problème | Détail |
-|---|---|---|
-| 3 | Routing sans history API | Pas d'URLs directes, pas de bouton retour navigateur. Migration vers React Router envisageable. |
-| 4 | Cache PDF non invalidé automatiquement | `settingsCache` TTL 5 min. Appeler `invalidateAgencySettingsCache(agencyId)` après sauvegarde des paramètres agence. |
-| 5 | Template PDF avec variables vides | Si `agency_settings` n'est pas renseigné, les `{{...}}` produisent des chaînes vides. |
-| 6 | Dashboard — 8 requêtes parallèles | Migration SQL `get_dashboard_stats` prête (`20260502000001`). À appliquer via `supabase db push` puis migrer `Dashboard.tsx`. |
-
-**Points de vigilance**
-
-- **Race conditions** : pattern `requestIdRef` implémenté dans `Calendrier.tsx`, `Contrats.tsx`. À reproduire dans toute nouvelle page avec chargement asynchrone.
-- **Plan limits** : `usePlanLimits` vérifié sur Immeubles et Unités, pas encore sur toutes les entités.
-- **QR code quittances** : paramètre `qr_code_quittances` dans `agency_settings`, génération non branchée dans le PDF.
+- double clic: retourne la transaction existante.
+- webhook replay: idempotent.
+- montant incorrect: rejet.
+- token inconnu: rejet.
+- plan gratuit/enterprise: pas de paiement automatique.
+- vieux pending: expiration via watchdog apres grace period.
 
 ---
 
-## 12. Améliorations futures
+## Flux Paiement Loyer
 
-| Fonctionnalité | Priorité |
-|---|---|
-| Paiement en ligne (Stripe, Wave Business) | Haute |
-| Envoi email/SMS automatique (rappels impayés, échéances) | Haute |
-| Portail locataire (accès quittances/contrats) | Moyenne |
-| Signature électronique des contrats et mandats | Moyenne |
-| Migration routing vers React Router / TanStack Router | Moyenne |
-| QR code sur les quittances | Basse |
-| Export comptable (FEC) | Basse |
-| Application mobile native (Expo) | Basse |
-| Gestion des feature flags depuis la console UI | Basse |
-| `bilans_mensuels` alimentée automatiquement (trigger SQL) | Basse |
+Les paiements de loyer ne doivent jamais etre inseres directement depuis le client.
+
+Flux correct:
+
+```text
+Paiements.tsx
+  -> createPaiementViaEdge()
+  -> create-paiement Edge Function
+  -> calcul commission serveur
+  -> insert paiements
+  -> trigger ledger_entries si statut paye/partiel
+```
+
+Le ledger ne doit enregistrer du cash que pour:
+
+- `paye`
+- `partiel`
+
+Pas pour:
+
+- `impaye`
+- `en_attente`
+- `annule`
 
 ---
 
-*Dernière mise à jour : mai 2026. Reflète fidèlement l'état du code source.*
+## Offline
+
+La queue offline est dans IndexedDB.
+
+Regles:
+
+- Les mutations non financieres peuvent passer par Supabase client si RLS le permet.
+- Les paiements passent toujours par Edge Function.
+- Chaque paiement offline doit avoir une `idempotency_key`.
+- Les entrees `syncing` restees bloquees sont remises en `pending` au demarrage.
+
+Limites restantes:
+
+- Gestion de conflit multi-device encore basique.
+- L'UI doit encore mieux distinguer local/pending/synced.
+- Pas encore de backoffice complet de reconciliation.
+
+---
+
+## Scores Production Actuels
+
+Evaluation realiste apres les derniers correctifs:
+
+| Categorie | Score |
+|---|---:|
+| Fiabilite paiement | 78/100 |
+| Resilience globale | 74/100 |
+| Production readiness | 76/100 |
+| Securite applicative | 75/100 hors rotation secrets |
+| Scalabilite | 68/100 |
+
+Verdict: beta stable avancee. Pas encore SaaS robuste pour scale 500 agences sans monitoring, rate limiting et reconciliation backoffice.
+
+---
+
+## Bloquants Avant Go-Live Payant
+
+Critique immediat:
+
+- Rotater tous les secrets exposes.
+- Tester PayDunya sandbox/live de bout en bout avec vrai callback.
+- Configurer alertes Sentry:
+  - webhook failed,
+  - activation failed,
+  - ledger drift,
+  - payment pending > 15 min,
+  - worker failure.
+- Ajouter rate limiting sur Edge Functions publiques.
+
+Avant premiers clients:
+
+- Backoffice reconciliation PayDunya.
+- Tests Edge automatises: double webhook, spoof webhook, timeout, failed, pending, replay.
+- Tests SQL RLS malveillants en CI.
+- Tests SQL drift ledger en CI.
+- UX offline plus explicite.
+
+Avant scale:
+
+- Pagination/virtualisation sur grandes listes.
+- Cache client React Query ou SWR.
+- Load test 10/100/1000 agences.
+- Reduction bundle: isoler/remplacer `xlsx`, `jspdf`, gros chunks charts.
+- Supabase Advisor complet et nettoyage des grants.
+
+---
+
+## Regles De Contribution
+
+- Pas de modification finance sans test.
+- Pas d'acces cross-tenant base sur `agency_id` fourni par le client.
+- Pas de `service_role` dans le frontend.
+- Pas de fallback silencieux sur commission, montant, statut ou plan.
+- Pas de `.catch(() => {})` directement sur les query builders Supabase.
+- Toute fonction `SECURITY DEFINER` doit avoir `SET search_path = public, pg_temp`.
+- Toute nouvelle table exposee doit avoir RLS.
+- Toute ecriture financiere doit etre idempotente.
+
+---
+
+## Note Securite
+
+Si un secret a ete colle dans un chat, un ticket, un README ou un terminal partage, il est considere compromis.
+
+Actions obligatoires:
+
+1. Rotater le token Supabase Management API.
+2. Rotater la cle `service_role`.
+3. Rotater les cles PayDunya.
+4. Rotater les cles Resend/SMS si elles ont ete exposees.
+5. Re-deployer les Edge Functions et Vercel avec les nouveaux secrets.
+
+---
+
+Derniere mise a jour: 6 mai 2026.

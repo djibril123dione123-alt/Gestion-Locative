@@ -75,21 +75,24 @@ serve(async (req: Request) => {
       });
 
     // 3. Log dans event_outbox
-    await supabaseAdmin.from("event_outbox").insert({
+    const { error: eventErr } = await supabaseAdmin.from("event_outbox").insert({
       event_type: "worker.finance.run",
       entity_type: "job_queue",
       payload: { worker: workerResult, snapshot: snapshotResult, duration_ms: Date.now() - startedAt },
       source: "edge-function",
       status: "processed",
       processed_at: new Date().toISOString(),
-    }).catch(() => {});
+    });
+    if (eventErr) {
+      console.warn("[finance-worker] event_outbox insert failed", eventErr.message);
+    }
 
     return json({
       success: true,
       worker: workerResult,
       duration_ms: Date.now() - startedAt,
     }, 200);
-  } catch (_err) {
+  } catch {
     return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
   }
 });

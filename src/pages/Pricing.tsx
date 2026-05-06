@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   CheckCircle2, Zap, Building2, Crown, ArrowRight,
-  Smartphone, Shield, Clock, ChevronDown, BarChart3,
+  Shield, Clock, ChevronDown, BarChart3,
   Star, TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -164,7 +164,6 @@ const FAQS = [
 ];
 
 const CONTACT_WHATSAPP = '221769010960';
-const CONTACT_EMAIL    = 'samaykeur@gmail.com';
 
 interface PricingProps {
   embedded?: boolean;

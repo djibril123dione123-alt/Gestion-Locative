@@ -27,6 +27,13 @@ interface Document {
 
 const FOLDERS = ['contrat', 'immeuble', 'locataire', 'autre'] as const;
 type Folder = (typeof FOLDERS)[number];
+type FolderFilter = 'all' | Folder;
+
+interface ContratOptionRow {
+  id: string;
+  locataires?: { nom?: string | null; prenom?: string | null } | null;
+  unites?: { nom?: string | null } | null;
+}
 
 function formatSize(bytes: number | null): string {
   if (!bytes) return '—';
@@ -47,7 +54,7 @@ export function Documents() {
   const [bailleurs, setBailleurs] = useState<{ id: string; nom: string; prenom: string }[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [filterFolder, setFilterFolder] = useState<'all' | Folder>('all');
+  const [filterFolder, setFilterFolder] = useState<FolderFilter>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [deleteTarget, setDeleteTarget] = useState<Document | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -78,7 +85,7 @@ export function Documents() {
       if (docRes.data) setItems(docRes.data as Document[]);
       if (cRes.data) {
         setContrats(
-          (cRes.data as any[]).map((c) => ({
+          (cRes.data as ContratOptionRow[]).map((c) => ({
             id: c.id,
             label: `${c.locataires?.prenom ?? ''} ${c.locataires?.nom ?? ''} – ${c.unites?.nom ?? ''}`.trim(),
           })),
@@ -271,7 +278,7 @@ export function Documents() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select value={filterFolder} onChange={(e) => setFilterFolder(e.target.value as any)} data-testid="filter-folder" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        <select value={filterFolder} onChange={(e) => setFilterFolder(e.target.value as FolderFilter)} data-testid="filter-folder" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Tous dossiers</option>
           {FOLDERS.map((f) => (
             <option key={f} value={f} className="capitalize">{f}</option>

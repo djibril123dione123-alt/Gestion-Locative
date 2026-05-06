@@ -31,7 +31,6 @@ async function extractOne({ input, output }) {
 }
 
 for (const job of pdfs) {
-  // eslint-disable-next-line no-await-in-loop
   await extractOne(job);
 }
 

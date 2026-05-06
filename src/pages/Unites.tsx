@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
@@ -24,11 +24,18 @@ interface Unite {
   immeubles?: { nom: string };
 }
 
+interface ImmeubleOption {
+  id: string;
+  nom: string;
+}
+
+type UniteStatut = Unite['statut'];
+
 export function Unites() {
   const { user, profile } = useAuth();
   const [unites, setUnites] = useState<Unite[]>([]);
   const [filteredUnites, setFilteredUnites] = useState<Unite[]>([]);
-  const [immeubles, setImmeubles] = useState<any[]>([]);
+  const [immeubles, setImmeubles] = useState<ImmeubleOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUnite, setEditingUnite] = useState<Unite | null>(null);
@@ -48,12 +55,6 @@ export function Unites() {
   });
 
   useEffect(() => {
-    if (profile?.agency_id) {
-      loadData();
-    }
-  }, [profile?.agency_id]);
-
-  useEffect(() => {
     const filtered = unites.filter(u =>
       `${u.nom} ${u.numero || ''} ${u.immeubles?.nom || ''}`
         .toLowerCase()
@@ -62,7 +63,7 @@ export function Unites() {
     setFilteredUnites(filtered);
   }, [searchTerm, unites]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
 
     try {
@@ -91,7 +92,13 @@ export function Unites() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.agency_id]);
+
+  useEffect(() => {
+    if (profile?.agency_id) {
+      loadData();
+    }
+  }, [loadData, profile?.agency_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -328,7 +335,7 @@ export function Unites() {
             <select
               required
               value={formData.statut}
-              onChange={(e) => setFormData({ ...formData, statut: e.target.value as any })}
+              onChange={(e) => setFormData({ ...formData, statut: e.target.value as UniteStatut })}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="libre">Libre</option>

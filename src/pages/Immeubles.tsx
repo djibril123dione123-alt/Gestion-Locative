@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
@@ -54,12 +54,6 @@ export function Immeubles() {
   });
 
   useEffect(() => {
-    if (profile?.agency_id) {
-      loadData();
-    }
-  }, [profile?.agency_id]);
-
-  useEffect(() => {
     const filtered = immeubles.filter(i =>
       `${i.nom} ${i.adresse} ${i.ville} ${i.quartier || ''}`
         .toLowerCase()
@@ -68,7 +62,7 @@ export function Immeubles() {
     setFilteredImmeubles(filtered);
   }, [searchTerm, immeubles]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
 
     try {
@@ -97,7 +91,13 @@ export function Immeubles() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.agency_id]);
+
+  useEffect(() => {
+    if (profile?.agency_id) {
+      loadData();
+    }
+  }, [loadData, profile?.agency_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

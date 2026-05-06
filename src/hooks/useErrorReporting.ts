@@ -11,7 +11,7 @@ interface UserContext {
 interface ErrorContext {
   component?: string;
   action?: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
 }
 
 export const useErrorReporting = () => {

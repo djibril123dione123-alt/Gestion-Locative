@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
@@ -6,6 +6,9 @@ import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Building2, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+
+type AgencyPlan = 'basic' | 'pro' | 'enterprise';
+type AgencyStatus = 'active' | 'suspended' | 'trial' | 'cancelled';
 
 interface Agency {
   id: string;
@@ -16,8 +19,8 @@ interface Agency {
   email: string;
   website: string | null;
   logo_url: string | null;
-  plan: 'basic' | 'pro' | 'enterprise';
-  status: 'active' | 'suspended' | 'trial' | 'cancelled';
+  plan: AgencyPlan;
+  status: AgencyStatus;
   trial_ends_at: string | null;
   is_bailleur_account: boolean;
   created_at: string;
@@ -30,8 +33,8 @@ interface AgencyFormData {
   phone: string;
   email: string;
   website: string;
-  plan: 'basic' | 'pro' | 'enterprise';
-  status: 'active' | 'suspended' | 'trial' | 'cancelled';
+  plan: AgencyPlan;
+  status: AgencyStatus;
   is_bailleur_account: boolean;
 }
 
@@ -56,13 +59,7 @@ export default function Agences() {
   });
   const { showToast } = useToast();
 
-  useEffect(() => {
-    if (profile?.role === 'super_admin') {
-      loadAgencies();
-    }
-  }, [profile]);
-
-  const loadAgencies = async () => {
+  const loadAgencies = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('agencies')
@@ -77,7 +74,13 @@ export default function Agences() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    if (profile?.role === 'super_admin') {
+      loadAgencies();
+    }
+  }, [loadAgencies, profile?.role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -437,7 +440,7 @@ export default function Agences() {
               </label>
               <select
                 value={formData.plan}
-                onChange={(e) => setFormData({ ...formData, plan: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, plan: e.target.value as AgencyPlan })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="basic">Basic</option>
@@ -452,7 +455,7 @@ export default function Agences() {
               </label>
               <select
                 value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as AgencyStatus })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               >
                 <option value="active">Actif</option>

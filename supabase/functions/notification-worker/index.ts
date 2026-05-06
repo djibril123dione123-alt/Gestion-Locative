@@ -137,20 +137,26 @@ serve(async (req: Request) => {
     }
 
     // Health snapshot passif
-    await supabaseAdmin.rpc("fn_snapshot_health").catch(() => {});
+    const { error: snapshotErr } = await supabaseAdmin.rpc("fn_snapshot_health");
+    if (snapshotErr) {
+      console.warn("[notification-worker] health snapshot failed", snapshotErr.message);
+    }
 
     // Log dans event_outbox
-    await supabaseAdmin.from("event_outbox").insert({
+    const { error: eventErr } = await supabaseAdmin.from("event_outbox").insert({
       event_type: "worker.notification.run",
       entity_type: "job_queue",
       payload: { processed, failed, duration_ms: Date.now() - startedAt },
       source: "edge-function",
       status: "processed",
       processed_at: new Date().toISOString(),
-    }).catch(() => {});
+    });
+    if (eventErr) {
+      console.warn("[notification-worker] event_outbox insert failed", eventErr.message);
+    }
 
     return json({ success: true, processed, failed, duration_ms: Date.now() - startedAt });
-  } catch (_err) {
+  } catch {
     return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
   }
 });

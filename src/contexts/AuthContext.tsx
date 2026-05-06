@@ -148,6 +148,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Fast Refresh accepts this shared hook export because it does not hold component state.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

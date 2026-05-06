@@ -97,18 +97,9 @@ export function Bailleurs() {
   });
 
   /**
-   * Chargement initial des bailleurs
-   */
-  useEffect(() => {
-    if (profile?.agency_id) {
-      loadBailleurs();
-    }
-  }, [profile?.agency_id]);
-
-  /**
    * Fonction de chargement des bailleurs
    */
-  const loadBailleurs = async () => {
+  const loadBailleurs = useCallback(async () => {
     if (!profile?.agency_id) return;
 
     try {
@@ -133,7 +124,16 @@ export function Bailleurs() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.agency_id, toast]);
+
+  /**
+   * Chargement initial des bailleurs
+   */
+  useEffect(() => {
+    if (profile?.agency_id) {
+      loadBailleurs();
+    }
+  }, [loadBailleurs, profile?.agency_id]);
 
   /**
    * Filtrage des bailleurs
@@ -216,7 +216,7 @@ export function Bailleurs() {
 
       closeModal();
       await loadBailleurs();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erreur lors de l\'enregistrement:', err);
       const errorMessage = translateSupabaseError(err);
       setError(errorMessage);

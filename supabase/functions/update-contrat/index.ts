@@ -161,26 +161,31 @@ serve(async (req: Request) => {
     const wasNotTerminated = existing.statut === "actif";
 
     if (newStatut && uniteFinalStatuts.includes(newStatut as typeof uniteFinalStatuts[number]) && wasNotTerminated) {
-      await supabaseAdmin
+      const { error: uniteErr } = await supabaseAdmin
         .from("unites")
         .update({ statut: "libre" })
         .eq("id", existing.unite_id)
-        .eq("agency_id", agencyId)
-        .catch(() => {});
+        .eq("agency_id", agencyId);
+      if (uniteErr) {
+        console.warn("[update-contrat] unite release failed", uniteErr.message);
+      }
     }
 
     // ── 8. Log event ─────────────────────────────────────────────────────────
-    await supabaseAdmin.from("event_log").insert({
+    const { error: eventErr } = await supabaseAdmin.from("event_log").insert({
       agency_id: agencyId,
       event_type: "contrat.updated",
       entity_type: "contrats",
       entity_id: input.id,
       payload: { patch, previous_statut: existing.statut, updated_by: user.id },
       created_by: user.id,
-    }).catch(() => {});
+    });
+    if (eventErr) {
+      console.warn("[update-contrat] event_log insert failed", eventErr.message);
+    }
 
     return json({ data: updated }, 200);
-  } catch (_err) {
+  } catch {
     return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
   }
 });

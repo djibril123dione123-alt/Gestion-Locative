@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Columns } from 'lucide-react';
 import type { ColumnVisibilityMap } from '../../hooks/useColumnVisibility';
 

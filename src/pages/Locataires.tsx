@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
@@ -50,12 +50,6 @@ export function Locataires() {
   });
 
   useEffect(() => {
-    if (profile?.agency_id) {
-      loadData();
-    }
-  }, [profile?.agency_id]);
-
-  useEffect(() => {
     const f = locataires.filter(l =>
       `${l.nom} ${l.prenom} ${l.telephone} ${l.email ?? ''}`.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -63,7 +57,7 @@ export function Locataires() {
     setCurrentPage(1);
   }, [searchTerm, locataires]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
     try {
       const { data, error } = await supabase
@@ -82,7 +76,13 @@ export function Locataires() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.agency_id, saveBackup]);
+
+  useEffect(() => {
+    if (profile?.agency_id) {
+      loadData();
+    }
+  }, [loadData, profile?.agency_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

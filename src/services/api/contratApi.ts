@@ -42,6 +42,7 @@ export interface ContratApiResult {
 
 export class ContratApiError extends Error {
   readonly code: string;
+
   constructor(message: string, code: string) {
     super(message);
     this.name = 'ContratApiError';
@@ -49,42 +50,44 @@ export class ContratApiError extends Error {
   }
 }
 
-function normalizeEdgeError(payload: { error?: string; code?: string; details?: unknown } | undefined, fallback: string) {
-  return {
-    message: payload?.error ?? fallback,
-    code: payload?.code ?? 'EDGE_FUNCTION_ERROR',
-  };
-}
-
 async function invokeContratFunction<T>(fnName: string, body: unknown): Promise<T> {
-  const { data, error } = await supabase.functions.invoke<{
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData.session) {
+    throw new ContratApiError('Session expirée. Veuillez vous reconnecter.', 'NO_SESSION');
+  }
+
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`, {
+    method: 'POST',
+    headers: {
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${sessionData.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await response.json().catch(() => null) as {
     data?: T;
     error?: string;
     code?: string;
     details?: unknown;
-  }>(fnName, { body: body as Record<string, unknown> });
+  } | null;
 
-  if (error) {
-    const payload = data as { error?: string; code?: string; details?: unknown } | undefined;
-    const normalized = normalizeEdgeError(payload, error.message ?? `Erreur Edge Function ${fnName}.`);
+  if (!response.ok) {
     throw new ContratApiError(
-      normalized.message,
-      error.status === 409 ? 'EDGE_FUNCTION_CONFLICT' : normalized.code,
+      payload?.error ?? `La fonction ${fnName} a échoué (${response.status}).`,
+      payload?.code ?? `EDGE_FUNCTION_${response.status}`,
     );
   }
 
-  if (data && (data as { error?: string }).error) {
-    const payload = data as { error?: string; code?: string; details?: unknown };
+  if (payload?.error) {
     throw new ContratApiError(
       payload.error ?? `Erreur Edge Function ${fnName}.`,
       payload.code ?? 'EDGE_FUNCTION_ERROR',
     );
   }
 
-  if (data && !(data as { error?: string }).error) {
-    const result = (data as { data?: T }).data;
-    if (result) return result;
-  }
+  if (payload?.data) return payload.data;
 
   throw new ContratApiError(`La fonction ${fnName} a échoué.`, 'EDGE_FUNCTION_EMPTY_RESPONSE');
 }

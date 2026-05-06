@@ -152,6 +152,7 @@ export async function syncPendingMutations(
             | 'mobile_money'
             | 'autre',
           statut: m.payload.statut as 'paye' | 'partiel' | 'impaye',
+          idempotency_key: (m.payload.idempotency_key as string | null | undefined) ?? null,
           reference: (m.payload.reference as string | null) ?? null,
         });
       } else if (m.action === 'paiement_update') {

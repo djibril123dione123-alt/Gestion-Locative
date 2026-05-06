@@ -57,6 +57,13 @@ const CreateContratSchema = z.object({
 });
 
 type CreateContratInput = z.infer<typeof CreateContratSchema>;
+const DEFAULT_CONTRAT_COMMISSION = 10;
+
+function addYearsToDateString(dateString: string, years: number): string {
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(Date.UTC(year + years, month - 1, day));
+  return date.toISOString().slice(0, 10);
+}
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: CORS });
@@ -167,16 +174,19 @@ serve(async (req: Request) => {
 
     // ── 5. INSERT contrat ────────────────────────────────────────────────────
 
+    const defaultCaution = input.loyer_mensuel * 2;
+    const defaultDateFin = addYearsToDateString(input.date_debut, 2);
+
     const { data: contrat, error: insertErr } = await supabaseAdmin
       .from("contrats")
       .insert({
         locataire_id: input.locataire_id,
         unite_id: input.unite_id,
         date_debut: input.date_debut,
-        date_fin: input.date_fin ?? null,
+        date_fin: input.date_fin ?? defaultDateFin,
         loyer_mensuel: input.loyer_mensuel,
-        commission: input.commission ?? null,
-        caution: input.caution ?? null,
+        commission: input.commission ?? DEFAULT_CONTRAT_COMMISSION,
+        caution: input.caution ?? defaultCaution,
         statut: input.statut,
         destination: input.destination ?? null,
         agency_id: agencyId,
@@ -209,8 +219,7 @@ serve(async (req: Request) => {
       .from("agencies")
       .update({ first_contract_at: new Date().toISOString() })
       .eq("id", agencyId)
-      .is("first_contract_at", null)
-      .catch(() => {});
+      .is("first_contract_at", null);
 
     return json({ data: contrat, ...(warnings.length ? { warnings } : {}) }, 201);
   } catch (caughtErr) {

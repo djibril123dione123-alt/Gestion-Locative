@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, ChevronRight, X, Building2, Users, Home, FileText } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,16 +23,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
   const [isDismissed, setIsDismissed] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadProgress();
-
-    const dismissed = localStorage.getItem('quickstart_dismissed');
-    if (dismissed === 'true') {
-      setIsDismissed(true);
-    }
-  }, [profile?.agency_id]);
-
-  const loadProgress = async () => {
+  const loadProgress = useCallback(async () => {
     if (!profile?.agency_id) {
       setLoading(false);
       return;
@@ -108,7 +99,16 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [onNavigate, profile?.agency_id]);
+
+  useEffect(() => {
+    loadProgress();
+
+    const dismissed = localStorage.getItem('quickstart_dismissed');
+    if (dismissed === 'true') {
+      setIsDismissed(true);
+    }
+  }, [loadProgress]);
 
   const handleDismiss = () => {
     setIsDismissed(true);

@@ -12,6 +12,8 @@ type Statut = 'a_faire' | 'en_cours' | 'termine';
 type Urgence = 'urgente' | 'normale' | 'basse';
 type Categorie = 'plomberie' | 'electricite' | 'peinture' | 'serrurerie' | 'climatisation' | 'autre';
 type DemandePar = 'locataire' | 'bailleur' | 'agent';
+type UrgenceFilter = 'all' | Urgence;
+type CategorieFilter = 'all' | Categorie;
 
 interface Intervention {
   id: string;
@@ -53,8 +55,8 @@ export function Interventions() {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [filterUrgence, setFilterUrgence] = useState<'all' | Urgence>('all');
-  const [filterCategorie, setFilterCategorie] = useState<'all' | Categorie>('all');
+  const [filterUrgence, setFilterUrgence] = useState<UrgenceFilter>('all');
+  const [filterCategorie, setFilterCategorie] = useState<CategorieFilter>('all');
   const [filterImmeuble, setFilterImmeuble] = useState<string>('all');
   const [activeColumn, setActiveColumn] = useState<Statut>('a_faire');
 
@@ -186,13 +188,13 @@ export function Interventions() {
       </div>
 
       <div className="flex flex-wrap gap-3 mb-4">
-        <select value={filterUrgence} onChange={(e) => setFilterUrgence(e.target.value as any)} data-testid="filter-urgence" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        <select value={filterUrgence} onChange={(e) => setFilterUrgence(e.target.value as UrgenceFilter)} data-testid="filter-urgence" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Toute urgence</option>
           <option value="urgente">Urgente</option>
           <option value="normale">Normale</option>
           <option value="basse">Basse</option>
         </select>
-        <select value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value as any)} data-testid="filter-categorie" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        <select value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value as CategorieFilter)} data-testid="filter-categorie" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Toute catégorie</option>
           <option value="plomberie">Plomberie</option>
           <option value="electricite">Électricité</option>

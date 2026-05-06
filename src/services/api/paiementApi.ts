@@ -1,21 +1,4 @@
-/**
- * paiementApi.ts — Client pour les Edge Functions paiements
- *
- * Remplace tous les appels directs supabase.from('paiements').insert/update/delete()
- * par des appels aux Edge Functions Supabase :
- *   - create-paiement : validation Zod + agency_id + commission côté serveur
- *   - update-paiement : vérification propriété + recalcul parts si montant modifié
- *   - cancel-paiement : soft-cancel + ledger reversal + event_log
- *
- * Déploiement :
- *   supabase functions deploy create-paiement
- *   supabase functions deploy update-paiement
- *   supabase functions deploy cancel-paiement
- */
-
 import { supabase } from '../../lib/supabase';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface CreatePaiementInput {
   contrat_id: string;
@@ -24,6 +7,7 @@ export interface CreatePaiementInput {
   date_paiement: string;
   mode_paiement: 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre';
   statut: 'paye' | 'partiel' | 'impaye';
+  idempotency_key?: string | null;
   reference?: string | null;
   notes?: string | null;
 }
@@ -60,6 +44,7 @@ export interface PaiementApiResult {
 
 export class PaiementApiError extends Error {
   readonly code: string;
+
   constructor(message: string, code: string) {
     super(message);
     this.name = 'PaiementApiError';
@@ -67,66 +52,63 @@ export class PaiementApiError extends Error {
   }
 }
 
-// ─── Helper interne ───────────────────────────────────────────────────────────
-
 async function invokePaiementFn<T>(fnName: string, body: unknown): Promise<T> {
-  const { data, error } = await supabase.functions.invoke<{
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !sessionData.session) {
+    throw new PaiementApiError('Session expirée. Veuillez vous reconnecter.', 'NO_SESSION');
+  }
+
+  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`, {
+    method: 'POST',
+    headers: {
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${sessionData.session.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  const payload = await response.json().catch(() => null) as {
     data?: T;
     error?: string;
     code?: string;
     details?: unknown;
-  }>(fnName, { body: body as Record<string, unknown> });
+  } | null;
 
-  if (error) {
-    const payload = data as { error?: string; code?: string; details?: unknown } | undefined;
+  if (!response.ok) {
     throw new PaiementApiError(
-      payload?.error ?? error.message ?? `Erreur Edge Function ${fnName}.`,
-      payload?.code ?? 'EDGE_FUNCTION_ERROR',
+      payload?.error ?? `La fonction ${fnName} a échoué (${response.status}).`,
+      payload?.code ?? `EDGE_FUNCTION_${response.status}`,
     );
   }
-  if (!data) {
+
+  if (!payload) {
     throw new PaiementApiError("Réponse vide de l'Edge Function.", 'EMPTY_RESPONSE');
   }
-  if ((data as { error?: string }).error) {
-    const payload = data as { error: string; code?: string; details?: unknown };
-    throw new PaiementApiError(
-      payload.error,
-      payload.code ?? 'API_ERROR',
-    );
+
+  if (payload.error) {
+    throw new PaiementApiError(payload.error, payload.code ?? 'API_ERROR');
   }
-  const result = (data as { data?: T }).data;
-  if (!result) {
+
+  if (!payload.data) {
     throw new PaiementApiError('Données de paiement manquantes dans la réponse.', 'MISSING_DATA');
   }
-  return result;
+
+  return payload.data;
 }
 
-// ─── API publique ─────────────────────────────────────────────────────────────
-
-/**
- * Crée un paiement.
- * La commission et l'agency_id sont calculés/injectés côté serveur.
- */
 export async function createPaiementViaEdge(
   input: CreatePaiementInput,
 ): Promise<PaiementApiResult> {
   return invokePaiementFn<PaiementApiResult>('create-paiement', input);
 }
 
-/**
- * Met à jour un paiement.
- * Si montant_total est fourni, les parts sont recalculées côté serveur.
- */
 export async function updatePaiementViaEdge(
   input: UpdatePaiementInput,
 ): Promise<PaiementApiResult> {
   return invokePaiementFn<PaiementApiResult>('update-paiement', input);
 }
 
-/**
- * Annule un paiement (soft-cancel : statut → 'annule').
- * Écrit un reversal dans le ledger et supprime l'entrée revenus associée.
- */
 export async function cancelPaiementViaEdge(
   input: CancelPaiementInput,
 ): Promise<{ id: string; statut: string; already_cancelled?: boolean }> {

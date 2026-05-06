@@ -79,6 +79,8 @@ export function Parametres() {
     if (profile?.agency_id) {
       loadSettings(profile.agency_id);
     }
+  // `loadSettings` is intentionally kept as a local workflow because it may create defaults.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.agency_id]);
 
   const loadSettings = async (agencyId: string) => {

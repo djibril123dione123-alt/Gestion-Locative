@@ -53,6 +53,46 @@ interface MonthlyStat {
     solde: number;
 }
 
+interface BilanEntreprise {
+    totalLoyers: number;
+    loyersImpayes: number;
+    commission: number;
+    revenus_alt: number;
+    totalRevenus: number;
+    totalDepenses: number;
+    soldeNet: number;
+}
+
+interface BailleurRow {
+    id: string;
+    nom: string;
+    prenom: string;
+}
+
+interface ImmeubleRow {
+    id: string;
+    nom: string;
+    bailleur_id: string;
+    bailleurs?: { nom?: string | null; prenom?: string | null } | null;
+}
+
+interface UniteRow {
+    immeuble_id: string;
+    statut: string;
+}
+
+interface PaiementMensuelRow {
+    montant_total: number;
+    part_agence: number;
+    part_bailleur?: number | null;
+    statut: string;
+    contrats?: { unites?: { immeuble_id?: string | null } | null } | null;
+}
+
+type PdfWithAutoTable = jsPDF & {
+    lastAutoTable?: { finalY: number };
+};
+
 // -------------------------------------------------------------------------
 // 2. FONCTIONS UTILITAIRES UNIFIÉES
 // -------------------------------------------------------------------------
@@ -75,7 +115,7 @@ export function TableauDeBordFinancierGlobal() {
     const [bailleursFilterList, setBailleursFilterList] = useState<{ label: string }[]>([]); 
 
     // Données des 4 rapports fusionnés:
-    const [bilanEntreprise, setBilanEntreprise] = useState<any>(null); 
+    const [bilanEntreprise, setBilanEntreprise] = useState<BilanEntreprise | null>(null); 
     const [statsAnnuel, setStatsAnnuel] = useState({ totalRevenus: 0, totalDepenses: 0, soldeNet: 0 }); // [11]
     const [monthlyData, setMonthlyData] = useState<MonthlyStat[]>([]); // [9, 11]
     const [rapportsImmeubles, setRapportsImmeubles] = useState<RapportImmeuble[]>([]); 
@@ -90,6 +130,8 @@ export function TableauDeBordFinancierGlobal() {
         if (profile?.agency_id) {
             loadAllData();
         }
+    // This dashboard loader owns a large coordinated query/calculation workflow.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedMonth, profile?.agency_id]); 
 
     const loadAllData = async () => {
@@ -137,16 +179,16 @@ export function TableauDeBordFinancierGlobal() {
             ]);
 
             // Extraction des données
-            const paiementsMensuels = paiementsMensuelsRes.data || [];
+            const paiementsMensuels = (paiementsMensuelsRes.data || []) as PaiementMensuelRow[];
             const depensesMensuels = depensesMensuelsRes.data || [];
             const revenus_autresMensuels = revenusAutresMensuelsRes.data || [];
 
             const paiementsAnnuels = paiementsAnnuelsRes.data || [];
             const depensesAnnuelles = depensesAnnuelsRes.data || [];
 
-            const bailleurs = bailleursRes.data || [];
-            const immeubles = immeublesRes.data || [];
-            const unites = unitesRes.data || [];
+            const bailleurs = (bailleursRes.data || []) as BailleurRow[];
+            const immeubles = (immeublesRes.data || []) as ImmeubleRow[];
+            const unites = (unitesRes.data || []) as UniteRow[];
 
 
             // ---------------------------------------------------
@@ -216,9 +258,9 @@ export function TableauDeBordFinancierGlobal() {
             const bilansMap = new Map<string, BilanBailleur>();
 
             // Initialisation et calcul du taux d'occupation [32]
-            immeubles.forEach((immeuble: any) => { 
-                const unitesImmeuble = unites?.filter((u: any) => u.immeuble_id === immeuble.id) || [];
-                const unitesLouees = unitesImmeuble.filter((u: any) => u.statut === 'loue').length;
+            immeubles.forEach((immeuble) => { 
+                const unitesImmeuble = unites?.filter((u) => u.immeuble_id === immeuble.id) || [];
+                const unitesLouees = unitesImmeuble.filter((u) => u.statut === 'loue').length;
                 
                 rapportsMap.set(immeuble.id, {
                     immeuble_id: immeuble.id,
@@ -237,7 +279,7 @@ export function TableauDeBordFinancierGlobal() {
                 // Initialisation Bilan Bailleur [30]
                 const bailleurId = immeuble.bailleur_id;
                 if (bailleurId && !bilansMap.has(bailleurId)) {
-                    const bailleur = bailleurs.find((b: any) => b.id === bailleurId);
+                    const bailleur = bailleurs.find((b) => b.id === bailleurId);
                     if (bailleur) {
                          bilansMap.set(bailleurId, {
                             bailleur_id: bailleurId,
@@ -254,9 +296,10 @@ export function TableauDeBordFinancierGlobal() {
             });
 
             // Remplissage des rapports à partir des paiements mensuels [31, 33]
-            paiementsMensuels.forEach((paiement: any) => {
+            paiementsMensuels.forEach((paiement) => {
                 const immeubleId = paiement.contrats?.unites?.immeuble_id;
-                const immeuble = immeubles?.find((i: any) => i.id === immeubleId);
+                if (!immeubleId) return;
+                const immeuble = immeubles?.find((i) => i.id === immeubleId);
                 
                 if (immeuble) {
                     const bailleurId = immeuble.bailleur_id;
@@ -358,7 +401,7 @@ export function TableauDeBordFinancierGlobal() {
             styles: { fontSize: 10 }, // [13]
         });
 
-        const finalY = (doc as any).lastAutoTable.finalY + 10;
+        const finalY = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? 50) + 10;
         doc.setFontSize(12); // [13]
         doc.setFont('helvetica', 'bold');
         doc.text('TOTAUX:', 14, finalY);

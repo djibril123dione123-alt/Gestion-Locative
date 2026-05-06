@@ -23,13 +23,19 @@ interface SetupWizardProps {
   onComplete: () => void;
 }
 
+interface WizardRecord {
+  id: string;
+  nom?: string | null;
+  prenom?: string | null;
+}
+
 interface WizardData {
-  bailleur?: any;
-  immeuble?: any;
-  unite?: any;
-  locataire?: any;
-  contrat?: any;
-  paiement?: any;
+  bailleur?: WizardRecord;
+  immeuble?: WizardRecord;
+  unite?: WizardRecord;
+  locataire?: WizardRecord;
+  contrat?: WizardRecord;
+  paiement?: WizardRecord;
 }
 
 const steps = [
@@ -120,6 +126,10 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
         }
 
         case 3: {
+          if (!wizardData.immeuble?.id) {
+            throw new Error('L\'immeuble n\'a pas Ã©tÃ© crÃ©Ã© correctement. Veuillez recommencer.');
+          }
+
           const { data, error } = await supabase
             .from('unites')
             .insert({
@@ -158,6 +168,10 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
         }
 
         case 5: {
+          if (!wizardData.locataire?.id || !wizardData.unite?.id) {
+            throw new Error('Le locataire ou l\'unitÃ© n\'a pas Ã©tÃ© crÃ©Ã© correctement. Veuillez recommencer.');
+          }
+
           const { data, error } = await supabase
             .from('contrats')
             .insert({
@@ -186,6 +200,10 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
         }
 
         case 6: {
+          if (!wizardData.contrat?.id) {
+            throw new Error('Le contrat n\'a pas Ã©tÃ© crÃ©Ã© correctement. Veuillez recommencer.');
+          }
+
           const montant = parseFloat(formData.contrat.loyer_mensuel);
           const commission = parseFloat(formData.contrat.commission) || null;
           const { calculateCommission } = await import('../../services/domain/commissionService');

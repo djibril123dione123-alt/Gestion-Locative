@@ -64,6 +64,7 @@ const Schema = z.object({
   phone:      z.string().optional(),
   amount_xof: z.number().positive(),
   agency_id:  z.string().uuid(),
+  idempotency_key: z.string().min(12).max(120).optional(),
 });
 
 serve(async (req) => {
@@ -73,15 +74,23 @@ serve(async (req) => {
   if (!authHeader.startsWith("Bearer ")) return err("Non authentifié", 401);
 
   try {
-    const body = await req.json();
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return err("JSON invalide", 400);
+    }
+
     const parsed = Schema.safeParse(body);
     if (!parsed.success) return err(parsed.error.issues[0]?.message ?? "Données invalides");
 
     const { plan_id, provider, phone, amount_xof, agency_id } = parsed.data;
+    const idempotencyKey = parsed.data.idempotency_key?.trim() || crypto.randomUUID();
 
     // Vérification prix côté serveur
     const expectedPrice = PLAN_PRICES[plan_id];
     if (expectedPrice === undefined) return err(`Plan inconnu : ${plan_id}`);
+    if (expectedPrice <= 0) return err("Ce plan ne peut pas etre paye automatiquement. Contactez le support.", 422);
     if (expectedPrice > 0 && amount_xof !== expectedPrice) {
       return err(`Montant invalide pour le plan ${plan_id}. Attendu : ${expectedPrice} XOF`);
     }
@@ -101,9 +110,40 @@ serve(async (req) => {
 
     const { data: profile } = await supabase
       .from("user_profiles")
-      .select("agency_id")
+      .select("agency_id, role, actif")
       .eq("id", user.id)
       .maybeSingle();
+
+    if (profile && (!profile.actif || profile.role === "bailleur")) {
+      return err("Acces refuse", 403);
+    }
+
+    if (profile?.agency_id === agency_id) {
+      const { data: existingTxn, error: existingErr } = await supabase
+        .from("payment_transactions")
+        .select("id, invoice_token, status")
+        .eq("agency_id", agency_id)
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+
+      if (existingErr) {
+        console.error("[initiate-payment] idempotency lookup error:", existingErr.message);
+        return err("Erreur verification transaction", 500);
+      }
+
+      if (existingTxn) {
+        const checkoutUrl = existingTxn.invoice_token
+          ? `${PAYDUNYA_CHECKOUT_BASE}/${existingTxn.invoice_token}`
+          : undefined;
+        return json({
+          transaction_id: existingTxn.id,
+          invoice_token: existingTxn.invoice_token,
+          checkout_url: checkoutUrl,
+          status: existingTxn.status,
+          idempotent: true,
+        });
+      }
+    }
 
     if (!profile || profile.agency_id !== agency_id) return err("Accès refusé", 403);
 
@@ -117,6 +157,7 @@ serve(async (req) => {
         plan_id,
         status: "pending",
         phone: phone ?? null,
+        idempotency_key: idempotencyKey,
       })
       .select("id")
       .single();
@@ -172,7 +213,12 @@ serve(async (req) => {
         // Mode test : simuler un token pour dev
         const fakeToken = `test_${txn.id}`;
         await supabase.from("payment_transactions").update({ invoice_token: fakeToken }).eq("id", txn.id);
-        return json({ transaction_id: txn.id, invoice_token: fakeToken, test_mode: true });
+        return json({
+          transaction_id: txn.id,
+          invoice_token: fakeToken,
+          test_mode: true,
+          activation_required: "verified_webhook_or_admin_validation",
+        });
       }
 
       return err(`PayDunya : ${pdData.response_text ?? "Erreur inconnue"}`, 502);

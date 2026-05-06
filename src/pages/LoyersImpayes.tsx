@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
@@ -31,6 +31,23 @@ interface LoyersImpayesProps {
   embedded?: boolean;
 }
 
+interface BailleurOption {
+  label: string;
+}
+
+interface ContratActifRow {
+  id: string;
+  loyer_mensuel: number;
+  locataires?: { nom?: string | null; prenom?: string | null; telephone?: string | null } | null;
+  unites?: {
+    nom?: string | null;
+    immeubles?: {
+      nom?: string | null;
+      bailleurs?: { nom?: string | null; prenom?: string | null } | null;
+    } | null;
+  } | null;
+}
+
 export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   const { embedded = false } = _props;
   const { profile } = useAuth();
@@ -40,19 +57,13 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBailleur, setSelectedBailleur] = useState('');
-  const [bailleurs, setBailleurs] = useState<any[]>([]);
+  const [bailleurs, setBailleurs] = useState<BailleurOption[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedLoyer, setSelectedLoyer] = useState<LoyerImpaye | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [page, setPage] = useState(1);
   const requestIdRef = useRef(0);
   const toast = useToast();
-
-  useEffect(() => {
-    if (profile?.agency_id) {
-      loadData();
-    }
-  }, [profile?.agency_id]);
 
   useEffect(() => {
     let result = impayes;
@@ -74,7 +85,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     setFiltered(result);
   }, [searchTerm, selectedBailleur, impayes]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
     const reqId = ++requestIdRef.current;
     setLoading(true);
@@ -121,7 +132,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
       const impayesList: LoyerImpaye[] = [];
 
-      (contratsActifs as any[] | null)?.forEach((contrat: any) => {
+      ((contratsActifs as ContratActifRow[] | null) || []).forEach((contrat) => {
         lastSixMonths.forEach(mois => {
           const key = `${contrat.id}-${mois}`;
           const statut = paiementsMap.get(key);
@@ -160,7 +171,13 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     } finally {
       if (reqId === requestIdRef.current) setLoading(false);
     }
-  };
+  }, [profile?.agency_id]);
+
+  useEffect(() => {
+    if (profile?.agency_id) {
+      loadData();
+    }
+  }, [loadData, profile?.agency_id]);
 
 
   const handlePayerClick = (loyer: LoyerImpaye) => {

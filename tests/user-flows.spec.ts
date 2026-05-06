@@ -51,7 +51,7 @@ test.describe('Form Submissions', () => {
     
     // Vérifier la présence de spinners ou indicateurs de chargement
     page.on('framenavigated', async () => {
-      const loadingIndicators = page.locator('[aria-busy="true"], .loading, .spinner');
+      page.locator('[aria-busy="true"], .loading, .spinner');
       // Ne laisser que du temps pour les vérifier
       await page.waitForTimeout(100);
     });
@@ -75,7 +75,7 @@ test.describe('Data Table Operations', () => {
   test('should handle pagination if present', async ({ page }) => {
     await page.goto('/');
     
-    const paginationButtons = page.locator('button:has-text("Suivant|Next|Précédent|Previous")');
+    page.locator('button:has-text("Suivant|Next|Précédent|Previous")');
     // Simplement vérifier qu'ils n'y a pas d'erreurs
     await expect(page).not.toHaveTitle('500');
   });

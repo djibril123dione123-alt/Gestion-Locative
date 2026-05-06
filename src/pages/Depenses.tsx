@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
@@ -12,20 +12,45 @@ import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
+interface Depense {
+  id: string;
+  montant: number;
+  date_depense: string;
+  categorie: string;
+  description: string | null;
+  beneficiaire: string | null;
+  immeuble_id: string | null;
+  immeubles?: { nom?: string | null } | null;
+}
+
+interface ImmeubleOption {
+  id: string;
+  nom: string;
+}
+
+interface DepenseFormData {
+  montant: string;
+  date_depense: string;
+  categorie: string;
+  description: string;
+  beneficiaire: string;
+  immeuble_id: string;
+}
+
 export function Depenses() {
   const { user, profile } = useAuth();
-  const [depenses, setDepenses] = useState<any[]>([]);
-  const [filtered, setFiltered] = useState<any[]>([]);
-  const [immeubles, setImmeubles] = useState<any[]>([]);
+  const [depenses, setDepenses] = useState<Depense[]>([]);
+  const [filtered, setFiltered] = useState<Depense[]>([]);
+  const [immeubles, setImmeubles] = useState<ImmeubleOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingDepense, setEditingDepense] = useState<any>(null);
-  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [editingDepense, setEditingDepense] = useState<Depense | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Depense | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const toast = useToast();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<DepenseFormData>({
     montant: '',
     date_depense: new Date().toISOString().split('T')[0],
     categorie: 'maintenance' as const,
@@ -37,19 +62,13 @@ export function Depenses() {
   const categories = ['🌐 Internet', '⚡ Électricité', '💧 Eau', '👷 Salaires', '🚌 Prime de transport','📱 Crédit téléphonique', '📦 Autres'];
 
   useEffect(() => {
-    if (profile?.agency_id) {
-      loadData();
-    }
-  }, [profile?.agency_id]);
-
-  useEffect(() => {
     const q = searchTerm.toLowerCase();
     setFiltered(
       depenses.filter((d) => {
         const searchable = [
           d.description,
           d.categorie,
-          (d as any).immeubles?.nom,
+          d.immeubles?.nom,
           d.montant != null ? String(d.montant) : '',
         ]
           .filter(Boolean)
@@ -60,7 +79,7 @@ export function Depenses() {
     );
   }, [searchTerm, depenses]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
     try {
       const [depensesRes, immeublesRes] = await Promise.all([
@@ -68,15 +87,21 @@ export function Depenses() {
         supabase.from('immeubles').select('id, nom').eq('agency_id', profile.agency_id).eq('actif', true),
       ]);
 
-      setDepenses(depensesRes.data || []);
-      setFiltered(depensesRes.data || []);
-      setImmeubles(immeublesRes.data || []);
+      setDepenses((depensesRes.data || []) as Depense[]);
+      setFiltered((depensesRes.data || []) as Depense[]);
+      setImmeubles((immeublesRes.data || []) as ImmeubleOption[]);
     } catch (error) {
       console.error('Erreur:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.agency_id]);
+
+  useEffect(() => {
+    if (profile?.agency_id) {
+      loadData();
+    }
+  }, [loadData, profile?.agency_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     if (!profile?.agency_id) return;
@@ -106,20 +131,20 @@ export function Depenses() {
     }
   };
 
-  const handleEdit = (depense: any) => {
+  const handleEdit = (depense: Depense) => {
     setEditingDepense(depense);
     setFormData({
       montant: depense.montant.toString(),
       date_depense: depense.date_depense,
       categorie: depense.categorie,
-      description: depense.description,
-      beneficiaire: depense.beneficiaire,
+      description: depense.description ?? '',
+      beneficiaire: depense.beneficiaire ?? '',
       immeuble_id: depense.immeuble_id || '',
     });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (depense: any) => {
+  const handleDelete = (depense: Depense) => {
     if (!profile?.agency_id) return;
     setDeleteTarget(depense);
   };
@@ -162,8 +187,8 @@ export function Depenses() {
     { key: 'categorie', label: 'Catégorie' },
     { key: 'description', label: 'Description' },
     { key: 'beneficiaire', label: 'Bénéficiaire' },
-    { key: 'montant', label: 'Montant', render: (d: any) => formatCurrency(d.montant) },
-    { key: 'immeuble', label: 'Immeuble', render: (d: any) => d.immeubles?.nom || '-' },
+    { key: 'montant', label: 'Montant', render: (d: Depense) => formatCurrency(d.montant) },
+    { key: 'immeuble', label: 'Immeuble', render: (d: Depense) => d.immeubles?.nom || '-' },
   ];
   const columns = allColumns.filter((c) => colIsVisible(c.key));
 
@@ -237,7 +262,7 @@ export function Depenses() {
             <select
               required
               value={formData.categorie}
-              onChange={(e) => setFormData({ ...formData, categorie: e.target.value as any })}
+              onChange={(e) => setFormData({ ...formData, categorie: e.target.value })}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
             >
               {categories.map((c) => (

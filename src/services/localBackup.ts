@@ -180,7 +180,7 @@ export async function parseBackupPreview(file: File): Promise<BackupPreview> {
           tables,
           hasPendingMutations,
         });
-      } catch (err) {
+      } catch {
         reject(new Error('Fichier de sauvegarde invalide ou corrompu.'));
       }
     };

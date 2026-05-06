@@ -51,8 +51,7 @@ export interface ContratInsert {
   agency_id: string;
 }
 
-export interface ContratUpdate
-  extends Partial<Omit<ContratInsert, 'agency_id' | 'unite_id' | 'locataire_id'>> {}
+export type ContratUpdate = Partial<Omit<ContratInsert, 'agency_id' | 'unite_id' | 'locataire_id'>>;
 
 const CONTRAT_SELECT = `
   id, unite_id, locataire_id, loyer_mensuel, caution, commission,

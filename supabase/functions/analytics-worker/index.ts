@@ -72,14 +72,17 @@ serve(async (req: Request) => {
       .rpc("fn_worker_analytics", { p_batch_size: 20 });
 
     // 3. Log
-    await supabaseAdmin.from("event_outbox").insert({
+    const { error: eventErr } = await supabaseAdmin.from("event_outbox").insert({
       event_type: "worker.analytics.run",
       entity_type: "job_queue",
       payload: { enqueued, worker: workerResult, duration_ms: Date.now() - startedAt },
       source: "edge-function",
       status: "processed",
       processed_at: new Date().toISOString(),
-    }).catch(() => {});
+    });
+    if (eventErr) {
+      console.warn("[analytics-worker] event_outbox insert failed", eventErr.message);
+    }
 
     return json({
       success: true,
@@ -87,7 +90,7 @@ serve(async (req: Request) => {
       worker: workerResult,
       duration_ms: Date.now() - startedAt,
     }, 200);
-  } catch (_err) {
+  } catch {
     return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
   }
 });

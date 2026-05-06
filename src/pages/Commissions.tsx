@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { TrendingUp, BarChart3, Download } from 'lucide-react';
@@ -7,28 +7,54 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '../lib/formatters';
 
+interface CommissionRow {
+  id: string;
+  montant_total: number;
+  part_agence: number;
+  date_paiement: string;
+  statut: string;
+  locataire: string;
+  unite: string;
+  immeuble: string;
+  bailleur: string;
+  contrats?: {
+    locataires?: { nom?: string | null; prenom?: string | null } | null;
+    unites?: {
+      nom?: string | null;
+      immeubles?: {
+        nom?: string | null;
+        bailleurs?: { nom?: string | null; prenom?: string | null } | null;
+      } | null;
+    } | null;
+  } | null;
+}
+
+interface CommissionChartRow {
+  name: string;
+  commission: number;
+}
+
+type PdfWithAutoTable = jsPDF & {
+  lastAutoTable?: { finalY: number };
+};
+
 export function Commissions() {
   const { profile } = useAuth();
-  const [commissions, setCommissions] = useState<any[]>([]);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [commissions, setCommissions] = useState<CommissionRow[]>([]);
+  const [chartData, setChartData] = useState<CommissionChartRow[]>([]);
   const [stats, setStats] = useState({
     totalCommission: 0,
     nombrePaiements: 0,
     commissionMoyenne: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [exportingLedger, setExportingLedger] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  useEffect(() => {
-    if (profile?.agency_id) {
-      loadCommissions();
-    }
-  }, [selectedMonth, profile?.agency_id]);
-
-  const loadCommissions = async () => {
+  const loadCommissions = useCallback(async () => {
     if (!profile?.agency_id) return;
     setLoading(true);
     try {
@@ -56,7 +82,7 @@ export function Commissions() {
         .lt('mois_concerne', monthEndStr)
         .order('date_paiement', { ascending: false });
 
-      const commissionsData = (data || []).map((p: any) => ({
+      const commissionsData = ((data || []) as unknown as CommissionRow[]).map((p) => ({
         ...p,
         locataire: p.contrats?.locataires ? `${p.contrats.locataires.prenom} ${p.contrats.locataires.nom}` : '-',
         unite: p.contrats?.unites?.nom || '-',
@@ -96,7 +122,13 @@ export function Commissions() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile?.agency_id, selectedMonth]);
+
+  useEffect(() => {
+    if (profile?.agency_id) {
+      loadCommissions();
+    }
+  }, [loadCommissions, profile?.agency_id]);
 
   const exportPDF = () => {
     const doc = new jsPDF();
@@ -128,11 +160,42 @@ export function Commissions() {
         formatCurrency(c.montant_total),
         formatCurrency(c.part_agence),
       ]),
-      startY: (doc as any).lastAutoTable.finalY + 10,
+      startY: ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? 40) + 10,
       styles: { fontSize: 9 },
     });
 
     doc.save(`commissions-${selectedMonth}.pdf`);
+  };
+
+  const exportSignedLedger = async () => {
+    setExportingLedger(true);
+    try {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) throw new Error('Session expirée. Veuillez vous reconnecter.');
+
+      const monthStart = `${selectedMonth}-01`;
+      const monthEnd = new Date(selectedMonth + '-01');
+      monthEnd.setMonth(monthEnd.getMonth() + 1);
+      monthEnd.setDate(0);
+      const dateTo = monthEnd.toISOString().slice(0, 10);
+
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/export-accounting-ledger`, {
+        method: 'POST',
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ date_from: monthStart, date_to: dateTo }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(payload?.error ?? `Export impossible (${response.status})`);
+      if (payload?.signed_url) window.open(payload.signed_url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Export comptable impossible');
+    } finally {
+      setExportingLedger(false);
+    }
   };
 
   if (loading) return <div className="flex items-center justify-center h-full"><div>Chargement...</div></div>;
@@ -144,10 +207,20 @@ export function Commissions() {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Gestion des Commissions</h1>
           <p className="text-sm sm:text-base text-slate-600">Suivi des revenus d'agence</p>
         </div>
-        <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base whitespace-nowrap">
-          <Download className="w-5 h-5" />
-          Export PDF
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base whitespace-nowrap">
+            <Download className="w-5 h-5" />
+            Export PDF
+          </button>
+          <button
+            onClick={exportSignedLedger}
+            disabled={exportingLedger}
+            className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-60 text-sm sm:text-base whitespace-nowrap"
+          >
+            <Download className="w-5 h-5" />
+            {exportingLedger ? 'Signature...' : 'Livre signé CSV'}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200">

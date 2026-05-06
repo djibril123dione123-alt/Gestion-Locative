@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Search, Filter, X, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -19,13 +19,37 @@ interface FiltersState {
   date_debut_max: string;
 }
 
+interface OptionRow {
+  id: string;
+  nom: string;
+  prenom?: string | null;
+}
+
+interface SearchResult {
+  id: string;
+  locataires?: { nom?: string | null; prenom?: string | null; telephone?: string | null } | null;
+  unites?: {
+    nom?: string | null;
+    statut?: string | null;
+    immeubles?: {
+      nom?: string | null;
+      bailleurs?: { nom?: string | null; prenom?: string | null } | null;
+    } | null;
+  } | null;
+  loyer_mensuel: number;
+  date_debut: string;
+  date_fin?: string | null;
+  statut: string;
+  dernier_statut_paiement?: string;
+}
+
 export function FiltresAvances() {
   const { profile } = useAuth();
   const { error: showError, toasts, removeToast } = useToast();
-  const [results, setResults] = useState<any[]>([]);
-  const [bailleurs, setBailleurs] = useState<any[]>([]);
-  const [immeubles, setImmeubles] = useState<any[]>([]);
-  const [unites, setUnites] = useState<any[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [bailleurs, setBailleurs] = useState<OptionRow[]>([]);
+  const [immeubles, setImmeubles] = useState<OptionRow[]>([]);
+  const [unites, setUnites] = useState<OptionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<FiltersState>({
     bailleur_id: '',
@@ -39,30 +63,7 @@ export function FiltresAvances() {
     date_debut_max: '',
   });
 
-  useEffect(() => {
-    if (profile?.agency_id) {
-      loadFilterOptions();
-    }
-  }, [profile?.agency_id]);
-
-  useEffect(() => {
-    if (filters.bailleur_id) {
-      loadImmeublesByBailleur(filters.bailleur_id);
-    } else {
-      setImmeubles([]);
-      setUnites([]);
-    }
-  }, [filters.bailleur_id]);
-
-  useEffect(() => {
-    if (filters.immeuble_id) {
-      loadUnitesByImmeuble(filters.immeuble_id);
-    } else {
-      setUnites([]);
-    }
-  }, [filters.immeuble_id]);
-
-  const loadFilterOptions = async () => {
+  const loadFilterOptions = useCallback(async () => {
     if (!profile?.agency_id) return;
     try {
       const { data: bailleursData } = await supabase
@@ -72,12 +73,13 @@ export function FiltresAvances() {
         .eq('actif', true)
         .order('nom');
 
-      setBailleurs(bailleursData || []);
+      setBailleurs((bailleursData || []) as OptionRow[]);
     } catch {
+      // Les options seront rechargées à la prochaine ouverture.
     }
-  };
+  }, [profile?.agency_id]);
 
-  const loadImmeublesByBailleur = async (bailleurId: string) => {
+  const loadImmeublesByBailleur = useCallback(async (bailleurId: string) => {
     if (!profile?.agency_id) return;
     try {
       const { data } = await supabase
@@ -88,12 +90,13 @@ export function FiltresAvances() {
         .eq('actif', true)
         .order('nom');
 
-      setImmeubles(data || []);
+      setImmeubles((data || []) as OptionRow[]);
     } catch {
+      // Les options seront rechargées au prochain changement de bailleur.
     }
-  };
+  }, [profile?.agency_id]);
 
-  const loadUnitesByImmeuble = async (immeubleId: string) => {
+  const loadUnitesByImmeuble = useCallback(async (immeubleId: string) => {
     if (!profile?.agency_id) return;
     try {
       const { data } = await supabase
@@ -104,10 +107,34 @@ export function FiltresAvances() {
         .eq('actif', true)
         .order('nom');
 
-      setUnites(data || []);
+      setUnites((data || []) as OptionRow[]);
     } catch {
+      // Les options seront rechargées au prochain changement d'immeuble.
     }
-  };
+  }, [profile?.agency_id]);
+
+  useEffect(() => {
+    if (profile?.agency_id) {
+      loadFilterOptions();
+    }
+  }, [loadFilterOptions, profile?.agency_id]);
+
+  useEffect(() => {
+    if (filters.bailleur_id) {
+      loadImmeublesByBailleur(filters.bailleur_id);
+    } else {
+      setImmeubles([]);
+      setUnites([]);
+    }
+  }, [filters.bailleur_id, loadImmeublesByBailleur]);
+
+  useEffect(() => {
+    if (filters.immeuble_id) {
+      loadUnitesByImmeuble(filters.immeuble_id);
+    } else {
+      setUnites([]);
+    }
+  }, [filters.immeuble_id, loadUnitesByImmeuble]);
 
   const handleSearch = async () => {
     if (!profile?.agency_id) return;
@@ -223,9 +250,9 @@ export function FiltresAvances() {
           .filter((c: { dernier_statut_paiement: string }) =>
             c.dernier_statut_paiement === filters.statut_paiement
           );
-        setResults(filtered);
+        setResults(filtered as SearchResult[]);
       } else {
-        setResults(data || []);
+        setResults((data || []) as SearchResult[]);
       }
     } catch (error: unknown) {
       showError(error instanceof Error ? error.message : 'Erreur lors de la recherche');

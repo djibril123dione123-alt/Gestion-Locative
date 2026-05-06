@@ -19,6 +19,14 @@ export function Table<T extends { id: string }>({
   onEdit,
   onDelete,
 }: TableProps<T>) {
+  const getCellValue = (item: T, key: string): React.ReactNode => {
+    const value = (item as Record<string, unknown>)[key];
+    if (value === null || value === undefined || value === '') return null;
+    if (React.isValidElement(value)) return value;
+    if (['string', 'number', 'boolean'].includes(typeof value)) return String(value);
+    return JSON.stringify(value);
+  };
+
   if (data.length === 0) {
     return (
       <div className="text-center py-10 text-slate-500 bg-white rounded-xl border border-gray-100 shadow-sm">
@@ -35,7 +43,7 @@ export function Table<T extends { id: string }>({
           <div key={item.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
             <div className="divide-y divide-slate-50">
               {columns.map((col) => {
-                const value = col.render ? col.render(item) : (item as any)[col.key];
+                const value = col.render ? col.render(item) : getCellValue(item, col.key);
                 if (value === null || value === undefined || value === '') return null;
                 return (
                   <div key={col.key} className="flex items-center justify-between gap-3 px-4 py-2.5">
@@ -107,7 +115,7 @@ export function Table<T extends { id: string }>({
               >
                 {columns.map((column) => (
                   <td key={column.key} className="py-4 px-5 text-sm text-slate-700">
-                    {column.render ? column.render(item) : (item as any)[column.key]}
+                    {column.render ? column.render(item) : getCellValue(item, column.key)}
                   </td>
                 ))}
 

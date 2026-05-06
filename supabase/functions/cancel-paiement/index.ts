@@ -131,15 +131,17 @@ serve(async (req: Request) => {
     }
 
     // ── 6. Suppression revenus associés ──────────────────────────────────────
-    await supabaseAdmin
+    const { error: revenusErr } = await supabaseAdmin
       .from("revenus")
       .delete()
-      .eq("paiement_id", id)
-      .catch(() => {});
+      .eq("paiement_id", id);
+    if (revenusErr) {
+      console.warn("[cancel-paiement] revenus cleanup failed", revenusErr.message);
+    }
 
     // ── 7. Ledger reversal ───────────────────────────────────────────────────
     if (paiement.montant_total && paiement.montant_total > 0) {
-      await supabaseAdmin.from("ledger_entries").insert([
+      const { error: ledgerErr } = await supabaseAdmin.from("ledger_entries").insert([
         {
           agency_id: agencyId,
           type: "annulation",
@@ -150,21 +152,27 @@ serve(async (req: Request) => {
           description: raison ? `Annulation : ${raison}` : "Annulation paiement",
           created_by: user.id,
         },
-      ]).catch(() => {});
+      ]);
+      if (ledgerErr) {
+        console.warn("[cancel-paiement] ledger reversal failed", ledgerErr.message);
+      }
     }
 
     // ── 8. Log event ─────────────────────────────────────────────────────────
-    await supabaseAdmin.from("event_log").insert({
+    const { error: eventErr } = await supabaseAdmin.from("event_log").insert({
       agency_id: agencyId,
       event_type: "paiement.cancelled",
       entity_type: "paiements",
       entity_id: id,
       payload: { raison: raison ?? null, montant: paiement.montant_total, cancelled_by: user.id },
       created_by: user.id,
-    }).catch(() => {});
+    });
+    if (eventErr) {
+      console.warn("[cancel-paiement] event_log insert failed", eventErr.message);
+    }
 
     return json({ data: cancelled }, 200);
-  } catch (_err) {
+  } catch {
     return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
   }
 });

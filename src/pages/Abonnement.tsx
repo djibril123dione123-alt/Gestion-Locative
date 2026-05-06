@@ -7,7 +7,7 @@ import { CheckoutModal } from '../components/billing/CheckoutModal';
 import {
   CreditCard, CheckCircle2, Clock, Zap, Building2, Crown,
   BarChart3, TrendingUp, AlertTriangle, Calendar, Users,
-  Home, DoorOpen, ChevronRight, Smartphone, Mail, ArrowUpRight,
+  Home, DoorOpen, ChevronRight, ArrowUpRight,
 } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
 

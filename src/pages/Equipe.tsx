@@ -151,6 +151,9 @@ export function Equipe() {
     }
   };
 
+  const ALL_COLUMN_KEYS_EQUIPE = ['nom', 'role', 'actif', 'created_at', 'actions'] as const;
+  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('equipe', [...ALL_COLUMN_KEYS_EQUIPE]);
+
   if (profile?.role !== 'admin') {
     return (
       <div className="p-6">
@@ -162,9 +165,6 @@ export function Equipe() {
       </div>
     );
   }
-
-  const ALL_COLUMN_KEYS_EQUIPE = ['nom', 'role', 'actif', 'created_at', 'actions'] as const;
-  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('equipe', [...ALL_COLUMN_KEYS_EQUIPE]);
 
   const allMemberColumns = [
     {

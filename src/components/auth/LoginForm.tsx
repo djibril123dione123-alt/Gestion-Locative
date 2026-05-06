@@ -15,7 +15,7 @@ export function LoginForm() {
 
     try {
       await signIn(email, password);
-    } catch (err) {
+    } catch {
       setError('Email ou mot de passe incorrect');
     } finally {
       setLoading(false);

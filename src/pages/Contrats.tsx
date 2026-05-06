@@ -10,7 +10,6 @@ import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { generateContratPDF } from '../lib/pdf';
 import { formatCurrency } from '../lib/formatters';
 import { useToast } from '../hooks/useToast';
-import { useTracking } from '../hooks/useTracking';
 import { useExport } from '../hooks/useExport';
 import { useBackup } from '../hooks/useBackup';
 
@@ -88,6 +87,9 @@ interface FormData {
   destination: 'Habitation' | 'Commercial' | '';
 }
 
+type ContratStatut = FormData['statut'];
+type ContratDestination = FormData['destination'];
+
 // =========================
 // 🔸 VALEURS INITIALES
 // =========================
@@ -102,6 +104,14 @@ const INITIAL_FORM_DATA: FormData = {
   statut: 'actif',
   destination: '',
 };
+
+function addYearsToDateString(dateString: string, years: number): string {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-').map(Number);
+  if (!year || !month || !day) return '';
+  const date = new Date(Date.UTC(year + years, month - 1, day));
+  return date.toISOString().slice(0, 10);
+}
 
 // =========================
 // 🔸 COMPOSANT PRINCIPAL
@@ -126,7 +136,6 @@ export function Contrats() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const toast = useToast();
-  const { track } = useTracking();
   const { exportContrats, exporting: exportingXlsx } = useExport();
   const { save: saveBackup } = useBackup();
 
@@ -207,15 +216,16 @@ export function Contrats() {
         setLoading(false);
       }
     }
-  }, [profile?.agency_id]);
+  }, [profile?.agency_id, saveBackup]);
 
   useEffect(() => {
     if (profile?.agency_id) {
       loadData();
     }
+    const activeRequestRef = requestIdRef;
     // Cleanup : invalide les requêtes en vol au démontage / changement.
     return () => {
-      requestIdRef.current++;
+      activeRequestRef.current++;
     };
   }, [profile?.agency_id, loadData]);
 
@@ -280,11 +290,20 @@ export function Contrats() {
         ...prev,
         unite_id: uniteId,
         loyer_mensuel: unite ? unite.loyer_base.toString() : '',
+        caution: unite ? (unite.loyer_base * 2).toString() : '',
         commission: commissionBailleur,
       }));
     },
     [unites]
   );
+
+  const handleDateDebutChange = useCallback((dateDebut: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      date_debut: dateDebut,
+      date_fin: addYearsToDateString(dateDebut, 2),
+    }));
+  }, []);
 
   // =========================
   // ✅ VALIDATION DU FORMULAIRE
@@ -299,6 +318,17 @@ export function Contrats() {
     }
     return null;
   }, [formData]);
+
+  const closeModal = useCallback(() => {
+    setIsModalOpen(false);
+    setFormData(INITIAL_FORM_DATA);
+  }, []);
+
+  const closeEditModal = useCallback(() => {
+    setIsEditModalOpen(false);
+    setEditing(null);
+    setFormData(INITIAL_FORM_DATA);
+  }, []);
 
   // =========================
   // 📝 CRÉATION DE CONTRAT
@@ -350,7 +380,7 @@ export function Contrats() {
         submitLockRef.current = false;
       }
     },
-    [formData, validateForm, loadData, profile?.agency_id, submitting]
+    [closeModal, formData, validateForm, loadData, profile?.agency_id, submitting, toast]
   );
 
   // =========================
@@ -386,7 +416,7 @@ export function Contrats() {
         setSubmitting(false);
       }
     },
-    [formData, editing, loadData, profile?.agency_id]
+    [closeEditModal, editing, formData, loadData, profile?.agency_id, toast]
   );
 
   // =========================
@@ -439,9 +469,10 @@ export function Contrats() {
       if (contrat) {
         await generateContratPDF(contrat);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erreur PDF:', err);
-      toast.error(`Erreur lors de la génération du PDF : ${err.message}`);
+      const message = err instanceof Error ? err.message : 'Erreur inconnue';
+      toast.error(`Erreur lors de la génération du PDF : ${message}`);
     } finally {
       setDownloadingId(null);
     }
@@ -472,20 +503,6 @@ export function Contrats() {
     },
     [deletingId, loadData, profile?.agency_id, toast]
   );
-
-  // =========================
-  // 🚪 FERMETURE DES MODALS
-  // =========================
-  const closeModal = useCallback(() => {
-    setIsModalOpen(false);
-    setFormData(INITIAL_FORM_DATA);
-  }, []);
-
-  const closeEditModal = useCallback(() => {
-    setIsEditModalOpen(false);
-    setEditing(null);
-    setFormData(INITIAL_FORM_DATA);
-  }, []);
 
   // =========================
   // 📋 COLONNES DU TABLEAU
@@ -647,9 +664,9 @@ export function Contrats() {
           <button
             type="button"
             onClick={() => exportContrats(contrats.map((c) => ({
-              locataire_nom: `${(c.locataires as any)?.prenom ?? ''} ${(c.locataires as any)?.nom ?? ''}`.trim(),
-              unite_nom: (c.unites as any)?.nom ?? '',
-              immeuble_nom: (c.unites as any)?.immeubles?.nom ?? '',
+              locataire_nom: `${c.locataires?.prenom ?? ''} ${c.locataires?.nom ?? ''}`.trim(),
+              unite_nom: c.unites?.nom ?? '',
+              immeuble_nom: c.unites?.immeubles?.nom ?? '',
               date_debut: c.date_debut,
               date_fin: c.date_fin,
               loyer_mensuel: c.loyer_mensuel,
@@ -810,7 +827,7 @@ export function Contrats() {
               required
               value={formData.destination}
               onChange={(e) =>
-                setFormData({ ...formData, destination: e.target.value as any })
+                setFormData({ ...formData, destination: e.target.value as ContratDestination })
               }
               className="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:outline-none transition-all"
               style={{ 
@@ -832,9 +849,7 @@ export function Contrats() {
                 type="date"
                 required
                 value={formData.date_debut}
-                onChange={(e) =>
-                  setFormData({ ...formData, date_debut: e.target.value })
-                }
+                onChange={(e) => handleDateDebutChange(e.target.value)}
                 className="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:outline-none"
               />
             </div>
@@ -943,7 +958,7 @@ export function Contrats() {
               onChange={(e) =>
                 setFormData({
                   ...formData,
-                  statut: e.target.value as any,
+                  statut: e.target.value as ContratStatut,
                 })
               }
               className="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:outline-none"

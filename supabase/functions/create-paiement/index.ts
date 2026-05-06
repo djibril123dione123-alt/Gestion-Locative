@@ -67,6 +67,7 @@ const CreatePaiementSchema = z.object({
       message: `statut doit être : ${StatutsPaiement.join(", ")}`,
     }),
   }),
+  idempotency_key: z.string().min(12).max(120).nullable().optional(),
   reference: z.string().max(100).nullable().optional(),
   notes: z.string().max(500).nullable().optional(),
 });
@@ -187,13 +188,28 @@ serve(async (req: Request) => {
     }
 
     const input: CreatePaiementInput = parsed.data;
+    const idempotencyKey = input.idempotency_key?.trim() || null;
+
+    if (idempotencyKey) {
+      const { data: existingPayment } = await supabaseAdmin
+        .from("paiements")
+        .select()
+        .eq("agency_id", agencyId)
+        .eq("idempotency_key", idempotencyKey)
+        .maybeSingle();
+
+      if (existingPayment) {
+        return json({ data: existingPayment, idempotent: true }, 200);
+      }
+    }
 
     // ── 4. Vérification propriété du contrat (via RLS user client) ───────────
     // Le client JWT garantit que seuls les contrats de l'agence sont accessibles.
-    const { data: contrat, error: contratErr } = await supabaseUser
+    const { data: contrat, error: contratErr } = await supabaseAdmin
       .from("contrats")
-      .select("id, commission, loyer_mensuel, statut")
+      .select("id, agency_id, commission, loyer_mensuel, statut")
       .eq("id", input.contrat_id)
+      .eq("agency_id", agencyId)
       .maybeSingle();
 
     if (contratErr || !contrat) {
@@ -229,6 +245,42 @@ serve(async (req: Request) => {
       commission,
     );
 
+    const { data: existingPaiements, error: existingPaiementsErr } =
+      await supabaseAdmin
+        .from("paiements")
+        .select("montant_total")
+        .eq("agency_id", agencyId)
+        .eq("contrat_id", input.contrat_id)
+        .eq("mois_concerne", input.mois_concerne)
+        .neq("statut", "annule")
+        .is("deleted_at", null);
+
+    if (existingPaiementsErr) {
+      return err(
+        `Impossible de verifier les paiements existants : ${existingPaiementsErr.message}`,
+        500,
+        "PAYMENT_SUM_CHECK_FAILED",
+      );
+    }
+
+    const alreadyPaid = (existingPaiements ?? []).reduce(
+      (sum, paiement) => sum + Number(paiement.montant_total || 0),
+      0,
+    );
+    const maxExpected = Number(contrat.loyer_mensuel || 0);
+    if (
+      ["paye", "partiel", "en_attente"].includes(input.statut) &&
+      maxExpected > 0 &&
+      alreadyPaid + input.montant_total > maxExpected
+    ) {
+      return err(
+        `Surpaiement detecte : ${alreadyPaid} XOF deja enregistres pour ce mois, ` +
+          `nouveau paiement ${input.montant_total} XOF, loyer attendu ${maxExpected} XOF.`,
+        409,
+        "OVERPAYMENT",
+      );
+    }
+
     // Sanity check avant d'écrire en base
     const ecart = Math.abs(partAgence + partBailleur - input.montant_total);
     if (ecart >= 0.01) {
@@ -251,6 +303,7 @@ serve(async (req: Request) => {
         statut: input.statut,
         reference: input.reference ?? null,
         notes: input.notes ?? null,
+        idempotency_key: idempotencyKey,
         part_agence: partAgence,
         part_bailleur: partBailleur,
         agency_id: agencyId, // injecté serveur — jamais lu depuis le client
@@ -260,6 +313,19 @@ serve(async (req: Request) => {
       .single();
 
     if (insertErr) {
+      if (insertErr.code === "23505" && idempotencyKey) {
+        const { data: existingPayment } = await supabaseAdmin
+          .from("paiements")
+          .select()
+          .eq("agency_id", agencyId)
+          .eq("idempotency_key", idempotencyKey)
+          .maybeSingle();
+
+        if (existingPayment) {
+          return json({ data: existingPayment, idempotent: true }, 200);
+        }
+      }
+
       // Remonter les erreurs de triggers PL/pgSQL (messages métier en français)
       return err(
         insertErr.message,
@@ -269,7 +335,7 @@ serve(async (req: Request) => {
     }
 
     return json({ data: paiement }, 201);
-  } catch (_err) {
+  } catch {
     return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
   }
 });

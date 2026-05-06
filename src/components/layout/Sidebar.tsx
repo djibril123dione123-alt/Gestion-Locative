@@ -5,7 +5,6 @@ import {
   Users,
   FileText,
   CreditCard,
-  Calculator,
   LogOut,
   UserCircle,
   DoorOpen,

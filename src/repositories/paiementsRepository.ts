@@ -41,7 +41,7 @@ export interface PaiementInsert {
   agency_id: string;
 }
 
-export interface PaiementUpdate extends Partial<Omit<PaiementInsert, 'agency_id' | 'contrat_id'>> {}
+export type PaiementUpdate = Partial<Omit<PaiementInsert, 'agency_id' | 'contrat_id'>>;
 
 const PAIEMENT_SELECT = `
   id, contrat_id, montant_total, mois_concerne, date_paiement,
@@ -98,21 +98,18 @@ export const paiementsRepository = {
 
   /** Insère un nouveau paiement */
   async insert(payload: PaiementInsert) {
-    const { data, error } = await supabase
-      .from('paiements')
-      .insert([payload])
-      .select('id')
-      .single();
-    return { data, error };
+    void payload;
+    return {
+      data: null,
+      error: new Error('Insertion directe de paiement interdite. Utilisez createPaiementViaEdge.'),
+    };
   },
 
   /** Met à jour un paiement existant */
   async update(id: string, payload: PaiementUpdate) {
-    const { error } = await supabase
-      .from('paiements')
-      .update(payload)
-      .eq('id', id);
-    return { error };
+    void id;
+    void payload;
+    return { error: new Error('Mise a jour directe de paiement interdite. Utilisez updatePaiementViaEdge.') };
   },
 
   /**
@@ -120,16 +117,13 @@ export const paiementsRepository = {
    * Garantit un audit trail complet et la possibilité de restauration.
    */
   async softDelete(id: string) {
-    const { error } = await supabase
-      .from('paiements')
-      .update({ deleted_at: new Date().toISOString(), actif: false })
-      .eq('id', id);
-    return { error };
+    void id;
+    return { error: new Error('Suppression directe de paiement interdite. Utilisez cancelPaiementViaEdge.') };
   },
 
   /** Suppression physique (pour les purges administratives) */
   async hardDelete(id: string) {
-    const { error } = await supabase.from('paiements').delete().eq('id', id);
-    return { error };
+    void id;
+    return { error: new Error('Suppression directe de paiement interdite. Utilisez cancelPaiementViaEdge.') };
   },
 };

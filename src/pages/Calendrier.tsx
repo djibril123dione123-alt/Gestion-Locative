@@ -98,9 +98,10 @@ export function Calendrier() {
 
   useEffect(() => {
     if (profile?.agency_id) load();
+    const activeRequestRef = requestIdRef;
     return () => {
       // Au démontage, on incrémente pour invalider toute requête en cours.
-      requestIdRef.current++;
+      activeRequestRef.current++;
     };
   }, [profile?.agency_id, load]);
 

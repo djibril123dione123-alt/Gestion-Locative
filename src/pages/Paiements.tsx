@@ -256,6 +256,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
 
       // ── Mode hors ligne : on stocke uniquement les champs d'entrée de l'Edge Function
       if (!isOnline && !editingPaiement) {
+        const idempotencyKey = crypto.randomUUID();
         await queueMutation({
           action: 'paiement_create',
           entity_type: 'paiements',
@@ -266,6 +267,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
             date_paiement: formData.date_paiement,
             mode_paiement: formData.mode_paiement,
             statut: formData.statut,
+            idempotency_key: idempotencyKey,
             reference: formData.reference || null,
           },
           timestamp: Date.now(),
@@ -292,6 +294,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           payload: { montant: parseFloat(formData.montant_total), mode: formData.mode_paiement },
         });
       } else {
+        const idempotencyKey = crypto.randomUUID();
         await createPaiementViaEdge({
           contrat_id: formData.contrat_id,
           montant_total: parseFloat(formData.montant_total),
@@ -299,6 +302,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           date_paiement: formData.date_paiement,
           mode_paiement: formData.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre',
           statut: formData.statut as 'paye' | 'partiel' | 'impaye',
+          idempotency_key: idempotencyKey,
           reference: formData.reference || null,
         });
         track({

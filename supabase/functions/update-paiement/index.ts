@@ -221,7 +221,7 @@ serve(async (req: Request) => {
     }
 
     // ── 7. Log event ─────────────────────────────────────────────────────────
-    await supabaseAdmin
+    const { error: eventErr } = await supabaseAdmin
       .from("event_log")
       .insert({
         agency_id: agencyId,
@@ -230,11 +230,13 @@ serve(async (req: Request) => {
         entity_id: input.id,
         payload: { fields_changed: Object.keys(patch).filter((k) => k !== "updated_at"), updated_by: user.id },
         created_by: user.id,
-      })
-      .catch(() => {});
+      });
+    if (eventErr) {
+      console.warn("[update-paiement] event_log insert failed", eventErr.message);
+    }
 
     return json({ data: updated }, 200);
-  } catch (_err) {
+  } catch {
     return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
   }
 });

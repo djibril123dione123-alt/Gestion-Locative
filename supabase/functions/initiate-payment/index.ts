@@ -21,11 +21,16 @@ const CORS = {
 };
 
 const IS_LIVE = Deno.env.get("PAYDUNYA_ENV") === "live";
-const MASTER_KEY    = Deno.env.get("PAYDUNYA_MASTER_KEY") ?? (IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_TOKEN") : Deno.env.get("PAYDUNYA_TEST_TOKEN"));
-const PRIVATE_KEY   = IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_PRIVATE_KEY") : Deno.env.get("PAYDUNYA_TEST_PRIVATE_KEY");
-const PUBLIC_KEY    = IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_PUBLIC_KEY")  : Deno.env.get("PAYDUNYA_TEST_PUBLIC_KEY");
-const TOKEN         = IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_TOKEN")       : Deno.env.get("PAYDUNYA_TEST_TOKEN");
-const PAYDUNYA_BASE = "https://app.paydunya.com";
+const MASTER_KEY  = Deno.env.get("PAYDUNYA_MASTER_KEY") ?? "";
+const PRIVATE_KEY = IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_PRIVATE_KEY") : Deno.env.get("PAYDUNYA_TEST_PRIVATE_KEY");
+const PUBLIC_KEY  = IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_PUBLIC_KEY")  : Deno.env.get("PAYDUNYA_TEST_PUBLIC_KEY");
+const TOKEN       = IS_LIVE ? Deno.env.get("PAYDUNYA_LIVE_TOKEN")       : Deno.env.get("PAYDUNYA_TEST_TOKEN");
+
+// PayDunya utilise deux bases URL distinctes selon l'environnement :
+//   - Test  : https://app.paydunya.com/sandbox-api/v1  (checkout: /sandbox-checkout/invoice/<token>)
+//   - Live  : https://app.paydunya.com/api/v1          (checkout: /checkout/invoice/<token>)
+const PAYDUNYA_API_BASE      = IS_LIVE ? "https://app.paydunya.com/api/v1"         : "https://app.paydunya.com/sandbox-api/v1";
+const PAYDUNYA_CHECKOUT_BASE = IS_LIVE ? "https://paydunya.com/checkout/invoice"   : "https://paydunya.com/sandbox-checkout/invoice";
 
 const SUPABASE_URL         = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -152,7 +157,7 @@ serve(async (req) => {
       },
     };
 
-    const pdRes = await fetch(`${PAYDUNYA_BASE}/api/v1/checkout-invoice/create`, {
+    const pdRes = await fetch(`${PAYDUNYA_API_BASE}/checkout-invoice/create`, {
       method: "POST",
       headers: paydunyaHeaders,
       body: JSON.stringify(invoiceBody),
@@ -178,13 +183,13 @@ serve(async (req) => {
 
     // ── Paiement carte : retourner l'URL de checkout PayDunya ──────────────
     if (provider === "card") {
-      const checkoutUrl = `${PAYDUNYA_BASE}/checkout/invoice/${invoiceToken}`;
+      const checkoutUrl = `${PAYDUNYA_CHECKOUT_BASE}/${invoiceToken}`;
       return json({ transaction_id: txn.id, invoice_token: invoiceToken, checkout_url: checkoutUrl });
     }
 
     // ── Paiement mobile : déclencher le softpay (push sur le téléphone) ────
     const softpaySlug = SOFTPAY_SLUGS[provider] ?? "orange-money-senegal";
-    const softpayRes = await fetch(`${PAYDUNYA_BASE}/api/v1/softpay/${softpaySlug}`, {
+    const softpayRes = await fetch(`${PAYDUNYA_API_BASE}/softpay/${softpaySlug}`, {
       method: "POST",
       headers: paydunyaHeaders,
       body: JSON.stringify({
@@ -203,7 +208,7 @@ serve(async (req) => {
         transaction_id: txn.id,
         invoice_token: invoiceToken,
         softpay_error: softpayData.response_text ?? "Envoi push échoué",
-        checkout_url: `${PAYDUNYA_BASE}/checkout/invoice/${invoiceToken}`,
+        checkout_url: `${PAYDUNYA_CHECKOUT_BASE}/${invoiceToken}`,
       });
     }
 

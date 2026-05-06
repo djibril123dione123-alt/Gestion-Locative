@@ -1,0 +1,125 @@
+Tu es un expert senior en développement SaaS (React + Supabase + Fintech).
+
+Contexte :
+Je développe une application SaaS de gestion immobilière avec :
+- authentification Supabase
+- système de paiements (PayDunya : Wave, Orange, Djamo)
+- dashboard (loyers, paiements, abonnements)
+
+Actuellement, l’application a plusieurs bugs critiques en production.
+Je veux que tu fasses un audit technique complet ET que tu corriges les problèmes de manière propre, robuste et scalable.
+
+---
+
+🎯 OBJECTIF
+
+1. Corriger TOUS les bugs existants
+2. Stabiliser complètement l’app (login, paiements, UI)
+3. Rendre le système fiable pour des utilisateurs réels
+4. Proposer des corrections durables (pas de patch temporaire)
+
+---
+
+⚠️ BUG 1 — ERREUR APRÈS CONNEXION
+
+Problème :
+Après connexion, j’ai ce message :
+
+"Une erreur est survenue. Nous avons été notifiés de cette erreur et travaillons à sa résolution."
+
+Mais si je refresh la page, ça fonctionne.
+
+👉 Analyse attendue :
+- vérifier le flow auth (Supabase session, onAuthStateChange)
+- vérifier les hooks React (race condition, état non prêt)
+- vérifier les appels API déclenchés trop tôt
+
+👉 Correction attendue :
+- empêcher le rendu avant que la session soit chargée
+- ajouter un état de loading global
+- corriger les dépendances useEffect si nécessaire
+
+---
+
+⚠️ BUG 2 — PAIEMENT INDISPONIBLE
+
+Message affiché :
+"Service temporairement indisponible. Le service de paiement est en cours de déploiement."
+
+👉 Problème :
+Le paiement PayDunya ne fonctionne pas réellement.
+
+👉 Analyse attendue :
+- vérifier si les Edge Functions sont bien déployées
+- vérifier les appels frontend → initiate-payment
+- vérifier les erreurs réseau / CORS / env variables
+- vérifier si les clés PayDunya sont correctement utilisées
+
+👉 Correction attendue :
+- rendre le paiement fonctionnel de bout en bout :
+  1. création transaction
+  2. redirection utilisateur
+  3. webhook
+  4. activation abonnement
+
+---
+
+🔁 AMÉLIORATION UX (OBLIGATOIRE)
+
+Supprimer le message actuel et remplacer par :
+
+- état réel du paiement :
+  - "Initialisation du paiement..."
+  - "En attente de confirmation..."
+  - "Paiement confirmé ✅"
+  - "Échec du paiement ❌"
+
+- ajouter fallback :
+  bouton "Contacter sur WhatsApp" uniquement si erreur réelle
+
+---
+
+🔍 AUDIT GLOBAL
+
+Tu dois aussi analyser :
+
+1. Paiements non synchronisés
+2. Historique qui ne s’affiche pas
+3. Lien entre "loyers impayés" et "paiements reçus"
+4. cohérence base de données (paiements, contrats)
+5. erreurs silencieuses frontend
+
+---
+
+🧠 ROBUSTESSE À AJOUTER
+
+- gestion des erreurs partout (try/catch + logs)
+- logs avec :contentReference[oaicite:0]{index=0}
+- retry automatique pour paiements
+- protection contre double paiement
+- fallback si API externe down
+
+---
+
+📦 LIVRABLE
+
+Je veux :
+
+- corrections précises (code)
+- explication des causes des bugs
+- amélioration UX
+- sécurisation du paiement
+- structure propre et maintenable
+
+---
+
+IMPORTANT :
+
+Ne fais pas de correction superficielle.
+
+Tu dois :
+- comprendre la vraie cause
+- corriger à la racine
+- penser comme une app en production avec utilisateurs payants
+
+Agis comme si cette app devait être lancée demain avec de vrais clients.

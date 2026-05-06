@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase, UserProfile } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 
@@ -18,44 +18,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const safeGetSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await loadProfile(session.user.id);
-        } else {
-          setLoading(false);
-        }
-      } catch {
-        await supabase.auth.signOut().catch(() => {});
-        setUser(null);
-        setProfile(null);
-        setLoading(false);
-      }
-    };
+  // Prevent concurrent loadProfile calls (race condition guard)
+  const loadingProfileRef = useRef(false);
 
-    void safeGetSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await loadProfile(session.user.id);
-        } else {
-          setProfile(null);
-          setLoading(false);
-        }
-      })();
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const loadProfile = async (userId: string, retryCount = 0) => {
+  const loadProfile = async (userId: string, retryCount = 0): Promise<void> => {
     const MAX_RETRIES = 3;
     const RETRY_DELAY = 1000;
 
@@ -68,7 +34,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         setProfile(null);
-        setLoading(false);
         return;
       }
 
@@ -85,8 +50,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null);
     } finally {
       setLoading(false);
+      loadingProfileRef.current = false;
     }
   };
+
+  useEffect(() => {
+    let mounted = true;
+
+    // Rely solely on onAuthStateChange (fires INITIAL_SESSION on startup).
+    // This avoids the race condition between safeGetSession + onAuthStateChange
+    // both calling loadProfile concurrently.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!mounted) return;
+
+        const newUser = session?.user ?? null;
+        setUser(newUser);
+
+        if (newUser) {
+          // Guard against concurrent calls (e.g. rapid auth state changes)
+          if (loadingProfileRef.current) return;
+          loadingProfileRef.current = true;
+          void loadProfile(newUser.id);
+        } else {
+          setProfile(null);
+          setLoading(false);
+          loadingProfileRef.current = false;
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });

@@ -1,0 +1,167 @@
+Tu es un expert SaaS fintech et Supabase.
+
+Contexte :
+Je développe une application SaaS de gestion immobilière (loyers, contrats, paiements) en Afrique (Sénégal).
+Je veux finaliser un système de paiement d’abonnement robuste avec PayDunya (Wave, Orange Money, Djamo).
+
+Objectif :
+Construire un système de paiement 100% fiable, sécurisé et automatisé, avec :
+- création de paiement côté serveur
+- webhook de confirmation
+- activation automatique d’abonnement
+- gestion des erreurs et retry
+
+Stack technique :
+- Frontend : React (Vite)
+- Backend : Supabase (Edge Functions)
+- Base : PostgreSQL
+- Monitoring : Sentry
+- Email : Resend
+- SMS : Orange SMS API
+
+---
+
+🎯 CE QUE TU DOIS FAIRE
+
+1. 🔐 Edge Function : initiate-payment
+Créer une fonction qui :
+- reçoit agency_id + plan choisi
+- vérifie le prix côté serveur (ne jamais faire confiance au client)
+- crée une transaction PayDunya
+- génère une facture avec :
+  - montant
+  - description
+  - metadata (agency_id, plan)
+- retourne un lien de paiement
+
+---
+
+2. 🔁 Edge Function : paydunya-webhook
+Créer un webhook sécurisé qui :
+- vérifie la signature PayDunya (master key)
+- récupère :
+  - status
+  - token
+  - montant
+  - metadata
+- si paiement confirmé :
+  - appelle une RPC SQL : activate_subscription(agency_id, plan)
+  - enregistre la transaction dans payment_transactions
+  - push une notification dans notification_queue
+
+---
+
+3. 🧠 Base de données
+
+Créer / vérifier :
+
+Table payment_transactions :
+- id
+- agency_id
+- montant
+- status (pending, success, failed)
+- provider (wave, orange, djamo)
+- reference
+- created_at
+
+Table notification_queue :
+- id
+- type (email, sms)
+- payload JSON
+- status (pending, sent, failed)
+
+---
+
+4. ⚙️ RPC SQL : activate_subscription
+Créer une fonction SQL qui :
+- met à jour agencies :
+  - subscription_status = active
+  - plan = choisi
+  - next_renewal_at = NOW() + 30 jours
+- log l’activation
+
+---
+
+5. 💳 Frontend : CheckoutModal
+
+Créer un composant qui :
+- appelle initiate-payment
+- redirige vers PayDunya
+- affiche :
+  - "en attente de confirmation"
+- fait un polling toutes les 5 secondes :
+  - vérifie si subscription_status = active
+
+---
+
+6. 🔁 Retry & robustesse
+
+Implémenter :
+- retry webhook si échec
+- idempotency (éviter double activation)
+- timeout si paiement non confirmé après 10 minutes
+
+---
+
+7. 📩 Notifications
+
+Après paiement réussi :
+- envoyer email (Resend)
+- envoyer SMS (Orange)
+
+---
+
+8. 🚨 Monitoring (Sentry)
+
+Ajouter dans le code :
+
+Sentry.setTag("module", "payment")
+Sentry.setTag("provider", "paydunya")
+Sentry.setTag("status", "pending")
+
+Logger :
+- erreurs webhook
+- erreurs paiement
+- incohérences
+
+---
+
+9. 🔐 Sécurité
+
+- toutes les clés PayDunya côté serveur uniquement
+- vérifier montant côté serveur
+- ne jamais activer abonnement sans webhook confirmé
+
+---
+
+10. 🧪 Tests
+
+Tester :
+- paiement réussi
+- paiement échoué
+- webhook non reçu
+- double webhook
+- utilisateur qui ferme la page
+
+---
+
+🎯 LIVRABLE ATTENDU
+
+- code complet des Edge Functions
+- SQL migrations
+- composant React prêt à utiliser
+- gestion d’erreurs propre
+- logs + monitoring
+
+---
+
+IMPORTANT :
+
+Le système doit garantir :
+
+👉 1 paiement = 1 abonnement activé  
+👉 aucun paiement perdu  
+👉 aucun double abonnement  
+👉 fonctionnement même en cas de bug réseau  
+
+Sois rigoureux, pense comme une startup fintech.

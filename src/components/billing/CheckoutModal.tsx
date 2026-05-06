@@ -44,9 +44,20 @@ const PROVIDERS: { id: Provider; label: string; sub: string; logo?: string; emoj
   { id: 'card',         label: 'Carte bancaire',   sub: 'Visa / Mastercard',        emoji: '💳', color: '#1D4ED8', bg: '#EFF6FF' },
 ];
 
+/**
+ * Returns true ONLY for genuine network failures (no connection, CORS blocked).
+ * "Edge Function returned a non-2xx status code" is NOT a network error — it means
+ * the function ran but returned an error response (missing keys, PayDunya down, etc.)
+ * and should show the real error message to the user instead of "service unavailable".
+ */
 function isCorsOrNetworkError(msg: string): boolean {
   const m = msg.toLowerCase();
-  return m.includes('failed to send') || m.includes('cors') || m.includes('network') || m.includes('fetch') || m.includes('edge function');
+  return (
+    m.includes('failed to fetch') ||
+    m.includes('failed to send a request') ||
+    m.includes('networkerror') ||
+    (m.includes('cors') && !m.includes('edge function'))
+  );
 }
 
 export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onSuccess }: CheckoutModalProps) {

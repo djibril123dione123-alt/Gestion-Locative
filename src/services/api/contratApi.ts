@@ -49,10 +49,6 @@ export class ContratApiError extends Error {
   }
 }
 
-function isEdgeFunctionUnavailable(error: { message?: string; status?: number } | null) {
-  const message = error?.message ?? '';
-  return error?.status === 404 || message.includes('Edge Function');
-}
 function normalizeEdgeError(payload: { error?: string; code?: string; details?: unknown } | undefined, fallback: string) {
   return {
     message: payload?.error ?? fallback,

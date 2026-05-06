@@ -161,8 +161,19 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
         return;
       }
 
-      // Mode test : simuler succès
-      if (data.test_mode) {
+      // Mode test : activer l'abonnement directement (PayDunya non disponible en dev)
+      if (data.test_mode && data.transaction_id) {
+        try {
+          await supabase.rpc('activate_subscription', {
+            p_agency_id:      profile?.agency_id,
+            p_plan_id:        planId,
+            p_transaction_id: data.transaction_id,
+            p_amount_xof:     priceXof,
+            p_phone:          null,
+          });
+        } catch {
+          // Non bloquant en mode test — l'abonnement sera activé via webhook en production
+        }
         setStep('success');
         setTimeout(() => onSuccess(), 2000);
         return;

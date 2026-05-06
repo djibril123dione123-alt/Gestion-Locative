@@ -338,6 +338,7 @@ export function Contrats() {
 
         closeModal();
         toast.success('Contrat créé avec succès');
+        loadData();
       } catch (err: unknown) {
         const msg = err instanceof ContratApiError
           ? err.message
@@ -374,6 +375,7 @@ export function Contrats() {
 
         closeEditModal();
         toast.success('Contrat modifié avec succès');
+        loadData();
       } catch (err: unknown) {
         console.error('Erreur modification:', err);
         const msg = err instanceof ContratApiError

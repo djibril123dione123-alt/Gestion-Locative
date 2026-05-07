@@ -180,8 +180,7 @@ export function Interventions() {
           type="button"
           onClick={() => setIsOpen(true)}
           data-testid="button-new-intervention"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold transition hover:opacity-90"
-          style={{ backgroundColor: '#F58220' }}
+          className="sk-create-cta w-full sm:w-auto"
         >
           <Plus className="w-5 h-5" /> Nouvelle intervention
         </button>

@@ -1,30 +1,31 @@
-import { useState, useMemo, useEffect, ComponentType } from 'react';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  FileText,
-  CreditCard,
-  LogOut,
-  UserCircle,
-  DoorOpen,
-  ChevronRight,
-  ChevronDown,
-  X,
-  Settings,
-  Wrench,
-  CalendarDays,
-  FolderOpen,
-  ClipboardList,
-  TrendingDown,
-  Wallet,
-  Briefcase,
-  HardHat,
   AlertCircle,
   BarChart3,
+  Briefcase,
+  Building2,
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  ClipboardList,
+  CreditCard,
+  DoorOpen,
+  FileText,
+  FolderOpen,
+  HardHat,
+  LayoutDashboard,
+  LogOut,
+  Settings,
+  TrendingDown,
+  UserCircle,
+  Users,
+  Wallet,
+  Wrench,
+  X,
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
+import { BrandLogo } from '../brand/BrandLogo';
 import { NotificationBell } from '../ui/NotificationBell';
 
 interface SidebarProps {
@@ -39,36 +40,17 @@ type Role = 'admin' | 'agent' | 'comptable' | 'bailleur';
 interface MenuLeaf {
   id: string;
   label: string;
-  icon: ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  icon: ComponentType<{ className?: string }>;
   roles: Role[];
 }
 
 interface MenuGroup {
   id: string;
   label: string;
-  icon: ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  icon: ComponentType<{ className?: string }>;
   roles: Role[];
   items: MenuLeaf[];
 }
-
-// =============================================================
-// IA repensée comme un gestionnaire d'agence (avril 2026)
-// =============================================================
-//   ➜ Tableau de bord                 [accès direct]
-//   ➜ Finances ▾                      [usage quotidien intensif]
-//        Encaissements (Reçus | Impayés)
-//        Dépenses
-//        Commissions
-//        Analyses (Rapports | Filtres)
-//   ➜ Locations ▾                     [usage quotidien]
-//        Locataires, Contrats
-//   ➜ Patrimoine ▾                    [usage hebdomadaire]
-//        Bailleurs, Immeubles, Produits
-//   ➜ Activité ▾                      [usage opérationnel]
-//        Calendrier, Maintenance, États des lieux, Documents
-//   ➜ Paramètres ▾                    [rare — config]
-//        Mon agence | Équipe | Abonnement (onglets internes au sein de la page)
-// =============================================================
 
 const NAV: Array<MenuLeaf | MenuGroup> = [
   {
@@ -85,7 +67,6 @@ const NAV: Array<MenuLeaf | MenuGroup> = [
     items: [
       { id: 'paiements', label: 'Encaissements', icon: CreditCard, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
       { id: 'depenses', label: 'Dépenses', icon: TrendingDown, roles: ['admin'] },
-      //{ id: 'commissions', label: 'Commissions', icon: Calculator, roles: ['admin'] },
       { id: 'tableau-de-bord-financier', label: 'Analyses', icon: BarChart3, roles: ['admin'] },
     ],
   },
@@ -127,14 +108,10 @@ const NAV: Array<MenuLeaf | MenuGroup> = [
     label: 'Paramètres',
     icon: Settings,
     roles: ['admin'],
-    // Pour Paramètres : aucune sous-entrée car la page utilise des onglets
-    // internes (Mon agence | Équipe | Abonnement). On expose un seul lien
-    // clickable qui mène à la page tabbed.
     items: [],
   },
 ];
 
-// Map enfant → groupe (pour auto-expand quand on est sur une sous-page)
 const PARENT_OF: Record<string, string> = {
   paiements: 'finances',
   'loyers-impayes': 'finances',
@@ -169,7 +146,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
       .filter((entry) => entry.roles.includes(role))
       .map((entry) => {
         if (isGroup(entry)) {
-          const items = entry.items.filter((it) => it.roles.includes(role));
+          const items = entry.items.filter((item) => item.roles.includes(role));
           return { ...entry, items };
         }
         return entry;
@@ -177,7 +154,6 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
       .filter((entry) => !isGroup(entry) || entry.items.length > 0 || entry.id === 'parametres');
   }, [profile, role]);
 
-  // Auto-expand le groupe contenant la page courante
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const initial = new Set<string>();
     const parent = PARENT_OF[currentPage];
@@ -197,6 +173,11 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
     }
   }, [currentPage]);
 
+  const handleNavigate = (page: string) => {
+    onNavigate(page);
+    onClose?.();
+  };
+
   const toggleGroup = (id: string) => {
     setOpenGroups((prev) => {
       const next = new Set(prev);
@@ -206,14 +187,8 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
     });
   };
 
-  const handleNavigate = (page: string) => {
-    onNavigate(page);
-    if (onClose) onClose();
-  };
-
   const isLeafActive = (id: string) => {
     if (currentPage === id) return true;
-    // 'paiements' active aussi quand on est sur 'loyers-impayes' (même page Encaissements)
     if (id === 'paiements' && currentPage === 'loyers-impayes') return true;
     if (id === 'tableau-de-bord-financier' && currentPage === 'filtres-avances') return true;
     if (id === 'parametres' && (currentPage === 'equipe' || currentPage === 'abonnement')) return true;
@@ -221,46 +196,32 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
   };
 
   const isGroupActive = (group: MenuGroup) =>
-    group.items.some((it) => isLeafActive(it.id)) ||
+    group.items.some((item) => isLeafActive(item.id)) ||
     (group.id === 'parametres' && isLeafActive('parametres'));
 
   return (
     <>
       {isOpen && onClose && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden animate-fadeIn"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 z-40 bg-brand-950/60 backdrop-blur-sm animate-fadeIn lg:hidden" onClick={onClose} />
       )}
 
-      <div
+      <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-50
-          w-64 h-screen flex flex-col text-white
-          transform transition-transform duration-300 ease-in-out
+          fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-white/10 bg-brand-950 text-white shadow-[24px_0_80px_rgba(6,17,13,0.18)]
+          transform transition-transform duration-300 ease-in-out lg:static
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
-        style={{ backgroundColor: '#2D2D2D' }}
       >
-        {/* Logo */}
-        <div className="p-3 border-b flex items-center justify-between" style={{ borderColor: '#3A3A3A' }}>
-          <img
-            src="/logo-full.png"
-            alt="Samay Këur"
-            className="w-52 h-auto object-contain mx-auto"
-          />
+        <div className="relative flex items-center justify-between overflow-hidden border-b border-white/10 p-4">
+          <div className="absolute -left-8 top-0 h-24 w-24 rounded-full bg-emerald-300/12 blur-2xl" />
+          <BrandLogo size="sm" tone="dark" animated showTagline className="relative" />
           {onClose && (
-            <button
-              onClick={onClose}
-              className="lg:hidden absolute right-3 top-3 p-2 rounded-lg hover:bg-slate-700 transition-colors"
-              aria-label="Fermer le menu"
-            >
-              <X className="w-5 h-5" />
+            <button onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden" aria-label="Fermer le menu">
+              <X className="h-5 w-5" />
             </button>
           )}
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4">
           <ul className="space-y-1 px-3">
             {visibleNav.map((entry) => {
@@ -271,21 +232,14 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
                   <li key={entry.id}>
                     <button
                       onClick={() => handleNavigate(entry.id)}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative"
-                      style={{
-                        backgroundColor: active ? 'rgba(245, 130, 32, 0.15)' : 'transparent',
-                        color: active ? '#FFA64D' : '#B0B0B0',
-                      }}
+                      className={`group relative flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-all duration-200 ${
+                        active ? 'bg-emerald-300/12 text-emerald-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
+                      }`}
                     >
-                      {active && (
-                        <div
-                          className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r"
-                          style={{ backgroundColor: '#F58220' }}
-                        />
-                      )}
-                      <Icon className="w-5 h-5" style={{ color: active ? '#F58220' : '#707070' }} />
-                      <span className="font-medium text-sm">{entry.label}</span>
-                      {active && <ChevronRight className="w-4 h-4 ml-auto" style={{ color: '#F58220' }} />}
+                      {active && <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r bg-emerald-300" />}
+                      <Icon className={`h-5 w-5 ${active ? 'text-emerald-300' : 'text-slate-500 group-hover:text-emerald-200'}`} />
+                      <span className="text-sm font-bold">{entry.label}</span>
+                      {active && <ChevronRight className="ml-auto h-4 w-4 text-emerald-300" />}
                     </button>
                   </li>
                 );
@@ -294,43 +248,32 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
               const Icon = entry.icon;
               const active = isGroupActive(entry);
               const open = openGroups.has(entry.id);
-              const isParametres = entry.id === 'parametres';
+              const isSettings = entry.id === 'parametres';
 
               return (
                 <li key={entry.id}>
                   <button
                     onClick={() => {
-                      // Paramètres : pas de sous-entrées, on navigue direct
-                      if (isParametres) {
+                      if (isSettings) {
                         handleNavigate('parametres');
                         return;
                       }
                       toggleGroup(entry.id);
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group relative"
-                    style={{
-                      backgroundColor: active ? 'rgba(245, 130, 32, 0.10)' : 'transparent',
-                      color: active ? '#FFA64D' : '#B0B0B0',
-                    }}
+                    className={`group relative flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-all duration-200 ${
+                      active ? 'bg-emerald-300/10 text-emerald-100' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
+                    }`}
                   >
-                    {active && (
-                      <div
-                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r"
-                        style={{ backgroundColor: '#F58220' }}
-                      />
-                    )}
-                    <Icon className="w-5 h-5" style={{ color: active ? '#F58220' : '#707070' }} />
-                    <span className="font-medium text-sm flex-1 text-left">{entry.label}</span>
-                    {!isParametres && (
-                      <ChevronDown
-                        className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'}`}
-                        style={{ color: active ? '#F58220' : '#707070' }}
-                      />
+                    {active && <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r bg-emerald-300" />}
+                    <Icon className={`h-5 w-5 ${active ? 'text-emerald-300' : 'text-slate-500 group-hover:text-emerald-200'}`} />
+                    <span className="flex-1 text-left text-sm font-bold">{entry.label}</span>
+                    {!isSettings && (
+                      <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'} ${active ? 'text-emerald-300' : 'text-slate-500'}`} />
                     )}
                   </button>
 
-                  {!isParametres && open && (
-                    <ul className="mt-1 ml-3 pl-3 border-l space-y-0.5" style={{ borderColor: '#3A3A3A' }}>
+                  {!isSettings && open && (
+                    <ul className="ml-3 mt-1 space-y-0.5 border-l border-white/10 pl-3">
                       {entry.items.map((leaf) => {
                         const LeafIcon = leaf.icon;
                         const leafActive = isLeafActive(leaf.id);
@@ -338,23 +281,13 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
                           <li key={leaf.id}>
                             <button
                               onClick={() => handleNavigate(leaf.id)}
-                              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-left"
-                              style={{
-                                backgroundColor: leafActive ? 'rgba(245, 130, 32, 0.18)' : 'transparent',
-                                color: leafActive ? '#FFA64D' : '#9A9A9A',
-                              }}
+                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all duration-200 ${
+                                leafActive ? 'bg-emerald-300/12 text-emerald-100' : 'text-slate-500 hover:bg-white/[0.055] hover:text-slate-200'
+                              }`}
                             >
-                              <LeafIcon
-                                className="w-4 h-4 flex-shrink-0"
-                                style={{ color: leafActive ? '#F58220' : '#707070' }}
-                              />
-                              <span className="text-sm font-medium">{leaf.label}</span>
-                              {leaf.id === 'paiements' && (
-                                <AlertCircle
-                                  className="w-3.5 h-3.5 ml-auto opacity-0"
-                                  aria-hidden="true"
-                                />
-                              )}
+                              <LeafIcon className={`h-4 w-4 flex-shrink-0 ${leafActive ? 'text-emerald-300' : 'text-slate-600'}`} />
+                              <span className="text-sm font-semibold">{leaf.label}</span>
+                              {leaf.id === 'paiements' && <AlertCircle className="ml-auto h-3.5 w-3.5 opacity-0" aria-hidden="true" />}
                             </button>
                           </li>
                         );
@@ -366,43 +299,33 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
             })}
           </ul>
 
-          <div className="px-3 mt-2">
+          <div className="px-3 pt-3">
             <NotificationBell onNavigate={handleNavigate} />
           </div>
         </nav>
 
-        {/* Profil */}
-        <div className="p-4 border-t" style={{ borderColor: '#3A3A3A' }}>
-          <div className="mb-3 px-3 py-3 rounded-lg" style={{ backgroundColor: '#3A3A3A' }}>
+        <div className="border-t border-white/10 p-4">
+          <div className="mb-3 rounded-lg border border-white/10 bg-white/[0.055] px-3 py-3">
             <div className="flex items-center gap-3">
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                style={{ background: 'linear-gradient(135deg, #F58220 0%, #C0392B 100%)' }}
-              >
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-300 to-brand-700 text-sm font-black text-white">
                 {profile?.prenom?.[0] ?? 'A'}
                 {profile?.nom?.[0] ?? 'S'}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-black text-white">
                   {profile?.prenom} {profile?.nom}
                 </p>
-                <p className="text-xs capitalize" style={{ color: '#FFA64D' }}>
-                  {profile?.role}
-                </p>
+                <p className="text-xs font-bold capitalize text-emerald-200">{profile?.role}</p>
               </div>
             </div>
           </div>
 
-          <button
-            onClick={() => signOut()}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition hover:bg-slate-700"
-            style={{ backgroundColor: 'transparent', color: '#B0B0B0' }}
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium text-sm">Déconnexion</span>
+          <button onClick={() => signOut()} className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-slate-400 transition hover:bg-white/[0.055] hover:text-white">
+            <LogOut className="h-5 w-5" />
+            <span className="text-sm font-bold">Déconnexion</span>
           </button>
         </div>
-      </div>
+      </aside>
     </>
   );
 }

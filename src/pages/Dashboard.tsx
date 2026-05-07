@@ -162,13 +162,13 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
     [stats.unitesLouees, stats.unitesLibres],
   );
 
-  const COLORS = ['#F58220', '#94a3b8'];
+  const COLORS = ['#166534', '#cbd5e1'];
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-orange-200 border-t-orange-600 mb-4" />
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-emerald-100 border-t-brand-700 mb-4" />
           <p className="text-lg text-slate-600 animate-pulse-soft">Chargement du tableau de bord...</p>
         </div>
       </div>
@@ -192,8 +192,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
               setLoading(true);
               loadDashboardData();
             }}
-            className="px-6 py-3 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-            style={{ background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)' }}
+            className="px-6 py-3 bg-brand-700 text-white rounded-lg font-bold shadow-premium hover:bg-brand-800 transition-all duration-300"
           >
             Réessayer
           </button>
@@ -214,9 +213,9 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
             }}
           />
         )}
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 animate-fadeIn">
+        <div className="sk-page-shell space-y-6 lg:space-y-8 animate-fadeIn">
           <div className="animate-slideInLeft">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950 mb-2">
               Bienvenue sur Gestion Locative
             </h1>
             <p className="text-slate-600 text-base lg:text-lg">
@@ -224,16 +223,16 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
             </p>
           </div>
 
-          <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200 animate-slideInUp">
+          <div className="sk-card-premium p-6 animate-slideInUp">
             <div className="flex items-start gap-4">
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-orange-900 mb-2">Configuration guidée recommandée</h3>
-                <p className="text-orange-800 text-sm mb-4">
+                <h3 className="text-lg font-black text-slate-950 mb-2">Configuration guidée recommandée</h3>
+                <p className="text-slate-700 text-sm font-medium mb-4">
                   Laissez-vous guider étape par étape pour créer votre premier flux complet en quelques minutes.
                 </p>
                 <button
                   onClick={() => setShowWizard(true)}
-                  className="px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all font-semibold shadow-lg hover:shadow-xl flex items-center gap-2"
+                  className="px-6 py-3 bg-brand-700 text-white rounded-lg hover:bg-brand-800 transition-all font-bold shadow-premium flex items-center gap-2"
                 >
                   <Sparkles className="w-5 h-5" />
                   Lancer la configuration guidée
@@ -244,7 +243,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
 
           <QuickStart onNavigate={onNavigate} />
 
-          <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-8">
+          <div className="sk-card-premium p-8">
             <EmptyState
               icon={Sparkles}
               title="Votre tableau de bord est prêt !"
@@ -254,25 +253,25 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border-2 border-orange-200">
+            <div className="sk-card p-6">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-brand-700 rounded-lg flex items-center justify-center">
                   <Building2 className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="font-bold text-orange-900">Gestion complète</h3>
+                <h3 className="font-black text-slate-950">Gestion complète</h3>
               </div>
-              <p className="text-sm text-orange-800">
+              <p className="text-sm font-medium text-slate-700">
                 Gérez vos bailleurs, immeubles, unités et locataires dans une seule plateforme intuitive
               </p>
             </div>
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-2 border-blue-200">
+            <div className="sk-card p-6">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-action-600 rounded-lg flex items-center justify-center">
                   <DollarSign className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="font-bold text-blue-900">Suivi financier</h3>
+                <h3 className="font-black text-slate-950">Suivi financier</h3>
               </div>
-              <p className="text-sm text-blue-800">
+              <p className="text-sm font-medium text-slate-700">
                 Encaissements, rapports mensuels, détection des impayés automatique et exports PDF
               </p>
             </div>
@@ -294,9 +293,9 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 animate-fadeIn">
+    <div className="sk-page-shell space-y-6 lg:space-y-8 animate-fadeIn">
       <div className="animate-slideInLeft">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950 mb-2">
           Tableau de bord
         </h1>
         <p className="text-slate-600 text-base lg:text-lg">Vue d'ensemble de votre activité immobilière</p>
@@ -305,10 +304,10 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
       {stats.nbImpayesMois > 0 && (
         <button
           onClick={() => onNavigate?.('loyers-impayes')}
-          className="w-full flex items-center justify-between gap-4 bg-red-50 border-2 border-red-200 rounded-2xl p-4 sm:p-5 hover:bg-red-100 transition-colors text-left group"
+          className="w-full flex items-center justify-between gap-4 bg-red-50 border border-red-200 rounded-lg p-4 sm:p-5 hover:bg-red-100 transition-colors text-left group shadow-sm"
         >
           <div className="flex items-center gap-4 min-w-0">
-            <div className="w-12 h-12 rounded-xl bg-red-500 flex items-center justify-center flex-shrink-0 group-hover:bg-red-600 transition-colors">
+            <div className="w-12 h-12 rounded-lg bg-red-600 flex items-center justify-center flex-shrink-0 group-hover:bg-red-700 transition-colors">
               <AlertCircle className="w-6 h-6 text-white" />
             </div>
             <div className="min-w-0">
@@ -329,14 +328,14 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
 
       {/* Résumé financier rapide */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl p-4 border border-emerald-200">
+        <div className="sk-card p-4">
           <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1">Encaissés ce mois</p>
           <p className="text-xl sm:text-2xl font-bold text-emerald-900 truncate">{formatCurrency(stats.revenusMois)}</p>
           <p className="text-xs text-emerald-600 mt-1">
             {stats.nbPaiementsMois} paiement{stats.nbPaiementsMois > 1 ? 's' : ''}
           </p>
         </div>
-        <div className={`rounded-xl p-4 border ${stats.impayesMois > 0 ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-200' : 'bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200'}`}>
+        <div className={`rounded-lg p-4 border ${stats.impayesMois > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200 shadow-premium'}`}>
           <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${stats.impayesMois > 0 ? 'text-red-700' : 'text-slate-500'}`}>
             Impayés ce mois
           </p>
@@ -347,15 +346,15 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
             {stats.nbImpayesMois} dossier{stats.nbImpayesMois > 1 ? 's' : ''}
           </p>
         </div>
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-4 border border-orange-200">
-          <p className="text-xs font-semibold text-orange-700 uppercase tracking-wide mb-1">Contrats actifs</p>
-          <p className="text-xl sm:text-2xl font-bold text-orange-900">{stats.contratsActifs}</p>
-          <p className="text-xs text-orange-600 mt-1">{stats.totalLocataires} locataires</p>
+        <div className="sk-card p-4">
+          <p className="text-xs font-bold text-brand-700 uppercase tracking-wide mb-1">Contrats actifs</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-950">{stats.contratsActifs}</p>
+          <p className="text-xs font-medium text-slate-600 mt-1">{stats.totalLocataires} locataires</p>
         </div>
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
-          <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Occupation</p>
-          <p className="text-xl sm:text-2xl font-bold text-blue-900">{stats.tauxOccupation.toFixed(0)}%</p>
-          <p className="text-xs text-blue-600 mt-1">
+        <div className="sk-card p-4">
+          <p className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1">Occupation</p>
+          <p className="text-xl sm:text-2xl font-black text-slate-950">{stats.tauxOccupation.toFixed(0)}%</p>
+          <p className="text-xs font-medium text-slate-600 mt-1">
             {stats.unitesLouees}/{stats.totalUnites} unités
           </p>
         </div>
@@ -375,10 +374,10 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-        <div className="lg:col-span-1 bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
+        <div className="lg:col-span-1 sk-card-premium p-4 sm:p-6 transition-all duration-300 animate-scaleIn">
           <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-2">Finances du mois</h2>
           <div className="space-y-4 mt-4">
-            <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl transition-all duration-300 hover:scale-105">
+            <div className="flex items-center justify-between p-3 sm:p-4 bg-brand-50 rounded-lg transition-all duration-300 hover:-translate-y-0.5">
               <div className="flex-1 min-w-0">
                 <p className="text-xs sm:text-sm text-green-700 font-medium">Revenus perçus</p>
                 <p className="text-lg sm:text-2xl font-bold text-green-900 truncate">
@@ -399,7 +398,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
           </div>
         </div>
 
-        <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
+        <div className="lg:col-span-2 sk-card-premium p-4 sm:p-6 transition-all duration-300 animate-scaleIn">
           <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-4">Revenus mensuels</h2>
           <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
             <BarChart data={monthlyRevenue}>
@@ -410,14 +409,14 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
                 formatter={(value: number) => formatCurrency(value)}
                 contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12px' }}
               />
-              <Bar dataKey="revenus" fill="#F58220" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="revenus" fill="#166534" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
+        <div className="sk-card-premium p-4 sm:p-6 transition-all duration-300 animate-scaleIn">
           <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-4">Occupation des unités</h2>
           <ResponsiveContainer width="100%" height={200} className="sm:h-[250px]">
             <PieChart>
@@ -442,7 +441,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn">
+        <div className="sk-card-premium p-4 sm:p-6 transition-all duration-300 animate-scaleIn">
           <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-4">Statistiques générales</h2>
           <div className="space-y-4">
             <StatRow label="Bailleurs enregistrés" value={stats.totalBailleurs} />
@@ -469,28 +468,28 @@ interface StatCardProps {
 }
 
 const COLOR_MAP: Record<StatCardProps['color'], { bg: string; icon: string; text: string }> = {
-  orange:  { bg: 'bg-orange-50',  icon: 'text-orange-600',  text: 'text-orange-900'  },
-  blue:    { bg: 'bg-blue-50',    icon: 'text-blue-600',    text: 'text-blue-900'    },
+  orange:  { bg: 'bg-action-50',  icon: 'text-action-700',  text: 'text-slate-950'  },
+  blue:    { bg: 'bg-sky-50',     icon: 'text-sky-700',     text: 'text-slate-950'    },
   slate:   { bg: 'bg-slate-100',  icon: 'text-slate-600',   text: 'text-slate-900'   },
-  green:   { bg: 'bg-green-50',   icon: 'text-green-600',   text: 'text-green-900'   },
-  emerald: { bg: 'bg-emerald-50', icon: 'text-emerald-600', text: 'text-emerald-900' },
+  green:   { bg: 'bg-brand-50',   icon: 'text-brand-700',   text: 'text-slate-950'   },
+  emerald: { bg: 'bg-emerald-50', icon: 'text-emerald-700', text: 'text-slate-950' },
 };
 
 function StatCard({ title, value, subtitle, icon: Icon, color, delay = 0 }: StatCardProps) {
   const c = COLOR_MAP[color];
   return (
     <div
-      className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-slate-200 transition-all duration-300 hover:shadow-xl animate-scaleIn"
+      className="sk-card p-4 sm:p-6 transition-all duration-300 hover:-translate-y-0.5 animate-scaleIn"
       style={{ animationDelay: `${delay}ms` }}
     >
       <div className="flex items-center justify-between mb-3">
-        <div className={`p-2.5 rounded-xl ${c.bg}`}>
+        <div className={`p-2.5 rounded-lg ${c.bg}`}>
           <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${c.icon}`} />
         </div>
       </div>
-      <p className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">{value}</p>
-      <p className="text-sm font-medium text-slate-600">{title}</p>
-      {subtitle && <p className="text-xs text-slate-400 mt-1">{subtitle}</p>}
+      <p className={`text-2xl sm:text-3xl font-black mb-1 ${c.text}`}>{value}</p>
+      <p className="text-sm font-semibold text-slate-700">{title}</p>
+      {subtitle && <p className="text-xs font-medium text-slate-600 mt-1">{subtitle}</p>}
     </div>
   );
 }

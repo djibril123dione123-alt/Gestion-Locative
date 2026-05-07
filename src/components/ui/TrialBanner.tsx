@@ -100,21 +100,21 @@ export function TrialBanner({ onNavigate }: TrialBannerProps = {}) {
       };
     } else if (daysLeft <= 7) {
       return {
-        bg: 'bg-orange-50',
-        border: 'border-orange-200',
-        iconBg: 'bg-orange-500',
-        text: 'text-orange-900',
-        subtext: 'text-orange-700',
-        button: 'bg-orange-600 hover:bg-orange-700',
+        bg: 'bg-action-50',
+        border: 'border-action-200',
+        iconBg: 'bg-action-600',
+        text: 'text-action-700',
+        subtext: 'text-action-700',
+        button: 'bg-action-600 hover:bg-action-700',
       };
     } else {
       return {
-        bg: 'bg-blue-50',
-        border: 'border-blue-200',
-        iconBg: 'bg-blue-500',
-        text: 'text-blue-900',
-        subtext: 'text-blue-700',
-        button: 'bg-blue-600 hover:bg-blue-700',
+        bg: 'bg-brand-50',
+        border: 'border-brand-100',
+        iconBg: 'bg-brand-700',
+        text: 'text-brand-900',
+        subtext: 'text-brand-700',
+        button: 'bg-brand-700 hover:bg-brand-800',
       };
     }
   };
@@ -142,7 +142,7 @@ export function TrialBanner({ onNavigate }: TrialBannerProps = {}) {
             <button
               onClick={() => onNavigate?.('abonnement')}
               data-testid="button-upgrade-trial"
-              className={`px-4 py-2 ${colors.button} text-white rounded-lg transition-colors text-sm font-semibold whitespace-nowrap`}
+              className={`px-4 py-2 ${colors.button} text-white rounded-lg transition-colors text-sm font-bold whitespace-nowrap shadow-sm`}
             >
               Passer au plan Pro
             </button>

@@ -16,7 +16,7 @@ const TABS = [
 
 const PageLoader = () => (
   <div className="flex items-center justify-center p-12">
-    <div className="animate-spin rounded-full h-10 w-10 border-4 border-orange-200 border-t-orange-600" />
+    <div className="animate-spin rounded-full h-10 w-10 border-4 border-emerald-100 border-t-brand-700" />
   </div>
 );
 
@@ -33,10 +33,10 @@ export function Encaissements({ initialTab = 'recus' }: EncaissementsProps) {
   }, [initialTab]);
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 bg-white border-b border-slate-200">
+    <div className="flex flex-col h-full bg-brand-paper">
+      <div className="px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 lg:pt-8 bg-brand-surface/80 border-b border-emerald-950/10 backdrop-blur-xl">
         <div className="mb-3">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800">Encaissements</h1>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950">Encaissements</h1>
           <p className="text-slate-500 text-sm mt-1">Suivi des loyers reçus et des impayés</p>
         </div>
         <Tabs tabs={TABS} activeId={active} onChange={(id) => setActive(id as 'recus' | 'impayes')} />

@@ -140,9 +140,9 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
 
   const colorClass =
     saving || syncing
-      ? 'text-blue-500'
+      ? 'text-brand-700'
       : isProblematic
-      ? 'text-orange-500'
+      ? 'text-action-700'
       : lastTs
       ? 'text-emerald-500'
       : 'text-slate-400';
@@ -151,13 +151,13 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
     <div className="fixed bottom-20 lg:bottom-4 right-4 z-40 flex flex-col items-end gap-2">
 
       {expanded && restoreStep === 'idle' && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-4 w-72 space-y-3 animate-slideUp">
+        <div className="sk-card-premium p-4 w-72 space-y-3 animate-slideUp">
           <p className="text-sm font-semibold text-slate-800">Gestion des données</p>
           {lastTs && (
             <p className="text-xs text-slate-500">Dernière sauvegarde locale : {relativeTime(lastTs)}</p>
           )}
           {localPending > 0 && (
-            <p className="text-xs text-orange-600 font-medium">
+            <p className="text-xs text-action-700 font-bold">
               {localPending} action{localPending > 1 ? 's' : ''} en attente de synchronisation
             </p>
           )}
@@ -168,7 +168,7 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
             <button
               onClick={handleDownload}
               disabled={downloading}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-slate-50 hover:bg-slate-100 text-slate-700 transition disabled:opacity-50"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold bg-brand-50 hover:bg-brand-100 text-brand-900 transition disabled:opacity-50"
             >
               {downloading
                 ? <RefreshCw className="w-4 h-4 animate-spin flex-shrink-0" />
@@ -177,7 +177,7 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
             </button>
             <button
               onClick={handleRestoreClick}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-slate-50 hover:bg-slate-100 text-slate-700 transition"
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 transition"
             >
               <Upload className="w-4 h-4 flex-shrink-0" />
               Restaurer une sauvegarde
@@ -188,7 +188,7 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
       )}
 
       {restoreStep === 'preview' && restorePreview && (
-        <div className="bg-white border border-amber-200 rounded-2xl shadow-xl p-4 w-80 space-y-3 animate-slideUp">
+        <div className="bg-white border border-action-200 rounded-lg shadow-premium p-4 w-80 space-y-3 animate-slideUp">
           <div className="flex items-start justify-between">
             <p className="text-sm font-semibold text-slate-800">Aperçu de la sauvegarde</p>
             <button onClick={handleRestoreCancel} className="text-slate-400 hover:text-slate-600 transition">
@@ -263,7 +263,7 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
             </button>
             <button
               onClick={handleRestoreConfirm}
-              className="flex-1 px-3 py-2 rounded-lg text-xs font-medium bg-amber-500 hover:bg-amber-600 text-white transition"
+              className="flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-action-600 hover:bg-action-700 text-white transition"
             >
               Restaurer
             </button>
@@ -272,15 +272,15 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
       )}
 
       {restoreStep === 'restoring' && (
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-4 w-72 flex items-center gap-3 animate-slideUp">
-          <RefreshCw className="w-4 h-4 animate-spin text-blue-500 flex-shrink-0" />
+        <div className="sk-card-premium p-4 w-72 flex items-center gap-3 animate-slideUp">
+          <RefreshCw className="w-4 h-4 animate-spin text-brand-700 flex-shrink-0" />
           <p className="text-sm text-slate-700">Restauration en cours…</p>
         </div>
       )}
 
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm text-xs font-medium text-slate-600 hover:bg-slate-50 transition"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-950/10 rounded-full shadow-premium text-xs font-bold text-slate-700 hover:bg-brand-50 hover:text-brand-900 transition"
         title="Gestion des sauvegardes"
       >
         <Icon

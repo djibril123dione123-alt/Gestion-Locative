@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { BrandLogo } from '../brand/BrandLogo';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -23,51 +24,21 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" 
-         style={{ background: 'linear-gradient(to bottom right, #FFF4E6, #FFFFFF, #FFF5F5)' }}>
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-t-4" 
-           style={{ borderTopColor: '#F58220' }}>
-        
-        {/* --- Logo avec halo --- */}
-        <div className="flex items-center justify-center mb-8 relative">
-          <div className="absolute inset-0 opacity-20 blur-xl rounded-full" 
-               style={{ background: 'linear-gradient(135deg, #F58220 0%, #C0392B 100%)' }} />
-          <div className="relative p-4 rounded-xl shadow-lg" 
-               style={{  backgroundColor: 'white' }}>
-            <img
-              src="/logo-icon.png"
-              alt="Samay Këur"
-              className="h-20 w-auto object-contain"
-            />
-          </div>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_18%,rgba(52,211,153,0.18),transparent_24rem),linear-gradient(135deg,#06110d,#0d3b2c_54%,#f7f3ea_54%,#fbfaf6)] p-4">
+      <div className="relative w-full max-w-md rounded-lg border border-emerald-900/10 bg-white/95 p-8 shadow-premium backdrop-blur">
+        <div className="mb-8 flex items-center justify-center">
+          <BrandLogo size="lg" tone="light" animated showTagline stacked className="items-center justify-center" />
         </div>
 
-        {/* --- Titre --- */}
-        <h1 className="text-3xl font-bold text-center mb-2">
-          <span style={{ 
-            background: 'linear-gradient(135deg, #F58220 0%, #FFA64D 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>Samay Këur</span>
-        </h1>
-        <p className="text-center text-sm font-medium mb-3" style={{ color: '#555555' }}>
-          Gestion immobilière professionnelle
-        </p>
-        <div className="h-1 w-20 mx-auto rounded-full mb-8" 
-             style={{ background: 'linear-gradient(90deg, #F58220 0%, #C0392B 100%)' }} />
-
-        {/* --- Formulaire --- */}
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="border-l-4 px-4 py-3 rounded" 
-                 style={{ backgroundColor: '#FFF5F5', borderColor: '#C0392B', color: '#922B21' }}>
-              <p className="text-sm">{error}</p>
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">
+              {error}
             </div>
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-semibold mb-2" style={{ color: '#555555' }}>
+            <label htmlFor="email" className="mb-2 block text-sm font-semibold text-slate-700">
               Email
             </label>
             <input
@@ -76,14 +47,13 @@ export function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 transition"
-              style={{ '--tw-ring-color': '#F58220' } as React.CSSProperties}
+              className="sk-input w-full px-4 py-3"
               placeholder="votre@email.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-semibold mb-2" style={{ color: '#555555' }}>
+            <label htmlFor="password" className="mb-2 block text-sm font-semibold text-slate-700">
               Mot de passe
             </label>
             <input
@@ -92,8 +62,7 @@ export function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 transition"
-              style={{ '--tw-ring-color': '#F58220' } as React.CSSProperties}
+              className="sk-input w-full px-4 py-3"
               placeholder="••••••••"
             />
           </div>
@@ -101,17 +70,15 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full text-white font-bold py-3 px-4 rounded-lg shadow-lg transition transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ background: 'linear-gradient(135deg, #F58220 0%, #C0392B 100%)' }}
+            className="flex w-full items-center justify-center rounded-lg bg-brand-700 px-4 py-3 font-bold text-white shadow-premium transition hover:-translate-y-0.5 hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
         </form>
 
-        {/* --- Footer --- */}
-        <div className="mt-6 text-center text-sm" style={{ color: '#707070' }}>
-          <p>© 2025 Samay Këur. Tous droits réservés.</p>
-        </div>
+        <p className="mt-6 text-center text-sm text-slate-500">
+          © 2026 Samay Këur. Tous droits réservés.
+        </p>
       </div>
     </div>
   );

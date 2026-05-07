@@ -1,0 +1,17 @@
+{
+  "name": "Samay Këur",
+  "short_name": "Samay Këur",
+  "description": "Plateforme premium de gestion locative pour agences immobilières africaines.",
+  "start_url": "/#",
+  "display": "standalone",
+  "background_color": "#0D1B16",
+  "theme_color": "#0D1B16",
+  "icons": [
+    {
+      "src": "/brand-mark.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

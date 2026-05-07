@@ -309,7 +309,7 @@ export function Depenses() {
             <button type="button" onClick={closeModal} className="px-4 py-2 sm:px-6 sm:py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 text-sm sm:text-base">
               Annuler
             </button>
-            <button type="submit" className="px-4 py-2 sm:px-6 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm sm:text-base">
+            <button type="submit" className="sk-action sk-action-primary px-4 sm:px-6">
               {editingDepense ? 'Modifier' : 'Créer'}
             </button>
           </div>

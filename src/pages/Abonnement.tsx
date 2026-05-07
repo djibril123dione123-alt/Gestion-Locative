@@ -236,8 +236,7 @@ export function Abonnement() {
             </div>
           </div>
           <button onClick={() => openPayment('pro')}
-            className="flex-shrink-0 px-5 py-2.5 rounded-xl text-white font-bold text-sm shadow hover:opacity-90 transition"
-            style={{ background: 'linear-gradient(135deg,#F58220,#C2410C)' }}>
+            className="sk-action sk-action-financial flex-shrink-0 px-5 py-2.5">
             Activer maintenant
           </button>
         </div>
@@ -298,13 +297,12 @@ export function Abonnement() {
               )}
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => openPayment(currentPlanId)} data-testid="button-pay"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-white font-bold text-sm shadow-md hover:opacity-90 transition"
-                  style={{ background: 'linear-gradient(135deg,#F58220,#C2410C)' }}>
+                  className="sk-action sk-action-financial px-4 py-2.5">
                   <CreditCard className="w-4 h-4" />
                   Renouveler
                 </button>
                 <button onClick={() => setUpgradeOpen(true)} data-testid="button-upgrade"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-slate-200 text-slate-700 font-medium text-sm hover:border-slate-300 hover:bg-slate-50 transition">
+                  className="sk-action sk-action-secondary px-4 py-2.5">
                   <TrendingUp className="w-4 h-4" />
                   Changer de plan
                 </button>
@@ -390,8 +388,7 @@ export function Abonnement() {
                   </a>
                 ) : (
                   <button onClick={() => openPayment(plan.id)}
-                    className="flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-bold text-white transition hover:opacity-90"
-                    style={{ backgroundColor: plan.color }}>
+                    className="sk-action sk-action-financial justify-center py-1.5">
                     {isHigher ? <><TrendingUp className="w-3 h-3" />Passer au {plan.name}</> : <><ChevronRight className="w-3 h-3" />Sélectionner</>}
                   </button>
                 )}

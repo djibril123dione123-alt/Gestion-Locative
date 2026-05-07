@@ -496,12 +496,12 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       key: 'actions',
       label: 'Actions',
       render: (p: PaiementRow) => (
-        <div className="flex flex-wrap gap-2">
+        <div className="sk-action-group-right">
           <button
             type="button"
             onClick={() => exportFacture(p.id)}
             disabled={exportingId === p.id}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-md transition disabled:opacity-50"
+            className="sk-action sk-action-financial"
             title="Télécharger la facture PDF"
           >
             <FileDown className="w-3.5 h-3.5" />
@@ -510,7 +510,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           <button
             type="button"
             onClick={() => handleEdit(p)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-md transition"
+            className="sk-action sk-action-secondary"
             title="Modifier"
           >
             <Pencil className="w-3.5 h-3.5" />
@@ -519,7 +519,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           <button
             type="button"
             onClick={() => handleDelete(p)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 rounded-md transition"
+            className="sk-action sk-action-danger"
             title="Supprimer"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -554,12 +554,12 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   return (
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="sk-page-shell space-y-6">
         {!embedded && (
           <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-800">Paiements</h1>
-              <p className="text-slate-500 text-sm mt-1">Encaissement des loyers</p>
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950">Paiements</h1>
+              <p className="text-slate-600 text-sm font-medium mt-1">Encaissement des loyers</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
@@ -635,7 +635,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-4">
+        <div className="sk-card p-4 sm:p-5 space-y-4">
           <div className="flex flex-col lg:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -644,7 +644,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                 placeholder="Rechercher un locataire, une référence, un produit…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition"
+                className="sk-input pl-10 pr-4"
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -663,14 +663,14 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                     onClick={() => setStatusFilter(f.id)}
                     className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition border ${
                       isActive
-                        ? 'bg-orange-50 text-orange-700 border-orange-300 shadow-sm'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:text-slate-800'
+                        ? 'bg-brand-950 text-white border-brand-950 shadow-sm'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-900'
                     }`}
                   >
                     {f.label}
                     <span
                       className={`inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-xs font-semibold rounded-full ${
-                        isActive ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600'
+                        isActive ? 'bg-emerald-300 text-brand-950' : 'bg-slate-100 text-slate-700'
                       }`}
                     >
                       {f.count}
@@ -683,11 +683,11 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
+          <div className="sk-card p-4 sm:p-6">
             <SkeletonTable rows={6} cols={6} />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200">
+          <div className="sk-card">
             <EmptyState
               icon={CreditCard}
               title={
@@ -708,7 +708,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
             />
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="sk-card overflow-hidden">
             <div className="overflow-x-auto">
               <Table columns={columns} data={filtered} />
             </div>

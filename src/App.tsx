@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense, useEffect } from 'react';
+﻿import { useState, lazy, Suspense, useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 
@@ -10,6 +10,7 @@ import { TrialBanner } from './components/ui/TrialBanner';
 import { MaintenanceBanner } from './components/ui/MaintenanceBanner';
 import { NetworkBanner } from './components/ui/NetworkBanner';
 import { BackupIndicator } from './components/ui/BackupIndicator';
+import { BrandMark, BrandedLoader } from './components/brand/BrandLogo';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
 import Welcome from './pages/Welcome';
@@ -17,6 +18,7 @@ import { runFullBackup, getLastBackupTimestamp } from './services/localBackup';
 import { recoverStaleSyncing } from './services/offlineQueue';
 import { identifyUser, trackPageView } from './lib/analytics';
 
+const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Agences = lazy(() => import('./pages/Agences'));
 const Bailleurs = lazy(() => import('./pages/Bailleurs').then(m => ({ default: m.Bailleurs })));
@@ -48,16 +50,16 @@ const PAGE_LABELS: Record<string, string> = {
     locataires: 'Locataires',
     contrats: 'Contrats',
     paiements: 'Encaissements',
-    'loyers-impayes': 'Impayés',
-    depenses: 'Dépenses',
+    'loyers-impayes': 'ImpayÃ©s',
+    depenses: 'DÃ©penses',
     commissions: 'Commissions',
     'tableau-de-bord-financier': 'Analyses',
-    'filtres-avances': 'Filtres avancés',
-    parametres: 'Paramètres',
-    equipe: 'Équipe',
+    'filtres-avances': 'Filtres avancÃ©s',
+    parametres: 'ParamÃ¨tres',
+    equipe: 'Ã‰quipe',
     abonnement: 'Abonnement',
     notifications: 'Notifications',
-    inventaires: 'États des lieux',
+    inventaires: 'Ã‰tats des lieux',
     interventions: 'Maintenance',
     calendrier: 'Calendrier',
     documents: 'Documents',
@@ -86,18 +88,18 @@ function AppContent() {
     // Derive current page from URL (React Router)
     const currentPage = location.pathname.replace(/^\//, '') || 'dashboard';
 
-    // Navigation helper — compatible avec l'interface onNavigate existante
+    // Navigation helper â€” compatible avec l'interface onNavigate existante
     const handleNavigate = (page: string) => {
         navigate('/' + page);
         setSidebarOpen(false);
     };
 
-    // ── PostHog : suivi de page à chaque changement de route ──
+    // â”€â”€ PostHog : suivi de page Ã  chaque changement de route â”€â”€
     useEffect(() => {
         trackPageView(currentPage);
     }, [currentPage]);
 
-    // ── PostHog : identification utilisateur après connexion ──
+    // â”€â”€ PostHog : identification utilisateur aprÃ¨s connexion â”€â”€
     useEffect(() => {
         if (profile) {
             identifyUser(profile.id, {
@@ -128,7 +130,7 @@ function AppContent() {
         }
     }, [user, invitationToken]);
 
-    // ── Backup complet quotidien depuis Supabase ──
+    // â”€â”€ Backup complet quotidien depuis Supabase â”€â”€
     useEffect(() => {
         if (!profile?.agency_id || !navigator.onLine) return;
         const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -136,22 +138,18 @@ function AppContent() {
         const isDue = !lastTs || (Date.now() - lastTs) > ONE_DAY_MS;
         if (!isDue) return;
         runFullBackup(profile.agency_id).catch(() => {
-            // Fail silencieux — le prochain démarrage réessaiera
+            // Fail silencieux â€” le prochain dÃ©marrage rÃ©essaiera
         });
     }, [profile?.agency_id]);
 
-    // ── Récupération des mutations bloquées en "syncing" ──
+    // â”€â”€ RÃ©cupÃ©ration des mutations bloquÃ©es en "syncing" â”€â”€
     useEffect(() => {
         recoverStaleSyncing().catch(() => { /* noop */ });
     }, []);
 
     if (invitationToken) {
         return (
-            <Suspense fallback={
-                <div className="flex items-center justify-center min-h-screen">
-                    <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600"></div>
-                </div>
-            }>
+            <Suspense fallback={<BrandedLoader label="Invitation" />}>
                 <AcceptInvitation
                     token={invitationToken}
                     onDone={() => {
@@ -166,32 +164,32 @@ function AppContent() {
     }
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600 mb-4"></div>
-                    <p className="text-slate-600">Chargement...</p>
-                </div>
-            </div>
-        );
+        return <BrandedLoader />;
     }
 
     if (!user) {
         if (currentPage === 'pricing') {
             return (
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600" /></div>}>
+                <Suspense fallback={<BrandedLoader label="Tarifs" />}>
                     <Pricing onNavigate={(p) => navigate('/' + p)} />
                 </Suspense>
             );
         }
-        return <Auth />;
+        if (currentPage === 'auth') {
+            return <Auth />;
+        }
+        return (
+            <Suspense fallback={<BrandedLoader label="Samay Këur" />}>
+                <LandingPage onNavigate={(p) => navigate(p ? '/' + p : '/')} />
+            </Suspense>
+        );
     }
 
     if (!profile && !showWelcomeAnyway) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 p-4">
-                <div className="text-center max-w-md bg-white rounded-2xl shadow-xl p-8">
-                    <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-orange-200 border-t-orange-600 mb-4"></div>
+            <div className="flex items-center justify-center min-h-screen bg-brand-paper p-4">
+                <div className="max-w-md rounded-lg border border-slate-200 bg-white p-8 text-center shadow-premium">
+                    <BrandMark size="xl" tone="light" animated className="mx-auto mb-4" />
                     <p className="text-lg text-slate-900 font-semibold mb-2">Chargement de votre profil...</p>
                     <p className="text-sm text-slate-600 mb-6">Cela peut prendre quelques secondes</p>
                     <button
@@ -203,9 +201,9 @@ function AppContent() {
                                 // Erreur silencieuse
                             }
                         }}
-                        className="text-sm text-orange-600 hover:text-orange-700 underline"
+                        className="text-sm font-bold text-brand-700 underline hover:text-brand-800"
                     >
-                        Problème de connexion ? Déconnectez-vous
+                        ProblÃ¨me de connexion ? DÃ©connectez-vous
                     </button>
                 </div>
             </div>
@@ -215,11 +213,7 @@ function AppContent() {
     if (profile?.role === 'super_admin') {
         return (
             <div className="min-h-screen bg-gray-950">
-                <Suspense fallback={
-                    <div className="flex items-center justify-center min-h-screen">
-                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600"></div>
-                    </div>
-                }>
+                <Suspense fallback={<BrandedLoader label="Control Tower" />}>
                     <Console />
                 </Suspense>
             </div>
@@ -283,10 +277,10 @@ function AppContent() {
         }
     };
 
-    const pageLabel = PAGE_LABELS[currentPage] ?? 'Samay Këur';
+    const pageLabel = PAGE_LABELS[currentPage] ?? 'Samay KÃ«ur';
 
     return (
-        <div className="flex h-screen overflow-hidden bg-gray-50">
+        <div className="premium-polish flex h-screen overflow-hidden bg-brand-paper">
             <MaintenanceBanner />
             <Sidebar
                 currentPage={currentPage}
@@ -296,34 +290,30 @@ function AppContent() {
             />
 
             <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
-                {/* Top bar — mobile only */}
-                <div className="lg:hidden bg-white border-b border-slate-200 px-3 py-2.5 flex items-center gap-3 sticky top-0 z-30 shadow-sm">
+                {/* Top bar â€” mobile only */}
+                <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-emerald-900/10 bg-white/[0.94] px-3 py-2.5 shadow-sm backdrop-blur-xl lg:hidden">
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="p-2 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0"
+                        className="flex-shrink-0 rounded-lg p-2 transition-colors hover:bg-emerald-50"
                         aria-label="Ouvrir le menu"
                     >
-                        <Menu className="w-5 h-5 text-slate-700" />
+                        <Menu className="h-5 w-5 text-brand-800" />
                     </button>
-                    <span className="text-base font-bold text-slate-900 truncate flex-1">
+                    <span className="flex-1 truncate text-base font-black text-slate-950">
                         {pageLabel}
                     </span>
-                    <img
-                        src="/logo-icon.png"
-                        alt="Samay Këur"
-                        className="h-8 w-auto object-contain flex-shrink-0 opacity-70"
-                    />
+                    <BrandMark size="sm" tone="light" animated={false} />
                 </div>
 
                 <NetworkBanner />
                 <TrialBanner onNavigate={handleNavigate} />
 
-                {/* Scrollable content — extra bottom padding on mobile for BottomNav */}
-                <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+                {/* Scrollable content â€” extra bottom padding on mobile for BottomNav */}
+                <main className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_20%_0%,rgba(52,211,153,0.08),transparent_34rem)] pb-20 lg:pb-0 scroll-smooth">
                     <Suspense fallback={
                         <div className="flex items-center justify-center h-full p-8">
                             <div className="text-center">
-                                <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600 mb-4"></div>
+                                <BrandMark size="lg" tone="light" animated className="mx-auto mb-4" />
                                 <p className="text-slate-600">Chargement...</p>
                             </div>
                         </div>
@@ -335,14 +325,14 @@ function AppContent() {
                 </main>
             </div>
 
-            {/* Bottom navigation — mobile only */}
+            {/* Bottom navigation â€” mobile only */}
             <BottomNav
                 currentPage={currentPage}
                 onNavigate={handleNavigate}
                 onOpenMenu={() => setSidebarOpen(true)}
             />
 
-            {/* Backup + offline status indicator — floating badge */}
+            {/* Backup + offline status indicator â€” floating badge */}
             <BackupIndicator syncing={syncing} pendingCount={pendingCount} />
         </div>
     );
@@ -359,3 +349,5 @@ function App() {
 }
 
 export default App;
+
+

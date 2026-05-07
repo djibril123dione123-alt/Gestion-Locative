@@ -297,17 +297,19 @@ export default function Agences() {
       key: 'actions',
       label: 'Actions',
       render: (agency: Agency) => (
-        <div className="flex space-x-2">
+        <div className="sk-action-group-right">
           <button
+            type="button"
             onClick={() => openEditModal(agency)}
-            className="text-blue-600 hover:text-blue-800"
+            className="sk-action sk-action-secondary sk-action-icon"
             title="Modifier"
           >
             <Edit2 className="w-4 h-4" />
           </button>
           <button
+            type="button"
             onClick={() => handleDelete(agency.id)}
-            className="text-red-600 hover:text-red-800"
+            className="sk-action sk-action-danger sk-action-icon"
             title="Supprimer"
           >
             <Trash2 className="w-4 h-4" />
@@ -329,7 +331,7 @@ export default function Agences() {
         </div>
         <button
           onClick={openCreateModal}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
+          className="sk-create-cta"
         >
           <Plus className="w-5 h-5 mr-2" />
           Nouvelle Agence
@@ -493,7 +495,7 @@ export default function Agences() {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              className="sk-action sk-action-primary px-4 py-2"
             >
               {editingAgency ? 'Modifier' : 'Créer'}
             </button>

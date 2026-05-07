@@ -7,16 +7,16 @@ const ACCENT_STYLES: Record<
   { iconBg: string; iconText: string; valueText: string; progressBg: string }
 > = {
   orange: {
-    iconBg: 'bg-orange-50',
-    iconText: 'text-orange-600',
+    iconBg: 'bg-action-50',
+    iconText: 'text-action-700',
     valueText: 'text-slate-900',
-    progressBg: 'bg-gradient-to-r from-orange-500 to-red-600',
+    progressBg: 'bg-action-600',
   },
   emerald: {
-    iconBg: 'bg-emerald-50',
-    iconText: 'text-emerald-600',
-    valueText: 'text-emerald-700',
-    progressBg: 'bg-emerald-500',
+    iconBg: 'bg-brand-50',
+    iconText: 'text-brand-700',
+    valueText: 'text-brand-800',
+    progressBg: 'bg-brand-700',
   },
   amber: {
     iconBg: 'bg-amber-50',
@@ -26,9 +26,9 @@ const ACCENT_STYLES: Record<
   },
   slate: {
     iconBg: 'bg-slate-100',
-    iconText: 'text-slate-600',
-    valueText: 'text-slate-800',
-    progressBg: 'bg-slate-400',
+    iconText: 'text-slate-700',
+    valueText: 'text-slate-900',
+    progressBg: 'bg-slate-500',
   },
 };
 
@@ -51,21 +51,21 @@ export function KpiCard({
 }: KpiCardProps) {
   const styles = ACCENT_STYLES[accent];
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition">
+    <div className="sk-card p-5 transition hover:-translate-y-0.5 hover:shadow-premium">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide truncate">
+          <p className="text-xs font-bold text-slate-600 uppercase tracking-wide truncate">
             {label}
           </p>
           <p className={`text-xl sm:text-2xl font-bold mt-1 truncate tabular-nums ${styles.valueText}`}>
             {value}
           </p>
         </div>
-        <div className={`p-2.5 rounded-xl flex-shrink-0 ${styles.iconBg}`}>
+        <div className={`p-2.5 rounded-lg flex-shrink-0 ${styles.iconBg}`}>
           <Icon className={`w-5 h-5 ${styles.iconText}`} />
         </div>
       </div>
-      {subtitle && <p className="text-xs text-slate-500 truncate">{subtitle}</p>}
+      {subtitle && <p className="text-xs font-medium text-slate-600 truncate">{subtitle}</p>}
       {progress !== undefined && (
         <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
           <div

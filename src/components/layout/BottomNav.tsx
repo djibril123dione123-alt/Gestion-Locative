@@ -21,7 +21,7 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu }: BottomNavProp
 
   return (
     <nav
-      className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-emerald-900/10 bg-white/94 shadow-[0_-18px_44px_rgba(6,17,13,0.10)] backdrop-blur-xl lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex items-stretch h-14">
@@ -31,14 +31,12 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu }: BottomNavProp
             <button
               key={id}
               onClick={() => onNavigate(id)}
-              className="flex-1 relative flex flex-col items-center justify-center gap-0.5 transition-colors"
-              style={{ color: active ? '#F58220' : '#94a3b8' }}
+              className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
+                active ? 'text-brand-800' : 'text-slate-400 hover:text-brand-700'
+              }`}
             >
               {active && (
-                <div
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b"
-                  style={{ backgroundColor: '#F58220' }}
-                />
+                <div className="absolute left-1/2 top-0 h-0.5 w-8 -translate-x-1/2 rounded-b bg-brand-700" />
               )}
               <Icon className="w-[18px] h-[18px]" />
               <span className="text-[10px] font-medium leading-none">{label}</span>
@@ -47,7 +45,7 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu }: BottomNavProp
         })}
         <button
           onClick={onOpenMenu}
-          className="flex-1 relative flex flex-col items-center justify-center gap-0.5 transition-colors text-slate-400"
+          className="relative flex flex-1 flex-col items-center justify-center gap-0.5 text-slate-400 transition-colors hover:text-brand-700"
         >
           <MoreHorizontal className="w-[18px] h-[18px]" />
           <span className="text-[10px] font-medium leading-none">Plus</span>

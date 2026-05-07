@@ -17,10 +17,10 @@ import { useBackup } from '../hooks/useBackup';
 // 🎨 PALETTE CONFORT IMMO ARCHI
 // =========================
 const BRAND_COLORS = {
-  primary: '#F58220',
-  primaryLight: '#FFA64D',
-  red: '#C0392B',
-  gray: '#555555',
+  primary: '#166534',
+  primaryLight: '#DCFCE7',
+  red: '#B42318',
+  gray: '#0F172A',
 } as const;
 
 // =========================
@@ -535,8 +535,8 @@ export function Contrats() {
           <span
             className={`px-2 py-1 rounded-full text-xs font-medium ${
               c.destination === 'Commercial'
-                ? 'bg-purple-100 text-purple-700'
-                : 'bg-blue-100 text-blue-700'
+                ? 'bg-violet-50 text-violet-800 border border-violet-200'
+                : 'bg-brand-50 text-brand-800 border border-brand-100'
             }`}
           >
             {c.destination || 'Non spécifié'}
@@ -584,9 +584,10 @@ export function Contrats() {
         label: 'PDF',
         render: (c: Contrat) => (
           <button
+            type="button"
             onClick={() => handleDownloadPDF(c.id)}
             disabled={downloadingId === c.id}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="sk-action sk-action-financial"
           >
             <Download className="w-4 h-4" />
             {downloadingId === c.id ? '...' : 'PDF'}
@@ -639,8 +640,7 @@ export function Contrats() {
             <p style={{ color: BRAND_COLORS.red }}>{error}</p>
             <button
               onClick={loadData}
-              className="mt-4 px-4 py-2 text-white rounded-lg transition hover:opacity-90"
-              style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.primary}, ${BRAND_COLORS.red})` }}
+              className="mt-4 px-4 py-2 bg-brand-700 text-white rounded-lg font-bold transition hover:bg-brand-800"
             >
               Réessayer
             </button>
@@ -651,11 +651,11 @@ export function Contrats() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
+    <div className="sk-page-shell space-y-6 lg:space-y-8">
       {/* 📊 En-tête et statistiques */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2" style={{ color: BRAND_COLORS.gray }}>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black mb-2 text-slate-950">
             Contrats
           </h1>
           <p className="text-slate-600">Gestion des contrats de location</p>
@@ -682,8 +682,7 @@ export function Contrats() {
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base text-white rounded-lg transition shadow-lg hover:shadow-xl transform hover:scale-105"
-            style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.primary}, ${BRAND_COLORS.red})` }}
+            className="sk-create-cta w-full sm:w-auto"
           >
             <Plus className="w-5 h-5" />
             Nouveau contrat
@@ -693,36 +692,35 @@ export function Contrats() {
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-600 font-medium">Total contrats</p>
-          <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+        <div className="sk-card p-4">
+          <p className="text-sm text-slate-600 font-bold">Total contrats</p>
+          <p className="text-2xl font-black text-slate-950">{stats.total}</p>
         </div>
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-sm text-green-600 font-medium">Actifs</p>
-          <p className="text-2xl font-bold text-green-900">{stats.actifs}</p>
+        <div className="sk-card p-4">
+          <p className="text-sm text-brand-700 font-bold">Actifs</p>
+          <p className="text-2xl font-black text-slate-950">{stats.actifs}</p>
         </div>
-        <div className="border rounded-lg p-4"
-             style={{ backgroundColor: '#FFF4E6', borderColor: BRAND_COLORS.primary }}>
-          <p className="text-sm font-medium" style={{ color: BRAND_COLORS.primary }}>
+        <div className="bg-action-50 border border-action-200 rounded-lg p-4">
+          <p className="text-sm font-bold text-action-700">
             Expirés
           </p>
-          <p className="text-2xl font-bold" style={{ color: BRAND_COLORS.red }}>
+          <p className="text-2xl font-black text-slate-950">
             {stats.expires}
           </p>
         </div>
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+        <div className="sk-card p-4">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="w-4 h-4 text-emerald-600" />
-            <p className="text-sm text-emerald-600 font-medium">Revenue mensuel</p>
+            <p className="text-sm text-brand-700 font-bold">Revenue mensuel</p>
           </div>
-          <p className="text-2xl font-bold text-emerald-900">
+          <p className="text-2xl font-black text-slate-950">
             {formatCurrency(stats.revenuTotal)}
           </p>
         </div>
       </div>
 
       {/* Recherche et tableau */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+      <div className="sk-card p-4 sm:p-6">
         <div className="mb-6">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -732,10 +730,7 @@ export function Contrats() {
                 placeholder="Rechercher un locataire, produit, immeuble, destination..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 sm:py-3 border-2 border-slate-300 rounded-lg focus:outline-none focus:border-transparent transition-all"
-                style={{
-                  boxShadow: searchTerm ? `0 0 0 3px rgba(245, 130, 32, 0.1)` : 'none'
-                }}
+                className="sk-input pl-10 pr-4"
               />
             </div>
             <ColumnPicker
@@ -748,7 +743,7 @@ export function Contrats() {
         </div>
 
         {filteredContrats.length === 0 ? (
-          <div className="text-center py-12 bg-slate-50 rounded-lg border border-slate-200">
+          <div className="text-center py-12 bg-brand-surface rounded-lg border border-emerald-950/10">
             <p className="text-slate-600 text-base lg:text-lg">
               {searchTerm
                 ? 'Aucun contrat trouvé pour votre recherche'
@@ -929,8 +924,7 @@ export function Contrats() {
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.primary}, ${BRAND_COLORS.red})` }}
+              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base bg-brand-700 text-white rounded-lg font-bold transition hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-premium"
             >
               {submitting ? 'Création...' : 'Créer le contrat'}
             </button>
@@ -1025,8 +1019,7 @@ export function Contrats() {
             <button
               onClick={handleEditSubmit}
               disabled={submitting}
-              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${BRAND_COLORS.primary}, ${BRAND_COLORS.red})` }}
+              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base bg-brand-700 text-white rounded-lg font-bold transition hover:bg-brand-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-premium"
             >
               {submitting ? 'Modification...' : 'Modifier le contrat'}
             </button>

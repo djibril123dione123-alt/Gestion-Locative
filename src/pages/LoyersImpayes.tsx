@@ -276,12 +276,9 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       label: 'Action',
       render: (i: LoyerImpaye) => (
         <button
+          type="button"
           onClick={() => handlePayerClick(i)}
-          className="px-4 py-2 text-sm font-semibold text-white rounded-lg shadow-md 
-                     transition-all duration-300"
-          style={{
-            background: 'linear-gradient(135deg, #F58220, #C0392B)',
-          }}
+          className="sk-action sk-action-financial"
         >
           Payer ce loyer
         </button>
@@ -431,7 +428,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                     : <button
                         key={p}
                         onClick={() => setPage(p as number)}
-                        className={`w-8 h-8 rounded-lg text-sm font-medium transition ${page === p ? 'bg-orange-500 text-white' : 'border border-slate-200 hover:bg-slate-50 text-slate-700'}`}
+                className={`sk-action sk-action-icon ${page === p ? 'sk-action-primary' : 'sk-action-secondary'}`}
                       >
                         {p}
                       </button>
@@ -477,17 +474,14 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
             <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
               <button
                 onClick={handleConfirmPaiement}
-                className="px-4 py-2 sm:px-6 sm:py-2 rounded-lg text-white font-semibold shadow-md text-sm sm:text-base"
-                style={{
-                  background: 'linear-gradient(135deg, #F58220, #C0392B)',
-                }}
+                className="sk-action sk-action-financial px-4 sm:px-6"
               >
                 {submitting ? 'Enregistrement…' : 'Oui, confirmer'}
               </button>
               <button
                 onClick={() => setShowModal(false)}
                 disabled={submitting}
-                className="px-4 py-2 sm:px-6 sm:py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-slate-800 font-semibold transition text-sm sm:text-base disabled:opacity-50"
+                className="sk-action sk-action-secondary px-4 sm:px-6 disabled:opacity-50"
               >
                 Annuler
               </button>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../lib/formatters';
@@ -10,13 +10,8 @@ import {
   Download,
   AlertCircle,
   CheckCircle2,
-  PieChart as PieChartIcon,
-  Calendar,
-  Filter,
 } from 'lucide-react';
 import {
-  BarChart,
-  Bar,
   LineChart,
   Line,
   PieChart,
@@ -65,7 +60,7 @@ interface CommissionBreakdown {
   percentage: number;
 }
 
-export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string) => void }) {
+export function DashboardFinancier() {
   const { profile } = useAuth();
   const { success, error: showError } = useToast();
 
@@ -183,7 +178,7 @@ export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string)
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-orange-200 border-t-orange-600 mb-4" />
+          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-emerald-100 border-t-brand-700 mb-4" />
           <p className="text-lg text-slate-600">Chargement du tableau de bord financier...</p>
         </div>
       </div>
@@ -191,11 +186,11 @@ export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string)
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 animate-fadeIn bg-gradient-to-b from-slate-50 to-white min-h-screen">
+    <div className="sk-page-shell space-y-6 lg:space-y-8 animate-fadeIn">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="animate-slideInLeft">
-          <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl lg:text-4xl font-black text-slate-950 mb-2">
             Tableau de bord financier
           </h1>
           <p className="text-slate-600">Analyse complète des revenus, commissions et conformité DGID</p>
@@ -206,7 +201,7 @@ export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string)
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-4 py-2 border-2 border-slate-200 rounded-xl font-medium text-slate-900 hover:border-orange-500 transition"
+            className="sk-input font-bold text-slate-950"
           >
             {Array.from({ length: 12 }, (_, i) => {
               const date = new Date();
@@ -222,7 +217,7 @@ export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string)
           <button
             onClick={handleExportCertified}
             disabled={exportLoading}
-            className="px-6 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 font-semibold flex items-center gap-2 disabled:opacity-50 transition"
+            className="px-6 py-2 bg-brand-700 text-white rounded-lg hover:bg-brand-800 font-bold flex items-center gap-2 disabled:opacity-50 transition shadow-premium"
           >
             <Download className="w-4 h-4" />
             {exportLoading ? 'Export...' : 'Exporter certifié'}
@@ -268,7 +263,7 @@ export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string)
       {/* Main Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Trend */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+        <div className="lg:col-span-2 sk-card-premium p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Évolution des revenus mensuels</h2>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyLedger}>
@@ -287,7 +282,7 @@ export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string)
               <Line
                 type="monotone"
                 dataKey="commissions_agence"
-                stroke="#F58220"
+                stroke="#f97316"
                 name="Commissions agence"
                 strokeWidth={2}
               />
@@ -303,7 +298,7 @@ export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string)
         </div>
 
         {/* Commission Breakdown */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+        <div className="sk-card-premium p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">Répartition des commissions</h2>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -320,7 +315,7 @@ export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string)
                 {commissionBreakdown.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={['#F58220', '#10b981', '#3b82f6', '#8b5cf6'][index % 4]}
+                    fill={['#166534', '#10b981', '#f97316', '#8b5cf6'][index % 4]}
                   />
                 ))}
               </Pie>
@@ -331,7 +326,7 @@ export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string)
       </div>
 
       {/* Top Bailleurs */}
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+      <div className="sk-card-premium p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-6">Top bailleurs</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -380,7 +375,7 @@ export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string)
 
       {/* Monthly Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+        <div className="sk-card-premium p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-6">Résumé du mois actuel</h2>
           <div className="space-y-4">
             {monthlyLedger.length > 0 && (
@@ -415,7 +410,7 @@ export function DashboardFinancier({ onNavigate }: { onNavigate?: (page: string)
         </div>
 
         {/* Compliance Status */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+        <div className="sk-card-premium p-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-6">État de conformité DGID</h2>
           <div className="space-y-4">
             <ComplianceRow
@@ -459,21 +454,21 @@ interface KPICardProps {
 function KPICard({ title, value, change, icon: Icon, color, subtitle }: KPICardProps) {
   const colors = {
     emerald: 'from-emerald-50 to-emerald-100 border-emerald-200',
-    blue: 'from-blue-50 to-blue-100 border-blue-200',
-    orange: 'from-orange-50 to-orange-100 border-orange-200',
+    blue: 'from-brand-50 to-white border-brand-100',
+    orange: 'from-action-50 to-white border-action-200',
     purple: 'from-purple-50 to-purple-100 border-purple-200',
   };
   const iconColors = {
     emerald: 'text-emerald-600 bg-emerald-100',
-    blue: 'text-blue-600 bg-blue-100',
-    orange: 'text-orange-600 bg-orange-100',
+    blue: 'text-brand-700 bg-brand-50',
+    orange: 'text-action-700 bg-action-50',
     purple: 'text-purple-600 bg-purple-100',
   };
 
   return (
-    <div className={`bg-gradient-to-br ${colors[color]} border-2 rounded-2xl p-6 transition-all hover:shadow-lg`}>
+    <div className={`bg-gradient-to-br ${colors[color]} border rounded-lg p-6 transition-all hover:-translate-y-0.5 hover:shadow-premium`}>
       <div className="flex items-start justify-between mb-4">
-        <div className={`p-3 rounded-xl ${iconColors[color]}`}>
+        <div className={`p-3 rounded-lg ${iconColors[color]}`}>
           <Icon className="w-6 h-6" />
         </div>
         {change !== undefined && (
@@ -504,7 +499,7 @@ function SummaryRow({ label, value, icon: Icon, color }: SummaryRowProps) {
   const colors = {
     emerald: 'bg-emerald-100 text-emerald-600',
     orange: 'bg-orange-100 text-orange-600',
-    blue: 'bg-blue-100 text-blue-600',
+    blue: 'bg-brand-50 text-brand-700',
     red: 'bg-red-100 text-red-600',
   };
 

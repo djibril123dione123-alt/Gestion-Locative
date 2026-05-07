@@ -1,7 +1,7 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react';
 import { LucideIcon } from 'lucide-react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'financial';
 type Size = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -14,9 +14,9 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const SIZE_CLASSES: Record<Size, string> = {
-  sm: 'px-3 py-1.5 text-sm gap-1.5',
-  md: 'px-4 py-2 sm:px-5 sm:py-2.5 text-sm sm:text-base gap-2',
-  lg: 'px-4 py-2 sm:px-6 sm:py-3 text-sm sm:text-base gap-2',
+  sm: 'px-3 py-1.5 text-sm gap-1.5 min-h-9',
+  md: 'px-4 py-2 sm:px-5 sm:py-2.5 text-sm sm:text-base gap-2 min-h-10',
+  lg: 'px-4 py-2.5 sm:px-6 sm:py-3 text-sm sm:text-base gap-2 min-h-12',
 };
 
 const ICON_SIZE: Record<Size, string> = {
@@ -27,26 +27,29 @@ const ICON_SIZE: Record<Size, string> = {
 
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary:
-    'text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] ' +
-    'bg-gradient-to-br from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 ' +
-    'focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2',
+    'text-white shadow-[0_18px_42px_rgba(249,115,22,0.24)] hover:shadow-[0_24px_62px_rgba(249,115,22,0.32)] transform hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] ' +
+    'border border-action-500/80 bg-gradient-to-br from-action-500 via-action-500 to-action-600 hover:from-action-500 hover:to-action-700 ' +
+    'focus-visible:ring-2 focus-visible:ring-action-500 focus-visible:ring-offset-2',
   secondary:
-    'border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400 ' +
-    'shadow-sm hover:shadow ' +
-    'focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2',
+    'border border-slate-200 text-slate-800 bg-white hover:bg-emerald-50/70 hover:border-emerald-200 ' +
+    'shadow-sm hover:shadow-md ' +
+    'focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2',
   ghost:
-    'text-slate-600 hover:text-slate-900 hover:bg-slate-100 ' +
-    'focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-2',
+    'text-slate-600 hover:text-brand-900 hover:bg-emerald-50 ' +
+    'focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2',
   danger:
     'text-white bg-red-600 hover:bg-red-700 shadow-md hover:shadow-lg ' +
     'focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2',
+  financial:
+    'text-action-700 border border-action-200 bg-action-50 hover:bg-action-100 hover:border-action-300 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 active:translate-y-0 ' +
+    'focus-visible:ring-2 focus-visible:ring-action-500 focus-visible:ring-offset-2',
   success:
-    'text-white bg-emerald-600 hover:bg-emerald-700 shadow-md hover:shadow-lg ' +
+    'text-white bg-brand-700 hover:bg-brand-800 shadow-md hover:shadow-lg ' +
     'focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2',
 };
 
 const BASE_CLASSES =
-  'inline-flex items-center justify-center font-semibold rounded-lg ' +
+  'inline-flex items-center justify-center font-black rounded-lg ' +
   'transition-all duration-200 outline-none ' +
   'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none';
 

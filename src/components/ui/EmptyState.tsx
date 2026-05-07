@@ -1,5 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 import { Button } from './Button';
+import { BrandMark } from '../brand/BrandLogo';
 
 interface EmptyStateProps {
   icon: LucideIcon;
@@ -13,12 +14,15 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center p-12 text-center">
-      <div className="w-20 h-20 bg-gradient-to-br from-orange-100 to-orange-200 rounded-full flex items-center justify-center mb-6 shadow-inner">
-        <Icon className="w-10 h-10 text-orange-600" />
+    <div className="relative flex flex-col items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white/80 p-12 text-center shadow-sm">
+      <div className="pointer-events-none absolute -right-8 -top-8 opacity-[0.035]">
+        <BrandMark size="xl" tone="light" withTile={false} />
       </div>
-      <h3 className="text-xl font-bold text-slate-900 mb-2">{title}</h3>
-      <p className="text-slate-600 mb-6 max-w-md">{description}</p>
+      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-lg bg-emerald-50 shadow-inner">
+        <Icon className="h-10 w-10 text-brand-700" />
+      </div>
+      <h3 className="mb-2 text-xl font-black text-slate-950">{title}</h3>
+      <p className="mb-6 max-w-md leading-7 text-slate-600">{description}</p>
       {action && (
         <Button onClick={action.onClick} size="lg">
           {action.label}

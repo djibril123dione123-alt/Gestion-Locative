@@ -22,10 +22,10 @@ export function Toast({ message, type, onClose, duration = 5000 }: ToastProps) {
 
   const styles = {
     success: {
-      bg: 'bg-green-50',
-      border: 'border-green-200',
-      text: 'text-green-800',
-      icon: <CheckCircle className="w-5 h-5 text-green-600" />,
+      bg: 'bg-brand-50',
+      border: 'border-brand-200',
+      text: 'text-brand-900',
+      icon: <CheckCircle className="w-5 h-5 text-brand-700" />,
     },
     error: {
       bg: 'bg-red-50',
@@ -34,10 +34,10 @@ export function Toast({ message, type, onClose, duration = 5000 }: ToastProps) {
       icon: <XCircle className="w-5 h-5 text-red-600" />,
     },
     warning: {
-      bg: 'bg-orange-50',
-      border: 'border-orange-200',
-      text: 'text-orange-800',
-      icon: <AlertCircle className="w-5 h-5 text-orange-600" />,
+      bg: 'bg-action-50',
+      border: 'border-action-200',
+      text: 'text-action-700',
+      icon: <AlertCircle className="w-5 h-5 text-action-700" />,
     },
   };
 
@@ -45,16 +45,18 @@ export function Toast({ message, type, onClose, duration = 5000 }: ToastProps) {
 
   return (
     <div
-      className={`${style.bg} ${style.border} ${style.text} border-l-4 p-4 rounded-lg shadow-lg
-                  flex items-start gap-3 min-w-[320px] max-w-md animate-slide-in`}
+      className={`${style.bg} ${style.border} ${style.text} border p-4 rounded-lg shadow-premium
+                  flex items-start gap-3 min-w-[min(320px,calc(100vw-2rem))] max-w-md animate-slide-in backdrop-blur`}
+      role="status"
     >
       {style.icon}
       <div className="flex-1">
-        <p className="text-sm font-medium">{message}</p>
+        <p className="text-sm font-semibold leading-5">{message}</p>
       </div>
       <button
         onClick={onClose}
-        className={`${style.text} hover:opacity-70 transition`}
+        className={`${style.text} rounded-md p-1 hover:bg-black/5 transition`}
+        aria-label="Fermer la notification"
       >
         <X className="w-4 h-4" />
       </button>
@@ -69,7 +71,7 @@ interface ToastContainerProps {
 
 export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
+    <div className="fixed left-4 right-4 top-4 z-50 flex flex-col items-end gap-2 sm:left-auto">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}

@@ -1,0 +1,35 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#0D1B16"/>
+  <rect x="30" y="30" width="452" height="452" rx="94" fill="url(#tile)"/>
+  <g filter="url(#depth)">
+    <path d="M132 374V155L294 42V148L217 204V421L132 374Z" fill="url(#cream)"/>
+    <path d="M238 226L311 168L420 257V426L343 378V284L294 243L262 269L343 342V439L238 358V226Z" fill="url(#cream)"/>
+    <path d="M188 203L260 151V430L188 382V203Z" fill="url(#green)" opacity=".96"/>
+    <path d="M360 196L433 143V428L360 382V196Z" fill="url(#cream)"/>
+    <path d="M384 169L500 90V268L384 194V169Z" fill="url(#orange)"/>
+  </g>
+  <defs>
+    <radialGradient id="tile" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(185 75) rotate(53) scale(520)">
+      <stop stop-color="#1F3B2E"/>
+      <stop offset=".48" stop-color="#0D1B16"/>
+      <stop offset="1" stop-color="#08110E"/>
+    </radialGradient>
+    <linearGradient id="cream" x1="118" y1="43" x2="405" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF8EA"/>
+      <stop offset=".62" stop-color="#F2EDE3"/>
+      <stop offset="1" stop-color="#BBA783"/>
+    </linearGradient>
+    <linearGradient id="green" x1="188" y1="151" x2="268" y2="430" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4F8A66"/>
+      <stop offset="1" stop-color="#1F3B2E"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="384" y1="90" x2="501" y2="268" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFC04D"/>
+      <stop offset="1" stop-color="#FF8A00"/>
+    </linearGradient>
+    <filter id="depth" x="70" y="0" width="460" height="486" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="26" stdDeviation="15" flood-color="#000000" flood-opacity=".46"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#FF8A00" flood-opacity=".16"/>
+    </filter>
+  </defs>
+</svg>

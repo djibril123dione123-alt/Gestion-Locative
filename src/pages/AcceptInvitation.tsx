@@ -130,8 +130,8 @@ export function AcceptInvitation({ token, onDone }: Props) {
   }, [token, user, agencyName, role]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 p-4">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+    <div className="min-h-screen flex items-center justify-center bg-brand-paper p-4">
+      <div className="max-w-md w-full sk-card-premium p-8 text-center">
         {status === 'loading' && (
           <>
             <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: '#F58220' }} />

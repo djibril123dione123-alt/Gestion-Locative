@@ -6,11 +6,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Database,
   TrendingDown,
   TrendingUp,
   Users,
-  Zap,
 } from 'lucide-react';
 
 interface HealthMetric {
@@ -26,7 +24,7 @@ interface HealthMetric {
  */
 export function SuperAdminDashboard() {
   const { profile } = useAuth();
-  const { error: showError } = useToast();
+  useToast();
 
   // Check authorization
   if (profile?.role !== 'super_admin') {

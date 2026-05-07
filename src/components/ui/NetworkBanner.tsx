@@ -81,7 +81,7 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
 
   if (!isOnline) {
     return (
-      <div className="bg-red-600 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-medium z-50 flex-shrink-0">
+      <div className="bg-red-700 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-semibold z-50 flex-shrink-0 shadow-sm">
         <WifiOff className="w-4 h-4 flex-shrink-0" />
         <span>
           Mode hors ligne
@@ -95,7 +95,7 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
 
   if (errorCount > 0 && !syncing) {
     return (
-      <div className="bg-amber-600 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-medium z-50 flex-shrink-0">
+      <div className="bg-action-700 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-semibold z-50 flex-shrink-0 shadow-sm">
         <AlertTriangle className="w-4 h-4 flex-shrink-0" />
         <span>
           {errorCount} action{errorCount > 1 ? 's' : ''} n'ont pas pu être synchronisée{errorCount > 1 ? 's' : ''} — ouvrez le panneau de sauvegarde pour voir le détail.
@@ -106,7 +106,7 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
 
   if (syncing) {
     return (
-      <div className="bg-blue-600 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-medium z-50 flex-shrink-0">
+      <div className="bg-brand-800 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-semibold z-50 flex-shrink-0 shadow-sm">
         <RefreshCw className="w-4 h-4 flex-shrink-0 animate-spin" />
         <span>Synchronisation des données en cours…</span>
       </div>
@@ -114,7 +114,7 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
   }
 
   return (
-    <div className="bg-emerald-600 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-medium z-50 flex-shrink-0">
+    <div className="bg-brand-700 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-semibold z-50 flex-shrink-0 shadow-sm">
       <Wifi className="w-4 h-4 flex-shrink-0" />
       <span>
         Connexion rétablie

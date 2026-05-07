@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 import { reloadUserProfile } from '../lib/agencyHelper';
+import { BrandLogo } from '../components/brand/BrandLogo';
 
 type AccountType = 'agency' | 'bailleur';
 type RequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
@@ -333,11 +334,7 @@ export default function Welcome() {
         return (
           <div className="max-w-4xl w-full animate-fadeIn">
             <div className="text-center mb-12 animate-slideInUp">
-              <img
-                src="/logo-full.png"
-                alt="Samay Këur"
-                className="h-20 md:h-24 w-auto object-contain mx-auto mb-6"
-              />
+              <BrandLogo size="lg" tone="light" animated showTagline stacked className="items-center justify-center" />
               <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-4">
                 Bienvenue sur Samay Këur
               </h1>

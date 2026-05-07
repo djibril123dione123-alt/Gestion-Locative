@@ -43,16 +43,16 @@ export function ConfirmModal({
       border: 'border-red-200',
     },
     warning: {
-      bg: 'bg-orange-50',
-      icon: 'text-orange-600',
-      button: 'bg-orange-600 hover:bg-orange-700',
-      border: 'border-orange-200',
+      bg: 'bg-action-50',
+      icon: 'text-action-700',
+      button: 'bg-action-600 hover:bg-action-700',
+      border: 'border-action-200',
     },
     info: {
-      bg: 'bg-blue-50',
-      icon: 'text-blue-600',
-      button: 'bg-blue-600 hover:bg-blue-700',
-      border: 'border-blue-200',
+      bg: 'bg-brand-50',
+      icon: 'text-brand-700',
+      button: 'bg-brand-700 hover:bg-brand-800',
+      border: 'border-brand-100',
     },
   };
 
@@ -62,21 +62,22 @@ export function ConfirmModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center p-4">
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+          className="fixed inset-0 bg-brand-950/65 backdrop-blur-sm transition-opacity"
           onClick={onClose}
         />
 
-        <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full transform transition-all">
+        <div className="relative sk-card-premium max-w-md w-full transform transition-all animate-scaleIn">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition"
+            className="absolute top-4 right-4 rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition"
+            aria-label="Fermer"
             disabled={isLoading}
           >
             <X className="w-5 h-5" />
           </button>
 
           <div className="p-6">
-            <div className={`w-12 h-12 rounded-full ${styles.bg} flex items-center justify-center mb-4`}>
+            <div className={`w-12 h-12 rounded-lg border ${styles.border} ${styles.bg} flex items-center justify-center mb-4`}>
               <AlertTriangle className={`w-6 h-6 ${styles.icon}`} />
             </div>
 
@@ -95,7 +96,7 @@ export function ConfirmModal({
               <button
                 onClick={onConfirm}
                 disabled={isLoading}
-                className={`flex-1 px-4 py-2 text-white rounded-lg transition-all shadow-md hover:shadow-lg
+              className={`flex-1 px-4 py-2 text-white rounded-lg font-bold transition-all shadow-premium
                           disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${styles.button}`}
               >
                 {isLoading ? (

@@ -29,28 +29,30 @@ export function Table<T extends { id: string }>({
 
   if (data.length === 0) {
     return (
-      <div className="text-center py-10 text-slate-500 bg-white rounded-xl border border-gray-100 shadow-sm">
-        Aucune donnée disponible
+      <div className="sk-card flex min-h-44 items-center justify-center px-6 py-12 text-center">
+        <div>
+          <p className="text-base font-black text-slate-950">Aucune donnée disponible</p>
+          <p className="mt-2 text-sm text-slate-500">Les résultats apparaîtront ici dès qu’ils seront créés.</p>
+        </div>
       </div>
     );
   }
 
   return (
     <>
-      {/* Mobile: card view */}
-      <div className="sm:hidden space-y-3">
+      <div className="space-y-3 sm:hidden">
         {data.map((item) => (
-          <div key={item.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-            <div className="divide-y divide-slate-50">
+          <div key={item.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="divide-y divide-slate-100">
               {columns.map((col) => {
                 const value = col.render ? col.render(item) : getCellValue(item, col.key);
                 if (value === null || value === undefined || value === '') return null;
                 return (
-                  <div key={col.key} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide flex-shrink-0 w-24">
+                  <div key={col.key} className="flex items-center justify-between gap-3 px-4 py-3">
+                    <span className="w-24 flex-shrink-0 text-xs font-black uppercase text-slate-500">
                       {col.label}
                     </span>
-                    <span className="text-sm text-slate-800 text-right min-w-0 flex-1 truncate">
+                    <span className="min-w-0 flex-1 truncate text-right text-sm font-semibold text-slate-800 [&_.sk-action-group]:justify-end">
                       {value}
                     </span>
                   </div>
@@ -58,21 +60,21 @@ export function Table<T extends { id: string }>({
               })}
             </div>
             {(onEdit || onDelete) && (
-              <div className="flex gap-2 px-4 py-3 bg-slate-50 border-t border-slate-100">
+              <div className="sk-action-group border-t border-slate-100 bg-brand-surface px-4 py-3">
                 {onEdit && (
                   <button
+                    type="button"
                     onClick={() => onEdit(item)}
-                    className="flex-1 py-2 text-sm font-medium text-white rounded-lg"
-                    style={{ background: 'linear-gradient(135deg, #F58220 0%, #FF914D 100%)' }}
+                    className="sk-action sk-action-secondary flex-1"
                   >
                     Modifier
                   </button>
                 )}
                 {onDelete && (
                   <button
+                    type="button"
                     onClick={() => onDelete(item)}
-                    className="flex-1 py-2 text-sm font-medium text-white rounded-lg"
-                    style={{ background: 'linear-gradient(135deg, #C0392B 0%, #E74C3C 100%)' }}
+                    className="sk-action sk-action-danger flex-1"
                   >
                     Supprimer
                   </button>
@@ -83,74 +85,62 @@ export function Table<T extends { id: string }>({
         ))}
       </div>
 
-      {/* Desktop: table view */}
-      <div className="hidden sm:block overflow-x-auto shadow-md rounded-xl border border-gray-100 bg-white">
-        <table className="w-full border-collapse">
-          <thead
-            className="bg-gradient-to-r from-[#F58220]/10 to-[#C0392B]/10 border-b"
-            style={{ borderBottomColor: '#F58220' }}
-          >
-            <tr>
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className="text-left py-4 px-5 text-sm font-semibold text-[#3A3A3A] uppercase tracking-wide"
-                >
-                  {column.label}
-                </th>
-              ))}
-              {(onEdit || onDelete) && (
-                <th className="text-right py-4 px-5 text-sm font-semibold text-[#3A3A3A] uppercase tracking-wide">
-                  Actions
-                </th>
-              )}
-            </tr>
-          </thead>
-
-          <tbody>
-            {data.map((item) => (
-              <tr
-                key={item.id}
-                className="border-b border-slate-100 hover:bg-gradient-to-r hover:from-[#FFF7F0] hover:to-[#FFEFEA] transition"
-              >
+      <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm sm:block">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-brand-surface/95 backdrop-blur">
+              <tr>
                 {columns.map((column) => (
-                  <td key={column.key} className="py-4 px-5 text-sm text-slate-700">
-                    {column.render ? column.render(item) : getCellValue(item, column.key)}
-                  </td>
+                  <th key={column.key} className="px-5 py-4 text-left text-xs font-black uppercase text-slate-500">
+                    {column.label}
+                  </th>
                 ))}
-
                 {(onEdit || onDelete) && (
-                  <td className="py-4 px-5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      {onEdit && (
-                        <button
-                          onClick={() => onEdit(item)}
-                          className="px-3 py-1.5 text-sm font-medium text-white rounded-lg shadow-sm transition-transform hover:scale-105"
-                          style={{
-                            background: 'linear-gradient(135deg, #F58220 0%, #FF914D 100%)',
-                          }}
-                        >
-                          Modifier
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button
-                          onClick={() => onDelete(item)}
-                          className="px-3 py-1.5 text-sm font-medium text-white rounded-lg shadow-sm transition-transform hover:scale-105"
-                          style={{
-                            background: 'linear-gradient(135deg, #C0392B 0%, #E74C3C 100%)',
-                          }}
-                        >
-                          Supprimer
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                  <th className="px-5 py-4 text-right text-xs font-black uppercase text-slate-500">
+                    Actions
+                  </th>
                 )}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+
+            <tbody>
+              {data.map((item) => (
+                <tr key={item.id} className="border-b border-slate-100 transition hover:bg-emerald-50/55">
+                  {columns.map((column) => (
+                    <td key={column.key} className="px-5 py-4 text-sm font-medium text-slate-700">
+                      {column.render ? column.render(item) : getCellValue(item, column.key)}
+                    </td>
+                  ))}
+
+                  {(onEdit || onDelete) && (
+                    <td className="px-5 py-4 text-right">
+                      <div className="sk-action-group-right">
+                        {onEdit && (
+                          <button
+                            type="button"
+                            onClick={() => onEdit(item)}
+                            className="sk-action sk-action-secondary"
+                          >
+                            Modifier
+                          </button>
+                        )}
+                        {onDelete && (
+                          <button
+                            type="button"
+                            onClick={() => onDelete(item)}
+                            className="sk-action sk-action-danger"
+                          >
+                            Supprimer
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </>
   );

@@ -55,7 +55,7 @@ const ErrorAlert: React.FC<{ message: string; onClose: () => void }> = ({ messag
     </div>
     <button
       onClick={onClose}
-      className="text-red-600 hover:text-red-800 transition"
+      className="text-red-700 hover:text-red-900 transition"
     >
       ✕
     </button>
@@ -349,7 +349,7 @@ export function Bailleurs() {
       render: (b: Bailleur) => (
         <a 
           href={`tel:${b.telephone}`}
-          className="text-blue-600 hover:text-blue-800 hover:underline"
+          className="font-medium text-brand-700 hover:text-brand-900 hover:underline"
         >
           {b.telephone}
         </a>
@@ -361,7 +361,7 @@ export function Bailleurs() {
       render: (b: Bailleur) => b.email ? (
         <a 
           href={`mailto:${b.email}`}
-          className="text-blue-600 hover:text-blue-800 hover:underline"
+          className="font-medium text-brand-700 hover:text-brand-900 hover:underline"
         >
           {b.email}
         </a>
@@ -393,11 +393,7 @@ export function Bailleurs() {
       render: (b: Bailleur) => (
         <button
           onClick={() => handleGenerateMandat(b)}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white rounded-lg shadow-md 
-                   transition-all duration-300 transform hover:scale-105 hover:shadow-lg"
-          style={{
-            background: 'linear-gradient(135deg, #F58220 0%, #C0392B 100%)',
-          }}
+          className="sk-action sk-action-financial"
           title="Générer le mandat de gérance"
         >
           <FileText className="w-4 h-4" />
@@ -415,7 +411,7 @@ export function Bailleurs() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-emerald-100 border-t-brand-700 mb-4"></div>
           <p className="text-lg text-slate-600">Chargement des bailleurs...</p>
         </div>
       </div>
@@ -423,11 +419,11 @@ export function Bailleurs() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto animate-fadeIn">
+    <div className="sk-page-shell max-w-7xl mx-auto animate-fadeIn">
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:mb-6 lg:mb-8 mb-6">
         <div className="animate-slideInLeft w-full">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950 mb-2">
             Bailleurs
           </h1>
           <p className="text-slate-600 text-base lg:text-lg">
@@ -436,11 +432,7 @@ export function Bailleurs() {
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 text-white rounded-xl font-semibold text-sm sm:text-base
-                   shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-0.5 animate-slideInRight"
-          style={{
-            background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)',
-          }}
+          className="sk-create-cta w-full animate-slideInRight sm:w-auto"
         >
           <Plus className="w-5 h-5" />
           Nouveau bailleur
@@ -451,20 +443,18 @@ export function Bailleurs() {
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
 
       {/* Conteneur principal */}
-      <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden transition-all duration-300 hover:shadow-xl">
+      <div className="sk-card-premium overflow-hidden transition-all duration-300">
         {/* Barre de recherche */}
-        <div className="p-4 sm:p-6 border-b border-slate-200 bg-gradient-to-r from-orange-50 to-orange-100">
+        <div className="p-4 sm:p-6 border-b border-emerald-950/10 bg-brand-surface">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-orange-500 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-brand-700 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Rechercher par nom, prénom, téléphone, email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 sm:py-3 border-2 border-orange-200 rounded-xl text-sm sm:text-base
-                         focus:ring-2 focus:ring-orange-500 focus:border-orange-500
-                         transition-all duration-300 hover:border-orange-300"
+                className="sk-input pl-10 pr-4"
               />
             </div>
             <ColumnPicker
@@ -535,9 +525,7 @@ export function Bailleurs() {
                   required
                   value={formData.nom}
                   onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg 
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                           transition-all"
+                  className="sk-input"
                   placeholder="Diop"
                 />
               </div>
@@ -551,9 +539,7 @@ export function Bailleurs() {
                   required
                   value={formData.prenom}
                   onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg 
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                           transition-all"
+                  className="sk-input"
                   placeholder="Amadou"
                 />
               </div>
@@ -569,9 +555,7 @@ export function Bailleurs() {
                   required
                   value={formData.telephone}
                   onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg 
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                           transition-all"
+                  className="sk-input"
                   placeholder="+221 77 123 45 67"
                 />
               </div>
@@ -584,9 +568,7 @@ export function Bailleurs() {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg 
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                           transition-all"
+                  className="sk-input"
                   placeholder="amadou.diop@example.com"
                 />
               </div>
@@ -607,9 +589,7 @@ export function Bailleurs() {
                 type="text"
                 value={formData.adresse}
                 onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         transition-all"
+                className="sk-input"
                 placeholder="123 Avenue Blaise Diagne, Dakar"
               />
             </div>
@@ -622,9 +602,7 @@ export function Bailleurs() {
                 type="text"
                 value={formData.piece_identite}
                 onChange={(e) => setFormData({ ...formData, piece_identite: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         transition-all"
+                className="sk-input"
                 placeholder="CNI N° 1234567890123"
               />
             </div>
@@ -642,9 +620,7 @@ export function Bailleurs() {
                   max="100"
                   value={formData.commission}
                   onChange={(e) => setFormData({ ...formData, commission: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg 
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                           transition-all"
+                  className="sk-input"
                   placeholder="10"
                 />
                 <p className="mt-1 text-xs text-slate-500">
@@ -661,9 +637,7 @@ export function Bailleurs() {
                   required
                   value={formData.debut_contrat}
                   onChange={(e) => setFormData({ ...formData, debut_contrat: e.target.value })}
-                  className="w-full px-4 py-2 border border-slate-300 rounded-lg 
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                           transition-all"
+                  className="sk-input"
                 />
               </div>
             </div>
@@ -676,9 +650,7 @@ export function Bailleurs() {
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg 
-                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         transition-all resize-none"
+                className="sk-input resize-none"
                 placeholder="Notes supplémentaires..."
               />
             </div>
@@ -698,13 +670,10 @@ export function Bailleurs() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base text-white rounded-lg font-semibold
-                       shadow-md hover:shadow-lg transition-all duration-300
+              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base bg-brand-700 text-white rounded-lg font-bold
+                       shadow-premium hover:bg-brand-800 transition-all duration-300
                        disabled:opacity-50 disabled:cursor-not-allowed
                        flex items-center justify-center gap-2 transform hover:scale-105 w-full sm:w-auto"
-              style={{
-                background: 'linear-gradient(135deg, #F58220 0%, #E65100 100%)',
-              }}
             >
               {isSubmitting ? (
                 <>

@@ -4,7 +4,30 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 🎨 Palette personnalisée Confort Immo Archi
+        brand: {
+          paper: '#F2EDE3',
+          surface: '#F8F4EC',
+          ink: '#0D1B16',
+          50: '#F2EDE3',
+          100: '#E8E0D2',
+          200: '#C7D7C4',
+          300: '#9FC5A1',
+          400: '#6FA77C',
+          500: '#3F7A56',
+          600: '#28523F',
+          700: '#1F3B2E',
+          800: '#14251E',
+          900: '#0D1B16',
+          950: '#08110E',
+        },
+        action: {
+          50: '#FFF7ED',
+          100: '#FFE8C7',
+          200: '#FFD399',
+          500: '#FF8A00',
+          600: '#E67900',
+          700: '#B85D00',
+        },
         'confort-orange': {
           DEFAULT: '#F58220',
           light: '#FFA64D',
@@ -20,6 +43,10 @@ export default {
           light: '#707070',
           dark: '#3A3A3A',
         },
+      },
+      boxShadow: {
+        premium: '0 24px 80px rgba(13, 27, 22, 0.14)',
+        'premium-lg': '0 35px 120px rgba(13, 27, 22, 0.24)',
       },
     },
   },

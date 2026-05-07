@@ -334,7 +334,7 @@ export function Immeubles() {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition w-full sm:w-auto"
+              className="sk-action sk-action-primary px-4 sm:px-6 w-full sm:w-auto"
             >
               {editingImmeuble ? 'Mettre à jour' : 'Créer'}
             </button>

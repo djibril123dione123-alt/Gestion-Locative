@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../../lib/supabase';
 
 /**
  * Financial Dashboard Service
@@ -263,7 +263,7 @@ export async function uploadCertifiedLedger(
   try {
     const fileName = `ledger/${yearMonth}/livre-comptes-${yearMonth}-CERTIFIE.csv`;
 
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from('agency-exports')
       .upload(fileName, new Blob([csvContent], { type: 'text/csv' }), {
         cacheControl: '0', // Don't cache

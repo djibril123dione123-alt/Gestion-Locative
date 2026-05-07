@@ -14,7 +14,7 @@ export function Skeleton({ className = '', rounded = 'md' }: SkeletonProps) {
   return (
     <div
       aria-hidden="true"
-      className={`animate-pulse bg-slate-200 ${ROUND[rounded]} ${className}`}
+      className={`animate-pulse bg-gradient-to-r from-slate-100 via-emerald-50 to-slate-100 ${ROUND[rounded]} ${className}`}
     />
   );
 }
@@ -51,7 +51,7 @@ export function SkeletonCards({ count = 4 }: SkeletonCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+        <div key={i} className="space-y-3 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-10 w-10" rounded="full" />

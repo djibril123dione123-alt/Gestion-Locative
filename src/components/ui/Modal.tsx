@@ -21,30 +21,35 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end sm:justify-center sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center sm:p-4">
       <div
-        className="fixed inset-0 bg-black bg-opacity-50"
+        className="fixed inset-0 bg-brand-950/64 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <div className="relative bg-white w-full z-10 flex flex-col rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[92vh] sm:max-h-[88vh] sm:max-w-2xl animate-slideUp sm:animate-scaleIn">
-        <div className="sm:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-300" />
+      <div className="sk-modal-shell">
+        <div className="flex flex-shrink-0 justify-center pb-1 pt-3 sm:hidden">
+          <div className="h-1 w-10 rounded-full bg-slate-300" />
         </div>
 
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-5 border-b border-slate-100 flex-shrink-0">
-          <h2 className="text-base sm:text-xl font-bold text-slate-900 truncate pr-4">{title}</h2>
+        <div className="sk-modal-header">
+          <div className="min-w-0">
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-action-600">
+              Samay Këur
+            </p>
+            <h2 className="mt-1 truncate pr-4 text-base font-black text-slate-950 sm:text-xl">{title}</h2>
+          </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-slate-100 transition text-slate-400 hover:text-slate-600 flex-shrink-0 -mr-1"
+            className="-mr-1 flex-shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-brand-800"
             aria-label="Fermer"
           >
-            <X className="w-5 h-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4">
+        <div className="sk-modal-body">
           {children}
         </div>
       </div>

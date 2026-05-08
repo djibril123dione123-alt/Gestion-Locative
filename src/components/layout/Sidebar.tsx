@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
-import { BrandLogo } from '../brand/BrandLogo';
+import { BrandMark } from '../brand/BrandLogo';
 import { NotificationBell } from '../ui/NotificationBell';
 
 interface SidebarProps {
@@ -214,7 +214,15 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
       >
         <div className="relative flex items-center justify-between overflow-hidden border-b border-white/10 p-4">
           <div className="absolute -left-8 top-0 h-24 w-24 rounded-full bg-emerald-300/12 blur-2xl" />
-          <BrandLogo size="sm" tone="dark" animated showTagline className="relative" />
+          <div className="relative flex min-w-0 items-center gap-3">
+            <BrandMark size="sm" tone="dark" animated withTile={false} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black tracking-[0.22em] text-brand-paper">SAMAY KËUR</p>
+              <p className="mt-0.5 truncate text-[0.56rem] font-black uppercase tracking-[0.24em] text-action-500">
+                Manage. Grow. Prosper.
+              </p>
+            </div>
+          </div>
           {onClose && (
             <button onClick={onClose} className="rounded-lg p-2 text-slate-400 hover:bg-white/10 hover:text-white lg:hidden" aria-label="Fermer le menu">
               <X className="h-5 w-5" />

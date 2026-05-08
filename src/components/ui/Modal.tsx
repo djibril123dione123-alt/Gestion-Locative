@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { BrandMark } from '../brand/BrandLogo';
 
 interface ModalProps {
   isOpen: boolean;
@@ -34,11 +35,14 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         </div>
 
         <div className="sk-modal-header">
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-3">
+            <BrandMark size="xs" tone="light" withTile={false} />
+            <div className="min-w-0">
             <p className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-action-600">
               Samay Këur
             </p>
             <h2 className="mt-1 truncate pr-4 text-base font-black text-slate-950 sm:text-xl">{title}</h2>
+            </div>
           </div>
           <button
             onClick={onClose}

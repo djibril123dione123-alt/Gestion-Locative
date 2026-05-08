@@ -30,6 +30,18 @@ const TEXT_SIZE: Record<BrandSize, string> = {
   xl: 'text-4xl',
 };
 
+const MARK_SRC: Record<BrandTone, string> = {
+  dark: '/brand/app-icon-primary.png',
+  light: '/brand/app-icon-light.png',
+  mono: '/brand/app-icon-monochrome.png',
+};
+
+const LOCKUP_SRC: Record<BrandTone, string> = {
+  dark: '/brand/logo-lockup-dark.png',
+  light: '/brand/presentation-light.png',
+  mono: '/brand/logo-monochrome-lockup.png',
+};
+
 export function BrandMark({
   size = 'md',
   tone = 'dark',
@@ -38,25 +50,44 @@ export function BrandMark({
   withTile = true,
 }: BrandMarkProps) {
   const isLight = tone === 'light';
+  const src = withTile ? MARK_SRC[tone] : '/brand/mark-transparent.png';
   const tileClass = withTile
     ? isLight
       ? 'bg-[#F2EDE3] shadow-[0_18px_42px_rgba(13,27,22,0.18)] ring-1 ring-[#DED6C8]'
       : 'bg-[radial-gradient(circle_at_35%_12%,rgba(31,59,46,0.92),rgba(13,27,22,0.98)_58%)] shadow-[0_20px_70px_rgba(8,17,14,0.42)] ring-1 ring-[#BEE7B8]/18'
     : '';
-  const monoClass = tone === 'mono' ? 'grayscale contrast-125' : '';
 
   return (
     <span
-      className={`sk-brand-mark ${animated ? 'sk-brand-mark-animated' : ''} ${MARK_SIZE[size]} ${withTile ? 'rounded-lg p-[18%]' : ''} ${tileClass} ${className}`}
+      className={`sk-brand-mark ${animated ? 'sk-brand-mark-animated' : ''} ${MARK_SIZE[size]} ${withTile ? 'rounded-lg p-0' : ''} ${tileClass} ${className}`}
       aria-hidden="true"
     >
       <img
-        src="/brand-mark.png"
+        src={src}
         alt=""
         decoding="async"
-        className={`sk-brand-image h-full w-full object-contain ${monoClass}`}
+        className="sk-brand-image h-full w-full object-contain"
       />
     </span>
+  );
+}
+
+export function BrandLockup({
+  tone = 'dark',
+  animated = false,
+  className = '',
+}: {
+  tone?: BrandTone;
+  animated?: boolean;
+  className?: string;
+}) {
+  return (
+    <img
+      src={LOCKUP_SRC[tone]}
+      alt="Samay Këur - Manage. Grow. Prosper."
+      decoding="async"
+      className={`sk-brand-lockup ${animated ? 'sk-brand-lockup-animated' : ''} ${className}`}
+    />
   );
 }
 
@@ -76,7 +107,7 @@ export function BrandLogo({
       <BrandMark size={size} tone={tone} animated={animated} withTile={withTile} />
       <div className={stacked ? 'mt-1' : 'min-w-0'}>
         <p className={`${TEXT_SIZE[size]} font-black tracking-[0.24em] ${isDark ? 'text-white' : 'text-brand-950'}`}>
-          SAMAY KEUR
+          SAMAY KËUR
         </p>
         {showTagline && (
           <p className={`mt-1 text-[0.62rem] font-black uppercase tracking-[0.34em] ${isDark ? 'text-action-500' : 'text-action-600'}`}>
@@ -90,13 +121,22 @@ export function BrandLogo({
 
 export function BrandedLoader({ label = 'Chargement...' }: { label?: string }) {
   return (
-    <div className="sk-brand-board-surface sk-brand-protection flex min-h-screen items-center justify-center p-6">
-      <div className="text-center">
-        <div className="relative mx-auto mb-5 flex h-24 w-24 items-center justify-center">
-          <div className="absolute inset-0 rounded-[2rem] bg-action-500/18 blur-2xl sk-logo-breathe" />
-          <BrandMark size="xl" tone="dark" animated />
+    <div className="sk-splash-screen sk-brand-board-surface sk-brand-protection flex min-h-screen items-center justify-center p-6">
+      <div className="sk-splash-card text-center">
+        <div className="relative mx-auto mb-6 flex h-28 w-28 items-center justify-center overflow-hidden rounded-lg">
+          <div className="absolute inset-0 rounded-lg bg-action-500/18 blur-2xl sk-logo-breathe" />
+          <video
+            className="relative z-10 h-full w-full rounded-lg object-cover"
+            src="/brand/logo-loader.mp4"
+            poster="/brand/app-icon-primary.png"
+            autoPlay
+            muted
+            loop
+            playsInline
+          />
         </div>
         <p className="text-sm font-black uppercase tracking-[0.28em] text-brand-paper">{label}</p>
+        <p className="mt-2 text-[0.62rem] font-black uppercase tracking-[0.34em] text-action-500">Manage. Grow. Prosper.</p>
       </div>
     </div>
   );

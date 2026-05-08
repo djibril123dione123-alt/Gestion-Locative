@@ -25,10 +25,17 @@ Règle clé : le vert porte la confiance, l'orange signale l'action. Ne jamais f
 
 Actifs officiels :
 
-- `/public/brand-mark.png` : source officielle du symbole premium, favicon, app icon, sidebar, loader, mobile, empty states.
-- `/public/logo.png` : alias public du symbole fourni.
-- `/public/brand-mark.svg` : fallback vectoriel interne.
-- `/public/brand-wordmark.svg` : présentations, documents, footer large, signatures.
+- Source de vérité locale : `C:\Users\DELL\Documents\Perso\projet\samay Keur\new logo`.
+- `/public/brand/mark-transparent.png` : symbole transparent officiel pour surfaces sans tuile.
+- `/public/brand/app-icon-primary.png` : app icon / sidebar / loaders sur fond sombre.
+- `/public/brand/app-icon-light.png` : variante claire sur surfaces ivoire/blanches.
+- `/public/brand/app-icon-monochrome.png` : variante monochrome.
+- `/public/brand/favicon.png` : favicon officiel.
+- `/public/brand/logo-lockup-dark.png` : lockup officiel sur fond sombre.
+- `/public/brand/logo-monochrome-lockup.png` : lockup monochrome.
+- `/public/brand/splash-mobile.png` et `/public/brand/splash-desktop.png` : splash screens officiels.
+- `/public/brand/logo-loader.mp4` et `/public/brand/logo-loader.lottie` : motion assets officiels de chargement.
+- `/public/brand-mark.png` et `/public/logo.png` : alias de compatibilité uniquement.
 
 Variantes à respecter :
 

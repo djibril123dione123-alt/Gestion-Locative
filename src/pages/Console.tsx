@@ -20,7 +20,6 @@ import {
   Edit3,
   Calendar,
   Activity,
-  Globe,
   Plus,
   Trash2,
   UserPlus,
@@ -39,6 +38,8 @@ import {
   type SubscriptionRow,
 } from '../components/console/ConsoleModals';
 import { AgencyRequestsPanel } from '../components/console/AgencyRequestsPanel';
+import { BrandMark } from '../components/brand/BrandLogo';
+import { LoadingState } from '../components/ui/LoadingState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -772,13 +773,11 @@ export function Console() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_12%_0%,rgba(255,138,0,0.08),transparent_24rem),linear-gradient(135deg,#08110e,#0d1b16)] text-white flex flex-col">
       {/* ── Header ── */}
-      <header className="bg-gray-900 border-b border-gray-800 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
+      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-white/10 bg-brand-950/88 px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:px-6 sm:py-4">
         <div className="flex items-center gap-4">
-          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-            <Globe className="w-5 h-5 text-white" />
-          </div>
+          <BrandMark size="sm" tone="dark" animated={false} withTile={false} />
           <div>
             <h1 className="text-lg font-bold text-white tracking-tight">Console Propriétaire</h1>
             <p className="text-xs text-gray-500">Samay Këur — Administration SaaS</p>
@@ -809,8 +808,8 @@ export function Console() {
       </header>
 
       {/* ── Tabs ── */}
-      <div className="bg-gray-900 border-b border-gray-800 px-6">
-        <div className="flex gap-1">
+      <div className="border-b border-white/10 bg-brand-950/70 px-3 backdrop-blur-xl sm:px-6">
+        <div className="scrollbar-hide flex gap-1 overflow-x-auto">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -829,11 +828,9 @@ export function Console() {
       </div>
 
       {/* ── Content ── */}
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6">
         {loading && tab === 'dashboard' ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600" />
-          </div>
+          <LoadingState label="Control Tower" tone="dark" />
         ) : (
           <>
             {/* ── Tab: Dashboard ── */}

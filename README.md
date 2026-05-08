@@ -27,6 +27,12 @@ Les flux critiques ont ete fortement durcis:
 - Paiement abonnement idempotent contre double clic, refresh et retry.
 - Watchdog DB pour expirer les transactions PayDunya pending trop anciennes.
 - Worker analytics corrige: plus de crash Postgres `FOR UPDATE` + `DISTINCT ON`.
+- Integration branding premium finalisee:
+  - assets officiels centralises dans `public/brand/`;
+  - favicon, manifest, splash mobile/desktop et loader video alignes;
+  - logo responsive selon contexte: sidebar, auth, vitrine, mobile, modals, empty states;
+  - loaders unifies via composant brand;
+  - pages Parametres, Analyses, Encaissements et Console super-admin harmonisees.
 
 Dernieres verifications locales:
 
@@ -34,6 +40,7 @@ Dernieres verifications locales:
 - `npm run typecheck`: OK
 - `npm run test:unit`: OK, 31 tests
 - `npm run build`: OK
+- smoke test navigateur local: OK sur landing, auth, parametres, paiements
 
 Dernier audit live DB:
 
@@ -64,6 +71,52 @@ Attention: des secrets Supabase ont ete exposes pendant les sessions de travail.
 - Orange SMS API
 - Sentry
 - Vercel
+
+---
+
+## Branding Et Design System
+
+Le branding Samay Keur est integre comme un systeme produit, pas comme une simple image.
+
+Source officielle locale des assets:
+
+```text
+C:\Users\DELL\Documents\Perso\projet\samay Keur\new logo
+```
+
+Assets publics normalises:
+
+| Asset | Usage |
+|---|---|
+| `public/brand/mark-transparent.png` | Symbole transparent pour surfaces sans fond |
+| `public/brand/app-icon-primary.png` | App icon, sidebar, loader sombre |
+| `public/brand/app-icon-light.png` | Logo sur surfaces claires/ivoire |
+| `public/brand/app-icon-monochrome.png` | Variante monochrome |
+| `public/brand/favicon.png` | Favicon navigateur |
+| `public/brand/logo-lockup-dark.png` | Lockup complet sur fond sombre |
+| `public/brand/logo-monochrome-lockup.png` | Lockup monochrome |
+| `public/brand/splash-mobile.png` | Splash mobile |
+| `public/brand/splash-desktop.png` | Splash desktop |
+| `public/brand/logo-loader.mp4` | Animation de chargement |
+| `public/brand/logo-loader.lottie` | Motion asset source |
+
+Regles d'usage:
+
+- Sidebar/mobile: icone seule, compacte, sans surcharge.
+- Auth: logo compact dans le carre prevu, pas de grande bande intrusive.
+- Landing/vitrine: lockup ou symbole selon le bloc, jamais distordu.
+- Modals/empty states/loaders: micro-branding discret.
+- Dark mode: variantes sombres ou transparentes.
+- Light mode: variante claire ou app icon light.
+- Ne jamais reprendre les fichiers depuis `Downloads`; utiliser uniquement la source officielle ci-dessus.
+
+Composants principaux:
+
+- `src/components/brand/BrandLogo.tsx`
+- `src/components/ui/LoadingState.tsx`
+- `src/components/ui/Button.tsx`
+- `src/components/ui/EmptyState.tsx`
+- `src/components/ui/Modal.tsx`
 
 ---
 
@@ -451,4 +504,4 @@ Actions obligatoires:
 
 ---
 
-Derniere mise a jour: 6 mai 2026.
+Derniere mise a jour: 8 mai 2026.

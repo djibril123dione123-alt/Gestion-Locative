@@ -11,6 +11,7 @@ import { MaintenanceBanner } from './components/ui/MaintenanceBanner';
 import { NetworkBanner } from './components/ui/NetworkBanner';
 import { BackupIndicator } from './components/ui/BackupIndicator';
 import { BrandMark, BrandedLoader } from './components/brand/BrandLogo';
+import { LoadingState } from './components/ui/LoadingState';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
 import Welcome from './pages/Welcome';
@@ -189,7 +190,7 @@ function AppContent() {
         return (
             <div className="flex items-center justify-center min-h-screen bg-brand-paper p-4">
                 <div className="max-w-md rounded-lg border border-slate-200 bg-white p-8 text-center shadow-premium">
-                    <BrandMark size="xl" tone="light" animated className="mx-auto mb-4" />
+                    <BrandMark size="lg" tone="light" animated className="mx-auto mb-4" />
                     <p className="text-lg text-slate-900 font-semibold mb-2">Chargement de votre profil...</p>
                     <p className="text-sm text-slate-600 mb-6">Cela peut prendre quelques secondes</p>
                     <button
@@ -212,7 +213,7 @@ function AppContent() {
 
     if (profile?.role === 'super_admin') {
         return (
-            <div className="min-h-screen bg-gray-950">
+            <div className="premium-polish min-h-screen bg-brand-950">
                 <Suspense fallback={<BrandedLoader label="Control Tower" />}>
                     <Console />
                 </Suspense>
@@ -302,7 +303,7 @@ function AppContent() {
                     <span className="flex-1 truncate text-base font-black text-slate-950">
                         {pageLabel}
                     </span>
-                    <BrandMark size="sm" tone="light" animated={false} />
+                    <BrandMark size="xs" tone="light" animated={false} withTile={false} />
                 </div>
 
                 <NetworkBanner />
@@ -312,10 +313,7 @@ function AppContent() {
                 <main className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_20%_0%,rgba(52,211,153,0.08),transparent_34rem)] pb-20 lg:pb-0 scroll-smooth">
                     <Suspense fallback={
                         <div className="flex items-center justify-center h-full p-8">
-                            <div className="text-center">
-                                <BrandMark size="lg" tone="light" animated className="mx-auto mb-4" />
-                                <p className="text-slate-600">Chargement...</p>
-                            </div>
+                            <LoadingState label="Chargement" compact />
                         </div>
                     }>
                         <Routes>

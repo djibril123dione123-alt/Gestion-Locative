@@ -85,8 +85,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {loading && (
         <span
           aria-hidden="true"
-          className={`${ICON_SIZE[size]} inline-block rounded-full border-2 border-current border-t-transparent animate-spin`}
-        />
+          className={`${ICON_SIZE[size]} inline-flex items-center justify-center rounded-full bg-current/10`}
+        >
+          <img src="/brand/mark-transparent.png" alt="" className="h-full w-full object-contain sk-button-brand-loader" />
+        </span>
       )}
       {!loading && Icon && iconPosition === 'left' && <Icon className={ICON_SIZE[size]} />}
       {children && <span className="whitespace-nowrap">{children}</span>}

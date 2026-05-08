@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AlertCircle, Eye, EyeOff, LogIn, ShieldCheck, UserPlus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { BrandLogo } from '../components/brand/BrandLogo';
+import { BrandMark } from '../components/brand/BrandLogo';
 
 export function Auth() {
   const { signIn, signUp } = useAuth();
@@ -51,16 +51,19 @@ export function Auth() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_50%_18%,rgba(52,211,153,0.18),transparent_24rem),linear-gradient(135deg,#06110d,#0d3b2c_53%,#f7f3ea_53%,#fbfaf6)] p-4">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:48px_48px]" />
-      <div className="pointer-events-none absolute left-1/2 top-10 h-64 w-64 -translate-x-1/2 rounded-full bg-emerald-300/18 blur-3xl" />
+    <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden p-4">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(255,138,0,0.12),transparent_22rem),linear-gradient(115deg,rgba(8,17,14,0.92),rgba(13,27,22,0.78)_52%,rgba(242,237,227,0.9)_52%,rgba(251,250,246,0.96))]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(242,237,227,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(242,237,227,0.035)_1px,transparent_1px)] bg-[size:48px_48px]" />
+      <div className="pointer-events-none absolute left-1/2 top-10 h-72 w-72 -translate-x-1/2 rounded-full bg-action-500/16 blur-3xl" />
 
-      <div className="relative w-full max-w-md">
-        <div className="sk-card-premium overflow-hidden animate-scaleIn">
-          <div className="p-8">
+      <div className="relative w-full max-w-md py-4 sm:py-8">
+        <div className="sk-card-premium overflow-hidden border-white/70 bg-white/[0.9] shadow-[0_32px_120px_rgba(6,17,13,0.32)] animate-scaleIn">
+          <div className="p-6 sm:p-8">
             <div className="mb-8 text-center">
-              <BrandLogo size="lg" tone="light" animated showTagline stacked className="items-center justify-center" />
-              <p className="mt-5 text-slate-600">
+              <BrandMark size="xl" tone="light" animated className="mx-auto mb-4" />
+              <p className="text-xs font-black uppercase tracking-[0.34em] text-action-600">Manage. Grow. Prosper.</p>
+              <h1 className="mt-3 text-2xl font-black tracking-[0.12em] text-brand-950">SAMAY KËUR</h1>
+              <p className="mt-4 text-slate-600">
                 Votre gestion locative, simplifiée et automatisée.
               </p>
               <div className="mx-auto mt-4 inline-flex items-center gap-2 rounded-lg border border-emerald-900/10 bg-emerald-50 px-3 py-2 text-xs font-black text-brand-800">

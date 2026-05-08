@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrandMark } from '../brand/BrandLogo';
 
 interface Column<T> {
   key: string;
@@ -31,6 +32,7 @@ export function Table<T extends { id: string }>({
     return (
       <div className="sk-card flex min-h-44 items-center justify-center px-6 py-12 text-center">
         <div>
+          <BrandMark size="sm" tone="light" animated={false} className="mx-auto mb-4" />
           <p className="text-base font-black text-slate-950">Aucune donnée disponible</p>
           <p className="mt-2 text-sm text-slate-500">Les résultats apparaîtront ici dès qu’ils seront créés.</p>
         </div>

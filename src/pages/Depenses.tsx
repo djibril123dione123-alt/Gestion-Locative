@@ -11,6 +11,7 @@ import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 interface Depense {
   id: string;
@@ -192,7 +193,7 @@ export function Depenses() {
   ];
   const columns = allColumns.filter((c) => colIsVisible(c.key));
 
-  if (loading) return <div className="flex items-center justify-center h-full"><div>Chargement...</div></div>;
+  if (loading) return <PageSkeleton title="Dépenses" variant="table" />;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">

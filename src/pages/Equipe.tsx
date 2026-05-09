@@ -10,6 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { UserPlus, Mail, Copy, Check, Shield, Users as UsersIcon } from 'lucide-react';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { SkeletonTable } from '../components/ui/Skeleton';
 
 interface Member {
   id: string;
@@ -173,7 +174,18 @@ export function Equipe() {
       render: (m: Member) => (
         <div>
           <p className="font-medium text-slate-900">{m.prenom ?? ''} {m.nom ?? ''}</p>
-          <p className="text-xs text-slate-500">{m.email ?? '-'}</p>
+          {m.email ? (
+            <a
+              href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(m.email)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs font-semibold text-brand-700 underline-offset-2 hover:text-brand-950 hover:underline"
+            >
+              {m.email}
+            </a>
+          ) : (
+            <p className="text-xs text-slate-500">-</p>
+          )}
         </div>
       ),
     },
@@ -253,7 +265,9 @@ export function Equipe() {
           </div>
         </div>
         {loading ? (
-          <div className="p-12 text-center text-slate-500">Chargement…</div>
+          <div className="p-4 sm:p-6">
+            <SkeletonTable rows={5} cols={5} />
+          </div>
         ) : members.length === 0 ? (
           <EmptyState icon={UsersIcon} title="Aucun membre" description="Invitez vos premiers collaborateurs." />
         ) : (
@@ -275,7 +289,15 @@ export function Equipe() {
               return (
                 <li key={inv.id} className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
-                    <p className="font-medium text-slate-900" data-testid={`text-invitation-email-${inv.id}`}>{inv.email}</p>
+                    <a
+                      href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(inv.email)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-brand-700 underline-offset-2 hover:text-brand-950 hover:underline"
+                      data-testid={`text-invitation-email-${inv.id}`}
+                    >
+                      {inv.email}
+                    </a>
                     <p className="text-xs text-slate-500">
                       Rôle : <span className="capitalize font-medium">{inv.role}</span> · Expire le {new Date(inv.expires_at).toLocaleDateString('fr-FR')}
                     </p>

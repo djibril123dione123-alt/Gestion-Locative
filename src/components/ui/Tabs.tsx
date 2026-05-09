@@ -31,7 +31,7 @@ export function Tabs({ tabs, activeId, onChange, className = '' }: TabsProps) {
             aria-selected={active}
             onClick={() => onChange(tab.id)}
             className={`
-              relative inline-flex items-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-black
+              relative inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-black sm:gap-2 sm:px-4 sm:py-2.5 sm:text-sm
               transition duration-200 focus:outline-none focus-visible:bg-emerald-50
               ${active ? 'bg-brand-950 text-white shadow-sm' : 'text-slate-500 hover:bg-emerald-50 hover:text-brand-900'}
             `}

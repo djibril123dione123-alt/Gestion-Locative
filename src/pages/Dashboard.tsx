@@ -23,6 +23,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { QuickStart } from '../components/ui/QuickStart';
+import { PageSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { SetupWizard } from '../components/ui/SetupWizard';
 
@@ -165,14 +166,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
   const COLORS = ['#166534', '#cbd5e1'];
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-emerald-100 border-t-brand-700 mb-4" />
-          <p className="text-lg text-slate-600 animate-pulse-soft">Chargement du tableau de bord...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton title="Tableau de bord" variant="dashboard" />;
   }
 
   if (error) {

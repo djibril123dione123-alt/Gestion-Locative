@@ -28,6 +28,42 @@ export function Table<T extends { id: string }>({
     return JSON.stringify(value);
   };
 
+  const renderContactValue = (key: string, value: React.ReactNode) => {
+    if (value === null || value === undefined || value === '' || React.isValidElement(value)) return value;
+    const text = String(value).trim();
+    const normalizedKey = key.toLowerCase();
+
+    if ((normalizedKey.includes('email') || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) && text.includes('@')) {
+      const to = encodeURIComponent(text);
+      return (
+        <a
+          href={`https://mail.google.com/mail/?view=cm&fs=1&to=${to}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-bold text-brand-700 underline-offset-2 transition hover:text-brand-950 hover:underline"
+        >
+          {text}
+        </a>
+      );
+    }
+
+    if (normalizedKey.includes('telephone') || normalizedKey.includes('phone') || normalizedKey.includes('tel')) {
+      const phone = text.replace(/[^\d+]/g, '');
+      if (phone.length >= 6) {
+        return (
+          <a
+            href={`tel:${phone}`}
+            className="font-bold text-brand-700 underline-offset-2 transition hover:text-brand-950 hover:underline"
+          >
+            {text}
+          </a>
+        );
+      }
+    }
+
+    return value;
+  };
+
   if (data.length === 0) {
     return (
       <div className="sk-card flex min-h-44 items-center justify-center px-6 py-12 text-center">
@@ -47,7 +83,8 @@ export function Table<T extends { id: string }>({
           <div key={item.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="divide-y divide-slate-100">
               {columns.map((col) => {
-                const value = col.render ? col.render(item) : getCellValue(item, col.key);
+                const rawValue = col.render ? col.render(item) : getCellValue(item, col.key);
+                const value = renderContactValue(col.key, rawValue);
                 if (value === null || value === undefined || value === '') return null;
                 return (
                   <div key={col.key} className="flex items-center justify-between gap-3 px-4 py-3">
@@ -110,7 +147,7 @@ export function Table<T extends { id: string }>({
                 <tr key={item.id} className="border-b border-slate-100 transition hover:bg-emerald-50/55">
                   {columns.map((column) => (
                     <td key={column.key} className="px-5 py-4 text-sm font-medium text-slate-700">
-                      {column.render ? column.render(item) : getCellValue(item, column.key)}
+                      {renderContactValue(column.key, column.render ? column.render(item) : getCellValue(item, column.key))}
                     </td>
                   ))}
 

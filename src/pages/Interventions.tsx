@@ -7,6 +7,7 @@ import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Wrench, Plus, ArrowRight, Phone, Building2 } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
+import { SkeletonCards } from '../components/ui/Skeleton';
 
 type Statut = 'a_faire' | 'en_cours' | 'termine';
 type Urgence = 'urgente' | 'normale' | 'basse';
@@ -211,7 +212,7 @@ export function Interventions() {
       </div>
 
       {loading ? (
-        <div className="p-12 text-center text-slate-500">Chargement…</div>
+        <SkeletonCards count={6} />
       ) : items.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <EmptyState icon={Wrench} title="Aucune intervention" description="Créez votre première fiche de maintenance." />

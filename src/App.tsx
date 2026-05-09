@@ -12,6 +12,7 @@ import { NetworkBanner } from './components/ui/NetworkBanner';
 import { BackupIndicator } from './components/ui/BackupIndicator';
 import { BrandMark, BrandedLoader } from './components/brand/BrandLogo';
 import { LoadingState } from './components/ui/LoadingState';
+import { DocumentGeneratedModal } from './components/documents/DocumentGeneratedModal';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
 import Welcome from './pages/Welcome';
@@ -51,16 +52,16 @@ const PAGE_LABELS: Record<string, string> = {
     locataires: 'Locataires',
     contrats: 'Contrats',
     paiements: 'Encaissements',
-    'loyers-impayes': 'ImpayÃ©s',
-    depenses: 'DÃ©penses',
+    'loyers-impayes': 'Impayés',
+    depenses: 'Dépenses',
     commissions: 'Commissions',
     'tableau-de-bord-financier': 'Analyses',
-    'filtres-avances': 'Filtres avancÃ©s',
-    parametres: 'ParamÃ¨tres',
-    equipe: 'Ã‰quipe',
+    'filtres-avances': 'Filtres avancés',
+    parametres: 'Paramètres',
+    equipe: 'Équipe',
     abonnement: 'Abonnement',
     notifications: 'Notifications',
-    inventaires: 'Ã‰tats des lieux',
+    inventaires: 'États des lieux',
     interventions: 'Maintenance',
     calendrier: 'Calendrier',
     documents: 'Documents',
@@ -89,18 +90,18 @@ function AppContent() {
     // Derive current page from URL (React Router)
     const currentPage = location.pathname.replace(/^\//, '') || 'dashboard';
 
-    // Navigation helper â€” compatible avec l'interface onNavigate existante
+    // Navigation helper - compatible avec l'interface onNavigate existante
     const handleNavigate = (page: string) => {
         navigate('/' + page);
         setSidebarOpen(false);
     };
 
-    // â”€â”€ PostHog : suivi de page Ã  chaque changement de route â”€â”€
+    // PostHog : suivi de page à chaque changement de route
     useEffect(() => {
         trackPageView(currentPage);
     }, [currentPage]);
 
-    // â”€â”€ PostHog : identification utilisateur aprÃ¨s connexion â”€â”€
+    // PostHog : identification utilisateur après connexion
     useEffect(() => {
         if (profile) {
             identifyUser(profile.id, {
@@ -131,7 +132,7 @@ function AppContent() {
         }
     }, [user, invitationToken]);
 
-    // â”€â”€ Backup complet quotidien depuis Supabase â”€â”€
+    // Backup complet quotidien depuis Supabase
     useEffect(() => {
         if (!profile?.agency_id || !navigator.onLine) return;
         const ONE_DAY_MS = 24 * 60 * 60 * 1000;
@@ -139,11 +140,11 @@ function AppContent() {
         const isDue = !lastTs || (Date.now() - lastTs) > ONE_DAY_MS;
         if (!isDue) return;
         runFullBackup(profile.agency_id).catch(() => {
-            // Fail silencieux â€” le prochain dÃ©marrage rÃ©essaiera
+            // Fail silencieux - le prochain démarrage réessaiera
         });
     }, [profile?.agency_id]);
 
-    // â”€â”€ RÃ©cupÃ©ration des mutations bloquÃ©es en "syncing" â”€â”€
+    // Récupération des mutations bloquées en "syncing"
     useEffect(() => {
         recoverStaleSyncing().catch(() => { /* noop */ });
     }, []);
@@ -204,7 +205,7 @@ function AppContent() {
                         }}
                         className="text-sm font-bold text-brand-700 underline hover:text-brand-800"
                     >
-                        ProblÃ¨me de connexion ? DÃ©connectez-vous
+                        Problème de connexion ? Déconnectez-vous
                     </button>
                 </div>
             </div>
@@ -217,6 +218,7 @@ function AppContent() {
                 <Suspense fallback={<BrandedLoader label="Control Tower" />}>
                     <Console />
                 </Suspense>
+                <DocumentGeneratedModal onNavigate={handleNavigate} />
             </div>
         );
     }
@@ -278,7 +280,7 @@ function AppContent() {
         }
     };
 
-    const pageLabel = PAGE_LABELS[currentPage] ?? 'Samay KÃ«ur';
+    const pageLabel = PAGE_LABELS[currentPage] ?? 'Samay Këur';
 
     return (
         <div className="premium-polish flex h-screen overflow-hidden bg-brand-paper">
@@ -291,7 +293,7 @@ function AppContent() {
             />
 
             <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
-                {/* Top bar â€” mobile only */}
+                {/* Top bar - mobile only */}
                 <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-emerald-900/10 bg-white/[0.94] px-3 py-2.5 shadow-sm backdrop-blur-xl lg:hidden">
                     <button
                         onClick={() => setSidebarOpen(true)}
@@ -309,7 +311,7 @@ function AppContent() {
                 <NetworkBanner />
                 <TrialBanner onNavigate={handleNavigate} />
 
-                {/* Scrollable content â€” extra bottom padding on mobile for BottomNav */}
+                {/* Scrollable content - extra bottom padding on mobile for BottomNav */}
                 <main className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_20%_0%,rgba(52,211,153,0.08),transparent_34rem)] pb-20 lg:pb-0 scroll-smooth">
                     <Suspense fallback={
                         <div className="flex items-center justify-center h-full p-8">
@@ -323,15 +325,16 @@ function AppContent() {
                 </main>
             </div>
 
-            {/* Bottom navigation â€” mobile only */}
+            {/* Bottom navigation - mobile only */}
             <BottomNav
                 currentPage={currentPage}
                 onNavigate={handleNavigate}
                 onOpenMenu={() => setSidebarOpen(true)}
             />
 
-            {/* Backup + offline status indicator â€” floating badge */}
+            {/* Backup + offline status indicator - floating badge */}
             <BackupIndicator syncing={syncing} pendingCount={pendingCount} />
+            <DocumentGeneratedModal onNavigate={handleNavigate} />
         </div>
     );
 }

@@ -11,6 +11,7 @@ import { useToast } from '../hooks/useToast';
 import { usePlanLimits } from '../hooks/usePlanLimits';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 interface Immeuble {
   id: string;
@@ -200,7 +201,7 @@ export function Immeubles() {
   const columns = allColumns.filter((c) => colIsVisible(c.key));
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full"><div className="text-lg text-slate-600">Chargement...</div></div>;
+    return <PageSkeleton title="Immeubles" variant="table" />;
   }
 
   return (

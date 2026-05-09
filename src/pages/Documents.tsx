@@ -10,6 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { FolderOpen, Upload, Download, Trash2 } from 'lucide-react';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { SkeletonTable } from '../components/ui/Skeleton';
 
 interface Document {
   id: string;
@@ -300,7 +301,9 @@ export function Documents() {
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
         {loading ? (
-          <div className="p-12 text-center text-slate-500">Chargement…</div>
+          <div className="p-4 sm:p-6">
+            <SkeletonTable rows={6} cols={5} />
+          </div>
         ) : filtered.length === 0 ? (
           <EmptyState icon={FolderOpen} title="Aucun document" description="Uploadez votre premier document." />
         ) : (

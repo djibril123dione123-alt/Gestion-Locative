@@ -12,6 +12,7 @@ import { formatCurrency } from '../lib/formatters';
 import { useToast } from '../hooks/useToast';
 import { useExport } from '../hooks/useExport';
 import { useBackup } from '../hooks/useBackup';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 // =========================
 // 🎨 PALETTE CONFORT IMMO ARCHI
@@ -606,20 +607,7 @@ export function Contrats() {
   // 🧩 RENDU
   // =========================
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full p-8">
-        <div className="text-center">
-          <div className="inline-block w-8 h-8 border-4 rounded-full animate-spin"
-               style={{ 
-                 borderColor: BRAND_COLORS.primary,
-                 borderTopColor: 'transparent'
-               }} />
-          <p className="mt-4 text-lg" style={{ color: BRAND_COLORS.gray }}>
-            Chargement des contrats...
-          </p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton title="Contrats" variant="table" />;
   }
 
   if (error) {

@@ -7,6 +7,7 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Bell, Check, Trash2 } from 'lucide-react';
 import type { NotificationItem } from '../components/ui/NotificationBell';
+import { SkeletonTable } from '../components/ui/Skeleton';
 
 export function Notifications() {
   const { user } = useAuth();
@@ -128,7 +129,9 @@ export function Notifications() {
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
         {loading ? (
-          <div className="p-12 text-center text-slate-500">Chargement…</div>
+          <div className="p-4 sm:p-6">
+            <SkeletonTable rows={5} cols={4} />
+          </div>
         ) : filtered.length === 0 ? (
           <EmptyState icon={Bell} title="Aucune notification" description="Vous êtes à jour." />
         ) : (

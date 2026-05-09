@@ -10,6 +10,7 @@ import {
   MandatPDFData,
 } from '../types';
 import { formatCurrency } from './formatters';
+import { announceGeneratedDocument, GeneratedDocumentKind } from './documentGenerated';
 
 export { formatCurrency };
 
@@ -65,6 +66,28 @@ export function invalidateAgencySettingsCache(agencyId?: string) {
   } else {
     settingsCache.clear();
   }
+}
+
+export function saveGeneratedPdf(
+  doc: jsPDF,
+  options: {
+    kind: GeneratedDocumentKind;
+    title: string;
+    fileName: string;
+    source?: string;
+  }
+) {
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  doc.save(options.fileName);
+  announceGeneratedDocument({
+    kind: options.kind,
+    title: options.title,
+    fileName: options.fileName,
+    source: options.source,
+    url,
+    blob,
+  });
 }
 
 async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
@@ -366,7 +389,12 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
   }
 
   addFooter(doc);
-  doc.save(`contrat-${(contrat.locataires?.nom ?? 'locataire')}-${Date.now()}.pdf`);
+  saveGeneratedPdf(doc, {
+    kind: 'contrat',
+    title: 'Contrat de location',
+    fileName: `contrat-${contrat.locataires?.nom ?? 'locataire'}-${Date.now()}.pdf`,
+    source: 'contrats',
+  });
 }
 
 export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Promise<void> {
@@ -526,7 +554,12 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
   }
 
   addFooter(doc);
-  doc.save(`facture-${locataire.nom ?? 'locataire'}-${Date.now()}.pdf`);
+  saveGeneratedPdf(doc, {
+    kind: 'facture',
+    title: 'Facture / quittance de loyer',
+    fileName: `facture-${locataire.nom ?? 'locataire'}-${Date.now()}.pdf`,
+    source: 'paiements',
+  });
 }
 
 export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promise<void> {
@@ -597,5 +630,10 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
   }
 
   addFooter(doc);
-  doc.save(`mandat-${bailleur.nom ?? 'bailleur'}-${Date.now()}.pdf`);
+  saveGeneratedPdf(doc, {
+    kind: 'mandat',
+    title: 'Mandat de gérance',
+    fileName: `mandat-${bailleur.nom ?? 'bailleur'}-${Date.now()}.pdf`,
+    source: 'bailleurs',
+  });
 }

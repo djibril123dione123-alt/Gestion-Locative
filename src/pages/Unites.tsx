@@ -12,6 +12,7 @@ import { usePlanLimits } from '../hooks/usePlanLimits';
 import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 interface Unite {
   id: string;
@@ -212,7 +213,7 @@ export function Unites() {
   const columns = allColumns.filter((c) => colIsVisible(c.key));
 
   if (loading) {
-    return <div className="flex items-center justify-center h-full"><div className="text-lg text-slate-600">Chargement...</div></div>;
+    return <PageSkeleton title="Produits" variant="table" />;
   }
 
   return (

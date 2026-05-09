@@ -6,6 +6,7 @@ import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Building2, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 type AgencyPlan = 'basic' | 'pro' | 'enterprise';
 type AgencyStatus = 'active' | 'suspended' | 'trial' | 'cancelled';
@@ -340,8 +341,7 @@ export default function Agences() {
 
       {loading ? (
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">Chargement...</p>
+          <PageSkeleton title="Agences" variant="table" className="p-0" />
         </div>
       ) : (
         <Table columns={columns} data={agencies} />

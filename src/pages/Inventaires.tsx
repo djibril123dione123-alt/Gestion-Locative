@@ -11,6 +11,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ClipboardList, Plus, Download, Trash2 } from 'lucide-react';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { saveGeneratedPdf } from '../lib/pdf';
+import { SkeletonTable } from '../components/ui/Skeleton';
 
 interface Piece {
   nom: string;
@@ -197,7 +199,12 @@ export function Inventaires() {
       doc.setFontSize(10);
       doc.text(inv.observations, 18, y, { maxWidth: 170 });
     }
-    doc.save(`inventaire-${inv.id.slice(0, 8)}.pdf`);
+    saveGeneratedPdf(doc, {
+      kind: 'inventaire',
+      title: `État des lieux ${inv.type === 'entree' ? "d'entrée" : 'de sortie'}`,
+      fileName: `inventaire-${inv.id.slice(0, 8)}.pdf`,
+      source: 'inventaires',
+    });
   };
 
   const confirmDelete = async () => {
@@ -344,7 +351,9 @@ export function Inventaires() {
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
         {loading ? (
-          <div className="p-12 text-center text-slate-500">Chargement…</div>
+          <div className="p-4 sm:p-6">
+            <SkeletonTable rows={6} cols={5} />
+          </div>
         ) : filtered.length === 0 ? (
           <EmptyState icon={ClipboardList} title="Aucun inventaire" description="Créez votre premier état des lieux." />
         ) : (

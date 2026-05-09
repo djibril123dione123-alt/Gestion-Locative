@@ -215,7 +215,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: Sid
         <div className="relative flex items-center justify-between overflow-hidden border-b border-white/10 p-4">
           <div className="absolute -left-8 top-0 h-24 w-24 rounded-full bg-emerald-300/12 blur-2xl" />
           <div className="relative flex min-w-0 items-center gap-3">
-            <BrandMark size="sm" tone="dark" animated withTile={false} />
+            <BrandMark size="md" tone="dark" animated withTile={false} />
             <div className="min-w-0">
               <p className="truncate text-sm font-black tracking-[0.22em] text-brand-paper">SAMAY KËUR</p>
               <p className="mt-0.5 truncate text-[0.56rem] font-black uppercase tracking-[0.24em] text-action-500">

@@ -4,9 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { BrandMark } from '../components/brand/BrandLogo';
 
 export function Auth() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signInWithGoogle, signUp } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -47,6 +48,18 @@ export function Auth() {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err: unknown) {
+      console.error('Google auth error:', err);
+      setError(err instanceof Error ? err.message : 'Connexion Google impossible pour le moment');
+      setGoogleLoading(false);
     }
   };
 
@@ -103,6 +116,28 @@ export function Auth() {
                 <UserPlus className="mr-2 inline-block h-5 w-5" />
                 Inscription
               </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={loading || googleLoading}
+              className="group mb-5 flex w-full items-center justify-center gap-3 rounded-xl border border-emerald-950/10 bg-white px-4 py-3 font-black text-slate-900 shadow-[0_14px_38px_rgba(6,17,13,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50/40 hover:shadow-[0_20px_48px_rgba(6,17,13,0.12)] focus:outline-none focus:ring-2 focus:ring-action-400 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-black text-slate-950 shadow-sm transition-transform duration-300 group-hover:scale-105">
+                {googleLoading ? (
+                  <span className="h-4 w-4 rounded-full border-2 border-brand-700 border-t-transparent animate-spin" />
+                ) : (
+                  <img src="/brand/google-g.png" alt="" className="h-5 w-5 object-contain" />
+                )}
+              </span>
+              <span>{googleLoading ? 'Ouverture de Google...' : 'Continuer avec Google'}</span>
+            </button>
+
+            <div className="mb-5 flex items-center gap-3">
+              <span className="h-px flex-1 bg-emerald-950/10" />
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">ou par email</span>
+              <span className="h-px flex-1 bg-emerald-950/10" />
             </div>
 
             {error && (
@@ -201,7 +236,7 @@ export function Auth() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || googleLoading}
                 className="flex w-full transform items-center justify-center gap-2 rounded-lg bg-brand-700 px-6 py-3 font-bold text-white shadow-premium transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? (

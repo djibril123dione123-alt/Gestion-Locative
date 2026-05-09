@@ -12,6 +12,7 @@ import { useExport } from '../hooks/useExport';
 import { useBackup } from '../hooks/useBackup';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 interface Locataire {
   id: string;
@@ -150,11 +151,11 @@ export function Locataires() {
     { key: 'nom', label: 'Nom' },
     { key: 'prenom', label: 'Prénom' },
     { key: 'telephone', label: 'Téléphone' },
-    { key: 'email', label: 'Email', render: (l: Locataire) => l.email || '-' },
+    { key: 'email', label: 'Email' },
   ];
   const columns = allColumns.filter((c) => colIsVisible(c.key));
 
-  if (loading) return <div className="flex items-center justify-center h-full"><div className="text-lg text-slate-600">Chargement...</div></div>;
+  if (loading) return <PageSkeleton title="Locataires" variant="table" />;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">

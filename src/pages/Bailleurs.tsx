@@ -12,6 +12,7 @@ import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages'
 import { formatDate } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 /**
  * Interface Bailleur avec les champs commission et debut_contrat
@@ -348,7 +349,7 @@ export function Bailleurs() {
       label: 'Téléphone',
       render: (b: Bailleur) => (
         <a 
-          href={`tel:${b.telephone}`}
+          href={`tel:${b.telephone.replace(/[^\d+]/g, '')}`}
           className="font-medium text-brand-700 hover:text-brand-900 hover:underline"
         >
           {b.telephone}
@@ -360,7 +361,9 @@ export function Bailleurs() {
       label: 'Email', 
       render: (b: Bailleur) => b.email ? (
         <a 
-          href={`mailto:${b.email}`}
+          href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(b.email)}`}
+          target="_blank"
+          rel="noopener noreferrer"
           className="font-medium text-brand-700 hover:text-brand-900 hover:underline"
         >
           {b.email}
@@ -408,14 +411,7 @@ export function Bailleurs() {
    * Affichage du loader
    */
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-emerald-100 border-t-brand-700 mb-4"></div>
-          <p className="text-lg text-slate-600">Chargement des bailleurs...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton title="Bailleurs" variant="table" />;
   }
 
   return (

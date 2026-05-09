@@ -127,7 +127,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
 
         case 3: {
           if (!wizardData.immeuble?.id) {
-            throw new Error('L\'immeuble n\'a pas Ã©tÃ© crÃ©Ã© correctement. Veuillez recommencer.');
+            throw new Error('L\'immeuble n\'a pas été créé correctement. Veuillez recommencer.');
           }
 
           const { data, error } = await supabase
@@ -169,7 +169,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
 
         case 5: {
           if (!wizardData.locataire?.id || !wizardData.unite?.id) {
-            throw new Error('Le locataire ou l\'unitÃ© n\'a pas Ã©tÃ© crÃ©Ã© correctement. Veuillez recommencer.');
+            throw new Error('Le locataire ou l\'unité n\'a pas été créé correctement. Veuillez recommencer.');
           }
 
           const { data, error } = await supabase
@@ -201,7 +201,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
 
         case 6: {
           if (!wizardData.contrat?.id) {
-            throw new Error('Le contrat n\'a pas Ã©tÃ© crÃ©Ã© correctement. Veuillez recommencer.');
+            throw new Error('Le contrat n\'a pas été créé correctement. Veuillez recommencer.');
           }
 
           const montant = parseFloat(formData.contrat.loyer_mensuel);

@@ -6,6 +6,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '../lib/formatters';
+import { saveGeneratedPdf } from '../lib/pdf';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 interface CommissionRow {
   id: string;
@@ -164,7 +166,12 @@ export function Commissions() {
       styles: { fontSize: 9 },
     });
 
-    doc.save(`commissions-${selectedMonth}.pdf`);
+    saveGeneratedPdf(doc, {
+      kind: 'commission',
+      title: 'Rapport des commissions',
+      fileName: `commissions-${selectedMonth}.pdf`,
+      source: 'commissions',
+    });
   };
 
   const exportSignedLedger = async () => {
@@ -199,14 +206,7 @@ export function Commissions() {
   };
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-emerald-100 border-t-brand-700" />
-          <p className="text-sm font-semibold text-slate-700">Chargement des commissions...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton title="Commissions" variant="analytics" />;
   }
 
   return (

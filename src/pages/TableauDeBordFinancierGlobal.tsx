@@ -6,6 +6,8 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '../lib/formatters';
+import { saveGeneratedPdf } from '../lib/pdf';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 // -------------------------------------------------------------------------
 // 1. DÉFINITION DES TYPES ET INTERFACES UNIFIÉS
@@ -410,7 +412,12 @@ export function TableauDeBordFinancierGlobal() {
         doc.text(`Frais de gestion: ${formatCurrency(bilan.total_frais)}`, 14, finalY + 21); // [18]
         doc.setFontSize(14);
         doc.text(`MONTANT À VERSER: ${formatCurrency(bilan.total_net)}`, 14, finalY + 30); // [18]
-        doc.save(`bilan-${bilan.bailleur_nom}-${selectedMonth}.pdf`);
+        saveGeneratedPdf(doc, {
+            kind: 'bilan',
+            title: 'Bilan mensuel bailleur',
+            fileName: `bilan-${bilan.bailleur_nom}-${selectedMonth}.pdf`,
+            source: 'tableau-de-bord-financier',
+        });
     };
 
     // -------------------------------------------------------------------------
@@ -438,11 +445,7 @@ export function TableauDeBordFinancierGlobal() {
     
     
     if (loading) {
-        return (
-            <div className="p-4 sm:p-6 lg:p-8 text-center text-base sm:text-lg lg:text-xl font-semibold">
-                Chargement...
-            </div>
-        );
+        return <PageSkeleton title="Tableau financier" variant="analytics" />;
     }
     
     // -------------------------------------------------------------------------

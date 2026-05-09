@@ -31,18 +31,18 @@ export function Encaissements({ initialTab = 'recus' }: EncaissementsProps) {
   }, [initialTab]);
 
   return (
-    <div className="flex flex-col h-full bg-brand-paper">
-      <div className="relative overflow-hidden border-b border-emerald-950/10 bg-brand-surface/90 px-4 pt-4 backdrop-blur-xl sm:px-6 sm:pt-6 lg:px-8 lg:pt-8">
-        <div className="pointer-events-none absolute right-6 top-4 opacity-[0.045]">
+    <div className="flex h-full flex-col bg-brand-paper">
+      <div className="relative overflow-hidden border-b border-emerald-950/10 bg-brand-surface/90 px-4 pt-3 backdrop-blur-xl sm:px-6 sm:pt-6 lg:px-8 lg:pt-8">
+        <div className="pointer-events-none absolute right-6 top-4 hidden opacity-[0.045] sm:block">
           <BrandMark size="xl" tone="light" withTile={false} />
         </div>
-        <div className="relative mb-3">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-lg border border-action-500/15 bg-action-50 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-action-700">
+        <div className="relative mb-0 sm:mb-3">
+          <div className="mb-2 hidden items-center gap-2 rounded-lg border border-action-500/15 bg-action-50 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-action-700 sm:inline-flex">
             <BrandMark size="xs" tone="light" />
             Flux financiers
           </div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950">Encaissements</h1>
-          <p className="text-slate-500 text-sm mt-1">Suivi des loyers reçus et des impayés</p>
+          <h1 className="hidden text-3xl font-black text-slate-950 sm:block lg:text-4xl">Encaissements</h1>
+          <p className="mt-1 hidden text-sm text-slate-500 sm:block">Suivi des loyers reçus et des impayés</p>
         </div>
         <Tabs tabs={TABS} activeId={active} onChange={(id) => setActive(id as 'recus' | 'impayes')} />
       </div>

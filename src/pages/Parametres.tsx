@@ -15,6 +15,7 @@ import { useToast } from '../hooks/useToast';
 import { AgencySettings, DEFAULT_AGENCY_SETTINGS } from '../types/agency';
 import { ToastContainer } from '../components/ui/Toast';
 import { invalidateAgencySettingsCache } from '../lib/pdf';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
   created_at?: string;
@@ -284,25 +285,21 @@ export function Parametres() {
   ];
 
   if (loading || !settings) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
-      </div>
-    );
+    return <PageSkeleton title="Paramètres" variant="form" />;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 px-4 py-4 sm:space-y-6 sm:px-0 sm:py-0">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-orange-100 rounded-lg">
-            <Settings className="w-8 h-8 text-orange-600" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-orange-100 sm:h-14 sm:w-14">
+            <Settings className="h-7 w-7 text-orange-600 sm:h-8 sm:w-8" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Paramètres de l'agence</h1>
-            <p className="text-slate-600">
+          <div className="min-w-0">
+            <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Paramètres de l'agence</h1>
+            <p className="text-sm leading-6 text-slate-600 sm:text-base">
               Personnalisez vos documents et l'identité de votre agence
             </p>
           </div>
@@ -310,7 +307,7 @@ export function Parametres() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 transition-colors"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-orange-500 px-5 py-3 font-black text-white transition-colors hover:bg-orange-600 disabled:opacity-50 sm:w-auto sm:px-6"
         >
           {saving ? (
             <>
@@ -326,16 +323,16 @@ export function Parametres() {
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-slate-200">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200">
-          <div className="flex gap-4 px-6">
+          <div className="flex gap-2 overflow-x-auto px-4 scrollbar-hide sm:gap-4 sm:px-6">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as 'general' | 'documents' | 'appearance')}
-                  className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-colors ${
+                  className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-sm transition-colors sm:px-4 sm:py-4 ${
                     activeTab === tab.id
                       ? 'border-orange-500 text-orange-600'
                       : 'border-transparent text-slate-600 hover:text-slate-800'
@@ -349,7 +346,7 @@ export function Parametres() {
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {activeTab === 'general' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -33,14 +33,20 @@ Les flux critiques ont ete fortement durcis:
   - logo responsive selon contexte: sidebar, auth, vitrine, mobile, modals, empty states;
   - loaders unifies via composant brand;
   - pages Parametres, Analyses, Encaissements et Console super-admin harmonisees.
+- Passe final polish globale:
+  - skeleton loaders structurels par type de page: dashboard, analytics, tables et formulaires;
+  - motion tokens unifies, transitions plus douces et support `prefers-reduced-motion`;
+  - focus, hover, touch targets et scrollbars harmonises dans le theme premium;
+  - suppression du warning PostCSS/Vite lie aux nodes CSS generes sans source.
 
-Dernieres verifications locales:
+Dernieres verifications locales du 2026-05-13:
 
 - `npm run lint`: OK
 - `npm run typecheck`: OK
 - `npm run test:unit`: OK, 31 tests
-- `npm run build`: OK
-- smoke test navigateur local: OK sur landing, auth, parametres, paiements
+- `npm run build`: OK, sans warning PostCSS/Vite
+- serveur local Vite: HTTP 200 sur `http://127.0.0.1:5173/`
+- verification navigateur integree: tentative bloquee/expiree par l'environnement local, a relancer manuellement si besoin
 
 Dernier audit live DB:
 

@@ -36,6 +36,12 @@ export function LoadingState({
             {description}
           </p>
         )}
+        {!compact && (
+          <div className="mx-auto mt-5 w-52 max-w-full space-y-2">
+            <div className={`sk-skeleton h-2 rounded-full ${dark ? 'sk-skeleton-dark' : ''}`} />
+            <div className={`sk-skeleton mx-auto h-2 w-32 rounded-full ${dark ? 'sk-skeleton-dark' : ''}`} />
+          </div>
+        )}
       </div>
     </div>
   );

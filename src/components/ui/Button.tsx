@@ -81,7 +81,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     .join(' ');
 
   return (
-    <button ref={ref} disabled={isDisabled} className={composedClassName} {...rest}>
+    <button ref={ref} disabled={isDisabled} aria-busy={loading || undefined} className={composedClassName} {...rest}>
       {loading && (
         <span
           aria-hidden="true"

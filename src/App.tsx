@@ -11,7 +11,7 @@ import { MaintenanceBanner } from './components/ui/MaintenanceBanner';
 import { NetworkBanner } from './components/ui/NetworkBanner';
 import { BackupIndicator } from './components/ui/BackupIndicator';
 import { BrandMark, BrandedLoader } from './components/brand/BrandLogo';
-import { LoadingState } from './components/ui/LoadingState';
+import { PageSkeleton } from './components/ui/Skeleton';
 import { DocumentGeneratedModal } from './components/documents/DocumentGeneratedModal';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
@@ -281,6 +281,14 @@ function AppContent() {
     };
 
     const pageLabel = PAGE_LABELS[currentPage] ?? 'Samay Këur';
+    const pageSkeletonVariant =
+        currentPage === 'dashboard'
+            ? 'dashboard'
+            : currentPage === 'tableau-de-bord-financier'
+                ? 'analytics'
+                : ['parametres', 'equipe', 'abonnement', 'pricing'].includes(currentPage)
+                    ? 'form'
+                    : 'table';
 
     return (
         <div className="premium-polish flex h-screen overflow-hidden bg-brand-paper">
@@ -313,11 +321,7 @@ function AppContent() {
 
                 {/* Scrollable content - extra bottom padding on mobile for BottomNav */}
                 <main className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_20%_0%,rgba(52,211,153,0.08),transparent_34rem)] pb-20 lg:pb-0 scroll-smooth">
-                    <Suspense fallback={
-                        <div className="flex items-center justify-center h-full p-8">
-                            <LoadingState label="Chargement" compact />
-                        </div>
-                    }>
+                    <Suspense fallback={<PageSkeleton title={pageLabel} variant={pageSkeletonVariant} />}>
                         <Routes>
                             <Route path="*" element={renderPage()} />
                         </Routes>

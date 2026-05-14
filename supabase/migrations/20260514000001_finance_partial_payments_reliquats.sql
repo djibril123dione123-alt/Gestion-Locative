@@ -153,6 +153,7 @@ DECLARE
   v_part_bailleur numeric(12,2);
   v_effective_statut public.paiement_statut;
   v_inserted public.paiements;
+  v_lock_id uuid;
 BEGIN
   IF p_montant_total IS NULL OR p_montant_total <= 0 THEN
     RAISE EXCEPTION 'INVALID_AMOUNT';
@@ -203,12 +204,15 @@ BEGIN
     RAISE EXCEPTION 'IMPAYE_IS_NOT_A_PAYMENT';
   END IF;
 
-  PERFORM 1
+  SELECT p.id
+  INTO v_lock_id
   FROM public.paiements p
   WHERE p.agency_id = p_agency_id
     AND p.contrat_id = p_contrat_id
     AND p.mois_concerne = p_mois_concerne
     AND p.deleted_at IS NULL
+  ORDER BY p.created_at, p.id
+  LIMIT 1
   FOR UPDATE;
 
   SELECT COALESCE(SUM(p.montant_total), 0)
@@ -411,6 +415,7 @@ DECLARE
   v_part_agence numeric(12,2);
   v_part_bailleur numeric(12,2);
   v_updated public.paiements;
+  v_lock_id uuid;
 BEGIN
   SELECT *
   INTO v_existing
@@ -474,12 +479,15 @@ BEGIN
     )
   );
 
-  PERFORM 1
+  SELECT p.id
+  INTO v_lock_id
   FROM public.paiements p
   WHERE p.agency_id = p_agency_id
     AND p.contrat_id = v_existing.contrat_id
     AND p.mois_concerne = v_existing.mois_concerne
     AND p.deleted_at IS NULL
+  ORDER BY p.created_at, p.id
+  LIMIT 1
   FOR UPDATE;
 
   SELECT COALESCE(SUM(p.montant_total), 0)

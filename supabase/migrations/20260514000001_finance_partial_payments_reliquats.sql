@@ -801,8 +801,11 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.get_monthly_revenue(uuid, integer);
+DROP FUNCTION IF EXISTS public.get_monthly_revenue(uuid, int);
+
 CREATE OR REPLACE FUNCTION public.get_monthly_revenue(p_agency_id uuid, p_year int)
-RETURNS TABLE(month_label text, revenus numeric)
+RETURNS TABLE(month_num int, revenus numeric)
 LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
@@ -821,7 +824,7 @@ BEGIN
 
   RETURN QUERY
   SELECT
-    to_char(gs, 'Mon', 'fr_FR') AS month_label,
+    EXTRACT(MONTH FROM gs)::int AS month_num,
     COALESCE(SUM(p.montant_total), 0) AS revenus
   FROM generate_series(
     make_date(p_year, 1, 1),
@@ -837,6 +840,9 @@ BEGIN
   ORDER BY gs;
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.get_monthly_revenue(uuid, int) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_monthly_revenue(uuid, int) TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.fn_aggregate_kpi_daily(
   p_agency_id uuid,

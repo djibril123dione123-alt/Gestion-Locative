@@ -40,6 +40,7 @@ export function Table<T extends { id: string }>({
           href={`https://mail.google.com/mail/?view=cm&fs=1&to=${to}`}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label={`Envoyer un email à ${text}`}
           className="font-bold text-brand-700 underline-offset-2 transition hover:text-brand-950 hover:underline"
         >
           {text}
@@ -53,6 +54,7 @@ export function Table<T extends { id: string }>({
         return (
           <a
             href={`tel:${phone}`}
+            aria-label={`Appeler ${text}`}
             className="font-bold text-brand-700 underline-offset-2 transition hover:text-brand-950 hover:underline"
           >
             {text}
@@ -80,7 +82,7 @@ export function Table<T extends { id: string }>({
     <>
       <div className="space-y-3 sm:hidden">
         {data.map((item) => (
-          <div key={item.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div key={item.id} className="overflow-hidden rounded-lg border border-emerald-950/10 bg-white/90 shadow-sm backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:shadow-premium">
             <div className="divide-y divide-slate-100">
               {columns.map((col) => {
                 const rawValue = col.render ? col.render(item) : getCellValue(item, col.key);

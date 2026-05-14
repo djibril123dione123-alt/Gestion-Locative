@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { BarChart3, Filter } from 'lucide-react';
 import { Tabs, TabPanel } from '../components/ui/Tabs';
 import { BrandMark } from '../components/brand/BrandLogo';
-import { LoadingState } from '../components/ui/LoadingState';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 const TableauDeBordFinancierGlobal = lazy(() =>
   import('./TableauDeBordFinancierGlobal').then((m) => ({ default: m.TableauDeBordFinancierGlobal })),
@@ -20,7 +20,7 @@ const TABS = [
   { id: 'filtres', label: 'Filtres avancés', icon: Filter },
 ];
 
-const PageLoader = () => <LoadingState label="Analyses" compact />;
+const PageLoader = () => <PageSkeleton title="Analyses" variant="analytics" className="p-4 sm:p-6" />;
 
 /**
  * Page « Analyses & rapports » : fusion Rapports financiers + Filtres avancés.

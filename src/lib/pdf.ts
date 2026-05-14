@@ -425,7 +425,9 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
 
   const loyer = Number(contrat.loyer_mensuel ?? 0);
   const paye = Number(paiement.montant_total ?? 0);
-  const reliquat = Math.max(loyer - paye, 0);
+  const reliquat = paiement.reliquat != null
+    ? Number(paiement.reliquat)
+    : Math.max(loyer - paye, 0);
   // Numéro de quittance unique (QIT-AAAAMM-XXXX) — légalement traçable
   const ref = paiement.reference ?? generateQuittanceRef(paiement);
 

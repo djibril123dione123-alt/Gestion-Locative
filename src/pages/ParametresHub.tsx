@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { Building, UserPlus, CreditCard } from 'lucide-react';
 import { Tabs, TabPanel } from '../components/ui/Tabs';
 import { BrandMark } from '../components/brand/BrandLogo';
-import { LoadingState } from '../components/ui/LoadingState';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 const Parametres = lazy(() => import('./Parametres').then((m) => ({ default: m.Parametres })));
 const Equipe = lazy(() => import('./Equipe').then((m) => ({ default: m.Equipe })));
@@ -18,7 +18,7 @@ const TABS = [
   { id: 'abonnement', label: 'Abonnement', icon: CreditCard },
 ];
 
-const PageLoader = () => <LoadingState label="Paramètres" compact />;
+const PageLoader = () => <PageSkeleton title="Paramètres" variant="form" className="p-4 sm:p-6" />;
 
 /**
  * Page « Paramètres » consolidée : regroupe Mon agence (ex-Parametres),

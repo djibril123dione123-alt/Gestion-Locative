@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, XCircle, MinusCircle, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, MinusCircle, XCircle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export interface PaiementContrats {
@@ -17,6 +17,9 @@ export interface PaiementRow {
   date_paiement: string;
   mode_paiement: string;
   statut: string;
+  montant_attendu?: number | null;
+  montant_encaisse_cumul?: number | null;
+  reliquat?: number | null;
   reference: string | null;
   actif?: boolean;
   deleted_at?: string | null;
@@ -32,10 +35,10 @@ export interface ContratRow {
   unites?: { nom: string; id?: string } | null;
 }
 
-export type StatusFilter = 'tous' | 'paye' | 'en_attente' | 'impaye' | 'partiel';
+export type StatusFilter = 'tous' | 'paye' | 'partiel';
 
 export type FormModePayment = 'especes' | 'cheque' | 'virement' | 'mobile_money';
-export type FormPaiementStatut = 'paye' | 'en_attente' | 'impaye' | 'partiel';
+export type FormPaiementStatut = 'paye' | 'partiel';
 
 export interface StatusLabel {
   label: string;

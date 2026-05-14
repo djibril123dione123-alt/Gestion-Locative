@@ -172,19 +172,20 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     let encaisseMois = 0;
     let nbPaiementsMois = 0;
     let encaissePrev = 0;
-    let enAttente = 0;
+    let reliquats = 0;
 
     paiements.forEach((p) => {
       const moisP = (p.mois_concerne || '').slice(0, 7);
-      if (p.statut === 'paye') {
+      if (p.statut === 'paye' || p.statut === 'partiel') {
         if (moisP === currentMonthYYYYMM) {
           encaisseMois += Number(p.montant_total || 0);
           nbPaiementsMois++;
         } else if (moisP === prevMonth) {
           encaissePrev += Number(p.montant_total || 0);
         }
-      } else if (p.statut === 'en_attente') {
-        enAttente += Number(p.montant_total || 0);
+      }
+      if (moisP === currentMonthYYYYMM && p.statut === 'partiel') {
+        reliquats += Number(p.reliquat || 0);
       }
     });
 
@@ -195,16 +196,14 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         ? Math.round(((encaisseMois - encaissePrev) / encaissePrev) * 100)
         : null;
 
-    return { encaisseMois, encaissePrev, nbPaiementsMois, enAttente, attenduMois, tauxRecouvrement, variation };
+    return { encaisseMois, encaissePrev, nbPaiementsMois, reliquats, attenduMois, tauxRecouvrement, variation };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paiements, contrats]);
 
   const counts = useMemo(() => {
-    const c: Record<StatusFilter, number> = { tous: paiements.length, paye: 0, en_attente: 0, impaye: 0, partiel: 0 };
+    const c: Record<StatusFilter, number> = { tous: paiements.length, paye: 0, partiel: 0 };
     paiements.forEach((p) => {
       if (p.statut === 'paye') c.paye++;
-      else if (p.statut === 'en_attente') c.en_attente++;
-      else if (p.statut === 'impaye') c.impaye++;
       else if (p.statut === 'partiel') c.partiel++;
     });
     return c;
@@ -219,7 +218,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       mois_concerne: paiement.mois_concerne,
       date_paiement: paiement.date_paiement,
       mode_paiement: paiement.mode_paiement as PaiementFormData['mode_paiement'],
-      statut: paiement.statut as PaiementFormData['statut'],
+      statut: paiement.statut === 'partiel' ? 'partiel' : 'paye',
       reference: paiement.reference || '',
     });
     setIsModalOpen(true);
@@ -282,7 +281,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           id: editingPaiement.id,
           montant_total: parseFloat(formData.montant_total),
           mode_paiement: formData.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre',
-          statut: formData.statut as 'paye' | 'partiel' | 'impaye',
+          statut: formData.statut as 'paye' | 'partiel',
           date_paiement: formData.date_paiement,
           reference: formData.reference || null,
         });
@@ -301,7 +300,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           mois_concerne: moisConcerne,
           date_paiement: formData.date_paiement,
           mode_paiement: formData.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre',
-          statut: formData.statut as 'paye' | 'partiel' | 'impaye',
+          statut: formData.statut as 'paye' | 'partiel',
           idempotency_key: idempotencyKey,
           reference: formData.reference || null,
         });
@@ -371,7 +370,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       const { data: pmt, error: e1 } = await supabase
         .from('paiements')
         .select(
-          `id, created_at, date_paiement, mois_concerne, montant_total, reference,
+          `id, created_at, date_paiement, mois_concerne, montant_total, reliquat, reference,
            contrats(id, loyer_mensuel, commission, locataires(nom, prenom), unites(id, nom))`,
         )
         .eq('agency_id', profile.agency_id)
@@ -384,6 +383,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         date_paiement: string;
         mois_concerne: string;
         montant_total: number;
+        reliquat?: number | null;
         reference: string | null;
         contrats: {
           id: string;
@@ -432,7 +432,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     }
   };
 
-  const ALL_COLUMN_KEYS = ['locataire', 'unite', 'mois_concerne', 'montant_total', 'date_paiement', 'mode', 'statut', 'actions'];
+  const ALL_COLUMN_KEYS = ['locataire', 'unite', 'mois_concerne', 'montant_total', 'reliquat', 'date_paiement', 'mode', 'statut', 'actions'];
   const { visibility, toggle, setAll, isVisible } = useColumnVisibility('paiements', ALL_COLUMN_KEYS, { actions: true });
 
   const allColumns = [
@@ -460,6 +460,15 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       label: 'Montant',
       render: (p: PaiementRow) => (
         <span className="font-semibold tabular-nums">{formatCurrency(p.montant_total)}</span>
+      ),
+    },
+    {
+      key: 'reliquat',
+      label: 'Reliquat',
+      render: (p: PaiementRow) => (
+        <span className={`font-semibold tabular-nums ${Number(p.reliquat || 0) > 0 ? 'text-orange-700' : 'text-emerald-700'}`}>
+          {formatCurrency(Number(p.reliquat || 0))}
+        </span>
       ),
     },
     {
@@ -536,8 +545,6 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     { id: 'tous',        label: 'Tous',       count: counts.tous        },
     { id: 'paye',        label: 'Payés',      count: counts.paye        },
     { id: 'partiel',     label: 'Partiel',    count: counts.partiel     },
-    { id: 'en_attente',  label: 'En attente', count: counts.en_attente  },
-    { id: 'impaye',      label: 'Impayés',    count: counts.impaye      },
   ];
 
   const exportRows = paiements.map((p) => ({
@@ -619,9 +626,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
             />
             <KpiCard
               icon={Clock}
-              label="En attente"
-              value={formatCurrency(kpis.enAttente)}
-              subtitle="à encaisser"
+              label="Reliquats"
+              value={formatCurrency(kpis.reliquats)}
+              subtitle="reste dû sur paiements partiels"
               accent="amber"
             />
             <KpiCard

@@ -1,17 +1,9 @@
 /**
- * Edge Function : create-paiement
+ * create-paiement
  *
- * Source de vérité serveur pour la création de paiements.
- *
- * Garanties :
- *   1. JWT vérifié — utilisateur authentifié
- *   2. agency_id injecté côté serveur (jamais lu depuis le client)
- *   3. Payload validé avec Zod (types, bornes, formats)
- *   4. Propriété du contrat vérifiée via RLS (client JWT)
- *   5. Commission calculée serveur (identique à commissionService frontend)
- *   6. INSERT via service role avec agency_id injecté
- *
- * Appelé via : supabase.functions.invoke('create-paiement', { body })
+ * Server source of truth for rent payments. The actual financial mutation is
+ * delegated to Postgres RPC so the overpayment check, partial-payment balance,
+ * commission split and insert happen in one locked transaction.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -25,56 +17,43 @@ const CORS = {
   "Content-Type": "application/json",
 };
 
-// ─── Schéma Zod ───────────────────────────────────────────────────────────────
-
 const ModesPaiement = [
   "especes",
   "virement",
   "cheque",
   "mobile_money",
-  "carte",
   "autre",
 ] as const;
 
-// Statuts acceptés à la création — doit correspondre à l'ENUM DB paiement_statut
-// ('paye', 'partiel', 'impaye', 'annule', 'en_attente')
-const StatutsPaiement = ["paye", "en_attente", "partiel", "impaye"] as const;
+const StatutsPaiement = ["paye", "partiel", "en_attente"] as const;
 
 const CreatePaiementSchema = z.object({
-  contrat_id: z
-    .string()
-    .uuid({ message: "contrat_id doit être un UUID valide" }),
+  contrat_id: z.string().uuid({ message: "contrat_id doit etre un UUID valide" }),
   montant_total: z.coerce
-    .number({ invalid_type_error: "montant_total doit être un nombre" })
-    .positive({ message: "montant_total doit être strictement positif" }),
-  mois_concerne: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, {
-      message: "mois_concerne doit être au format YYYY-MM-DD",
-    }),
-  date_paiement: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, {
-      message: "date_paiement doit être au format YYYY-MM-DD",
-    }),
+    .number({ invalid_type_error: "montant_total doit etre un nombre" })
+    .positive({ message: "montant_total doit etre strictement positif" }),
+  mois_concerne: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "mois_concerne doit etre au format YYYY-MM-DD",
+  }),
+  date_paiement: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: "date_paiement doit etre au format YYYY-MM-DD",
+  }),
   mode_paiement: z.enum(ModesPaiement, {
     errorMap: () => ({
-      message: `mode_paiement doit être : ${ModesPaiement.join(", ")}`,
+      message: `mode_paiement doit etre : ${ModesPaiement.join(", ")}`,
     }),
   }),
   statut: z.enum(StatutsPaiement, {
     errorMap: () => ({
-      message: `statut doit être : ${StatutsPaiement.join(", ")}`,
+      message: "statut doit etre paye, partiel ou en_attente",
     }),
-  }),
+  }).default("paye"),
   idempotency_key: z.string().min(12).max(120).nullable().optional(),
   reference: z.string().max(100).nullable().optional(),
   notes: z.string().max(500).nullable().optional(),
 });
 
 type CreatePaiementInput = z.infer<typeof CreatePaiementSchema>;
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: CORS });
@@ -92,51 +71,78 @@ async function readBody(req: Request): Promise<unknown> {
   }
 }
 
-// Commission calculation — identique à commissionService.ts frontend
-function calculateParts(
-  montantTotal: number,
-  commission: number,
-): { partAgence: number; partBailleur: number } {
-  const partAgence = Math.round((montantTotal * commission) / 100);
-  const partBailleur = montantTotal - partAgence;
-  return { partAgence, partBailleur };
+function mapDbError(message: string): { message: string; status: number; code: string } {
+  if (message.includes("OVERPAYMENT")) {
+    return {
+      message: message.replace(/^.*OVERPAYMENT:\s*/i, "Surpaiement detecte : "),
+      status: 409,
+      code: "OVERPAYMENT",
+    };
+  }
+  if (message.includes("COMMISSION_REQUIRED")) {
+    return {
+      message: "La commission n'est pas definie sur ce contrat.",
+      status: 422,
+      code: "COMMISSION_REQUIRED",
+    };
+  }
+  if (message.includes("COMMISSION_RANGE")) {
+    return {
+      message: "Le taux de commission doit etre entre 0 et 100.",
+      status: 422,
+      code: "COMMISSION_RANGE",
+    };
+  }
+  if (message.includes("IMPAYE_IS_NOT_A_PAYMENT")) {
+    return {
+      message: "Un impaye est un solde a recouvrer, pas un paiement. Enregistrez un encaissement reel.",
+      status: 422,
+      code: "IMPAYE_IS_NOT_A_PAYMENT",
+    };
+  }
+  if (message.includes("CONTRAT_NOT_FOUND")) {
+    return {
+      message: "Contrat introuvable ou acces refuse.",
+      status: 404,
+      code: "CONTRAT_NOT_FOUND",
+    };
+  }
+  return { message, status: 422, code: "DB_ERROR" };
 }
 
-// ─── Handler ──────────────────────────────────────────────────────────────────
+async function getAuthenticatedUser(req: Request) {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return { error: err("Token d'authentification manquant.", 401, "NOT_AUTHENTICATED") };
+  }
+
+  const supabaseUser = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } },
+  );
+
+  const {
+    data: { user },
+    error: authErr,
+  } = await supabaseUser.auth.getUser();
+
+  if (authErr || !user) {
+    return { error: err("Token invalide ou expire.", 401, "INVALID_TOKEN") };
+  }
+
+  return { user };
+}
 
 serve(async (req: Request) => {
-  // Preflight CORS
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: CORS });
-  }
-
-  if (req.method !== "POST") {
-    return err("Méthode non autorisée — utilisez POST.", 405);
-  }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== "POST") return err("Methode non autorisee. Utilisez POST.", 405);
 
   try {
-    // ── 1. Authentification ──────────────────────────────────────────────────
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return err("Token d'authentification manquant.", 401, "NOT_AUTHENTICATED");
-    }
+    const auth = await getAuthenticatedUser(req);
+    if (auth.error) return auth.error;
+    const user = auth.user!;
 
-    const supabaseUser = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-
-    const {
-      data: { user },
-      error: authErr,
-    } = await supabaseUser.auth.getUser();
-
-    if (authErr || !user) {
-      return err("Token invalide ou expiré.", 401, "INVALID_TOKEN");
-    }
-
-    // ── 2. Profil + agency_id injecté serveur ────────────────────────────────
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -148,194 +154,63 @@ serve(async (req: Request) => {
       .eq("id", user.id)
       .single();
 
-    if (profileErr || !profile) {
-      return err("Profil utilisateur introuvable.", 403, "PROFILE_NOT_FOUND");
-    }
-
-    if (!profile.actif) {
-      return err("Compte désactivé.", 403, "ACCOUNT_DISABLED");
-    }
-
+    if (profileErr || !profile) return err("Profil utilisateur introuvable.", 403, "PROFILE_NOT_FOUND");
+    if (!profile.actif) return err("Compte desactive.", 403, "ACCOUNT_DISABLED");
     if (profile.role === "bailleur") {
-      return err(
-        "Accès refusé : les bailleurs ne peuvent pas créer de paiements.",
-        403,
-        "FORBIDDEN_ROLE",
-      );
+      return err("Acces refuse : les bailleurs ne peuvent pas creer de paiements.", 403, "FORBIDDEN_ROLE");
     }
+    if (!profile.agency_id) return err("Aucune agence associee a ce compte.", 403, "NO_AGENCY");
 
-    const agencyId: string = profile.agency_id;
-    if (!agencyId) {
-      return err("Aucune agence associée à ce compte.", 403, "NO_AGENCY");
-    }
-
-    // ── 3. Validation Zod ────────────────────────────────────────────────────
     const rawBody = await readBody(req);
-    if (!rawBody) {
-      return err(
-        "Corps de la requête invalide — JSON attendu.",
-        400,
-        "INVALID_JSON",
-      );
-    }
+    if (!rawBody) return err("Corps de la requete invalide. JSON attendu.", 400, "INVALID_JSON");
 
     const parsed = CreatePaiementSchema.safeParse(rawBody);
     if (!parsed.success) {
       const details = parsed.error.issues
-        .map((i) => `${i.path.join(".")}: ${i.message}`)
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
         .join("; ");
-      return err(`Données invalides — ${details}`, 422, "VALIDATION_ERROR");
+      return err(`Donnees invalides : ${details}`, 422, "VALIDATION_ERROR");
     }
 
     const input: CreatePaiementInput = parsed.data;
     const idempotencyKey = input.idempotency_key?.trim() || null;
 
-    if (idempotencyKey) {
-      const { data: existingPayment } = await supabaseAdmin
-        .from("paiements")
-        .select()
-        .eq("agency_id", agencyId)
-        .eq("idempotency_key", idempotencyKey)
-        .maybeSingle();
-
-      if (existingPayment) {
-        return json({ data: existingPayment, idempotent: true }, 200);
-      }
-    }
-
-    // ── 4. Vérification propriété du contrat (via RLS user client) ───────────
-    // Le client JWT garantit que seuls les contrats de l'agence sont accessibles.
-    const { data: contrat, error: contratErr } = await supabaseAdmin
-      .from("contrats")
-      .select("id, agency_id, commission, loyer_mensuel, statut")
-      .eq("id", input.contrat_id)
-      .eq("agency_id", agencyId)
-      .maybeSingle();
-
-    if (contratErr || !contrat) {
-      return err(
-        "Contrat introuvable ou accès refusé.",
-        404,
-        "CONTRAT_NOT_FOUND",
-      );
-    }
-
-    // ── 5. Validation commission (règle métier centrale) ────────────────────
-    if (contrat.commission === null || contrat.commission === undefined) {
-      return err(
-        "COMMISSION_REQUISE : La commission n'est pas définie sur ce contrat. " +
-          "Configurez le taux avant d'enregistrer un paiement.",
-        422,
-        "COMMISSION_REQUIRED",
-      );
-    }
-
-    const commission = Number(contrat.commission);
-    if (isNaN(commission) || commission < 0 || commission > 100) {
-      return err(
-        `COMMISSION_HORS_BORNES : Le taux (${contrat.commission}%) doit être entre 0 et 100.`,
-        422,
-        "COMMISSION_RANGE",
-      );
-    }
-
-    // ── 6. Calcul parts (source de vérité serveur) ───────────────────────────
-    const { partAgence, partBailleur } = calculateParts(
-      input.montant_total,
-      commission,
+    const { data: paiement, error: rpcErr } = await supabaseAdmin.rpc(
+      "fn_create_paiement_financial",
+      {
+        p_agency_id: profile.agency_id,
+        p_user_id: user.id,
+        p_contrat_id: input.contrat_id,
+        p_montant_total: input.montant_total,
+        p_mois_concerne: input.mois_concerne,
+        p_date_paiement: input.date_paiement,
+        p_mode_paiement: input.mode_paiement,
+        p_statut: input.statut,
+        p_reference: input.reference ?? null,
+        p_notes: input.notes ?? null,
+        p_idempotency_key: idempotencyKey,
+      },
     );
 
-    const { data: existingPaiements, error: existingPaiementsErr } =
-      await supabaseAdmin
-        .from("paiements")
-        .select("montant_total")
-        .eq("agency_id", agencyId)
-        .eq("contrat_id", input.contrat_id)
-        .eq("mois_concerne", input.mois_concerne)
-        .neq("statut", "annule")
-        .is("deleted_at", null);
-
-    if (existingPaiementsErr) {
-      return err(
-        `Impossible de verifier les paiements existants : ${existingPaiementsErr.message}`,
-        500,
-        "PAYMENT_SUM_CHECK_FAILED",
-      );
-    }
-
-    const alreadyPaid = (existingPaiements ?? []).reduce(
-      (sum, paiement) => sum + Number(paiement.montant_total || 0),
-      0,
-    );
-    const maxExpected = Number(contrat.loyer_mensuel || 0);
-    if (
-      ["paye", "partiel", "en_attente"].includes(input.statut) &&
-      maxExpected > 0 &&
-      alreadyPaid + input.montant_total > maxExpected
-    ) {
-      return err(
-        `Surpaiement detecte : ${alreadyPaid} XOF deja enregistres pour ce mois, ` +
-          `nouveau paiement ${input.montant_total} XOF, loyer attendu ${maxExpected} XOF.`,
-        409,
-        "OVERPAYMENT",
-      );
-    }
-
-    // Sanity check avant d'écrire en base
-    const ecart = Math.abs(partAgence + partBailleur - input.montant_total);
-    if (ecart >= 0.01) {
-      return err(
-        `Incohérence de calcul interne : parts (${partAgence} + ${partBailleur}) ≠ total (${input.montant_total}).`,
-        500,
-        "CALC_ERROR",
-      );
-    }
-
-    // ── 7. INSERT via service role — agency_id injecté serveur ──────────────
-    const { data: paiement, error: insertErr } = await supabaseAdmin
-      .from("paiements")
-      .insert({
-        contrat_id: input.contrat_id,
-        montant_total: input.montant_total,
-        mois_concerne: input.mois_concerne,
-        date_paiement: input.date_paiement,
-        mode_paiement: input.mode_paiement,
-        statut: input.statut,
-        reference: input.reference ?? null,
-        notes: input.notes ?? null,
-        idempotency_key: idempotencyKey,
-        part_agence: partAgence,
-        part_bailleur: partBailleur,
-        agency_id: agencyId, // injecté serveur — jamais lu depuis le client
-        created_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (insertErr) {
-      if (insertErr.code === "23505" && idempotencyKey) {
+    if (rpcErr) {
+      if (rpcErr.code === "23505" && idempotencyKey) {
         const { data: existingPayment } = await supabaseAdmin
           .from("paiements")
           .select()
-          .eq("agency_id", agencyId)
+          .eq("agency_id", profile.agency_id)
           .eq("idempotency_key", idempotencyKey)
           .maybeSingle();
 
-        if (existingPayment) {
-          return json({ data: existingPayment, idempotent: true }, 200);
-        }
+        if (existingPayment) return json({ data: existingPayment, idempotent: true }, 200);
       }
 
-      // Remonter les erreurs de triggers PL/pgSQL (messages métier en français)
-      return err(
-        insertErr.message,
-        422,
-        insertErr.code ?? "DB_CONSTRAINT",
-      );
+      const mapped = mapDbError(rpcErr.message);
+      return err(mapped.message, mapped.status, mapped.code);
     }
 
     return json({ data: paiement }, 201);
-  } catch {
+  } catch (unexpected) {
+    console.error("[create-paiement] unexpected error", unexpected);
     return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
   }
 });

@@ -96,6 +96,9 @@ export interface Paiement {
   mode_paiement: ModePayment;
   part_agence: number;
   part_bailleur: number;
+  montant_attendu: number | null;
+  montant_encaisse_cumul: number | null;
+  reliquat: number | null;
   statut: PaiementStatut;
   reference: string | null;
   piece_justificative: string | null;

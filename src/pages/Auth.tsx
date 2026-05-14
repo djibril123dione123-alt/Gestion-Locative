@@ -69,13 +69,13 @@ export function Auth() {
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(242,237,227,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(242,237,227,0.035)_1px,transparent_1px)] bg-[size:48px_48px]" />
       <div className="pointer-events-none absolute left-1/2 top-10 h-72 w-72 -translate-x-1/2 rounded-full bg-action-500/16 blur-3xl" />
 
-      <div className="relative w-full max-w-md py-4 sm:py-8">
+      <div className="relative w-full max-w-md py-3 sm:py-8">
         <div className="sk-card-premium overflow-hidden border-white/70 bg-white/[0.9] shadow-[0_32px_120px_rgba(6,17,13,0.32)] animate-scaleIn">
-          <div className="p-6 sm:p-8">
-            <div className="mb-8 text-center">
-              <BrandMark size="xl" tone="light" animated className="mx-auto mb-4" />
+          <div className="p-5 sm:p-8">
+            <div className="mb-6 text-center sm:mb-8">
+              <BrandMark size="lg" tone="light" animated className="mx-auto mb-4" />
               <p className="text-xs font-black uppercase tracking-[0.34em] text-action-600">Manage. Grow. Prosper.</p>
-              <h1 className="mt-3 text-2xl font-black tracking-[0.12em] text-brand-950">SAMAY KËUR</h1>
+              <h1 className="mt-3 text-xl font-black tracking-[0.12em] text-brand-950 sm:text-2xl">SAMAY KËUR</h1>
               <p className="mt-4 text-slate-600">
                 Votre gestion locative, simplifiée et automatisée.
               </p>
@@ -141,13 +141,13 @@ export function Auth() {
             </div>
 
             {error && (
-              <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 animate-slideInUp">
+              <div id="auth-error" className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 animate-slideInUp">
                 <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
                 <p className="text-sm text-red-800">{error}</p>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-5" aria-describedby={error ? 'auth-error' : undefined}>
               {mode === 'register' && (
                 <div className="grid grid-cols-2 gap-4 animate-slideInLeft">
                   <div>
@@ -157,6 +157,7 @@ export function Auth() {
                     <input
                       type="text"
                       required
+                      autoComplete="given-name"
                       value={formData.prenom}
                       onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
                       className="sk-input w-full px-4 py-3"
@@ -170,6 +171,7 @@ export function Auth() {
                     <input
                       type="text"
                       required
+                      autoComplete="family-name"
                       value={formData.nom}
                       onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                       className="sk-input w-full px-4 py-3"
@@ -186,6 +188,8 @@ export function Auth() {
                 <input
                   type="email"
                   required
+                  autoComplete="email"
+                  aria-invalid={!!error}
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   className="sk-input w-full px-4 py-3"
@@ -201,6 +205,8 @@ export function Auth() {
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
+                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                    aria-invalid={!!error}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="sk-input w-full px-4 py-3 pr-12"
@@ -226,6 +232,8 @@ export function Auth() {
                   <input
                     type="password"
                     required
+                    autoComplete="new-password"
+                    aria-invalid={!!error}
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                     className="sk-input w-full px-4 py-3"

@@ -151,7 +151,7 @@ export async function syncPendingMutations(
             | 'cheque'
             | 'mobile_money'
             | 'autre',
-          statut: m.payload.statut as 'paye' | 'partiel' | 'impaye',
+          statut: m.payload.statut as 'paye' | 'partiel' | 'en_attente',
           idempotency_key: (m.payload.idempotency_key as string | null | undefined) ?? null,
           reference: (m.payload.reference as string | null) ?? null,
         });
@@ -170,7 +170,7 @@ export async function syncPendingMutations(
               | 'autre',
           }),
           ...(m.payload.statut != null && {
-            statut: m.payload.statut as 'paye' | 'partiel' | 'impaye' | 'annule',
+            statut: m.payload.statut as 'paye' | 'partiel' | 'en_attente',
           }),
           ...(m.payload.date_paiement != null && {
             date_paiement: m.payload.date_paiement as string,

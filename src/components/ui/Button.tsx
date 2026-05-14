@@ -91,7 +91,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         </span>
       )}
       {!loading && Icon && iconPosition === 'left' && <Icon className={ICON_SIZE[size]} />}
-      {children && <span className="whitespace-nowrap">{children}</span>}
+      {children && <span className="min-w-0 text-center leading-tight sm:whitespace-nowrap">{children}</span>}
       {!loading && Icon && iconPosition === 'right' && <Icon className={ICON_SIZE[size]} />}
     </button>
   );

@@ -1,16 +1,8 @@
 /**
- * Edge Function : cancel-paiement
+ * cancel-paiement
  *
- * Annulation sécurisée d'un paiement (soft-cancel : statut = 'annule').
- * Garanties :
- *   1. JWT + agency_id serveur
- *   2. Vérification propriété du paiement
- *   3. Idempotent si déjà annulé
- *   4. Entrée de reversal dans ledger_entries
- *   5. Suppression de la ligne revenus associée
- *   6. Log dans event_log
- *
- * Appelé via : supabase.functions.invoke('cancel-paiement', { body: { id, raison? } })
+ * Soft-cancels a payment. The database trigger is the single writer for ledger
+ * reversal, which keeps cancellation idempotent and append-only.
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -25,16 +17,18 @@ const CORS = {
 };
 
 const CancelPaiementSchema = z.object({
-  id: z.string().uuid({ message: "id doit être un UUID valide" }),
+  id: z.string().uuid({ message: "id doit etre un UUID valide" }),
   raison: z.string().max(300).optional(),
 });
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: CORS });
 }
+
 function err(message: string, status = 400, code?: string) {
   return json({ error: message, ...(code ? { code } : {}) }, status);
 }
+
 async function readBody(req: Request): Promise<unknown> {
   try {
     return await req.json();
@@ -46,11 +40,10 @@ async function readBody(req: Request): Promise<unknown> {
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST" && req.method !== "DELETE") {
-    return err("Méthode non autorisée — utilisez POST.", 405);
+    return err("Methode non autorisee. Utilisez POST.", 405);
   }
 
   try {
-    // ── 1. Authentification ──────────────────────────────────────────────────
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return err("Token manquant.", 401, "NOT_AUTHENTICATED");
@@ -62,10 +55,12 @@ serve(async (req: Request) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    const { data: { user }, error: authErr } = await supabaseUser.auth.getUser();
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabaseUser.auth.getUser();
     if (authErr || !user) return err("Token invalide.", 401, "INVALID_TOKEN");
 
-    // ── 2. Profil + agency_id ────────────────────────────────────────────────
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -78,47 +73,45 @@ serve(async (req: Request) => {
       .single();
 
     if (profileErr || !profile) return err("Profil introuvable.", 403, "PROFILE_NOT_FOUND");
-    if (!profile.actif) return err("Compte désactivé.", 403, "ACCOUNT_DISABLED");
-    if (profile.role === "bailleur") return err("Accès refusé.", 403, "FORBIDDEN_ROLE");
+    if (!profile.actif) return err("Compte desactive.", 403, "ACCOUNT_DISABLED");
+    if (profile.role === "bailleur") return err("Acces refuse.", 403, "FORBIDDEN_ROLE");
 
     const agencyId: string = profile.agency_id;
-    if (!agencyId) return err("Aucune agence associée.", 403, "NO_AGENCY");
+    if (!agencyId) return err("Aucune agence associee.", 403, "NO_AGENCY");
 
-    // ── 3. Validation Zod ────────────────────────────────────────────────────
     const rawBody = await readBody(req);
     if (!rawBody) return err("JSON invalide.", 400, "INVALID_JSON");
 
     const parsed = CancelPaiementSchema.safeParse(rawBody);
     if (!parsed.success) {
-      const details = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
-      return err(`Données invalides — ${details}`, 422, "VALIDATION_ERROR");
+      const details = parsed.error.issues
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+        .join("; ");
+      return err(`Donnees invalides : ${details}`, 422, "VALIDATION_ERROR");
     }
 
     const { id, raison } = parsed.data;
 
-    // ── 4. Récupération paiement (vérification propriété) ────────────────────
     const { data: paiement, error: fetchErr } = await supabaseAdmin
       .from("paiements")
-      .select("id, statut, montant_total, part_agence, part_bailleur, agency_id, contrat_id")
+      .select("id, statut, montant_total, agency_id")
       .eq("id", id)
       .eq("agency_id", agencyId)
       .single();
 
     if (fetchErr || !paiement) {
-      return err("Paiement introuvable ou accès refusé.", 404, "NOT_FOUND");
+      return err("Paiement introuvable ou acces refuse.", 404, "NOT_FOUND");
     }
 
-    // Idempotent : déjà annulé = succès silencieux
     if (paiement.statut === "annule") {
       return json({ data: { id, statut: "annule", already_cancelled: true } }, 200);
     }
 
-    // ── 5. Soft-cancel : statut = 'annule' ───────────────────────────────────
     const { data: cancelled, error: cancelErr } = await supabaseAdmin
       .from("paiements")
       .update({
         statut: "annule",
-        notes: raison ? `Annulé : ${raison}` : "Annulé",
+        notes: raison ? `Annule : ${raison}` : "Annule",
         updated_at: new Date().toISOString(),
       })
       .eq("id", id)
@@ -126,11 +119,8 @@ serve(async (req: Request) => {
       .select()
       .single();
 
-    if (cancelErr) {
-      return err(cancelErr.message, 422, cancelErr.code ?? "DB_ERROR");
-    }
+    if (cancelErr) return err(cancelErr.message, 422, cancelErr.code ?? "DB_ERROR");
 
-    // ── 6. Suppression revenus associés ──────────────────────────────────────
     const { error: revenusErr } = await supabaseAdmin
       .from("revenus")
       .delete()
@@ -139,26 +129,6 @@ serve(async (req: Request) => {
       console.warn("[cancel-paiement] revenus cleanup failed", revenusErr.message);
     }
 
-    // ── 7. Ledger reversal ───────────────────────────────────────────────────
-    if (paiement.montant_total && paiement.montant_total > 0) {
-      const { error: ledgerErr } = await supabaseAdmin.from("ledger_entries").insert([
-        {
-          agency_id: agencyId,
-          type: "annulation",
-          direction: "debit",
-          montant: paiement.montant_total,
-          reference_type: "paiements",
-          reference_id: id,
-          description: raison ? `Annulation : ${raison}` : "Annulation paiement",
-          created_by: user.id,
-        },
-      ]);
-      if (ledgerErr) {
-        console.warn("[cancel-paiement] ledger reversal failed", ledgerErr.message);
-      }
-    }
-
-    // ── 8. Log event ─────────────────────────────────────────────────────────
     const { error: eventErr } = await supabaseAdmin.from("event_log").insert({
       agency_id: agencyId,
       event_type: "paiement.cancelled",
@@ -167,12 +137,11 @@ serve(async (req: Request) => {
       payload: { raison: raison ?? null, montant: paiement.montant_total, cancelled_by: user.id },
       created_by: user.id,
     });
-    if (eventErr) {
-      console.warn("[cancel-paiement] event_log insert failed", eventErr.message);
-    }
+    if (eventErr) console.warn("[cancel-paiement] event_log insert failed", eventErr.message);
 
     return json({ data: cancelled }, 200);
-  } catch {
+  } catch (unexpected) {
+    console.error("[cancel-paiement] unexpected error", unexpected);
     return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
   }
 });

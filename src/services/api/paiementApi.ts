@@ -6,7 +6,7 @@ export interface CreatePaiementInput {
   mois_concerne: string;
   date_paiement: string;
   mode_paiement: 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre';
-  statut: 'paye' | 'partiel' | 'impaye';
+  statut: 'paye' | 'partiel' | 'en_attente';
   idempotency_key?: string | null;
   reference?: string | null;
   notes?: string | null;
@@ -16,7 +16,7 @@ export interface UpdatePaiementInput {
   id: string;
   montant_total?: number;
   mode_paiement?: 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre';
-  statut?: 'paye' | 'partiel' | 'impaye' | 'annule';
+  statut?: 'paye' | 'partiel' | 'en_attente';
   date_paiement?: string;
   reference?: string | null;
   notes?: string | null;

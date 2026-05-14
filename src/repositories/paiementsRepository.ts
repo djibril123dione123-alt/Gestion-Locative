@@ -14,6 +14,9 @@ export interface PaiementListItem {
   id: string;
   contrat_id: string;
   montant_total: number;
+  montant_attendu?: number | null;
+  montant_encaisse_cumul?: number | null;
+  reliquat?: number | null;
   mois_concerne: string;
   date_paiement: string;
   mode_paiement: string;
@@ -44,7 +47,7 @@ export interface PaiementInsert {
 export type PaiementUpdate = Partial<Omit<PaiementInsert, 'agency_id' | 'contrat_id'>>;
 
 const PAIEMENT_SELECT = `
-  id, contrat_id, montant_total, mois_concerne, date_paiement,
+  id, contrat_id, montant_total, montant_attendu, montant_encaisse_cumul, reliquat, mois_concerne, date_paiement,
   mode_paiement, statut, reference, created_at,
   contrats(loyer_mensuel, commission, locataires(nom, prenom), unites(nom, id))
 ` as const;
@@ -87,7 +90,7 @@ export const paiementsRepository = {
     const { data, error } = await supabase
       .from('paiements')
       .select(
-        `id, created_at, date_paiement, mois_concerne, montant_total, reference,
+        `id, created_at, date_paiement, mois_concerne, montant_total, reliquat, reference,
          contrats(id, loyer_mensuel, commission, locataires(nom, prenom), unites(id, nom))`,
       )
       .eq('agency_id', agencyId)

@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { CreditCard, AlertCircle } from 'lucide-react';
 import { Tabs, TabPanel } from '../components/ui/Tabs';
 import { BrandMark } from '../components/brand/BrandLogo';
-import { LoadingState } from '../components/ui/LoadingState';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 const Paiements = lazy(() => import('./Paiements').then((m) => ({ default: m.Paiements })));
 const LoyersImpayes = lazy(() => import('./LoyersImpayes').then((m) => ({ default: m.LoyersImpayes })));
@@ -16,7 +16,7 @@ const TABS = [
   { id: 'impayes', label: 'Loyers impayés', icon: AlertCircle },
 ];
 
-const PageLoader = () => <LoadingState label="Encaissements" compact />;
+const PageLoader = () => <PageSkeleton title="Encaissements" variant="table" className="p-4 sm:p-6" />;
 
 /**
  * Page « Encaissements » : fusion des anciennes pages Paiements + Loyers impayés.

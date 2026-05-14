@@ -87,6 +87,7 @@ interface PaiementMensuelRow {
     montant_total: number;
     part_agence: number;
     part_bailleur?: number | null;
+    reliquat?: number | null;
     statut: string;
     contrats?: { unites?: { immeuble_id?: string | null } | null } | null;
 }
@@ -196,12 +197,14 @@ export function TableauDeBordFinancierGlobal() {
             // ---------------------------------------------------
             // CALCUL 1: BILAN ENTREPRISE MENSUEL (KPIs) [25, 26]
             // ---------------------------------------------------
-            const totalLoyers = paiementsMensuels.reduce((sum, p) => sum + Number(p.montant_total), 0);
-            const loyersImpayes = paiementsMensuels
-                .filter(p => p.statut === 'impaye')
+            const totalLoyers = paiementsMensuels
+                .filter(p => p.statut === 'paye' || p.statut === 'partiel')
                 .reduce((sum, p) => sum + Number(p.montant_total), 0);
+            const loyersImpayes = paiementsMensuels
+                .filter(p => p.statut === 'partiel')
+                .reduce((sum, p) => sum + Number(p.reliquat || 0), 0);
             const commission = paiementsMensuels
-                .filter(p => p.statut === 'paye')
+                .filter(p => p.statut === 'paye' || p.statut === 'partiel')
                 .reduce((sum, p) => sum + Number(p.part_agence), 0);
             const revenus_alt = revenus_autresMensuels.reduce((sum, r) => sum + Number(r.montant), 0);
 
@@ -219,7 +222,7 @@ export function TableauDeBordFinancierGlobal() {
             
             // Totaux Annuels [23]
             const totalRevenusAnnuel = (paiementsAnnuels || [])
-                .filter(p => p.statut === 'paye')
+                .filter(p => p.statut === 'paye' || p.statut === 'partiel')
                 .reduce((sum, p) => sum + Number(p.part_agence), 0);
             const totalDepensesAnnuel = (depensesAnnuelles || []).reduce((sum, d) => sum + Number(d.montant), 0);
             
@@ -234,7 +237,7 @@ export function TableauDeBordFinancierGlobal() {
                 const monthStr = `${currentYear}-${String(index + 1).padStart(2, '0')}`;
                 
                 const revenus = (paiementsAnnuels || [])
-                    .filter(p => p.mois_concerne.startsWith(monthStr) && p.statut === 'paye')
+                    .filter(p => p.mois_concerne.startsWith(monthStr) && (p.statut === 'paye' || p.statut === 'partiel'))
                     .reduce((sum, p) => sum + Number(p.part_agence), 0);
                 
                 const depenses = (depensesAnnuelles || [])
@@ -308,7 +311,7 @@ export function TableauDeBordFinancierGlobal() {
                     const rapportImmeuble = rapportsMap.get(immeubleId)!;
                     const bilanBailleur = bilansMap.get(bailleurId);
 
-                    if (paiement.statut === 'paye') {
+                    if (paiement.statut === 'paye' || paiement.statut === 'partiel') {
                         // Mise à jour Rapport Immeuble [33]
                         rapportImmeuble.loyers_percus += Number(paiement.montant_total);
                         rapportImmeuble.frais_gestion += Number(paiement.part_agence);
@@ -328,19 +331,18 @@ export function TableauDeBordFinancierGlobal() {
                             bilanBailleur.total_frais += Number(paiement.part_agence);
                             bilanBailleur.total_net += Number(paiement.part_bailleur);
                         }
-                    } else if (paiement.statut === 'impaye') {
-                        // Mise à jour Rapport Immeuble [33]
-                        rapportImmeuble.loyers_impayes += Number(paiement.montant_total);
-
-                        // Mise à jour Bilan Bailleur [1]
-                         if (bilanBailleur) {
-                            let immeubleData = bilanBailleur.immeubles.find(i => i.immeuble_nom === immeuble.nom);
-                            if (!immeubleData) {
-                                immeubleData = { immeuble_nom: immeuble.nom, loyers_percus: 0, loyers_impayes: 0, frais_gestion: 0, resultat_net: 0 };
-                                bilanBailleur.immeubles.push(immeubleData);
+                        const reliquat = Number(paiement.reliquat || 0);
+                        if (reliquat > 0) {
+                            rapportImmeuble.loyers_impayes += reliquat;
+                            if (bilanBailleur) {
+                                let immeubleData = bilanBailleur.immeubles.find(i => i.immeuble_nom === immeuble.nom);
+                                if (!immeubleData) {
+                                    immeubleData = { immeuble_nom: immeuble.nom, loyers_percus: 0, loyers_impayes: 0, frais_gestion: 0, resultat_net: 0 };
+                                    bilanBailleur.immeubles.push(immeubleData);
+                                }
+                                immeubleData.loyers_impayes += reliquat;
+                                bilanBailleur.total_impayes += reliquat;
                             }
-                            immeubleData.loyers_impayes += Number(paiement.montant_total);
-                            bilanBailleur.total_impayes += Number(paiement.montant_total);
                         }
                     }
                 }

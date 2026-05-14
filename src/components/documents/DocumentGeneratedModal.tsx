@@ -72,6 +72,7 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
   if (!documentPayload) return null;
 
   const kindLabel = KIND_LABELS[documentPayload.kind] ?? 'Document';
+  const titleId = 'document-generated-title';
 
   const downloadAgain = () => {
     const link = window.document.createElement('a');
@@ -161,7 +162,12 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
         }}
       />
 
-      <section className="relative grid w-full max-w-6xl overflow-hidden rounded-2xl border border-white/12 bg-[#06130f]/94 shadow-[0_40px_140px_rgba(0,0,0,0.48)] animate-scaleIn lg:grid-cols-[0.95fr_1.05fr]">
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative grid max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-white/12 bg-[#06130f]/94 shadow-[0_40px_140px_rgba(0,0,0,0.48)] animate-scaleIn lg:grid-cols-[0.95fr_1.05fr] lg:overflow-hidden"
+      >
         <button
           type="button"
           onClick={close}
@@ -171,7 +177,7 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
           <X className="h-5 w-5" />
         </button>
 
-        <div className="relative overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,rgba(13,27,22,0.98),rgba(8,17,14,0.9))] p-6 text-white sm:p-8 lg:border-b-0 lg:border-r">
+        <div className="relative overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,rgba(13,27,22,0.98),rgba(8,17,14,0.9))] p-5 text-white sm:p-8 lg:border-b-0 lg:border-r">
           <div className="pointer-events-none absolute -left-16 -top-20 h-52 w-52 rounded-full bg-emerald-400/14 blur-3xl" />
           <div className="pointer-events-none absolute bottom-0 right-0 h-48 w-48 rounded-full bg-action-500/16 blur-3xl" />
 
@@ -190,7 +196,7 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
               </div>
             </div>
 
-            <h2 className="max-w-md text-3xl font-black tracking-tight text-white sm:text-4xl">
+            <h2 id={titleId} className="max-w-md text-2xl font-black tracking-tight text-white sm:text-4xl">
               {kindLabel} généré avec succès.
             </h2>
             <p className="mt-4 max-w-lg text-sm leading-6 text-emerald-50/72 sm:text-base">
@@ -220,7 +226,7 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
           </div>
         </div>
 
-        <div className="bg-[linear-gradient(180deg,rgba(250,247,239,0.98),rgba(242,237,227,0.95))] p-4 sm:p-6 lg:p-8">
+        <div className="overflow-y-auto bg-[linear-gradient(180deg,rgba(250,247,239,0.98),rgba(242,237,227,0.95))] p-4 sm:p-6 lg:p-8">
           <div className="mb-5 overflow-hidden rounded-2xl border border-emerald-950/12 bg-white shadow-[0_24px_70px_rgba(6,17,13,0.16)]">
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
               <div className="flex min-w-0 items-center gap-3">
@@ -235,7 +241,7 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-brand-800">PDF</span>
             </div>
 
-            <div className="hidden h-[420px] bg-slate-100 md:block">
+            <div className="hidden h-[min(420px,48vh)] bg-slate-100 md:block">
               <iframe
                 title={`Aperçu ${documentPayload.fileName}`}
                 src={documentPayload.url}

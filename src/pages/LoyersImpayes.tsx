@@ -119,15 +119,16 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
       const { data: paiementsExistants } = await supabase
         .from('paiements')
-        .select('contrat_id, mois_concerne, statut')
+        .select('contrat_id, mois_concerne, statut, montant_total')
         .eq('agency_id', profile.agency_id)
         .in('contrat_id', contratIds)
         .in('mois_concerne', lastSixMonths);
 
-      const paiementsMap = new Map();
+      const paiementsMap = new Map<string, number>();
       paiementsExistants?.forEach(p => {
+        if (p.statut !== 'paye' && p.statut !== 'partiel') return;
         const key = `${p.contrat_id}-${p.mois_concerne}`;
-        paiementsMap.set(key, p.statut);
+        paiementsMap.set(key, (paiementsMap.get(key) ?? 0) + Number(p.montant_total || 0));
       });
 
       const impayesList: LoyerImpaye[] = [];
@@ -135,9 +136,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       ((contratsActifs as ContratActifRow[] | null) || []).forEach((contrat) => {
         lastSixMonths.forEach(mois => {
           const key = `${contrat.id}-${mois}`;
-          const statut = paiementsMap.get(key);
+          const montantEncaisse = paiementsMap.get(key) ?? 0;
+          const montantDu = Math.max(Number(contrat.loyer_mensuel || 0) - montantEncaisse, 0);
 
-          if (!statut || statut === 'impaye') {
+          if (montantDu > 0) {
             impayesList.push({
               id: `${contrat.id}-${mois}`,
               locataire_nom: contrat.locataires?.nom || '',
@@ -146,7 +148,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
               immeuble_nom: contrat.unites?.immeubles?.nom || '',
               bailleur_nom: contrat.unites?.immeubles?.bailleurs?.nom || '',
               bailleur_prenom: contrat.unites?.immeubles?.bailleurs?.prenom || '',
-              montant_du: contrat.loyer_mensuel,
+              montant_du: montantDu,
               mois_concerne: mois,
               telephone_locataire: contrat.locataires?.telephone || '',
             });

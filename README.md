@@ -27,6 +27,13 @@ Les flux critiques ont ete fortement durcis:
 - Paiement abonnement idempotent contre double clic, refresh et retry.
 - Watchdog DB pour expirer les transactions PayDunya pending trop anciennes.
 - Worker analytics corrige: plus de crash Postgres `FOR UPDATE` + `DISTINCT ON`.
+- Refonte finance loyers partiels:
+  - paiements partiels acceptes et soldes automatiquement;
+  - reliquat calcule cote serveur et expose dans l'UI;
+  - detection surpaiement basee uniquement sur les vrais encaissements;
+  - commission agence separee du montant paye par le locataire;
+  - impayes calcules par echeance reelle, sans lignes fantomes;
+  - ledger append-only preserve, corrections via annulation + nouveau paiement.
 - Integration branding premium finalisee:
   - assets officiels centralises dans `public/brand/`;
   - favicon, manifest, splash mobile/desktop et loader video alignes;
@@ -39,12 +46,12 @@ Les flux critiques ont ete fortement durcis:
   - focus, hover, touch targets et scrollbars harmonises dans le theme premium;
   - suppression du warning PostCSS/Vite lie aux nodes CSS generes sans source.
 
-Dernieres verifications locales du 2026-05-13:
+Dernieres verifications locales du 2026-05-14:
 
 - `npm run lint`: OK
 - `npm run typecheck`: OK
 - `npm run test:unit`: OK, 31 tests
-- `npm run build`: OK, sans warning PostCSS/Vite
+- `npm run build`: OK
 - serveur local Vite: HTTP 200 sur `http://127.0.0.1:5173/`
 - verification navigateur integree: tentative bloquee/expiree par l'environnement local, a relancer manuellement si besoin
 
@@ -262,6 +269,7 @@ Migrations importantes recentes:
 | `20260506190933_phase3_payment_watchdog.sql` | Watchdog pending PayDunya |
 | `20260506191057_fix_worker_analytics_locking.sql` | Fix worker analytics |
 | `20260512000001_phase3_finance_security_hardening.sql` | Durcissement finance/abonnement |
+| `20260514000001_finance_partial_payments_reliquats.sql` | Paiements partiels, reliquats, impayes reels, commissions separees |
 
 Appliquer les migrations avec prudence:
 
@@ -350,6 +358,8 @@ Supabase Edge Functions:
 
 ```bash
 npx supabase functions deploy create-paiement --project-ref <project-ref> --use-api
+npx supabase functions deploy update-paiement --project-ref <project-ref> --use-api
+npx supabase functions deploy cancel-paiement --project-ref <project-ref> --use-api
 npx supabase functions deploy initiate-payment paydunya-webhook --project-ref <project-ref> --use-api
 ```
 
@@ -398,9 +408,11 @@ Flux correct:
 Paiements.tsx
   -> createPaiementViaEdge()
   -> create-paiement Edge Function
-  -> calcul commission serveur
-  -> insert paiements
-  -> trigger ledger_entries si statut paye/partiel
+  -> RPC service-role fn_create_paiement_financial()
+  -> lock DB par agence/contrat/mois
+  -> calcul reliquat + statut serveur
+  -> ventilation commission agence/bailleur
+  -> trigger ledger_entries si transition cash
 ```
 
 Le ledger ne doit enregistrer du cash que pour:
@@ -413,6 +425,14 @@ Pas pour:
 - `impaye`
 - `en_attente`
 - `annule`
+
+Regles metier:
+
+- Un paiement partiel est valide si `0 < montant < loyer attendu`.
+- Le reliquat est `loyer attendu - total encaisse reel`.
+- Un surpaiement est refuse seulement si le total des encaissements cash depasse le loyer attendu.
+- La commission est derivee du montant encaisse reel et ne modifie jamais le total paye locataire.
+- Un paiement deja comptabilise ne doit pas etre modifie; il doit etre annule puis recree.
 
 ---
 
@@ -441,11 +461,11 @@ Evaluation realiste apres les derniers correctifs:
 
 | Categorie | Score |
 |---|---:|
-| Fiabilite paiement | 78/100 |
-| Resilience globale | 74/100 |
-| Production readiness | 76/100 |
+| Fiabilite paiement | 84/100 |
+| Resilience globale | 77/100 |
+| Production readiness | 79/100 |
 | Securite applicative | 75/100 hors rotation secrets |
-| Scalabilite | 68/100 |
+| Scalabilite | 69/100 |
 
 Verdict: beta stable avancee. Pas encore SaaS robuste pour scale 500 agences sans monitoring, rate limiting et reconciliation backoffice.
 
@@ -510,4 +530,4 @@ Actions obligatoires:
 
 ---
 
-Derniere mise a jour: 8 mai 2026.
+Derniere mise a jour: 14 mai 2026.

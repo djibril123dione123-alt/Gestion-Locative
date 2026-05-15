@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
+import { canAccessPage } from '../../lib/rbac';
+import type { AgencySettings } from '../../types/agency';
 import { BrandMark } from '../brand/BrandLogo';
 import { NotificationBell } from '../ui/NotificationBell';
 
@@ -33,6 +35,12 @@ interface SidebarProps {
   onNavigate: (page: string) => void;
   isOpen?: boolean;
   onClose?: () => void;
+  moduleSettings?: Partial<
+    Pick<
+      AgencySettings,
+      'module_depenses_actif' | 'module_inventaires_actif' | 'module_interventions_actif' | 'mode_avance_actif'
+    >
+  > | null;
 }
 
 type Role = 'admin' | 'agent' | 'comptable' | 'bailleur';
@@ -136,23 +144,25 @@ function isGroup(entry: MenuLeaf | MenuGroup): entry is MenuGroup {
   return 'items' in entry;
 }
 
-export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose }: SidebarProps) {
+export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose, moduleSettings }: SidebarProps) {
   const { profile, signOut } = useAuth();
   const role = (profile?.role ?? 'agent') as Role;
 
   const visibleNav = useMemo(() => {
     if (!profile || profile.role === 'super_admin') return [] as Array<MenuLeaf | MenuGroup>;
     return NAV
-      .filter((entry) => entry.roles.includes(role))
+      .filter((entry) => entry.roles.includes(role) && canAccessPage(profile.role, entry.id, moduleSettings))
       .map((entry) => {
         if (isGroup(entry)) {
-          const items = entry.items.filter((item) => item.roles.includes(role));
+          const items = entry.items.filter(
+            (item) => item.roles.includes(role) && canAccessPage(profile.role, item.id, moduleSettings)
+          );
           return { ...entry, items };
         }
         return entry;
       })
       .filter((entry) => !isGroup(entry) || entry.items.length > 0 || entry.id === 'parametres');
-  }, [profile, role]);
+  }, [moduleSettings, profile, role]);
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const initial = new Set<string>();

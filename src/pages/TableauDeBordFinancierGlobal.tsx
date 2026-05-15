@@ -8,6 +8,7 @@ import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '../lib/formatters';
 import { saveGeneratedPdf } from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import type { AgencySettings } from '../types/agency';
 
 // -------------------------------------------------------------------------
 // 1. DÉFINITION DES TYPES ET INTERFACES UNIFIÉS
@@ -24,11 +25,24 @@ interface BilanBailleur {
         loyers_impayes: number;
         frais_gestion: number;
         resultat_net: number; // [7]
+        unites: BilanBailleurUnite[];
     }[];
     total_loyers_percus: number;
     total_impayes: number;
     total_frais: number;
     total_net: number;
+}
+
+interface BilanBailleurUnite {
+    unite_nom: string;
+    locataire_nom: string;
+    loyer: number;
+    statut_paiement: string;
+    montant_encaisse: number;
+    reliquat: number;
+    montant_restant: number;
+    periode: string;
+    observation: string;
 }
 
 // Interface pour le rapport immeuble [5, 8]
@@ -89,7 +103,12 @@ interface PaiementMensuelRow {
     part_bailleur?: number | null;
     reliquat?: number | null;
     statut: string;
-    contrats?: { unites?: { immeuble_id?: string | null } | null } | null;
+    mois_concerne?: string | null;
+    contrats?: {
+        loyer_mensuel?: number | null;
+        locataires?: { nom?: string | null; prenom?: string | null } | null;
+        unites?: { id?: string | null; nom?: string | null; immeuble_id?: string | null } | null;
+    } | null;
 }
 
 type PdfWithAutoTable = jsPDF & {
@@ -123,6 +142,7 @@ export function TableauDeBordFinancierGlobal() {
     const [monthlyData, setMonthlyData] = useState<MonthlyStat[]>([]); // [9, 11]
     const [rapportsImmeubles, setRapportsImmeubles] = useState<RapportImmeuble[]>([]); 
     const [bilansBailleurs, setBilansBailleurs] = useState<BilanBailleur[]>([]); 
+    const [agencySettings, setAgencySettings] = useState<Partial<AgencySettings> | null>(null);
     const [currentPage, setCurrentPage] = useState('bilan-entreprise'); 
 
     // -------------------------------------------------------------------------
@@ -164,10 +184,11 @@ export function TableauDeBordFinancierGlobal() {
                 // Pour Rapports Immeubles/Bailleurs:
                 bailleursRes, // [22]
                 immeublesRes, // [10, 22]
-                unitesRes // [24]
+                unitesRes, // [24]
+                settingsRes,
             ] = await Promise.all([
                 // 1. Données Mensuelles
-                supabase.from('paiements').select('*, contrats(unites(immeuble_id))').eq('agency_id', profile.agency_id).gte('mois_concerne', monthStart).lt('mois_concerne', monthEndStr),
+                supabase.from('paiements').select('*, contrats(loyer_mensuel, locataires(nom, prenom), unites(id, nom, immeuble_id))').eq('agency_id', profile.agency_id).gte('mois_concerne', monthStart).lt('mois_concerne', monthEndStr),
                 supabase.from('depenses').select('*').eq('agency_id', profile.agency_id).gte('date_depense', monthStart).lt('date_depense', monthEndStr),
                 supabase.from('revenus').select('*').eq('agency_id', profile.agency_id).gte('date_revenu', monthStart).lt('date_revenu', monthEndStr),
 
@@ -179,6 +200,7 @@ export function TableauDeBordFinancierGlobal() {
                 supabase.from('bailleurs').select('id, nom, prenom').eq('agency_id', profile.agency_id).eq('actif', true),
                 supabase.from('immeubles').select('id, nom, bailleur_id, nombre_unites, bailleurs(nom, prenom)').eq('agency_id', profile.agency_id).eq('actif', true), // [10]
                 supabase.from('unites').select('immeuble_id, statut').eq('agency_id', profile.agency_id).eq('actif', true), // [24]
+                supabase.from('agency_settings').select('nom_agence, adresse, telephone, email, logo_url, couleur_primaire, couleur_secondaire, pied_page_personnalise').eq('agency_id', profile.agency_id).maybeSingle(),
             ]);
 
             // Extraction des données
@@ -192,6 +214,7 @@ export function TableauDeBordFinancierGlobal() {
             const bailleurs = (bailleursRes.data || []) as BailleurRow[];
             const immeubles = (immeublesRes.data || []) as ImmeubleRow[];
             const unites = (unitesRes.data || []) as UniteRow[];
+            setAgencySettings((settingsRes.data || null) as Partial<AgencySettings> | null);
 
 
             // ---------------------------------------------------
@@ -320,12 +343,43 @@ export function TableauDeBordFinancierGlobal() {
                         if (bilanBailleur) {
                             let immeubleData = bilanBailleur.immeubles.find(i => i.immeuble_nom === immeuble.nom);
                             if (!immeubleData) {
-                                immeubleData = { immeuble_nom: immeuble.nom, loyers_percus: 0, loyers_impayes: 0, frais_gestion: 0, resultat_net: 0 };
+                                immeubleData = { immeuble_nom: immeuble.nom, loyers_percus: 0, loyers_impayes: 0, frais_gestion: 0, resultat_net: 0, unites: [] };
                                 bilanBailleur.immeubles.push(immeubleData);
                             }
                             immeubleData.loyers_percus += Number(paiement.montant_total);
                             immeubleData.frais_gestion += Number(paiement.part_agence);
                             immeubleData.resultat_net += Number(paiement.part_bailleur);
+
+                            const uniteNom = paiement.contrats?.unites?.nom || 'Unité non renseignée';
+                            const locataireNom = [
+                                paiement.contrats?.locataires?.prenom,
+                                paiement.contrats?.locataires?.nom,
+                            ].filter(Boolean).join(' ') || 'Locataire non renseigné';
+                            const periode = paiement.mois_concerne
+                                ? new Date(paiement.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+                                : selectedMonth;
+                            let uniteData = immeubleData.unites.find(
+                                (u) => u.unite_nom === uniteNom && u.locataire_nom === locataireNom && u.periode === periode
+                            );
+                            if (!uniteData) {
+                                uniteData = {
+                                    unite_nom: uniteNom,
+                                    locataire_nom: locataireNom,
+                                    loyer: Number(paiement.contrats?.loyer_mensuel || 0),
+                                    statut_paiement: paiement.statut,
+                                    montant_encaisse: 0,
+                                    reliquat: 0,
+                                    montant_restant: 0,
+                                    periode,
+                                    observation: '',
+                                };
+                                immeubleData.unites.push(uniteData);
+                            }
+                            uniteData.montant_encaisse += Number(paiement.montant_total);
+                            uniteData.reliquat = Math.max(uniteData.reliquat, Number(paiement.reliquat || 0));
+                            uniteData.montant_restant = uniteData.reliquat;
+                            uniteData.statut_paiement = uniteData.reliquat > 0 ? 'partiel' : paiement.statut;
+                            uniteData.observation = uniteData.reliquat > 0 ? 'Reliquat à suivre' : 'Échéance soldée';
                             
                             bilanBailleur.total_loyers_percus += Number(paiement.montant_total);
                             bilanBailleur.total_frais += Number(paiement.part_agence);
@@ -337,7 +391,7 @@ export function TableauDeBordFinancierGlobal() {
                             if (bilanBailleur) {
                                 let immeubleData = bilanBailleur.immeubles.find(i => i.immeuble_nom === immeuble.nom);
                                 if (!immeubleData) {
-                                    immeubleData = { immeuble_nom: immeuble.nom, loyers_percus: 0, loyers_impayes: 0, frais_gestion: 0, resultat_net: 0 };
+                                    immeubleData = { immeuble_nom: immeuble.nom, loyers_percus: 0, loyers_impayes: 0, frais_gestion: 0, resultat_net: 0, unites: [] };
                                     bilanBailleur.immeubles.push(immeubleData);
                                 }
                                 immeubleData.loyers_impayes += reliquat;
@@ -381,44 +435,160 @@ export function TableauDeBordFinancierGlobal() {
     // câblées à un bouton. Voir l'historique git pour les récupérer.
 
     const exportBilanBailleurPDF = (bilan: BilanBailleur) => {
-        const doc = new jsPDF(); // [1]
-        doc.setFontSize(20); // [1]
-        doc.text('BILAN MENSUEL', 105, 20, { align: 'center' }); // [1]
-        doc.setFontSize(12); // [1]
-        doc.text(`Bailleur: ${bilan.bailleur_prenom} ${bilan.bailleur_nom}`, 14, 35); // [1]
-        doc.text(
-            `Période: ${new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}`,
-            14, // [13]
-            42
-        ); 
+        const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+        const hexToRgb = (hex: string | null | undefined, fallback: [number, number, number]) => {
+            const value = (hex || '').replace('#', '').trim();
+            if (!/^[0-9a-f]{6}$/i.test(value)) return fallback;
+            return [
+                parseInt(value.slice(0, 2), 16),
+                parseInt(value.slice(2, 4), 16),
+                parseInt(value.slice(4, 6), 16),
+            ] as [number, number, number];
+        };
+        const primary = hexToRgb(agencySettings?.couleur_primaire, [8, 47, 35]);
+        const secondary = hexToRgb(agencySettings?.couleur_secondaire, [15, 23, 42]);
+        const periodLabel = new Date(selectedMonth).toLocaleDateString('fr-FR', {
+            year: 'numeric',
+            month: 'long',
+        });
+        const occupancyBase = bilan.total_loyers_percus + bilan.total_impayes;
+        const recoveryRate = occupancyBase > 0
+            ? Math.round((bilan.total_loyers_percus / occupancyBase) * 100)
+            : 100;
 
-        autoTable(doc, {
-            head: [['Immeuble', 'Loyers perçus', 'Impayés', 'Frais gestion', 'Montant net']], // [13]
-            body: bilan.immeubles.map(i => [ // CORRIGÉ : Assurez-vous des virgules après head
-                i.immeuble_nom,
-                formatCurrency(i.loyers_percus),
-                formatCurrency(i.loyers_impayes),
-                formatCurrency(i.frais_gestion),
-                formatCurrency(i.resultat_net),
-            ]), // [13]
-            startY: 50, // [13]
-            styles: { fontSize: 10 }, // [13]
+        doc.setFillColor(...primary);
+        doc.rect(0, 0, 210, 54, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(21);
+        doc.text('Rapport mensuel bailleur', 16, 21);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Période : ${periodLabel}`, 16, 31);
+        doc.text(`Bailleur : ${bilan.bailleur_prenom} ${bilan.bailleur_nom}`, 16, 38);
+        doc.setTextColor(251, 146, 60);
+        doc.text(`${agencySettings?.nom_agence || 'Samay Këur'} • Pilotage immobilier premium`, 16, 46);
+
+        const cards = [
+            ['Revenus encaissés', formatCurrency(bilan.total_loyers_percus)],
+            ['Impayés restants', formatCurrency(bilan.total_impayes)],
+            ['Commissions', formatCurrency(bilan.total_frais)],
+            ['Net à verser', formatCurrency(bilan.total_net)],
+        ];
+        cards.forEach(([label, value], index) => {
+            const x = 16 + (index % 2) * 90;
+            const y = 66 + Math.floor(index / 2) * 26;
+            doc.setFillColor(248, 250, 252);
+            doc.roundedRect(x, y, 82, 19, 3, 3, 'F');
+            doc.setTextColor(71, 85, 105);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.text(label, x + 5, y + 7);
+            doc.setTextColor(...secondary);
+            doc.setFontSize(12);
+            doc.text(value, x + 5, y + 15);
         });
 
-        const finalY = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? 50) + 10;
-        doc.setFontSize(12); // [13]
+        doc.setTextColor(...secondary);
+        doc.setFontSize(13);
         doc.setFont('helvetica', 'bold');
-        doc.text('TOTAUX:', 14, finalY);
-        doc.text(`Loyers perçus: ${formatCurrency(bilan.total_loyers_percus)}`, 14, finalY + 7); // [18]
-        doc.text(`Loyers impayés: ${formatCurrency(bilan.total_impayes)}`, 14, finalY + 14); // [18]
-        doc.text(`Frais de gestion: ${formatCurrency(bilan.total_frais)}`, 14, finalY + 21); // [18]
-        doc.setFontSize(14);
-        doc.text(`MONTANT À VERSER: ${formatCurrency(bilan.total_net)}`, 14, finalY + 30); // [18]
+        doc.text('Résumé exécutif', 16, 126);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const executiveSummary = [
+            `Taux de recouvrement estim? : ${recoveryRate}%.`,
+            `Montant net prévu pour le bailleur : ${formatCurrency(bilan.total_net)}.`,
+            bilan.total_impayes > 0
+                ? `Action recommandée : prioriser la relance des impayés (${formatCurrency(bilan.total_impayes)}).`
+                : 'Aucun impay? significatif sur la période.',
+        ];
+        doc.text(doc.splitTextToSize(executiveSummary.join(' '), 178), 16, 134);
+
+        const detailRows = bilan.immeubles.flatMap((immeuble) => {
+            const unitRows = immeuble.unites.map((unit, index) => [
+                index === 0 ? immeuble.immeuble_nom : '',
+                unit.unite_nom,
+                unit.locataire_nom,
+                formatCurrency(unit.loyer),
+                unit.statut_paiement === 'partiel' ? 'Partiel' : 'Payé',
+                formatCurrency(unit.montant_encaisse),
+                formatCurrency(unit.montant_restant),
+                unit.periode,
+                unit.observation,
+            ]);
+            return [
+                ...unitRows,
+                [
+                    `${immeuble.immeuble_nom} — total`,
+                    '',
+                    '',
+                    '',
+                    '',
+                    formatCurrency(immeuble.loyers_percus),
+                    formatCurrency(immeuble.loyers_impayes),
+                    '',
+                    `Net bailleur ${formatCurrency(immeuble.resultat_net)}`,
+                ],
+            ];
+        });
+
+        autoTable(doc, {
+            head: [['Immeuble', 'Unit?', 'Locataire', 'Loyer', 'Statut', 'Encaissé', 'Restant', 'Période', 'Observation']],
+            body: detailRows,
+            startY: 154,
+            styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59] },
+            headStyles: { fillColor: primary, textColor: [255, 255, 255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            margin: { left: 16, right: 16 },
+            didParseCell: (data) => {
+                const firstCell = Array.isArray(data.row.raw) ? data.row.raw[0] : undefined;
+                if (typeof firstCell === 'string' && firstCell.includes('? total')) {
+                    data.cell.styles.fillColor = [255, 247, 237];
+                    data.cell.styles.fontStyle = 'bold';
+                    data.cell.styles.textColor = [154, 52, 18];
+                }
+            },
+        });
+
+        const finalY = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? 154) + 12;
+        doc.setFillColor(255, 247, 237);
+        doc.roundedRect(16, finalY, 178, 20, 3, 3, 'F');
+        doc.setTextColor(154, 52, 18);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text(`Net à verser : ${formatCurrency(bilan.total_net)}`, 22, finalY + 9);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} • ${agencySettings?.nom_agence || 'Samay Këur'}`, 22, finalY + 16);
+
+        const previewRows = bilan.immeubles.flatMap((i) =>
+            i.unites.map((u) => ({
+                Immeuble: i.immeuble_nom,
+                Unité: u.unite_nom,
+                Locataire: u.locataire_nom,
+                Statut: u.statut_paiement === 'partiel' ? 'Partiel' : 'Payé',
+                Encaissé: formatCurrency(u.montant_encaisse),
+                Restant: formatCurrency(u.montant_restant),
+            }))
+        );
+
         saveGeneratedPdf(doc, {
             kind: 'bilan',
-            title: 'Bilan mensuel bailleur',
-            fileName: `bilan-${bilan.bailleur_nom}-${selectedMonth}.pdf`,
+            title: 'Rapport bailleur premium',
+            fileName: `rapport-bailleur-${bilan.bailleur_nom}-${selectedMonth}.pdf`,
             source: 'tableau-de-bord-financier',
+            preview: {
+                columns: ['Immeuble', 'Unit?', 'Locataire', 'Statut', 'Encaissé', 'Restant'],
+                rows: previewRows.slice(0, 6),
+                rowCount: previewRows.length,
+                period: periodLabel,
+                stats: [
+                    { label: 'Revenus encaissés', value: formatCurrency(bilan.total_loyers_percus) },
+                    { label: 'Impayés', value: formatCurrency(bilan.total_impayes) },
+                    { label: 'Net bailleur', value: formatCurrency(bilan.total_net) },
+                    { label: 'Recouvrement', value: `${recoveryRate}%` },
+                ],
+            },
         });
     };
 

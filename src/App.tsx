@@ -15,6 +15,8 @@ import { PageSkeleton } from './components/ui/Skeleton';
 import { DocumentGeneratedModal } from './components/documents/DocumentGeneratedModal';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
+import { canAccessPage, getPageAccessReason } from './lib/rbac';
+import type { AgencySettings } from './types/agency';
 import Welcome from './pages/Welcome';
 import { runFullBackup, getLastBackupTimestamp } from './services/localBackup';
 import { recoverStaleSyncing } from './services/offlineQueue';
@@ -42,6 +44,7 @@ const Documents = lazy(() => import('./pages/Documents').then(m => ({ default: m
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation').then(m => ({ default: m.AcceptInvitation })));
 const AuditDashboard = lazy(() => import('./pages/AuditDashboard').then(m => ({ default: m.AuditDashboard })));
 const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
+const VerifyDocument = lazy(() => import('./pages/VerifyDocument').then(m => ({ default: m.VerifyDocument })));
 
 const PAGE_LABELS: Record<string, string> = {
     dashboard: 'Tableau de bord',
@@ -76,6 +79,12 @@ function AppContent() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const { pendingCount, syncing } = useOfflineSync();
     const [showWelcomeAnyway, setShowWelcomeAnyway] = useState(false);
+    const [moduleSettings, setModuleSettings] = useState<
+        Pick<
+            AgencySettings,
+            'module_depenses_actif' | 'module_inventaires_actif' | 'module_interventions_actif' | 'mode_avance_actif'
+        > | null
+    >(null);
     const [invitationToken, setInvitationToken] = useState<string | null>(() => {
         const params = new URLSearchParams(window.location.search);
         const fromUrl = params.get('token');
@@ -149,6 +158,43 @@ function AppContent() {
         recoverStaleSyncing().catch(() => { /* noop */ });
     }, []);
 
+    useEffect(() => {
+        if (!profile?.agency_id || profile.role === 'super_admin') {
+            setModuleSettings(null);
+            return;
+        }
+
+        let alive = true;
+        void (async () => {
+            try {
+                const { data } = await supabase
+                    .from('agency_settings')
+                    .select('module_depenses_actif,module_inventaires_actif,module_interventions_actif,mode_avance_actif')
+                    .eq('agency_id', profile.agency_id)
+                    .maybeSingle();
+                if (!alive) return;
+                setModuleSettings({
+                    module_depenses_actif: data?.module_depenses_actif ?? true,
+                    module_inventaires_actif: data?.module_inventaires_actif ?? false,
+                    module_interventions_actif: data?.module_interventions_actif ?? false,
+                    mode_avance_actif: data?.mode_avance_actif ?? false,
+                });
+            } catch {
+                if (!alive) return;
+                setModuleSettings({
+                    module_depenses_actif: true,
+                    module_inventaires_actif: false,
+                    module_interventions_actif: false,
+                    mode_avance_actif: false,
+                });
+            }
+        })();
+
+        return () => {
+            alive = false;
+        };
+    }, [profile?.agency_id, profile?.role]);
+
     if (invitationToken) {
         return (
             <Suspense fallback={<BrandedLoader label="Invitation" />}>
@@ -161,6 +207,14 @@ function AppContent() {
                         setInvitationToken(null);
                     }}
                 />
+            </Suspense>
+        );
+    }
+
+    if (currentPage === 'verify-document') {
+        return (
+            <Suspense fallback={<BrandedLoader label="Vérification" />}>
+                <VerifyDocument />
             </Suspense>
         );
     }
@@ -228,6 +282,29 @@ function AppContent() {
     }
 
     const renderPage = () => {
+        if (!canAccessPage(profile.role, currentPage, moduleSettings)) {
+            const reason = getPageAccessReason(currentPage, moduleSettings);
+            return (
+                <div className="flex min-h-full items-center justify-center p-6">
+                    <div className="max-w-lg rounded-3xl border border-emerald-100 bg-white p-8 text-center shadow-2xl shadow-emerald-950/10">
+                        <BrandMark size="lg" tone="light" animated className="mx-auto mb-5" />
+                        <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">
+                            Accès contrôlé
+                        </p>
+                        <h1 className="mt-3 text-3xl font-black text-slate-950">Page indisponible</h1>
+                        <p className="mt-3 text-sm leading-6 text-slate-600">{reason}</p>
+                        <button
+                            type="button"
+                            onClick={() => handleNavigate('dashboard')}
+                            className="mt-6 inline-flex items-center justify-center rounded-xl bg-emerald-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/20 transition hover:-translate-y-0.5 hover:bg-emerald-900"
+                        >
+                            Retour au tableau de bord
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         switch (currentPage) {
             case 'dashboard':
                 return <Dashboard onNavigate={handleNavigate} />;
@@ -298,6 +375,7 @@ function AppContent() {
                 onNavigate={handleNavigate}
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
+                moduleSettings={moduleSettings}
             />
 
             <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
@@ -334,6 +412,8 @@ function AppContent() {
                 currentPage={currentPage}
                 onNavigate={handleNavigate}
                 onOpenMenu={() => setSidebarOpen(true)}
+                role={profile.role}
+                moduleSettings={moduleSettings}
             />
 
             {/* Backup + offline status indicator - floating badge */}

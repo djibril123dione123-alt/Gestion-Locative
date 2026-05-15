@@ -5,6 +5,7 @@ import {
   Download,
   ExternalLink,
   FilePlus2,
+  FileSpreadsheet,
   FileText,
   LayoutDashboard,
   Mail,
@@ -35,6 +36,9 @@ const KIND_LABELS: Partial<Record<GeneratedDocumentPayload['kind'], string>> = {
   commission: 'Rapport',
   inventaire: 'Inventaire',
   bilan: 'Bilan',
+  xlsx: 'Export Excel',
+  csv: 'Export CSV',
+  export: 'Export',
   pdf: 'PDF',
   document: 'Document',
 };
@@ -73,6 +77,11 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
 
   const kindLabel = KIND_LABELS[documentPayload.kind] ?? 'Document';
   const titleId = 'document-generated-title';
+  const isPdf = (documentPayload.mimeType ?? '').includes('pdf') || documentPayload.fileName.toLowerCase().endsWith('.pdf');
+  const isTableExport = ['xlsx', 'csv', 'export'].includes(documentPayload.kind);
+  const fileSize = documentPayload.fileSize
+    ? `${(documentPayload.fileSize / 1024).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Ko`
+    : 'Calcul local';
 
   const downloadAgain = () => {
     const link = window.document.createElement('a');
@@ -82,11 +91,15 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
     link.click();
   };
 
-  const openPdf = () => {
+  const openFile = () => {
     window.open(documentPayload.url, '_blank', 'noopener,noreferrer');
   };
 
   const printPdf = () => {
+    if (!isPdf) {
+      downloadAgain();
+      return;
+    }
     const pdfWindow = window.open(documentPayload.url, '_blank', 'noopener,noreferrer');
     if (!pdfWindow) return;
     setFeedback('printed');
@@ -115,7 +128,7 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
       if (navigator.share) {
         if (documentPayload.blob) {
           const file = new File([documentPayload.blob], documentPayload.fileName, {
-            type: 'application/pdf',
+          type: documentPayload.mimeType ?? 'application/pdf',
           });
           if (!navigator.canShare || navigator.canShare({ files: [file] })) {
             await navigator.share({ title: documentPayload.title, text: shareText, files: [file] });
@@ -185,7 +198,9 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
             <div className="mb-7 flex items-center gap-3">
               <BrandMark size="sm" tone="dark" animated withTile={false} />
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.28em] text-action-300">Document prêt</p>
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-action-300">
+                  {isTableExport ? 'Export prêt' : 'Document prêt'}
+                </p>
                 <p className="text-sm text-emerald-100/70">Téléchargement automatique terminé</p>
               </div>
             </div>
@@ -212,6 +227,16 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/70">Généré le</p>
                 <p className="mt-1 font-bold text-white">{generatedDate}</p>
               </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/70">Taille</p>
+                <p className="mt-1 font-bold text-white">{fileSize}</p>
+              </div>
+              {documentPayload.preview?.rowCount != null && (
+                <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/70">Lignes</p>
+                  <p className="mt-1 font-bold text-white">{documentPayload.preview.rowCount}</p>
+                </div>
+              )}
             </div>
 
             {feedback && (
@@ -231,33 +256,79 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
             <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-950 text-white">
-                  <FileText className="h-5 w-5" />
+                  {isTableExport ? <FileSpreadsheet className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-black text-slate-950">{documentPayload.title}</p>
                   <p className="truncate text-xs font-semibold text-slate-500">{documentPayload.fileName}</p>
                 </div>
               </div>
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-brand-800">PDF</span>
+              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-brand-800">
+                {isTableExport ? 'EXPORT' : 'PDF'}
+              </span>
             </div>
 
-            <div className="hidden h-[min(420px,48vh)] bg-slate-100 md:block">
-              <iframe
-                title={`Aperçu ${documentPayload.fileName}`}
-                src={documentPayload.url}
-                className="h-full w-full bg-white"
-              />
-            </div>
+            {isPdf ? (
+              <div className="hidden h-[min(420px,48vh)] bg-slate-100 md:block">
+                <iframe
+                  title={`Aperçu ${documentPayload.fileName}`}
+                  src={documentPayload.url}
+                  className="h-full w-full bg-white"
+                />
+              </div>
+            ) : (
+              <div className="max-h-[min(420px,48vh)] overflow-auto bg-white p-4">
+                {documentPayload.preview?.stats?.length ? (
+                  <div className="mb-4 grid gap-3 sm:grid-cols-3">
+                    {documentPayload.preview.stats.map((stat) => (
+                      <div key={stat.label} className="rounded-xl border border-emerald-900/10 bg-emerald-50/70 p-3">
+                        <p className="text-[11px] font-black uppercase tracking-wide text-brand-700">{stat.label}</p>
+                        <p className="mt-1 text-lg font-black text-slate-950">{stat.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {documentPayload.preview?.rows?.length ? (
+                  <table className="min-w-full overflow-hidden rounded-xl text-left text-sm">
+                    <thead className="bg-brand-950 text-white">
+                      <tr>
+                        {documentPayload.preview.columns.slice(0, 6).map((column) => (
+                          <th key={column} className="px-3 py-2 text-xs font-black uppercase tracking-wide">
+                            {column}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {documentPayload.preview.rows.map((row, index) => (
+                        <tr key={index} className="bg-white">
+                          {documentPayload.preview?.columns.slice(0, 6).map((column) => (
+                            <td key={column} className="max-w-[12rem] truncate px-3 py-2 font-semibold text-slate-700">
+                              {row[column] ?? '—'}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="flex h-52 flex-col items-center justify-center text-center">
+                    <FileSpreadsheet className="h-10 w-10 text-brand-700" />
+                    <p className="mt-3 text-sm font-bold text-slate-700">Export prêt à ouvrir dans Excel.</p>
+                  </div>
+                )}
+              </div>
+            )}
             <button
               type="button"
-              onClick={openPdf}
+              onClick={openFile}
               className="flex h-56 w-full flex-col items-center justify-center gap-3 bg-white text-center md:hidden"
             >
               <div className="rounded-2xl bg-emerald-50 p-4 text-brand-800">
                 <FileText className="h-9 w-9" />
               </div>
               <span className="max-w-[14rem] text-sm font-bold text-slate-700">
-                Touchez pour ouvrir l'aperçu PDF
+                Touchez pour ouvrir le fichier
               </span>
             </button>
           </div>
@@ -266,8 +337,8 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
             <Button type="button" variant="primary" icon={Download} onClick={downloadAgain} fullWidth>
               Télécharger à nouveau
             </Button>
-            <Button type="button" variant="success" icon={ExternalLink} onClick={openPdf} fullWidth>
-              Ouvrir le PDF
+            <Button type="button" variant="success" icon={ExternalLink} onClick={openFile} fullWidth>
+              Ouvrir le fichier
             </Button>
             <Button type="button" variant="secondary" icon={Share2} onClick={shareDocument} fullWidth>
               Partager

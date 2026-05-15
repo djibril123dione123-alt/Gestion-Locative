@@ -8,6 +8,7 @@ import {
   Palette,
   Building,
   CheckCircle,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,6 +22,9 @@ type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
   created_at?: string;
   updated_at?: string;
 };
+
+type SettingsTab = 'general' | 'documents' | 'appearance' | 'modules';
+type LogoUploadState = 'idle' | 'preview' | 'uploading' | 'done';
 
 const EMPTY_SETTINGS: Omit<SettingsState, 'agency_id'> = {
   nom_agence: '',
@@ -72,9 +76,10 @@ export function Parametres() {
   const { showToast, toasts, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'documents' | 'appearance'>('general');
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [settings, setSettings] = useState<SettingsState | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
+  const [logoUploadState, setLogoUploadState] = useState<LogoUploadState>('idle');
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -239,28 +244,43 @@ export function Parametres() {
     }
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const validateLogoFile = (file: File): string | null => {
+    const allowedTypes = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return 'Formats acceptés : PNG, SVG, JPG ou WEBP.';
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      return "L'image ne doit pas dépasser 2 Mo.";
+    }
+    return null;
+  };
+
+  const uploadLogoFile = async (file: File) => {
     if (!file || !profile?.agency_id || !settings) return;
 
-    if (!file.type.startsWith('image/')) {
-      showToast('Veuillez sélectionner une image', 'error');
+    const validationError = validateLogoFile(file);
+    if (validationError) {
+      showToast(validationError, 'error');
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      showToast("L'image ne doit pas dépasser 2 Mo", 'error');
-      return;
-    }
+    const localPreview = URL.createObjectURL(file);
+    setLogoPreview(localPreview);
+    setLogoUploadState('preview');
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${profile.agency_id}-logo-${Date.now()}.${fileExt}`;
+      setLogoUploadState('uploading');
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
+      const fileName = `${profile.agency_id}-logo.${fileExt}`;
       const filePath = `logos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('agency-assets')
-        .upload(filePath, file);
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          contentType: file.type,
+          upsert: true,
+        });
 
       if (uploadError) throw uploadError;
 
@@ -270,18 +290,35 @@ export function Parametres() {
 
       setSettings({ ...settings, logo_url: publicUrl.publicUrl });
       setLogoPreview(publicUrl.publicUrl);
+      setLogoUploadState('done');
       showToast('Logo uploadé avec succès', 'success');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Erreur upload logo:", msg);
+      setLogoUploadState('idle');
       showToast("Erreur lors de l'upload du logo", 'error');
+    } finally {
+      URL.revokeObjectURL(localPreview);
     }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await uploadLogoFile(file);
+    e.target.value = '';
+  };
+
+  const handleLogoDrop = async (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) await uploadLogoFile(file);
   };
 
   const tabs = [
     { id: 'general', label: 'Informations générales', icon: Building },
     { id: 'documents', label: 'Modèles de documents', icon: FileText },
     { id: 'appearance', label: 'Apparence', icon: Palette },
+    { id: 'modules', label: 'Modules / pages', icon: SlidersHorizontal },
   ];
 
   if (loading || !settings) {
@@ -331,7 +368,7 @@ export function Parametres() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as 'general' | 'documents' | 'appearance')}
+                  onClick={() => setActiveTab(tab.id as SettingsTab)}
                   className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-3 text-sm transition-colors sm:px-4 sm:py-4 ${
                     activeTab === tab.id
                       ? 'border-orange-500 text-orange-600'
@@ -632,19 +669,33 @@ export function Parametres() {
                 </label>
                 <div className="flex items-start gap-6">
                   <div className="flex-1">
-                    <label className="block">
-                      <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-orange-500 transition-colors cursor-pointer">
+                    <label
+                      className="block"
+                      onDrop={handleLogoDrop}
+                      onDragOver={(e) => e.preventDefault()}
+                    >
+                      <div className="group rounded-2xl border border-dashed border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-orange-50/60 p-6 text-center shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-xl hover:shadow-orange-100/60 sm:p-8">
                         <input
                           type="file"
-                          accept="image/*"
+                          accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
                           onChange={handleLogoUpload}
                           className="hidden"
                         />
-                        <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                        <p className="text-sm text-slate-600 mb-1">
-                          Cliquez pour télécharger un logo
+                        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-emerald-800 shadow-lg shadow-emerald-100 ring-1 ring-emerald-100 transition-transform group-hover:scale-105">
+                          {logoUploadState === 'uploading' ? (
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-emerald-200 border-t-orange-500" />
+                          ) : (
+                            <Upload className="h-7 w-7" />
+                          )}
+                        </div>
+                        <p className="mb-1 text-sm font-black text-slate-900">
+                          {logoUploadState === 'uploading'
+                            ? 'Upload du logo en cours...'
+                            : 'Glissez le logo ici ou cliquez pour uploader'}
                         </p>
-                        <p className="text-xs text-slate-500">PNG, JPG jusqu'à 2 Mo</p>
+                        <p className="text-xs font-medium text-slate-500">
+                          PNG, SVG, JPG, WEBP jusqu'à 2 Mo
+                        </p>
                       </div>
                     </label>
                   </div>
@@ -652,7 +703,7 @@ export function Parametres() {
                   {logoPreview && (
                     <div className="flex-shrink-0">
                       <p className="text-sm font-medium text-slate-700 mb-2">Aperçu</p>
-                      <div className="w-48 h-32 border border-slate-300 rounded-lg p-4 bg-slate-50 flex items-center justify-center">
+                      <div className="flex h-32 w-48 items-center justify-center rounded-2xl border border-emerald-100 bg-[radial-gradient(circle_at_top,#ecfdf5,white_55%,#fff7ed)] p-4 shadow-inner">
                         <img
                           src={logoPreview}
                           alt="Logo agence"
@@ -748,6 +799,98 @@ export function Parametres() {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'modules' && (
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-5 text-white shadow-xl shadow-emerald-950/10 sm:p-6">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-200">
+                      Modules visibles
+                    </p>
+                    <h3 className="mt-2 text-2xl font-black">Gestion modules/pages</h3>
+                    <p className="mt-2 max-w-2xl text-sm leading-6 text-emerald-50/80">
+                      Activez uniquement les espaces utiles à votre agence. Les pages désactivées
+                      disparaissent de la navigation et deviennent inaccessibles aux rôles standards.
+                    </p>
+                  </div>
+                  <SlidersHorizontal className="h-8 w-8 text-orange-300" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {[
+                  {
+                    key: 'module_depenses_actif',
+                    title: 'Dépenses',
+                    desc: 'Suivi des charges, dépenses bailleurs et justificatifs.',
+                  },
+                  {
+                    key: 'module_inventaires_actif',
+                    title: 'États des lieux',
+                    desc: 'Inventaires, entrées, sorties et documents associés.',
+                  },
+                  {
+                    key: 'module_interventions_actif',
+                    title: 'Maintenance',
+                    desc: 'Demandes d’intervention, suivi technique et priorités.',
+                  },
+                  {
+                    key: 'mode_avance_actif',
+                    title: 'Mode avancé',
+                    desc: 'Options expertes pour équipes structurées et workflow complet.',
+                  },
+                ].map((module) => {
+                  const key = module.key as keyof Pick<
+                    SettingsState,
+                    | 'module_depenses_actif'
+                    | 'module_inventaires_actif'
+                    | 'module_interventions_actif'
+                    | 'mode_avance_actif'
+                  >;
+                  const enabled = Boolean(settings[key]);
+
+                  return (
+                    <button
+                      key={module.key}
+                      type="button"
+                      onClick={() => setSettings({ ...settings, [key]: !enabled })}
+                      className={`rounded-2xl border p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl ${
+                        enabled
+                          ? 'border-emerald-200 bg-emerald-50 shadow-emerald-100/70'
+                          : 'border-slate-200 bg-white shadow-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h4 className="text-lg font-black text-slate-950">{module.title}</h4>
+                          <p className="mt-2 text-sm leading-6 text-slate-600">{module.desc}</p>
+                        </div>
+                        <span
+                          className={`relative mt-1 inline-flex h-7 w-12 flex-shrink-0 rounded-full p-1 transition-colors ${
+                            enabled ? 'bg-emerald-700' : 'bg-slate-200'
+                          }`}
+                        >
+                          <span
+                            className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                              enabled ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </span>
+                      </div>
+                      <p
+                        className={`mt-4 text-xs font-black uppercase tracking-[0.18em] ${
+                          enabled ? 'text-emerald-700' : 'text-slate-400'
+                        }`}
+                      >
+                        {enabled ? 'Actif' : 'Masqué'}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

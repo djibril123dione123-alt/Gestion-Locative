@@ -8,6 +8,7 @@
 
 import { useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
+import { announceGeneratedDocument, type GeneratedDocumentPreview } from '../lib/documentGenerated';
 
 export interface ExportLocataire {
   nom: string;
@@ -39,14 +40,53 @@ export interface ExportContrat {
   destination?: string | null;
 }
 
-function downloadXlsx(wb: XLSX.WorkBook, filename: string): void {
-  XLSX.writeFile(wb, filename);
+function downloadWorkbook(
+  wb: XLSX.WorkBook,
+  filename: string,
+  title: string,
+  preview: GeneratedDocumentPreview
+): void {
+  const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+  const blob = new Blob([buffer], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.rel = 'noopener noreferrer';
+  link.click();
+
+  announceGeneratedDocument({
+    kind: 'xlsx',
+    title,
+    fileName: filename,
+    url,
+    blob,
+    mimeType: blob.type,
+    fileSize: blob.size,
+    source: 'exports',
+    preview,
+  });
 }
 
 function fmt(v: unknown): string | number | null {
   if (v === null || v === undefined) return null;
   if (typeof v === 'number') return v;
   return String(v);
+}
+
+function buildPreview(
+  rows: Array<Record<string, string | number | null>>,
+  stats: GeneratedDocumentPreview['stats'] = []
+): GeneratedDocumentPreview {
+  const columns = rows[0] ? Object.keys(rows[0]) : [];
+  return {
+    columns,
+    rows: rows.slice(0, 6),
+    rowCount: rows.length,
+    stats: [{ label: 'Lignes', value: rows.length }, ...stats],
+  };
 }
 
 export interface UseExportReturn {
@@ -87,7 +127,7 @@ export function useExport(): UseExportReturn {
         ws['!cols'] = [20, 20, 18, 28, 35].map((w) => ({ wch: w }));
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Locataires');
-        downloadXlsx(wb, filename);
+        downloadWorkbook(wb, filename, 'Export locataires', buildPreview(rows));
       });
     },
     [run],
@@ -110,7 +150,13 @@ export function useExport(): UseExportReturn {
         ws['!cols'] = [18, 14, 14, 14, 12, 18, 24, 20].map((w) => ({ wch: w }));
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Paiements');
-        downloadXlsx(wb, filename);
+        const total = data.reduce((sum, p) => sum + Number(p.montant_total ?? 0), 0);
+        downloadWorkbook(
+          wb,
+          filename,
+          'Export paiements',
+          buildPreview(rows, [{ label: 'Montant total', value: total.toLocaleString('fr-FR') }])
+        );
       });
     },
     [run],
@@ -133,7 +179,7 @@ export function useExport(): UseExportReturn {
         ws['!cols'] = [24, 18, 20, 14, 14, 16, 12, 14].map((w) => ({ wch: w }));
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'Contrats');
-        downloadXlsx(wb, filename);
+        downloadWorkbook(wb, filename, 'Export contrats', buildPreview(rows));
       });
     },
     [run],
@@ -189,7 +235,12 @@ export function useExport(): UseExportReturn {
         }
 
         if (wb.SheetNames.length === 0) return;
-        downloadXlsx(wb, `samay-keur-export-${date}.xlsx`);
+        const rows = [
+          { Feuille: 'Locataires', Lignes: data.locataires?.length ?? 0 },
+          { Feuille: 'Paiements', Lignes: data.paiements?.length ?? 0 },
+          { Feuille: 'Contrats', Lignes: data.contrats?.length ?? 0 },
+        ];
+        downloadWorkbook(wb, `samay-keur-export-${date}.xlsx`, 'Export complet Samay Këur', buildPreview(rows));
       });
     },
     [run],

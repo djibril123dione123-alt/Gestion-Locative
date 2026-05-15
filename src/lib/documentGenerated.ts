@@ -7,8 +7,19 @@ export type GeneratedDocumentKind =
   | 'commission'
   | 'inventaire'
   | 'bilan'
+  | 'xlsx'
+  | 'csv'
+  | 'export'
   | 'pdf'
   | 'document';
+
+export interface GeneratedDocumentPreview {
+  columns: string[];
+  rows: Array<Record<string, string | number | null>>;
+  stats?: Array<{ label: string; value: string | number }>;
+  period?: string;
+  rowCount?: number;
+}
 
 export interface GeneratedDocumentPayload {
   kind: GeneratedDocumentKind;
@@ -16,8 +27,11 @@ export interface GeneratedDocumentPayload {
   fileName: string;
   url: string;
   blob?: Blob;
+  mimeType?: string;
+  fileSize?: number;
   generatedAt: string;
   source?: string;
+  preview?: GeneratedDocumentPreview;
 }
 
 export const DOCUMENT_GENERATED_EVENT = 'samaykeur:document-generated';

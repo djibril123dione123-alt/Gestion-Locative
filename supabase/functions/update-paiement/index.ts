@@ -145,6 +145,18 @@ serve(async (req: Request) => {
     if (profile.role === "bailleur") return err("Acces refuse.", 403, "FORBIDDEN_ROLE");
     if (!profile.agency_id) return err("Aucune agence associee.", 403, "NO_AGENCY");
 
+    const { data: canUpdatePaiement, error: permissionErr } = await supabaseAdmin.rpc(
+      "fn_user_can",
+      { p_user_id: user.id, p_page: "paiements", p_action: "update" },
+    );
+    if (permissionErr) {
+      console.error("[update-paiement] RBAC check failed", permissionErr.message);
+      return err("Verification des permissions indisponible.", 500, "RBAC_CHECK_FAILED");
+    }
+    if (!canUpdatePaiement) {
+      return err("Action refusee par les permissions de l'agence.", 403, "RBAC_FORBIDDEN");
+    }
+
     const rawBody = await readBody(req);
     if (!rawBody) return err("Corps invalide. JSON attendu.", 400, "INVALID_JSON");
 

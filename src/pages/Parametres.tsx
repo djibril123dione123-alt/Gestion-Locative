@@ -26,6 +26,11 @@ type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
 type SettingsTab = 'general' | 'documents' | 'appearance' | 'modules';
 type LogoUploadState = 'idle' | 'preview' | 'uploading' | 'done';
 
+const AGENCY_ASSETS_BUCKET = 'agency-assets';
+const LOGO_MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
+const LOGO_COMPRESSION_THRESHOLD = 1.4 * 1024 * 1024;
+const LOGO_MAX_DIMENSION = 1200;
+
 const EMPTY_SETTINGS: Omit<SettingsState, 'agency_id'> = {
   nom_agence: '',
   adresse: '',
@@ -70,6 +75,66 @@ const EMPTY_SETTINGS: Omit<SettingsState, 'agency_id'> = {
   sms_notifications_actif: false,
   champs_personnalises_locataire: 0,
 };
+
+function getLogoExtension(file: File) {
+  if (file.type === 'image/svg+xml') return 'svg';
+  if (file.type === 'image/webp') return 'webp';
+  if (file.type === 'image/jpeg') return 'jpg';
+  return 'png';
+}
+
+function extractAgencyAssetPath(url: string | null | undefined, agencyId: string): string | null {
+  if (!url) return null;
+  const marker = `/storage/v1/object/public/${AGENCY_ASSETS_BUCKET}/`;
+  const markerIndex = url.indexOf(marker);
+  if (markerIndex === -1) return null;
+
+  const rawPath = url.slice(markerIndex + marker.length).split('?')[0];
+  const path = decodeURIComponent(rawPath);
+  if (path.startsWith(`${agencyId}/logos/`) || path.startsWith(`logos/${agencyId}-logo.`)) {
+    return path;
+  }
+  return null;
+}
+
+async function compressLogoFile(file: File): Promise<File> {
+  if (file.type === 'image/svg+xml' || file.size <= LOGO_COMPRESSION_THRESHOLD) {
+    return file;
+  }
+
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = imageUrl;
+    });
+
+    const ratio = Math.min(1, LOGO_MAX_DIMENSION / Math.max(image.width, image.height));
+    const width = Math.max(1, Math.round(image.width * ratio));
+    const height = Math.max(1, Math.round(image.height * ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(image, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, 'image/webp', 0.92);
+    });
+
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, '.webp'), { type: 'image/webp' });
+  } catch {
+    return file;
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
 
 export function Parametres() {
   const { profile } = useAuth();
@@ -249,8 +314,8 @@ export function Parametres() {
     if (!allowedTypes.includes(file.type)) {
       return 'Formats acceptés : PNG, SVG, JPG ou WEBP.';
     }
-    if (file.size > 2 * 1024 * 1024) {
-      return "L'image ne doit pas dépasser 2 Mo.";
+    if (file.size > LOGO_MAX_UPLOAD_SIZE) {
+      return "L'image ne doit pas dépasser 5 Mo.";
     }
     return null;
   };
@@ -264,39 +329,67 @@ export function Parametres() {
       return;
     }
 
+    const previousPreview = logoPreview;
+    const previousLogoUrl = settings.logo_url;
     const localPreview = URL.createObjectURL(file);
     setLogoPreview(localPreview);
     setLogoUploadState('preview');
 
     try {
       setLogoUploadState('uploading');
-      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
-      const fileName = `${profile.agency_id}-logo.${fileExt}`;
-      const filePath = `logos/${fileName}`;
+      const uploadFile = await compressLogoFile(file);
+      const fileExt = getLogoExtension(uploadFile);
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+      const filePath = `${profile.agency_id}/logos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('agency-assets')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          contentType: file.type,
-          upsert: true,
+        .from(AGENCY_ASSETS_BUCKET)
+        .upload(filePath, uploadFile, {
+          cacheControl: '31536000',
+          contentType: uploadFile.type,
+          upsert: false,
         });
 
       if (uploadError) throw uploadError;
 
       const { data: publicUrl } = supabase.storage
-        .from('agency-assets')
+        .from(AGENCY_ASSETS_BUCKET)
         .getPublicUrl(filePath);
 
-      setSettings({ ...settings, logo_url: publicUrl.publicUrl });
-      setLogoPreview(publicUrl.publicUrl);
+      const versionedLogoUrl = `${publicUrl.publicUrl}?v=${Date.now()}`;
+      const { data: savedSettings, error: updateError } = await supabase
+        .from('agency_settings')
+        .update({ logo_url: versionedLogoUrl })
+        .eq('agency_id', profile.agency_id)
+        .select()
+        .maybeSingle();
+
+      if (updateError) {
+        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([filePath]);
+        throw updateError;
+      }
+
+      if (!savedSettings) {
+        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([filePath]);
+        throw new Error("Logo uploadé, mais la sauvegarde des paramètres a été refusée par les permissions.");
+      }
+
+      const oldAssetPath = extractAgencyAssetPath(previousLogoUrl, profile.agency_id);
+      if (oldAssetPath && oldAssetPath !== filePath) {
+        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([oldAssetPath]);
+      }
+
+      setSettings(savedSettings as SettingsState);
+      setLogoPreview(versionedLogoUrl);
       setLogoUploadState('done');
-      showToast('Logo uploadé avec succès', 'success');
+      invalidateAgencySettingsCache(profile.agency_id);
+      showToast('Logo uploadé et sauvegardé avec succès', 'success');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("Erreur upload logo:", msg);
       setLogoUploadState('idle');
-      showToast("Erreur lors de l'upload du logo", 'error');
+      setLogoPreview(previousPreview);
+      showToast(`Erreur upload logo : ${msg}`, 'error');
     } finally {
       URL.revokeObjectURL(localPreview);
     }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -11,7 +12,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { ClipboardList, Plus, Download, Trash2 } from 'lucide-react';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
-import { saveGeneratedPdf } from '../lib/pdf';
+import { addFooter, drawPageBorder, drawSectionFrame, saveGeneratedPdf } from '../lib/pdf';
 import { SkeletonTable } from '../components/ui/Skeleton';
 
 interface Piece {
@@ -170,35 +171,67 @@ export function Inventaires() {
   };
 
   const exportPDF = (inv: Inventaire) => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text(`État des lieux ${inv.type === 'entree' ? "d'entrée" : 'de sortie'}`, 14, 20);
-    doc.setFontSize(11);
-    doc.text(`Date : ${new Date(inv.date).toLocaleDateString('fr-FR')}`, 14, 32);
-    doc.text(`Locataire : ${inv.contrats?.locataires?.prenom ?? ''} ${inv.contrats?.locataires?.nom ?? ''}`, 14, 40);
-    doc.text(`Logement : ${inv.contrats?.unites?.nom ?? ''} (${inv.contrats?.unites?.immeubles?.nom ?? ''})`, 14, 48);
-    doc.text(`Statut : ${inv.statut}`, 14, 56);
-    let y = 70;
-    doc.setFontSize(13);
-    doc.text('Pièces inspectées', 14, y);
-    y += 8;
-    doc.setFontSize(10);
-    (inv.pieces || []).forEach((p) => {
-      doc.text(`• ${p.nom} — État: ${p.etat}${p.observations ? ` — ${p.observations}` : ''}`, 18, y);
-      y += 6;
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+    drawPageBorder(doc);
+
+    const title = `État des lieux ${inv.type === 'entree' ? "d'entrée" : 'de sortie'}`;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(15, 23, 42);
+    doc.text(title, 14, 24);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Référence : ${inv.id.slice(0, 8).toUpperCase()} • ${new Date(inv.date).toLocaleDateString('fr-FR')}`, 14, 31);
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, 38, 196, 38);
+
+    drawSectionFrame(doc, 14, 48, 182, 34, undefined, {
+      title: 'Informations générales',
+      accent: 'primary',
     });
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Locataire : ${inv.contrats?.locataires?.prenom ?? ''} ${inv.contrats?.locataires?.nom ?? ''}`, 18, 62);
+    doc.text(`Logement : ${inv.contrats?.unites?.nom ?? ''} (${inv.contrats?.unites?.immeubles?.nom ?? ''})`, 18, 69);
+    doc.text(`Statut : ${inv.statut}`, 18, 76);
+
+    drawSectionFrame(doc, 14, 92, 182, 12, undefined, {
+      title: 'Pièces inspectées',
+      accent: 'orange',
+      fill: false,
+    });
+    autoTable(doc, {
+      startY: 110,
+      head: [['Pièce', 'État', 'Observations']],
+      body: (inv.pieces || []).map((p) => [
+        p.nom || '—',
+        p.etat,
+        p.observations || '—',
+      ]),
+      theme: 'grid',
+      styles: { fontSize: 8.5, cellPadding: 2.6, textColor: [30, 41, 59], lineColor: [226, 232, 240], lineWidth: 0.12 },
+      headStyles: { fillColor: [20, 83, 45], textColor: [255, 255, 255], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 14, right: 14 },
+    });
+
+    let y = ((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 110) + 12;
     if (inv.observations) {
-      y += 6;
-      doc.setFontSize(13);
-      doc.text('Observations', 14, y);
-      y += 8;
-      doc.setFontSize(10);
-      doc.text(inv.observations, 18, y, { maxWidth: 170 });
+      if (y > 235) {
+        doc.addPage();
+        drawPageBorder(doc);
+        y = 28;
+      }
+      drawSectionFrame(doc, 14, y, 182, 34, undefined, {
+        title: 'Observations',
+        accent: 'neutral',
+      });
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      doc.text(doc.splitTextToSize(inv.observations, 170) as string[], 18, y + 15);
     }
+    addFooter(doc);
     saveGeneratedPdf(doc, {
       kind: 'inventaire',
       title: `État des lieux ${inv.type === 'entree' ? "d'entrée" : 'de sortie'}`,

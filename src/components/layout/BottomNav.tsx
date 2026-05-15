@@ -1,5 +1,5 @@
 import { LayoutDashboard, CreditCard, FileText, Wrench, MoreHorizontal } from 'lucide-react';
-import { canAccessPage } from '../../lib/rbac';
+import { canAccessPage, type UserPermissionMap } from '../../lib/rbac';
 import type { UserRole } from '../../lib/supabase';
 import type { AgencySettings } from '../../types/agency';
 
@@ -14,6 +14,7 @@ interface BottomNavProps {
       'module_depenses_actif' | 'module_inventaires_actif' | 'module_interventions_actif' | 'mode_avance_actif'
     >
   > | null;
+  userPermissions?: UserPermissionMap | null;
 }
 
 const BOTTOM_ITEMS = [
@@ -23,7 +24,7 @@ const BOTTOM_ITEMS = [
   { id: 'interventions', label: 'Maintenance', icon: Wrench },
 ];
 
-export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent', moduleSettings }: BottomNavProps) {
+export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent', moduleSettings, userPermissions }: BottomNavProps) {
   const isActive = (id: string) => {
     if (id === 'paiements' && (currentPage === 'paiements' || currentPage === 'loyers-impayes')) return true;
     return currentPage === id;
@@ -35,7 +36,7 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent',
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="flex items-stretch h-14">
-        {BOTTOM_ITEMS.filter(({ id }) => canAccessPage(role, id, moduleSettings)).map(({ id, label, icon: Icon }) => {
+        {BOTTOM_ITEMS.filter(({ id }) => canAccessPage(role, id, moduleSettings, userPermissions)).map(({ id, label, icon: Icon }) => {
           const active = isActive(id);
           return (
             <button

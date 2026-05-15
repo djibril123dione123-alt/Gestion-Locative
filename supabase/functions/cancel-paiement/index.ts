@@ -79,6 +79,18 @@ serve(async (req: Request) => {
     const agencyId: string = profile.agency_id;
     if (!agencyId) return err("Aucune agence associee.", 403, "NO_AGENCY");
 
+    const { data: canDeletePaiement, error: permissionErr } = await supabaseAdmin.rpc(
+      "fn_user_can",
+      { p_user_id: user.id, p_page: "paiements", p_action: "delete" },
+    );
+    if (permissionErr) {
+      console.error("[cancel-paiement] RBAC check failed", permissionErr.message);
+      return err("Verification des permissions indisponible.", 500, "RBAC_CHECK_FAILED");
+    }
+    if (!canDeletePaiement) {
+      return err("Action refusee par les permissions de l'agence.", 403, "RBAC_FORBIDDEN");
+    }
+
     const rawBody = await readBody(req);
     if (!rawBody) return err("JSON invalide.", 400, "INVALID_JSON");
 

@@ -6,7 +6,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '../lib/formatters';
-import { saveGeneratedPdf } from '../lib/pdf';
+import { addFooter, drawPageBorder, drawSectionFrame, saveGeneratedPdf } from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import type { AgencySettings } from '../types/agency';
 
@@ -114,6 +114,34 @@ interface PaiementMensuelRow {
 type PdfWithAutoTable = jsPDF & {
     lastAutoTable?: { finalY: number };
 };
+
+async function loadPdfLogoDataUrl(
+    url: string | null | undefined
+): Promise<{ dataUrl: string; width: number; height: number } | null> {
+    if (!url || typeof document === 'undefined') return null;
+    try {
+        const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = url;
+        });
+        const ratio = Math.min(1, 320 / Math.max(image.width, 1));
+        const width = Math.max(1, Math.round(image.width * ratio));
+        const height = Math.max(1, Math.round(image.height * ratio));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(image, 0, 0, width, height);
+        return { dataUrl: canvas.toDataURL('image/png'), width, height };
+    } catch {
+        return null;
+    }
+}
 
 // -------------------------------------------------------------------------
 // 2. FONCTIONS UTILITAIRES UNIFIÉES
@@ -434,7 +462,7 @@ export function TableauDeBordFinancierGlobal() {
     // rapports immeubles, comptabilité) ont été retirées car jamais
     // câblées à un bouton. Voir l'historique git pour les récupérer.
 
-    const exportBilanBailleurPDF = (bilan: BilanBailleur) => {
+    const exportBilanBailleurPDF = async (bilan: BilanBailleur) => {
         const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
         const hexToRgb = (hex: string | null | undefined, fallback: [number, number, number]) => {
             const value = (hex || '').replace('#', '').trim();
@@ -455,19 +483,52 @@ export function TableauDeBordFinancierGlobal() {
         const recoveryRate = occupancyBase > 0
             ? Math.round((bilan.total_loyers_percus / occupancyBase) * 100)
             : 100;
+        const agencyLogo = await loadPdfLogoDataUrl(agencySettings?.logo_url);
 
-        doc.setFillColor(...primary);
-        doc.rect(0, 0, 210, 54, 'F');
-        doc.setTextColor(255, 255, 255);
+        drawPageBorder(doc, agencySettings ?? undefined);
+        doc.setFillColor(255, 255, 255);
+        doc.rect(0, 0, 210, 42, 'F');
+        let agencyTextX = 16;
+        if (agencyLogo) {
+            const logoWidth = Math.min(26, Math.max(14, agencyLogo.width * 0.08));
+            const logoHeight = Math.min(13, (agencyLogo.height / agencyLogo.width) * logoWidth);
+            doc.addImage(agencyLogo.dataUrl, 'PNG', 16, 10, logoWidth, logoHeight);
+            agencyTextX = 16 + logoWidth + 5;
+        }
+        doc.setTextColor(...secondary);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(21);
-        doc.text('Rapport mensuel bailleur', 16, 21);
-        doc.setFontSize(10);
+        doc.setFontSize(11);
+        doc.text(agencySettings?.nom_agence || 'Samay Këur', agencyTextX, 15);
+        doc.setFontSize(8.5);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Période : ${periodLabel}`, 16, 31);
-        doc.text(`Bailleur : ${bilan.bailleur_prenom} ${bilan.bailleur_nom}`, 16, 38);
-        doc.setTextColor(251, 146, 60);
-        doc.text(`${agencySettings?.nom_agence || 'Samay Këur'} • Pilotage immobilier premium`, 16, 46);
+        doc.setTextColor(71, 85, 105);
+        doc.text(
+            [agencySettings?.adresse, agencySettings?.telephone, agencySettings?.email].filter(Boolean).join(' • '),
+            agencyTextX,
+            21
+        );
+        doc.setTextColor(...secondary);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text('Rapport mensuel bailleur', 194, 15, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(71, 85, 105);
+        doc.text(`Période : ${periodLabel}`, 194, 22, { align: 'right' });
+        doc.text(`Bailleur : ${bilan.bailleur_prenom} ${bilan.bailleur_nom}`, 194, 28, { align: 'right' });
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.2);
+        doc.line(16, 35, 194, 35);
+        doc.setDrawColor(251, 146, 60);
+        doc.setLineWidth(0.45);
+        doc.line(16, 36.2, 56, 36.2);
+
+        drawSectionFrame(doc, 14, 46, 182, 52, agencySettings ?? undefined, {
+            title: 'Indicateurs du mois',
+            subtitle: 'Vue synthétique destinée au bailleur',
+            accent: 'primary',
+            fill: false,
+        });
 
         const cards = [
             ['Revenus encaissés', formatCurrency(bilan.total_loyers_percus)],
@@ -477,9 +538,9 @@ export function TableauDeBordFinancierGlobal() {
         ];
         cards.forEach(([label, value], index) => {
             const x = 16 + (index % 2) * 90;
-            const y = 66 + Math.floor(index / 2) * 26;
+            const y = 50 + Math.floor(index / 2) * 24;
             doc.setFillColor(248, 250, 252);
-            doc.roundedRect(x, y, 82, 19, 3, 3, 'F');
+            doc.roundedRect(x, y, 82, 18, 2.5, 2.5, 'F');
             doc.setTextColor(71, 85, 105);
             doc.setFontSize(8);
             doc.setFont('helvetica', 'bold');
@@ -492,17 +553,21 @@ export function TableauDeBordFinancierGlobal() {
         doc.setTextColor(...secondary);
         doc.setFontSize(13);
         doc.setFont('helvetica', 'bold');
-        doc.text('Résumé exécutif', 16, 126);
+        drawSectionFrame(doc, 14, 104, 182, 24, agencySettings ?? undefined, {
+            title: 'Résumé exécutif',
+            accent: 'neutral',
+        });
         doc.setFontSize(10);
+        doc.setTextColor(30, 41, 59);
         doc.setFont('helvetica', 'normal');
         const executiveSummary = [
-            `Taux de recouvrement estim? : ${recoveryRate}%.`,
+            `Taux de recouvrement estimé : ${recoveryRate}%.`,
             `Montant net prévu pour le bailleur : ${formatCurrency(bilan.total_net)}.`,
             bilan.total_impayes > 0
                 ? `Action recommandée : prioriser la relance des impayés (${formatCurrency(bilan.total_impayes)}).`
-                : 'Aucun impay? significatif sur la période.',
+                : 'Aucun impayé significatif sur la période.',
         ];
-        doc.text(doc.splitTextToSize(executiveSummary.join(' '), 178), 16, 134);
+        doc.text(doc.splitTextToSize(executiveSummary.join(' '), 178), 16, 116);
 
         const detailRows = bilan.immeubles.flatMap((immeuble) => {
             const unitRows = immeuble.unites.map((unit, index) => [
@@ -533,16 +598,17 @@ export function TableauDeBordFinancierGlobal() {
         });
 
         autoTable(doc, {
-            head: [['Immeuble', 'Unit?', 'Locataire', 'Loyer', 'Statut', 'Encaissé', 'Restant', 'Période', 'Observation']],
+            head: [['Immeuble', 'Unité', 'Locataire', 'Loyer', 'Statut', 'Encaissé', 'Restant', 'Période', 'Observation']],
             body: detailRows,
-            startY: 154,
-            styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59] },
+            startY: 136,
+            theme: 'grid',
+            styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59], lineColor: [226, 232, 240], lineWidth: 0.12 },
             headStyles: { fillColor: primary, textColor: [255, 255, 255], fontStyle: 'bold' },
             alternateRowStyles: { fillColor: [248, 250, 252] },
             margin: { left: 16, right: 16 },
             didParseCell: (data) => {
                 const firstCell = Array.isArray(data.row.raw) ? data.row.raw[0] : undefined;
-                if (typeof firstCell === 'string' && firstCell.includes('? total')) {
+                if (typeof firstCell === 'string' && firstCell.includes('— total')) {
                     data.cell.styles.fillColor = [255, 247, 237];
                     data.cell.styles.fontStyle = 'bold';
                     data.cell.styles.textColor = [154, 52, 18];
@@ -550,7 +616,7 @@ export function TableauDeBordFinancierGlobal() {
             },
         });
 
-        const finalY = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? 154) + 12;
+        const finalY = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? 136) + 12;
         doc.setFillColor(255, 247, 237);
         doc.roundedRect(16, finalY, 178, 20, 3, 3, 'F');
         doc.setTextColor(154, 52, 18);
@@ -560,6 +626,7 @@ export function TableauDeBordFinancierGlobal() {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} • ${agencySettings?.nom_agence || 'Samay Këur'}`, 22, finalY + 16);
+        addFooter(doc, agencySettings ?? undefined);
 
         const previewRows = bilan.immeubles.flatMap((i) =>
             i.unites.map((u) => ({
@@ -578,7 +645,7 @@ export function TableauDeBordFinancierGlobal() {
             fileName: `rapport-bailleur-${bilan.bailleur_nom}-${selectedMonth}.pdf`,
             source: 'tableau-de-bord-financier',
             preview: {
-                columns: ['Immeuble', 'Unit?', 'Locataire', 'Statut', 'Encaissé', 'Restant'],
+                columns: ['Immeuble', 'Unité', 'Locataire', 'Statut', 'Encaissé', 'Restant'],
                 rows: previewRows.slice(0, 6),
                 rowCount: previewRows.length,
                 period: periodLabel,
@@ -905,7 +972,7 @@ export function TableauDeBordFinancierGlobal() {
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                                     <p className="text-xs sm:text-sm text-gray-600">{bilan.immeubles.length} immeuble(s)</p>
                                     <button
-                                        onClick={() => exportBilanBailleurPDF(bilan)}
+                                        onClick={() => void exportBilanBailleurPDF(bilan)}
                                         className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white text-xs sm:text-sm rounded-lg hover:bg-red-700 transition whitespace-nowrap"
                                     >
                                         <Download className="w-3 sm:w-4 h-3 sm:h-4" /> Bilan PDF

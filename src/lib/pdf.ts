@@ -30,6 +30,7 @@ const PDF_SETTINGS_FALLBACK: Partial<AgencySettings> = {
   email: DEFAULT_AGENCY_SETTINGS.email ?? null,
   logo_url: DEFAULT_AGENCY_SETTINGS.logo_url ?? null,
   couleur_primaire: DEFAULT_AGENCY_SETTINGS.couleur_primaire ?? '#F58220',
+  couleur_secondaire: DEFAULT_AGENCY_SETTINGS.couleur_secondaire ?? '#334155',
   ninea: DEFAULT_AGENCY_SETTINGS.ninea ?? null,
   rc: DEFAULT_AGENCY_SETTINGS.rc ?? null,
   representant_nom: DEFAULT_AGENCY_SETTINGS.representant_nom ?? null,
@@ -129,6 +130,41 @@ async function buildVerificationUrl(payload: {
   return `${base}#/verify-document?${params.toString()}`;
 }
 
+async function loadImageAsPngDataUrl(
+  url: string | null | undefined,
+  maxWidth = 320
+): Promise<{ dataUrl: string; width: number; height: number } | null> {
+  if (!url || typeof document === 'undefined') return null;
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = url;
+    });
+
+    const ratio = Math.min(1, maxWidth / Math.max(img.width, 1));
+    const width = Math.max(1, Math.round(img.width * ratio));
+    const height = Math.max(1, Math.round(img.height * ratio));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+
+    return {
+      dataUrl: canvas.toDataURL('image/png'),
+      width,
+      height,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
   try {
     const {
@@ -153,7 +189,7 @@ async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
     const { data, error } = await supabase
       .from('agency_settings')
       .select(
-        `nom_agence, adresse, telephone, email, logo_url, couleur_primaire,
+        `nom_agence, adresse, telephone, email, logo_url, couleur_primaire, couleur_secondaire,
          ninea, rc, representant_nom, representant_fonction,
          manager_id_type, manager_id_number, city, devise,
          pied_page_personnalise, signature_url, qr_code_quittances,
@@ -192,8 +228,93 @@ function getBrandColors(settings?: Partial<AgencySettings>) {
     secondary: hexToRgb(settings?.couleur_secondaire, [15, 23, 42]),
     orange: [249, 115, 22] as [number, number, number],
     paper: [255, 251, 245] as [number, number, number],
+    surface: [248, 250, 252] as [number, number, number],
+    border: [226, 232, 240] as [number, number, number],
     muted: [100, 116, 139] as [number, number, number],
   };
+}
+
+type SectionFrameOptions = {
+  title?: string;
+  subtitle?: string;
+  accent?: 'primary' | 'orange' | 'neutral';
+  fill?: boolean;
+};
+
+export function drawSectionFrame(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  settings?: Partial<AgencySettings>,
+  options: SectionFrameOptions = {}
+): number {
+  const colors = getBrandColors(settings);
+  const accent = options.accent === 'orange'
+    ? colors.orange
+    : options.accent === 'neutral'
+      ? colors.border
+      : colors.primary;
+
+  if (options.fill !== false) {
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(x, y, width, height, 2.5, 2.5, 'F');
+  }
+  doc.setDrawColor(...colors.border);
+  doc.setLineWidth(0.18);
+  doc.roundedRect(x, y, width, height, 2.5, 2.5, 'S');
+  doc.setDrawColor(...accent);
+  doc.setLineWidth(0.45);
+  doc.line(x, y, x + Math.min(42, width * 0.32), y);
+
+  let contentY = y + 6;
+  if (options.title) {
+    doc.setFont(undefined as unknown as string, 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text(options.title, x + 4, contentY);
+    contentY += 5;
+  }
+  if (options.subtitle) {
+    doc.setFont(undefined as unknown as string, 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...colors.muted);
+    doc.text(options.subtitle, x + 4, contentY);
+    contentY += 4;
+  }
+  doc.setTextColor(0, 0, 0);
+  return contentY;
+}
+
+export function drawSignatureBlocks(
+  doc: jsPDF,
+  y: number,
+  labels: [string, string],
+  settings?: Partial<AgencySettings>
+): void {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const colors = getBrandColors(settings);
+  const width = 76;
+  const gap = pageWidth - 28 - width * 2;
+  const leftX = 14;
+  const rightX = leftX + width + gap;
+
+  [leftX, rightX].forEach((x, index) => {
+    drawSectionFrame(doc, x, y, width, 28, settings, { accent: 'neutral', fill: false });
+    doc.setFont(undefined as unknown as string, 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(labels[index], x + 5, y + 7);
+    doc.setDrawColor(...colors.border);
+    doc.setLineWidth(0.2);
+    doc.line(x + 5, y + 21, x + width - 5, y + 21);
+    doc.setFont(undefined as unknown as string, 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(...colors.muted);
+    doc.text('Signature et cachet', x + 5, y + 25);
+  });
+  doc.setTextColor(0, 0, 0);
 }
 
 async function drawDocumentHeader(
@@ -204,60 +325,88 @@ async function drawDocumentHeader(
 ): Promise<number> {
   const pageWidth = doc.internal.pageSize.getWidth();
   const colors = getBrandColors(settings);
-  doc.setFillColor(...colors.primary);
-  doc.rect(0, 0, pageWidth, 38, 'F');
 
-  doc.setTextColor(255, 255, 255);
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, pageWidth, 42, 'F');
+
+  let brandTextX = 14;
+  const logo = await loadImageAsPngDataUrl(settings.logo_url, 360);
+  if (logo) {
+    const logoWidth = Math.min(28, Math.max(14, logo.width * 0.085));
+    const logoHeight = Math.min(14, (logo.height / logo.width) * logoWidth);
+    const logoY = 12 + Math.max(0, (14 - logoHeight) / 2);
+    doc.addImage(logo.dataUrl, 'PNG', 14, logoY, logoWidth, logoHeight);
+    brandTextX = 14 + logoWidth + 5;
+  } else {
+    doc.setFillColor(...colors.primary);
+    doc.roundedRect(14, 11, 13, 13, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont(undefined as unknown as string, 'bold');
+    doc.setFontSize(8);
+    doc.text((settings.nom_agence ?? 'SK').slice(0, 2).toUpperCase(), 20.5, 19.5, {
+      align: 'center',
+    });
+    brandTextX = 32;
+  }
+
+  doc.setTextColor(15, 23, 42);
+  doc.setFont(undefined as unknown as string, 'bold');
+  doc.setFontSize(11);
+  doc.text(settings.nom_agence ?? 'Samay Këur', brandTextX, 15);
+  doc.setFont(undefined as unknown as string, 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(71, 85, 105);
+  const agencyLine = [settings.adresse, settings.telephone, settings.email].filter(Boolean).join(' • ');
+  if (agencyLine) doc.text(agencyLine, brandTextX, 20);
+  const legalLine = [settings.ninea ? `NINEA ${settings.ninea}` : null, settings.rc ? `RC ${settings.rc}` : null]
+    .filter(Boolean)
+    .join(' • ');
+  if (legalLine) doc.text(legalLine, brandTextX, 25);
+
+  doc.setTextColor(15, 23, 42);
   doc.setFont(undefined as unknown as string, 'bold');
   doc.setFontSize(14);
-  doc.text(settings.nom_agence ?? 'Samay Këur', 14, 14);
-  doc.setFont(undefined as unknown as string, 'normal');
-  doc.setFontSize(8);
-  const agencyLine = [settings.adresse, settings.telephone, settings.email].filter(Boolean).join(' • ');
-  if (agencyLine) doc.text(agencyLine, 14, 20);
-
-  doc.setTextColor(...colors.orange);
-  doc.setFont(undefined as unknown as string, 'bold');
-  doc.setFontSize(16);
   doc.text(title, pageWidth - 14, 15, { align: 'right' });
   if (subtitle) {
     doc.setFont(undefined as unknown as string, 'normal');
-    doc.setFontSize(9);
-    doc.text(subtitle, pageWidth - 14, 23, { align: 'right' });
+    doc.setFontSize(8.5);
+    doc.setTextColor(71, 85, 105);
+    doc.text(subtitle, pageWidth - 14, 21, { align: 'right' });
   }
 
-  if (settings.logo_url) {
-    try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = reject;
-        img.src = settings.logo_url || '';
-      });
-      doc.addImage(img, 'PNG', pageWidth - 40, 25, 18, Math.min(10, (img.height / img.width) * 18));
-    } catch {
-      // Optional brand image: document generation must stay reliable.
-    }
-  }
-
+  doc.setDrawColor(226, 232, 240);
+  doc.setLineWidth(0.2);
+  doc.line(14, 34, pageWidth - 14, 34);
   doc.setDrawColor(...colors.orange);
-  doc.setLineWidth(0.8);
-  doc.line(14, 41, pageWidth - 14, 41);
+  doc.setLineWidth(0.45);
+  doc.line(14, 35.2, 54, 35.2);
   doc.setTextColor(0);
-  return 52;
+  return 47;
 }
 
 function getAutoTableTheme(settings?: Partial<AgencySettings>) {
   const colors = getBrandColors(settings);
   return {
-    styles: { fontSize: 9, cellPadding: 3, textColor: [30, 41, 59] as [number, number, number] },
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+      textColor: [30, 41, 59] as [number, number, number],
+      lineColor: colors.border,
+      lineWidth: 0.12,
+    },
     headStyles: {
       fillColor: colors.primary,
       textColor: [255, 255, 255] as [number, number, number],
       fontStyle: 'bold' as const,
+      lineColor: colors.primary,
+      lineWidth: 0.12,
     },
-    alternateRowStyles: { fillColor: [248, 250, 252] as [number, number, number] },
+    bodyStyles: {
+      lineColor: colors.border,
+      lineWidth: 0.12,
+    },
+    alternateRowStyles: { fillColor: colors.surface },
+    margin: { left: 14, right: 14 },
   };
 }
 
@@ -268,11 +417,17 @@ function getAutoTableTheme(settings?: Partial<AgencySettings>) {
 export function drawPageBorder(doc: jsPDF, settings?: Partial<AgencySettings>): void {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 5;
   const colors = getBrandColors(settings);
+  doc.setDrawColor(...colors.border);
+  doc.setLineWidth(0.15);
+  doc.rect(8, 8, pageWidth - 16, pageHeight - 16);
   doc.setDrawColor(...colors.primary);
-  doc.setLineWidth(0.5);
-  doc.rect(margin, margin, pageWidth - 2 * margin, pageHeight - 2 * margin);
+  doc.setLineWidth(0.45);
+  doc.line(8, 8, 42, 8);
+  doc.line(pageWidth - 42, pageHeight - 8, pageWidth - 8, pageHeight - 8);
+  doc.setDrawColor(...colors.border);
+  doc.setLineWidth(0.12);
+  doc.line(12, 42, pageWidth - 12, 42);
 }
 
 export function addFooter(doc: jsPDF, settings?: Partial<AgencySettings>): void {
@@ -282,9 +437,12 @@ export function addFooter(doc: jsPDF, settings?: Partial<AgencySettings>): void 
     doc.setPage(i);
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setDrawColor(...colors.primary);
-    doc.setLineWidth(0.2);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.15);
     doc.line(14, pageHeight - 16, pageWidth - 14, pageHeight - 16);
+    doc.setDrawColor(...colors.orange);
+    doc.setLineWidth(0.35);
+    doc.line(14, pageHeight - 16, 42, pageHeight - 16);
     doc.setFontSize(9);
     doc.setTextColor(...colors.muted);
     doc.setFont(undefined as unknown as string, 'normal');
@@ -493,7 +651,28 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
       `${locataire.prenom ?? ''} ${locataire.nom ?? ''}`.trim()
     );
 
-    renderTemplateToDoc(doc, body, dynamicValues, titleY, leftMargin, usableWidth, 7, 11, settings);
+    const sectionY = titleY - 2;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const bodyY = drawSectionFrame(
+      doc,
+      leftMargin,
+      sectionY,
+      usableWidth,
+      pageHeight - sectionY - 48,
+      settings,
+      { title: 'Clauses contractuelles', subtitle: 'Contrat de location et conditions applicables' }
+    );
+    renderTemplateToDoc(doc, body, dynamicValues, bodyY + 1, leftMargin + 4, usableWidth - 8, 6.6, 10.5, settings);
+
+    doc.addPage();
+    drawPageBorder(doc, settings);
+    const signatureHeaderY = await drawDocumentHeader(doc, settings, 'SIGNATURES', 'Contrat de location');
+    drawSectionFrame(doc, leftMargin, signatureHeaderY, usableWidth, 34, settings, {
+      title: 'Validation du document',
+      subtitle: 'Les parties déclarent avoir lu et accepté les clauses du présent contrat.',
+      accent: 'neutral',
+    });
+    drawSignatureBlocks(doc, signatureHeaderY + 48, ['Le bailleur / mandataire', 'Le locataire'], settings);
   } catch (err) {
     console.error('Erreur génération contrat:', err);
   }
@@ -558,33 +737,36 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
 
   doc.setFont(undefined as unknown as string, 'normal');
   doc.setFontSize(11);
-  let y = titleY + 10;
-
-  doc.setFont(undefined as unknown as string, 'bold');
-  doc.text(`Référence : ${ref}`, leftMargin, y);
-  y += 6;
+  let y = titleY + 3;
 
   const datePaiement = paiement.date_paiement
     ? new Date(paiement.date_paiement).toLocaleDateString('fr-FR')
     : new Date().toLocaleDateString('fr-FR');
-  doc.text(`Date : ${datePaiement}`, leftMargin, y);
-  y += 8;
 
-  doc.setFont(undefined as unknown as string, 'bold');
-  doc.text('Informations du locataire', leftMargin, y);
-  y += 6;
-  doc.text(
-    `Nom : ${locataire.prenom ?? ''} ${locataire.nom ?? ''}`.trim() || '—',
-    leftMargin,
-    y
-  );
-  y += 6;
+  drawSectionFrame(doc, leftMargin, y, usableWidth, 22, settings, {
+    title: 'Référence du document',
+    accent: 'orange',
+  });
+  doc.setFont(undefined as unknown as string, 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(30, 41, 59);
+  doc.text(`Référence : ${ref}`, leftMargin + 4, y + 14);
+  doc.text(`Date : ${datePaiement}`, pageWidth - rightMargin - 4, y + 14, { align: 'right' });
+  y += 30;
+
+  const tenantBoxY = y;
+  drawSectionFrame(doc, leftMargin, tenantBoxY, usableWidth, 32, settings, {
+    title: 'Informations du locataire',
+  });
+  doc.setFont(undefined as unknown as string, 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(30, 41, 59);
+  doc.text(`Nom : ${`${locataire.prenom ?? ''} ${locataire.nom ?? ''}`.trim() || '—'}`, leftMargin + 4, tenantBoxY + 14);
   doc.text(
     `Adresse du logement : ${(unite.immeubles as { adresse?: string } | undefined)?.adresse ?? '—'}`,
-    leftMargin,
-    y
+    leftMargin + 4,
+    tenantBoxY + 21
   );
-  y += 6;
 
   const moisConcerne = paiement.mois_concerne
     ? new Date(paiement.mois_concerne).toLocaleDateString('fr-FR', {
@@ -592,8 +774,8 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
         month: 'long',
       })
     : '—';
-  doc.text(`Mois concerné : ${moisConcerne}`, leftMargin, y);
-  y += 10;
+  doc.text(`Mois concerné : ${moisConcerne}`, leftMargin + 4, tenantBoxY + 28);
+  y += 40;
 
   autoTable(doc, {
     startY: y,
@@ -617,14 +799,19 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     'NB 2 : La sous-location est strictement interdite.',
   ];
 
-  doc.setFont(undefined as unknown as string, 'bold');
-  doc.text('Mentions', leftMargin, finalY);
+  const mentionBoxHeight = 35;
+  drawSectionFrame(doc, leftMargin, finalY - 4, usableWidth, mentionBoxHeight, settings, {
+    title: 'Mentions',
+    accent: 'neutral',
+  });
 
   doc.setFont(undefined as unknown as string, 'normal');
-  let yMentions = finalY + 6;
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 41, 59);
+  let yMentions = finalY + 8;
   for (const m of mentions) {
-    const lines = doc.splitTextToSize(`- ${m}`, usableWidth) as string[];
-    doc.text(lines, leftMargin, yMentions);
+    const lines = doc.splitTextToSize(`- ${m}`, usableWidth - 8) as string[];
+    doc.text(lines, leftMargin + 4, yMentions);
     yMentions += lines.length * 5;
   }
 
@@ -654,7 +841,11 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
       const qrSize = 24;
       const ph = doc.internal.pageSize.getHeight();
       const qrX = pageWidth - rightMargin - qrSize;
-      const qrY = ph - 48;
+      const qrY = ph - 50;
+      drawSectionFrame(doc, qrX - 3, qrY - 3, qrSize + 6, qrSize + 10, settings, {
+        accent: 'neutral',
+        fill: false,
+      });
       doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize);
       doc.setFontSize(7);
       doc.setTextColor(120);
@@ -729,11 +920,32 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
     const titleY = await drawDocumentHeader(
       doc,
       settings,
-      'MANDAT DE G?RANCE',
+      'MANDAT DE GÉRANCE',
       `${bailleur.prenom ?? ''} ${bailleur.nom ?? ''}`.trim()
     );
 
-    renderTemplateToDoc(doc, body, dynamicValues, titleY, leftMargin, usableWidth, 7, 12, settings);
+    const sectionY = titleY - 2;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const bodyY = drawSectionFrame(
+      doc,
+      leftMargin,
+      sectionY,
+      usableWidth,
+      pageHeight - sectionY - 48,
+      settings,
+      { title: 'Mandat et conditions de gestion', subtitle: 'Document de délégation de gestion locative' }
+    );
+    renderTemplateToDoc(doc, body, dynamicValues, bodyY + 1, leftMargin + 4, usableWidth - 8, 6.8, 10.8, settings);
+
+    doc.addPage();
+    drawPageBorder(doc, settings);
+    const signatureHeaderY = await drawDocumentHeader(doc, settings, 'SIGNATURES', 'Mandat de gérance');
+    drawSectionFrame(doc, leftMargin, signatureHeaderY, usableWidth, 34, settings, {
+      title: 'Validation du mandat',
+      subtitle: 'Les parties confirment la délégation de gestion décrite dans le présent mandat.',
+      accent: 'neutral',
+    });
+    drawSignatureBlocks(doc, signatureHeaderY + 48, ['Le mandant', 'Le mandataire'], settings);
   } catch {
     doc.setFont(undefined as unknown as string, 'normal');
     doc.setFontSize(12);

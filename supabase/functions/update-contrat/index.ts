@@ -91,6 +91,18 @@ serve(async (req: Request) => {
     const agencyId: string = profile.agency_id;
     if (!agencyId) return err("Aucune agence associée.", 403, "NO_AGENCY");
 
+    const { data: canUpdateContrat, error: permissionErr } = await supabaseAdmin.rpc(
+      "fn_user_can",
+      { p_user_id: user.id, p_page: "contrats", p_action: "update" },
+    );
+    if (permissionErr) {
+      console.error("[update-contrat] RBAC check failed", permissionErr.message);
+      return err("Vérification des permissions indisponible.", 500, "RBAC_CHECK_FAILED");
+    }
+    if (!canUpdateContrat) {
+      return err("Action refusée par les permissions de l'agence.", 403, "RBAC_FORBIDDEN");
+    }
+
     // ── 3. Validation Zod ────────────────────────────────────────────────────
     let rawBody: unknown;
     try { rawBody = await req.json(); } catch {

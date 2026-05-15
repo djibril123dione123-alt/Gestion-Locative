@@ -15,7 +15,7 @@ import { PageSkeleton } from './components/ui/Skeleton';
 import { DocumentGeneratedModal } from './components/documents/DocumentGeneratedModal';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
-import { canAccessPage, getPageAccessReason } from './lib/rbac';
+import { canAccessPage, getPageAccessReason, permissionRowsToMap, type UserPermissionMap } from './lib/rbac';
 import type { AgencySettings } from './types/agency';
 import Welcome from './pages/Welcome';
 import { runFullBackup, getLastBackupTimestamp } from './services/localBackup';
@@ -85,6 +85,7 @@ function AppContent() {
             'module_depenses_actif' | 'module_inventaires_actif' | 'module_interventions_actif' | 'mode_avance_actif'
         > | null
     >(null);
+    const [userPermissions, setUserPermissions] = useState<UserPermissionMap | null>(null);
     const [invitationToken, setInvitationToken] = useState<string | null>(() => {
         const params = new URLSearchParams(window.location.search);
         const fromUrl = params.get('token');
@@ -195,6 +196,34 @@ function AppContent() {
         };
     }, [profile?.agency_id, profile?.role]);
 
+    useEffect(() => {
+        if (!profile?.agency_id || !profile.id || profile.role === 'super_admin' || profile.role === 'admin') {
+            setUserPermissions(null);
+            return;
+        }
+
+        let alive = true;
+        void (async () => {
+            const { data, error } = await supabase
+                .from('user_page_permissions')
+                .select('page,access_level,can_create,can_update,can_delete,can_export,can_manage')
+                .eq('agency_id', profile.agency_id)
+                .eq('user_id', profile.id);
+
+            if (!alive) return;
+            if (error) {
+                console.warn('[rbac] permissions load failed', error.message);
+                setUserPermissions({});
+                return;
+            }
+            setUserPermissions(permissionRowsToMap(data));
+        })();
+
+        return () => {
+            alive = false;
+        };
+    }, [profile?.agency_id, profile?.id, profile?.role]);
+
     if (invitationToken) {
         return (
             <Suspense fallback={<BrandedLoader label="Invitation" />}>
@@ -282,8 +311,8 @@ function AppContent() {
     }
 
     const renderPage = () => {
-        if (!canAccessPage(profile.role, currentPage, moduleSettings)) {
-            const reason = getPageAccessReason(currentPage, moduleSettings);
+        if (!canAccessPage(profile.role, currentPage, moduleSettings, userPermissions)) {
+            const reason = getPageAccessReason(currentPage, moduleSettings, userPermissions);
             return (
                 <div className="flex min-h-full items-center justify-center p-6">
                     <div className="max-w-lg rounded-3xl border border-emerald-100 bg-white p-8 text-center shadow-2xl shadow-emerald-950/10">
@@ -376,6 +405,7 @@ function AppContent() {
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
                 moduleSettings={moduleSettings}
+                userPermissions={userPermissions}
             />
 
             <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
@@ -414,6 +444,7 @@ function AppContent() {
                 onOpenMenu={() => setSidebarOpen(true)}
                 role={profile.role}
                 moduleSettings={moduleSettings}
+                userPermissions={userPermissions}
             />
 
             {/* Backup + offline status indicator - floating badge */}

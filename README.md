@@ -45,15 +45,21 @@ Les flux critiques ont ete fortement durcis:
   - motion tokens unifies, transitions plus douces et support `prefers-reduced-motion`;
   - focus, hover, touch targets et scrollbars harmonises dans le theme premium;
   - suppression du warning PostCSS/Vite lie aux nodes CSS generes sans source.
+- RBAC equipe enterprise:
+  - table `user_page_permissions` pour les overrides par utilisateur et par page;
+  - niveaux `none`, `read`, `write`, `admin` + actions `create/update/delete/export/manage`;
+  - navigation, routes et page Equipe branches sur les permissions effectives;
+  - Edge Functions critiques paiement/contrat controlees par `fn_user_can()`;
+  - RLS multi-tenant pour que seuls les admins d'agence gerent les permissions.
 
-Dernieres verifications locales du 2026-05-14:
+Dernieres verifications locales du 2026-05-15:
 
 - `npm run lint`: OK
 - `npm run typecheck`: OK
 - `npm run test:unit`: OK, 31 tests
 - `npm run build`: OK
-- serveur local Vite: HTTP 200 sur `http://127.0.0.1:5173/`
-- verification navigateur integree: tentative bloquee/expiree par l'environnement local, a relancer manuellement si besoin
+- scan encodage UTF-8/mojibake: OK, 211 fichiers
+- verification navigateur integree: page auth chargee sur `http://127.0.0.1:4173/#/auth`
 
 Dernier audit live DB:
 
@@ -189,10 +195,32 @@ Regle importante: tout ce qui touche aux paiements, aux contrats critiques, au l
 
 - Multi-agence.
 - Roles: `super_admin`, `admin`, `agent`, `comptable`, `bailleur`.
+- Permissions dynamiques par membre d'equipe via `user_page_permissions`.
 - Abonnements PayDunya.
 - Plans: `starter`, `pro`, `business`, `enterprise`.
 - Console super-admin.
 - Audit dashboard.
+
+### RBAC equipe
+
+Le role reste la base de securite, mais l'admin d'agence peut appliquer des overrides par utilisateur.
+
+Modele:
+
+- `user_profiles.role` definit le niveau par defaut.
+- `user_page_permissions` peut masquer une page, la passer en lecture seule ou autoriser l'edition.
+- Les actions sensibles sont separees: `can_create`, `can_update`, `can_delete`, `can_export`, `can_manage`.
+- `fn_user_can(user_id, page, action)` est le point de controle serveur pour les Edge Functions.
+- La sidebar, la bottom nav et le route guard utilisent le meme catalogue RBAC centralise dans `src/lib/rbac.ts`.
+
+Pages controlables:
+
+- Dashboard, Bailleurs, Immeubles, Unites, Locataires, Contrats.
+- Paiements, Loyers impayes, Depenses, Commissions, Analytics.
+- Documents, Notifications, Calendrier, Interventions, Inventaires.
+- Parametres, Equipe, Abonnement, Audit.
+
+Regle de production: une restriction importante doit toujours etre appliquee cote serveur ou RLS, pas seulement dans l'UI.
 
 ### Offline-first
 
@@ -270,6 +298,8 @@ Migrations importantes recentes:
 | `20260506191057_fix_worker_analytics_locking.sql` | Fix worker analytics |
 | `20260512000001_phase3_finance_security_hardening.sql` | Durcissement finance/abonnement |
 | `20260514000001_finance_partial_payments_reliquats.sql` | Paiements partiels, reliquats, impayes reels, commissions separees |
+| `20260515000001_fix_agency_assets_logo_upload.sql` | Bucket/policies logo agence dans `agency-assets` |
+| `20260515000002_enterprise_team_permissions.sql` | RBAC equipe: permissions par page/action + RPC `fn_user_can` |
 
 Appliquer les migrations avec prudence:
 
@@ -360,6 +390,8 @@ Supabase Edge Functions:
 npx supabase functions deploy create-paiement --project-ref <project-ref> --use-api
 npx supabase functions deploy update-paiement --project-ref <project-ref> --use-api
 npx supabase functions deploy cancel-paiement --project-ref <project-ref> --use-api
+npx supabase functions deploy create-contrat --project-ref <project-ref> --use-api
+npx supabase functions deploy update-contrat --project-ref <project-ref> --use-api
 npx supabase functions deploy initiate-payment paydunya-webhook --project-ref <project-ref> --use-api
 ```
 

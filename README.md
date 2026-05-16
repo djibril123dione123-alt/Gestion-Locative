@@ -51,14 +51,20 @@ Les flux critiques ont ete fortement durcis:
   - navigation, routes et page Equipe branches sur les permissions effectives;
   - Edge Functions critiques paiement/contrat controlees par `fn_user_can()`;
   - RLS multi-tenant pour que seuls les admins d'agence gerent les permissions.
+- Systeme documentaire enterprise:
+  - en-tetes PDF unifies avec logo agence, coordonnees, NINEA/RC/site web, reference et statut;
+  - contrats, mandats et quittances avec cadres fins, typographie juridique, signatures officielles et previews post-generation;
+  - quittances avec QR code de verification et bloc d'authenticite scannable;
+  - rapport bailleur decomposé par immeuble, unite et locataire, avec KPIs, recouvrement et totaux propres;
+  - exports PDF relies au branding dynamique de l'agence sans logo geant ni surcharge visuelle.
 
-Dernieres verifications locales du 2026-05-15:
+Dernieres verifications locales du 2026-05-16:
 
 - `npm run lint`: OK
 - `npm run typecheck`: OK
 - `npm run test:unit`: OK, 31 tests
 - `npm run build`: OK
-- scan encodage UTF-8/mojibake: OK, 211 fichiers
+- scan encodage UTF-8/mojibake: OK, 210 fichiers
 - verification navigateur integree: page auth chargee sur `http://127.0.0.1:4173/#/auth`
 
 Dernier audit live DB:

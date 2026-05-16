@@ -6,7 +6,14 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '../lib/formatters';
-import { addFooter, drawPageBorder, drawSectionFrame, saveGeneratedPdf } from '../lib/pdf';
+import {
+    addFooter,
+    drawDocumentHeader,
+    drawPageBorder,
+    drawSectionFrame,
+    getAutoTableTheme,
+    saveGeneratedPdf,
+} from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import type { AgencySettings } from '../types/agency';
 
@@ -114,34 +121,6 @@ interface PaiementMensuelRow {
 type PdfWithAutoTable = jsPDF & {
     lastAutoTable?: { finalY: number };
 };
-
-async function loadPdfLogoDataUrl(
-    url: string | null | undefined
-): Promise<{ dataUrl: string; width: number; height: number } | null> {
-    if (!url || typeof document === 'undefined') return null;
-    try {
-        const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-            const img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = url;
-        });
-        const ratio = Math.min(1, 320 / Math.max(image.width, 1));
-        const width = Math.max(1, Math.round(image.width * ratio));
-        const height = Math.max(1, Math.round(image.height * ratio));
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return null;
-        ctx.clearRect(0, 0, width, height);
-        ctx.drawImage(image, 0, 0, width, height);
-        return { dataUrl: canvas.toDataURL('image/png'), width, height };
-    } catch {
-        return null;
-    }
-}
 
 // -------------------------------------------------------------------------
 // 2. FONCTIONS UTILITAIRES UNIFIÉES
@@ -464,17 +443,6 @@ export function TableauDeBordFinancierGlobal() {
 
     const exportBilanBailleurPDF = async (bilan: BilanBailleur) => {
         const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-        const hexToRgb = (hex: string | null | undefined, fallback: [number, number, number]) => {
-            const value = (hex || '').replace('#', '').trim();
-            if (!/^[0-9a-f]{6}$/i.test(value)) return fallback;
-            return [
-                parseInt(value.slice(0, 2), 16),
-                parseInt(value.slice(2, 4), 16),
-                parseInt(value.slice(4, 6), 16),
-            ] as [number, number, number];
-        };
-        const primary = hexToRgb(agencySettings?.couleur_primaire, [8, 47, 35]);
-        const secondary = hexToRgb(agencySettings?.couleur_secondaire, [15, 23, 42]);
         const periodLabel = new Date(selectedMonth).toLocaleDateString('fr-FR', {
             year: 'numeric',
             month: 'long',
@@ -483,47 +451,22 @@ export function TableauDeBordFinancierGlobal() {
         const recoveryRate = occupancyBase > 0
             ? Math.round((bilan.total_loyers_percus / occupancyBase) * 100)
             : 100;
-        const agencyLogo = await loadPdfLogoDataUrl(agencySettings?.logo_url);
 
         drawPageBorder(doc, agencySettings ?? undefined);
-        doc.setFillColor(255, 255, 255);
-        doc.rect(0, 0, 210, 42, 'F');
-        let agencyTextX = 16;
-        if (agencyLogo) {
-            const logoWidth = Math.min(26, Math.max(14, agencyLogo.width * 0.08));
-            const logoHeight = Math.min(13, (agencyLogo.height / agencyLogo.width) * logoWidth);
-            doc.addImage(agencyLogo.dataUrl, 'PNG', 16, 10, logoWidth, logoHeight);
-            agencyTextX = 16 + logoWidth + 5;
-        }
-        doc.setTextColor(...secondary);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.text(agencySettings?.nom_agence || 'Samay Këur', agencyTextX, 15);
-        doc.setFontSize(8.5);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(71, 85, 105);
-        doc.text(
-            [agencySettings?.adresse, agencySettings?.telephone, agencySettings?.email].filter(Boolean).join(' • '),
-            agencyTextX,
-            21
+        const headerY = await drawDocumentHeader(
+            doc,
+            agencySettings ?? {},
+            'RAPPORT MENSUEL BAILLEUR',
+            `${bilan.bailleur_prenom} ${bilan.bailleur_nom}`,
+            {
+                reference: `RPT-${selectedMonth.replace('-', '')}-${bilan.bailleur_id.slice(0, 6).toUpperCase()}`,
+                issueDate: new Date().toLocaleDateString('fr-FR'),
+                status: `${recoveryRate}% recouvrement`,
+            }
         );
-        doc.setTextColor(...secondary);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.text('Rapport mensuel bailleur', 194, 15, { align: 'right' });
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(71, 85, 105);
-        doc.text(`Période : ${periodLabel}`, 194, 22, { align: 'right' });
-        doc.text(`Bailleur : ${bilan.bailleur_prenom} ${bilan.bailleur_nom}`, 194, 28, { align: 'right' });
-        doc.setDrawColor(226, 232, 240);
-        doc.setLineWidth(0.2);
-        doc.line(16, 35, 194, 35);
-        doc.setDrawColor(251, 146, 60);
-        doc.setLineWidth(0.45);
-        doc.line(16, 36.2, 56, 36.2);
 
-        drawSectionFrame(doc, 14, 46, 182, 52, agencySettings ?? undefined, {
+        const kpiY = headerY + 2;
+        drawSectionFrame(doc, 14, kpiY, 182, 52, agencySettings ?? undefined, {
             title: 'Indicateurs du mois',
             subtitle: 'Vue synthétique destinée au bailleur',
             accent: 'primary',
@@ -538,22 +481,23 @@ export function TableauDeBordFinancierGlobal() {
         ];
         cards.forEach(([label, value], index) => {
             const x = 16 + (index % 2) * 90;
-            const y = 50 + Math.floor(index / 2) * 24;
+            const y = kpiY + 4 + Math.floor(index / 2) * 24;
             doc.setFillColor(248, 250, 252);
             doc.roundedRect(x, y, 82, 18, 2.5, 2.5, 'F');
             doc.setTextColor(71, 85, 105);
             doc.setFontSize(8);
             doc.setFont('helvetica', 'bold');
             doc.text(label, x + 5, y + 7);
-            doc.setTextColor(...secondary);
+            doc.setTextColor(15, 23, 42);
             doc.setFontSize(12);
             doc.text(value, x + 5, y + 15);
         });
 
-        doc.setTextColor(...secondary);
+        doc.setTextColor(15, 23, 42);
         doc.setFontSize(13);
         doc.setFont('helvetica', 'bold');
-        drawSectionFrame(doc, 14, 104, 182, 24, agencySettings ?? undefined, {
+        const summaryY = kpiY + 58;
+        drawSectionFrame(doc, 14, summaryY, 182, 24, agencySettings ?? undefined, {
             title: 'Résumé exécutif',
             accent: 'neutral',
         });
@@ -567,7 +511,7 @@ export function TableauDeBordFinancierGlobal() {
                 ? `Action recommandée : prioriser la relance des impayés (${formatCurrency(bilan.total_impayes)}).`
                 : 'Aucun impayé significatif sur la période.',
         ];
-        doc.text(doc.splitTextToSize(executiveSummary.join(' '), 178), 16, 116);
+        doc.text(doc.splitTextToSize(executiveSummary.join(' '), 178), 16, summaryY + 12);
 
         const detailRows = bilan.immeubles.flatMap((immeuble) => {
             const unitRows = immeuble.unites.map((unit, index) => [
@@ -600,12 +544,16 @@ export function TableauDeBordFinancierGlobal() {
         autoTable(doc, {
             head: [['Immeuble', 'Unité', 'Locataire', 'Loyer', 'Statut', 'Encaissé', 'Restant', 'Période', 'Observation']],
             body: detailRows,
-            startY: 136,
+            startY: summaryY + 32,
             theme: 'grid',
-            styles: { fontSize: 7.5, cellPadding: 2, textColor: [30, 41, 59], lineColor: [226, 232, 240], lineWidth: 0.12 },
-            headStyles: { fillColor: primary, textColor: [255, 255, 255], fontStyle: 'bold' },
-            alternateRowStyles: { fillColor: [248, 250, 252] },
+            ...getAutoTableTheme(agencySettings ?? undefined),
+            styles: { ...getAutoTableTheme(agencySettings ?? undefined).styles, fontSize: 7.4 },
             margin: { left: 16, right: 16 },
+            columnStyles: {
+                3: { halign: 'right' },
+                5: { halign: 'right' },
+                6: { halign: 'right' },
+            },
             didParseCell: (data) => {
                 const firstCell = Array.isArray(data.row.raw) ? data.row.raw[0] : undefined;
                 if (typeof firstCell === 'string' && firstCell.includes('— total')) {
@@ -616,7 +564,12 @@ export function TableauDeBordFinancierGlobal() {
             },
         });
 
-        const finalY = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? 136) + 12;
+        let finalY = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? summaryY + 32) + 12;
+        if (finalY > 252) {
+            doc.addPage();
+            drawPageBorder(doc, agencySettings ?? undefined);
+            finalY = 30;
+        }
         doc.setFillColor(255, 247, 237);
         doc.roundedRect(16, finalY, 178, 20, 3, 3, 'F');
         doc.setTextColor(154, 52, 18);

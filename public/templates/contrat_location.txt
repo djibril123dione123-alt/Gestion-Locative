@@ -69,7 +69,3 @@ ARTICLE 12 : IMPORTANT
 {{mention_frais_huissier}} Le montant des frais d'huissier s'élève à {{frais_huissier}}.
 
 Fait à {{agency_city}}, le {{date_du_jour}} en deux originaux.
-
-Le Locataire                                                                                    Le Mandataire
- (Signature)                                                                                      (Signature)
-                                                                                                 {{agency_name}}

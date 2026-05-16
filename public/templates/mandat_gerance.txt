@@ -26,6 +26,3 @@ Pouvoirs donnés à l'agence :
 {{mention_frais_huissier}}
 
 Fait à {{agency_city}}, le {{date_du_jour}}
-  Le Propriétaire                                                                          Le {{agency_manager_title}}
-    (Signature)                                                                            (Signature et cachet)
-                                                                                           {{agency_name}}

@@ -170,7 +170,7 @@ export function Inventaires() {
     }
   };
 
-  const exportPDF = (inv: Inventaire) => {
+  const exportPDF = async (inv: Inventaire) => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
     drawPageBorder(doc);
 
@@ -232,11 +232,20 @@ export function Inventaires() {
       doc.text(doc.splitTextToSize(inv.observations, 170) as string[], 18, y + 15);
     }
     addFooter(doc);
-    saveGeneratedPdf(doc, {
+    await saveGeneratedPdf(doc, {
       kind: 'inventaire',
       title: `État des lieux ${inv.type === 'entree' ? "d'entrée" : 'de sortie'}`,
       fileName: `inventaire-${inv.id.slice(0, 8)}.pdf`,
       source: 'inventaires',
+      documentType: 'document',
+      entityId: inv.id,
+      period: inv.date?.slice(0, 7) ?? null,
+      reference: `INV-${inv.id.slice(0, 8).toUpperCase()}`,
+      data: {
+        document: 'inventaire',
+        inventaire: inv,
+        agency_id: profile?.agency_id ?? null,
+      },
     });
   };
 
@@ -319,7 +328,7 @@ export function Inventaires() {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => exportPDF(i)}
+            onClick={() => void exportPDF(i)}
             data-testid={`button-pdf-${i.id}`}
             className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-slate-300 hover:bg-slate-50"
           >

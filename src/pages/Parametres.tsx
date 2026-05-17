@@ -17,6 +17,7 @@ import { AgencySettings, DEFAULT_AGENCY_SETTINGS } from '../types/agency';
 import { ToastContainer } from '../components/ui/Toast';
 import { invalidateAgencySettingsCache } from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 
 type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
   created_at?: string;
@@ -198,7 +199,7 @@ export function Parametres() {
         agency_id: agencyId,
         nom_agence: agency?.name ?? DEFAULT_AGENCY_SETTINGS.nom_agence ?? 'Mon Agence',
         adresse: agency?.address ?? '',
-        telephone: agency?.phone ?? '',
+        telephone: normalizeSenegalPhone(agency?.phone ?? '') ?? agency?.phone ?? '',
         email: agency?.email ?? '',
         ninea: agency?.ninea ?? '',
       };
@@ -234,11 +235,17 @@ export function Parametres() {
 
     setSaving(true);
     try {
+      const normalizedPhone = settings.telephone ? normalizeSenegalPhone(settings.telephone) : null;
+      if (settings.telephone && !normalizedPhone) {
+        showToast('Le téléphone de l’agence doit être un numéro sénégalais valide, par exemple 77 123 45 67.', 'error');
+        setSaving(false);
+        return;
+      }
       const dataToSave: Omit<AgencySettings, 'created_at' | 'updated_at'> = {
         agency_id: profile.agency_id,
         nom_agence: settings.nom_agence ?? '',
         adresse: settings.adresse ?? '',
-        telephone: settings.telephone ?? '',
+        telephone: normalizedPhone ?? '',
         email: settings.email ?? '',
         site_web: settings.site_web ?? '',
         ninea: settings.ninea ?? '',
@@ -498,8 +505,8 @@ export function Parametres() {
                   </label>
                   <input
                     type="text"
-                    value={settings.telephone ?? ''}
-                    onChange={(e) => setSettings({ ...settings, telephone: e.target.value })}
+                    value={formatSenegalPhone(settings.telephone, '')}
+                    onChange={(e) => setSettings({ ...settings, telephone: formatSenegalPhoneInput(e.target.value) })}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>

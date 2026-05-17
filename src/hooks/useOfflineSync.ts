@@ -91,12 +91,34 @@ export function useOfflineSync(): UseOfflineSyncReturn {
     };
   }, [doSync]);
 
+  useEffect(() => {
+    if (!isOnline) return undefined;
+    const id = window.setInterval(() => {
+      doSync();
+      refreshPendingCount();
+    }, 30_000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        doSync();
+        refreshPendingCount();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [doSync, isOnline, refreshPendingCount]);
+
   const enqueue = useCallback(
     async (mutation: Omit<PendingMutation, 'id' | 'status' | 'retries'>) => {
       await enqueueMutation({ ...mutation, action: mutation.action as MutationAction });
       await refreshPendingCount();
+      if (navigator.onLine) {
+        void doSync();
+      }
     },
-    [refreshPendingCount],
+    [doSync, refreshPendingCount],
   );
 
   return {

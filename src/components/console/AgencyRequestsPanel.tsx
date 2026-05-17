@@ -13,6 +13,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { formatSenegalPhone } from '../../lib/formatters';
 import { formatDate } from '../../lib/formatters';
 
 type RequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
@@ -242,7 +243,7 @@ export function AgencyRequestsPanel() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                       <InfoLine icon={Mail}   label="Email"     value={req.requester_email} />
-                      {req.requester_phone && <InfoLine icon={Phone}  label="Téléphone" value={req.requester_phone} />}
+                      {req.requester_phone && <InfoLine icon={Phone}  label="Téléphone" value={formatSenegalPhone(req.requester_phone)} />}
                       {req.agency_address && <InfoLine icon={MapPin} label="Adresse"   value={req.agency_address} />}
                       {req.agency_ninea   && <InfoLine icon={Hash}   label="NINEA"     value={req.agency_ninea} />}
                     </div>

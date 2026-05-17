@@ -199,9 +199,11 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
               <BrandMark size="sm" tone="dark" animated withTile={false} />
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.28em] text-action-300">
-                  {isTableExport ? 'Export prêt' : 'Document prêt'}
+                  {documentPayload.reused ? 'Archive retrouvee' : isTableExport ? 'Export prêt' : 'Document prêt'}
                 </p>
-                <p className="text-sm text-emerald-100/70">Téléchargement automatique terminé</p>
+                <p className="text-sm text-emerald-100/70">
+                  {documentPayload.reused ? 'Version existante reutilisee' : 'Téléchargement automatique terminé'}
+                </p>
               </div>
             </div>
 
@@ -212,10 +214,18 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
             </div>
 
             <h2 id={titleId} className="max-w-md text-2xl font-black tracking-tight text-white sm:text-4xl">
-              {kindLabel} généré avec succès.
+              {documentPayload.reused ? `${kindLabel} deja genere.` : `${kindLabel} généré avec succès.`}
             </h2>
             <p className="mt-4 max-w-lg text-sm leading-6 text-emerald-50/72 sm:text-base">
-              Le fichier <span className="font-bold text-white">{documentPayload.fileName}</span> a été créé et téléchargé. Vous pouvez maintenant le partager, l'imprimer ou l'ouvrir en un clic.
+              {documentPayload.reused ? (
+                <>
+                  Le fichier <span className="font-bold text-white">{documentPayload.fileName}</span> existe deja dans l'archive documentaire. Il est rouvert sans creer de doublon.
+                </>
+              ) : (
+                <>
+                  Le fichier <span className="font-bold text-white">{documentPayload.fileName}</span> a été créé et téléchargé. Vous pouvez maintenant le partager, l'imprimer ou l'ouvrir en un clic.
+                </>
+              )}
             </p>
 
             <div className="mt-7 grid gap-3 text-sm sm:grid-cols-2">
@@ -231,6 +241,12 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/70">Taille</p>
                 <p className="mt-1 font-bold text-white">{fileSize}</p>
               </div>
+              {documentPayload.version != null && (
+                <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/70">Version</p>
+                  <p className="mt-1 font-bold text-white">v{documentPayload.version}</p>
+                </div>
+              )}
               {documentPayload.preview?.rowCount != null && (
                 <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/70">Lignes</p>

@@ -13,6 +13,7 @@ import { useBackup } from '../hooks/useBackup';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 
 interface Locataire {
   id: string;
@@ -88,10 +89,16 @@ export function Locataires() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const normalizedPhone = normalizeSenegalPhone(formData.telephone);
+      if (!normalizedPhone) {
+        toast.error('Le numéro de téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.');
+        return;
+      }
+      const submitData = { ...formData, telephone: normalizedPhone };
       if (editing) {
-        await supabase.from('locataires').update(formData).eq('id', editing.id);
+        await supabase.from('locataires').update(submitData).eq('id', editing.id);
       } else {
-        await supabase.from('locataires').insert([{ ...formData, created_by: user?.id, agency_id: profile?.agency_id }]);
+        await supabase.from('locataires').insert([{ ...submitData, created_by: user?.id, agency_id: profile?.agency_id }]);
       }
       closeModal();
       loadData();
@@ -107,7 +114,7 @@ export function Locataires() {
     setFormData({
       nom: item.nom,
       prenom: item.prenom,
-      telephone: item.telephone,
+      telephone: formatSenegalPhone(item.telephone, ''),
       email: item.email || '',
       adresse_personnelle: item.adresse_personnelle || '',
       piece_identite: item.piece_identite || '',
@@ -170,7 +177,7 @@ export function Locataires() {
             onClick={() => exportLocataires(locataires.map((l) => ({
               nom: l.nom,
               prenom: l.prenom,
-              telephone: l.telephone,
+              telephone: formatSenegalPhone(l.telephone, ''),
               email: l.email,
               adresse_personnelle: l.adresse_personnelle,
             })))}
@@ -278,7 +285,7 @@ export function Locataires() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Téléphone *</label>
-              <input type="tel" required value={formData.telephone} onChange={(e) => setFormData({ ...formData, telephone: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+              <input type="tel" required value={formData.telephone} onChange={(e) => setFormData({ ...formData, telephone: formatSenegalPhoneInput(e.target.value) })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>

@@ -32,6 +32,9 @@ export interface GeneratedDocumentPayload {
   generatedAt: string;
   source?: string;
   preview?: GeneratedDocumentPreview;
+  reused?: boolean;
+  version?: number;
+  storagePath?: string;
 }
 
 export const DOCUMENT_GENERATED_EVENT = 'samaykeur:document-generated';

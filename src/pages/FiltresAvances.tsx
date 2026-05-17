@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Search, Filter, X, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '../contexts/AuthContext';
-import { formatCurrency } from '../lib/formatters';
+import { formatCurrency, formatSenegalPhone } from '../lib/formatters';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 
@@ -281,7 +281,7 @@ export function FiltresAvances() {
   const exportToExcel = () => {
     const data = results.map(r => ({
       Locataire: r.locataires ? `${r.locataires.prenom} ${r.locataires.nom}` : '',
-      Téléphone: r.locataires?.telephone || '',
+      Téléphone: formatSenegalPhone(r.locataires?.telephone, ''),
       Unité: r.unites?.nom || '',
       Immeuble: r.unites?.immeubles?.nom || '',
       Bailleur: r.unites?.immeubles?.bailleurs ? `${r.unites.immeubles.bailleurs.prenom} ${r.unites.immeubles.bailleurs.nom}` : '',

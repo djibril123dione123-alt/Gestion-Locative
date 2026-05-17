@@ -19,6 +19,12 @@ export interface DBSchema {
       entity_type: string;
       payload: Record<string, unknown>;
       timestamp: number;
+      created_at?: number;
+      updated_at?: number;
+      client_mutation_id?: string;
+      mutation_key?: string;
+      last_attempt_at?: number;
+      next_retry_at?: number;
       status: 'pending' | 'syncing' | 'done' | 'error';
       retries?: number;
       error?: string;
@@ -37,16 +43,33 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains('snapshots')) {
         db.createObjectStore('snapshots', { keyPath: 'id' });
       }
+      let pendingStore: IDBObjectStore | null = null;
       if (!db.objectStoreNames.contains('pending_mutations')) {
-        const store = db.createObjectStore('pending_mutations', {
+        pendingStore = db.createObjectStore('pending_mutations', {
           keyPath: 'id',
           autoIncrement: true,
         });
-        store.createIndex('status', 'status', { unique: false });
+      } else {
+        pendingStore = (e.target as IDBOpenDBRequest).transaction?.objectStore('pending_mutations') ?? null;
+      }
+      if (pendingStore) {
+        if (!pendingStore.indexNames.contains('status')) {
+          pendingStore.createIndex('status', 'status', { unique: false });
+        }
+        if (!pendingStore.indexNames.contains('mutation_key')) {
+          pendingStore.createIndex('mutation_key', 'mutation_key', { unique: false });
+        }
+        if (!pendingStore.indexNames.contains('next_retry_at')) {
+          pendingStore.createIndex('next_retry_at', 'next_retry_at', { unique: false });
+        }
       }
     };
     req.onsuccess = (e) => {
       _db = (e.target as IDBOpenDBRequest).result;
+      _db.onversionchange = () => {
+        _db?.close();
+        _db = null;
+      };
       resolve(_db!);
     };
     req.onerror = () => reject(req.error);

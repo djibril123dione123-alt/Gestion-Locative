@@ -7,9 +7,10 @@ import { CheckoutModal } from '../components/billing/CheckoutModal';
 import {
   CreditCard, CheckCircle2, Clock, Zap, Building2, Crown,
   BarChart3, TrendingUp, AlertTriangle, Calendar, Users,
-  Home, DoorOpen, ChevronRight, ArrowUpRight,
+  Home, DoorOpen, ChevronRight, ArrowUpRight, ShieldCheck,
 } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
+import { SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
 
 interface Plan {
   id: string;
@@ -195,22 +196,48 @@ export function Abonnement() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-orange-100 border-t-orange-500 rounded-full animate-spin" />
-          <p className="text-sm text-slate-400">Chargement…</p>
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+        <div className="rounded-[2rem] border border-emerald-900/10 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-6 sm:p-8 shadow-2xl shadow-emerald-950/15">
+          <div className="h-4 w-32 animate-pulse rounded-full bg-white/15" />
+          <div className="mt-5 h-8 w-64 animate-pulse rounded-2xl bg-white/15" />
+          <div className="mt-3 h-4 w-full max-w-xl animate-pulse rounded-full bg-white/10" />
         </div>
+        <SkeletonCards count={3} />
+        <SkeletonTable rows={4} cols={4} />
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
 
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Abonnement</h1>
-        <p className="text-sm text-slate-400 mt-1">Gérez votre plan, votre utilisation et vos paiements</p>
+      <div className="relative overflow-hidden rounded-[2rem] border border-emerald-900/10 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-5 sm:p-7 text-white shadow-2xl shadow-emerald-950/15">
+        <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-orange-400/20 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-24 w-80 rounded-full bg-emerald-300/10 blur-3xl" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-emerald-100">
+              <ShieldCheck className="h-3.5 w-3.5 text-orange-200" />
+              Facturation SaaS
+            </div>
+            <h1 className="mt-4 text-2xl sm:text-4xl font-black tracking-tight">Abonnement</h1>
+            <p className="mt-2 text-sm sm:text-base leading-6 text-emerald-50/75">
+              Gérez votre plan, vos limites et vos paiements avec une lecture claire de votre capacité opérationnelle.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.08] p-2 backdrop-blur">
+            {[
+              ['Plan', currentPlan?.name ?? catalogPlan.name],
+              ['Statut', statusCfg.label],
+              ['Usage', `${usage.unites} unités`],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl bg-black/15 px-3 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-100/60">{label}</p>
+                <p className="mt-1 truncate text-sm font-black text-white">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── Bannière urgente essai ── */}

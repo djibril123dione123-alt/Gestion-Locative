@@ -4,7 +4,7 @@ import { CheckCircle2, Loader2, Smartphone, CreditCard, ArrowLeft } from 'lucide
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTracking } from '../../hooks/useTracking';
-import { formatCurrency } from '../../lib/formatters';
+import { formatCurrency, formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -39,9 +39,9 @@ export function PaymentModal({ isOpen, onClose, planName, priceXof, onSuccess }:
   };
 
   const handlePay = async () => {
-    const cleaned = phone.replace(/\s/g, '');
-    if (!cleaned || cleaned.length < 9) {
-      setError('Entrez un numéro valide (9 chiffres minimum).');
+    const normalizedPhone = normalizeSenegalPhone(phone);
+    if (!normalizedPhone) {
+      setError('Entrez un numéro sénégalais valide, par exemple 77 123 45 67.');
       return;
     }
     setError('');
@@ -73,7 +73,7 @@ export function PaymentModal({ isOpen, onClose, planName, priceXof, onSuccess }:
 
         await track({
           action: 'subscription_pay',
-          metadata: { provider, plan: planName, amount: priceXof, phone: cleaned.slice(-4) },
+          metadata: { provider, plan: planName, amount: priceXof, phone: normalizedPhone.slice(-4) },
         });
       }
 
@@ -173,7 +173,7 @@ export function PaymentModal({ isOpen, onClose, planName, priceXof, onSuccess }:
             <input
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(formatSenegalPhoneInput(e.target.value))}
               placeholder="Ex : 77 123 45 67"
               maxLength={14}
               className="w-full px-4 py-3 border border-slate-300 rounded-lg text-lg tracking-wider focus:ring-2 focus:ring-orange-400 focus:border-orange-400"

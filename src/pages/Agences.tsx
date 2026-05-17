@@ -7,6 +7,7 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Building2, Plus, Edit2, Trash2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 
 type AgencyPlan = 'basic' | 'pro' | 'enterprise';
 type AgencyStatus = 'active' | 'suspended' | 'trial' | 'cancelled';
@@ -87,6 +88,11 @@ export default function Agences() {
     e.preventDefault();
 
     try {
+      const normalizedPhone = normalizeSenegalPhone(formData.phone);
+      if (!normalizedPhone) {
+        showToast('Le téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.', 'error');
+        return;
+      }
       if (editingAgency) {
         const { error } = await supabase
           .from('agencies')
@@ -94,7 +100,7 @@ export default function Agences() {
             name: formData.name,
             ninea: formData.ninea || null,
             address: formData.address || null,
-            phone: formData.phone,
+            phone: normalizedPhone,
             email: formData.email,
             website: formData.website || null,
             plan: formData.plan,
@@ -110,7 +116,7 @@ export default function Agences() {
           name: formData.name,
           ninea: formData.ninea || null,
           address: formData.address || null,
-          phone: formData.phone,
+          phone: normalizedPhone,
           email: formData.email,
           website: formData.website || null,
           plan: formData.plan,
@@ -233,7 +239,7 @@ export default function Agences() {
       name: agency.name,
       ninea: agency.ninea || '',
       address: agency.address || '',
-      phone: agency.phone,
+      phone: formatSenegalPhone(agency.phone, ''),
       email: agency.email,
       website: agency.website || '',
       plan: agency.plan,
@@ -391,7 +397,7 @@ export default function Agences() {
                 type="tel"
                 required
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, phone: formatSenegalPhoneInput(e.target.value) })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               />
             </div>

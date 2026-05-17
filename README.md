@@ -51,20 +51,19 @@ Les flux critiques ont ete fortement durcis:
   - navigation, routes et page Equipe branches sur les permissions effectives;
   - Edge Functions critiques paiement/contrat controlees par `fn_user_can()`;
   - RLS multi-tenant pour que seuls les admins d'agence gerent les permissions.
-- Systeme documentaire enterprise:
-  - en-tetes PDF unifies avec logo agence, coordonnees, NINEA/RC/site web, reference et statut;
-  - contrats, mandats et quittances avec cadres fins, typographie juridique, signatures officielles et previews post-generation;
-  - quittances avec QR code de verification et bloc d'authenticite scannable;
-  - rapport bailleur decomposé par immeuble, unite et locataire, avec KPIs, recouvrement et totaux propres;
-  - exports PDF relies au branding dynamique de l'agence sans logo geant ni surcharge visuelle.
+- GED documentaire legere:
+  - registre `document_registry` pour contrats, mandats, quittances, rapports et exports PDF;
+  - stockage prive Supabase sous `agencies/{agency_id}/{type}/{year}/{month}/`;
+  - `data_hash` pour reutiliser les documents identiques et creer une nouvelle version si les donnees changent;
+  - URLs signees Storage, RLS multi-tenant et policies compatibles avec la nouvelle arborescence;
+  - experience post-generation capable d'indiquer quand une version archivee est reutilisee.
 
-Dernieres verifications locales du 2026-05-16:
+Dernieres verifications locales du 2026-05-17:
 
 - `npm run lint`: OK
 - `npm run typecheck`: OK
-- `npm run test:unit`: OK, 31 tests
 - `npm run build`: OK
-- scan encodage UTF-8/mojibake: OK, 210 fichiers
+- scan encodage UTF-8/mojibake: OK, 211 fichiers
 - verification navigateur integree: page auth chargee sur `http://127.0.0.1:4173/#/auth`
 
 Dernier audit live DB:

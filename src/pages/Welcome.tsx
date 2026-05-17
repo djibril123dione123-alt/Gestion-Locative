@@ -16,6 +16,7 @@ import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 import { reloadUserProfile } from '../lib/agencyHelper';
 import { BrandLogo } from '../components/brand/BrandLogo';
+import { formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 
 type AccountType = 'agency' | 'bailleur';
 type RequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
@@ -116,6 +117,12 @@ export default function Welcome() {
     }
     setLoading(true);
     try {
+      const normalizedPhone = normalizeSenegalPhone(formData.phone);
+      if (!normalizedPhone) {
+        showToast('Le téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.', 'error');
+        setLoading(false);
+        return;
+      }
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !session) {
         throw new Error('Votre session a expiré. Veuillez vous reconnecter.');
@@ -127,9 +134,9 @@ export default function Welcome() {
           requester_id: user.id,
           requester_email: user.email,
           requester_name: null,
-          requester_phone: formData.phone,
+          requester_phone: normalizedPhone,
           agency_name: formData.name.trim(),
-          agency_phone: formData.phone.trim(),
+          agency_phone: normalizedPhone,
           agency_email: formData.email.trim() || user.email,
           agency_address: formData.address.trim() || null,
           agency_ninea: formData.ninea.trim() || null,
@@ -460,7 +467,7 @@ export default function Welcome() {
                 type="tel"
                 autoFocus
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, phone: formatSenegalPhoneInput(e.target.value) })}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
                 placeholder="+221 77 123 45 67"
                 onKeyPress={(e) => e.key === 'Enter' && formData.phone.trim() && nextStep()}

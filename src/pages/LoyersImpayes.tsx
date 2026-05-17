@@ -13,6 +13,10 @@ import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 const ITEMS_PER_PAGE = 20;
+const LOOKBACK_MONTHS = 12;
+const LOOKAHEAD_MONTHS = 2;
+
+type LoyerStatut = 'a_venir' | 'en_retard' | 'partiel' | 'paye_en_avance';
 
 interface LoyerImpaye {
   id: string;
@@ -22,8 +26,12 @@ interface LoyerImpaye {
   immeuble_nom: string;
   bailleur_nom: string;
   bailleur_prenom: string;
+  montant_attendu: number;
+  montant_encaisse: number;
   montant_du: number;
   mois_concerne: string;
+  date_echeance: string;
+  statut: LoyerStatut;
   telephone_locataire: string;
 }
 
@@ -38,6 +46,8 @@ interface BailleurOption {
 interface ContratActifRow {
   id: string;
   loyer_mensuel: number;
+  date_debut: string;
+  date_fin?: string | null;
   locataires?: { nom?: string | null; prenom?: string | null; telephone?: string | null } | null;
   unites?: {
     nom?: string | null;
@@ -47,6 +57,63 @@ interface ContratActifRow {
     } | null;
   } | null;
 }
+
+interface PaiementAggregate {
+  contrat_id: string;
+  mois_concerne: string;
+  statut: string;
+  montant_total: number | null;
+  date_paiement?: string | null;
+}
+
+function monthStart(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addMonths(date: Date, count: number): Date {
+  return new Date(date.getFullYear(), date.getMonth() + count, 1);
+}
+
+function toDateInput(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function monthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+function getDueDateForMonth(month: string, contractStart: string): Date {
+  const monthDate = new Date(month);
+  const startDate = new Date(contractStart);
+  const desiredDay = Number.isFinite(startDate.getDate()) ? startDate.getDate() : 1;
+  const lastDay = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+  return new Date(monthDate.getFullYear(), monthDate.getMonth(), Math.min(desiredDay, lastDay));
+}
+
+function generateContractMonths(contract: ContratActifRow, today: Date): string[] {
+  const startLimit = addMonths(monthStart(today), -LOOKBACK_MONTHS);
+  const endLimit = addMonths(monthStart(today), LOOKAHEAD_MONTHS);
+  const contractStart = monthStart(new Date(contract.date_debut));
+  const contractEnd = contract.date_fin ? monthStart(new Date(contract.date_fin)) : endLimit;
+  const start = contractStart > startLimit ? contractStart : startLimit;
+  const end = contractEnd < endLimit ? contractEnd : endLimit;
+
+  const months: string[] = [];
+  for (let cursor = start; cursor <= end; cursor = addMonths(cursor, 1)) {
+    months.push(monthKey(cursor));
+  }
+  return months;
+}
+
+const STATUS_META: Record<LoyerStatut, { label: string; classes: string }> = {
+  a_venir: { label: 'À venir', classes: 'bg-slate-100 text-slate-700 border-slate-200' },
+  en_retard: { label: 'En retard', classes: 'bg-red-100 text-red-700 border-red-200' },
+  partiel: { label: 'Partiel', classes: 'bg-orange-100 text-orange-700 border-orange-200' },
+  paye_en_avance: { label: 'Payé en avance', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+};
 
 export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   const { embedded = false } = _props;
@@ -96,6 +163,8 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         .select(`
           id,
           loyer_mensuel,
+          date_debut,
+          date_fin,
           locataires(nom, prenom, telephone),
           unites(
             nom,
@@ -108,38 +177,69 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         .eq('statut', 'actif')
         .eq('agency_id', profile.agency_id);
 
-      const currentDate = new Date();
-      const lastSixMonths: string[] = [];
-      for (let i = 0; i < 6; i++) {
-        const d = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
-        lastSixMonths.push(d.toISOString().slice(0, 7) + '-01');
-      }
-
       const contratIds = contratsActifs?.map(c => c.id) || [];
+      const currentDate = new Date();
+      const startPeriod = monthKey(addMonths(monthStart(currentDate), -LOOKBACK_MONTHS));
+      const endPeriod = monthKey(addMonths(monthStart(currentDate), LOOKAHEAD_MONTHS));
+
+      if (contratIds.length === 0) {
+        setImpayes([]);
+        setFiltered([]);
+        setBailleurs([]);
+        setPage(1);
+        return;
+      }
 
       const { data: paiementsExistants } = await supabase
         .from('paiements')
-        .select('contrat_id, mois_concerne, statut, montant_total')
+        .select('contrat_id, mois_concerne, statut, montant_total, date_paiement')
         .eq('agency_id', profile.agency_id)
         .in('contrat_id', contratIds)
-        .in('mois_concerne', lastSixMonths);
+        .gte('mois_concerne', startPeriod)
+        .lte('mois_concerne', endPeriod);
 
-      const paiementsMap = new Map<string, number>();
-      paiementsExistants?.forEach(p => {
+      const paiementsMap = new Map<string, { amount: number; earliestDate: string | null }>();
+      (paiementsExistants as PaiementAggregate[] | null)?.forEach(p => {
         if (p.statut !== 'paye' && p.statut !== 'partiel') return;
         const key = `${p.contrat_id}-${p.mois_concerne}`;
-        paiementsMap.set(key, (paiementsMap.get(key) ?? 0) + Number(p.montant_total || 0));
+        const existing = paiementsMap.get(key) ?? { amount: 0, earliestDate: null };
+        const paymentDate = p.date_paiement ?? null;
+        paiementsMap.set(key, {
+          amount: existing.amount + Number(p.montant_total || 0),
+          earliestDate:
+            !existing.earliestDate || (paymentDate && paymentDate < existing.earliestDate)
+              ? paymentDate
+              : existing.earliestDate,
+        });
       });
 
       const impayesList: LoyerImpaye[] = [];
 
       ((contratsActifs as ContratActifRow[] | null) || []).forEach((contrat) => {
-        lastSixMonths.forEach(mois => {
+        generateContractMonths(contrat, currentDate).forEach(mois => {
           const key = `${contrat.id}-${mois}`;
-          const montantEncaisse = paiementsMap.get(key) ?? 0;
-          const montantDu = Math.max(Number(contrat.loyer_mensuel || 0) - montantEncaisse, 0);
+          const paiementInfo = paiementsMap.get(key) ?? { amount: 0, earliestDate: null };
+          const montantEncaisse = paiementInfo.amount;
+          const montantAttendu = Number(contrat.loyer_mensuel || 0);
+          const montantDu = Math.max(montantAttendu - montantEncaisse, 0);
+          const dueDate = getDueDateForMonth(mois, contrat.date_debut);
+          const isFutureMonth = monthStart(new Date(mois)) > monthStart(currentDate);
+          const paidBeforePeriod =
+            Boolean(paiementInfo.earliestDate) &&
+            new Date(paiementInfo.earliestDate as string) < new Date(mois);
 
-          if (montantDu > 0) {
+          let statut: LoyerStatut | null = null;
+          if (montantDu <= 0 && (isFutureMonth || paidBeforePeriod)) {
+            statut = 'paye_en_avance';
+          } else if (montantDu > 0 && montantEncaisse > 0) {
+            statut = 'partiel';
+          } else if (montantDu > 0 && dueDate > currentDate) {
+            statut = 'a_venir';
+          } else if (montantDu > 0) {
+            statut = 'en_retard';
+          }
+
+          if (statut) {
             impayesList.push({
               id: `${contrat.id}-${mois}`,
               locataire_nom: contrat.locataires?.nom || '',
@@ -148,8 +248,12 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
               immeuble_nom: contrat.unites?.immeubles?.nom || '',
               bailleur_nom: contrat.unites?.immeubles?.bailleurs?.nom || '',
               bailleur_prenom: contrat.unites?.immeubles?.bailleurs?.prenom || '',
+              montant_attendu: montantAttendu,
+              montant_encaisse: montantEncaisse,
               montant_du: montantDu,
               mois_concerne: mois,
+              date_echeance: toDateInput(dueDate),
+              statut,
               telephone_locataire: contrat.locataires?.telephone || '',
             });
           }
@@ -157,6 +261,11 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       });
 
       if (reqId !== requestIdRef.current) return;
+
+      impayesList.sort((a, b) => {
+        const priority: Record<LoyerStatut, number> = { en_retard: 0, partiel: 1, a_venir: 2, paye_en_avance: 3 };
+        return priority[a.statut] - priority[b.statut] || a.mois_concerne.localeCompare(b.mois_concerne);
+      });
 
       setImpayes(impayesList);
       setFiltered(impayesList);
@@ -238,11 +347,14 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   };
 
   const totalImpaye = filtered.reduce((sum, i) => sum + i.montant_du, 0);
+  const totalEnRetard = filtered
+    .filter((i) => i.statut === 'en_retard' || i.statut === 'partiel')
+    .reduce((sum, i) => sum + i.montant_du, 0);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const ALL_COLUMN_KEYS_LOYERS = ['locataire', 'unite_nom', 'immeuble_nom', 'bailleur', 'mois_concerne', 'montant_du', 'telephone_locataire', 'actions'] as const;
+  const ALL_COLUMN_KEYS_LOYERS = ['locataire', 'unite_nom', 'immeuble_nom', 'bailleur', 'mois_concerne', 'statut', 'montant_encaisse', 'montant_du', 'telephone_locataire', 'actions'] as const;
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('loyersImpayes', [...ALL_COLUMN_KEYS_LOYERS]);
 
   const allColumns = [
@@ -268,6 +380,23 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         }),
     },
     {
+      key: 'statut',
+      label: 'Statut',
+      render: (i: LoyerImpaye) => {
+        const meta = STATUS_META[i.statut];
+        return (
+          <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${meta.classes}`}>
+            {meta.label}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'montant_encaisse',
+      label: 'Encaissé',
+      render: (i: LoyerImpaye) => formatCurrency(i.montant_encaisse),
+    },
+    {
       key: 'montant_du',
       label: 'Montant dû',
       render: (i: LoyerImpaye) => formatCurrency(i.montant_du),
@@ -277,13 +406,17 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       key: 'actions',
       label: 'Action',
       render: (i: LoyerImpaye) => (
-        <button
-          type="button"
-          onClick={() => handlePayerClick(i)}
-          className="sk-action sk-action-financial"
-        >
-          Payer ce loyer
-        </button>
+        i.montant_du > 0 ? (
+          <button
+            type="button"
+            onClick={() => handlePayerClick(i)}
+            className="sk-action sk-action-financial"
+          >
+            Payer ce loyer
+          </button>
+        ) : (
+          <span className="text-xs font-semibold text-emerald-700">Soldé</span>
+        )
       ),
     },
   ];
@@ -340,21 +473,21 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
               <AlertCircle className="w-5 sm:w-6 h-5 sm:h-6" />
             </div>
             <div>
-              <h3 className="text-xs sm:text-sm font-medium text-slate-600">Total impayés</h3>
-              <p className="text-lg sm:text-2xl font-bold text-red-600 mt-1">{formatCurrency(totalImpaye)}</p>
+              <h3 className="text-xs sm:text-sm font-medium text-slate-600">Retards et reliquats</h3>
+              <p className="text-lg sm:text-2xl font-bold text-red-600 mt-1">{formatCurrency(totalEnRetard)}</p>
             </div>
           </div>
         </div>
 
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Nombre de loyers impayés</h3>
+          <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Échéances ouvertes</h3>
           <p className="text-lg sm:text-2xl font-bold text-slate-900">{filtered.length}</p>
         </div>
 
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Locataires concernés</h3>
+          <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Solde à recouvrer</h3>
           <p className="text-lg sm:text-2xl font-bold text-slate-900">
-            {new Set(filtered.map(i => `${i.locataire_nom} ${i.locataire_prenom}`)).size}
+            {formatCurrency(totalImpaye)}
           </p>
         </div>
       </div>

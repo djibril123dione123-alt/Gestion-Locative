@@ -9,6 +9,7 @@
 import { useState, useCallback } from 'react';
 import * as XLSX from 'xlsx';
 import { announceGeneratedDocument, type GeneratedDocumentPreview } from '../lib/documentGenerated';
+import { formatSenegalPhone } from '../lib/formatters';
 
 export interface ExportLocataire {
   nom: string;
@@ -76,6 +77,11 @@ function fmt(v: unknown): string | number | null {
   return String(v);
 }
 
+function fmtPhone(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  return formatSenegalPhone(String(v), '');
+}
+
 function buildPreview(
   rows: Array<Record<string, string | number | null>>,
   stats: GeneratedDocumentPreview['stats'] = []
@@ -119,7 +125,7 @@ export function useExport(): UseExportReturn {
         const rows = data.map((l) => ({
           Nom: fmt(l.nom),
           Prénom: fmt(l.prenom),
-          Téléphone: fmt(l.telephone),
+          Téléphone: fmtPhone(l.telephone),
           Email: fmt(l.email),
           Adresse: fmt(l.adresse_personnelle),
         }));
@@ -199,7 +205,7 @@ export function useExport(): UseExportReturn {
           const rows = data.locataires.map((l) => ({
             Nom: fmt(l.nom),
             Prénom: fmt(l.prenom),
-            Téléphone: fmt(l.telephone),
+            Téléphone: fmtPhone(l.telephone),
             Email: fmt(l.email),
           }));
           const ws = XLSX.utils.json_to_sheet(rows);

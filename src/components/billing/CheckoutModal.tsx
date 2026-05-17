@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { formatCurrency } from '../../lib/formatters';
+import { formatCurrency, formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -105,11 +105,11 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
   };
 
   const handlePay = () => {
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length < 8) { setPhoneError('Numéro invalide (8 chiffres minimum).'); return; }
+    const normalizedPhone = normalizeSenegalPhone(phone);
+    if (!normalizedPhone) { setPhoneError('Numéro sénégalais invalide. Exemple : 77 123 45 67.'); return; }
     setPhoneError('');
     setStep('processing');
-    initiatePayment(provider!, cleaned);
+    initiatePayment(provider!, normalizedPhone);
   };
 
   const initiatePayment = async (prov: Provider, phoneNum: string | undefined) => {
@@ -321,7 +321,7 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
               <input
                 type="tel"
                 value={phone}
-                onChange={(e) => { setPhone(e.target.value); setPhoneError(''); }}
+                onChange={(e) => { setPhone(formatSenegalPhoneInput(e.target.value)); setPhoneError(''); }}
                 onKeyDown={(e) => e.key === 'Enter' && handlePay()}
                 placeholder="77 123 45 67"
                 maxLength={14}
@@ -385,7 +385,7 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
             <p className="text-xl font-bold text-slate-900">Confirmez sur votre téléphone</p>
             <p className="text-sm text-slate-600 max-w-xs">
               Une notification <strong>{selectedProvider.label}</strong> a été envoyée au{' '}
-              <strong>+221 {phone}</strong>. Ouvrez l'application et confirmez le paiement.
+              <strong>{formatSenegalPhone(phone)}</strong>. Ouvrez l'application et confirmez le paiement.
             </p>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium"
               style={{ backgroundColor: '#FFF7ED', color: '#C2410C' }}>

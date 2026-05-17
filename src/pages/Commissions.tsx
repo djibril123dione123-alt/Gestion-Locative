@@ -132,7 +132,7 @@ export function Commissions() {
     }
   }, [loadCommissions, profile?.agency_id]);
 
-  const exportPDF = () => {
+  const exportPDF = async () => {
     const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
     const monthName = new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
 
@@ -195,11 +195,20 @@ export function Commissions() {
     });
 
     addFooter(doc);
-    saveGeneratedPdf(doc, {
+    await saveGeneratedPdf(doc, {
       kind: 'commission',
       title: 'Rapport des commissions',
       fileName: `commissions-${selectedMonth}.pdf`,
       source: 'commissions',
+      documentType: 'rapport_bailleur',
+      entityId: profile?.agency_id ? `commissions-${profile.agency_id}` : 'commissions',
+      period: selectedMonth,
+      reference: `COMM-${selectedMonth}`,
+      data: {
+        document: 'commissions',
+        selectedMonth,
+        commissions,
+      },
     });
   };
 
@@ -246,7 +255,7 @@ export function Commissions() {
           <p className="text-sm sm:text-base text-slate-600">Suivi des revenus d'agence</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <button onClick={exportPDF} className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-brand-700 text-white rounded-lg hover:bg-brand-800 text-sm sm:text-base font-bold whitespace-nowrap shadow-premium">
+          <button onClick={() => void exportPDF()} className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-brand-700 text-white rounded-lg hover:bg-brand-800 text-sm sm:text-base font-bold whitespace-nowrap shadow-premium">
             <Download className="w-5 h-5" />
             Export PDF
           </button>

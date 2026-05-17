@@ -9,7 +9,7 @@ import { generateMandatBailleurPDF } from '../lib/pdf';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages';
-import { formatDate } from '../lib/formatters';
+import { formatDate, formatSenegalPhone, formatSenegalPhoneInput, getSenegalPhoneHref, normalizeSenegalPhone } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
@@ -169,6 +169,12 @@ export function Bailleurs() {
       return;
     }
 
+    const normalizedPhone = normalizeSenegalPhone(formData.telephone);
+    if (!normalizedPhone) {
+      setError('Le numéro de téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.');
+      return;
+    }
+
     if (!formData.debut_contrat) {
       setError('La date de début du contrat est obligatoire.');
       return;
@@ -181,7 +187,7 @@ export function Bailleurs() {
       const submitData = {
         nom: formData.nom,
         prenom: formData.prenom,
-        telephone: formData.telephone,
+        telephone: normalizedPhone,
         email: formData.email || null,
         adresse: formData.adresse || null,
         piece_identite: formData.piece_identite || null,
@@ -235,7 +241,7 @@ export function Bailleurs() {
     setFormData({
       nom: bailleur.nom,
       prenom: bailleur.prenom,
-      telephone: bailleur.telephone,
+      telephone: formatSenegalPhone(bailleur.telephone, ''),
       email: bailleur.email || '',
       adresse: bailleur.adresse || '',
       piece_identite: bailleur.piece_identite || '',
@@ -349,10 +355,10 @@ export function Bailleurs() {
       label: 'Téléphone',
       render: (b: Bailleur) => (
         <a 
-          href={`tel:${b.telephone.replace(/[^\d+]/g, '')}`}
+          href={getSenegalPhoneHref(b.telephone) ?? undefined}
           className="font-medium text-brand-700 hover:text-brand-900 hover:underline"
         >
-          {b.telephone}
+          {formatSenegalPhone(b.telephone)}
         </a>
       )
     },
@@ -550,7 +556,7 @@ export function Bailleurs() {
                   type="tel"
                   required
                   value={formData.telephone}
-                  onChange={(e) => setFormData({ ...formData, telephone: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, telephone: formatSenegalPhoneInput(e.target.value) })}
                   className="sk-input"
                   placeholder="+221 77 123 45 67"
                 />

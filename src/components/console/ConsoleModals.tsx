@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, AlertTriangle, Building2, UserPlus, UserCog, CreditCard, Copy, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
 
 // ─── Types partagés (snake_case côté DB et TS pour cohérence avec l'existant)
 export interface AgencyOption {
@@ -108,6 +109,12 @@ export function CreateAgencyModal({ open, onClose, actorId, actorEmail, onCreate
     setBusy(true);
     setErr(null);
     try {
+      const normalizedPhone = normalizeSenegalPhone(form.phone);
+      if (!normalizedPhone) {
+        setErr('Le téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.');
+        setBusy(false);
+        return;
+      }
       const trialEnd = form.status === 'trial'
         ? new Date(Date.now() + form.trial_days * 24 * 3600 * 1000).toISOString()
         : null;
@@ -117,7 +124,7 @@ export function CreateAgencyModal({ open, onClose, actorId, actorEmail, onCreate
         .insert({
           name: form.name.trim(),
           email: form.email.trim(),
-          phone: form.phone.trim(),
+          phone: normalizedPhone,
           plan: form.plan,
           status: form.status,
           trial_ends_at: trialEnd,
@@ -160,7 +167,7 @@ export function CreateAgencyModal({ open, onClose, actorId, actorEmail, onCreate
           </div>
           <div>
             <label className={labelCls}>Téléphone *</label>
-            <input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className={inputCls} data-testid="input-new-agency-phone" />
+            <input required value={form.phone} onChange={(e) => setForm({ ...form, phone: formatSenegalPhoneInput(e.target.value) })} className={inputCls} data-testid="input-new-agency-phone" />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-3">

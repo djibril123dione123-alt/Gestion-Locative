@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrandMark } from '../brand/BrandLogo';
+import { formatSenegalPhone, getSenegalPhoneHref } from '../../lib/formatters';
 
 interface Column<T> {
   key: string;
@@ -49,15 +50,15 @@ export function Table<T extends { id: string }>({
     }
 
     if (normalizedKey.includes('telephone') || normalizedKey.includes('phone') || normalizedKey.includes('tel')) {
-      const phone = text.replace(/[^\d+]/g, '');
-      if (phone.length >= 6) {
+      const phoneHref = getSenegalPhoneHref(text);
+      if (phoneHref) {
         return (
           <a
-            href={`tel:${phone}`}
+            href={phoneHref}
             aria-label={`Appeler ${text}`}
             className="font-bold text-brand-700 underline-offset-2 transition hover:text-brand-950 hover:underline"
           >
-            {text}
+            {formatSenegalPhone(text)}
           </a>
         );
       }

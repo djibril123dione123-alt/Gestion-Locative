@@ -9,12 +9,13 @@ import {
   PaiementPDFData,
   MandatPDFData,
 } from '../types';
-import { formatCurrency } from './formatters';
+import { formatCurrency, formatSenegalPhone } from './formatters';
 import {
   announceGeneratedDocument,
   GeneratedDocumentKind,
   type GeneratedDocumentPreview,
 } from './documentGenerated';
+import { saveManagedDocument, type ManagedDocumentType } from '../services/documentRegistry';
 
 export { formatCurrency };
 
@@ -74,7 +75,7 @@ export function invalidateAgencySettingsCache(agencyId?: string) {
   }
 }
 
-export function saveGeneratedPdf(
+export async function saveGeneratedPdf(
   doc: jsPDF,
   options: {
     kind: GeneratedDocumentKind;
@@ -82,21 +83,67 @@ export function saveGeneratedPdf(
     fileName: string;
     source?: string;
     preview?: GeneratedDocumentPreview;
+    documentType?: ManagedDocumentType;
+    entityId?: string;
+    period?: string | null;
+    reference?: string;
+    data?: unknown;
   }
 ) {
   const blob = doc.output('blob');
-  const url = URL.createObjectURL(blob);
-  doc.save(options.fileName);
+  let url = URL.createObjectURL(blob);
+  let fileSize = blob.size;
+  let reused = false;
+  let version: number | undefined;
+  let storagePath: string | undefined;
+
+  if (options.documentType && options.entityId && options.reference) {
+    try {
+      const managed = await saveManagedDocument({
+        blob,
+        documentType: options.documentType,
+        entityId: options.entityId,
+        period: options.period,
+        reference: options.reference,
+        fileName: options.fileName,
+        data: options.data ?? {},
+        mimeType: 'application/pdf',
+        metadata: {
+          kind: options.kind,
+          title: options.title,
+          source: options.source,
+        },
+      });
+
+      if (managed) {
+        url = managed.url;
+        fileSize = managed.fileSize;
+        reused = managed.reused;
+        version = managed.version;
+        storagePath = managed.storagePath;
+      }
+    } catch (error) {
+      console.warn('[DocumentRegistry] Archive indisponible, generation locale utilisee.', error);
+    }
+  }
+
+  if (!reused) {
+    doc.save(options.fileName);
+  }
+
   announceGeneratedDocument({
     kind: options.kind,
-    title: options.title,
+    title: reused ? `${options.title} deja genere` : options.title,
     fileName: options.fileName,
     source: options.source,
     url,
-    blob,
+    blob: reused ? undefined : blob,
     mimeType: 'application/pdf',
-    fileSize: blob.size,
+    fileSize,
     preview: options.preview,
+    reused,
+    version,
+    storagePath,
   });
 }
 
@@ -269,7 +316,11 @@ async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
       .maybeSingle();
 
     if (error) throw error;
-    const settings = (data ?? PDF_SETTINGS_FALLBACK) as Partial<AgencySettings>;
+    const settings = ({
+      ...PDF_SETTINGS_FALLBACK,
+      ...(data ?? {}),
+      agency_id: profile.agency_id,
+    }) as Partial<AgencySettings>;
     settingsCache.set(profile.agency_id, {
       settings,
       expiresAt: Date.now() + CACHE_TTL_MS,
@@ -328,6 +379,15 @@ type DocumentVerificationPayload = {
 function safeText(value: unknown, fallback = '—'): string {
   const text = String(value ?? '').trim();
   return text || fallback;
+}
+
+function fitSingleLine(doc: jsPDF, text: string, maxWidth: number): string {
+  if (doc.getTextWidth(text) <= maxWidth) return text;
+  let output = text;
+  while (output.length > 3 && doc.getTextWidth(`${output}…`) > maxWidth) {
+    output = output.slice(0, -1);
+  }
+  return `${output.trim()}…`;
 }
 
 export function drawSectionFrame(
@@ -440,7 +500,7 @@ export async function drawDocumentHeader(
   doc.setTextColor(71, 85, 105);
   const infoLines = [
     settings.adresse,
-    [settings.telephone, settings.email].filter(Boolean).join(' · '),
+    [settings.telephone ? formatSenegalPhone(settings.telephone, '') : null, settings.email].filter(Boolean).join(' · '),
     settings.ninea ? `NINEA ${settings.ninea}` : null,
     settings.rc ? `RC ${settings.rc}` : null,
     settings.site_web ?? null,
@@ -763,25 +823,86 @@ async function drawVerificationBlock(
     date,
     paymentStatus,
   });
+  if (!verification.registered) return;
+
   const qrDataUrl = await QRCode.toDataURL(verification.url, {
-    width: 92,
+    width: 144,
     margin: 1,
-    errorCorrectionLevel: 'M',
+    errorCorrectionLevel: 'Q',
   });
 
-  drawSectionFrame(doc, x, y, width, 20, settings, { accent: 'neutral', fill: false });
+  const blockHeight = 24;
+  drawSectionFrame(doc, x, y, width, blockHeight, settings, { accent: 'neutral', fill: true });
 
-  const qrSize = 11;
-  doc.addImage(qrDataUrl, 'PNG', x + 4, y + 4.5, qrSize, qrSize);
+  const qrSize = 13.5;
+  doc.addImage(qrDataUrl, 'PNG', x + 5, y + 5.2, qrSize, qrSize);
   doc.setFont(undefined as unknown as string, 'bold');
-  doc.setFontSize(6.8);
+  doc.setFontSize(7.2);
   doc.setTextColor(15, 23, 42);
-  doc.text('Vérification du document', x + 18, y + 7.5);
+  doc.text('Vérification du document', x + 22, y + 7.7);
   doc.setFont(undefined as unknown as string, 'normal');
-  doc.setFontSize(6.2);
+  doc.setFontSize(6.4);
   doc.setTextColor(...colors.muted);
-  doc.text(`Réf. ${ref}`, x + 18, y + 11.8);
-  doc.text(`Agence : ${safeText(agency, 'Agence')}`, x + 18, y + 15.8);
+  const textWidth = width - 27;
+  doc.text(fitSingleLine(doc, `Réf. ${ref}`, textWidth), x + 22, y + 12.1);
+  doc.text(fitSingleLine(doc, `Agence : ${safeText(agency, 'Agence')}`, textWidth), x + 22, y + 16.1);
+  doc.text(verification.registered ? 'Authenticité enregistrée' : 'Vérification locale', x + 22, y + 20);
+  doc.setTextColor(0);
+}
+
+async function drawLegalVerificationFooter(
+  doc: jsPDF,
+  options: {
+    ref: string;
+    type: string;
+    agency: string;
+    date?: string;
+    settings?: Partial<AgencySettings>;
+  }
+): Promise<void> {
+  const { ref, type, agency, date, settings } = options;
+  const colors = getBrandColors(settings);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const pageNumber = doc.getNumberOfPages();
+
+  const verification = await registerDocumentVerification({
+    type,
+    ref,
+    agency,
+    agencyId: settings?.agency_id,
+    date,
+  });
+  if (!verification.registered) return;
+
+  const qrDataUrl = await QRCode.toDataURL(verification.url, {
+    width: 160,
+    margin: 1,
+    errorCorrectionLevel: 'Q',
+  });
+
+  doc.setPage(pageNumber);
+  const qrSize = 12;
+  const blockWidth = 62;
+  const blockHeight = 18;
+  const x = pageWidth - 14 - blockWidth;
+  const y = pageHeight - 38;
+  const textX = x + qrSize + 3;
+
+  doc.setDrawColor(...colors.border);
+  doc.setLineWidth(0.1);
+  doc.roundedRect(x, y, blockWidth, blockHeight, 1.8, 1.8, 'S');
+  doc.addImage(qrDataUrl, 'PNG', x + 3, y + 3, qrSize, qrSize);
+
+  doc.setFont(undefined as unknown as string, 'bold');
+  doc.setFontSize(6.2);
+  doc.setTextColor(30, 41, 59);
+  doc.text('Authentification numérique', textX + 3, y + 6);
+  doc.setFont(undefined as unknown as string, 'normal');
+  doc.setFontSize(5.6);
+  doc.setTextColor(...colors.muted);
+  doc.text(fitSingleLine(doc, `Réf. ${ref}`, blockWidth - qrSize - 10), textX + 3, y + 10.2);
+  doc.text('Vérification en ligne', textX + 3, y + 14.2);
   doc.setTextColor(0);
 }
 
@@ -842,6 +963,7 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
 
   const settings = await loadAgencySettings();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  const contractRef = `CTR-${new Date().getFullYear()}-${(contrat.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
 
   const bailleur = (contrat.unites?.immeubles?.bailleurs ?? {}) as {
     prenom?: string;
@@ -922,7 +1044,6 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
     const pageWidth = doc.internal.pageSize.getWidth();
     const leftMargin = 14;
     const usableWidth = pageWidth - 28;
-    const contractRef = `CTR-${new Date().getFullYear()}-${(contrat.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
 
     drawPageBorder(doc, settings);
     const titleY = await drawDocumentHeader(
@@ -973,11 +1094,34 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
   }
 
   addFooter(doc, settings);
-  saveGeneratedPdf(doc, {
+  if (settings.qr_code_quittances !== false) {
+    try {
+      await drawLegalVerificationFooter(doc, {
+        ref: contractRef,
+        type: 'contrat',
+        agency: settings.nom_agence ?? 'Samay Këur',
+        date: new Date().toISOString(),
+        settings,
+      });
+    } catch {
+      // Document verification QR is non-blocking.
+    }
+  }
+  await saveGeneratedPdf(doc, {
     kind: 'contrat',
     title: 'Contrat de location',
-    fileName: `contrat-${contrat.locataires?.nom ?? 'locataire'}-${Date.now()}.pdf`,
+    fileName: `${contractRef}.pdf`,
     source: 'contrats',
+    documentType: 'contrat',
+    entityId: contrat.id ?? contractRef,
+    period: contrat.date_debut?.slice(0, 7) ?? null,
+    reference: contractRef,
+    data: {
+      document: 'contrat',
+      reference: contractRef,
+      contrat,
+      agency: settings,
+    },
     preview: {
       columns: ['Champ', 'Valeur'],
       rows: [
@@ -1152,11 +1296,24 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
   }
 
   addFooter(doc, settings);
-  saveGeneratedPdf(doc, {
+  await saveGeneratedPdf(doc, {
     kind: 'facture',
     title: 'Facture / quittance de loyer',
-    fileName: `facture-${locataire.nom ?? 'locataire'}-${Date.now()}.pdf`,
+    fileName: `${ref}.pdf`,
     source: 'paiements',
+    documentType: 'quittance',
+    entityId: paiement.id ?? ref,
+    period: paiement.mois_concerne?.slice(0, 7) ?? null,
+    reference: ref,
+    data: {
+      document: 'quittance',
+      reference: ref,
+      paiement,
+      loyer,
+      paye,
+      reliquat,
+      agency: settings,
+    },
     preview: {
       columns: ['Ligne', 'Montant'],
       rows: [
@@ -1179,6 +1336,7 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
 
   const settings = await loadAgencySettings();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  const mandatRef = `MDT-${new Date().getFullYear()}-${(bailleur.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
 
   try {
     const tpl = await fetchTemplate('/templates/mandat_gerance.txt');
@@ -1224,7 +1382,6 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
     const pageWidth = doc.internal.pageSize.getWidth();
     const leftMargin = 14;
     const usableWidth = pageWidth - leftMargin - 14;
-    const mandatRef = `MDT-${new Date().getFullYear()}-${(bailleur.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
 
     drawPageBorder(doc, settings);
     const titleY = await drawDocumentHeader(
@@ -1278,11 +1435,34 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
   }
 
   addFooter(doc, settings);
-  saveGeneratedPdf(doc, {
+  if (settings.qr_code_quittances !== false) {
+    try {
+      await drawLegalVerificationFooter(doc, {
+        ref: mandatRef,
+        type: 'mandat',
+        agency: settings.nom_agence ?? 'Samay Këur',
+        date: new Date().toISOString(),
+        settings,
+      });
+    } catch {
+      // Document verification QR is non-blocking.
+    }
+  }
+  await saveGeneratedPdf(doc, {
     kind: 'mandat',
     title: 'Mandat de gérance',
-    fileName: `mandat-${bailleur.nom ?? 'bailleur'}-${Date.now()}.pdf`,
+    fileName: `${mandatRef}.pdf`,
     source: 'bailleurs',
+    documentType: 'mandat',
+    entityId: bailleur.id ?? mandatRef,
+    period: bailleur.debut_contrat?.slice(0, 7) ?? null,
+    reference: mandatRef,
+    data: {
+      document: 'mandat',
+      reference: mandatRef,
+      bailleur,
+      agency: settings,
+    },
     preview: {
       columns: ['Champ', 'Valeur'],
       rows: [

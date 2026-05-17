@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
-import { formatCurrency } from '../../lib/formatters';
+import { formatCurrency, formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../hooks/useToast';
@@ -83,10 +83,15 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
     try {
       switch (step) {
         case 1: {
+          const normalizedPhone = normalizeSenegalPhone(formData.bailleur.telephone);
+          if (!normalizedPhone) {
+            throw new Error('Le téléphone du bailleur doit être un numéro sénégalais valide, par exemple 77 123 45 67.');
+          }
           const { data, error } = await supabase
             .from('bailleurs')
             .insert({
               ...formData.bailleur,
+              telephone: normalizedPhone,
               agency_id: profile.agency_id
             })
             .select()
@@ -151,10 +156,15 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
         }
 
         case 4: {
+          const normalizedPhone = normalizeSenegalPhone(formData.locataire.telephone);
+          if (!normalizedPhone) {
+            throw new Error('Le téléphone du locataire doit être un numéro sénégalais valide, par exemple 77 123 45 67.');
+          }
           const { data, error } = await supabase
             .from('locataires')
             .insert({
               ...formData.locataire,
+              telephone: normalizedPhone,
               agency_id: profile.agency_id
             })
             .select()
@@ -282,7 +292,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
                 value={formData.bailleur.telephone}
                 onChange={(e) => setFormData({
                   ...formData,
-                  bailleur: { ...formData.bailleur, telephone: e.target.value }
+                  bailleur: { ...formData.bailleur, telephone: formatSenegalPhoneInput(e.target.value) }
                 })}
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="+221 77 123 45 67"
@@ -429,7 +439,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
                 value={formData.locataire.telephone}
                 onChange={(e) => setFormData({
                   ...formData,
-                  locataire: { ...formData.locataire, telephone: e.target.value }
+                  locataire: { ...formData.locataire, telephone: formatSenegalPhoneInput(e.target.value) }
                 })}
                 className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 placeholder="+221 77 987 65 43"

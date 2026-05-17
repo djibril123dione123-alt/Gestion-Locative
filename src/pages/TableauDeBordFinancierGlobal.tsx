@@ -10,7 +10,6 @@ import {
     addFooter,
     drawDocumentHeader,
     drawPageBorder,
-    drawSectionFrame,
     getAutoTableTheme,
     saveGeneratedPdf,
 } from '../lib/pdf';
@@ -443,6 +442,8 @@ export function TableauDeBordFinancierGlobal() {
 
     const exportBilanBailleurPDF = async (bilan: BilanBailleur) => {
         const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const pageWidth = doc.internal.pageSize.getWidth();
         const periodLabel = new Date(selectedMonth).toLocaleDateString('fr-FR', {
             year: 'numeric',
             month: 'long',
@@ -464,123 +465,179 @@ export function TableauDeBordFinancierGlobal() {
             }
         );
 
-        const kpiY = headerY + 2;
-        drawSectionFrame(doc, 14, kpiY, 182, 52, agencySettings ?? undefined, {
-            title: 'Indicateurs du mois',
-            subtitle: 'Vue synthétique destinée au bailleur',
-            accent: 'primary',
-            fill: false,
-        });
-
-        const cards = [
-            ['Revenus encaissés', formatCurrency(bilan.total_loyers_percus)],
-            ['Impayés restants', formatCurrency(bilan.total_impayes)],
-            ['Commissions', formatCurrency(bilan.total_frais)],
-            ['Net à verser', formatCurrency(bilan.total_net)],
-        ];
-        cards.forEach(([label, value], index) => {
-            const x = 16 + (index % 2) * 90;
-            const y = kpiY + 4 + Math.floor(index / 2) * 24;
-            doc.setFillColor(248, 250, 252);
-            doc.roundedRect(x, y, 82, 18, 2.5, 2.5, 'F');
-            doc.setTextColor(71, 85, 105);
-            doc.setFontSize(8);
+        let y = headerY + 8;
+        const ensureSpace = (needed: number) => {
+            if (y + needed > pageHeight - 26) {
+                addFooter(doc, agencySettings ?? undefined);
+                doc.addPage();
+                drawPageBorder(doc, agencySettings ?? undefined);
+                y = 24;
+            }
+        };
+        const tableTheme = getAutoTableTheme(agencySettings ?? undefined);
+        const sectionTitle = (title: string, subtitle?: string) => {
+            ensureSpace(subtitle ? 18 : 13);
             doc.setFont('helvetica', 'bold');
-            doc.text(label, x + 5, y + 7);
+            doc.setFontSize(10.8);
             doc.setTextColor(15, 23, 42);
-            doc.setFontSize(12);
-            doc.text(value, x + 5, y + 15);
-        });
+            doc.text(title, 14, y);
+            if (subtitle) {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8.5);
+                doc.setTextColor(100, 116, 139);
+                doc.text(subtitle, 14, y + 5.2);
+                y += 10.5;
+            } else {
+                y += 5.8;
+            }
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.12);
+            doc.line(14, y, pageWidth - 14, y);
+            y += 6;
+        };
 
-        doc.setTextColor(15, 23, 42);
-        doc.setFontSize(13);
-        doc.setFont('helvetica', 'bold');
-        const summaryY = kpiY + 58;
-        drawSectionFrame(doc, 14, summaryY, 182, 24, agencySettings ?? undefined, {
-            title: 'Résumé exécutif',
-            accent: 'neutral',
-        });
-        doc.setFontSize(10);
-        doc.setTextColor(30, 41, 59);
-        doc.setFont('helvetica', 'normal');
-        const executiveSummary = [
-            `Taux de recouvrement estimé : ${recoveryRate}%.`,
-            `Montant net prévu pour le bailleur : ${formatCurrency(bilan.total_net)}.`,
-            bilan.total_impayes > 0
-                ? `Action recommandée : prioriser la relance des impayés (${formatCurrency(bilan.total_impayes)}).`
-                : 'Aucun impayé significatif sur la période.',
-        ];
-        doc.text(doc.splitTextToSize(executiveSummary.join(' '), 178), 16, summaryY + 12);
-
-        const detailRows = bilan.immeubles.flatMap((immeuble) => {
-            const unitRows = immeuble.unites.map((unit, index) => [
-                index === 0 ? immeuble.immeuble_nom : '',
-                unit.unite_nom,
-                unit.locataire_nom,
-                formatCurrency(unit.loyer),
-                unit.statut_paiement === 'partiel' ? 'Partiel' : 'Payé',
-                formatCurrency(unit.montant_encaisse),
-                formatCurrency(unit.montant_restant),
-                unit.periode,
-                unit.observation,
-            ]);
-            return [
-                ...unitRows,
-                [
-                    `${immeuble.immeuble_nom} — total`,
-                    '',
-                    '',
-                    '',
-                    '',
-                    formatCurrency(immeuble.loyers_percus),
-                    formatCurrency(immeuble.loyers_impayes),
-                    '',
-                    `Net bailleur ${formatCurrency(immeuble.resultat_net)}`,
-                ],
-            ];
-        });
-
+        sectionTitle('Indicateurs du mois', 'Période analysée : ' + periodLabel);
         autoTable(doc, {
-            head: [['Immeuble', 'Unité', 'Locataire', 'Loyer', 'Statut', 'Encaissé', 'Restant', 'Période', 'Observation']],
-            body: detailRows,
-            startY: summaryY + 32,
+            body: [
+                ['Loyers encaissés', formatCurrency(bilan.total_loyers_percus), 'Reliquats à suivre', formatCurrency(bilan.total_impayes)],
+                ['Commissions agence', formatCurrency(bilan.total_frais), 'Net bailleur estimé', formatCurrency(bilan.total_net)],
+                ['Taux de recouvrement', String(recoveryRate) + '%', 'Immeubles suivis', String(bilan.immeubles.length)],
+            ],
+            startY: y,
             theme: 'grid',
-            ...getAutoTableTheme(agencySettings ?? undefined),
-            styles: { ...getAutoTableTheme(agencySettings ?? undefined).styles, fontSize: 7.4 },
-            margin: { left: 16, right: 16 },
-            columnStyles: {
-                3: { halign: 'right' },
-                5: { halign: 'right' },
-                6: { halign: 'right' },
+            ...tableTheme,
+            styles: {
+                ...tableTheme.styles,
+                fontSize: 8.8,
+                cellPadding: { top: 3.1, right: 3.2, bottom: 3.1, left: 3.2 },
             },
-            didParseCell: (data) => {
-                const firstCell = Array.isArray(data.row.raw) ? data.row.raw[0] : undefined;
-                if (typeof firstCell === 'string' && firstCell.includes('— total')) {
-                    data.cell.styles.fillColor = [248, 250, 252];
-                    data.cell.styles.fontStyle = 'bold';
-                    data.cell.styles.textColor = [15, 23, 42];
-                }
+            margin: { left: 14, right: 14 },
+            columnStyles: {
+                0: { fontStyle: 'bold', textColor: [71, 85, 105], cellWidth: 42 },
+                1: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 40 },
+                2: { fontStyle: 'bold', textColor: [71, 85, 105], cellWidth: 44 },
+                3: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42] },
             },
         });
+        y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 12;
 
-        let finalY = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? summaryY + 32) + 12;
-        if (finalY > 252) {
-            doc.addPage();
-            drawPageBorder(doc, agencySettings ?? undefined);
-            finalY = 30;
-        }
-        doc.setFillColor(255, 255, 255);
-        doc.rect(16, finalY, 178, 20, 'F');
-        doc.setDrawColor(226, 232, 240);
-        doc.setLineWidth(0.12);
-        doc.rect(16, finalY, 178, 20, 'S');
-        doc.setTextColor(15, 23, 42);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.text(`Net à verser : ${formatCurrency(bilan.total_net)}`, 22, finalY + 9);
+        sectionTitle('Résumé exécutif');
+        const executiveSummary = [
+            'Sur la période ' + periodLabel + ', le portefeuille de ' + bilan.bailleur_prenom + ' ' + bilan.bailleur_nom + ' présente un taux de recouvrement estimé à ' + recoveryRate + '%.',
+            bilan.total_impayes > 0
+                ? 'Les reliquats ouverts représentent ' + formatCurrency(bilan.total_impayes) + ' et doivent rester prioritaires dans le suivi de gestion.'
+                : 'Les échéances enregistrées sur la période sont soldées, sans reliquat significatif à reporter.',
+            'Après ventilation des commissions, le montant net estimé au profit du bailleur ressort à ' + formatCurrency(bilan.total_net) + '.',
+        ];
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} • ${agencySettings?.nom_agence || 'Samay Këur'}`, 22, finalY + 16);
+        doc.setFontSize(9.3);
+        doc.setTextColor(30, 41, 59);
+        const summaryLines = doc.splitTextToSize(executiveSummary.join(' '), 178);
+        doc.text(summaryLines, 14, y);
+        y += summaryLines.length * 4.8 + 10;
+
+        sectionTitle('Détail par immeuble', 'Lecture par immeuble, unité, locataire et situation financière.');
+        if (bilan.immeubles.length === 0) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+            doc.text('Aucune ligne de paiement enregistrée pour cette période.', 14, y);
+            y += 12;
+        }
+
+        bilan.immeubles.forEach((immeuble, index) => {
+            ensureSpace(38);
+            if (index > 0) y += 2;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.setTextColor(15, 23, 42);
+            doc.text(immeuble.immeuble_nom, 14, y);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(100, 116, 139);
+            doc.text(
+                'Total encaissé ' + formatCurrency(immeuble.loyers_percus) + ' · Reliquat ' + formatCurrency(immeuble.loyers_impayes) + ' · Net ' + formatCurrency(immeuble.resultat_net),
+                pageWidth - 14,
+                y,
+                { align: 'right' }
+            );
+            y += 5;
+
+            const bodyRows = immeuble.unites.length
+                ? immeuble.unites.map((unit) => [
+                    unit.unite_nom,
+                    unit.locataire_nom,
+                    formatCurrency(unit.loyer),
+                    unit.statut_paiement === 'partiel' ? 'Partiel' : 'Soldé',
+                    formatCurrency(unit.montant_encaisse),
+                    formatCurrency(unit.montant_restant),
+                    unit.periode,
+                    unit.observation,
+                ])
+                : [['-', 'Aucune unité payée', '-', '-', '-', '-', periodLabel, '-']];
+
+            autoTable(doc, {
+                head: [['Unité', 'Locataire', 'Loyer', 'Statut', 'Encaissé', 'Reliquat', 'Période', 'Observation']],
+                body: [
+                    ...bodyRows,
+                    ['', 'Total immeuble', '', '', formatCurrency(immeuble.loyers_percus), formatCurrency(immeuble.loyers_impayes), '', 'Net ' + formatCurrency(immeuble.resultat_net)],
+                ],
+                startY: y,
+                theme: 'grid',
+                ...tableTheme,
+                styles: {
+                    ...tableTheme.styles,
+                    fontSize: 7.6,
+                    cellPadding: { top: 2.5, right: 2.2, bottom: 2.5, left: 2.2 },
+                    overflow: 'linebreak',
+                },
+                headStyles: {
+                    ...tableTheme.headStyles,
+                    fontSize: 7.4,
+                },
+                margin: { left: 14, right: 14 },
+                columnStyles: {
+                    2: { halign: 'right', cellWidth: 20 },
+                    4: { halign: 'right', cellWidth: 22 },
+                    5: { halign: 'right', cellWidth: 22 },
+                    6: { cellWidth: 24 },
+                    7: { cellWidth: 34 },
+                },
+                didParseCell: (data) => {
+                    const raw = Array.isArray(data.row.raw) ? data.row.raw : [];
+                    if (raw[1] === 'Total immeuble') {
+                        data.cell.styles.fillColor = [248, 250, 252];
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = [15, 23, 42];
+                    }
+                },
+            });
+            y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 10;
+        });
+
+        ensureSpace(30);
+        sectionTitle('Synthèse financière finale');
+        autoTable(doc, {
+            body: [
+                ['Total encaissé', formatCurrency(bilan.total_loyers_percus)],
+                ['Reliquat total', formatCurrency(bilan.total_impayes)],
+                ['Commission agence', formatCurrency(bilan.total_frais)],
+                ['Net bailleur', formatCurrency(bilan.total_net)],
+            ],
+            startY: y,
+            theme: 'grid',
+            ...tableTheme,
+            styles: {
+                ...tableTheme.styles,
+                fontSize: 9,
+                cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+            },
+            margin: { left: 14, right: 96 },
+            columnStyles: {
+                0: { fontStyle: 'bold', textColor: [71, 85, 105] },
+                1: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42] },
+            },
+        });
         addFooter(doc, agencySettings ?? undefined);
 
         const previewRows = bilan.immeubles.flatMap((i) =>
@@ -594,11 +651,21 @@ export function TableauDeBordFinancierGlobal() {
             }))
         );
 
-        saveGeneratedPdf(doc, {
+        await saveGeneratedPdf(doc, {
             kind: 'bilan',
             title: 'Rapport bailleur',
             fileName: `rapport-bailleur-${bilan.bailleur_nom}-${selectedMonth}.pdf`,
             source: 'tableau-de-bord-financier',
+            documentType: 'rapport_bailleur',
+            entityId: bilan.bailleur_id,
+            period: selectedMonth,
+            reference: `RBL-${selectedMonth}-${bilan.bailleur_id.slice(0, 8).toUpperCase()}`,
+            data: {
+                document: 'rapport_bailleur',
+                selectedMonth,
+                bilan,
+                agencySettings,
+            },
             preview: {
                 columns: ['Immeuble', 'Unité', 'Locataire', 'Statut', 'Encaissé', 'Restant'],
                 rows: previewRows.slice(0, 6),

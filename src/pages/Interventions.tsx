@@ -6,7 +6,7 @@ import { Modal } from '../components/ui/Modal';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Wrench, Plus, ArrowRight, Phone, Building2 } from 'lucide-react';
-import { formatCurrency } from '../lib/formatters';
+import { formatCurrency, formatSenegalPhone, formatSenegalPhoneInput, getSenegalPhoneHref, normalizeSenegalPhone } from '../lib/formatters';
 import { SkeletonCards } from '../components/ui/Skeleton';
 
 type Statut = 'a_faire' | 'en_cours' | 'termine';
@@ -121,7 +121,7 @@ export function Interventions() {
         date_demande: form.date_demande,
         date_souhaitee: form.date_souhaitee || null,
         prestataire_nom: form.prestataire_nom || null,
-        prestataire_telephone: form.prestataire_telephone || null,
+        prestataire_telephone: form.prestataire_telephone ? normalizeSenegalPhone(form.prestataire_telephone) ?? form.prestataire_telephone : null,
         cout_estime: form.cout_estime ? parseFloat(form.cout_estime) : null,
         statut: 'a_faire',
         created_by: user?.id,
@@ -273,8 +273,8 @@ export function Interventions() {
                           <div className="text-xs text-slate-600 mb-2">
                             <span className="font-medium">{i.prestataire_nom}</span>
                             {i.prestataire_telephone && (
-                              <a href={`tel:${i.prestataire_telephone}`} className="inline-flex items-center gap-1 ml-2 text-orange-600">
-                                <Phone className="w-3 h-3" />{i.prestataire_telephone}
+                              <a href={getSenegalPhoneHref(i.prestataire_telephone) ?? `tel:${i.prestataire_telephone}`} className="inline-flex items-center gap-1 ml-2 text-orange-600">
+                                <Phone className="w-3 h-3" />{formatSenegalPhone(i.prestataire_telephone)}
                               </a>
                             )}
                           </div>
@@ -367,7 +367,7 @@ export function Interventions() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Téléphone prestataire</label>
-              <input type="tel" value={form.prestataire_telephone} onChange={(e) => setForm({ ...form, prestataire_telephone: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+              <input type="tel" value={form.prestataire_telephone} onChange={(e) => setForm({ ...form, prestataire_telephone: formatSenegalPhoneInput(e.target.value) })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Coût estimé</label>

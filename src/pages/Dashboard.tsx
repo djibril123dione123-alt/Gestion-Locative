@@ -9,6 +9,7 @@ import {
   AlertCircle,
   DoorOpen,
   Sparkles,
+  FileText,
 } from 'lucide-react';
 import {
   BarChart,
@@ -320,50 +321,48 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
         </button>
       )}
 
-      {/* Résumé financier rapide */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="sk-card p-4">
-          <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide mb-1">Encaissés ce mois</p>
-          <p className="text-xl sm:text-2xl font-bold text-emerald-900 truncate">{formatCurrency(stats.revenusMois)}</p>
-          <p className="text-xs text-emerald-600 mt-1">
-            {stats.nbPaiementsMois} paiement{stats.nbPaiementsMois > 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className={`rounded-lg p-4 border ${stats.impayesMois > 0 ? 'bg-red-50 border-red-200' : 'bg-white border-slate-200 shadow-premium'}`}>
-          <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${stats.impayesMois > 0 ? 'text-red-700' : 'text-slate-500'}`}>
-            Impayés ce mois
-          </p>
-          <p className={`text-xl sm:text-2xl font-bold truncate ${stats.impayesMois > 0 ? 'text-red-900' : 'text-slate-400'}`}>
-            {formatCurrency(stats.impayesMois)}
-          </p>
-          <p className={`text-xs mt-1 ${stats.impayesMois > 0 ? 'text-red-600' : 'text-slate-400'}`}>
-            {stats.nbImpayesMois} dossier{stats.nbImpayesMois > 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="sk-card p-4">
-          <p className="text-xs font-bold text-brand-700 uppercase tracking-wide mb-1">Contrats actifs</p>
-          <p className="text-xl sm:text-2xl font-black text-slate-950">{stats.contratsActifs}</p>
-          <p className="text-xs font-medium text-slate-600 mt-1">{stats.totalLocataires} locataires</p>
-        </div>
-        <div className="sk-card p-4">
-          <p className="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1">Occupation</p>
-          <p className="text-xl sm:text-2xl font-black text-slate-950">{stats.tauxOccupation.toFixed(0)}%</p>
-          <p className="text-xs font-medium text-slate-600 mt-1">
-            {stats.unitesLouees}/{stats.totalUnites} unités
-          </p>
-        </div>
-      </div>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-        <StatCard title="Immeubles" value={stats.totalImmeubles} icon={Building2} color="orange" delay={0} />
-        <StatCard
-          title="Unités totales"
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+        <KpiCard
+          title="Encaissements"
+          value={formatCurrency(stats.revenusMois)}
+          subtitle={`${stats.nbPaiementsMois} paiement${stats.nbPaiementsMois > 1 ? 's' : ''}`}
+          icon={DollarSign}
+          tone="emerald"
+        />
+        <KpiCard
+          title="Impayés"
+          value={formatCurrency(stats.impayesMois)}
+          subtitle={`${stats.nbImpayesMois} dossier${stats.nbImpayesMois > 1 ? 's' : ''}`}
+          icon={AlertCircle}
+          tone={stats.impayesMois > 0 ? 'red' : 'slate'}
+        />
+        <KpiCard
+          title="Contrats actifs"
+          value={stats.contratsActifs}
+          subtitle={`${stats.totalLocataires} locataires`}
+          icon={FileText}
+          tone="brand"
+        />
+        <KpiCard
+          title="Occupation"
+          value={`${stats.tauxOccupation.toFixed(0)}%`}
+          subtitle={`${stats.unitesLouees}/${stats.totalUnites} unités`}
+          icon={TrendingUp}
+          tone="blue"
+        />
+        <KpiCard
+          title="Immeubles"
+          value={stats.totalImmeubles}
+          subtitle="Patrimoine géré"
+          icon={Building2}
+          tone="orange"
+        />
+        <KpiCard
+          title="Unités"
           value={stats.totalUnites}
           subtitle={`${stats.unitesLibres} libres`}
           icon={DoorOpen}
-          color="blue"
-          delay={100}
+          tone="slate"
         />
       </div>
 
@@ -452,38 +451,91 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
 
 // ─── Composants internes ──────────────────────────────────────────────────────
 
-interface StatCardProps {
+interface KpiCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
   icon: React.ElementType;
-  color: 'orange' | 'blue' | 'slate' | 'green' | 'emerald';
-  delay?: number;
+  tone: 'orange' | 'blue' | 'slate' | 'brand' | 'emerald' | 'red';
 }
 
-const COLOR_MAP: Record<StatCardProps['color'], { bg: string; icon: string; text: string }> = {
-  orange:  { bg: 'bg-action-50',  icon: 'text-action-700',  text: 'text-slate-950'  },
-  blue:    { bg: 'bg-sky-50',     icon: 'text-sky-700',     text: 'text-slate-950'    },
-  slate:   { bg: 'bg-slate-100',  icon: 'text-slate-600',   text: 'text-slate-900'   },
-  green:   { bg: 'bg-brand-50',   icon: 'text-brand-700',   text: 'text-slate-950'   },
-  emerald: { bg: 'bg-emerald-50', icon: 'text-emerald-700', text: 'text-slate-950' },
+const KPI_TONES: Record<KpiCardProps['tone'], { card: string; iconWrap: string; icon: string; title: string; value: string; subtitle: string }> = {
+  orange: {
+    card: 'border-action-100 bg-gradient-to-br from-white to-action-50/45',
+    iconWrap: 'bg-action-50 ring-action-100',
+    icon: 'text-action-700',
+    title: 'text-action-800',
+    value: 'text-slate-950',
+    subtitle: 'text-slate-600',
+  },
+  blue: {
+    card: 'border-sky-100 bg-gradient-to-br from-white to-sky-50/55',
+    iconWrap: 'bg-sky-50 ring-sky-100',
+    icon: 'text-sky-700',
+    title: 'text-sky-800',
+    value: 'text-slate-950',
+    subtitle: 'text-slate-600',
+  },
+  slate: {
+    card: 'border-slate-200 bg-white',
+    iconWrap: 'bg-slate-100 ring-slate-200',
+    icon: 'text-slate-600',
+    title: 'text-slate-600',
+    value: 'text-slate-950',
+    subtitle: 'text-slate-500',
+  },
+  brand: {
+    card: 'border-brand-100 bg-gradient-to-br from-white to-brand-50/55',
+    iconWrap: 'bg-brand-50 ring-brand-100',
+    icon: 'text-brand-700',
+    title: 'text-brand-800',
+    value: 'text-slate-950',
+    subtitle: 'text-slate-600',
+  },
+  emerald: {
+    card: 'border-emerald-100 bg-gradient-to-br from-white to-emerald-50/55',
+    iconWrap: 'bg-emerald-50 ring-emerald-100',
+    icon: 'text-emerald-700',
+    title: 'text-emerald-800',
+    value: 'text-emerald-950',
+    subtitle: 'text-emerald-700',
+  },
+  red: {
+    card: 'border-red-200 bg-gradient-to-br from-white to-red-50/70',
+    iconWrap: 'bg-red-50 ring-red-200',
+    icon: 'text-red-700',
+    title: 'text-red-700',
+    value: 'text-red-950',
+    subtitle: 'text-red-700',
+  },
 };
 
-function StatCard({ title, value, subtitle, icon: Icon, color, delay = 0 }: StatCardProps) {
-  const c = COLOR_MAP[color];
+function KpiCard({ title, value, subtitle, icon: Icon, tone }: KpiCardProps) {
+  const c = KPI_TONES[tone];
   return (
     <div
-      className="sk-card p-4 sm:p-6 transition-all duration-300 hover:-translate-y-0.5 animate-scaleIn"
-      style={{ animationDelay: `${delay}ms` }}
+      className={`min-w-0 rounded-2xl border p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-4 ${c.card}`}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div className={`p-2.5 rounded-lg ${c.bg}`}>
-          <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${c.icon}`} />
+      <div className="flex min-h-[116px] flex-col justify-between gap-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className={`min-w-0 truncate text-[0.66rem] font-black uppercase tracking-[0.14em] ${c.title}`}>
+            {title}
+          </p>
+          <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ring-1 ${c.iconWrap}`}>
+            <Icon className={`h-5 w-5 ${c.icon}`} />
+          </div>
+        </div>
+        <div className="min-w-0">
+          <p className={`truncate text-xl font-black leading-tight tracking-tight sm:text-2xl ${c.value}`}>
+            {value}
+          </p>
+          {subtitle && (
+            <p className={`mt-1 truncate text-xs font-semibold ${c.subtitle}`}>
+              {subtitle}
+            </p>
+          )}
         </div>
       </div>
-      <p className={`text-2xl sm:text-3xl font-black mb-1 ${c.text}`}>{value}</p>
-      <p className="text-sm font-semibold text-slate-700">{title}</p>
-      {subtitle && <p className="text-xs font-medium text-slate-600 mt-1">{subtitle}</p>}
     </div>
   );
 }

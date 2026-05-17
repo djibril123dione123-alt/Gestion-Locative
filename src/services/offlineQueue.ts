@@ -36,6 +36,12 @@ export interface PendingMutation {
   entity_type: string;
   payload: Record<string, unknown>;
   timestamp: number;
+  created_at?: number;
+  updated_at?: number;
+  client_mutation_id?: string;
+  mutation_key?: string;
+  last_attempt_at?: number;
+  next_retry_at?: number;
   status: 'pending' | 'syncing' | 'done' | 'error';
   retries?: number;
   error?: string;
@@ -48,6 +54,8 @@ export interface SyncResult {
 }
 
 const MAX_RETRIES = 3;
+const BASE_RETRY_DELAY_MS = 5_000;
+const MAX_RETRY_DELAY_MS = 5 * 60_000;
 
 const ACTION_TABLE: Record<MutationAction, string> = {
   locataire_create: 'locataires',
@@ -61,6 +69,30 @@ const ACTION_TABLE: Record<MutationAction, string> = {
   contrat_delete: 'contrats',
 };
 
+function makeClientMutationId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function buildMutationKey(mutation: Pick<PendingMutation, 'action' | 'entity_type' | 'payload'>): string {
+  const idempotencyKey = mutation.payload.idempotency_key;
+  if (typeof idempotencyKey === 'string' && idempotencyKey.trim()) {
+    return `${mutation.action}:idempotency:${idempotencyKey}`;
+  }
+  const id = mutation.payload.id;
+  if (typeof id === 'string' && id.trim()) {
+    return `${mutation.action}:${mutation.entity_type}:${id}`;
+  }
+  return `${mutation.action}:${mutation.entity_type}:${makeClientMutationId()}`;
+}
+
+function retryDelayMs(retries: number): number {
+  const jitter = Math.floor(Math.random() * 1_500);
+  return Math.min(MAX_RETRY_DELAY_MS, BASE_RETRY_DELAY_MS * 2 ** Math.max(0, retries - 1)) + jitter;
+}
+
 /** Resets any stale 'syncing' entries back to 'pending'.
  *  Call once at app startup — guards against crash during a previous sync. */
 export async function recoverStaleSyncing(): Promise<number> {
@@ -68,7 +100,12 @@ export async function recoverStaleSyncing(): Promise<number> {
     const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
     const stale = all.filter((m) => m.status === 'syncing');
     for (const m of stale) {
-      await dbPut('pending_mutations', { ...m, status: 'pending' });
+      await dbPut('pending_mutations', {
+        ...m,
+        status: 'pending',
+        updated_at: Date.now(),
+        next_retry_at: Date.now(),
+      });
     }
     return stale.length;
   } catch {
@@ -81,8 +118,23 @@ export async function enqueueMutation(
   mutation: Omit<PendingMutation, 'id' | 'status' | 'retries'>,
 ): Promise<void> {
   try {
+    const now = Date.now();
+    const mutationKey = mutation.mutation_key ?? buildMutationKey(mutation);
+    const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
+    const duplicate = all.find(
+      (m) =>
+        m.mutation_key === mutationKey &&
+        (m.status === 'pending' || m.status === 'syncing'),
+    );
+    if (duplicate) return;
+
     await dbPut('pending_mutations', {
       ...mutation,
+      client_mutation_id: mutation.client_mutation_id ?? makeClientMutationId(),
+      mutation_key: mutationKey,
+      created_at: mutation.created_at ?? now,
+      updated_at: now,
+      next_retry_at: mutation.next_retry_at ?? now,
       status: 'pending',
       retries: 0,
     } as PendingMutation);
@@ -95,7 +147,10 @@ export async function enqueueMutation(
 export async function getPendingMutations(): Promise<PendingMutation[]> {
   try {
     const all = await dbGetByIndex('pending_mutations', 'status', 'pending');
-    return (all as PendingMutation[]).sort((a, b) => a.timestamp - b.timestamp);
+    const now = Date.now();
+    return (all as PendingMutation[])
+      .filter((m) => (m.next_retry_at ?? 0) <= now)
+      .sort((a, b) => a.timestamp - b.timestamp);
   } catch {
     return [];
   }
@@ -103,8 +158,15 @@ export async function getPendingMutations(): Promise<PendingMutation[]> {
 
 /** Returns total count of pending mutations */
 export async function getPendingCount(): Promise<number> {
-  const pending = await getPendingMutations();
-  return pending.length;
+  try {
+    const [pending, syncing] = await Promise.all([
+      dbGetByIndex('pending_mutations', 'status', 'pending'),
+      dbGetByIndex('pending_mutations', 'status', 'syncing'),
+    ]);
+    return pending.length + syncing.length;
+  } catch {
+    return 0;
+  }
 }
 
 /** Returns all mutations that have permanently errored (>= MAX_RETRIES) */
@@ -138,6 +200,15 @@ export async function syncPendingMutations(
     if (!table) continue;
 
     try {
+      if (m.id !== undefined) {
+        await dbPut('pending_mutations', {
+          ...m,
+          status: 'syncing',
+          last_attempt_at: Date.now(),
+          updated_at: Date.now(),
+        });
+      }
+
       // ── Paiement mutations → Edge Functions (financial integrity) ──────────
       if (m.action === 'paiement_create') {
         await createPaiementViaEdge({
@@ -216,11 +287,15 @@ export async function syncPendingMutations(
       const retries = (m.retries ?? 0) + 1;
       if (m.id !== undefined) {
         const newStatus: PendingMutation['status'] = retries >= MAX_RETRIES ? 'error' : 'pending';
+        const now = Date.now();
         await dbPut('pending_mutations', {
           ...m,
           status: newStatus,
           retries,
           error: msg,
+          updated_at: now,
+          last_attempt_at: now,
+          next_retry_at: newStatus === 'pending' ? now + retryDelayMs(retries) : undefined,
         });
       }
     }

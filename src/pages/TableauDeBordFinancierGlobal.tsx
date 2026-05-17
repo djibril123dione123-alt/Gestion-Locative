@@ -456,12 +456,11 @@ export function TableauDeBordFinancierGlobal() {
         const headerY = await drawDocumentHeader(
             doc,
             agencySettings ?? {},
-            'RAPPORT MENSUEL BAILLEUR',
+            'Rapport mensuel bailleur',
             `${bilan.bailleur_prenom} ${bilan.bailleur_nom}`,
             {
                 reference: `RPT-${selectedMonth.replace('-', '')}-${bilan.bailleur_id.slice(0, 6).toUpperCase()}`,
                 issueDate: new Date().toLocaleDateString('fr-FR'),
-                status: `${recoveryRate}% recouvrement`,
             }
         );
 
@@ -557,9 +556,9 @@ export function TableauDeBordFinancierGlobal() {
             didParseCell: (data) => {
                 const firstCell = Array.isArray(data.row.raw) ? data.row.raw[0] : undefined;
                 if (typeof firstCell === 'string' && firstCell.includes('— total')) {
-                    data.cell.styles.fillColor = [255, 247, 237];
+                    data.cell.styles.fillColor = [248, 250, 252];
                     data.cell.styles.fontStyle = 'bold';
-                    data.cell.styles.textColor = [154, 52, 18];
+                    data.cell.styles.textColor = [15, 23, 42];
                 }
             },
         });
@@ -570,9 +569,12 @@ export function TableauDeBordFinancierGlobal() {
             drawPageBorder(doc, agencySettings ?? undefined);
             finalY = 30;
         }
-        doc.setFillColor(255, 247, 237);
-        doc.roundedRect(16, finalY, 178, 20, 3, 3, 'F');
-        doc.setTextColor(154, 52, 18);
+        doc.setFillColor(255, 255, 255);
+        doc.rect(16, finalY, 178, 20, 'F');
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.12);
+        doc.rect(16, finalY, 178, 20, 'S');
+        doc.setTextColor(15, 23, 42);
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(11);
         doc.text(`Net à verser : ${formatCurrency(bilan.total_net)}`, 22, finalY + 9);
@@ -594,7 +596,7 @@ export function TableauDeBordFinancierGlobal() {
 
         saveGeneratedPdf(doc, {
             kind: 'bilan',
-            title: 'Rapport bailleur premium',
+            title: 'Rapport bailleur',
             fileName: `rapport-bailleur-${bilan.bailleur_nom}-${selectedMonth}.pdf`,
             source: 'tableau-de-bord-financier',
             preview: {

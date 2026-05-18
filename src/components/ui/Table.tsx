@@ -113,7 +113,7 @@ export function Table<T extends { id: string }>({
               })}
             </div>
             {(onEdit || onDelete) && (
-              <div className="grid grid-cols-2 gap-2 border-t border-slate-100 bg-white px-4 py-3">
+              <div className="grid grid-cols-2 gap-2 border-t border-emerald-950/10 bg-brand-surface/75 px-4 py-3">
                 {onEdit && (
                   <button
                     type="button"
@@ -138,10 +138,10 @@ export function Table<T extends { id: string }>({
         ))}
       </div>
 
-      <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm sm:block">
+      <div className="hidden overflow-hidden rounded-[1.15rem] border border-emerald-950/10 bg-white/92 shadow-premium backdrop-blur sm:block">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
-            <thead className="sticky top-0 z-10 border-b border-slate-200 bg-brand-surface/95 backdrop-blur">
+            <thead className="sticky top-0 z-10 border-b border-emerald-950/10 bg-[linear-gradient(180deg,rgba(248,244,236,0.98),rgba(255,255,255,0.94))] backdrop-blur">
               <tr>
                 {columns.map((column) => (
                   <th key={column.key} className="px-5 py-4 text-left text-xs font-black uppercase text-slate-500">

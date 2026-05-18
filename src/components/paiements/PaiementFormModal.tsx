@@ -115,7 +115,7 @@ export function PaiementFormModal({
           )}
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="sk-premium-panel p-4">
           <label className="mb-1 block text-sm font-medium text-slate-700">
             Contrat <span className="text-red-500">*</span>
           </label>
@@ -151,7 +151,7 @@ export function PaiementFormModal({
         </div>
 
         {selectedContrat && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="sk-premium-panel p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Résumé financier</p>
@@ -160,11 +160,11 @@ export function PaiementFormModal({
               <CreditCard className="h-5 w-5 text-orange-500" />
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <div className="rounded-xl bg-slate-50 p-3">
+              <div className="rounded-xl border border-emerald-950/10 bg-white/75 p-3 shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Période</p>
                 <p className="mt-1 text-sm font-black text-slate-950">{formData.mois_display || '-'}</p>
               </div>
-              <div className="rounded-xl bg-slate-50 p-3">
+              <div className="rounded-xl border border-emerald-950/10 bg-white/75 p-3 shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Montant dû</p>
                 <p className="mt-1 text-sm font-black tabular-nums text-slate-950">{loyerAttendu.toLocaleString('fr-FR')} FCFA</p>
               </div>
@@ -296,7 +296,7 @@ export function PaiementFormModal({
           </div>
         </div>
 
-        <div className="flex flex-col-reverse justify-end gap-3 border-t border-slate-200 pt-4 sm:flex-row">
+        <div className="flex flex-col-reverse justify-end gap-3 border-t border-emerald-950/10 pt-4 sm:flex-row">
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
             Annuler
           </Button>

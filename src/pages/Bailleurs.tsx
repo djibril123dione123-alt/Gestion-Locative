@@ -534,18 +534,20 @@ export function Bailleurs() {
   return (
     <div className="sk-page-shell max-w-7xl mx-auto animate-fadeIn">
       {/* En-tête */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:mb-6 lg:mb-8 mb-6">
-        <div className="animate-slideInLeft w-full">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950 mb-2">
+      <div className="sk-page-hero mb-6 flex flex-col items-start justify-between gap-4 sm:mb-6 sm:flex-row sm:items-center lg:mb-8">
+        <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-action-500/10 blur-3xl" />
+        <div className="animate-slideInLeft relative w-full">
+          <p className="sk-section-eyebrow">Portefeuille propriétaire</p>
+          <h1 className="mt-2 text-2xl font-black text-slate-950 sm:text-3xl lg:text-4xl">
             Bailleurs
           </h1>
-          <p className="text-slate-600 text-base lg:text-lg">
-            Gestion des propriétaires • {bailleurs.length} bailleur{bailleurs.length > 1 ? 's' : ''}
+          <p className="mt-2 text-base leading-7 text-slate-600 lg:text-lg">
+            Gestion des propriétaires · {bailleurs.length} bailleur{bailleurs.length > 1 ? 's' : ''}
           </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="sk-create-cta w-full animate-slideInRight sm:w-auto"
+          className="sk-create-cta relative w-full animate-slideInRight sm:w-auto"
         >
           <Plus className="w-5 h-5" />
           Nouveau bailleur

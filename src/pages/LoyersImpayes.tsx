@@ -480,45 +480,45 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="sk-page-shell space-y-5">
       {!embedded && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
+        <div className="sk-page-hero flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Loyers Impayés</h1>
-            <p className="text-sm sm:text-base text-slate-600">Suivi des loyers en retard</p>
+            <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">Loyers Impayés</h1>
+            <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">Suivi des loyers en retard, reliquats et paiements partiels</p>
           </div>
         </div>
       )}
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-6 lg:mb-8">
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-red-200">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="sk-metric-tile border-red-200/80 p-4 sm:p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 sm:p-3 rounded-lg bg-red-50 text-red-600">
               <AlertCircle className="w-5 sm:w-6 h-5 sm:h-6" />
             </div>
             <div>
-              <h3 className="text-xs sm:text-sm font-medium text-slate-600">Retards et reliquats</h3>
-              <p className="text-lg sm:text-2xl font-bold text-red-600 mt-1">{formatCurrency(totalEnRetard)}</p>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-sm">Retards et reliquats</h3>
+              <p className="mt-1 text-lg font-extrabold text-red-600 sm:text-2xl">{formatCurrency(totalEnRetard)}</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Échéances ouvertes</h3>
-          <p className="text-lg sm:text-2xl font-bold text-slate-900">{filtered.length}</p>
+        <div className="sk-metric-tile p-4 sm:p-5">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-sm">Échéances ouvertes</h3>
+          <p className="text-lg font-extrabold text-slate-950 sm:text-2xl">{filtered.length}</p>
         </div>
 
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-200">
-          <h3 className="text-xs sm:text-sm font-medium text-slate-600 mb-2">Solde à recouvrer</h3>
-          <p className="text-lg sm:text-2xl font-bold text-slate-900">
+        <div className="sk-metric-tile p-4 sm:p-5">
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-sm">Solde à recouvrer</h3>
+          <p className="text-lg font-extrabold text-slate-950 sm:text-2xl">
             {formatCurrency(totalImpaye)}
           </p>
         </div>
       </div>
 
       {/* Filtres + Table */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+      <div className="sk-premium-panel p-4 sm:p-5">
         <div className="flex flex-wrap items-start gap-4 mb-6">
           <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="relative">
@@ -528,7 +528,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
               placeholder="Rechercher..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="sk-input pl-10 pr-4"
             />
           </div>
 
@@ -536,7 +536,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
             <select
               value={selectedBailleur}
               onChange={(e) => setSelectedBailleur(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="sk-input"
             >
               <option value="">Tous les bailleurs</option>
               {bailleurs.map((b, index) => (
@@ -561,7 +561,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
+          <div className="mt-4 flex flex-col gap-3 border-t border-emerald-950/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-slate-500">
               {filtered.length} résultat{filtered.length > 1 ? 's' : ''} — page {page} / {totalPages}
             </p>

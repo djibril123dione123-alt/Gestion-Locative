@@ -262,32 +262,33 @@ function PlanCard({ plan, onCta }: { plan: PlanDef; onCta: (plan: PlanDef) => vo
 
   return (
     <article
-      className={`relative mx-auto flex h-full w-full max-w-[20rem] min-w-0 flex-col overflow-hidden rounded-[1.6rem] border bg-white/95 shadow-premium backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:max-w-none ${
-        plan.highlighted ? 'border-orange-300 ring-4 ring-orange-100/70' : 'border-emerald-950/10'
+      className={`relative mx-auto flex h-full w-full max-w-[20rem] min-w-0 flex-col overflow-hidden rounded-[1.7rem] border bg-white/96 shadow-premium backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-emerald-900/25 hover:shadow-2xl sm:max-w-none ${
+        plan.highlighted ? 'border-orange-300 ring-4 ring-orange-200/55' : 'border-white/70'
       }`}
     >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_22%_0%,rgba(245,130,32,0.13),transparent_11rem)]" />
       {plan.badge && (
-        <div className="absolute right-4 top-4 rounded-full bg-emerald-950 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-white">
+        <div className="absolute right-4 top-4 z-10 rounded-full bg-emerald-950 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.14em] text-white shadow-lg shadow-emerald-950/20">
           {plan.badge}
         </div>
       )}
 
-      <div className="p-5 sm:p-6" style={{ backgroundColor: plan.surface }}>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+      <div className="relative p-5 sm:p-6" style={{ background: `linear-gradient(145deg, ${plan.surface}, #FFFFFF 72%)` }}>
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-lg shadow-slate-950/5 ring-1 ring-black/5">
           <Icon className="h-5 w-5" style={{ color: plan.accent }} />
         </div>
         <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-slate-500">{plan.audience}</p>
-        <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-950">{plan.name}</h3>
+        <h3 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-950">{plan.name}</h3>
         <p className="mt-3 min-h-[48px] break-words text-sm font-semibold leading-6 text-slate-600">{plan.positioning}</p>
         <div className="mt-5">
-          <span className="text-3xl font-black text-slate-950">{plan.priceLabel}</span>
+          <span className="text-3xl font-extrabold text-slate-950">{plan.priceLabel}</span>
           <span className="ml-2 text-sm font-bold text-slate-500">{plan.billingLabel}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 border-y border-emerald-950/10 bg-white/82 p-4">
+      <div className="grid grid-cols-2 gap-2 border-y border-emerald-950/10 bg-[linear-gradient(135deg,rgba(6,78,59,0.045),rgba(255,255,255,0.88),rgba(245,130,32,0.055))] p-4">
         {Object.entries(plan.capacities).map(([key, value]) => (
-          <div key={key} className="rounded-xl border border-emerald-950/5 bg-white/78 px-3 py-2 shadow-sm">
+          <div key={key} className="rounded-xl border border-emerald-950/8 bg-white/82 px-3 py-2 shadow-sm">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{key === 'unites' ? 'unités' : key}</p>
             <p className="mt-1 text-xs font-black text-slate-800">{value}</p>
           </div>
@@ -296,7 +297,7 @@ function PlanCard({ plan, onCta }: { plan: PlanDef; onCta: (plan: PlanDef) => vo
 
       <div className="flex flex-1 flex-col gap-5 p-5 sm:p-6">
         <div>
-          <p className="text-sm font-black text-slate-950">Valeur métier</p>
+          <p className="text-sm font-extrabold text-slate-950">Valeur métier</p>
           <ul className="mt-3 space-y-2.5">
             {plan.value.map((item) => (
               <li key={item} className="flex gap-2 text-sm font-semibold leading-5 text-slate-650">
@@ -307,7 +308,7 @@ function PlanCard({ plan, onCta }: { plan: PlanDef; onCta: (plan: PlanDef) => vo
           </ul>
         </div>
 
-        <div className="rounded-[1.25rem] border border-emerald-950/10 bg-gradient-to-br from-emerald-50 via-white to-orange-50/35 p-4 shadow-sm">
+        <div className="rounded-[1.25rem] border border-emerald-950/10 bg-gradient-to-br from-emerald-50 via-white to-orange-50/45 p-4 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-900">Infrastructure incluse</p>
           <ul className="mt-3 space-y-2">
             {plan.infrastructure.map((item) => (
@@ -374,35 +375,36 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
       style={{
         background: embedded
           ? 'transparent'
-          : 'radial-gradient(circle at top left, rgba(245,130,32,0.12), transparent 28%), linear-gradient(180deg, #F7F4EC 0%, #FFFFFF 42%, #F8FAFC 100%)',
+          : 'radial-gradient(circle at 16% 0%, rgba(245,130,32,0.24), transparent 19rem), radial-gradient(circle at 88% 4%, rgba(16,185,129,0.18), transparent 18rem), linear-gradient(180deg, #06120F 0%, #0B1B16 30%, #F4F0E7 56%, #FFFFFF 100%)',
       }}
     >
       {!embedded && (
-        <section className="mx-auto max-w-6xl overflow-hidden px-4 pb-8 pt-10 text-center sm:pb-10 sm:pt-16">
-          <div className="mx-auto inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-900/10 bg-white/80 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-emerald-950 shadow-sm sm:px-4 sm:tracking-[0.16em]">
+        <section className="relative mx-auto max-w-6xl overflow-hidden px-4 pb-8 pt-10 text-center sm:pb-10 sm:pt-16">
+          <div className="pointer-events-none absolute left-1/2 top-6 h-64 w-64 -translate-x-1/2 rounded-full bg-orange-300/10 blur-3xl" />
+          <div className="relative mx-auto inline-flex max-w-full items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-3 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-50 shadow-sm backdrop-blur sm:px-4 sm:tracking-[0.16em]">
             <ShieldCheck className="h-4 w-4 text-orange-500" />
             <span className="truncate sm:hidden">Pricing SaaS</span>
             <span className="hidden sm:inline">Pricing infrastructure immobilière</span>
           </div>
-          <h1 className="mx-auto mt-5 max-w-[17rem] text-[1.58rem] font-black leading-[1.12] tracking-tight text-slate-950 sm:mt-6 sm:max-w-4xl sm:text-6xl">
+          <h1 className="relative mx-auto mt-5 max-w-[17rem] text-[1.58rem] font-black leading-[1.12] tracking-tight text-white sm:mt-6 sm:max-w-4xl sm:text-6xl">
             Des plans pensés pour faire grandir une gestion locative sérieuse.
           </h1>
-          <p className="mx-auto mt-5 max-w-[17.5rem] text-[0.88rem] font-semibold leading-7 text-slate-600 sm:max-w-2xl sm:text-lg">
+          <p className="relative mx-auto mt-5 max-w-[17.5rem] text-[0.88rem] font-semibold leading-7 text-emerald-50/80 sm:max-w-2xl sm:text-lg">
             Samay Këur ne vend pas seulement des fonctionnalités : la plateforme fournit l’infrastructure de paiement, GED,
             reporting, synchronisation et contrôle dont une agence a besoin pour travailler proprement.
           </p>
-          <div className="mx-auto mt-7 grid max-w-[17.5rem] grid-cols-1 items-center justify-center gap-2 text-sm font-bold text-slate-600 sm:flex sm:max-w-none sm:flex-wrap sm:gap-3">
+          <div className="relative mx-auto mt-7 grid max-w-[17.5rem] grid-cols-1 items-center justify-center gap-2 text-sm font-bold text-emerald-50 sm:flex sm:max-w-none sm:flex-wrap sm:gap-3">
             {[
               ['Orange Money', '/logo-orange-money.png'],
               ['Wave', '/logo-wave.png'],
               ['Djamo', '/logo-djamo.png'],
             ].map(([label, src]) => (
-              <span key={label} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <span key={label} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-emerald-50 shadow-lg shadow-emerald-950/10 backdrop-blur">
                 <img src={src} alt={label} className="h-5 w-5 rounded object-contain" />
                 {label}
               </span>
             ))}
-            <span className="inline-flex min-w-0 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <span className="inline-flex min-w-0 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-emerald-50 shadow-lg shadow-emerald-950/10 backdrop-blur">
               <Smartphone className="h-4 w-4 text-emerald-700" />
               Mobile Money local
             </span>

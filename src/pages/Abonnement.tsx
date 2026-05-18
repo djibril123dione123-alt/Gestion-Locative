@@ -486,7 +486,7 @@ export function Abonnement() {
       </div>
 
       {/* ── Support ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
+      <div className="sk-premium-panel p-5 sm:p-6">
         <h2 className="font-bold text-slate-900 text-lg mb-4">Besoin d'aide ?</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, j\'ai une question sur mon abonnement Samay Këur.')}`}
@@ -511,9 +511,9 @@ export function Abonnement() {
 
       {/* ── Modal changement de plan ── */}
       {upgradeOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand-950/68 p-0 backdrop-blur-md sm:items-center sm:p-4"
           onClick={() => setUpgradeOpen(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-3"
+          <div className="sk-modal-shell w-full max-w-md p-6 space-y-3"
             onClick={(e) => e.stopPropagation()}>
             <div>
               <h3 className="text-xl font-bold text-slate-900">Changer de plan</h3>

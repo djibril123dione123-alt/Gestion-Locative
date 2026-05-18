@@ -594,9 +594,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="sk-page-shell space-y-6">
         {!embedded && (
-          <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <header className="sk-page-hero flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950">Paiements</h1>
+              <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">Paiements</h1>
               <p className="text-slate-600 text-sm font-medium mt-1">Encaissement des loyers</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -673,7 +673,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           </div>
         )}
 
-        <div className="sk-card relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
+        <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
           <div className="flex flex-col gap-3 xl:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
@@ -736,7 +736,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                     className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition border ${
                       isActive
                         ? 'bg-brand-950 text-white border-brand-950 shadow-sm'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-900'
+                        : 'bg-white/85 text-slate-700 border-emerald-950/10 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-900 shadow-sm'
                     }`}
                   >
                     {f.label}
@@ -754,7 +754,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         </div>
 
         {loading ? (
-          <div className="sk-card p-4 sm:p-6">
+          <div className="sk-premium-panel p-4 sm:p-6">
             <SkeletonTable rows={6} cols={6} />
           </div>
         ) : filtered.length === 0 ? (

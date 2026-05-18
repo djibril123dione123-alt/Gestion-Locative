@@ -39,6 +39,8 @@ const UpdateContratSchema = z.object({
     .nullable()
     .optional(),
   caution: z.number().min(0).nullable().optional(),
+  resiliation_motif: z.string().trim().min(3).max(240).nullable().optional(),
+  resiliation_observations: z.string().trim().max(1000).nullable().optional(),
 });
 
 type UpdateContratInput = z.infer<typeof UpdateContratSchema>;
@@ -116,6 +118,9 @@ serve(async (req: Request) => {
     }
 
     const input: UpdateContratInput = parsed.data;
+    if (input.statut === "resilie" && !input.date_fin) {
+      return err("La date de résiliation est obligatoire.", 422, "RESILIATION_DATE_REQUIRED");
+    }
 
     // ── 4. Récupération contrat (propriété + unite_id) ────────────────────────
     const { data: existing, error: fetchErr } = await supabaseAdmin
@@ -189,7 +194,19 @@ serve(async (req: Request) => {
       event_type: "contrat.updated",
       entity_type: "contrats",
       entity_id: input.id,
-      payload: { patch, previous_statut: existing.statut, updated_by: user.id },
+      payload: {
+        patch,
+        previous_statut: existing.statut,
+        updated_by: user.id,
+        lifecycle: input.statut === "resilie"
+          ? {
+              action: "resiliation",
+              date: input.date_fin,
+              motif: input.resiliation_motif ?? null,
+              observations: input.resiliation_observations ?? null,
+            }
+          : null,
+      },
       created_by: user.id,
     });
     if (eventErr) {

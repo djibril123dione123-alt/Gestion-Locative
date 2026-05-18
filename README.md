@@ -10,7 +10,7 @@ Production: https://samay-keur-gestion-locative.vercel.app
 
 ## Etat Actuel
 
-Statut produit: beta stable, pas encore SaaS robuste a 100%.
+Statut produit: beta avancee stabilisee, avec une architecture plus proche d'un SaaS enterprise.
 
 Les flux critiques ont ete fortement durcis:
 
@@ -57,14 +57,36 @@ Les flux critiques ont ete fortement durcis:
   - `data_hash` pour reutiliser les documents identiques et creer une nouvelle version si les donnees changent;
   - URLs signees Storage, RLS multi-tenant et policies compatibles avec la nouvelle arborescence;
   - experience post-generation capable d'indiquer quand une version archivee est reutilisee.
+- Strategie stockage/GED enterprise:
+  - distinction claire entre documents generes et documents uploades par les utilisateurs;
+  - bucket prive `documents` avec arborescence `agencies/{agency_id}/...`;
+  - quotas de stockage par plan: Starter 1 Go, Pro 20 Go, Business 100 Go, Enterprise sur mesure/fair usage;
+  - page Documents transformee en coffre documentaire: categories metier, recherche, filtres, liens entites;
+  - dashboard stockage: usage, repartition, fichiers lourds, critiques, temporaires et archives;
+  - compression automatique des images lourdes avant upload;
+  - maintenance non destructive: archivage doublons, temporaires expires, detection d'enregistrements orphelins;
+  - documents critiques proteges contre les suppressions brutales.
+- Cycle de vie metier:
+  - resiliation bailleur et contrat avec statut, motif, observations, utilisateur responsable et historique;
+  - actions CRUD destructives remplacees progressivement par des workflows metier: resilier, suspendre, archiver, cloturer.
+- Navigation et mobile:
+  - sidebar reorganisee autour des workflows metier;
+  - notifications deplacees vers une logique transversale plus SaaS;
+  - bottom navigation mobile orientee terrain: accueil, encaissements, impayes, documents, plus;
+  - tables et listes converties en vues mobiles plus lisibles et tactiles.
+- Pricing et abonnement:
+  - plans repositionnes par valeur metier, infrastructure, collaboration, securite et stockage;
+  - suppression de l'usage dangereux de l'illimite;
+  - mise en avant GED, offline-first, QR verification, reporting, permissions et workflows equipe.
 
-Dernieres verifications locales du 2026-05-17:
+Dernieres verifications locales du 2026-05-18:
 
 - `npm run lint`: OK
 - `npm run typecheck`: OK
 - `npm run build`: OK
-- scan encodage UTF-8/mojibake: OK, 211 fichiers
-- verification navigateur integree: page auth chargee sur `http://127.0.0.1:4173/#/auth`
+- scan encodage UTF-8/mojibake sur les fichiers touches: OK
+- preview locale disponible sur `http://127.0.0.1:4175/`
+- Supabase CLI non installee localement: migrations SQL a appliquer depuis l'editeur SQL Supabase ou CI.
 
 Dernier audit live DB:
 
@@ -203,8 +225,39 @@ Regle importante: tout ce qui touche aux paiements, aux contrats critiques, au l
 - Permissions dynamiques par membre d'equipe via `user_page_permissions`.
 - Abonnements PayDunya.
 - Plans: `starter`, `pro`, `business`, `enterprise`.
+- Quotas stockage par plan et usage GED visible dans l'application.
 - Console super-admin.
 - Audit dashboard.
+
+### GED et stockage documentaire
+
+Samay Keur dispose maintenant d'une GED legere et orientee metier.
+
+Deux familles sont separees:
+
+- Documents generes par le systeme: contrats, mandats, quittances, factures, rapports bailleurs, exports.
+- Documents uploades par l'utilisateur: CNI, actes, justificatifs, assurances, documents administratifs, photos, archives.
+
+Principes:
+
+- Chemins Storage structures par agence, type, annee et mois.
+- Documents generes idempotents via `data_hash`: meme donnees = meme document reutilise.
+- Nouvelle version uniquement si les donnees source changent.
+- `file_hash` pour detecter les doublons de fichiers uploades.
+- `retention_policy`: `critical`, `standard`, `temporary`.
+- Lifecycle: `active`, `archived`, `orphaned`, `corrupt`, `deleted`.
+- URLs signees pour l'ouverture des fichiers.
+- Quotas de stockage calcules serveur via RPC.
+
+Page Documents:
+
+- Coffre documentaire avec categories metier.
+- Recherche et filtres source/categorie.
+- Lien optionnel avec bailleur, locataire, immeuble, unite, contrat ou operation.
+- Vue stockage: quota, usage, repartition, fichiers lourds.
+- Maintenance non destructive: optimisation, temporaires, orphelins.
+
+Regle de production: les documents legaux critiques ne doivent jamais etre supprimes brutalement. Ils doivent etre archives ou versionnes.
 
 ### RBAC equipe
 
@@ -305,6 +358,9 @@ Migrations importantes recentes:
 | `20260514000001_finance_partial_payments_reliquats.sql` | Paiements partiels, reliquats, impayes reels, commissions separees |
 | `20260515000001_fix_agency_assets_logo_upload.sql` | Bucket/policies logo agence dans `agency-assets` |
 | `20260515000002_enterprise_team_permissions.sql` | RBAC equipe: permissions par page/action + RPC `fn_user_can` |
+| `20260517000001_bailleur_lifecycle_resiliation.sql` | Lifecycle bailleur: resiliation, suspension, archivage, audit trail |
+| `20260517000002_document_registry.sql` | Registre documentaire idempotent pour documents generes |
+| `20260518000001_document_storage_strategy.sql` | Strategie GED: bucket prive, quotas, breakdown, lifecycle, maintenance stockage |
 
 Appliquer les migrations avec prudence:
 
@@ -387,6 +443,14 @@ Frontend:
 
 ```bash
 npx vercel deploy --prod --yes --scope seul
+```
+
+Avant de deployer:
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
 ```
 
 Supabase Edge Functions:
@@ -567,4 +631,4 @@ Actions obligatoires:
 
 ---
 
-Derniere mise a jour: 14 mai 2026.
+Derniere mise a jour: 18 mai 2026.

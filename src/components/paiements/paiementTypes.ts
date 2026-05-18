@@ -6,7 +6,14 @@ export interface PaiementContrats {
   commission: number | null;
   pourcentage_agence?: number | null;
   locataires: { nom: string; prenom: string } | null;
-  unites: { nom: string; id: string } | null;
+  unites: {
+    nom: string;
+    id: string;
+    immeubles?: {
+      nom?: string | null;
+      bailleurs?: { id: string; nom: string; prenom: string } | null;
+    } | null;
+  } | null;
 }
 
 export interface PaiementRow {
@@ -32,7 +39,14 @@ export interface ContratRow {
   commission?: number | null;
   pourcentage_agence?: number | null;
   locataires?: { nom: string; prenom: string } | null;
-  unites?: { nom: string; id?: string } | null;
+  unites?: {
+    nom: string;
+    id?: string;
+    immeubles?: {
+      nom?: string | null;
+      bailleurs?: { id: string; nom: string; prenom: string } | null;
+    } | null;
+  } | null;
 }
 
 export type StatusFilter = 'tous' | 'paye' | 'partiel';

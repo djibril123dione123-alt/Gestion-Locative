@@ -18,6 +18,8 @@ export interface UpdateContratInput {
   date_fin?: string | null;
   commission?: number | null;
   caution?: number | null;
+  resiliation_motif?: string | null;
+  resiliation_observations?: string | null;
 }
 
 export interface DeleteContratInput {

@@ -18,6 +18,11 @@
     --sk-ink: #0d1b16;
     --sk-ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
     --sk-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --sk-mobile-topbar-height: 4.25rem;
+    --sk-mobile-bottom-nav-height: 4.625rem;
+    --sk-mobile-page-padding: 1rem;
+    --sk-mobile-radius: 1.25rem;
+    --sk-touch-target: 2.75rem;
   }
 
   * {
@@ -29,6 +34,7 @@
     scroll-behavior: smooth;
     touch-action: manipulation;
     background: var(--sk-paper);
+    overflow-x: hidden;
   }
 
   body {
@@ -38,6 +44,14 @@
       radial-gradient(circle at 12% 0%, rgba(31, 59, 46, 0.12), transparent 28rem),
       linear-gradient(180deg, #f2ede3 0%, #fbfaf6 48%, #f2ede3 100%);
     text-rendering: optimizeLegibility;
+    overscroll-behavior-y: none;
+    overflow-x: hidden;
+  }
+
+  #root {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
   }
 
   a,
@@ -80,6 +94,45 @@
 @layer components {
   .sk-page-shell {
     @apply min-h-full bg-brand-paper/70 px-4 py-4 sm:px-6 lg:px-8 lg:py-6;
+  }
+
+  .sk-mobile-page {
+    @apply mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:px-8;
+    box-sizing: border-box;
+  }
+
+  .sk-mobile-hero {
+    @apply relative overflow-hidden rounded-[1.4rem] border border-emerald-900/10 shadow-premium;
+  }
+
+  .sk-mobile-card {
+    @apply rounded-[1.15rem] border border-emerald-950/10 bg-white/[0.94] shadow-sm backdrop-blur;
+  }
+
+  .sk-mobile-touch {
+    min-height: var(--sk-touch-target);
+    touch-action: manipulation;
+  }
+
+  .sk-mobile-topbar {
+    min-height: var(--sk-mobile-topbar-height);
+    padding-top: max(env(safe-area-inset-top), 0px);
+  }
+
+  .sk-bottom-nav {
+    padding-bottom: max(env(safe-area-inset-bottom), 0.35rem);
+  }
+
+  .sk-bottom-nav-inner {
+    min-height: var(--sk-mobile-bottom-nav-height);
+  }
+
+  .sk-pressable {
+    @apply transition duration-200;
+  }
+
+  .sk-pressable:active {
+    transform: scale(0.985);
   }
 
   .sk-card {
@@ -479,6 +532,65 @@
 
   .premium-polish table td:last-child {
     white-space: nowrap;
+  }
+
+  @media (max-width: 639px) {
+    .sk-mobile-page {
+      width: 100%;
+      max-width: 100vw;
+      padding-bottom: calc(var(--sk-mobile-bottom-nav-height) + env(safe-area-inset-bottom) + 1.25rem);
+    }
+
+    .sk-mobile-page > * {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .sk-page-shell {
+      @apply px-4 py-4;
+      padding-bottom: calc(var(--sk-mobile-bottom-nav-height) + env(safe-area-inset-bottom) + 1.25rem);
+    }
+
+    .sk-mobile-hero {
+      border-radius: var(--sk-mobile-radius);
+    }
+
+    .sk-action,
+    .sk-create-cta,
+    .sk-create-cta-muted {
+      min-height: 2.75rem;
+      border-radius: 0.9rem;
+    }
+
+    .sk-action-icon {
+      height: 2.75rem;
+      width: 2.75rem;
+    }
+
+    .sk-card,
+    .sk-card-premium,
+    .sk-mobile-card {
+      border-radius: var(--sk-mobile-radius);
+    }
+
+    .sk-modal-shell {
+      max-height: min(88vh, calc(100dvh - env(safe-area-inset-top) - 0.75rem));
+      border-radius: 1.35rem 1.35rem 0 0;
+      padding-bottom: max(env(safe-area-inset-bottom), 0px);
+    }
+
+    .sk-modal-header {
+      @apply px-4 py-3;
+    }
+
+    .sk-modal-body {
+      @apply px-4 py-4;
+    }
+
+    .premium-polish ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
   }
 
   .premium-polish ::-webkit-scrollbar {

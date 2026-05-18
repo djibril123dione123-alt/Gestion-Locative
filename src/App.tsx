@@ -1,6 +1,6 @@
 ﻿import { useState, lazy, Suspense, useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Menu } from 'lucide-react';
+import { Menu, RefreshCw, WifiOff } from 'lucide-react';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Auth } from './pages/Auth';
@@ -10,6 +10,7 @@ import { TrialBanner } from './components/ui/TrialBanner';
 import { MaintenanceBanner } from './components/ui/MaintenanceBanner';
 import { NetworkBanner } from './components/ui/NetworkBanner';
 import { BackupIndicator } from './components/ui/BackupIndicator';
+import { NotificationBell } from './components/ui/NotificationBell';
 import { BrandMark, BrandedLoader } from './components/brand/BrandLogo';
 import { PageSkeleton } from './components/ui/Skeleton';
 import { DocumentGeneratedModal } from './components/documents/DocumentGeneratedModal';
@@ -51,15 +52,15 @@ const PAGE_LABELS: Record<string, string> = {
     agences: 'Agences',
     bailleurs: 'Bailleurs',
     immeubles: 'Immeubles',
-    unites: 'Produits',
+    unites: 'Unités',
     locataires: 'Locataires',
     contrats: 'Contrats',
     paiements: 'Encaissements',
     'loyers-impayes': 'Impayés',
     depenses: 'Dépenses',
     commissions: 'Commissions',
-    'tableau-de-bord-financier': 'Analyses',
-    'filtres-avances': 'Filtres avancés',
+    'tableau-de-bord-financier': 'Rapports',
+    'filtres-avances': 'Rapports',
     parametres: 'Paramètres',
     equipe: 'Équipe',
     abonnement: 'Abonnement',
@@ -72,12 +73,55 @@ const PAGE_LABELS: Record<string, string> = {
     pricing: 'Tarifs',
 };
 
+const CONTEXTUAL_LINKS: Record<string, Array<{ id: string; label: string }>> = {
+    bailleurs: [
+        { id: 'immeubles', label: 'Immeubles' },
+        { id: 'unites', label: 'Unités' },
+        { id: 'tableau-de-bord-financier', label: 'Rapports' },
+    ],
+    immeubles: [
+        { id: 'unites', label: 'Unités' },
+        { id: 'locataires', label: 'Locataires' },
+        { id: 'contrats', label: 'Contrats' },
+    ],
+    unites: [
+        { id: 'locataires', label: 'Locataires' },
+        { id: 'contrats', label: 'Contrats' },
+        { id: 'paiements', label: 'Encaissements' },
+    ],
+    locataires: [
+        { id: 'contrats', label: 'Contrats' },
+        { id: 'paiements', label: 'Encaissements' },
+        { id: 'loyers-impayes', label: 'Impayés' },
+    ],
+    contrats: [
+        { id: 'paiements', label: 'Encaisser' },
+        { id: 'documents', label: 'Documents' },
+        { id: 'inventaires', label: 'États des lieux' },
+    ],
+    paiements: [
+        { id: 'loyers-impayes', label: 'Impayés' },
+        { id: 'depenses', label: 'Dépenses' },
+        { id: 'tableau-de-bord-financier', label: 'Rapports' },
+    ],
+    'loyers-impayes': [
+        { id: 'paiements', label: 'Encaissements' },
+        { id: 'locataires', label: 'Locataires' },
+        { id: 'tableau-de-bord-financier', label: 'Rapports' },
+    ],
+    'tableau-de-bord-financier': [
+        { id: 'bailleurs', label: 'Bailleurs' },
+        { id: 'paiements', label: 'Encaissements' },
+        { id: 'documents', label: 'Documents' },
+    ],
+};
+
 function AppContent() {
     const { user, profile, loading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const { pendingCount, syncing } = useOfflineSync();
+    const { pendingCount, syncing, isOnline, errorCount } = useOfflineSync();
     const [showWelcomeAnyway, setShowWelcomeAnyway] = useState(false);
     const [moduleSettings, setModuleSettings] = useState<
         Pick<
@@ -360,7 +404,7 @@ function AppContent() {
             case 'tableau-de-bord-financier':
                 return <Analyses initialTab="rapports" />;
             case 'filtres-avances':
-                return <Analyses initialTab="filtres" />;
+                return <Analyses initialTab="rapports" />;
             case 'parametres':
                 return <ParametresHub initialTab="agence" />;
             case 'equipe':
@@ -387,6 +431,18 @@ function AppContent() {
     };
 
     const pageLabel = PAGE_LABELS[currentPage] ?? 'Samay Këur';
+    const contextualLinks = (CONTEXTUAL_LINKS[currentPage] ?? []).filter((link) =>
+        canAccessPage(profile.role, link.id, moduleSettings, userPermissions)
+    );
+    const mobileSyncLabel = !isOnline
+        ? 'Hors ligne'
+        : syncing
+            ? 'Sync'
+            : pendingCount > 0
+                ? `${pendingCount} en attente`
+                : errorCount > 0
+                    ? `${errorCount} erreur${errorCount > 1 ? 's' : ''}`
+                    : null;
     const pageSkeletonVariant =
         currentPage === 'dashboard'
             ? 'dashboard'
@@ -410,25 +466,65 @@ function AppContent() {
 
             <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
                 {/* Top bar - mobile only */}
-                <div className="sticky top-0 z-30 flex items-center gap-3 border-b border-emerald-900/10 bg-white/[0.94] px-3 py-2.5 shadow-sm backdrop-blur-xl lg:hidden">
+                <div className="sk-mobile-topbar sticky top-0 z-30 flex items-center gap-3 border-b border-emerald-900/10 bg-white/[0.92] px-3 pb-2.5 shadow-sm backdrop-blur-2xl lg:hidden">
                     <button
                         onClick={() => setSidebarOpen(true)}
-                        className="flex-shrink-0 rounded-lg p-2 transition-colors hover:bg-emerald-50"
+                        className="sk-pressable flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl transition-colors hover:bg-emerald-50"
                         aria-label="Ouvrir le menu"
                     >
                         <Menu className="h-5 w-5 text-brand-800" />
                     </button>
-                    <span className="flex-1 truncate text-base font-black text-slate-950">
-                        {pageLabel}
-                    </span>
-                    <BrandMark size="xs" tone="light" animated={false} withTile={false} />
+                    <div className="min-w-0 flex-1">
+                        <span className="block truncate text-[1.05rem] font-black leading-tight text-slate-950">
+                            {pageLabel}
+                        </span>
+                        {mobileSyncLabel && (
+                            <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-brand-800">
+                                {!isOnline ? <WifiOff className="h-3 w-3" /> : <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />}
+                                <span className="truncate">{mobileSyncLabel}</span>
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-surface">
+                        <NotificationBell onNavigate={handleNavigate} compact />
+                    </div>
+                </div>
+
+                {/* Top bar - desktop context */}
+                <div className="hidden border-b border-emerald-900/10 bg-white/[0.88] px-6 py-3 shadow-sm backdrop-blur-xl lg:flex lg:items-center lg:justify-between">
+                    <div className="min-w-0">
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-brand-700">
+                            Samay Këur
+                        </p>
+                        <div className="mt-1 flex min-w-0 items-center gap-3">
+                            <h1 className="truncate text-xl font-black text-slate-950">{pageLabel}</h1>
+                            {contextualLinks.length > 0 && (
+                                <div className="flex items-center gap-2">
+                                    {contextualLinks.map((link) => (
+                                        <button
+                                            key={link.id}
+                                            type="button"
+                                            onClick={() => handleNavigate(link.id)}
+                                            className="rounded-full border border-emerald-900/10 bg-brand-surface px-3 py-1 text-xs font-black text-brand-800 transition hover:border-brand-300 hover:bg-emerald-50"
+                                        >
+                                            {link.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <NotificationBell onNavigate={handleNavigate} compact />
+                        <BrandMark size="xs" tone="light" animated={false} withTile={false} />
+                    </div>
                 </div>
 
                 <NetworkBanner />
                 <TrialBanner onNavigate={handleNavigate} />
 
                 {/* Scrollable content - extra bottom padding on mobile for BottomNav */}
-                <main className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_20%_0%,rgba(52,211,153,0.08),transparent_34rem)] pb-20 lg:pb-0 scroll-smooth">
+                <main className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_20%_0%,rgba(52,211,153,0.08),transparent_34rem)] pb-[calc(var(--sk-mobile-bottom-nav-height)+env(safe-area-inset-bottom)+1rem)] scroll-smooth lg:pb-0">
                     <Suspense fallback={<PageSkeleton title={pageLabel} variant={pageSkeletonVariant} />}>
                         <Routes>
                             <Route path="*" element={renderPage()} />

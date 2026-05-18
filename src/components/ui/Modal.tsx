@@ -24,14 +24,14 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center sm:p-4">
       <div
-        className="fixed inset-0 bg-brand-950/64 backdrop-blur-sm"
+        className="fixed inset-0 bg-brand-950/68 backdrop-blur-md"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      <div className="sk-modal-shell">
+      <section className="sk-modal-shell" role="dialog" aria-modal="true" aria-label={title}>
         <div className="flex flex-shrink-0 justify-center pb-1 pt-3 sm:hidden">
-          <div className="h-1 w-10 rounded-full bg-slate-300" />
+          <div className="h-1 w-11 rounded-full bg-slate-300" />
         </div>
 
         <div className="sk-modal-header">
@@ -47,7 +47,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
           <button
             type="button"
             onClick={onClose}
-            className="-mr-1 flex-shrink-0 rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-brand-800"
+            className="sk-pressable -mr-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-slate-400 transition hover:bg-emerald-50 hover:text-brand-800"
             aria-label="Fermer"
           >
             <X className="h-5 w-5" />
@@ -57,7 +57,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         <div className="sk-modal-body">
           {children}
         </div>
-      </div>
+      </section>
     </div>
   );
 }

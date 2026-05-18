@@ -7,10 +7,11 @@ import { CheckoutModal } from '../components/billing/CheckoutModal';
 import {
   CreditCard, CheckCircle2, Clock, Zap, Building2, Crown,
   BarChart3, TrendingUp, AlertTriangle, Calendar, Users,
-  Home, DoorOpen, ChevronRight, ArrowUpRight, ShieldCheck,
+  Home, DoorOpen, ChevronRight, ArrowUpRight, ShieldCheck, HardDrive,
 } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
 import { SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
+import { formatStorageSize, getAgencyStorageUsage, type StorageUsage } from '../services/documentStorage';
 
 interface Plan {
   id: string;
@@ -59,9 +60,10 @@ const PLAN_CATALOG = [
     max_users: 1,
     max_immeubles: 3,
     max_unites: 10,
+    storage_gb: 1,
     icon: Zap,
     color: '#475569',
-    features: ['Tableau de bord loyers', 'Quittances PDF', 'Exports Excel', 'Rappels email'],
+    features: ['Pilotage simple des loyers', 'Documents locatifs professionnels', 'GED légère', 'Support email'],
   },
   {
     id: 'pro',
@@ -70,6 +72,7 @@ const PLAN_CATALOG = [
     max_users: 5,
     max_immeubles: 20,
     max_unites: 100,
+    storage_gb: 20,
     icon: Building2,
     color: '#F58220',
     badge: 'Recommandé',
@@ -82,6 +85,7 @@ const PLAN_CATALOG = [
     max_users: 15,
     max_immeubles: 100,
     max_unites: 500,
+    storage_gb: 100,
     icon: BarChart3,
     color: '#0891B2',
     features: ['Tout Pro', '15 utilisateurs', 'Rapports agents', 'Multi-portefeuilles', 'API webhooks', 'Support < 4h'],
@@ -93,9 +97,10 @@ const PLAN_CATALOG = [
     max_users: -1,
     max_immeubles: -1,
     max_unites: -1,
+    storage_gb: 100,
     icon: Crown,
     color: '#7C3AED',
-    features: ['Tout Business', 'Illimité partout', 'White-label', 'SLA 99,9 %', 'Account manager', 'Formation sur site'],
+    features: ['Capacité sur mesure', 'White-label', 'SLA contractualisé', 'Account manager', 'Formation sur site'],
   },
 ] as const;
 
@@ -115,6 +120,7 @@ export function Abonnement() {
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
   const [history, setHistory]         = useState<Subscription[]>([]);
   const [usage, setUsage]             = useState<Usage>({ users: 0, immeubles: 0, unites: 0 });
+  const [storageUsage, setStorageUsage] = useState<StorageUsage | null>(null);
   const [loading, setLoading]         = useState(true);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('pro');
@@ -124,10 +130,11 @@ export function Abonnement() {
     if (!profile?.agency_id) return;
     setLoading(true);
     try {
-      const [agencyRes, subRes, limitsRes] = await Promise.all([
+      const [agencyRes, subRes, limitsRes, storageRes] = await Promise.all([
         supabase.from('agencies').select('id, name, status, plan, trial_ends_at').eq('id', profile.agency_id).single(),
         supabase.from('subscriptions').select('*, subscription_plans(*)').eq('agency_id', profile.agency_id).order('created_at', { ascending: false }),
         supabase.rpc('check_plan_limits', { p_agency_id: profile.agency_id }),
+        getAgencyStorageUsage(profile.agency_id).catch(() => null),
       ]);
 
       if (agencyRes.data) setAgency(agencyRes.data as Agency);
@@ -144,6 +151,7 @@ export function Abonnement() {
       }
 
       if (limitsRes.data?.usage) setUsage(limitsRes.data.usage as Usage);
+      if (storageRes) setStorageUsage(storageRes);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Erreur de chargement');
     } finally {
@@ -171,7 +179,7 @@ export function Abonnement() {
   };
 
   const renderUsageBar = (icon: React.ReactNode, label: string, used: number, max: number, testId?: string) => {
-    const unlimited = max === -1 || max >= 999;
+    const unlimited = max === -1;
     const pct       = unlimited ? 0 : Math.min(100, Math.round((used / Math.max(max, 1)) * 100));
     const barColor  = pct > 85 ? '#EF4444' : pct > 65 ? '#F59E0B' : '#F58220';
 
@@ -182,7 +190,7 @@ export function Abonnement() {
             <span className="text-sm font-medium text-slate-700">{label}</span>
           </div>
           <span className="text-sm font-bold text-slate-800">
-            {used}{unlimited ? <span className="text-xs font-normal text-slate-400 ml-1">(illimité)</span> : <span className="text-slate-400">/{max}</span>}
+            {unlimited ? <span className="text-xs font-semibold text-slate-500">sur mesure</span> : <>{used}<span className="text-slate-400">/{max}</span></>}
           </span>
         </div>
         {!unlimited && (
@@ -196,7 +204,7 @@ export function Abonnement() {
 
   if (loading) {
     return (
-      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+      <div className="sk-mobile-page max-w-6xl space-y-5 sm:space-y-6">
         <div className="rounded-[2rem] border border-emerald-900/10 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-6 sm:p-8 shadow-2xl shadow-emerald-950/15">
           <div className="h-4 w-32 animate-pulse rounded-full bg-white/15" />
           <div className="mt-5 h-8 w-64 animate-pulse rounded-2xl bg-white/15" />
@@ -209,9 +217,9 @@ export function Abonnement() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+    <div className="sk-mobile-page max-w-6xl space-y-5 sm:space-y-6">
 
-      <div className="relative overflow-hidden rounded-[2rem] border border-emerald-900/10 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-5 sm:p-7 text-white shadow-2xl shadow-emerald-950/15">
+      <div className="sk-mobile-hero bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-4 text-white shadow-2xl shadow-emerald-950/15 sm:p-7">
         <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-orange-400/20 blur-3xl" />
         <div className="absolute bottom-0 left-1/3 h-24 w-80 rounded-full bg-emerald-300/10 blur-3xl" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -338,11 +346,30 @@ export function Abonnement() {
           </div>
 
           {/* Usage bars */}
-          <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-5">
+          <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
             {renderUsageBar(<Users className="w-4 h-4" />, 'Utilisateurs', usage.users, currentPlan?.max_users ?? catalogPlan.max_users, 'usage-utilisateurs')}
             {renderUsageBar(<Home className="w-4 h-4" />, 'Immeubles', usage.immeubles, currentPlan?.max_immeubles ?? catalogPlan.max_immeubles, 'usage-immeubles')}
             {renderUsageBar(<DoorOpen className="w-4 h-4" />, 'Unités', usage.unites, currentPlan?.max_unites ?? catalogPlan.max_unites, 'usage-produits')}
+            {renderUsageBar(
+              <HardDrive className="w-4 h-4" />,
+              'Stockage',
+              Math.round((storageUsage?.used_bytes ?? 0) / 1024 / 1024),
+              Math.max(
+                1,
+                Math.round(
+                  (storageUsage?.limit_bytes ?? ((currentPlan?.storage_gb ?? catalogPlan.storage_gb) * 1024 * 1024 * 1024)) /
+                    1024 /
+                    1024
+                )
+              ),
+              'usage-stockage'
+            )}
           </div>
+          {storageUsage && (
+            <p className="mt-3 text-xs font-semibold text-slate-400">
+              Stockage utilisé : {formatStorageSize(storageUsage.used_bytes)} sur {formatStorageSize(storageUsage.limit_bytes)}.
+            </p>
+          )}
         </div>
       </div>
 

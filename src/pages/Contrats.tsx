@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { createContratViaEdge, updateContratViaEdge, deleteContrat, ContratApiError } from '../services/api/contratApi';
+import { createContratViaEdge, updateContratViaEdge, ContratApiError } from '../services/api/contratApi';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
-import { Plus, Search, Download, AlertCircle, TrendingUp, Sheet } from 'lucide-react';
+import { Plus, Search, Download, AlertCircle, TrendingUp, Sheet, Ban, CalendarDays } from 'lucide-react';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { generateContratPDF } from '../lib/pdf';
@@ -135,7 +135,13 @@ export function Contrats() {
   const [submitting, setSubmitting] = useState(false);
   const submitLockRef = useRef(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [resiliationTarget, setResiliationTarget] = useState<Contrat | null>(null);
+  const [resiliating, setResiliating] = useState(false);
+  const [resiliationForm, setResiliationForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    motif: '',
+    observations: '',
+  });
   const toast = useToast();
   const { exportContrats, exporting: exportingXlsx } = useExport();
   const { save: saveBackup } = useBackup();
@@ -479,34 +485,66 @@ export function Contrats() {
     }
   }, [profile?.agency_id, toast]);
 
-  const handleDelete = useCallback(
-    async (contrat: Contrat) => {
-      if (!profile?.agency_id) return;
-      if (deletingId) return;
+  const openResiliation = useCallback((contrat: Contrat) => {
+    setResiliationTarget(contrat);
+    setResiliationForm({
+      date: new Date().toISOString().slice(0, 10),
+      motif: '',
+      observations: '',
+    });
+  }, []);
 
-      const confirmed = window.confirm('Supprimer ce contrat ? Cette action est définitive.');
-      if (!confirmed) return;
+  const closeResiliation = useCallback(() => {
+    if (resiliating) return;
+    setResiliationTarget(null);
+    setResiliationForm({
+      date: new Date().toISOString().slice(0, 10),
+      motif: '',
+      observations: '',
+    });
+  }, [resiliating]);
 
-      setDeletingId(contrat.id);
-      try {
-        await deleteContrat({ id: contrat.id });
-        toast.success('Contrat supprimé');
-        await loadData();
-      } catch (err: unknown) {
-        const msg = err instanceof ContratApiError
-          ? err.message
-          : err instanceof Error ? err.message : 'Erreur lors de la suppression du contrat';
-        setError(msg);
-        toast.error(msg);
-      } finally {
-        setDeletingId(null);
-      }
-    },
-    [deletingId, loadData, profile?.agency_id, toast]
-  );
+  const confirmResiliation = useCallback(async () => {
+    if (!profile?.agency_id || !resiliationTarget) return;
+    if (!resiliationForm.date) {
+      toast.warning('Veuillez renseigner la date de résiliation');
+      return;
+    }
+    if (resiliationForm.motif.trim().length < 3) {
+      toast.warning('Veuillez renseigner un motif clair');
+      return;
+    }
+
+    setResiliating(true);
+    try {
+      await updateContratViaEdge({
+        id: resiliationTarget.id,
+        statut: 'resilie',
+        date_fin: resiliationForm.date,
+        resiliation_motif: resiliationForm.motif.trim(),
+        resiliation_observations: resiliationForm.observations.trim() || null,
+      });
+      toast.success('Contrat résilié et historisé');
+      setResiliationTarget(null);
+      setResiliationForm({
+        date: new Date().toISOString().slice(0, 10),
+        motif: '',
+        observations: '',
+      });
+      await loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof ContratApiError
+        ? err.message
+        : err instanceof Error ? err.message : 'Erreur lors de la résiliation du contrat';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setResiliating(false);
+    }
+  }, [loadData, profile?.agency_id, resiliationForm, resiliationTarget, toast]);
 
   // =========================
-  // 📋 COLONNES DU TABLEAU
+  // COLONNES DU TABLEAU
   // =========================
   const ALL_COLUMN_KEYS_CONTRATS = ['locataire', 'unite', 'immeuble', 'destination', 'date_debut', 'loyer_mensuel', 'revenue_total', 'statut', 'actions'] as const;
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('contrats', [...ALL_COLUMN_KEYS_CONTRATS]);
@@ -582,21 +620,34 @@ export function Contrats() {
       },
       {
         key: 'actions',
-        label: 'PDF',
+        label: 'Actions',
         render: (c: Contrat) => (
-          <button
-            type="button"
-            onClick={() => handleDownloadPDF(c.id)}
-            disabled={downloadingId === c.id}
-            className="sk-action sk-action-financial"
-          >
-            <Download className="w-4 h-4" />
-            {downloadingId === c.id ? '...' : 'PDF'}
-          </button>
+          <div className="sk-action-group-right">
+            <button
+              type="button"
+              onClick={() => handleDownloadPDF(c.id)}
+              disabled={downloadingId === c.id}
+              className="sk-action sk-action-financial"
+            >
+              <Download className="w-4 h-4" />
+              {downloadingId === c.id ? '...' : 'PDF'}
+            </button>
+            {c.statut === 'actif' && (
+              <button
+                type="button"
+                onClick={() => openResiliation(c)}
+                className="sk-action sk-action-danger"
+                title="Résilier le contrat"
+              >
+                <Ban className="w-4 h-4" />
+                Résilier
+              </button>
+            )}
+          </div>
         ),
       },
     ],
-    [handleDownloadPDF, downloadingId]
+    [handleDownloadPDF, downloadingId, openResiliation]
   );
   const columns = useMemo(
     () => allColumns.filter((c) => c.key === 'actions' || colIsVisible(c.key)),
@@ -744,7 +795,6 @@ export function Contrats() {
               columns={columns}
               data={filteredContrats}
               onEdit={handleEdit}
-              onDelete={handleDelete}
             />
           </div>
         )}
@@ -920,6 +970,103 @@ export function Contrats() {
           {error && (
             <p className="text-sm text-red-600 mt-2">{error}</p>
           )}
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={!!resiliationTarget}
+        onClose={closeResiliation}
+        title="Résilier le contrat"
+      >
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white text-red-700 ring-1 ring-red-100">
+                <Ban className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-black text-slate-950">Action de cycle de vie</p>
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  La résiliation met le contrat en statut terminal, libère l'unité et inscrit l'événement dans l'historique serveur.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {resiliationTarget && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Contrat concerné</p>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs font-semibold text-slate-500">Locataire</p>
+                  <p className="font-bold text-slate-950">
+                    {resiliationTarget.locataires
+                      ? `${resiliationTarget.locataires.prenom} ${resiliationTarget.locataires.nom}`
+                      : '-'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-500">Unité</p>
+                  <p className="font-bold text-slate-950">{resiliationTarget.unites?.nom || '-'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm font-bold text-slate-700">Date de résiliation *</label>
+              <div className="relative">
+                <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="date"
+                  value={resiliationForm.date}
+                  onChange={(e) => setResiliationForm((prev) => ({ ...prev, date: e.target.value }))}
+                  className="sk-input pl-10"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-bold text-slate-700">Motif *</label>
+              <input
+                value={resiliationForm.motif}
+                onChange={(e) => setResiliationForm((prev) => ({ ...prev, motif: e.target.value }))}
+                placeholder="Départ locataire, accord amiable..."
+                className="sk-input"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-bold text-slate-700">Observations</label>
+            <textarea
+              value={resiliationForm.observations}
+              onChange={(e) => setResiliationForm((prev) => ({ ...prev, observations: e.target.value }))}
+              rows={4}
+              placeholder="Notes internes, état des lieux, suivi à prévoir..."
+              className="sk-input min-h-28 resize-y"
+            />
+          </div>
+
+          <div className="flex flex-col-reverse justify-end gap-3 border-t border-slate-200 pt-4 sm:flex-row">
+            <button
+              type="button"
+              onClick={closeResiliation}
+              disabled={resiliating}
+              className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={confirmResiliation}
+              disabled={resiliating}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-5 py-2 font-bold text-white shadow-sm transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Ban className="h-4 w-4" />
+              {resiliating ? 'Résiliation...' : 'Confirmer la résiliation'}
+            </button>
+          </div>
         </div>
       </Modal>
 

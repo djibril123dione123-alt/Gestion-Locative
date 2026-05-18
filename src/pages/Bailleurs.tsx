@@ -2,9 +2,8 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
-import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
-import { Plus, Search, FileText, AlertCircle } from 'lucide-react';
+import { Plus, Search, FileText, AlertCircle, Ban, ShieldAlert, Building2, Home, ClipboardList } from 'lucide-react';
 import { generateMandatBailleurPDF } from '../lib/pdf';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -13,6 +12,11 @@ import { formatDate, formatSenegalPhone, formatSenegalPhoneInput, getSenegalPhon
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import {
+  updateBailleurLifecycleViaEdge,
+  type BailleurLifecycleStatus,
+  type BailleurLifecycleImpacts,
+} from '../services/api/bailleurApi';
 
 /**
  * Interface Bailleur avec les champs commission et debut_contrat
@@ -29,6 +33,10 @@ interface Bailleur {
   commission: number | null;
   debut_contrat: string | null;
   actif: boolean;
+  statut?: string | null;
+  resiliation_date?: string | null;
+  resiliation_motif?: string | null;
+  resiliation_observations?: string | null;
   created_at: string;
   updated_at?: string;
 }
@@ -43,6 +51,14 @@ interface FormData {
   notes: string;
   commission: string;
   debut_contrat: string;
+}
+
+interface LifecycleFormData {
+  statut: BailleurLifecycleStatus;
+  date: string;
+  motif: string;
+  observations: string;
+  acknowledge_impacts: boolean;
 }
 
 /**
@@ -63,6 +79,8 @@ const ErrorAlert: React.FC<{ message: string; onClose: () => void }> = ({ messag
   </div>
 );
 
+const todayInput = () => new Date().toISOString().split('T')[0];
+
 /**
  * Composant principal - Gestion des Bailleurs
  */
@@ -78,11 +96,17 @@ export function Bailleurs() {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean;
-    bailleur: Bailleur | null;
-    isDeleting: boolean;
-  }>({ isOpen: false, bailleur: null, isDeleting: false });
+  const [lifecycleTarget, setLifecycleTarget] = useState<Bailleur | null>(null);
+  const [lifecycleForm, setLifecycleForm] = useState<LifecycleFormData>({
+    statut: 'resilie',
+    date: todayInput(),
+    motif: '',
+    observations: '',
+    acknowledge_impacts: false,
+  });
+  const [lifecycleImpacts, setLifecycleImpacts] = useState<BailleurLifecycleImpacts | null>(null);
+  const [loadingImpacts, setLoadingImpacts] = useState(false);
+  const [isLifecycleSubmitting, setIsLifecycleSubmitting] = useState(false);
 
   // État du formulaire avec commission et debut_contrat
   const [formData, setFormData] = useState<FormData>({
@@ -253,39 +277,115 @@ export function Bailleurs() {
     setIsModalOpen(true);
   }, []);
 
-  /**
-   * Ouverture de la modal de confirmation de suppression
-   */
-  const handleDelete = (bailleur: Bailleur) => {
-    setConfirmModal({ isOpen: true, bailleur, isDeleting: false });
+  const loadLifecycleImpacts = async (bailleur: Bailleur) => {
+    if (!profile?.agency_id) return;
+    setLoadingImpacts(true);
+    try {
+      const { data: immeubles } = await supabase
+        .from('immeubles')
+        .select('id')
+        .eq('agency_id', profile.agency_id)
+        .eq('bailleur_id', bailleur.id)
+        .eq('actif', true);
+
+      const immeubleIds = (immeubles || []).map((row) => row.id);
+      let unitesLiees = 0;
+      let contratsActifs = 0;
+
+      if (immeubleIds.length > 0) {
+        const { data: unites } = await supabase
+          .from('unites')
+          .select('id')
+          .eq('agency_id', profile.agency_id)
+          .in('immeuble_id', immeubleIds);
+
+        const uniteIds = (unites || []).map((row) => row.id);
+        unitesLiees = uniteIds.length;
+
+        if (uniteIds.length > 0) {
+          const { count } = await supabase
+            .from('contrats')
+            .select('id', { count: 'exact', head: true })
+            .eq('agency_id', profile.agency_id)
+            .eq('statut', 'actif')
+            .in('unite_id', uniteIds);
+          contratsActifs = count ?? 0;
+        }
+      }
+
+      setLifecycleImpacts({
+        immeubles_actifs: immeubleIds.length,
+        unites_liees: unitesLiees,
+        contrats_actifs: contratsActifs,
+      });
+    } catch (err) {
+      console.error('Erreur lors du calcul des impacts bailleur:', err);
+      setLifecycleImpacts(null);
+    } finally {
+      setLoadingImpacts(false);
+    }
   };
 
-  /**
-   * Suppression logique d'un bailleur
-   */
-  const confirmDelete = async () => {
-    if (!confirmModal.bailleur) return;
+  const openLifecycleModal = (bailleur: Bailleur) => {
+    setLifecycleTarget(bailleur);
+    setLifecycleForm({
+      statut: 'resilie',
+      date: todayInput(),
+      motif: '',
+      observations: '',
+      acknowledge_impacts: false,
+    });
+    setLifecycleImpacts(null);
+    setError(null);
+    void loadLifecycleImpacts(bailleur);
+  };
+
+  const closeLifecycleModal = () => {
+    if (isLifecycleSubmitting) return;
+    setLifecycleTarget(null);
+    setLifecycleImpacts(null);
+    setLifecycleForm({
+      statut: 'resilie',
+      date: todayInput(),
+      motif: '',
+      observations: '',
+      acknowledge_impacts: false,
+    });
+  };
+
+  const confirmLifecycle = async () => {
+    if (!lifecycleTarget) return;
+    if (!lifecycleForm.motif.trim() || lifecycleForm.motif.trim().length < 3) {
+      setError('Le motif doit contenir au moins 3 caracteres.');
+      return;
+    }
+    if (!lifecycleForm.date) {
+      setError('La date de prise d effet est obligatoire.');
+      return;
+    }
 
     try {
-      setConfirmModal((prev) => ({ ...prev, isDeleting: true }));
+      setIsLifecycleSubmitting(true);
       setError(null);
-
-      const { error: deleteError } = await supabase
-        .from('bailleurs')
-        .update({ actif: false, updated_at: new Date().toISOString() })
-        .eq('id', confirmModal.bailleur.id);
-
-      if (deleteError) throw deleteError;
-
-      toast.success(getSuccessMessage('delete', 'Bailleur'));
-      setConfirmModal({ isOpen: false, bailleur: null, isDeleting: false });
+      await updateBailleurLifecycleViaEdge({
+        id: lifecycleTarget.id,
+        statut: lifecycleForm.statut,
+        date: lifecycleForm.date,
+        motif: lifecycleForm.motif.trim(),
+        observations: lifecycleForm.observations.trim() || null,
+        acknowledge_impacts: lifecycleForm.acknowledge_impacts,
+      });
+      toast.success('Cycle de vie du bailleur mis a jour');
+      setLifecycleTarget(null);
+      setLifecycleImpacts(null);
       await loadBailleurs();
     } catch (err) {
-      console.error('Erreur lors de la suppression:', err);
-      const errorMessage = translateSupabaseError(err);
+      console.error('Erreur cycle de vie bailleur:', err);
+      const errorMessage = err instanceof Error ? err.message : translateSupabaseError(err);
       setError(errorMessage);
       toast.error(errorMessage);
-      setConfirmModal((prev) => ({ ...prev, isDeleting: false }));
+    } finally {
+      setIsLifecycleSubmitting(false);
     }
   };
 
@@ -400,14 +500,25 @@ export function Bailleurs() {
       key: 'mandat', 
       label: 'Actions', 
       render: (b: Bailleur) => (
-        <button
-          onClick={() => handleGenerateMandat(b)}
-          className="sk-action sk-action-financial"
-          title="Générer le mandat de gérance"
-        >
-          <FileText className="w-4 h-4" />
-          Mandat PDF
-        </button>
+        <div className="sk-action-group-right">
+          <button
+            onClick={() => handleGenerateMandat(b)}
+            className="sk-action sk-action-financial"
+            title="Generer le mandat de gerance"
+          >
+            <FileText className="w-4 h-4" />
+            Mandat PDF
+          </button>
+          <button
+            type="button"
+            onClick={() => openLifecycleModal(b)}
+            className="sk-action sk-action-danger"
+            title="Ouvrir le workflow de resiliation"
+          >
+            <Ban className="w-4 h-4" />
+            Resilier
+          </button>
+        </div>
       )
     },
   ];
@@ -495,7 +606,6 @@ export function Bailleurs() {
               columns={columns}
               data={filteredBailleurs}
               onEdit={handleEdit}
-              onDelete={handleDelete}
             />
           )}
         </div>
@@ -690,18 +800,144 @@ export function Bailleurs() {
         </form>
       </Modal>
 
-      {/* Modal de confirmation de suppression */}
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        onClose={() => setConfirmModal({ isOpen: false, bailleur: null, isDeleting: false })}
-        onConfirm={confirmDelete}
-        title="Confirmer la suppression"
-        message={`Êtes-vous sûr de vouloir supprimer ${confirmModal.bailleur?.prenom} ${confirmModal.bailleur?.nom} ? Cette action est irréversible.`}
-        confirmText="Supprimer"
-        cancelText="Annuler"
-        variant="danger"
-        isLoading={confirmModal.isDeleting}
-      />
+      <Modal
+        isOpen={!!lifecycleTarget}
+        onClose={closeLifecycleModal}
+        title="Cycle de vie du bailleur"
+      >
+        {lifecycleTarget && (
+          <div className="space-y-5">
+            {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
+              <div className="flex items-start gap-3">
+                <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+                <div>
+                  <p className="text-sm font-black text-amber-950">
+                    Action métier sensible
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-amber-900">
+                    La résiliation conserve l'historique financier et documentaire. Les biens,
+                    contrats et encaissements liés restent traçables.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-emerald-950/10 bg-white p-4 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-wide text-slate-500">Bailleur concerné</p>
+              <p className="mt-1 text-xl font-black text-slate-950">
+                {lifecycleTarget.prenom} {lifecycleTarget.nom}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                Commission {formatCommission(lifecycleTarget.commission)} · début {formatDate(lifecycleTarget.debut_contrat)}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+                <Building2 className="h-5 w-5 text-brand-700" />
+                <p className="mt-3 text-xs font-bold uppercase text-slate-500">Immeubles</p>
+                <p className="text-2xl font-black text-slate-950">
+                  {loadingImpacts ? '...' : lifecycleImpacts?.immeubles_actifs ?? 0}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+                <Home className="h-5 w-5 text-brand-700" />
+                <p className="mt-3 text-xs font-bold uppercase text-slate-500">Unités liées</p>
+                <p className="text-2xl font-black text-slate-950">
+                  {loadingImpacts ? '...' : lifecycleImpacts?.unites_liees ?? 0}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+                <ClipboardList className="h-5 w-5 text-brand-700" />
+                <p className="mt-3 text-xs font-bold uppercase text-slate-500">Contrats actifs</p>
+                <p className="text-2xl font-black text-slate-950">
+                  {loadingImpacts ? '...' : lifecycleImpacts?.contrats_actifs ?? 0}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">Statut</label>
+                <select
+                  value={lifecycleForm.statut}
+                  onChange={(e) => setLifecycleForm({ ...lifecycleForm, statut: e.target.value as BailleurLifecycleStatus })}
+                  className="sk-input"
+                >
+                  <option value="resilie">Résilié</option>
+                  <option value="suspendu">Suspendu</option>
+                  <option value="cloture">Clôturé</option>
+                  <option value="archive">Archivé</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-bold text-slate-700">Date d'effet</label>
+                <input
+                  type="date"
+                  value={lifecycleForm.date}
+                  onChange={(e) => setLifecycleForm({ ...lifecycleForm, date: e.target.value })}
+                  className="sk-input"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-slate-700">Motif</label>
+              <input
+                value={lifecycleForm.motif}
+                onChange={(e) => setLifecycleForm({ ...lifecycleForm, motif: e.target.value })}
+                className="sk-input"
+                placeholder="Fin de mandat, changement de gestion, décision du bailleur..."
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-bold text-slate-700">Observations</label>
+              <textarea
+                value={lifecycleForm.observations}
+                onChange={(e) => setLifecycleForm({ ...lifecycleForm, observations: e.target.value })}
+                rows={3}
+                className="sk-input resize-none"
+                placeholder="Notes internes, prochaines actions, documents à récupérer..."
+              />
+            </div>
+
+            <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <input
+                type="checkbox"
+                checked={lifecycleForm.acknowledge_impacts}
+                onChange={(e) => setLifecycleForm({ ...lifecycleForm, acknowledge_impacts: e.target.checked })}
+                className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-700 focus:ring-brand-600"
+              />
+              <span className="text-sm leading-6 text-slate-700">
+                Je confirme avoir vérifié les impacts sur les biens, contrats actifs,
+                locataires et encaissements futurs.
+              </span>
+            </label>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={closeLifecycleModal}
+                disabled={isLifecycleSubmitting}
+                className="sk-action sk-action-secondary justify-center"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={confirmLifecycle}
+                disabled={isLifecycleSubmitting || !lifecycleForm.acknowledge_impacts}
+                className="sk-action sk-action-danger justify-center disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isLifecycleSubmitting ? 'Validation...' : 'Valider le changement'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* Conteneur de toasts */}
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />

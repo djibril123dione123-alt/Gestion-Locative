@@ -148,7 +148,7 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
       : 'text-slate-400';
 
   return (
-    <div className="fixed bottom-20 lg:bottom-4 right-4 z-40 flex flex-col items-end gap-2">
+    <div className="fixed bottom-[calc(var(--sk-mobile-bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] right-3 z-40 flex flex-col items-end gap-2 lg:bottom-4 lg:right-4">
 
       {expanded && restoreStep === 'idle' && (
         <div className="sk-card-premium p-4 w-72 space-y-3 animate-slideUp">
@@ -280,7 +280,7 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
 
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-emerald-950/10 rounded-full shadow-premium text-xs font-bold text-slate-700 hover:bg-brand-50 hover:text-brand-900 transition"
+        className="sk-pressable flex min-h-10 items-center gap-1.5 rounded-full border border-emerald-950/10 bg-white/[0.92] px-3 py-1.5 text-xs font-bold text-slate-700 shadow-premium backdrop-blur-xl transition hover:bg-brand-50 hover:text-brand-900"
         title="Gestion des sauvegardes"
       >
         <Icon

@@ -1,492 +1,562 @@
 import { useState } from 'react';
 import {
-  CheckCircle2, Zap, Building2, Crown, ArrowRight,
-  Shield, Clock, ChevronDown, BarChart3,
-  Star, TrendingUp,
+  ArrowRight,
+  BarChart3,
+  Building2,
+  CheckCircle2,
+  ChevronDown,
+  Crown,
+  Database,
+  FileCheck2,
+  Globe2,
+  HardDrive,
+  LockKeyhole,
+  Network,
+  ShieldCheck,
+  Smartphone,
+  Wifi,
+  Zap,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckoutModal } from '../components/billing/CheckoutModal';
 
+type PlanId = 'starter' | 'pro' | 'business' | 'enterprise';
+
 interface PlanDef {
-  id: 'starter' | 'pro' | 'business' | 'enterprise';
+  id: PlanId;
   name: string;
+  audience: string;
   price: number;
   priceLabel: string;
-  tagline: string;
-  description: string;
+  billingLabel: string;
+  positioning: string;
+  outcome: string;
   icon: typeof Zap;
-  color: string;
-  bgColor: string;
-  badgeText?: string;
-  badgeColor?: string;
-  highlighted: boolean;
-  features: string[];
-  notIncluded?: string[];
-  limits: { users: string; immeubles: string; unites: string };
+  accent: string;
+  surface: string;
+  highlighted?: boolean;
+  badge?: string;
+  capacities: {
+    users: string;
+    immeubles: string;
+    unites: string;
+    storage: string;
+  };
+  value: string[];
+  infrastructure: string[];
   cta: string;
   ctaStyle: 'primary' | 'secondary' | 'outline' | 'contact';
 }
+
+const CONTACT_WHATSAPP = '221769010960';
 
 const PLANS: PlanDef[] = [
   {
     id: 'starter',
     name: 'Starter',
+    audience: 'Bailleur individuel',
     price: 5000,
     priceLabel: '5 000 FCFA',
-    tagline: '≈ 7,50 €/mois',
-    description: 'Pour les bailleurs qui démarrent leur digitalisation.',
+    billingLabel: 'par mois',
+    positioning: 'Pour structurer un petit patrimoine sans Excel dispersé.',
+    outcome: 'Vous gardez une vision claire des loyers, documents et échéances essentielles.',
     icon: Zap,
-    color: '#475569',
-    bgColor: '#F8FAFC',
-    highlighted: false,
-    features: [
-      'Tableau de bord des loyers',
-      'Saisie manuelle des paiements',
-      'Quittances PDF à la demande',
-      'Exports Excel basiques',
-      'Rappels locataires email',
-      'Support par email',
+    accent: '#475569',
+    surface: '#F8FAFC',
+    capacities: {
+      users: '1 utilisateur',
+      immeubles: '3 immeubles',
+      unites: '10 unités',
+      storage: '1 Go sécurisé',
+    },
+    value: [
+      'Pilotage simple des loyers',
+      'Documents locatifs professionnels',
+      'Suivi basique des impayés',
+      'Archivage documentaire léger',
     ],
-    notIncluded: ['Notifications bailleurs', 'Rapports mensuels auto', 'Alertes impayés auto'],
-    limits: { users: '1 utilisateur', immeubles: '3 immeubles', unites: '10 unités' },
+    infrastructure: ['GED de démarrage', 'Exports essentiels', 'Support email'],
     cta: 'Commencer en Starter',
     ctaStyle: 'outline',
   },
   {
     id: 'pro',
     name: 'Pro',
+    audience: 'Bailleur sérieux / petite gestion',
     price: 15000,
     priceLabel: '15 000 FCFA',
-    tagline: '≈ 22 €/mois',
-    description: 'La solution complète pour bailleurs sérieux et petites agences.',
+    billingLabel: 'par mois',
+    positioning: 'Pour professionnaliser les encaissements et rassurer les propriétaires.',
+    outcome: 'Vous automatisez le suivi financier, les relances et les rapports propriétaires.',
     icon: Building2,
-    color: '#F58220',
-    bgColor: '#FFF7ED',
-    badgeText: '⭐ Le plus populaire',
-    badgeColor: '#F58220',
+    accent: '#F58220',
+    surface: '#FFF7ED',
     highlighted: true,
-    features: [
-      'Tout le plan Starter',
-      'Notifications bailleurs auto',
-      'Rapports PDF mensuels par bailleur',
-      'Alertes impayés en temps réel',
-      'Gestion des commissions agence',
-      'Paiement Orange Money + Wave',
-      'Exports Excel avancés',
-      'Plusieurs utilisateurs',
-      'Support prioritaire WhatsApp',
+    badge: 'Recommandé',
+    capacities: {
+      users: '5 utilisateurs',
+      immeubles: '20 immeubles',
+      unites: '100 unités',
+      storage: '20 Go sécurisés',
+    },
+    value: [
+      'Suivi propriétaire automatisé',
+      'Reporting financier avancé',
+      'Paiements Wave, Orange Money et Djamo',
+      'QR de vérification documentaire',
+      'Gestion des reliquats et paiements partiels',
     ],
-    limits: { users: '5 utilisateurs', immeubles: '20 immeubles', unites: '100 unités' },
-    cta: 'Activer le plan Pro',
+    infrastructure: ['GED structurée', 'Synchronisation offline-first', 'Support WhatsApp prioritaire'],
+    cta: 'Activer Pro',
     ctaStyle: 'primary',
   },
   {
     id: 'business',
     name: 'Business',
+    audience: 'Agence immobilière structurée',
     price: 35000,
     priceLabel: '35 000 FCFA',
-    tagline: '≈ 53 €/mois',
-    description: 'Pour les agences immobilières structurées avec équipe.',
+    billingLabel: 'par mois',
+    positioning: 'Pour coordonner une équipe, sécuriser les workflows et piloter un portefeuille.',
+    outcome: 'Votre agence gagne en contrôle : rôles, validations, audit trail et reporting consolidé.',
     icon: BarChart3,
-    color: '#0891B2',
-    bgColor: '#ECFEFF',
-    badgeText: '🚀 Pour agences',
-    badgeColor: '#0891B2',
-    highlighted: false,
-    features: [
-      'Tout le plan Pro',
-      '15 utilisateurs inclus',
-      'Jusqu\'à 500 unités',
-      'Tableau de bord équipe',
-      'Rapports de performance agents',
-      'Gestion multi-portefeuilles',
-      'API webhooks',
-      'Onboarding guidé inclus',
-      'Support dédié (temps de réponse < 4h)',
+    accent: '#0F766E',
+    surface: '#ECFDF5',
+    badge: 'Agence',
+    capacities: {
+      users: '15 utilisateurs',
+      immeubles: '100 immeubles',
+      unites: '500 unités',
+      storage: '100 Go sécurisés',
+    },
+    value: [
+      'Rôles et permissions avancés',
+      'Workflows équipe et coordination agence',
+      'Historique et audit trail opérationnel',
+      'Rapports bailleurs et finance consolidés',
+      'Portefeuille multi-gestionnaires',
     ],
-    limits: { users: '15 utilisateurs', immeubles: '100 immeubles', unites: '500 unités' },
-    cta: 'Activer Business',
+    infrastructure: ['GED agence complète', 'API webhooks', 'Support prioritaire < 4h'],
+    cta: 'Passer en Business',
     ctaStyle: 'secondary',
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
+    audience: 'Groupes, réseaux, multi-agences',
     price: 0,
     priceLabel: 'Sur devis',
-    tagline: 'Personnalisé',
-    description: 'Grands réseaux d\'agences, groupes immobiliers, multi-pays.',
+    billingLabel: 'capacité sur mesure',
+    positioning: 'Pour déployer une infrastructure immobilière gouvernée, sécurisée et scalable.',
+    outcome: 'Vous obtenez une plateforme adaptée à vos règles, vos équipes et votre gouvernance.',
     icon: Crown,
-    color: '#7C3AED',
-    bgColor: '#FAF5FF',
-    highlighted: false,
-    features: [
-      'Tout le plan Business',
-      'Utilisateurs et unités illimités',
-      'White-label (votre marque)',
-      'Intégration comptabilité sur mesure',
-      'SLA garanti 99,9 %',
+    accent: '#14532D',
+    surface: '#F0FDF4',
+    capacities: {
+      users: 'Sur mesure',
+      immeubles: 'Sur mesure',
+      unites: 'Sur mesure',
+      storage: 'Fair usage contractualisé',
+    },
+    value: [
+      'Multi-agence et gouvernance réseau',
+      'SLA, sécurité et conformité renforcés',
+      'Déploiement personnalisé et formation',
+      'White-label et intégrations métier',
       'Account manager dédié',
-      'Formation équipe sur site',
-      'Facturation personnalisée',
-      'Accès API complet',
     ],
-    limits: { users: 'Illimité', immeubles: 'Illimité', unites: 'Illimité' },
+    infrastructure: ['Architecture dédiée selon volume', 'API complète', 'Support institutionnel'],
     cta: 'Demander un devis',
     ctaStyle: 'contact',
   },
 ];
 
-const COMPARISON_ROWS: { label: string; values: (boolean | string)[] }[] = [
-  { label: 'Tableau de bord loyers',           values: [true, true, true, true] },
-  { label: 'Quittances PDF',                   values: [true, true, true, true] },
-  { label: 'Exports Excel',                    values: ['Basique', 'Avancé', 'Avancé', 'Avancé'] },
-  { label: 'Rappels locataires (email)',        values: [true, true, true, true] },
-  { label: 'Notifications bailleurs auto',      values: [false, true, true, true] },
-  { label: 'Rapports PDF mensuels',            values: [false, true, true, true] },
-  { label: 'Alertes impayés temps réel',       values: [false, true, true, true] },
-  { label: 'Gestion commissions',              values: [false, true, true, true] },
-  { label: 'Orange Money / Wave / Djamo',      values: [false, true, true, true] },
-  { label: 'Rapports de performance agents',   values: [false, false, true, true] },
-  { label: 'Gestion multi-portefeuilles',      values: [false, false, true, true] },
-  { label: 'API webhooks',                     values: [false, false, true, true] },
-  { label: 'White-label',                      values: [false, false, false, true] },
-  { label: 'SLA garanti 99,9 %',              values: [false, false, false, true] },
-  { label: 'Support',                          values: ['Email', 'WhatsApp prio.', '< 4h', 'Dédié'] },
+const TRUST_POINTS = [
+  {
+    icon: LockKeyhole,
+    title: 'Stockage maîtrisé',
+    text: 'Quotas par plan, archivage et réutilisation intelligente des documents générés.',
+  },
+  {
+    icon: FileCheck2,
+    title: 'Documents vérifiables',
+    text: 'Contrats, quittances et factures avec QR de vérification et registre documentaire.',
+  },
+  {
+    icon: Wifi,
+    title: 'Terrain et mauvais réseau',
+    text: 'Architecture offline-first pensée pour continuer le travail même en connexion instable.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Sécurité multi-agence',
+    text: 'Isolation tenant, permissions, audit trail et accès signés aux fichiers sensibles.',
+  },
+];
+
+const COMPARISON_SECTIONS = [
+  {
+    title: 'Capacité opérationnelle',
+    rows: [
+      ['Positionnement', 'Bailleur individuel', 'Petite gestion locative', 'Agence structurée', 'Groupe / réseau'],
+      ['Utilisateurs', '1', '5', '15', 'Sur mesure'],
+      ['Immeubles', '3', '20', '100', 'Sur mesure'],
+      ['Unités', '10', '100', '500', 'Sur mesure'],
+      ['Stockage documents', '1 Go', '20 Go', '100 Go', 'Fair usage contractualisé'],
+    ],
+  },
+  {
+    title: 'Infrastructure documentaire',
+    rows: [
+      ['GED sécurisée', 'Légère', 'Structurée', 'Avancée', 'Gouvernée'],
+      ['Documents générés', 'Essentiels', 'Professionnels', 'Avancés', 'Personnalisés'],
+      ['QR de vérification', 'Base', 'Inclus', 'Inclus', 'Politiques dédiées'],
+      ['Archivage et versioning', 'Standard', 'Standard', 'Avancé', 'Sur mesure'],
+    ],
+  },
+  {
+    title: 'Collaboration et contrôle',
+    rows: [
+      ['Rôles et permissions', 'Simple', 'Équipe réduite', 'Avancés', 'Gouvernance complète'],
+      ['Audit trail', 'Basique', 'Opérationnel', 'Avancé', 'Conformité dédiée'],
+      ['API / webhooks', 'Non inclus', 'Non inclus', 'Webhooks', 'API complète'],
+      ['Support', 'Email', 'WhatsApp prioritaire', 'Prioritaire < 4h', 'Account manager'],
+    ],
+  },
 ];
 
 const FAQS = [
-  { q: 'Quels moyens de paiement sont acceptés ?', r: 'Orange Money Sénégal, Wave (Sénégal et Côte d\'Ivoire), Djamo, et carte bancaire (Visa / Mastercard) via PayDunya. Aucune carte requise pour Orange Money ou Wave.' },
-  { q: 'Y a-t-il un engagement minimum ?', r: 'Non, zéro engagement. Chaque plan est mensuel. Vous pouvez changer, monter en gamme ou annuler à tout moment depuis votre espace abonnement.' },
-  { q: 'L\'essai gratuit est-il limité ?', r: 'Vous disposez de 14 jours d\'essai complet sur le plan Pro. Aucun paiement requis pour démarrer. À la fin de l\'essai, choisissez votre plan ou passez en Starter gratuit.' },
-  { q: 'Que se passe-t-il si je dépasse mes limites ?', r: 'L\'application vous avertit à 80 % d\'utilisation. Vous pouvez monter en gamme en quelques clics sans perdre aucune donnée.' },
-  { q: 'Puis-je migrer mes données ?', r: 'Oui, à tout moment. Toutes vos données sont exportables en Excel et PDF. Aucun enfermement propriétaire.' },
-  { q: 'La facturation est-elle disponible pour Côte d\'Ivoire / Mali ?', r: 'Oui. Wave fonctionne en Côte d\'Ivoire et au Sénégal. Orange Money couvre le Sénégal. Nous ajoutons de nouveaux pays progressivement.' },
+  {
+    q: 'Pourquoi le stockage est-il limité par plan ?',
+    r: 'Le stockage documentaire a un coût réel. Les limites protègent la performance, la sécurité et les marges du service, tout en permettant une montée en capacité claire quand votre portefeuille grandit.',
+  },
+  {
+    q: 'Que se passe-t-il si je dépasse mon quota ?',
+    r: "Samay Këur vous alerte avant saturation. Vous pouvez archiver, nettoyer les fichiers temporaires ou passer au plan supérieur sans perdre vos documents critiques.",
+  },
+  {
+    q: 'Les documents sont-ils sécurisés ?',
+    r: 'Oui. Les fichiers sont séparés par agence, accessibles via URLs signées, et les documents critiques peuvent être versionnés, archivés et vérifiés par QR code.',
+  },
+  {
+    q: 'Puis-je payer localement ?',
+    r: 'Oui. Les plans supportent les circuits locaux comme Orange Money, Wave, Djamo et carte bancaire via PayDunya selon disponibilité.',
+  },
+  {
+    q: 'Le mode offline est-il inclus ?',
+    r: 'La logique offline-first est intégrée à la plateforme pour sécuriser le travail terrain, avec synchronisation lorsque la connexion revient.',
+  },
+  {
+    q: 'Enterprise veut-il dire sans limite technique ?',
+    r: 'Non. Enterprise signifie capacité contractualisée : stockage, utilisateurs, agences, SLA et intégrations sont dimensionnés selon votre volume réel.',
+  },
 ];
-
-const CONTACT_WHATSAPP = '221769010960';
 
 interface PricingProps {
   embedded?: boolean;
   onNavigate?: (page: string) => void;
 }
 
+function PlanCard({ plan, onCta }: { plan: PlanDef; onCta: (plan: PlanDef) => void }) {
+  const Icon = plan.icon;
+
+  return (
+    <article
+      className={`relative mx-auto flex h-full w-full max-w-[20rem] min-w-0 flex-col overflow-hidden rounded-[1.6rem] border bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:max-w-none ${
+        plan.highlighted ? 'border-orange-300 ring-4 ring-orange-100/70' : 'border-emerald-950/10'
+      }`}
+    >
+      {plan.badge && (
+        <div className="absolute right-4 top-4 rounded-full bg-emerald-950 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-white">
+          {plan.badge}
+        </div>
+      )}
+
+      <div className="p-5 sm:p-6" style={{ backgroundColor: plan.surface }}>
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+          <Icon className="h-5 w-5" style={{ color: plan.accent }} />
+        </div>
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-slate-500">{plan.audience}</p>
+        <h3 className="mt-2 text-2xl font-black tracking-tight text-slate-950">{plan.name}</h3>
+        <p className="mt-3 min-h-[48px] break-words text-sm font-semibold leading-6 text-slate-600">{plan.positioning}</p>
+        <div className="mt-5">
+          <span className="text-3xl font-black text-slate-950">{plan.priceLabel}</span>
+          <span className="ml-2 text-sm font-bold text-slate-500">{plan.billingLabel}</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 border-y border-slate-100 bg-white p-4">
+        {Object.entries(plan.capacities).map(([key, value]) => (
+          <div key={key} className="rounded-xl bg-slate-50 px-3 py-2">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{key === 'unites' ? 'unités' : key}</p>
+            <p className="mt-1 text-xs font-black text-slate-800">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-1 flex-col gap-5 p-5 sm:p-6">
+        <div>
+          <p className="text-sm font-black text-slate-950">Valeur métier</p>
+          <ul className="mt-3 space-y-2.5">
+            {plan.value.map((item) => (
+              <li key={item} className="flex gap-2 text-sm font-semibold leading-5 text-slate-650">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: plan.accent }} />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/60 p-4">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-900">Infrastructure incluse</p>
+          <ul className="mt-3 space-y-2">
+            {plan.infrastructure.map((item) => (
+              <li key={item} className="flex gap-2 text-xs font-bold leading-5 text-emerald-950/75">
+                <Database className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-800" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="mt-auto break-words text-sm font-semibold leading-6 text-slate-500">{plan.outcome}</p>
+
+        <button
+          type="button"
+          onClick={() => onCta(plan)}
+          className={`mt-1 flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black transition active:scale-[0.98] ${
+            plan.ctaStyle === 'outline'
+              ? 'border border-emerald-900/20 bg-white text-emerald-950 hover:bg-emerald-50'
+              : plan.ctaStyle === 'contact'
+                ? 'bg-emerald-950 text-white hover:bg-emerald-900'
+                : 'text-white shadow-lg'
+          }`}
+          style={
+            plan.ctaStyle === 'primary' || plan.ctaStyle === 'secondary'
+              ? { background: `linear-gradient(135deg, ${plan.accent}, #14532D)` }
+              : undefined
+          }
+        >
+          {plan.cta}
+          <ArrowRight className="h-4 w-4" />
+        </button>
+      </div>
+    </article>
+  );
+}
+
 export function Pricing({ embedded = false, onNavigate }: PricingProps) {
   const { profile } = useAuth();
   const [checkoutPlan, setCheckoutPlan] = useState<PlanDef | null>(null);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [showComparison, setShowComparison] = useState(false);
 
   const handleCta = (plan: PlanDef) => {
     if (plan.ctaStyle === 'contact') {
-      window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je souhaite un devis Enterprise pour Samay Këur.')}`, '_blank');
+      window.open(
+        `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je souhaite dimensionner un plan Enterprise Samay Këur.')}`,
+        '_blank'
+      );
       return;
     }
+
     if (!profile) {
       onNavigate?.('auth');
       return;
     }
+
     setCheckoutPlan(plan);
   };
 
   return (
-    <div className={embedded ? '' : 'min-h-screen'} style={{ background: embedded ? 'transparent' : 'linear-gradient(160deg, #FFF7ED 0%, #FFFFFF 35%, #F0F9FF 100%)' }}>
-
-      {/* ── Hero ── */}
+    <div
+      className={embedded ? '' : 'min-h-screen overflow-hidden'}
+      style={{
+        background: embedded
+          ? 'transparent'
+          : 'radial-gradient(circle at top left, rgba(245,130,32,0.12), transparent 28%), linear-gradient(180deg, #F7F4EC 0%, #FFFFFF 42%, #F8FAFC 100%)',
+      }}
+    >
       {!embedded && (
-        <div className="pt-14 pb-10 px-4 text-center max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold mb-6"
-            style={{ backgroundColor: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA' }}>
-            <Star className="w-4 h-4 fill-current" />
-            14 jours d'essai Pro gratuit · Aucune carte requise
+        <section className="mx-auto max-w-6xl overflow-hidden px-4 pb-8 pt-10 text-center sm:pb-10 sm:pt-16">
+          <div className="mx-auto inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-900/10 bg-white/80 px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-emerald-950 shadow-sm sm:px-4 sm:tracking-[0.16em]">
+            <ShieldCheck className="h-4 w-4 text-orange-500" />
+            <span className="truncate sm:hidden">Pricing SaaS</span>
+            <span className="hidden sm:inline">Pricing infrastructure immobilière</span>
           </div>
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-slate-900 leading-tight mb-4">
-            Un plan pour chaque<br />
-            <span style={{ background: 'linear-gradient(135deg, #F58220, #C2410C)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-              taille d'agence
-            </span>
+          <h1 className="mx-auto mt-5 max-w-[17rem] text-[1.58rem] font-black leading-[1.12] tracking-tight text-slate-950 sm:mt-6 sm:max-w-4xl sm:text-6xl">
+            Des plans pensés pour faire grandir une gestion locative sérieuse.
           </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed">
-            Paiement via <strong>Orange Money, Wave, Djamo</strong> ou carte bancaire.
-            Sans engagement, sans carte requise. Passez d'un plan à l'autre à tout moment.
+          <p className="mx-auto mt-5 max-w-[17.5rem] text-[0.88rem] font-semibold leading-7 text-slate-600 sm:max-w-2xl sm:text-lg">
+            Samay Këur ne vend pas seulement des fonctionnalités : la plateforme fournit l’infrastructure de paiement, GED,
+            reporting, synchronisation et contrôle dont une agence a besoin pour travailler proprement.
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-5 mt-8 text-sm text-slate-500">
-            <span className="flex items-center gap-1.5"><Shield className="w-4 h-4 text-green-500" />Données chiffrées</span>
-            <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-orange-400" />Activation instantanée</span>
-            <span className="flex items-center gap-1.5"><TrendingUp className="w-4 h-4 text-purple-500" />Montée en gamme libre</span>
-          </div>
-
-          {/* Logos paiements */}
-          <div className="flex items-center justify-center gap-3 mt-6 flex-wrap">
-            <span className="text-xs text-slate-400 mr-1">Paiements acceptés :</span>
+          <div className="mx-auto mt-7 grid max-w-[17.5rem] grid-cols-1 items-center justify-center gap-2 text-sm font-bold text-slate-600 sm:flex sm:max-w-none sm:flex-wrap sm:gap-3">
             {[
-              { src: '/logo-orange-money.png', alt: 'Orange Money', bg: '#FFF4EE' },
-              { src: '/logo-wave.png',         alt: 'Wave',         bg: '#EFF9FF' },
-              { src: '/logo-djamo.png',        alt: 'Djamo',        bg: '#F5F5F5' },
-            ].map(({ src, alt, bg }) => (
-              <div key={alt} className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shadow-sm border border-slate-100"
-                style={{ backgroundColor: bg }}>
-                <img src={src} alt={alt} className="w-7 h-7 object-contain" />
-              </div>
+              ['Orange Money', '/logo-orange-money.png'],
+              ['Wave', '/logo-wave.png'],
+              ['Djamo', '/logo-djamo.png'],
+            ].map(([label, src]) => (
+              <span key={label} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                <img src={src} alt={label} className="h-5 w-5 rounded object-contain" />
+                {label}
+              </span>
             ))}
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 shadow-sm border border-slate-100">
-              <span className="text-xs font-bold text-blue-700 leading-tight text-center">VISA<br/>MC</span>
-            </div>
+            <span className="inline-flex min-w-0 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <Smartphone className="h-4 w-4 text-emerald-700" />
+              Mobile Money local
+            </span>
           </div>
-        </div>
+        </section>
       )}
 
-      <div className="max-w-6xl mx-auto px-4 pb-12">
+      <main className="sk-mobile-page max-w-7xl pb-12">
+        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {PLANS.map((plan) => (
+            <PlanCard key={plan.id} plan={plan} onCta={handleCta} />
+          ))}
+        </section>
 
-        {/* ── Grille des plans ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 items-stretch">
-          {PLANS.map((plan) => {
-            const Icon = plan.icon;
-            return (
-              <div
-                key={plan.id}
-                className="relative flex flex-col rounded-2xl overflow-hidden transition-all duration-200 hover:shadow-2xl"
-                style={{
-                  border: plan.highlighted ? `2px solid ${plan.color}` : '2px solid #E2E8F0',
-                  boxShadow: plan.highlighted ? `0 8px 40px ${plan.color}25` : undefined,
-                  transform: plan.highlighted ? 'translateY(-6px)' : undefined,
-                }}
-              >
-                {plan.badgeText && (
-                  <div className="text-center py-2 text-xs font-extrabold text-white tracking-wide"
-                    style={{ backgroundColor: plan.badgeColor }}>
-                    {plan.badgeText}
+        {!embedded && (
+          <>
+            <section className="mt-12 grid gap-4 lg:grid-cols-4">
+              {TRUST_POINTS.map((item) => (
+                <div key={item.title} className="rounded-[1.4rem] border border-emerald-950/10 bg-white/90 p-5 shadow-sm">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
+                    <item.icon className="h-5 w-5" />
                   </div>
-                )}
-
-                {/* Header */}
-                <div className="p-5 pb-4" style={{ backgroundColor: plan.bgColor }}>
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3"
-                    style={{ backgroundColor: plan.color + '20' }}>
-                    <Icon className="w-5 h-5" style={{ color: plan.color }} />
-                  </div>
-                  <h3 className="text-lg font-extrabold text-slate-900">{plan.name}</h3>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">{plan.description}</p>
-
-                  <div className="mt-3">
-                    {plan.price > 0 ? (
-                      <>
-                        <span className="text-2xl font-extrabold text-slate-900">{plan.priceLabel}</span>
-                        <span className="text-slate-400 text-xs ml-1">/ mois</span>
-                        <div className="text-xs mt-0.5" style={{ color: plan.color }}>{plan.tagline}</div>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-2xl font-extrabold text-slate-900">{plan.priceLabel}</span>
-                        <div className="text-xs mt-0.5 text-slate-400">{plan.tagline}</div>
-                      </>
-                    )}
-                  </div>
+                  <h2 className="mt-4 text-base font-black text-slate-950">{item.title}</h2>
+                  <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">{item.text}</p>
                 </div>
+              ))}
+            </section>
 
-                {/* Limites pills */}
-                <div className="px-5 py-2.5 bg-white border-y border-slate-100 flex flex-wrap gap-1.5">
-                  {Object.values(plan.limits).map((l, i) => (
-                    <span key={i} className="text-xs px-2 py-0.5 rounded-full font-medium"
-                      style={{ backgroundColor: plan.color + '12', color: plan.color }}>
-                      {l}
-                    </span>
+            <section className="mt-12 overflow-hidden rounded-[1.75rem] border border-emerald-950/10 bg-emerald-950 text-white shadow-2xl shadow-emerald-950/15">
+              <div className="grid gap-0 lg:grid-cols-[1fr_1.2fr]">
+                <div className="p-6 sm:p-8">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-emerald-100">
+                    <Network className="h-3.5 w-3.5 text-orange-200" />
+                    Capacité et fair usage
+                  </div>
+                  <h2 className="mt-5 text-2xl font-black tracking-tight sm:text-3xl">
+                    Le pricing protège votre croissance et la stabilité de la plateforme.
+                  </h2>
+                  <p className="mt-4 text-sm font-semibold leading-7 text-emerald-50/70">
+                    Les limites ne sont pas là pour bloquer : elles donnent une base saine pour dimensionner stockage, bande
+                    passante, équipes, documents et support sans créer de coûts cachés.
+                  </p>
+                </div>
+                <div className="grid gap-3 border-t border-white/10 bg-white/[0.04] p-5 sm:grid-cols-2 lg:border-l lg:border-t-0">
+                  {[
+                    ['Starter', '1 Go', 'Patrimoine léger'],
+                    ['Pro', '20 Go', 'Gestion active'],
+                    ['Business', '100 Go', 'Agence structurée'],
+                    ['Enterprise', 'Sur mesure', 'Contrat fair usage'],
+                  ].map(([plan, storage, note]) => (
+                    <div key={plan} className="rounded-2xl border border-white/10 bg-black/15 p-4">
+                      <HardDrive className="h-5 w-5 text-orange-200" />
+                      <p className="mt-3 text-sm font-black text-white">{plan}</p>
+                      <p className="mt-1 text-xl font-black text-emerald-100">{storage}</p>
+                      <p className="mt-1 text-xs font-semibold text-emerald-50/55">{note}</p>
+                    </div>
                   ))}
                 </div>
-
-                {/* Features */}
-                <div className="flex-1 bg-white p-5">
-                  <ul className="space-y-2">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2">
-                        <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: plan.color }} />
-                        <span className="text-xs text-slate-700 leading-relaxed">{f}</span>
-                      </li>
-                    ))}
-                    {plan.notIncluded?.map((f) => (
-                      <li key={f} className="flex items-start gap-2 opacity-40">
-                        <span className="w-4 h-4 flex-shrink-0 mt-0.5 text-center text-slate-400 text-sm leading-none">—</span>
-                        <span className="text-xs text-slate-400 leading-relaxed line-through">{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* CTA */}
-                <div className="bg-white px-5 pb-5 pt-3">
-                  <button
-                    onClick={() => handleCta(plan)}
-                    className="w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 active:scale-95"
-                    style={
-                      plan.ctaStyle === 'primary'
-                        ? { background: `linear-gradient(135deg, ${plan.color}, #C2410C)`, color: 'white', boxShadow: `0 4px 14px ${plan.color}40` }
-                        : plan.ctaStyle === 'secondary'
-                        ? { backgroundColor: plan.color, color: 'white' }
-                        : plan.ctaStyle === 'contact'
-                        ? { backgroundColor: plan.color + '15', color: plan.color, border: `1.5px solid ${plan.color}40` }
-                        : { backgroundColor: 'white', color: plan.color, border: `2px solid ${plan.color}40` }
-                    }
-                  >
-                    {plan.cta}
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
               </div>
-            );
-          })}
-        </div>
+            </section>
 
-        {/* ── Comparatif ── */}
-        {!embedded && (
-          <div className="mt-12">
-            <button
-              onClick={() => setShowComparison(!showComparison)}
-              className="flex items-center gap-2 mx-auto text-sm font-semibold text-slate-600 hover:text-slate-900 transition"
-            >
-              <ChevronDown className={`w-5 h-5 transition-transform ${showComparison ? 'rotate-180' : ''}`} />
-              {showComparison ? 'Masquer' : 'Voir'} le tableau comparatif complet
-            </button>
+            <section className="mt-10">
+              <button
+                type="button"
+                onClick={() => setShowComparison(!showComparison)}
+                className="mx-auto flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm transition hover:border-emerald-900/20 hover:text-emerald-950"
+              >
+                <ChevronDown className={`h-4 w-4 transition ${showComparison ? 'rotate-180' : ''}`} />
+                {showComparison ? 'Masquer' : 'Voir'} le comparatif détaillé
+              </button>
 
-            {showComparison && (
-              <div className="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr style={{ backgroundColor: '#F8FAFC' }}>
-                        <th className="text-left py-4 px-5 font-semibold text-slate-700 w-2/5 border-b border-slate-200">Fonctionnalité</th>
-                        {PLANS.map((p) => (
-                          <th key={p.id} className="text-center py-4 px-3 font-extrabold border-b border-slate-200" style={{ color: p.color }}>
-                            {p.name}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {COMPARISON_ROWS.map(({ label, values }) => (
-                        <tr key={label} className="border-b border-slate-100 hover:bg-slate-50 transition">
-                          <td className="py-3 px-5 text-sm text-slate-700">{label}</td>
-                          {values.map((v, i) => (
-                            <td key={i} className="py-3 px-3 text-center">
-                              {typeof v === 'boolean'
-                                ? v
-                                  ? <CheckCircle2 className="w-5 h-5 mx-auto" style={{ color: PLANS[i].color }} />
-                                  : <span className="text-slate-300 text-lg font-light">—</span>
-                                : <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: PLANS[i].color + '15', color: PLANS[i].color }}>{v}</span>
-                              }
-                            </td>
+              {showComparison && (
+                <div className="mt-6 overflow-hidden rounded-[1.4rem] border border-emerald-950/10 bg-white shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[820px] text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50">
+                          <th className="px-5 py-4 text-left text-xs font-black uppercase tracking-[0.14em] text-slate-500">Capacité</th>
+                          {PLANS.map((plan) => (
+                            <th key={plan.id} className="px-4 py-4 text-left text-xs font-black uppercase tracking-[0.14em]" style={{ color: plan.accent }}>
+                              {plan.name}
+                            </th>
                           ))}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {COMPARISON_SECTIONS.map((section) => (
+                          <FragmentRows key={section.title} title={section.title} rows={section.rows} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
+              )}
+            </section>
+
+            <section className="mx-auto mt-12 max-w-3xl">
+              <div className="text-center">
+                <h2 className="text-2xl font-black text-slate-950">Questions clés avant de choisir</h2>
+                <p className="mt-2 text-sm font-semibold text-slate-500">
+                  Les réponses importantes sur stockage, sécurité, paiement local et montée en charge.
+                </p>
               </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Convertisseur visuel : "Quel plan pour moi ?" ── */}
-        {!embedded && (
-          <div className="mt-12 rounded-2xl p-6 sm:p-8"
-            style={{ background: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)', border: '2px solid #FED7AA' }}>
-            <h2 className="text-xl font-extrabold text-slate-900 mb-5 text-center">Quel plan vous correspond ?</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { emoji: '🏠', label: 'Bailleur particulier', desc: '1 à 3 immeubles, gestion simple', plan: 'Starter', color: '#475569' },
-                { emoji: '🏢', label: 'Bailleur sérieux', desc: '10–50 unités, notifications auto', plan: 'Pro', color: '#F58220' },
-                { emoji: '🏗️', label: 'Agence immobilière', desc: 'Équipe + multi-portefeuilles', plan: 'Business', color: '#0891B2' },
-                { emoji: '🌍', label: 'Réseau / Groupe', desc: 'Multi-agences, personnalisation', plan: 'Enterprise', color: '#7C3AED' },
-              ].map((item) => (
-                <div key={item.label} className="bg-white rounded-xl p-4 text-center shadow-sm border border-slate-100">
-                  <div className="text-3xl mb-2">{item.emoji}</div>
-                  <p className="font-bold text-slate-900 text-sm">{item.label}</p>
-                  <p className="text-xs text-slate-500 mt-1 mb-3">{item.desc}</p>
-                  <span className="inline-flex px-3 py-1 rounded-full text-xs font-bold text-white" style={{ backgroundColor: item.color }}>
-                    Plan {item.plan}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── FAQ accordéon ── */}
-        {!embedded && (
-          <div className="mt-12 max-w-3xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-extrabold text-slate-900">Questions fréquentes</h2>
-              <p className="text-slate-500 mt-2">Tout ce que vous devez savoir avant de vous lancer.</p>
-            </div>
-            <div className="space-y-3">
-              {FAQS.map(({ q, r }, idx) => (
-                <div key={q} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                  <button
-                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                    className="w-full flex items-center justify-between p-5 text-left hover:bg-slate-50 transition"
-                  >
-                    <span className="font-semibold text-slate-900 pr-4 text-sm">{q}</span>
-                    <ChevronDown
-                      className="w-5 h-5 flex-shrink-0 text-slate-400 transition-transform duration-200"
-                      style={{ transform: openFaq === idx ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                    />
-                  </button>
-                  {openFaq === idx && (
-                    <div className="px-5 pb-5 text-sm text-slate-600 leading-relaxed border-t border-slate-100 pt-4">
-                      {r}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── CTA final ── */}
-        {!embedded && (
-          <div className="mt-12 text-center rounded-3xl p-8 sm:p-14"
-            style={{ background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)' }}>
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-              style={{ background: 'linear-gradient(135deg, #F58220, #C2410C)' }}>
-              <Zap className="w-7 h-7 text-white" />
-            </div>
-            <h2 className="text-3xl font-extrabold text-white mb-3">Démarrez gratuitement</h2>
-            <p className="text-slate-400 text-base mb-8 max-w-lg mx-auto">
-              14 jours d'essai Pro complet. Aucune carte bancaire. Aucun engagement.
-              Passez au plan payant quand vous êtes prêt.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <button
-                onClick={() => onNavigate?.(profile ? 'dashboard' : 'auth')}
-                className="px-8 py-4 rounded-2xl text-white font-extrabold text-base transition-all shadow-lg hover:shadow-xl active:scale-95"
-                style={{ background: 'linear-gradient(135deg, #F58220, #C2410C)' }}
-              >
-                Démarrer l'essai gratuit
-              </button>
-              <a
-                href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux en savoir plus sur Samay Këur.')}`}
-                target="_blank" rel="noopener noreferrer"
-                className="px-8 py-4 rounded-2xl font-bold text-base transition-all text-slate-300 border border-slate-600 hover:border-slate-400 hover:text-white hover:bg-slate-800"
-              >
-                Parler à l'équipe
-              </a>
-            </div>
-            <div className="flex items-center justify-center gap-4 mt-5 flex-wrap">
-              <span className="text-slate-600 text-xs">Paiements acceptés :</span>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center overflow-hidden">
-                  <img src="/logo-orange-money.png" alt="Orange Money" className="w-6 h-6 object-contain" />
-                </div>
-                <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center overflow-hidden">
-                  <img src="/logo-wave.png" alt="Wave" className="w-6 h-6 object-contain" />
-                </div>
-                <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center overflow-hidden">
-                  <img src="/logo-djamo.png" alt="Djamo" className="w-6 h-6 object-contain" />
-                </div>
-                <span className="text-slate-500 text-xs border border-slate-600 rounded px-1.5 py-0.5 font-medium">VISA · MC</span>
+              <div className="mt-6 space-y-3">
+                {FAQS.map((item, index) => (
+                  <div key={item.q} className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(openFaq === index ? null : index)}
+                      className="flex w-full items-center justify-between gap-4 p-5 text-left"
+                    >
+                      <span className="text-sm font-black text-slate-950">{item.q}</span>
+                      <ChevronDown className={`h-5 w-5 flex-shrink-0 text-slate-400 transition ${openFaq === index ? 'rotate-180' : ''}`} />
+                    </button>
+                    {openFaq === index && (
+                      <div className="border-t border-slate-100 px-5 pb-5 pt-4 text-sm font-semibold leading-7 text-slate-600">
+                        {item.r}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            </div>
-          </div>
+            </section>
+
+            <section className="mt-12 rounded-[2rem] bg-slate-950 p-7 text-center text-white shadow-2xl shadow-slate-950/20 sm:p-12">
+              <Globe2 className="mx-auto h-9 w-9 text-orange-300" />
+              <h2 className="mx-auto mt-5 max-w-2xl text-3xl font-black tracking-tight">
+                Choisissez un plan adapté à votre manière réelle de gérer l’immobilier.
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-sm font-semibold leading-7 text-slate-300">
+                Démarrez petit, structurez vos workflows, puis augmentez les capacités quand votre portefeuille,
+                vos documents et votre équipe grandissent.
+              </p>
+              <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.(profile ? 'abonnement' : 'auth')}
+                  className="rounded-2xl bg-orange-500 px-6 py-3 text-sm font-black text-white transition hover:bg-orange-400"
+                >
+                  Démarrer maintenant
+                </button>
+                <a
+                  href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux comprendre quel plan Samay Këur choisir.')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-2xl border border-white/15 px-6 py-3 text-sm font-black text-slate-200 transition hover:bg-white/10"
+                >
+                  Parler à l’équipe
+                </a>
+              </div>
+            </section>
+          </>
         )}
-      </div>
+      </main>
 
       {checkoutPlan && (
         <CheckoutModal
@@ -502,5 +572,27 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
         />
       )}
     </div>
+  );
+}
+
+function FragmentRows({ title, rows }: { title: string; rows: string[][] }) {
+  return (
+    <>
+      <tr className="border-b border-slate-100 bg-emerald-50/60">
+        <td colSpan={5} className="px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-emerald-950">
+          {title}
+        </td>
+      </tr>
+      {rows.map(([label, ...values]) => (
+        <tr key={`${title}-${label}`} className="border-b border-slate-100">
+          <td className="px-5 py-4 font-bold text-slate-700">{label}</td>
+          {values.map((value, index) => (
+            <td key={`${label}-${index}`} className="px-4 py-4 font-semibold text-slate-600">
+              {value}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
   );
 }

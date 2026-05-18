@@ -70,6 +70,8 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('tous');
+  const [monthFilter, setMonthFilter] = useState('current');
+  const [bailleurFilter, setBailleurFilter] = useState('all');
   const [editingPaiement, setEditingPaiement] = useState<PaiementRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PaiementRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -104,12 +106,12 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       const [paiementsRes, contratsRes] = await Promise.all([
         supabase
           .from('paiements')
-          .select('*, contrats(loyer_mensuel, commission, locataires(nom, prenom), unites(nom,id))')
+          .select('*, contrats(loyer_mensuel, commission, locataires(nom, prenom), unites(nom,id,immeubles(nom,bailleurs(id,nom,prenom))))')
           .eq('agency_id', profile.agency_id)
           .order('created_at', { ascending: false }),
         supabase
           .from('contrats')
-          .select('id, loyer_mensuel, commission, locataires(nom, prenom), unites(nom, id)')
+          .select('id, loyer_mensuel, commission, locataires(nom, prenom), unites(nom, id, immeubles(nom,bailleurs(id,nom,prenom))))')
           .eq('agency_id', profile.agency_id)
           .eq('statut', 'actif'),
       ]);
@@ -139,18 +141,29 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   }, [profile?.agency_id]);
 
   const filtered = useMemo(() => {
-    let list = paiements;
+    let list = paiements.filter((p) => p.statut === 'paye' || p.statut === 'partiel');
     if (statusFilter !== 'tous') {
       list = list.filter((p) => p.statut === statusFilter);
+    }
+    if (monthFilter !== 'all') {
+      const targetMonth = monthFilter === 'current' ? currentMonthYYYYMM : monthFilter;
+      list = list.filter((p) => (p.mois_concerne || '').slice(0, 7) === targetMonth);
+    }
+    if (bailleurFilter !== 'all') {
+      list = list.filter((p) => p.contrats?.unites?.immeubles?.bailleurs?.id === bailleurFilter);
     }
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       list = list.filter((p) => {
         const loc = p.contrats?.locataires;
+        const bailleur = p.contrats?.unites?.immeubles?.bailleurs;
         const searchable = [
           loc?.prenom,
           loc?.nom,
           p.contrats?.unites?.nom,
+          p.contrats?.unites?.immeubles?.nom,
+          bailleur?.prenom,
+          bailleur?.nom,
           p.reference,
           p.mois_concerne,
           p.mode_paiement,
@@ -163,7 +176,22 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       });
     }
     return list;
-  }, [paiements, statusFilter, searchTerm]);
+  }, [paiements, statusFilter, monthFilter, bailleurFilter, searchTerm, currentMonthYYYYMM]);
+
+  const bailleurOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    const addBailleur = (contrat?: PaiementRow['contrats'] | ContratRow | null) => {
+      const bailleur = contrat?.unites?.immeubles?.bailleurs;
+      if (bailleur?.id) {
+        map.set(bailleur.id, `${bailleur.prenom ?? ''} ${bailleur.nom ?? ''}`.trim());
+      }
+    };
+    paiements.forEach((row) => addBailleur(row.contrats));
+    contrats.forEach((contrat) => addBailleur(contrat));
+    return Array.from(map.entries())
+      .map(([id, label]) => ({ id, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [paiements, contrats]);
 
   const kpis = useMemo(() => {
     const prevMonthDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -201,11 +229,12 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   }, [paiements, contrats]);
 
   const counts = useMemo(() => {
-    const c: Record<StatusFilter, number> = { tous: paiements.length, paye: 0, partiel: 0 };
+    const c: Record<StatusFilter, number> = { tous: 0, paye: 0, partiel: 0 };
     paiements.forEach((p) => {
       if (p.statut === 'paye') c.paye++;
       else if (p.statut === 'partiel') c.partiel++;
     });
+    c.tous = c.paye + c.partiel;
     return c;
   }, [paiements]);
 
@@ -514,7 +543,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
             title="Télécharger la facture PDF"
           >
             <FileDown className="w-3.5 h-3.5" />
-            {exportingId === p.id ? '…' : 'Facture'}
+            {exportingId === p.id ? '...' : 'Facture'}
           </button>
           <button
             type="button"
@@ -547,7 +576,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     { id: 'partiel',     label: 'Partiel',    count: counts.partiel     },
   ];
 
-  const exportRows = paiements.map((p) => ({
+  const exportRows = paiements
+    .filter((p) => p.statut === 'paye' || p.statut === 'partiel')
+    .map((p) => ({
     reference:      p.reference,
     date_paiement:  p.date_paiement,
     mois_concerne:  p.mois_concerne,
@@ -642,8 +673,8 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           </div>
         )}
 
-        <div className="sk-card p-4 sm:p-5 space-y-4">
-          <div className="flex flex-col lg:flex-row gap-3">
+        <div className="sk-card relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
+          <div className="flex flex-col gap-3 xl:flex-row">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
@@ -654,13 +685,47 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                 className="sk-input pl-10 pr-4"
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:items-center">
+              <select
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+                className="sk-input min-w-0 xl:w-48"
+                aria-label="Filtrer par mois"
+              >
+                <option value="current">Mois en cours</option>
+                <option value="all">Tous les mois</option>
+                {Array.from(new Set(paiements.map((p) => (p.mois_concerne || '').slice(0, 7)).filter(Boolean)))
+                  .sort()
+                  .reverse()
+                  .slice(0, 18)
+                  .map((month) => (
+                    <option key={month} value={month}>
+                      {new Date(`${month}-01`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                    </option>
+                  ))}
+              </select>
+              <select
+                value={bailleurFilter}
+                onChange={(e) => setBailleurFilter(e.target.value)}
+                className="sk-input min-w-0 xl:w-56"
+                aria-label="Filtrer par bailleur"
+              >
+                <option value="all">Tous les bailleurs</option>
+                {bailleurOptions.map((bailleur) => (
+                  <option key={bailleur.id} value={bailleur.id}>
+                    {bailleur.label}
+                  </option>
+                ))}
+              </select>
               <ColumnPicker
                 columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
                 visibility={visibility}
                 onToggle={toggle}
                 onSetAll={setAll}
               />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
               {statusFilters.map((f) => {
                 const isActive = statusFilter === f.id;
                 return (
@@ -685,7 +750,6 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                   </button>
                 );
               })}
-            </div>
           </div>
         </div>
 

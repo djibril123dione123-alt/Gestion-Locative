@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
-import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, CreditCard, Wallet, Building2, CalendarDays, ReceiptText } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
@@ -128,6 +128,12 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   const [showModal, setShowModal] = useState(false);
   const [selectedLoyer, setSelectedLoyer] = useState<LoyerImpaye | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    montant: '',
+    date_paiement: toDateInput(new Date()),
+    mode_paiement: 'especes',
+    reference: '',
+  });
   const [page, setPage] = useState(1);
   const requestIdRef = useRef(0);
   const toast = useToast();
@@ -293,6 +299,12 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
   const handlePayerClick = (loyer: LoyerImpaye) => {
     setSelectedLoyer(loyer);
+    setPaymentForm({
+      montant: String(loyer.montant_du || ''),
+      date_paiement: toDateInput(new Date()),
+      mode_paiement: 'especes',
+      reference: '',
+    });
     setShowModal(true);
   };
 
@@ -300,6 +312,11 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     if (!selectedLoyer || !profile?.agency_id) return;
     setSubmitting(true);
     try {
+      const montantSaisi = Number(paymentForm.montant);
+      if (!Number.isFinite(montantSaisi) || montantSaisi <= 0) {
+        throw new Error('Le montant du paiement doit etre superieur a zero.');
+      }
+
       // L'id est de la forme "<uuid>-YYYY-MM". On extrait l'UUID via regex
       // plutôt qu'un slice fragile.
       const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
@@ -313,19 +330,19 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       // Le trigger trg_update_bilan_mensuel met à jour bilans_mensuels automatiquement.
       await createPaiementViaEdge({
         contrat_id: contratId,
-        montant_total: selectedLoyer.montant_du,
+        montant_total: montantSaisi,
         mois_concerne: selectedLoyer.mois_concerne,
-        date_paiement: new Date().toISOString().split('T')[0],
-        mode_paiement: 'especes',
-        statut: 'paye',
-        reference: null,
+        date_paiement: paymentForm.date_paiement,
+        mode_paiement: paymentForm.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre',
+        statut: montantSaisi >= selectedLoyer.montant_du ? 'paye' : 'partiel',
+        reference: paymentForm.reference.trim() || null,
       });
 
       emitEvent({
         type: 'paiement.created',
         agency_id: profile.agency_id,
         entity_type: 'paiements',
-        payload: { source: 'loyers_impayes', montant: selectedLoyer.montant_du, mois: selectedLoyer.mois_concerne },
+        payload: { source: 'loyers_impayes', montant: montantSaisi, mois: selectedLoyer.mois_concerne },
       });
 
       // Notify sibling components (e.g. Paiements tab) to refresh their data
@@ -353,6 +370,13 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const paymentAmount = Number(paymentForm.montant || 0);
+  const remainingAfterPayment = selectedLoyer
+    ? Math.max(selectedLoyer.montant_du - paymentAmount, 0)
+    : 0;
+  const advanceAfterPayment = selectedLoyer
+    ? Math.max(paymentAmount - selectedLoyer.montant_du, 0)
+    : 0;
 
   const ALL_COLUMN_KEYS_LOYERS = ['locataire', 'unite_nom', 'immeuble_nom', 'bailleur', 'mois_concerne', 'statut', 'montant_encaisse', 'montant_du', 'telephone_locataire', 'actions'] as const;
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('loyersImpayes', [...ALL_COLUMN_KEYS_LOYERS]);
@@ -580,46 +604,160 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         )}
       </div>
 
-      {/* MODAL DE CONFIRMATION */}
+      {/* Workflow de paiement */}
       {showModal && selectedLoyer && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 lg:p-8 max-w-md w-full text-center">
-            <img
-              src="/templates/Logo confort immo archi neutre.png"
-              alt="Logo"
-              className="mx-auto mb-4 h-12 sm:h-16 w-auto object-contain"
-            />
-            <h2 className="text-lg sm:text-xl font-bold text-slate-800 mb-2">
-              Confirmer le paiement ?
-            </h2>
-            <p className="text-sm sm:text-base text-slate-600 mb-6">
-              Voulez-vous confirmer le paiement du loyer de{' '}
-              <strong>
-                {selectedLoyer.locataire_prenom} {selectedLoyer.locataire_nom}
-              </strong>{' '}
-              pour le mois de{' '}
-              <strong>
-                {new Date(selectedLoyer.mois_concerne).toLocaleDateString('fr-FR', {
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </strong>{' '}
-              ?
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
-              <button
-                onClick={handleConfirmPaiement}
-                className="sk-action sk-action-financial px-4 sm:px-6"
-              >
-                {submitting ? 'Enregistrement…' : 'Oui, confirmer'}
-              </button>
-              <button
-                onClick={() => setShowModal(false)}
-                disabled={submitting}
-                className="sk-action sk-action-secondary px-4 sm:px-6 disabled:opacity-50"
-              >
-                Annuler
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-emerald-900/15 bg-white shadow-2xl">
+            <div className="relative overflow-hidden rounded-t-3xl bg-brand-950 px-5 py-5 text-white sm:px-7">
+              <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-orange-400/20 blur-3xl" />
+              <div className="relative flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-200">
+                    Encaissement sécurisé
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black">Payer ce loyer</h2>
+                  <p className="mt-1 text-sm text-emerald-100">
+                    Paiement partiel, complet ou avance avec mise à jour automatique du reliquat.
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white/10 p-3">
+                  <CreditCard className="h-6 w-6 text-orange-200" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-5 p-5 sm:p-7">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+                  <Wallet className="h-5 w-5 text-brand-700" />
+                  <p className="mt-3 text-xs font-black uppercase text-slate-500">Montant dû</p>
+                  <p className="mt-1 text-xl font-black text-slate-950">{formatCurrency(selectedLoyer.montant_du)}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+                  <ReceiptText className="h-5 w-5 text-brand-700" />
+                  <p className="mt-3 text-xs font-black uppercase text-slate-500">Déjà encaissé</p>
+                  <p className="mt-1 text-xl font-black text-slate-950">{formatCurrency(selectedLoyer.montant_encaisse)}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+                  <CalendarDays className="h-5 w-5 text-brand-700" />
+                  <p className="mt-3 text-xs font-black uppercase text-slate-500">Échéance</p>
+                  <p className="mt-1 text-xl font-black text-slate-950">
+                    {new Date(selectedLoyer.date_echeance).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-emerald-950/10 bg-white p-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-500">Locataire</p>
+                    <p className="mt-1 text-lg font-black text-slate-950">
+                      {selectedLoyer.locataire_prenom} {selectedLoyer.locataire_nom}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-500">Période</p>
+                    <p className="mt-1 text-lg font-black text-slate-950">
+                      {new Date(selectedLoyer.mois_concerne).toLocaleDateString('fr-FR', {
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-xs font-black uppercase text-slate-500">Bien concerné</p>
+                    <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <Building2 className="h-4 w-4 text-brand-700" />
+                      {selectedLoyer.immeuble_nom} · {selectedLoyer.unite_nom}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-slate-700">Montant encaissé</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={paymentForm.montant}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, montant: e.target.value })}
+                    className="sk-input"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Un montant inférieur au solde créera un paiement partiel.
+                  </p>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-slate-700">Date paiement</label>
+                  <input
+                    type="date"
+                    value={paymentForm.date_paiement}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, date_paiement: e.target.value })}
+                    className="sk-input"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-slate-700">Mode paiement</label>
+                  <select
+                    value={paymentForm.mode_paiement}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, mode_paiement: e.target.value })}
+                    className="sk-input"
+                  >
+                    <option value="especes">Espèces</option>
+                    <option value="mobile_money">Mobile money</option>
+                    <option value="virement">Virement</option>
+                    <option value="cheque">Chèque</option>
+                    <option value="autre">Autre</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-bold text-slate-700">Référence transaction</label>
+                  <input
+                    value={paymentForm.reference}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+                    className="sk-input"
+                    placeholder="Wave, Orange Money, reçu caisse..."
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-500">Statut après paiement</p>
+                    <p className={`mt-1 font-black ${remainingAfterPayment > 0 ? 'text-orange-700' : 'text-emerald-700'}`}>
+                      {remainingAfterPayment > 0 ? 'Partiel' : 'Soldé'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-500">Reliquat restant</p>
+                    <p className="mt-1 font-black text-slate-950">{formatCurrency(remainingAfterPayment)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-500">Avance / trop-perçu</p>
+                    <p className="mt-1 font-black text-slate-950">{formatCurrency(advanceAfterPayment)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+                <button
+                  onClick={() => setShowModal(false)}
+                  disabled={submitting}
+                  className="sk-action sk-action-secondary justify-center disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleConfirmPaiement}
+                  disabled={submitting || paymentAmount <= 0}
+                  className="sk-action sk-action-financial justify-center disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitting ? 'Enregistrement...' : 'Enregistrer le paiement'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

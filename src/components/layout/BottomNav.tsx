@@ -1,4 +1,4 @@
-import { LayoutDashboard, CreditCard, FileText, Wrench, MoreHorizontal } from 'lucide-react';
+import { CreditCard, FolderOpen, LayoutDashboard, MoreHorizontal, ReceiptText } from 'lucide-react';
 import { canAccessPage, type UserPermissionMap } from '../../lib/rbac';
 import type { UserRole } from '../../lib/supabase';
 import type { AgencySettings } from '../../types/agency';
@@ -19,47 +19,47 @@ interface BottomNavProps {
 
 const BOTTOM_ITEMS = [
   { id: 'dashboard', label: 'Accueil', icon: LayoutDashboard },
-  { id: 'paiements', label: 'Encaiss.', icon: CreditCard },
-  { id: 'contrats', label: 'Contrats', icon: FileText },
-  { id: 'interventions', label: 'Maintenance', icon: Wrench },
+  { id: 'paiements', label: 'Encaisser', icon: CreditCard },
+  { id: 'loyers-impayes', label: 'Impayés', icon: ReceiptText },
+  { id: 'documents', label: 'Docs', icon: FolderOpen },
 ];
 
 export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent', moduleSettings, userPermissions }: BottomNavProps) {
-  const isActive = (id: string) => {
-    if (id === 'paiements' && (currentPage === 'paiements' || currentPage === 'loyers-impayes')) return true;
-    return currentPage === id;
-  };
+  const isActive = (id: string) => currentPage === id;
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-emerald-900/10 bg-white/94 shadow-[0_-18px_44px_rgba(6,17,13,0.10)] backdrop-blur-xl lg:hidden"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="sk-bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t border-emerald-900/10 bg-white/[0.88] shadow-[0_-18px_54px_rgba(6,17,13,0.14)] backdrop-blur-2xl lg:hidden"
+      aria-label="Navigation mobile principale"
     >
-      <div className="flex items-stretch h-14">
+      <div className="sk-bottom-nav-inner mx-auto flex max-w-md items-stretch px-2 pt-2">
         {BOTTOM_ITEMS.filter(({ id }) => canAccessPage(role, id, moduleSettings, userPermissions)).map(({ id, label, icon: Icon }) => {
           const active = isActive(id);
           return (
             <button
               key={id}
+              type="button"
               onClick={() => onNavigate(id)}
-              className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 transition-colors ${
-                active ? 'text-brand-800' : 'text-slate-400 hover:text-brand-700'
+              className={`sk-pressable relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl transition ${
+                active
+                  ? 'bg-brand-950 text-white shadow-[0_12px_30px_rgba(6,17,13,0.20)]'
+                  : 'text-slate-500 hover:bg-emerald-50 hover:text-brand-800'
               }`}
+              aria-current={active ? 'page' : undefined}
             >
-              {active && (
-                <div className="absolute left-1/2 top-0 h-0.5 w-8 -translate-x-1/2 rounded-b bg-brand-700" />
-              )}
-              <Icon className="w-[18px] h-[18px]" />
-              <span className="text-[10px] font-medium leading-none">{label}</span>
+              <Icon className={`h-[19px] w-[19px] ${active ? 'text-orange-200' : ''}`} />
+              <span className="max-w-full truncate px-1 text-[10.5px] font-black leading-none">{label}</span>
             </button>
           );
         })}
         <button
+          type="button"
           onClick={onOpenMenu}
-          className="relative flex flex-1 flex-col items-center justify-center gap-0.5 text-slate-400 transition-colors hover:text-brand-700"
+          className="sk-pressable relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl text-slate-500 transition hover:bg-emerald-50 hover:text-brand-800"
+          aria-label="Ouvrir plus de navigation"
         >
-          <MoreHorizontal className="w-[18px] h-[18px]" />
-          <span className="text-[10px] font-medium leading-none">Plus</span>
+          <MoreHorizontal className="h-[19px] w-[19px]" />
+          <span className="text-[10.5px] font-black leading-none">Plus</span>
         </button>
       </div>
     </nav>

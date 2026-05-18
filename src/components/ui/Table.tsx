@@ -69,11 +69,11 @@ export function Table<T extends { id: string }>({
 
   if (data.length === 0) {
     return (
-      <div className="sk-card flex min-h-44 items-center justify-center px-6 py-12 text-center">
+      <div className="sk-card flex min-h-44 items-center justify-center px-5 py-10 text-center sm:px-6 sm:py-12">
         <div>
           <BrandMark size="sm" tone="light" animated={false} className="mx-auto mb-4" />
           <p className="text-base font-black text-slate-950">Aucune donnée disponible</p>
-          <p className="mt-2 text-sm text-slate-500">Les résultats apparaîtront ici dès qu’ils seront créés.</p>
+          <p className="mt-2 text-sm text-slate-500">Les résultats apparaîtront ici dès qu'ils seront créés.</p>
         </div>
       </div>
     );
@@ -83,18 +83,29 @@ export function Table<T extends { id: string }>({
     <>
       <div className="space-y-3 sm:hidden">
         {data.map((item) => (
-          <div key={item.id} className="overflow-hidden rounded-lg border border-emerald-950/10 bg-white/90 shadow-sm backdrop-blur transition duration-200 hover:-translate-y-0.5 hover:shadow-premium">
+          <article
+            key={item.id}
+            className="sk-mobile-card overflow-hidden transition duration-200 active:scale-[0.992]"
+          >
             <div className="divide-y divide-slate-100">
-              {columns.map((col) => {
+              {columns.map((col, index) => {
                 const rawValue = col.render ? col.render(item) : getCellValue(item, col.key);
                 const value = renderContactValue(col.key, rawValue);
                 if (value === null || value === undefined || value === '') return null;
+                const isPrimary = index === 0;
                 return (
-                  <div key={col.key} className="flex items-center justify-between gap-3 px-4 py-3">
-                    <span className="w-24 flex-shrink-0 text-xs font-black uppercase text-slate-500">
+                  <div
+                    key={col.key}
+                    className={`flex items-start justify-between gap-3 px-4 ${isPrimary ? 'bg-brand-surface/75 py-4' : 'py-3'}`}
+                  >
+                    <span className="w-24 flex-shrink-0 text-[11px] font-black uppercase tracking-[0.08em] text-slate-500">
                       {col.label}
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-right text-sm font-semibold text-slate-800 [&_.sk-action-group]:justify-end">
+                    <span
+                      className={`min-w-0 flex-1 text-right leading-5 text-slate-800 [&_.sk-action-group]:justify-end ${
+                        isPrimary ? 'text-base font-black' : 'text-sm font-semibold'
+                      }`}
+                    >
                       {value}
                     </span>
                   </div>
@@ -102,7 +113,7 @@ export function Table<T extends { id: string }>({
               })}
             </div>
             {(onEdit || onDelete) && (
-              <div className="sk-action-group border-t border-slate-100 bg-brand-surface px-4 py-3">
+              <div className="grid grid-cols-2 gap-2 border-t border-slate-100 bg-white px-4 py-3">
                 {onEdit && (
                   <button
                     type="button"
@@ -123,7 +134,7 @@ export function Table<T extends { id: string }>({
                 )}
               </div>
             )}
-          </div>
+          </article>
         ))}
       </div>
 

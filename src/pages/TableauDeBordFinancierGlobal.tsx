@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { TrendingUp, TrendingDown, Download, Calendar, Building2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Download, Calendar } from 'lucide-react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -51,21 +51,6 @@ interface BilanBailleurUnite {
     observation: string;
 }
 
-// Interface pour le rapport immeuble [5, 8]
-interface RapportImmeuble {
-    immeuble_id: string;
-    immeuble_nom: string;
-    bailleur_nom: string;
-    bailleur_prenom: string;
-    loyers_percus: number;
-    loyers_impayes: number;
-    frais_gestion: number;
-    resultat_net: number; // [8]
-    nombre_unites: number;
-    unites_louees: number;
-    taux_occupation: number;
-}
-
 // Interface pour les données mensuelles (fusion de BilanEntreprise et Comptabilité)
 interface MonthlyStat {
     month: string;
@@ -96,11 +81,6 @@ interface ImmeubleRow {
     nom: string;
     bailleur_id: string;
     bailleurs?: { nom?: string | null; prenom?: string | null } | null;
-}
-
-interface UniteRow {
-    immeuble_id: string;
-    statut: string;
 }
 
 interface PaiementMensuelRow {
@@ -139,17 +119,13 @@ export function TableauDeBordFinancierGlobal() {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; // [7, 9, 10]
     });
 
-    const [selectedBailleur, setSelectedBailleur] = useState('');
-    const [bailleursFilterList, setBailleursFilterList] = useState<{ label: string }[]>([]); 
-
     // Données des 4 rapports fusionnés:
     const [bilanEntreprise, setBilanEntreprise] = useState<BilanEntreprise | null>(null); 
     const [statsAnnuel, setStatsAnnuel] = useState({ totalRevenus: 0, totalDepenses: 0, soldeNet: 0 }); // [11]
     const [monthlyData, setMonthlyData] = useState<MonthlyStat[]>([]); // [9, 11]
-    const [rapportsImmeubles, setRapportsImmeubles] = useState<RapportImmeuble[]>([]); 
     const [bilansBailleurs, setBilansBailleurs] = useState<BilanBailleur[]>([]); 
     const [agencySettings, setAgencySettings] = useState<Partial<AgencySettings> | null>(null);
-    const [currentPage, setCurrentPage] = useState('bilan-entreprise'); 
+    const [currentPage, setCurrentPage] = useState<'bailleurs' | 'operationnel'>('bailleurs');
 
     // -------------------------------------------------------------------------
     // 4. LOGIQUE DE CHARGEMENT ET DE CALCUL UNIFIÉE
@@ -187,10 +163,9 @@ export function TableauDeBordFinancierGlobal() {
                 paiementsAnnuelsRes, // Utilisation pour 'part_agence' annuelle [23]
                 depensesAnnuelsRes, // [23]
 
-                // Pour Rapports Immeubles/Bailleurs:
+                // Pour les bilans bailleurs:
                 bailleursRes, // [22]
                 immeublesRes, // [10, 22]
-                unitesRes, // [24]
                 settingsRes,
             ] = await Promise.all([
                 // 1. Données Mensuelles
@@ -205,7 +180,6 @@ export function TableauDeBordFinancierGlobal() {
                 // 3. Données Structurelles
                 supabase.from('bailleurs').select('id, nom, prenom').eq('agency_id', profile.agency_id).eq('actif', true),
                 supabase.from('immeubles').select('id, nom, bailleur_id, nombre_unites, bailleurs(nom, prenom)').eq('agency_id', profile.agency_id).eq('actif', true), // [10]
-                supabase.from('unites').select('immeuble_id, statut').eq('agency_id', profile.agency_id).eq('actif', true), // [24]
                 supabase.from('agency_settings').select('nom_agence, adresse, telephone, email, logo_url, couleur_primaire, couleur_secondaire, pied_page_personnalise').eq('agency_id', profile.agency_id).maybeSingle(),
             ]);
 
@@ -219,7 +193,6 @@ export function TableauDeBordFinancierGlobal() {
 
             const bailleurs = (bailleursRes.data || []) as BailleurRow[];
             const immeubles = (immeublesRes.data || []) as ImmeubleRow[];
-            const unites = (unitesRes.data || []) as UniteRow[];
             setAgencySettings((settingsRes.data || null) as Partial<AgencySettings> | null);
 
 
@@ -285,32 +258,12 @@ export function TableauDeBordFinancierGlobal() {
 
 
             // ---------------------------------------------------
-            // CALCUL 3: RAPPORTS IMMMEUBLES ET BILANS BAILLEURS (Fusionnés) [29-33]
+            // CALCUL 3: BILANS BAILLEURS [29-33]
             // ---------------------------------------------------
             
-            const rapportsMap = new Map<string, RapportImmeuble>();
             const bilansMap = new Map<string, BilanBailleur>();
 
-            // Initialisation et calcul du taux d'occupation [32]
             immeubles.forEach((immeuble) => { 
-                const unitesImmeuble = unites?.filter((u) => u.immeuble_id === immeuble.id) || [];
-                const unitesLouees = unitesImmeuble.filter((u) => u.statut === 'loue').length;
-                
-                rapportsMap.set(immeuble.id, {
-                    immeuble_id: immeuble.id,
-                    immeuble_nom: immeuble.nom,
-                    bailleur_nom: immeuble.bailleurs?.nom || '',
-                    bailleur_prenom: immeuble.bailleurs?.prenom || '',
-                    loyers_percus: 0,
-                    loyers_impayes: 0,
-                    frais_gestion: 0,
-                    resultat_net: 0,
-                    nombre_unites: unitesImmeuble.length,
-                    unites_louees: unitesLouees,
-                    taux_occupation: unitesImmeuble.length > 0 ? (unitesLouees / unitesImmeuble.length) * 100 : 0,
-                });
-
-                // Initialisation Bilan Bailleur [30]
                 const bailleurId = immeuble.bailleur_id;
                 if (bailleurId && !bilansMap.has(bailleurId)) {
                     const bailleur = bailleurs.find((b) => b.id === bailleurId);
@@ -337,15 +290,9 @@ export function TableauDeBordFinancierGlobal() {
                 
                 if (immeuble) {
                     const bailleurId = immeuble.bailleur_id;
-                    const rapportImmeuble = rapportsMap.get(immeubleId)!;
                     const bilanBailleur = bilansMap.get(bailleurId);
 
                     if (paiement.statut === 'paye' || paiement.statut === 'partiel') {
-                        // Mise à jour Rapport Immeuble [33]
-                        rapportImmeuble.loyers_percus += Number(paiement.montant_total);
-                        rapportImmeuble.frais_gestion += Number(paiement.part_agence);
-
-                        // Mise à jour Bilan Bailleur [31]
                         if (bilanBailleur) {
                             let immeubleData = bilanBailleur.immeubles.find(i => i.immeuble_nom === immeuble.nom);
                             if (!immeubleData) {
@@ -393,7 +340,6 @@ export function TableauDeBordFinancierGlobal() {
                         }
                         const reliquat = Number(paiement.reliquat || 0);
                         if (reliquat > 0) {
-                            rapportImmeuble.loyers_impayes += reliquat;
                             if (bilanBailleur) {
                                 let immeubleData = bilanBailleur.immeubles.find(i => i.immeuble_nom === immeuble.nom);
                                 if (!immeubleData) {
@@ -408,22 +354,7 @@ export function TableauDeBordFinancierGlobal() {
                 }
             });
             
-            // Finalisation des rapports immeubles (calcul résultat net) [33]
-            rapportsMap.forEach(rapport => {
-                rapport.resultat_net = rapport.loyers_percus - rapport.frais_gestion;
-            });
-            
-            const rapportsList = Array.from(rapportsMap.values());
-            setRapportsImmeubles(rapportsList);
-
             setBilansBailleurs(Array.from(bilansMap.values()));
-            
-            // Préparation de la liste des bailleurs pour le filtre Immeubles [34]
-             const uniqueBailleurs = Array.from(
-                new Set(rapportsList.map(r => `${r.bailleur_prenom} ${r.bailleur_nom}`))
-            ).filter(b => b.trim());
-            setBailleursFilterList(uniqueBailleurs.map(b => ({ label: b })));
-
 
         } catch (error) {
             console.error('Erreur lors du chargement des données:', error);
@@ -615,29 +546,6 @@ export function TableauDeBordFinancierGlobal() {
             y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 10;
         });
 
-        ensureSpace(30);
-        sectionTitle('Synthèse financière finale');
-        autoTable(doc, {
-            body: [
-                ['Total encaissé', formatCurrency(bilan.total_loyers_percus)],
-                ['Reliquat total', formatCurrency(bilan.total_impayes)],
-                ['Commission agence', formatCurrency(bilan.total_frais)],
-                ['Net bailleur', formatCurrency(bilan.total_net)],
-            ],
-            startY: y,
-            theme: 'grid',
-            ...tableTheme,
-            styles: {
-                ...tableTheme.styles,
-                fontSize: 9,
-                cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
-            },
-            margin: { left: 14, right: 96 },
-            columnStyles: {
-                0: { fontStyle: 'bold', textColor: [71, 85, 105] },
-                1: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42] },
-            },
-        });
         addFooter(doc, agencySettings ?? undefined);
 
         const previewRows = bilan.immeubles.flatMap((i) =>
@@ -681,30 +589,6 @@ export function TableauDeBordFinancierGlobal() {
         });
     };
 
-    // -------------------------------------------------------------------------
-    // 6. LOGIQUE DE FILTRAGE ET DE CALCUL D'AGRÉGATS (Rapports Immeubles)
-    // -------------------------------------------------------------------------
-
-    // Filtre des rapports immeubles [19]
-    const getFilteredRapports = (): RapportImmeuble[] => {
-        return selectedBailleur
-            ? rapportsImmeubles.filter(r => `${r.bailleur_prenom} ${r.bailleur_nom}` === selectedBailleur)
-            : rapportsImmeubles;
-    };
-    
-    // Calcul des totaux pour les rapports immeubles filtrés [19, 35]
-    const filteredRapports = getFilteredRapports();
-    const totauxImmeubles = filteredRapports.reduce(
-        (acc, r) => ({
-            loyers_percus: acc.loyers_percus + r.loyers_percus,
-            loyers_impayes: acc.loyers_impayes + r.loyers_impayes,
-            frais_gestion: acc.frais_gestion + r.frais_gestion,
-            resultat_net: acc.resultat_net + r.resultat_net,
-        }),
-        { loyers_percus: 0, loyers_impayes: 0, frais_gestion: 0, resultat_net: 0 }
-    );
-    
-    
     if (loading) {
         return <PageSkeleton title="Tableau financier" variant="analytics" />;
     }
@@ -715,53 +599,39 @@ export function TableauDeBordFinancierGlobal() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-10">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">Tableau de Bord Financier Global</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">Rapports financiers</h1>
 
-            {/* BARRE DE NAVIGATION (Simulée) */}
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3 border-b pb-2">
+            <div className="grid grid-cols-1 gap-2 rounded-2xl border border-emerald-950/10 bg-white/80 p-2 shadow-sm sm:grid-cols-2">
                 <button
-                    onClick={() => setCurrentPage('bilan-entreprise')}
-                    className={`px-3 sm:px-4 py-2 rounded-lg transition text-xs sm:text-sm whitespace-nowrap ${currentPage === 'bilan-entreprise' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    onClick={() => setCurrentPage('bailleurs')}
+                    className={`rounded-xl px-4 py-3 text-left text-sm font-bold transition ${currentPage === 'bailleurs' ? 'bg-brand-950 text-white shadow-lg shadow-emerald-950/15' : 'text-slate-600 hover:bg-emerald-50 hover:text-brand-900'}`}
                 >
-                    Bilan Agence
+                    Rapport Bailleur
+                    <span className="mt-1 block text-xs font-medium opacity-75">Vue principale de reporting propriétaire.</span>
                 </button>
                 <button
-                    onClick={() => setCurrentPage('comptabilite')}
-                    className={`px-3 sm:px-4 py-2 rounded-lg transition text-xs sm:text-sm whitespace-nowrap ${currentPage === 'comptabilite' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    onClick={() => setCurrentPage('operationnel')}
+                    className={`rounded-xl px-4 py-3 text-left text-sm font-bold transition ${currentPage === 'operationnel' ? 'bg-brand-950 text-white shadow-lg shadow-emerald-950/15' : 'text-slate-600 hover:bg-emerald-50 hover:text-brand-900'}`}
                 >
-                    Comptabilité
-                </button>
-                <button
-                    onClick={() => setCurrentPage('rapports-immeubles')}
-                    className={`px-3 sm:px-4 py-2 rounded-lg transition text-xs sm:text-sm whitespace-nowrap ${currentPage === 'rapports-immeubles' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                >
-                    Immeubles
-                </button>
-                <button
-                    onClick={() => setCurrentPage('bilans-bailleurs')}
-                    className={`px-3 sm:px-4 py-2 rounded-lg transition text-xs sm:text-sm whitespace-nowrap ${currentPage === 'bilans-bailleurs' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                >
-                    Bailleurs
+                    Vue financière opérationnelle
+                    <span className="mt-1 block text-xs font-medium opacity-75">Encaissements, dépenses, solde et mouvements du mois.</span>
                 </button>
             </div>
             
-            {/* SÉLECTEUR DE PÉRIODE (Unique pour les rapports Mensuels) */}
-            {(currentPage !== 'comptabilite') && (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                    <Calendar className="w-4 sm:w-5 h-4 sm:h-5 text-gray-500 flex-shrink-0 mt-0.5 sm:mt-0" />
-                    <label htmlFor="month-selector" className="text-sm sm:text-base text-gray-700 font-medium">Période:</label>
-                    <input
-                        id="month-selector"
-                        type="month"
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(e.target.value)}
-                        className="px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm w-full sm:w-auto"
-                    />
-                </div>
-            )}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                <Calendar className="w-4 sm:w-5 h-4 sm:h-5 text-gray-500 flex-shrink-0 mt-0.5 sm:mt-0" />
+                <label htmlFor="month-selector" className="text-sm sm:text-base text-gray-700 font-medium">Période:</label>
+                <input
+                    id="month-selector"
+                    type="month"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-600 text-sm w-full sm:w-auto"
+                />
+            </div>
             
             {/* VUE 1: BILAN ENTREPRISE (Mensuel) */}
-            {currentPage === 'bilan-entreprise' && bilanEntreprise && (
+            {currentPage === 'operationnel' && bilanEntreprise && (
                 <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Bilan de l'Entreprise (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
@@ -819,7 +689,7 @@ export function TableauDeBordFinancierGlobal() {
             )}
             
             {/* VUE 2: COMPTABILITÉ (Annuelle) */}
-            {currentPage === 'comptabilite' && (
+            {currentPage === 'operationnel' && (
                  <div className="space-y-6">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Comptabilité (Année {new Date().getFullYear()})</h2>
@@ -893,93 +763,8 @@ export function TableauDeBordFinancierGlobal() {
             )}
 
 
-            {/* VUE 3: RAPPORTS PAR IMMEUBLE */}
-            {currentPage === 'rapports-immeubles' && (
-                 <div className="space-y-6">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Rapports par Immeuble (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
-                    </div>
-
-                    {/* Filtre Bailleur */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                        <label htmlFor="bailleur-filter" className="text-sm sm:text-base text-gray-700 font-medium">Bailleur:</label>
-                        <select
-                            id="bailleur-filter"
-                            value={selectedBailleur}
-                            onChange={(e) => setSelectedBailleur(e.target.value)}
-                            className="w-full sm:w-64 px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-                        >
-                            <option value="">Tous les bailleurs</option>
-                            {bailleursFilterList.map((b, index) => (
-                                <option key={index} value={b.label}>{b.label}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Totaux Filtrés */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                        <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Loyers perçus</p>
-                            <p className="text-lg sm:text-xl font-bold text-green-600 mt-1">{formatCurrency(totauxImmeubles.loyers_percus)}</p>
-                        </div>
-                        <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Loyers impayés</p>
-                            <p className="text-lg sm:text-xl font-bold text-red-600 mt-1">{formatCurrency(totauxImmeubles.loyers_impayes)}</p>
-                        </div>
-                        <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Frais de gestion</p>
-                            <p className="text-lg sm:text-xl font-bold text-blue-600 mt-1">{formatCurrency(totauxImmeubles.frais_gestion)}</p>
-                        </div>
-                        <div className="bg-white p-4 sm:p-6 rounded-2xl border shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Résultat net</p>
-                            <p className="text-lg sm:text-xl font-bold text-gray-800 mt-1">{formatCurrency(totauxImmeubles.resultat_net)}</p>
-                        </div>
-                    </div>
-                    
-                    {/* Liste des Rapports Détaillés */}
-                    <div className="space-y-4">
-                        {filteredRapports.map((rapport) => (
-                            <div key={rapport.immeuble_id} className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100">
-                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-2 mb-3 gap-2">
-                                    <h4 className="text-base lg:text-lg font-bold text-gray-800 flex items-center gap-2">
-                                        <Building2 className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500 flex-shrink-0" />
-                                        {rapport.immeuble_nom}
-                                    </h4>
-                                    <p className="text-xs sm:text-sm text-gray-600">Bailleur: {rapport.bailleur_prenom} {rapport.bailleur_nom}</p>
-                                </div>
-
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4">
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-500">Taux occupation</p>
-                                        <p className="text-base sm:text-lg font-bold text-purple-600 mt-1">{rapport.taux_occupation.toFixed(1)}%</p>
-                                        <p className="text-xs text-gray-500 mt-1">{rapport.unites_louees}/{rapport.nombre_unites}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-500">Loyers perçus</p>
-                                        <p className="text-base sm:text-lg font-bold text-green-600 mt-1">{formatCurrency(rapport.loyers_percus)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-500">Loyers impayés</p>
-                                        <p className="text-base sm:text-lg font-bold text-red-600 mt-1">{formatCurrency(rapport.loyers_impayes)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-500">Frais gestion</p>
-                                        <p className="text-base sm:text-lg font-bold text-blue-600 mt-1">{formatCurrency(rapport.frais_gestion)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-medium text-gray-500">Résultat net</p>
-                                        <p className="text-base sm:text-lg font-bold text-gray-800 mt-1">{formatCurrency(rapport.resultat_net)}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-            
-            
-            {/* VUE 4: BILANS MENSUELS BAILLEURS */}
-            {currentPage === 'bilans-bailleurs' && (
+            {/* VUE 3: BILANS MENSUELS BAILLEURS */}
+            {currentPage === 'bailleurs' && (
                 <div className="space-y-6 lg:space-y-8">
                      <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Bilans Mensuels Bailleurs (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
 

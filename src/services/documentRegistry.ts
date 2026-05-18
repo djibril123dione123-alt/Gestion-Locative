@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { assertCanUploadDocument, type RetentionPolicy } from './documentStorage';
 
 export type ManagedDocumentType =
   | 'contrat'
@@ -24,6 +25,7 @@ export interface DocumentRegistryEntry {
   generated_at: string;
   generated_by: string | null;
   status: 'active' | 'archived' | 'orphaned' | 'corrupt' | 'deleted';
+  retention_policy?: RetentionPolicy;
   file_size: number;
   mime_type: string;
   metadata?: Record<string, unknown>;
@@ -39,6 +41,7 @@ export interface ManagedDocumentSaveInput {
   data: unknown;
   mimeType?: string;
   metadata?: Record<string, unknown>;
+  retentionPolicy?: RetentionPolicy;
 }
 
 export interface ManagedDocumentSaveResult {
@@ -222,6 +225,10 @@ export async function saveManagedDocument(
   if (latest?.data_hash === dataHash) {
     try {
       const url = await createSignedDocumentUrl(latest.storage_path);
+      await supabase
+        .from('document_registry')
+        .update({ last_accessed_at: new Date().toISOString() })
+        .eq('id', latest.id);
       return {
         url,
         storagePath: latest.storage_path,
@@ -248,6 +255,8 @@ export async function saveManagedDocument(
   }
 
   const version = latest ? latest.version + 1 : 1;
+  await assertCanUploadDocument(context.agencyId, input.blob.size);
+
   const storagePath = buildStoragePath({
     agencyId: context.agencyId,
     documentType: input.documentType,
@@ -282,6 +291,7 @@ export async function saveManagedDocument(
       data_hash: dataHash,
       generated_by: context.userId,
       status: 'active',
+      retention_policy: input.retentionPolicy ?? 'critical',
       file_size: input.blob.size,
       mime_type: input.mimeType ?? input.blob.type ?? 'application/pdf',
       metadata: {

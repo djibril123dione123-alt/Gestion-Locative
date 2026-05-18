@@ -27,9 +27,11 @@ function formatRelative(dateStr: string): string {
 
 interface Props {
   onNavigate?: (page: string) => void;
+  compact?: boolean;
+  align?: 'top' | 'bottom';
 }
 
-export function NotificationBell({ onNavigate }: Props) {
+export function NotificationBell({ onNavigate, compact = false, align = 'top' }: Props) {
   const { user } = useAuth();
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unread, setUnread] = useState(0);
@@ -91,14 +93,17 @@ export function NotificationBell({ onNavigate }: Props) {
         type="button"
         onClick={() => setOpen((v) => !v)}
         data-testid="button-notifications-toggle"
-        className="relative w-full flex items-center gap-3 px-4 py-3 rounded-lg transition hover:bg-slate-700"
-        style={{ color: '#B0B0B0' }}
+        className={`relative flex items-center gap-3 rounded-lg transition ${
+          compact
+            ? 'h-10 w-10 justify-center border border-emerald-900/10 bg-white text-brand-800 shadow-sm hover:bg-emerald-50'
+            : 'w-full px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white'
+        }`}
       >
         <Bell className="w-5 h-5" />
-        <span className="font-medium text-sm">Notifications</span>
+        {!compact && <span className="font-medium text-sm">Notifications</span>}
         {unread > 0 && (
           <span
-            className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white rounded-full"
+            className={`${compact ? 'absolute -right-1 -top-1' : 'ml-auto'} inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-bold text-white`}
             data-testid="badge-notifications-count"
             style={{ backgroundColor: '#F58220' }}
           >
@@ -108,7 +113,7 @@ export function NotificationBell({ onNavigate }: Props) {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-0 mb-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-slate-200 z-50 max-h-[70vh] flex flex-col">
+        <div className={`absolute ${align === 'bottom' ? 'left-0 bottom-full mb-2' : 'right-0 top-full mt-2'} z-50 flex max-h-[70vh] w-80 max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-slate-200 bg-white shadow-2xl`}>
           <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
             <h3 className="font-semibold text-slate-900 text-sm">Notifications</h3>
             <div className="flex items-center gap-2">

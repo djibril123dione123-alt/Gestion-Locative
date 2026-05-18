@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, CreditCard, Home, Info, UserRound, Wallet } from 'lucide-react';
+import { AlertTriangle, Building2, CreditCard, Home, Info, UserRound, Wallet, WifiOff } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { isCommissionMissing } from '../../services/domain/commissionService';
@@ -26,6 +26,7 @@ export function PaiementFormModal({
   contrats,
   isSaving,
   onSubmit,
+  isOnline,
 }: PaiementFormModalProps) {
   const handleMoisChange = (monthValue: string) => {
     setFormData((prev) => ({
@@ -40,6 +41,7 @@ export function PaiementFormModal({
   const montantSaisi = Number(formData.montant_total || 0);
   const loyerAttendu = Number(selectedContrat?.loyer_mensuel || 0);
   const reliquatPreview = selectedContrat ? Math.max(loyerAttendu - montantSaisi, 0) : 0;
+  const tropPercuPreview = selectedContrat ? Math.max(montantSaisi - loyerAttendu, 0) : 0;
   const tauxCouverture =
     selectedContrat && loyerAttendu > 0
       ? Math.min(100, Math.round((montantSaisi / loyerAttendu) * 100))
@@ -48,6 +50,9 @@ export function PaiementFormModal({
     ? `${selectedContrat.locataires?.prenom ?? ''} ${selectedContrat.locataires?.nom ?? ''}`.trim()
     : '';
   const uniteLabel = selectedContrat?.unites?.nom ?? '';
+  const immeubleLabel = selectedContrat?.unites?.immeubles?.nom ?? '';
+  const bailleur = selectedContrat?.unites?.immeubles?.bailleurs;
+  const bailleurLabel = bailleur ? `${bailleur.prenom ?? ''} ${bailleur.nom ?? ''}`.trim() : '';
 
   return (
     <Modal
@@ -75,7 +80,7 @@ export function PaiementFormModal({
           </div>
 
           {selectedContrat && (
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-2xl bg-white/9 p-3 ring-1 ring-white/10">
                 <UserRound className="mb-2 h-4 w-4 text-orange-200" />
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-100/70">
@@ -89,6 +94,13 @@ export function PaiementFormModal({
                   Unité
                 </p>
                 <p className="mt-1 truncate text-sm font-black">{uniteLabel || 'Non renseignée'}</p>
+              </div>
+              <div className="rounded-2xl bg-white/9 p-3 ring-1 ring-white/10">
+                <Building2 className="mb-2 h-4 w-4 text-orange-200" />
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-100/70">
+                  Immeuble
+                </p>
+                <p className="mt-1 truncate text-sm font-black">{immeubleLabel || bailleurLabel || 'Non renseigné'}</p>
               </div>
               <div className="rounded-2xl bg-white/9 p-3 ring-1 ring-white/10">
                 <CreditCard className="mb-2 h-4 w-4 text-orange-200" />
@@ -137,6 +149,47 @@ export function PaiementFormModal({
             </div>
           )}
         </div>
+
+        {selectedContrat && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Résumé financier</p>
+                <p className="mt-1 text-sm text-slate-600">Contrôle métier avant validation serveur.</p>
+              </div>
+              <CreditCard className="h-5 w-5 text-orange-500" />
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <div className="rounded-xl bg-slate-50 p-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Période</p>
+                <p className="mt-1 text-sm font-black text-slate-950">{formData.mois_display || '-'}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Montant dû</p>
+                <p className="mt-1 text-sm font-black tabular-nums text-slate-950">{loyerAttendu.toLocaleString('fr-FR')} FCFA</p>
+              </div>
+              <div className="rounded-xl bg-emerald-50 p-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700">Reliquat</p>
+                <p className="mt-1 text-sm font-black tabular-nums text-emerald-950">{reliquatPreview.toLocaleString('fr-FR')} FCFA</p>
+              </div>
+              <div className="rounded-xl bg-orange-50 p-3">
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-orange-700">Avance</p>
+                <p className="mt-1 text-sm font-black tabular-nums text-orange-950">{tropPercuPreview.toLocaleString('fr-FR')} FCFA</p>
+              </div>
+            </div>
+            {tropPercuPreview > 0 && (
+              <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs leading-5 text-orange-800">
+                Le montant dépasse l'échéance sélectionnée. La validation serveur doit traiter ce surplus comme avance ou régularisation selon la règle financière active.
+              </div>
+            )}
+            {!isOnline && (
+              <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+                <WifiOff className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>Mode hors ligne : l'encaissement sera placé en file d'attente et synchronisé automatiquement au retour de connexion.</span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>

@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import {
-  AlertCircle,
   BarChart3,
-  Briefcase,
   Building2,
   CalendarDays,
   ChevronDown,
@@ -22,13 +20,14 @@ import {
   Wallet,
   Wrench,
   X,
+  ReceiptText,
+  ShieldCheck,
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { canAccessPage, type UserPermissionMap } from '../../lib/rbac';
 import type { AgencySettings } from '../../types/agency';
 import { BrandMark } from '../brand/BrandLogo';
-import { NotificationBell } from '../ui/NotificationBell';
 
 interface SidebarProps {
   currentPage: string;
@@ -56,6 +55,7 @@ interface MenuLeaf {
 interface MenuGroup {
   id: string;
   label: string;
+  description: string;
   icon: ComponentType<{ className?: string }>;
   roles: Role[];
   items: MenuLeaf[];
@@ -64,45 +64,42 @@ interface MenuGroup {
 const NAV: Array<MenuLeaf | MenuGroup> = [
   {
     id: 'dashboard',
-    label: 'Tableau de bord',
+    label: 'Vue d’ensemble',
     icon: LayoutDashboard,
     roles: ['admin', 'agent', 'comptable', 'bailleur'],
   },
   {
-    id: 'finances',
-    label: 'Finances',
+    id: 'portefeuille',
+    label: 'Portefeuille locatif',
+    description: 'Bailleur → bien → locataire → bail',
+    icon: Building2,
+    roles: ['admin', 'agent', 'comptable', 'bailleur'],
+    items: [
+      { id: 'bailleurs', label: 'Bailleurs', icon: UserCircle, roles: ['admin'] },
+      { id: 'immeubles', label: 'Immeubles', icon: Building2, roles: ['admin'] },
+      { id: 'unites', label: 'Unités', icon: DoorOpen, roles: ['admin'] },
+      { id: 'locataires', label: 'Locataires', icon: Users, roles: ['admin', 'agent', 'comptable'] },
+      { id: 'contrats', label: 'Contrats & baux', icon: FileText, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
+    ],
+  },
+  {
+    id: 'finance',
+    label: 'Encaissement & finance',
+    description: 'Paiements, reliquats, charges, commissions',
     icon: Wallet,
     roles: ['admin', 'agent', 'comptable', 'bailleur'],
     items: [
       { id: 'paiements', label: 'Encaissements', icon: CreditCard, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
+      { id: 'loyers-impayes', label: 'Loyers impayés', icon: ReceiptText, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
       { id: 'depenses', label: 'Dépenses', icon: TrendingDown, roles: ['admin'] },
-      { id: 'tableau-de-bord-financier', label: 'Analyses', icon: BarChart3, roles: ['admin'] },
+      { id: 'commissions', label: 'Commissions', icon: ShieldCheck, roles: ['admin'] },
+      { id: 'tableau-de-bord-financier', label: 'Rapports', icon: BarChart3, roles: ['admin'] },
     ],
   },
   {
-    id: 'locations',
-    label: 'Locations',
-    icon: Briefcase,
-    roles: ['admin', 'agent', 'comptable', 'bailleur'],
-    items: [
-      { id: 'locataires', label: 'Locataires', icon: Users, roles: ['admin', 'agent', 'comptable'] },
-      { id: 'contrats', label: 'Contrats', icon: FileText, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
-    ],
-  },
-  {
-    id: 'patrimoine',
-    label: 'Patrimoine',
-    icon: Building2,
-    roles: ['admin'],
-    items: [
-      { id: 'bailleurs', label: 'Bailleurs', icon: UserCircle, roles: ['admin'] },
-      { id: 'immeubles', label: 'Immeubles', icon: Building2, roles: ['admin'] },
-      { id: 'unites', label: 'Produits', icon: DoorOpen, roles: ['admin'] },
-    ],
-  },
-  {
-    id: 'activite',
-    label: 'Activité',
+    id: 'operations',
+    label: 'Opérations terrain',
+    description: 'Planning, maintenance et états des lieux',
     icon: HardHat,
     roles: ['admin', 'agent'],
     items: [
@@ -113,32 +110,40 @@ const NAV: Array<MenuLeaf | MenuGroup> = [
     ],
   },
   {
-    id: 'parametres',
-    label: 'Paramètres',
+    id: 'administration',
+    label: 'Administration',
+    description: 'Agence, équipe, abonnement et contrôle',
     icon: Settings,
     roles: ['admin'],
-    items: [],
+    items: [
+      { id: 'parametres', label: 'Paramètres agence', icon: Settings, roles: ['admin'] },
+      { id: 'equipe', label: 'Équipe & accès', icon: Users, roles: ['admin'] },
+      { id: 'abonnement', label: 'Abonnement', icon: CreditCard, roles: ['admin'] },
+      { id: 'audit', label: 'Journal & audit', icon: ClipboardList, roles: ['admin'] },
+    ],
   },
 ];
 
 const PARENT_OF: Record<string, string> = {
-  paiements: 'finances',
-  'loyers-impayes': 'finances',
-  depenses: 'finances',
-  commissions: 'finances',
-  'tableau-de-bord-financier': 'finances',
-  'filtres-avances': 'finances',
-  locataires: 'locations',
-  contrats: 'locations',
-  bailleurs: 'patrimoine',
-  immeubles: 'patrimoine',
-  unites: 'patrimoine',
-  calendrier: 'activite',
-  interventions: 'activite',
-  inventaires: 'activite',
-  documents: 'activite',
-  equipe: 'parametres',
-  abonnement: 'parametres',
+  bailleurs: 'portefeuille',
+  immeubles: 'portefeuille',
+  unites: 'portefeuille',
+  locataires: 'portefeuille',
+  contrats: 'portefeuille',
+  paiements: 'finance',
+  'loyers-impayes': 'finance',
+  depenses: 'finance',
+  commissions: 'finance',
+  'tableau-de-bord-financier': 'finance',
+  'filtres-avances': 'finance',
+  calendrier: 'operations',
+  interventions: 'operations',
+  inventaires: 'operations',
+  documents: 'operations',
+  parametres: 'administration',
+  equipe: 'administration',
+  abonnement: 'administration',
+  audit: 'administration',
 };
 
 function isGroup(entry: MenuLeaf | MenuGroup): entry is MenuGroup {
@@ -152,7 +157,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose, modul
   const visibleNav = useMemo(() => {
     if (!profile || profile.role === 'super_admin') return [] as Array<MenuLeaf | MenuGroup>;
     return NAV
-      .filter((entry) => entry.roles.includes(role) && canAccessPage(profile.role, entry.id, moduleSettings, userPermissions))
+      .filter((entry) => entry.roles.includes(role) && (isGroup(entry) || canAccessPage(profile.role, entry.id, moduleSettings, userPermissions)))
       .map((entry) => {
         if (isGroup(entry)) {
           const items = entry.items.filter(
@@ -162,7 +167,7 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose, modul
         }
         return entry;
       })
-      .filter((entry) => !isGroup(entry) || entry.items.length > 0 || entry.id === 'parametres');
+      .filter((entry) => !isGroup(entry) || entry.items.length > 0);
   }, [moduleSettings, profile, role, userPermissions]);
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
@@ -200,15 +205,12 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose, modul
 
   const isLeafActive = (id: string) => {
     if (currentPage === id) return true;
-    if (id === 'paiements' && currentPage === 'loyers-impayes') return true;
     if (id === 'tableau-de-bord-financier' && currentPage === 'filtres-avances') return true;
-    if (id === 'parametres' && (currentPage === 'equipe' || currentPage === 'abonnement')) return true;
     return false;
   };
 
   const isGroupActive = (group: MenuGroup) =>
-    group.items.some((item) => isLeafActive(item.id)) ||
-    (group.id === 'parametres' && isLeafActive('parametres'));
+    group.items.some((item) => isLeafActive(item.id));
 
   return (
     <>
@@ -267,16 +269,11 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose, modul
               const Icon = entry.icon;
               const active = isGroupActive(entry);
               const open = openGroups.has(entry.id);
-              const isSettings = entry.id === 'parametres';
 
               return (
                 <li key={entry.id}>
                   <button
                     onClick={() => {
-                      if (isSettings) {
-                        handleNavigate('parametres');
-                        return;
-                      }
                       toggleGroup(entry.id);
                     }}
                     className={`group relative flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-all duration-200 ${
@@ -285,13 +282,16 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose, modul
                   >
                     {active && <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r bg-emerald-300" />}
                     <Icon className={`h-5 w-5 ${active ? 'text-emerald-300' : 'text-slate-500 group-hover:text-emerald-200'}`} />
-                    <span className="flex-1 text-left text-sm font-bold">{entry.label}</span>
-                    {!isSettings && (
-                      <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'} ${active ? 'text-emerald-300' : 'text-slate-500'}`} />
-                    )}
+                    <span className="flex-1 text-left">
+                      <span className="block text-sm font-bold">{entry.label}</span>
+                      <span className={`mt-0.5 block text-[0.68rem] font-semibold ${active ? 'text-emerald-200/80' : 'text-slate-500'}`}>
+                        {entry.description}
+                      </span>
+                    </span>
+                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'} ${active ? 'text-emerald-300' : 'text-slate-500'}`} />
                   </button>
 
-                  {!isSettings && open && (
+                  {open && (
                     <ul className="ml-3 mt-1 space-y-0.5 border-l border-white/10 pl-3">
                       {entry.items.map((leaf) => {
                         const LeafIcon = leaf.icon;
@@ -306,7 +306,6 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose, modul
                             >
                               <LeafIcon className={`h-4 w-4 flex-shrink-0 ${leafActive ? 'text-emerald-300' : 'text-slate-600'}`} />
                               <span className="text-sm font-semibold">{leaf.label}</span>
-                              {leaf.id === 'paiements' && <AlertCircle className="ml-auto h-3.5 w-3.5 opacity-0" aria-hidden="true" />}
                             </button>
                           </li>
                         );
@@ -318,9 +317,6 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose, modul
             })}
           </ul>
 
-          <div className="px-3 pt-3">
-            <NotificationBell onNavigate={handleNavigate} />
-          </div>
         </nav>
 
         <div className="border-t border-white/10 p-4">

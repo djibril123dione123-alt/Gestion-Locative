@@ -16,6 +16,7 @@ import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 import { reloadUserProfile } from '../lib/agencyHelper';
 import { BrandLogo } from '../components/brand/BrandLogo';
+import { LoadingState } from '../components/ui/LoadingState';
 import { formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 
 type AccountType = 'agency' | 'bailleur';
@@ -197,11 +198,12 @@ export default function Welcome() {
 
   if (requestLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-orange-200 border-t-orange-600 mb-4" />
-          <p className="text-slate-700">Chargement…</p>
-        </div>
+      <div className="min-h-screen bg-brand-paper">
+        <LoadingState
+          label="Initialisation"
+          description="Préparation de votre espace Samay Këur."
+          className="min-h-screen"
+        />
       </div>
     );
   }

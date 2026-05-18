@@ -28,6 +28,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { canAccessPage, type UserPermissionMap } from '../../lib/rbac';
 import type { AgencySettings } from '../../types/agency';
 import { BrandMark } from '../brand/BrandLogo';
+import { NotificationBell } from '../ui/NotificationBell';
 
 interface SidebarProps {
   currentPage: string;
@@ -320,6 +321,10 @@ export function Sidebar({ currentPage, onNavigate, isOpen = true, onClose, modul
         </nav>
 
         <div className="border-t border-white/10 p-4">
+          <div className="mb-3">
+            <NotificationBell onNavigate={handleNavigate} align="bottom" />
+          </div>
+
           <div className="mb-3 rounded-lg border border-white/10 bg-white/[0.055] px-3 py-3">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-300 to-brand-700 text-sm font-black text-white">

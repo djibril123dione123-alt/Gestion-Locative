@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../lib/formatters';
 import { useToast } from '../hooks/useToast';
+import { LoadingState } from '../components/ui/LoadingState';
 import {
   TrendingUp,
   TrendingDown,
@@ -176,12 +177,11 @@ export function DashboardFinancier() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-4 border-emerald-100 border-t-brand-700 mb-4" />
-          <p className="text-lg text-slate-600">Chargement du tableau de bord financier...</p>
-        </div>
-      </div>
+      <LoadingState
+        label="Rapports financiers"
+        description="Consolidation des indicateurs, encaissements et tendances."
+        className="min-h-[55vh]"
+      />
     );
   }
 

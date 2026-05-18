@@ -979,7 +979,7 @@ export function Contrats() {
         title="Résilier le contrat"
       >
         <div className="space-y-5">
-          <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+          <div className="rounded-[1.25rem] border border-red-100 bg-gradient-to-br from-red-50 via-white to-orange-50 p-4 shadow-sm">
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white text-red-700 ring-1 ring-red-100">
                 <Ban className="h-5 w-5" />
@@ -994,7 +994,7 @@ export function Contrats() {
           </div>
 
           {resiliationTarget && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="sk-card-premium p-4">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Contrat concerné</p>
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
@@ -1048,12 +1048,12 @@ export function Contrats() {
             />
           </div>
 
-          <div className="flex flex-col-reverse justify-end gap-3 border-t border-slate-200 pt-4 sm:flex-row">
+          <div className="flex flex-col-reverse justify-end gap-3 border-t border-emerald-950/10 pt-4 sm:flex-row">
             <button
               type="button"
               onClick={closeResiliation}
               disabled={resiliating}
-              className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+              className="sk-action sk-action-secondary justify-center disabled:opacity-50"
             >
               Annuler
             </button>
@@ -1061,7 +1061,7 @@ export function Contrats() {
               type="button"
               onClick={confirmResiliation}
               disabled={resiliating}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-5 py-2 font-bold text-white shadow-sm transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-5 py-2.5 font-bold text-white shadow-lg shadow-red-950/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Ban className="h-4 w-4" />
               {resiliating ? 'Résiliation...' : 'Confirmer la résiliation'}

@@ -73,49 +73,6 @@ const PAGE_LABELS: Record<string, string> = {
     pricing: 'Tarifs',
 };
 
-const CONTEXTUAL_LINKS: Record<string, Array<{ id: string; label: string }>> = {
-    bailleurs: [
-        { id: 'immeubles', label: 'Immeubles' },
-        { id: 'unites', label: 'Unités' },
-        { id: 'tableau-de-bord-financier', label: 'Rapports' },
-    ],
-    immeubles: [
-        { id: 'unites', label: 'Unités' },
-        { id: 'locataires', label: 'Locataires' },
-        { id: 'contrats', label: 'Contrats' },
-    ],
-    unites: [
-        { id: 'locataires', label: 'Locataires' },
-        { id: 'contrats', label: 'Contrats' },
-        { id: 'paiements', label: 'Encaissements' },
-    ],
-    locataires: [
-        { id: 'contrats', label: 'Contrats' },
-        { id: 'paiements', label: 'Encaissements' },
-        { id: 'loyers-impayes', label: 'Impayés' },
-    ],
-    contrats: [
-        { id: 'paiements', label: 'Encaisser' },
-        { id: 'documents', label: 'Documents' },
-        { id: 'inventaires', label: 'États des lieux' },
-    ],
-    paiements: [
-        { id: 'loyers-impayes', label: 'Impayés' },
-        { id: 'depenses', label: 'Dépenses' },
-        { id: 'tableau-de-bord-financier', label: 'Rapports' },
-    ],
-    'loyers-impayes': [
-        { id: 'paiements', label: 'Encaissements' },
-        { id: 'locataires', label: 'Locataires' },
-        { id: 'tableau-de-bord-financier', label: 'Rapports' },
-    ],
-    'tableau-de-bord-financier': [
-        { id: 'bailleurs', label: 'Bailleurs' },
-        { id: 'paiements', label: 'Encaissements' },
-        { id: 'documents', label: 'Documents' },
-    ],
-};
-
 function AppContent() {
     const { user, profile, loading } = useAuth();
     const navigate = useNavigate();
@@ -431,9 +388,6 @@ function AppContent() {
     };
 
     const pageLabel = PAGE_LABELS[currentPage] ?? 'Samay Këur';
-    const contextualLinks = (CONTEXTUAL_LINKS[currentPage] ?? []).filter((link) =>
-        canAccessPage(profile.role, link.id, moduleSettings, userPermissions)
-    );
     const mobileSyncLabel = !isOnline
         ? 'Hors ligne'
         : syncing
@@ -487,36 +441,6 @@ function AppContent() {
                     </div>
                     <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-surface">
                         <NotificationBell onNavigate={handleNavigate} compact />
-                    </div>
-                </div>
-
-                {/* Top bar - desktop context */}
-                <div className="hidden border-b border-emerald-900/10 bg-white/[0.88] px-6 py-3 shadow-sm backdrop-blur-xl lg:flex lg:items-center lg:justify-between">
-                    <div className="min-w-0">
-                        <p className="text-xs font-black uppercase tracking-[0.2em] text-brand-700">
-                            Samay Këur
-                        </p>
-                        <div className="mt-1 flex min-w-0 items-center gap-3">
-                            <h1 className="truncate text-xl font-black text-slate-950">{pageLabel}</h1>
-                            {contextualLinks.length > 0 && (
-                                <div className="flex items-center gap-2">
-                                    {contextualLinks.map((link) => (
-                                        <button
-                                            key={link.id}
-                                            type="button"
-                                            onClick={() => handleNavigate(link.id)}
-                                            className="rounded-full border border-emerald-900/10 bg-brand-surface px-3 py-1 text-xs font-black text-brand-800 transition hover:border-brand-300 hover:bg-emerald-50"
-                                        >
-                                            {link.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <NotificationBell onNavigate={handleNavigate} compact />
-                        <BrandMark size="xs" tone="light" animated={false} withTile={false} />
                     </div>
                 </div>
 

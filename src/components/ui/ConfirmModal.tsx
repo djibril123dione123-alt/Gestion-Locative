@@ -1,4 +1,5 @@
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle, Info, X } from 'lucide-react';
+import { Button } from './Button';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -29,89 +30,100 @@ export function ConfirmModal({
   isDestructive,
   isLoading = false,
 }: ConfirmModalProps) {
+  if (!isOpen) return null;
+
   const resolvedConfirm = confirmLabel ?? confirmText ?? 'Confirmer';
   const resolvedCancel = cancelLabel ?? cancelText ?? 'Annuler';
   const resolvedVariant: 'danger' | 'warning' | 'info' =
     variant ?? (isDestructive ? 'danger' : 'info');
-  if (!isOpen) return null;
 
   const variantStyles = {
     danger: {
-      bg: 'bg-red-50',
-      icon: 'text-red-600',
-      button: 'bg-red-600 hover:bg-red-700',
-      border: 'border-red-200',
+      iconWrap: 'border-red-200 bg-red-50 text-red-600',
+      confirmVariant: 'danger' as const,
+      eyebrow: 'Action sensible',
+      Icon: AlertTriangle,
     },
     warning: {
-      bg: 'bg-action-50',
-      icon: 'text-action-700',
-      button: 'bg-action-600 hover:bg-action-700',
-      border: 'border-action-200',
+      iconWrap: 'border-action-200 bg-action-50 text-action-700',
+      confirmVariant: 'financial' as const,
+      eyebrow: 'Confirmation requise',
+      Icon: AlertTriangle,
     },
     info: {
-      bg: 'bg-brand-50',
-      icon: 'text-brand-700',
-      button: 'bg-brand-700 hover:bg-brand-800',
-      border: 'border-brand-100',
+      iconWrap: 'border-brand-100 bg-brand-50 text-brand-700',
+      confirmVariant: 'success' as const,
+      eyebrow: 'Validation',
+      Icon: Info,
     },
   };
 
   const styles = variantStyles[resolvedVariant];
+  const Icon = styles.Icon;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        <div
-          className="fixed inset-0 bg-brand-950/65 backdrop-blur-sm transition-opacity"
+    <div className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center sm:p-4">
+      <div
+        className="fixed inset-0 bg-brand-950/65 backdrop-blur-md transition-opacity"
+        onClick={isLoading ? undefined : onClose}
+        aria-hidden="true"
+      />
+
+      <section
+        className="relative w-full overflow-hidden rounded-t-3xl border border-emerald-900/10 bg-white shadow-2xl shadow-emerald-950/20 animate-scaleIn sm:max-w-md sm:rounded-3xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+      >
+        <div className="flex flex-shrink-0 justify-center pb-1 pt-3 sm:hidden">
+          <div className="h-1 w-11 rounded-full bg-slate-300" />
+        </div>
+
+        <button
           onClick={onClose}
-        />
+          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-2xl text-slate-400 transition hover:bg-emerald-50 hover:text-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Fermer"
+          disabled={isLoading}
+        >
+          <X className="h-5 w-5" />
+        </button>
 
-        <div className="relative sk-card-premium max-w-md w-full transform transition-all animate-scaleIn">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition"
-            aria-label="Fermer"
-            disabled={isLoading}
-          >
-            <X className="w-5 h-5" />
-          </button>
+        <div className="p-6 sm:p-7">
+          <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border ${styles.iconWrap}`}>
+            <Icon className="h-5 w-5" />
+          </div>
 
-          <div className="p-6">
-            <div className={`w-12 h-12 rounded-lg border ${styles.border} ${styles.bg} flex items-center justify-center mb-4`}>
-              <AlertTriangle className={`w-6 h-6 ${styles.icon}`} />
-            </div>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-action-600">
+            {styles.eyebrow}
+          </p>
+          <h3 className="mt-2 text-xl font-black leading-tight text-slate-950">{title}</h3>
+          <p className="mt-3 text-sm leading-6 text-slate-600">{message}</p>
 
-            <h3 className="text-xl font-bold text-slate-900 mb-2">{title}</h3>
-            <p className="text-slate-600 mb-6">{message}</p>
-
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                disabled={isLoading}
-                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg
-                         hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {resolvedCancel}
-              </button>
-              <button
-                onClick={onConfirm}
-                disabled={isLoading}
-              className={`flex-1 px-4 py-2 text-white rounded-lg font-bold transition-all shadow-premium
-                          disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${styles.button}`}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    En cours...
-                  </>
-                ) : (
-                  resolvedConfirm
-                )}
-              </button>
-            </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <Button
+              type="button"
+              onClick={onClose}
+              disabled={isLoading}
+              variant="secondary"
+              size="md"
+              fullWidth
+            >
+              {resolvedCancel}
+            </Button>
+            <Button
+              type="button"
+              onClick={onConfirm}
+              disabled={isLoading}
+              loading={isLoading}
+              variant={styles.confirmVariant}
+              size="md"
+              fullWidth
+            >
+              {isLoading ? 'En cours...' : resolvedConfirm}
+            </Button>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

@@ -262,7 +262,7 @@ function PlanCard({ plan, onCta }: { plan: PlanDef; onCta: (plan: PlanDef) => vo
 
   return (
     <article
-      className={`relative mx-auto flex h-full w-full max-w-[20rem] min-w-0 flex-col overflow-hidden rounded-[1.6rem] border bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:max-w-none ${
+      className={`relative mx-auto flex h-full w-full max-w-[20rem] min-w-0 flex-col overflow-hidden rounded-[1.6rem] border bg-white/95 shadow-premium backdrop-blur transition duration-300 hover:-translate-y-1 hover:shadow-2xl sm:max-w-none ${
         plan.highlighted ? 'border-orange-300 ring-4 ring-orange-100/70' : 'border-emerald-950/10'
       }`}
     >
@@ -285,9 +285,9 @@ function PlanCard({ plan, onCta }: { plan: PlanDef; onCta: (plan: PlanDef) => vo
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 border-y border-slate-100 bg-white p-4">
+      <div className="grid grid-cols-2 gap-2 border-y border-emerald-950/10 bg-white/82 p-4">
         {Object.entries(plan.capacities).map(([key, value]) => (
-          <div key={key} className="rounded-xl bg-slate-50 px-3 py-2">
+          <div key={key} className="rounded-xl border border-emerald-950/5 bg-white/78 px-3 py-2 shadow-sm">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{key === 'unites' ? 'unités' : key}</p>
             <p className="mt-1 text-xs font-black text-slate-800">{value}</p>
           </div>
@@ -307,7 +307,7 @@ function PlanCard({ plan, onCta }: { plan: PlanDef; onCta: (plan: PlanDef) => vo
           </ul>
         </div>
 
-        <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/60 p-4">
+        <div className="rounded-[1.25rem] border border-emerald-950/10 bg-gradient-to-br from-emerald-50 via-white to-orange-50/35 p-4 shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-900">Infrastructure incluse</p>
           <ul className="mt-3 space-y-2">
             {plan.infrastructure.map((item) => (

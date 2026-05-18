@@ -809,7 +809,7 @@ export function Bailleurs() {
           <div className="space-y-5">
             {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
 
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
+            <div className="rounded-[1.25rem] border border-amber-200 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4 shadow-sm">
               <div className="flex items-start gap-3">
                 <ShieldAlert className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
                 <div>
@@ -824,7 +824,7 @@ export function Bailleurs() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-emerald-950/10 bg-white p-4 shadow-sm">
+            <div className="sk-card-premium p-4">
               <p className="text-xs font-black uppercase tracking-wide text-slate-500">Bailleur concerné</p>
               <p className="mt-1 text-xl font-black text-slate-950">
                 {lifecycleTarget.prenom} {lifecycleTarget.nom}
@@ -835,21 +835,21 @@ export function Bailleurs() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+              <div className="sk-metric-tile">
                 <Building2 className="h-5 w-5 text-brand-700" />
                 <p className="mt-3 text-xs font-bold uppercase text-slate-500">Immeubles</p>
                 <p className="text-2xl font-black text-slate-950">
                   {loadingImpacts ? '...' : lifecycleImpacts?.immeubles_actifs ?? 0}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+              <div className="sk-metric-tile">
                 <Home className="h-5 w-5 text-brand-700" />
                 <p className="mt-3 text-xs font-bold uppercase text-slate-500">Unités liées</p>
                 <p className="text-2xl font-black text-slate-950">
                   {loadingImpacts ? '...' : lifecycleImpacts?.unites_liees ?? 0}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+              <div className="sk-metric-tile">
                 <ClipboardList className="h-5 w-5 text-brand-700" />
                 <p className="mt-3 text-xs font-bold uppercase text-slate-500">Contrats actifs</p>
                 <p className="text-2xl font-black text-slate-950">
@@ -904,7 +904,7 @@ export function Bailleurs() {
               />
             </div>
 
-            <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <label className="flex items-start gap-3 rounded-[1.25rem] border border-emerald-950/10 bg-emerald-50/50 p-4 shadow-sm">
               <input
                 type="checkbox"
                 checked={lifecycleForm.acknowledge_impacts}
@@ -917,7 +917,7 @@ export function Bailleurs() {
               </span>
             </label>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t border-emerald-950/10 pt-5 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={closeLifecycleModal}

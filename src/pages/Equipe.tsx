@@ -397,7 +397,7 @@ export function Equipe() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
-      <section className="relative overflow-hidden rounded-2xl border border-emerald-900/10 bg-white p-5 shadow-premium sm:p-6">
+      <section className="sk-premium-panel p-5 sm:p-6">
         <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-emerald-200/30 blur-3xl" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -428,7 +428,7 @@ export function Equipe() {
         <MetricCard label="Profils restreints" value={stats.restrictedMembers} icon={Lock} tone="emerald" />
       </section>
 
-      <section className="rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      <section className="sk-premium-panel overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-lg font-black text-slate-950">Membres actuels</h2>
@@ -471,7 +471,7 @@ export function Equipe() {
               const summary = getMemberPermissionSummary(member, permissions);
               const isProtected = member.id === profile.id || member.role === 'admin' || member.role === 'super_admin';
               return (
-                <article key={member.id} className="grid gap-4 p-4 transition hover:bg-emerald-50/40 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-center">
+                <article key={member.id} className="grid gap-4 p-4 transition hover:bg-emerald-50/45 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-center">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="truncate text-base font-black text-slate-950">
@@ -497,7 +497,7 @@ export function Equipe() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-100 bg-slate-50 p-2 text-center">
+                  <div className="grid grid-cols-3 gap-2 rounded-[1rem] border border-emerald-950/10 bg-white/70 p-2 text-center shadow-sm">
                     <MiniStat label="Masquées" value={summary.hidden} />
                     <MiniStat label="Lecture" value={summary.readOnly} />
                     <MiniStat label="Overrides" value={summary.overrides} />
@@ -532,7 +532,7 @@ export function Equipe() {
         )}
       </section>
 
-      <section className="rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+      <section className="sk-premium-panel overflow-hidden">
         <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-4">
           <Mail className="h-5 w-5 text-slate-500" />
           <h2 className="font-black text-slate-950">Invitations en attente ({invitations.length})</h2>
@@ -654,7 +654,7 @@ export function Equipe() {
       >
         {permissionTarget ? (
           <div className="space-y-5">
-            <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50 p-4">
+            <div className="sk-card-premium p-4">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-800">Profil contrôlé</p>
               <p className="mt-1 text-sm font-semibold text-slate-700">
                 Base actuelle : {ROLE_LABELS[permissionTarget.role] ?? permissionTarget.role}. Les lignes “Rôle par défaut” suivent automatiquement ce rôle.
@@ -663,7 +663,7 @@ export function Equipe() {
 
             <div className="max-h-[62vh] space-y-4 overflow-y-auto pr-1">
               {Object.entries(groupedCatalog).map(([category, items]) => (
-                <div key={category} className="rounded-2xl border border-slate-200 bg-white">
+                <div key={category} className="rounded-[1.25rem] border border-emerald-950/10 bg-white/90 shadow-sm">
                   <div className="border-b border-slate-100 px-4 py-3">
                     <h3 className="font-black text-slate-950">{category}</h3>
                   </div>
@@ -782,7 +782,7 @@ function MetricCard({
         ? 'bg-emerald-50 text-emerald-700'
         : 'bg-brand-50 text-brand-800';
   return (
-    <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+    <div className="sk-metric-tile">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-bold text-slate-500">{label}</p>

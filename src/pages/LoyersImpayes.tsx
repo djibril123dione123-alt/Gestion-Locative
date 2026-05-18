@@ -11,6 +11,7 @@ import { createPaiementViaEdge, PaiementApiError } from '../services/api/paiemen
 import { emitEvent } from '../lib/eventBus';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { LoadingState } from '../components/ui/LoadingState';
 
 const ITEMS_PER_PAGE = 20;
 const LOOKBACK_MONTHS = 12;
@@ -448,12 +449,12 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full p-8">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-orange-200 border-t-orange-600 mb-3"></div>
-          <p className="text-slate-600">Chargement des loyers impayés…</p>
-        </div>
-      </div>
+      <LoadingState
+        label="Loyers impayés"
+        description="Analyse des échéances, reliquats et paiements partiels."
+        compact
+        className="min-h-[45vh]"
+      />
     );
   }
 
@@ -606,9 +607,9 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
       {/* Workflow de paiement */}
       {showModal && selectedLoyer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-emerald-900/15 bg-white shadow-2xl">
-            <div className="relative overflow-hidden rounded-t-3xl bg-brand-950 px-5 py-5 text-white sm:px-7">
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-brand-950/68 p-0 backdrop-blur-md sm:items-center sm:justify-center sm:p-4">
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-[1.75rem] border border-white/70 bg-white shadow-2xl shadow-emerald-950/20 sm:rounded-[1.75rem]">
+            <div className="relative overflow-hidden rounded-t-[1.75rem] bg-[radial-gradient(circle_at_100%_0%,rgba(255,138,0,0.22),transparent_14rem),linear-gradient(135deg,#08110e,#0d1b16_55%,#14251e)] px-5 py-5 text-white sm:px-7">
               <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-orange-400/20 blur-3xl" />
               <div className="relative flex items-start justify-between gap-4">
                 <div>
@@ -628,17 +629,17 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
             <div className="space-y-5 p-5 sm:p-7">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+                <div className="sk-metric-tile">
                   <Wallet className="h-5 w-5 text-brand-700" />
                   <p className="mt-3 text-xs font-black uppercase text-slate-500">Montant dû</p>
                   <p className="mt-1 text-xl font-black text-slate-950">{formatCurrency(selectedLoyer.montant_du)}</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+                <div className="sk-metric-tile">
                   <ReceiptText className="h-5 w-5 text-brand-700" />
                   <p className="mt-3 text-xs font-black uppercase text-slate-500">Déjà encaissé</p>
                   <p className="mt-1 text-xl font-black text-slate-950">{formatCurrency(selectedLoyer.montant_encaisse)}</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-brand-surface p-4">
+                <div className="sk-metric-tile">
                   <CalendarDays className="h-5 w-5 text-brand-700" />
                   <p className="mt-3 text-xs font-black uppercase text-slate-500">Échéance</p>
                   <p className="mt-1 text-xl font-black text-slate-950">
@@ -647,7 +648,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-emerald-950/10 bg-white p-4">
+              <div className="sk-card-premium p-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <p className="text-xs font-black uppercase text-slate-500">Locataire</p>
@@ -723,7 +724,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="sk-premium-panel p-4">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
                     <p className="text-xs font-black uppercase text-slate-500">Statut après paiement</p>

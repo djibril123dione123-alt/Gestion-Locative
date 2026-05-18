@@ -54,17 +54,24 @@ export function NotificationBell({ onNavigate, compact = false, align = 'top' }:
 
   useEffect(() => {
     if (!user?.id) return;
+    let active = true;
     load();
+
+    const topic = `notifications-${user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const channel = supabase
-      .channel(`notifications-${user.id}`)
+      .channel(topic)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        () => load(),
+        () => {
+          if (active) load();
+        },
       )
       .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      active = false;
+      void supabase.removeChannel(channel);
     };
   }, [user?.id, load]);
 

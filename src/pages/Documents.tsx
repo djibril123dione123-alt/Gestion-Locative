@@ -538,7 +538,7 @@ export function Documents() {
           { label: 'Documents générés', value: items.filter((item) => item.source === 'generated').length, icon: FileText },
           { label: 'Documents critiques', value: items.filter((item) => item.retentionPolicy === 'critical').length, icon: ShieldCheck },
         ].map((metric) => (
-          <div key={metric.label} className="sk-mobile-card p-3 sm:p-4">
+          <div key={metric.label} className="sk-metric-tile p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">{metric.label}</p>
               <metric.icon className="h-4 w-4 text-emerald-700" />
@@ -549,7 +549,7 @@ export function Documents() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <div className="sk-mobile-card p-4">
+        <div className="sk-premium-panel p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Repartition stockage</p>
@@ -564,7 +564,7 @@ export function Documents() {
               { label: 'Critiques', bucket: criticalBucket },
               { label: 'Temporaires', bucket: temporaryBucket },
             ].map((entry) => (
-              <div key={entry.label} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+              <div key={entry.label} className="rounded-[1.15rem] border border-emerald-950/10 bg-white/75 p-3 shadow-sm">
                 <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">{entry.label}</p>
                 <p className="mt-1 text-base font-black text-slate-950">{formatStorageSize(entry.bucket?.bytes ?? 0)}</p>
                 <p className="text-xs font-semibold text-slate-500">{entry.bucket?.count ?? 0} fichier(s)</p>
@@ -573,7 +573,7 @@ export function Documents() {
           </div>
         </div>
 
-        <div className="sk-mobile-card p-4">
+        <div className="sk-premium-panel p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Lifecycle management</p>
@@ -625,7 +625,7 @@ export function Documents() {
             Ajouter un document
           </button>
 
-          <div className="rounded-2xl border border-emerald-950/10 bg-white/90 p-3 shadow-sm">
+          <div className="sk-premium-panel p-3">
             <button
               type="button"
               onClick={() => setCategoryFilter('all')}
@@ -660,7 +660,7 @@ export function Documents() {
           </div>
 
           {breakdown?.large_files?.length ? (
-            <div className="rounded-2xl border border-emerald-950/10 bg-white/90 p-3 shadow-sm">
+            <div className="sk-premium-panel p-3">
               <p className="px-1 text-xs font-black uppercase tracking-[0.14em] text-slate-500">Fichiers lourds</p>
               <div className="mt-2 space-y-2">
                 {breakdown.large_files.slice(0, 4).map((file) => (
@@ -682,7 +682,7 @@ export function Documents() {
         </aside>
 
         <section className="space-y-4">
-          <div className="sk-mobile-card flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+          <div className="sk-premium-panel flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
             <label className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input

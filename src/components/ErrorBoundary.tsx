@@ -1,5 +1,7 @@
 import React from 'react';
 import * as Sentry from '@sentry/react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { BrandMark } from './brand/BrandLogo';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -43,33 +45,45 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6">
-            <div className="flex items-center mb-4">
-              <div className="flex-shrink-0">
-                <svg className="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
+        <div className="premium-polish flex min-h-screen items-center justify-center bg-brand-paper p-4">
+          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-emerald-900/10 bg-white p-7 text-center shadow-2xl shadow-emerald-950/10">
+            <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-orange-400/10 blur-3xl" />
+            <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl" />
+
+            <div className="relative">
+              <BrandMark size="lg" tone="light" animated className="mx-auto mb-5" />
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-700">
+                <AlertTriangle className="h-5 w-5" />
               </div>
-              <div className="ml-3">
-                <h3 className="text-lg font-medium text-gray-900">Une erreur est survenue</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Nous avons été notifiés de cette erreur et travaillons à sa résolution.
-                </p>
-              </div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">
+                Incident applicatif
+              </p>
+              <h1 className="mt-3 text-2xl font-black text-slate-950">Une erreur est survenue</h1>
+              <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-600">
+                L'interface a été protégée pour éviter une page blanche. Vous pouvez relancer l'écran ou actualiser la page.
+              </p>
             </div>
-            <div className="mt-4">
+
+            <div className="relative mt-6 grid gap-3 sm:grid-cols-2">
               <button
                 onClick={this.resetError}
-                className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-900 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
               >
+                <RefreshCw className="h-4 w-4" />
                 Réessayer
               </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="inline-flex items-center justify-center rounded-2xl border border-emerald-900/10 bg-brand-surface px-4 py-3 text-sm font-black text-brand-900 transition hover:-translate-y-0.5 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+              >
+                Actualiser
+              </button>
             </div>
-            {process.env.NODE_ENV === 'development' && (
-              <details className="mt-4">
-                <summary className="cursor-pointer text-sm text-gray-500">Détails de l'erreur (dev)</summary>
-                <pre className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded overflow-auto">
+
+            {import.meta.env.DEV && (
+              <details className="relative mt-5 text-left">
+                <summary className="cursor-pointer text-sm font-semibold text-slate-500">Détails de l'erreur</summary>
+                <pre className="mt-2 max-h-48 overflow-auto rounded-2xl bg-red-50 p-3 text-xs text-red-700">
                   {this.state.error.stack}
                 </pre>
               </details>

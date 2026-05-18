@@ -296,7 +296,7 @@ export function Abonnement() {
       )}
 
       {/* ── Plan actuel ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="sk-premium-panel overflow-hidden">
         <div className="p-5 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -374,7 +374,7 @@ export function Abonnement() {
       </div>
 
       {/* ── Grille comparaison plans ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
+      <div className="sk-premium-panel p-5 sm:p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="font-bold text-slate-900 text-lg">Comparer les plans</h2>
@@ -392,7 +392,7 @@ export function Abonnement() {
             const isHigher = PLAN_CATALOG.findIndex((p) => p.id === plan.id) > PLAN_CATALOG.findIndex((p) => p.id === currentPlanId);
             return (
               <div key={plan.id}
-                className="relative rounded-2xl border-2 p-4 flex flex-col gap-3 transition-all"
+                className="relative flex flex-col gap-3 rounded-[1.25rem] border p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-premium"
                 style={{ borderColor: isCurrent ? plan.color : '#E2E8F0', backgroundColor: isCurrent ? plan.color + '06' : '#FAFAFA' }}>
                 {'badge' in plan && !isCurrent && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold text-white"
@@ -453,7 +453,7 @@ export function Abonnement() {
       </div>
 
       {/* ── Historique ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 sm:p-6">
+      <div className="sk-premium-panel p-5 sm:p-6">
         <h2 className="font-bold text-slate-900 text-lg mb-4">Historique des paiements</h2>
         {history.length === 0 ? (
           <div className="text-center py-8">

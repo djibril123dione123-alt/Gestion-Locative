@@ -1,890 +1,687 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
-import {
-  ArrowRight,
-  BarChart3,
-  Bell,
-  Check,
-  ChevronDown,
-  CreditCard,
-  FileText,
-  Globe2,
-  Landmark,
-  LayoutDashboard,
-  Lock,
-  ReceiptText,
-  ShieldCheck,
-  Smartphone,
-  Sparkles,
-  TrendingDown,
-  Users,
-  WalletCards,
-  WifiOff,
-  Zap,
+import React, { useState, useEffect } from 'react';
+import { 
+  Building2, ShieldCheck, FileText, Users, TrendingUp, 
+  Smartphone, CheckCircle2, Menu, X, ChevronRight, Lock, 
+  Globe, Zap, BarChart3, Server, Download, QrCode, 
+  ArrowRight, Play, Star
 } from 'lucide-react';
-import { BrandLogo, BrandMark } from '../components/brand/BrandLogo';
 
-interface LandingPageProps {
-  onNavigate?: (page: string) => void;
-}
+// --- COMPOSANTS UI INTERNES (Pour éviter les dépendances externes) ---
 
-const CONTACT_WHATSAPP = '221769010960';
+const Button = ({ children, variant = 'primary', className = '', icon: Icon, ...props }: any) => {
+  const baseStyle = "inline-flex items-center justify-center px-6 py-3.5 text-sm font-medium transition-all duration-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+  
+  const variants = {
+    primary: "bg-gradient-to-r from-emerald-600 to-emerald-800 hover:from-emerald-500 hover:to-emerald-700 text-white shadow-lg shadow-emerald-900/20 border border-transparent focus:ring-emerald-500",
+    secondary: "bg-slate-900/50 hover:bg-slate-800/50 text-emerald-50 border border-emerald-500/30 backdrop-blur-sm focus:ring-emerald-500",
+    outline: "bg-transparent hover:bg-emerald-950/30 text-emerald-100 border border-emerald-500/30 focus:ring-emerald-500",
+    gold: "bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200 hover:from-amber-100 hover:to-amber-300 text-emerald-950 shadow-lg shadow-amber-900/20 border border-amber-200/50"
+  };
 
-const ease: [number, number, number, number] = [0.22, 1, 0.36, 1];
-const spring = { type: 'spring', stiffness: 130, damping: 20, mass: 0.72 } as const;
-
-const fadeUp = {
-  hidden: { opacity: 0.82, y: 18 },
-  visible: { opacity: 1, y: 0 },
-};
-
-const heroFade = {
-  hidden: { opacity: 0.84, y: 14 },
-  visible: { opacity: 1, y: 0 },
-};
-
-const stagger = {
-  hidden: {},
-  visible: {
-    transition: {
-      staggerChildren: 0.07,
-      delayChildren: 0.05,
-    },
-  },
-};
-
-const trustLogos = ['Teranga Homes', 'Keur Invest', 'Dakar Gestion', 'Abidjan Locatif', 'Afrique Patrimoine'];
-
-const problems = [
-  {
-    title: 'Paiements dispersés',
-    text: 'Les virements, mobile money, reçus et captures WhatsApp vivent dans des endroits différents.',
-    metric: '42%',
-    caption: 'des retards mal suivis',
-    icon: WalletCards,
-  },
-  {
-    title: 'Impayés invisibles',
-    text: 'Une agence découvre trop tard les retards, puis relance dans l’urgence sans preuve fiable.',
-    metric: '+9j',
-    caption: 'avant relance moyenne',
-    icon: TrendingDown,
-  },
-  {
-    title: 'Reporting fragile',
-    text: 'Le bailleur attend des chiffres clairs, mais reçoit des fichiers manuels impossibles à auditer.',
-    metric: '3h',
-    caption: 'perdues chaque semaine',
-    icon: FileText,
-  },
-];
-
-const features = [
-  { title: 'Suivi des loyers', text: 'Statuts clairs par unité, locataire, mois et bailleur.', icon: Landmark },
-  { title: 'Historique paiements', text: 'Chaque encaissement garde son origine, sa preuve et son état.', icon: ReceiptText },
-  { title: 'Gestion des impayés', text: 'Retards détectés, priorisés et reliés aux relances.', icon: Bell },
-  { title: 'Quittances', text: 'Documents PDF propres, numérotés et prêts à envoyer.', icon: FileText },
-  { title: 'Multi-utilisateurs', text: 'Rôles, accès et actions d’équipe par agence.', icon: Users },
-  { title: 'Dashboard intelligent', text: 'Revenus, recouvrement, commissions et risques visibles.', icon: LayoutDashboard },
-  { title: 'Encaissements mobiles', text: 'Wave, Orange Money, Djamo, PayDunya et cartes.', icon: CreditCard },
-  { title: 'Offline-first', text: 'Le terrain continue même quand la connexion devient instable.', icon: WifiOff },
-];
-
-const businessBenefits = [
-  ['94%', 'taux de recouvrement suivi'],
-  ['-3h', 'sur les rapports hebdo'],
-  ['126', 'quittances générées'],
-  ['840k', 'commissions contrôlées'],
-];
-
-const plans = [
-  {
-    name: 'Starter',
-    price: '5 000',
-    unit: 'FCFA/mois',
-    description: 'Pour bailleurs individuels et petits portefeuilles.',
-    features: ['Essai gratuit', '10 unités', 'Quittances PDF', 'Import assisté'],
-    highlighted: false,
-  },
-  {
-    name: 'Pro',
-    price: '15 000',
-    unit: 'FCFA/mois',
-    description: 'Pour agences qui veulent vendre une gestion plus professionnelle.',
-    features: ['Essai gratuit', '100 unités', 'Support WhatsApp', 'Onboarding inclus', 'Alertes impayés'],
-    highlighted: true,
-  },
-  {
-    name: 'Business',
-    price: '35 000',
-    unit: 'FCFA/mois',
-    description: 'Pour agences structurées avec plusieurs agents et bailleurs.',
-    features: ['500 unités', 'Multi-utilisateurs', 'Rapports bailleurs', 'Accompagnement'],
-    highlighted: false,
-  },
-  {
-    name: 'Enterprise',
-    price: 'Sur devis',
-    unit: '',
-    description: 'Pour groupes immobiliers, promoteurs et réseaux multi-pays.',
-    features: ['SLA', 'Migration dédiée', 'Support prioritaire', 'Plan sur mesure'],
-    highlighted: false,
-  },
-];
-
-const testimonials = [
-  {
-    quote:
-      'Le produit donne enfin une lecture propre des paiements, des retards et des rapports bailleurs. Cela change la conversation avec les clients.',
-    name: 'Aminata Diop',
-    role: 'Directrice, agence à Dakar',
-  },
-  {
-    quote:
-      'Nous avons remplacé les fichiers dispersés par un tableau de bord unique. L’équipe sait quoi relancer et le bailleur reçoit des chiffres nets.',
-    name: 'Moussa Koné',
-    role: 'Administrateur de biens, Abidjan',
-  },
-  {
-    quote:
-      'Le suivi est plus sérieux, plus calme. Je peux comprendre mes loyers sans demander un message WhatsApp chaque semaine.',
-    name: 'Fatou Ndiaye',
-    role: 'Bailleure indépendante',
-  },
-];
-
-const faqs = [
-  {
-    question: 'Samay Këur convient-il aux petites agences ?',
-    answer:
-      'Oui. Une agence peut commencer avec peu de biens, puis évoluer vers une gestion multi-utilisateurs, multi-bailleurs et multi-portefeuilles.',
-  },
-  {
-    question: 'Les paiements mobile money sont-ils intégrés ?',
-    answer:
-      'La landing présente les parcours Wave, Orange Money, Djamo et PayDunya. Les flux sensibles restent traités côté serveur pour garder une logique fiable.',
-  },
-  {
-    question: 'Peut-on importer des données existantes ?',
-    answer:
-      'Oui. Les plans mettent en avant l’import assisté, l’onboarding et l’accompagnement pour migrer depuis Excel, cahiers ou fichiers existants.',
-  },
-  {
-    question: 'Les bailleurs reçoivent-ils des documents propres ?',
-    answer:
-      'Oui. Le produit met l’accent sur les quittances, rapports, preuves de paiement et exports nécessaires pour inspirer confiance.',
-  },
-  {
-    question: 'Comment demander une démo ?',
-    answer:
-      'Le visiteur peut demander une démo directement depuis la landing ou passer par WhatsApp pour parler à l’équipe Samay Këur.',
-  },
-];
-
-function whatsappHref(message: string) {
-  return `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(message)}`;
-}
-
-function Reveal({ children, className = '', delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
   return (
-    <motion.div
-      variants={fadeUp}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.18 }}
-      transition={{ duration: 0.62, ease, delay }}
-      className={className}
-    >
+    <button className={`${baseStyle} ${variants[variant as keyof typeof variants]} ${className}`} {...props}>
       {children}
-    </motion.div>
+      {Icon && <Icon className="ml-2 w-4 h-4" />}
+    </button>
   );
-}
+};
 
-function PremiumButton({
-  children,
-  variant = 'primary',
-  onClick,
-  href,
-}: {
-  children: ReactNode;
-  variant?: 'primary' | 'secondary' | 'ghost';
-  onClick?: () => void;
-  href?: string;
-}) {
-  const className = {
-    primary:
-      'bg-emerald-400 text-emerald-950 shadow-[0_18px_46px_rgba(52,211,153,0.28)] hover:bg-emerald-300',
-    secondary:
-      'border border-white/25 bg-white/[0.12] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] hover:bg-white/[0.18]',
-    ghost: 'border border-emerald-900/10 bg-white text-slate-950 shadow-sm hover:bg-emerald-50',
-  }[variant];
+const SectionHeading = ({ badge, title, subtitle, align = 'center' }: any) => (
+  <div className={`mb-16 ${align === 'center' ? 'text-center' : 'text-left'} max-w-4xl mx-auto`}>
+    {badge && (
+      <span className="inline-block px-4 py-1.5 mb-6 text-xs font-semibold tracking-wider text-emerald-300 uppercase bg-emerald-950/50 border border-emerald-500/20 rounded-full">
+        {badge}
+      </span>
+    )}
+    <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 tracking-tight leading-tight">
+      {title}
+    </h2>
+    <p className="text-lg text-slate-400 leading-relaxed max-w-2xl mx-auto">
+      {subtitle}
+    </p>
+  </div>
+);
 
-  const content = (
-    <>
-      {children}
-      <ArrowRight className="h-4 w-4" />
-    </>
-  );
+const FeatureCard = ({ icon: Icon, title, description, delay }: any) => (
+  <div className="group relative p-8 bg-slate-900/40 border border-slate-800 hover:border-emerald-500/30 rounded-2xl transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-900/10 overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    <div className="relative z-10">
+      <div className="w-14 h-14 mb-6 rounded-xl bg-emerald-950/50 border border-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+        <Icon className="w-7 h-7 text-emerald-400" />
+      </div>
+      <h3 className="text-xl font-semibold text-white mb-3">{title}</h3>
+      <p className="text-slate-400 leading-relaxed">{description}</p>
+    </div>
+  </div>
+);
 
-  if (href) {
-    return (
-      <motion.a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        whileHover={{ y: -2, scale: 1.01 }}
-        whileTap={{ scale: 0.985 }}
-        transition={spring}
-        className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-black ${className}`}
-      >
-        {content}
-      </motion.a>
-    );
-  }
+// --- SECTIONS PRINCIPALES ---
 
-  return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      whileHover={{ y: -2, scale: 1.01 }}
-      whileTap={{ scale: 0.985 }}
-      transition={spring}
-      className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 py-3 text-sm font-black ${className}`}
-    >
-      {content}
-    </motion.button>
-  );
-}
+const Navbar = () => {
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-function SectionHeader({
-  eyebrow,
-  title,
-  text,
-  align = 'center',
-  tone = 'light',
-}: {
-  eyebrow: string;
-  title: string;
-  text?: string;
-  align?: 'center' | 'left';
-  tone?: 'light' | 'dark';
-}) {
-  const isDark = tone === 'dark';
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  return (
-    <Reveal className={align === 'center' ? 'mx-auto max-w-3xl text-center' : 'max-w-2xl'}>
-      <p className={`text-xs font-black uppercase ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>{eyebrow}</p>
-      <h2 className={`mt-4 text-3xl font-black leading-tight sm:text-5xl ${isDark ? 'text-white' : 'text-slate-950'}`}>
-        {title}
-      </h2>
-      {text && <p className={`mt-5 text-base leading-8 sm:text-lg ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{text}</p>}
-    </Reveal>
-  );
-}
-
-function MetricTile({ label, value, tone }: { label: string; value: string; tone: 'emerald' | 'amber' | 'blue' }) {
-  const toneClass = {
-    emerald: 'text-emerald-300 bg-emerald-300/10 border-emerald-300/15',
-    amber: 'text-amber-200 bg-amber-300/10 border-amber-300/15',
-    blue: 'text-sky-200 bg-sky-300/10 border-sky-300/15',
-  }[tone];
-
-  return (
-    <motion.div
-      variants={fadeUp}
-      whileHover={{ y: -3 }}
-      transition={spring}
-      className={`rounded-lg border p-4 ${toneClass}`}
-    >
-      <p className="text-xs font-bold opacity-80">{label}</p>
-      <p className="mt-2 text-2xl font-black text-white">{value}</p>
-    </motion.div>
-  );
-}
-
-function DashboardMockup() {
-  const shouldReduceMotion = useReducedMotion();
-  const bars = [46, 72, 58, 86, 64, 92, 78, 96, 69, 84];
-  const payments = [
-    ['Wave', '+250 000 FCFA', 'Quittance générée', 'text-sky-200'],
-    ['Orange Money', '+180 000 FCFA', 'Bailleur notifié', 'text-emerald-200'],
-    ['PayDunya', '+75 000 FCFA', 'Commission calculée', 'text-violet-200'],
-    ['Retard détecté', 'J+7', 'Relance prête', 'text-amber-200'],
+  const navLinks = [
+    { name: 'Solution', href: '#solution' },
+    { name: 'Fonctionnalités', href: '#features' },
+    { name: 'Sécurité', href: '#security' },
+    { name: 'Tarifs', href: '#pricing' },
   ];
 
   return (
-    <motion.div
-      initial={{ opacity: 0.9, y: 20, rotateX: 6 }}
-      animate={{ opacity: 1, y: 0, rotateX: 0 }}
-      transition={{ duration: 0.9, ease }}
-      className="relative mx-auto w-full max-w-3xl"
-    >
-      <motion.div
-        aria-hidden
-        className="absolute -inset-8 rounded-lg bg-[radial-gradient(circle_at_30%_20%,rgba(52,211,153,0.22),transparent_34%),radial-gradient(circle_at_80%_65%,rgba(245,158,11,0.14),transparent_30%)] blur-2xl"
-        animate={shouldReduceMotion ? undefined : { opacity: [0.65, 0.95, 0.65], scale: [0.98, 1.02, 0.98] }}
-        transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+    <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'bg-slate-950/80 backdrop-blur-md border-b border-slate-800 py-4' : 'bg-transparent py-6'}`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <Building2 className="w-6 h-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold text-white tracking-tight">Samay <span className="text-emerald-400">Këur</span></span>
+          </div>
+
+          {/* Desktop Nav */}
+          <div className="hidden md:flex items-center space-x-8">
+            {navLinks.map((link) => (
+              <a key={link.name} href={link.href} className="text-sm font-medium text-slate-300 hover:text-emerald-400 transition-colors">
+                {link.name}
+              </a>
+            ))}
+            <Button variant="primary" className="!py-2 !px-4 !text-xs">
+              Connexion
+            </Button>
+          </div>
+
+          {/* Mobile Toggle */}
+          <button className="md:hidden text-slate-300" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden absolute top-full left-0 w-full bg-slate-950 border-b border-slate-800 p-4 flex flex-col space-y-4 shadow-2xl">
+          {navLinks.map((link) => (
+            <a key={link.name} href={link.href} className="text-base font-medium text-slate-300 hover:text-emerald-400 py-2" onClick={() => setMobileMenuOpen(false)}>
+              {link.name}
+            </a>
+          ))}
+          <Button variant="primary" className="w-full justify-center">Connexion</Button>
+        </div>
+      )}
+    </nav>
+  );
+};
+
+const Hero = () => {
+  return (
+    <section className="relative min-h-screen flex items-center pt-20 overflow-hidden bg-slate-950">
+      {/* Background Effects */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-900/20 via-slate-950 to-slate-950" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
+      
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 grid lg:grid-cols-2 gap-12 items-center">
+        <div className="space-y-8 animate-fade-in-up">
+          <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-950/50 border border-emerald-500/20 text-emerald-400 text-xs font-semibold tracking-wide uppercase">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Nouvelle Génération Proptech
+          </div>
+          
+          <h1 className="text-5xl md:text-7xl font-bold text-white leading-[1.1] tracking-tight">
+            L'Infrastructure de <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-emerald-300 to-amber-200">
+              Confiance Immobilière
+            </span>
+          </h1>
+          
+          <p className="text-lg md:text-xl text-slate-400 max-w-xl leading-relaxed">
+            Passez du chaos administratif à la maîtrise totale. La première plateforme SaaS conçue pour les agences et bailleurs exigeants d'Afrique francophone.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <Button variant="gold" icon={ArrowRight}>
+              Démarrer l'essai gratuit
+            </Button>
+            <Button variant="secondary" icon={Play}>
+              Voir la démo
+            </Button>
+          </div>
+
+          <div className="pt-8 flex items-center space-x-6 text-sm text-slate-500">
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>Sans engagement</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>Setup en 5 min</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              <span>Support local</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Hero Visual / Dashboard Preview */}
+        <div className="relative lg:h-[600px] w-full hidden lg:block perspective-1000">
+          <div className="relative w-full h-full transform rotate-y-[-12deg] rotate-x-[5deg] transition-transform duration-700 hover:rotate-y-0 hover:rotate-x-0">
+            {/* Main Dashboard Card */}
+            <div className="absolute inset-0 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+              {/* Header */}
+              <div className="h-14 bg-slate-950 border-b border-slate-800 flex items-center px-6 space-x-4">
+                <div className="flex space-x-2">
+                  <div className="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50" />
+                  <div className="w-3 h-3 rounded-full bg-amber-500/20 border border-amber-500/50" />
+                  <div className="w-3 h-3 rounded-full bg-emerald-500/20 border border-emerald-500/50" />
+                </div>
+                <div className="h-2 w-64 bg-slate-800 rounded-full ml-4" />
+              </div>
+              {/* Body */}
+              <div className="flex-1 p-6 grid grid-cols-3 gap-6 bg-slate-900/50">
+                {/* Sidebar */}
+                <div className="col-span-1 space-y-4">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="h-10 bg-slate-800/50 rounded-lg w-full animate-pulse" style={{ animationDelay: `${i * 100}ms` }} />
+                  ))}
+                </div>
+                {/* Content */}
+                <div className="col-span-2 space-y-6">
+                  <div className="flex justify-between">
+                    <div className="h-8 w-32 bg-slate-800 rounded-lg" />
+                    <div className="h-8 w-24 bg-emerald-900/30 border border-emerald-500/20 rounded-lg" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="h-32 bg-slate-800/30 border border-slate-700 rounded-xl p-4">
+                      <div className="h-2 w-12 bg-slate-700 rounded mb-4" />
+                      <div className="h-8 w-24 bg-emerald-500/20 rounded" />
+                    </div>
+                    <div className="h-32 bg-slate-800/30 border border-slate-700 rounded-xl p-4">
+                      <div className="h-2 w-12 bg-slate-700 rounded mb-4" />
+                      <div className="h-8 w-24 bg-amber-500/20 rounded" />
+                    </div>
+                  </div>
+                  <div className="h-40 bg-slate-800/30 border border-slate-700 rounded-xl mt-6 relative overflow-hidden">
+                     <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-emerald-900/20 to-transparent" />
+                     <div className="flex items-end justify-around h-full p-4 pb-0">
+                        {[40, 70, 45, 90, 60, 80, 50].map((h, i) => (
+                          <div key={i} className="w-8 bg-emerald-500/20 rounded-t-sm" style={{ height: `${h}%` }} />
+                        ))}
+                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Floating Elements */}
+            <div className="absolute -right-12 top-20 w-64 bg-slate-800 border border-slate-600 rounded-xl p-4 shadow-2xl animate-bounce-slow">
+              <div className="flex items-center space-x-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6 text-green-500" />
+                </div>
+                <div>
+                  <div className="text-xs text-slate-400">Paiement Reçu</div>
+                  <div className="text-sm font-bold text-white">250.000 FCFA</div>
+                </div>
+              </div>
+              <div className="h-1.5 w-full bg-slate-700 rounded-full overflow-hidden">
+                <div className="h-full w-full bg-green-500" />
+              </div>
+            </div>
+
+            <div className="absolute -left-8 bottom-32 w-56 bg-slate-800 border border-slate-600 rounded-xl p-4 shadow-2xl animate-bounce-slow-delayed">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-slate-400">Contrat Signé</span>
+                <QrCode className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div className="text-sm font-semibold text-white">Appartement V.I.P</div>
+              <div className="text-xs text-slate-500 mt-1">Dakar, Plateau</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const TrustLogos = () => (
+  <section className="py-10 border-y border-slate-800 bg-slate-950/50">
+    <div className="max-w-7xl mx-auto px-4 text-center">
+      <p className="text-sm font-medium text-slate-500 mb-8 uppercase tracking-widest">Ils nous font confiance pour gérer leur patrimoine</p>
+      <div className="flex flex-wrap justify-center items-center gap-12 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
+        {['Wave', 'Orange Money', 'Djamo', 'CBAO', 'BICIS'].map((brand) => (
+          <div key={brand} className="text-xl font-bold text-slate-300 flex items-center space-x-2">
+            <Building2 className="w-6 h-6" />
+            <span>{brand}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+);
+
+const ProblemSolution = () => (
+  <section id="solution" className="py-24 bg-slate-950 relative overflow-hidden">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <SectionHeading 
+        badge="Transformation"
+        title="De l'artisanal à l'industriel"
+        subtitle="L'immobilier africain change. Les outils doivent suivre. Samay Këur remplace vos fichiers Excel et vos chats WhatsApp par une infrastructure robuste."
       />
 
-      <motion.div
-        className="absolute -left-2 top-10 z-20 hidden rounded-lg border border-emerald-200/60 bg-white/[0.94] px-3 py-2 shadow-2xl backdrop-blur sm:flex"
-        animate={shouldReduceMotion ? undefined : { y: [0, -8, 0], x: [0, 3, 0] }}
-        transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
-      >
-        <div className="mr-3 flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
-          <Check className="h-4 w-4" />
-        </div>
-        <div>
-          <p className="text-sm font-black text-slate-950">Paiement reçu</p>
-          <p className="text-xs font-semibold text-slate-500">250 000 FCFA</p>
-        </div>
-      </motion.div>
-
-      <motion.div
-        className="absolute -right-2 top-44 z-20 hidden rounded-lg border border-amber-200/70 bg-white/[0.94] px-3 py-2 shadow-2xl backdrop-blur md:flex"
-        animate={shouldReduceMotion ? undefined : { y: [0, 9, 0], x: [0, -3, 0] }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-      >
-        <div className="mr-3 flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
-          <Bell className="h-4 w-4" />
-        </div>
-        <div>
-          <p className="text-sm font-black text-slate-950">Bailleur notifié</p>
-          <p className="text-xs font-semibold text-slate-500">Rapport mensuel prêt</p>
-        </div>
-      </motion.div>
-
-      <div className="relative overflow-hidden rounded-lg border border-white/10 bg-[rgba(7,18,15,0.92)] shadow-[0_35px_130px_rgba(0,0,0,0.35)] backdrop-blur">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-          <div className="flex items-center gap-3">
-            <BrandMark size="sm" tone="dark" animated={false} />
-            <div>
-              <p className="text-sm font-black text-white">Samay Këur OS</p>
-              <p className="text-xs text-slate-400">Portefeuille Dakar Plateau</p>
-            </div>
+      <div className="grid md:grid-cols-2 gap-12 mt-16">
+        {/* Before */}
+        <div className="relative p-8 rounded-3xl bg-red-950/10 border border-red-900/30">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <X className="w-32 h-32 text-red-500" />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="rounded-md bg-emerald-400/12 px-2 py-1 text-xs font-black text-emerald-300">live</span>
-            <span className="rounded-md bg-white/[0.08] px-2 py-1 text-xs font-bold text-slate-300">Mai 2026</span>
-          </div>
+          <h3 className="text-2xl font-bold text-red-400 mb-6 flex items-center">
+            <span className="w-8 h-8 rounded-full bg-red-900/50 flex items-center justify-center mr-3 text-sm">Avant</span>
+            La gestion actuelle
+          </h3>
+          <ul className="space-y-4">
+            {[
+              'Paiements en cash non tracés',
+              'Quittances manuelles sur Word',
+              'Relances oubliées sur WhatsApp',
+              'Données dispersées sur plusieurs téléphones',
+              'Impossible de savoir qui doit quoi',
+              'Risque élevé de fraude interne'
+            ].map((item, i) => (
+              <li key={i} className="flex items-start text-slate-400">
+                <X className="w-5 h-5 text-red-500/50 mr-3 mt-0.5 shrink-0" />
+                {item}
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <div className="grid gap-3 p-3 sm:grid-cols-3">
-          <MetricTile label="Revenus encaissés" value="8,4M" tone="emerald" />
-          <MetricTile label="Recouvrement" value="94%" tone="blue" />
-          <MetricTile label="Risque impayé" value="-12%" tone="amber" />
-        </div>
-
-        <div className="grid gap-3 px-3 pb-3 lg:grid-cols-[1.25fr_0.75fr]">
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-black text-white">Encaissements intelligents</p>
-                <p className="text-xs text-slate-400">Wave, Orange Money, PayDunya</p>
-              </div>
-              <BarChart3 className="h-4 w-4 text-emerald-300" />
-            </div>
-            <div className="flex h-40 items-end gap-2">
-              {bars.map((height, index) => (
-                <div key={index} className="flex h-full flex-1 items-end rounded-md bg-white/[0.09] p-0.5">
-                  <motion.div
-                    className="w-full origin-bottom rounded-md bg-gradient-to-t from-emerald-600 via-emerald-300 to-white shadow-[0_0_20px_rgba(52,211,153,0.28)]"
-                    style={{ height: `${height}%` }}
-                    initial={{ scaleY: 0.18, opacity: 0.72 }}
-                    animate={{ scaleY: 1, opacity: 1 }}
-                    transition={{ duration: 0.9, ease, delay: index * 0.04 }}
-                  />
-                </div>
-              ))}
-            </div>
+        {/* After */}
+        <div className="relative p-8 rounded-3xl bg-emerald-950/20 border border-emerald-500/20 shadow-2xl shadow-emerald-900/10">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <CheckCircle2 className="w-32 h-32 text-emerald-500" />
           </div>
-
-          <div className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm font-black text-white">Activité temps réel</p>
-              <SignalIcon />
-            </div>
-            <div className="space-y-3">
-              {payments.map(([name, value, note, color], index) => (
-                <motion.div
-                  key={name}
-                  initial={{ opacity: 0, x: 16 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.46, ease, delay: 0.18 + index * 0.07 }}
-                  className="rounded-lg border border-white/10 bg-slate-950/38 p-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="truncate text-xs font-black text-white">{name}</p>
-                    <p className={`text-xs font-black ${color}`}>{value}</p>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-400">{note}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
+          <h3 className="text-2xl font-bold text-emerald-400 mb-6 flex items-center">
+            <span className="w-8 h-8 rounded-full bg-emerald-900/50 flex items-center justify-center mr-3 text-sm">Avec Samay Këur</span>
+            L'excellence opérationnelle
+          </h3>
+          <ul className="space-y-4">
+            {[
+              'Encaissements Mobile Money & Cash tracés',
+              'Génération automatique de quittances PDF',
+              'Relances automatiques SMS & Email',
+              'Centralisation cloud sécurisée (Offline-first)',
+              'Tableau de bord financier en temps réel',
+              'Audit trail complet et permissions rôles'
+            ].map((item, i) => (
+              <li key={i} className="flex items-start text-slate-300">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 mr-3 mt-0.5 shrink-0" />
+                {item}
+              </li>
+            ))}
+          </ul>
         </div>
+      </div>
+    </div>
+  </section>
+);
 
-        <div className="grid grid-cols-3 gap-3 border-t border-white/10 p-3">
-          {[
-            ['Unités louées', '78/93', 'bg-emerald-300'],
-            ['Quittances', '126', 'bg-sky-300'],
-            ['Commissions', '840k', 'bg-amber-300'],
-          ].map(([label, value, dot]) => (
-            <div key={label} className="flex items-center justify-between rounded-lg bg-white/[0.05] px-3 py-2">
-              <span className="flex min-w-0 items-center gap-2 text-xs font-semibold text-slate-400">
-                <span className={`h-2 w-2 rounded-full ${dot}`} />
-                <span className="truncate">{label}</span>
-              </span>
-              <span className="text-sm font-black text-white">{value}</span>
-            </div>
+const FeaturesGrid = () => {
+  const features = [
+    {
+      icon: FileText,
+      title: "GED Documentaire Avancée",
+      description: "Stockage, versioning et génération automatique de contrats, quittances et états des lieux. Vérification par QR Code."
+    },
+    {
+      icon: Zap,
+      title: "Paiements Hybrides",
+      description: "Intégration native Wave, Orange Money, FMoney et suivi rigoureux du cash. Rapprochement bancaire automatique."
+    },
+    {
+      icon: Smartphone,
+      title: "Mode Offline-First",
+      description: "Travaillez sans internet. Vos données se synchronisent automatiquement dès la reconnexion. Idéal pour le terrain."
+    },
+    {
+      icon: Users,
+      title: "Gestion Multi-Agences",
+      description: "Architecture multi-tenant stricte. Gérez plusieurs agences, équipes et portefeuilles depuis un seul compte maître."
+    },
+    {
+      icon: ShieldCheck,
+      title: "Sécurité Bancaire",
+      description: "Chiffrement des données, Row Level Security (RLS), backups quotidiens et journal d'audit complet de toutes les actions."
+    },
+    {
+      icon: BarChart3,
+      title: "Reporting Financier",
+      description: "Suivi du taux d'occupation, recouvrement, churn locataire et prévisions de trésorerie. Export comptable simplifié."
+    }
+  ];
+
+  return (
+    <section id="features" className="py-24 bg-slate-950 relative">
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <SectionHeading 
+          badge="Fonctionnalités"
+          title="Une suite complète pour professionnels"
+          subtitle="Tout ce dont vous avez besoin pour gérer, louer et entretenir votre patrimoine immobilier avec précision."
+        />
+        
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {features.map((feature, index) => (
+            <FeatureCard key={index} {...feature} />
           ))}
         </div>
       </div>
-    </motion.div>
+    </section>
   );
-}
+};
 
-function SignalIcon() {
-  return (
-    <div className="flex h-4 items-end gap-0.5">
-      {[5, 8, 11, 14].map((height) => (
-        <span key={height} className="w-0.5 rounded-full bg-emerald-300" style={{ height }} />
-      ))}
-    </div>
-  );
-}
-
-function PhonePreview() {
-  const rows = [
-    ['Loyer reçu', 'Villa Almadies', '+420k'],
-    ['Relance', 'Studio Point E', 'J+5'],
-    ['Quittance', 'Appartement C12', 'PDF'],
-  ];
-
-  return (
-    <Reveal className="relative mx-auto max-w-xs">
-      <div className="absolute -inset-8 rounded-lg bg-emerald-300/18 blur-2xl" />
-      <motion.div
-        whileHover={{ y: -4 }}
-        transition={spring}
-        className="relative rounded-[28px] border border-slate-200 bg-slate-950 p-2 shadow-[0_34px_100px_rgba(15,23,42,0.28)]"
-      >
-        <div className="overflow-hidden rounded-[22px] bg-[#f8faf5]">
-          <div className="bg-[#09211a] px-4 pb-7 pt-5 text-white">
-            <div className="flex items-center justify-between">
-              <BrandMark size="sm" tone="dark" animated={false} />
-              <span className="rounded-md bg-emerald-300/14 px-2 py-1 text-xs font-black text-emerald-200">online</span>
-            </div>
-            <p className="mt-6 text-xs font-bold text-emerald-200">Solde à reverser</p>
-            <p className="mt-1 text-3xl font-black">1,08M</p>
-            <p className="mt-2 text-sm text-slate-300">Bailleurs notifiés automatiquement</p>
-          </div>
-          <div className="-mt-4 space-y-3 px-4 pb-5">
-            <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-              <p className="text-xs font-bold text-slate-500">Recouvrement du mois</p>
-              <div className="mt-3 h-2 rounded-full bg-slate-100">
-                <div className="h-2 w-[86%] rounded-full bg-emerald-500" />
-              </div>
-            </div>
-            {rows.map(([label, place, value]) => (
-              <div key={place} className="rounded-lg border border-slate-200 bg-white p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-black text-slate-950">{label}</p>
-                    <p className="mt-1 text-xs text-slate-500">{place}</p>
-                  </div>
-                  <p className="text-sm font-black text-emerald-700">{value}</p>
+const SecuritySection = () => (
+  <section id="security" className="py-24 bg-slate-900 relative overflow-hidden">
+    <div className="absolute top-0 right-0 w-1/2 h-full bg-emerald-900/5 blur-3xl" />
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div>
+          <span className="text-emerald-400 font-semibold tracking-wider uppercase text-sm">Confiance & Souveraineté</span>
+          <h2 className="text-4xl font-bold text-white mt-4 mb-6">Vos données sont votre actif le plus précieux.</h2>
+          <p className="text-slate-400 text-lg mb-8 leading-relaxed">
+            Nous avons conçu Samay Këur avec une architecture de sécurité de niveau enterprise. Chaque agence est isolée, chaque action est tracée, chaque donnée est sauvegardée.
+          </p>
+          
+          <div className="space-y-6">
+            {[
+              { title: "Isolation Stricte", desc: "Row Level Security (RLS) assure qu'aucune agence ne peut voir les données d'une autre." },
+              { title: "Traçabilité Totale", desc: "Qui a fait quoi et quand ? L'historique complet des modifications est conservé indéfiniment." },
+              { title: "Backup Automatisé", desc: "Sauvegardes incrémentales toutes les heures. Restauration possible à n'importe quel point dans le temps." }
+            ].map((item, i) => (
+              <div key={i} className="flex space-x-4">
+                <div className="shrink-0 w-12 h-12 rounded-lg bg-emerald-950 border border-emerald-500/20 flex items-center justify-center">
+                  <Lock className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div>
+                  <h4 className="text-white font-semibold text-lg">{item.title}</h4>
+                  <p className="text-slate-400">{item.desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      </motion.div>
-    </Reveal>
-  );
-}
-
-export function LandingPage({ onNavigate }: LandingPageProps) {
-  const [openFaq, setOpenFaq] = useState(0);
-  const shouldReduceMotion = useReducedMotion();
-  const year = useMemo(() => new Date().getFullYear(), []);
-
-  const goSignup = () => onNavigate?.('auth');
-  const goDemo = () => {
-    window.location.href = whatsappHref('Bonjour, je souhaite une démo de Samay Këur pour mon agence.');
-  };
-
-  return (
-    <div className="min-h-screen overflow-hidden bg-[#f6f3ea] text-slate-950">
-      <motion.header
-        initial={{ y: -18, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.55, ease }}
-        className="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[#06110d] text-white shadow-[0_12px_36px_rgba(6,17,13,0.22)]"
-      >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-3">
-            <BrandMark size="sm" tone="dark" animated={false} />
-            <span className="text-base font-black tracking-[0.18em]">SAMAY KEUR</span>
-          </button>
-          <nav className="hidden items-center gap-7 text-sm font-bold text-slate-200 md:flex">
-            <a href="#solution" className="hover:text-white">Solution</a>
-            <a href="#dashboard" className="hover:text-white">Dashboard</a>
-            <a href="#mobile" className="hover:text-white">Mobile</a>
-            <a href="#tarifs" className="hover:text-white">Tarifs</a>
-            <a href="#faq" className="hover:text-white">FAQ</a>
-          </nav>
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => onNavigate?.('auth')} className="hidden rounded-lg px-4 py-2 text-sm font-black text-slate-100 hover:bg-white/10 sm:block">
-              Connexion
-            </button>
-            <button type="button" onClick={goSignup} className="rounded-lg bg-white px-4 py-2 text-sm font-black text-slate-950 hover:bg-emerald-50">
-              Essai gratuit
-            </button>
-          </div>
-        </div>
-      </motion.header>
-
-      <main>
-        <section className="relative overflow-hidden bg-[#06110d] pt-20 text-white">
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:58px_58px]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(52,211,153,0.18),transparent_30%),radial-gradient(circle_at_82%_18%,rgba(245,158,11,0.12),transparent_28%),linear-gradient(180deg,transparent_0%,#06110d_88%)]" />
-          <motion.div
-            aria-hidden
-            className="absolute left-1/2 top-28 h-px w-[70vw] -translate-x-1/2 bg-gradient-to-r from-transparent via-emerald-200/50 to-transparent"
-            animate={shouldReduceMotion ? undefined : { opacity: [0.25, 0.8, 0.25], scaleX: [0.9, 1.02, 0.9] }}
-            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-          />
-
-          <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[0.85fr_1.15fr] lg:px-8 lg:py-24">
-            <motion.div variants={stagger} initial="hidden" animate="visible">
-              <motion.div variants={heroFade} transition={{ duration: 0.56, ease }} className="mb-6 inline-flex items-center gap-2 rounded-lg border border-emerald-200/14 bg-white/[0.06] px-3 py-2 text-sm font-black text-emerald-100 backdrop-blur">
-                <Sparkles className="h-4 w-4 text-emerald-300" />
-                SaaS immobilier premium pour agences africaines
-              </motion.div>
-              <motion.h1 variants={heroFade} transition={{ duration: 0.62, ease }} className="max-w-4xl text-5xl font-black leading-[0.96] text-white sm:text-6xl lg:text-7xl">
-                Gérez vos loyers sans chaos.
-                <span className="block bg-gradient-to-r from-emerald-200 via-white to-amber-100 bg-clip-text text-transparent">
-                  Pilotez chaque franc avec clarté.
-                </span>
-              </motion.h1>
-              <motion.p variants={heroFade} transition={{ duration: 0.6, ease }} className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
-                Samay Këur centralise paiements, impayés, quittances, rapports bailleurs et mobile money dans une expérience simple, fiable et pensée pour les agences immobilières du Sénégal et d’Afrique francophone.
-              </motion.p>
-              <motion.div variants={heroFade} transition={{ duration: 0.6, ease }} className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <PremiumButton onClick={goSignup}>Essayer gratuitement</PremiumButton>
-                <PremiumButton variant="secondary" onClick={goDemo}>Voir une démo</PremiumButton>
-                <PremiumButton variant="secondary" href={whatsappHref('Bonjour, je souhaite parler à l’équipe Samay Këur.')}>
-                  WhatsApp
-                </PremiumButton>
-              </motion.div>
-              <motion.div variants={stagger} className="mt-8 grid grid-cols-3 gap-3 border-t border-white/10 pt-6">
-                {businessBenefits.slice(0, 3).map(([value, label]) => (
-                  <motion.div key={label} variants={heroFade}>
-                    <p className="text-2xl font-black text-white">{value}</p>
-                    <p className="mt-1 text-xs font-bold text-slate-400">{label}</p>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </motion.div>
-            <DashboardMockup />
-          </div>
-        </section>
-
-        <section className="border-y border-emerald-900/10 bg-[#f6f3ea] px-4 py-8 sm:px-6 lg:px-8">
-          <Reveal className="mx-auto max-w-7xl">
-            <p className="text-center text-xs font-black uppercase text-slate-500">Pensé pour les agences qui veulent inspirer confiance</p>
-            <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-5">
-              {trustLogos.map((logo) => (
-                <div key={logo} className="rounded-lg border border-emerald-900/10 bg-white/70 px-4 py-4 text-center text-sm font-black text-slate-700 shadow-sm">
-                  {logo}
+        
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-amber-500 blur-2xl opacity-20 rounded-full" />
+          <div className="relative bg-slate-950 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+            <div className="flex items-center justify-between mb-8 pb-8 border-b border-slate-800">
+              <div className="flex items-center space-x-3">
+                <ShieldCheck className="w-8 h-8 text-emerald-500" />
+                <span className="text-xl font-bold text-white">Certification Sécurité</span>
+              </div>
+              <span className="px-3 py-1 bg-emerald-900/30 text-emerald-400 text-xs rounded-full border border-emerald-500/20">Niveau Enterprise</span>
+            </div>
+            
+            <div className="space-y-4">
+              {[
+                "Chiffrement AES-256 au repos",
+                "Transmission TLS 1.3",
+                "Authentification 2FA disponible",
+                "Hébergement redondant",
+                "Conformité RGPD & Lois locales"
+              ].map((check, i) => (
+                <div key={i} className="flex items-center space-x-3 text-slate-300">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                  <span>{check}</span>
                 </div>
               ))}
             </div>
-          </Reveal>
-        </section>
-
-        <section className="bg-white px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <SectionHeader
-              eyebrow="Le vrai problème"
-              title="Les agences ne perdent pas seulement du temps. Elles perdent de la confiance."
-              text="Quand le suivi des loyers repose sur Excel, WhatsApp et des cahiers, les erreurs financières deviennent invisibles jusqu’au moment où elles coûtent cher."
-            />
-            <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="mt-12 grid gap-4 lg:grid-cols-3">
-              {problems.map((problem) => {
-                const Icon = problem.icon;
-                return (
-                  <motion.div key={problem.title} variants={fadeUp} whileHover={{ y: -5 }} transition={spring} className="rounded-lg border border-slate-200 bg-[#fbfaf6] p-6">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <p className="mt-6 text-xl font-black text-slate-950">{problem.title}</p>
-                    <p className="mt-3 leading-7 text-slate-600">{problem.text}</p>
-                    <div className="mt-6 border-t border-slate-200 pt-5">
-                      <p className="text-3xl font-black text-slate-950">{problem.metric}</p>
-                      <p className="mt-1 text-sm font-bold text-slate-500">{problem.caption}</p>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          </div>
-        </section>
-
-        <section id="solution" className="bg-[#07120f] px-4 py-20 text-white sm:px-6 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-center">
-            <SectionHeader
-              align="left"
-              tone="dark"
-              eyebrow="Solution"
-              title="Une console unique pour encaisser, suivre, prouver et rassurer."
-              text="Samay Këur transforme la gestion locative en workflow clair : paiement reçu, quittance générée, impayé détecté, bailleur informé, rapport prêt."
-            />
-            <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="grid gap-3 sm:grid-cols-2">
-              {features.map((feature) => {
-                const Icon = feature.icon;
-                return (
-                  <motion.div key={feature.title} variants={fadeUp} whileHover={{ y: -4, backgroundColor: 'rgba(255,255,255,0.075)' }} transition={spring} className="rounded-lg border border-white/10 bg-white/[0.045] p-5">
-                    <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-300/12 text-emerald-200">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <p className="text-base font-black text-white">{feature.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-slate-400">{feature.text}</p>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          </div>
-        </section>
-
-        <section id="dashboard" className="bg-[#f6f3ea] px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <SectionHeader
-              eyebrow="Dashboard preview"
-              title="Un pilotage financier qui ressemble enfin à un vrai logiciel."
-              text="KPIs, revenus, impayés, historique, mobile money et rapports apparaissent dans une interface lisible, calme et exploitable."
-            />
-            <div className="mt-12">
-              <DashboardMockup />
+            
+            <div className="mt-8 pt-8 border-t border-slate-800 flex justify-between items-center">
+              <span className="text-sm text-slate-500">Dernier audit : Il y a 2 jours</span>
+              <span className="text-emerald-400 font-mono text-sm">STATUT: SÉCURISÉ</span>
             </div>
           </div>
-        </section>
+        </div>
+      </div>
+    </div>
+  </section>
+);
 
-        <section id="mobile" className="bg-white px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1fr_0.8fr] lg:items-center">
-            <div>
-              <SectionHeader
-                align="left"
-                eyebrow="Mobile-first"
-                title="Sur le terrain, l’expérience doit rester simple."
-                text="Un agent peut vérifier un paiement, repérer un retard, générer une quittance ou rassurer un bailleur depuis un écran compact, sans perdre le fil."
-              />
-              <motion.div variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.2 }} className="mt-8 grid gap-3 sm:grid-cols-2">
-                {[
-                  [Smartphone, 'Expérience app-like', 'Des actions lisibles, rapides et adaptées au mobile.'],
-                  [Lock, 'Confiance financière', 'Chaque action sensible garde une logique structurée.'],
-                  [Globe2, 'Marché local', 'Pensé pour mobile money, WhatsApp et agences africaines.'],
-                  [ShieldCheck, 'Données maîtrisées', 'Rôles, accès et séparation par agence.'],
-                ].map(([Icon, title, text]) => {
-                  const FeatureIcon = Icon as typeof Smartphone;
-                  return (
-                    <motion.div key={title as string} variants={fadeUp} className="rounded-lg border border-slate-200 bg-[#fbfaf6] p-5">
-                      <FeatureIcon className="h-5 w-5 text-emerald-700" />
-                      <p className="mt-4 font-black text-slate-950">{title as string}</p>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">{text as string}</p>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            </div>
-            <PhonePreview />
+const Pricing = () => {
+  const [annual, setAnnual] = useState(true);
+
+  return (
+    <section id="pricing" className="py-24 bg-slate-950 relative">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <SectionHeading 
+          badge="Offres Flexibles"
+          title="Investissez dans la sérénité"
+          subtitle="Des plans adaptés à la taille de votre portefeuille, sans frais cachés."
+        />
+
+        <div className="flex justify-center mb-16">
+          <div className="bg-slate-900 p-1 rounded-xl inline-flex border border-slate-800">
+            <button 
+              onClick={() => setAnnual(false)}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${!annual ? 'bg-slate-800 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+            >
+              Mensuel
+            </button>
+            <button 
+              onClick={() => setAnnual(true)}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${annual ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+            >
+              Annuel <span className="ml-1 text-xs opacity-80">(-20%)</span>
+            </button>
           </div>
-        </section>
+        </div>
 
-        <section className="bg-[#07120f] px-4 py-20 text-white sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <SectionHeader
-              tone="dark"
-              eyebrow="Avantages business"
-              title="Moins de friction. Plus de recouvrement. Plus de crédibilité."
-              text="Le produit donne à l’agence une image plus sérieuse et réduit les moments flous qui abîment la relation avec les bailleurs."
-            />
-            <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {businessBenefits.map(([value, label]) => (
-                <Reveal key={label} className="rounded-lg border border-white/10 bg-white/[0.045] p-6">
-                  <p className="text-4xl font-black text-white">{value}</p>
-                  <p className="mt-3 text-sm font-bold leading-6 text-slate-400">{label}</p>
-                </Reveal>
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {/* Starter */}
+          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 flex flex-col hover:border-slate-600 transition-colors">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-white">Starter</h3>
+              <p className="text-slate-400 text-sm mt-2">Pour les petits bailleurs</p>
+            </div>
+            <div className="mb-6">
+              <span className="text-4xl font-bold text-white">{annual ? '15.000' : '18.000'}</span>
+              <span className="text-slate-500"> FCFA / mois</span>
+            </div>
+            <ul className="space-y-4 mb-8 flex-1">
+              {['Jusqu\'à 10 logements', 'Gestion locataires', 'Quittances PDF', 'Support email'].map((feat, i) => (
+                <li key={i} className="flex items-center text-slate-300 text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-slate-500 mr-3" /> {feat}
+                </li>
               ))}
-            </div>
+            </ul>
+            <Button variant="outline" className="w-full">Commencer</Button>
           </div>
-        </section>
 
-        <section className="bg-white px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <SectionHeader
-              eyebrow="Preuve sociale"
-              title="Une expérience pensée pour des utilisateurs réels, pas pour une démo vide."
-              text="Les agences veulent gagner du temps, mais surtout prouver que l’argent est bien suivi."
-            />
-            <div className="mt-12 grid gap-4 lg:grid-cols-3">
-              {testimonials.map((testimonial) => (
-                <Reveal key={testimonial.name} className="rounded-lg border border-slate-200 bg-[#fbfaf6] p-6">
-                  <p className="text-lg font-bold leading-8 text-slate-900">“{testimonial.quote}”</p>
-                  <div className="mt-6 flex items-center gap-3 border-t border-slate-200 pt-5">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-100 text-sm font-black text-emerald-800">
-                      {testimonial.name.slice(0, 1)}
-                    </div>
-                    <div>
-                      <p className="font-black text-slate-950">{testimonial.name}</p>
-                      <p className="text-sm font-semibold text-slate-500">{testimonial.role}</p>
-                    </div>
-                  </div>
-                </Reveal>
+          {/* Pro - Highlighted */}
+          <div className="relative bg-slate-900 border border-emerald-500/50 rounded-2xl p-8 flex flex-col shadow-2xl shadow-emerald-900/20 transform md:-scale-105 z-10">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-emerald-500 to-amber-500 text-slate-950 px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
+              Le plus populaire
+            </div>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-white">Agence Pro</h3>
+              <p className="text-slate-400 text-sm mt-2">Pour les gestionnaires actifs</p>
+            </div>
+            <div className="mb-6">
+              <span className="text-4xl font-bold text-white">{annual ? '45.000' : '55.000'}</span>
+              <span className="text-slate-500"> FCFA / mois</span>
+            </div>
+            <ul className="space-y-4 mb-8 flex-1">
+              {['Jusqu\'à 50 logements', 'Paiements Mobile Money', 'Relances automatiques', 'GED Illimitée', 'Multi-utilisateurs (3)', 'Tableau de bord avancé'].map((feat, i) => (
+                <li key={i} className="flex items-center text-white text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 mr-3" /> {feat}
+                </li>
               ))}
-            </div>
+            </ul>
+            <Button variant="gold" className="w-full">Essai Gratuit 14j</Button>
           </div>
-        </section>
 
-        <section id="tarifs" className="bg-[#f6f3ea] px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-7xl">
-            <SectionHeader
-              eyebrow="Pricing"
-              title="Des plans simples, avec onboarding et accompagnement."
-              text="Chaque plan est conçu pour réduire la friction de départ : essai gratuit, import des données, support WhatsApp et montée en charge progressive."
-            />
-            <div className="mt-12 grid gap-4 lg:grid-cols-4">
-              {plans.map((plan) => (
-                <Reveal
-                  key={plan.name}
-                  className={`relative rounded-lg border p-6 ${
-                    plan.highlighted
-                      ? 'border-emerald-500 bg-[#07120f] text-white shadow-[0_30px_100px_rgba(6,17,13,0.24)]'
-                      : 'border-emerald-900/10 bg-white text-slate-950'
-                  }`}
-                >
-                  {plan.highlighted && (
-                    <div className="mb-4 inline-flex rounded-md bg-emerald-300 px-2 py-1 text-xs font-black text-emerald-950">
-                      Recommandé
-                    </div>
-                  )}
-                  <p className="text-xl font-black">{plan.name}</p>
-                  <p className={`mt-3 text-sm leading-6 ${plan.highlighted ? 'text-slate-300' : 'text-slate-600'}`}>
-                    {plan.description}
-                  </p>
-                  <div className="mt-6">
-                    <span className="text-4xl font-black">{plan.price}</span>
-                    {plan.unit && <span className={`ml-2 text-sm font-bold ${plan.highlighted ? 'text-slate-300' : 'text-slate-500'}`}>{plan.unit}</span>}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={plan.name === 'Enterprise' ? goDemo : goSignup}
-                    className={`mt-6 w-full rounded-lg px-4 py-3 text-sm font-black ${
-                      plan.highlighted ? 'bg-emerald-300 text-emerald-950 hover:bg-emerald-200' : 'bg-slate-950 text-white hover:bg-emerald-950'
-                    }`}
-                  >
-                    {plan.name === 'Enterprise' ? 'Parler à l’équipe' : 'Commencer'}
-                  </button>
-                  <div className="mt-6 space-y-3">
-                    {plan.features.map((feature) => (
-                      <div key={feature} className="flex gap-3">
-                        <Check className={`mt-0.5 h-4 w-4 ${plan.highlighted ? 'text-emerald-300' : 'text-emerald-700'}`} />
-                        <span className={`text-sm font-semibold ${plan.highlighted ? 'text-slate-200' : 'text-slate-700'}`}>{feature}</span>
-                      </div>
-                    ))}
-                  </div>
-                </Reveal>
+          {/* Enterprise */}
+          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-8 flex flex-col hover:border-slate-600 transition-colors">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-white">Entreprise</h3>
+              <p className="text-slate-400 text-sm mt-2">Grands portefeuilles</p>
+            </div>
+            <div className="mb-6">
+              <span className="text-4xl font-bold text-white">Sur mesure</span>
+            </div>
+            <ul className="space-y-4 mb-8 flex-1">
+              {['Logements illimités', 'API dédiée', 'SSO & Permissions avancées', 'Account Manager dédié', 'Formation équipe', 'SLA Garanti'].map((feat, i) => (
+                <li key={i} className="flex items-center text-slate-300 text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-slate-500 mr-3" /> {feat}
+                </li>
               ))}
-            </div>
+            </ul>
+            <Button variant="outline" className="w-full">Contactez-nous</Button>
           </div>
-        </section>
+        </div>
+      </div>
+    </section>
+  );
+};
 
-        <section id="faq" className="bg-white px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.8fr_1.2fr]">
-            <SectionHeader
-              align="left"
-              eyebrow="FAQ"
-              title="Les questions que posent les agences sérieuses."
-              text="Une landing premium doit aussi rassurer vite : paiements, import, documents, démo et montée en charge."
-            />
-            <div className="space-y-3">
-              {faqs.map((faq, index) => (
-                <Reveal key={faq.question}>
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaq(openFaq === index ? -1 : index)}
-                    className="w-full rounded-lg border border-slate-200 bg-[#fbfaf6] p-5 text-left"
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="font-black text-slate-950">{faq.question}</span>
-                      <motion.span animate={{ rotate: openFaq === index ? 180 : 0 }} transition={spring}>
-                        <ChevronDown className="h-5 w-5 text-slate-500" />
-                      </motion.span>
-                    </div>
-                    <motion.div
-                      initial={false}
-                      animate={{ height: openFaq === index ? 'auto' : 0, opacity: openFaq === index ? 1 : 0 }}
-                      transition={{ duration: 0.28, ease }}
-                      className="overflow-hidden"
-                    >
-                      <p className="pt-4 leading-7 text-slate-600">{faq.answer}</p>
-                    </motion.div>
-                  </button>
-                </Reveal>
-              ))}
+const FAQ = () => {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  
+  const faqs = [
+    { q: "Mes données sont-elles vraiment sécurisées ?", a: "Absolument. Nous utilisons le même niveau de sécurité que les banques (chiffrement AES-256, SSL/TLS). Chaque agence est isolée techniquement et vos données sont sauvegardées quotidiennement sur des serveurs redondants." },
+    { q: "Que se passe-t-il si je n'ai pas internet ? ", a: "Samay Këur fonctionne en mode 'Offline-First'. Vous pouvez consulter vos dossiers, créer des quittances et enregistrer des paiements sans connexion. Tout se synchronisera automatiquement dès que vous retrouverez du réseau." },
+    { q: "Puis-je importer mes données depuis Excel ? ", a: "Oui, nous proposons un outil d'importation guidée pour reprendre vos locataires, immeubles et historiques de paiement depuis vos fichiers Excel existants en quelques clics." },
+    { q: "Comment fonctionnent les paiements Mobile Money ? ", a: "Nous sommes intégrés nativement avec Wave, Orange Money et FMoney. Vous recevez les fonds directement sur votre compte marchand, et le système rapproche automatiquement le paiement avec le bon locataire." }
+  ];
+
+  return (
+    <section className="py-24 bg-slate-950 border-t border-slate-900">
+      <div className="max-w-3xl mx-auto px-4">
+        <SectionHeading title="Questions Fréquentes" subtitle="Tout ce que vous devez savoir avant de vous lancer." />
+        
+        <div className="space-y-4">
+          {faqs.map((faq, i) => (
+            <div key={i} className="border border-slate-800 rounded-xl bg-slate-900/30 overflow-hidden">
+              <button 
+                onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                className="w-full px-6 py-4 text-left flex justify-between items-center hover:bg-slate-900/50 transition-colors"
+              >
+                <span className="font-medium text-slate-200">{faq.q}</span>
+                <ChevronRight className={`w-5 h-5 text-slate-500 transition-transform ${openIndex === i ? 'rotate-90' : ''}`} />
+              </button>
+              <div className={`px-6 overflow-hidden transition-all duration-300 ${openIndex === i ? 'max-h-40 pb-6' : 'max-h-0'}`}>
+                <p className="text-slate-400 leading-relaxed">{faq.a}</p>
+              </div>
             </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const Footer = () => (
+  <footer className="bg-slate-950 border-t border-slate-900 pt-16 pb-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="grid md:grid-cols-4 gap-12 mb-12">
+        <div className="col-span-1 md:col-span-2">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-lg flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-xl font-bold text-white">Samay <span className="text-emerald-400">Këur</span></span>
           </div>
-        </section>
+          <p className="text-slate-400 max-w-sm mb-6">
+            La première infrastructure numérique de confiance pour l'immobilier en Afrique francophone. Simplifiez, sécurisez,规模化.
+          </p>
+          <div className="flex space-x-4">
+            {/* Social placeholders */}
+            {[1, 2, 3].map(i => (
+              <div key={i} className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center hover:border-emerald-500/50 hover:text-emerald-400 transition-colors cursor-pointer text-slate-400">
+                <Globe className="w-5 h-5" />
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <div>
+          <h4 className="text-white font-semibold mb-6">Produit</h4>
+          <ul className="space-y-3 text-sm text-slate-400">
+            <li><a href="#" className="hover:text-emerald-400 transition-colors">Fonctionnalités</a></li>
+            <li><a href="#" className="hover:text-emerald-400 transition-colors">Sécurité</a></li>
+            <li><a href="#" className="hover:text-emerald-400 transition-colors">Tarifs</a></li>
+            <li><a href="#" className="hover:text-emerald-400 transition-colors">Mises à jour</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h4 className="text-white font-semibold mb-6">Entreprise</h4>
+          <ul className="space-y-3 text-sm text-slate-400">
+            <li><a href="#" className="hover:text-emerald-400 transition-colors">À propos</a></li>
+            <li><a href="#" className="hover:text-emerald-400 transition-colors">Contact</a></li>
+            <li><a href="#" className="hover:text-emerald-400 transition-colors">Mentions légales</a></li>
+            <li><a href="#" className="hover:text-emerald-400 transition-colors">Confidentialité</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div className="border-t border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center text-sm text-slate-500">
+        <p>&copy; 2024 Samay Këur. Tous droits réservés.</p>
+        <div className="flex space-x-6 mt-4 md:mt-0">
+          <span>Fait avec ❤️ à Dakar</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+);
 
-        <section className="bg-[#f6f3ea] px-4 py-20 sm:px-6 lg:px-8">
-          <Reveal className="mx-auto max-w-7xl overflow-hidden rounded-lg bg-[#07120f] px-6 py-14 text-center text-white shadow-[0_35px_120px_rgba(6,17,13,0.24)] sm:px-10">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-300 text-emerald-950">
-              <Zap className="h-6 w-6" />
-            </div>
-            <h2 className="mx-auto mt-6 max-w-3xl text-3xl font-black leading-tight sm:text-5xl">
-              Passez à une gestion locative qui inspire confiance.
-            </h2>
-            <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-slate-300">
-              Vos loyers, vos impayés, vos quittances et vos rapports méritent une expérience claire, moderne et crédible.
-            </p>
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <PremiumButton onClick={goSignup}>Commencer gratuitement</PremiumButton>
-              <PremiumButton variant="secondary" onClick={goDemo}>Parler à l’équipe</PremiumButton>
-            </div>
-          </Reveal>
-        </section>
+// --- COMPOSANT PRINCIPAL ---
+
+export default function LandingPage() {
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-emerald-500/30 selection:text-emerald-200">
+      <Navbar />
+      <main>
+        <Hero />
+        <TrustLogos />
+        <ProblemSolution />
+        <FeaturesGrid />
+        <SecuritySection />
+        <Pricing />
+        <FAQ />
       </main>
-
-      <footer className="border-t border-emerald-900/10 bg-[#f6f3ea] px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-8 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <BrandLogo size="sm" tone="light" showTagline />
-            </div>
-            <p className="mt-3 max-w-md text-sm leading-6 text-slate-600">
-              SaaS de gestion locative pour agences immobilières, bailleurs et équipes qui veulent suivre leur argent avec sérieux.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-8 text-sm font-bold text-slate-600 sm:grid-cols-4">
-            <a href="#solution" className="hover:text-emerald-800">Solution</a>
-            <a href="#dashboard" className="hover:text-emerald-800">Dashboard</a>
-            <a href="#tarifs" className="hover:text-emerald-800">Tarifs</a>
-            <a href={whatsappHref('Bonjour Samay Këur.')} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-800">
-              WhatsApp
-            </a>
-          </div>
-        </div>
-        <div className="mx-auto mt-8 flex max-w-7xl flex-col gap-3 border-t border-emerald-900/10 pt-6 text-xs font-semibold text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} Samay Këur. Tous droits réservés.</p>
-          <div className="flex gap-5">
-            <a href="#" className="hover:text-emerald-800">Confidentialité</a>
-            <a href="#" className="hover:text-emerald-800">Conditions</a>
-            <a href="mailto:contact@samaykeur.com" className="hover:text-emerald-800">contact@samaykeur.com</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
+      
+      {/* Styles globaux pour animations personnalisées si non présents dans tailwind.config */}
+      <style jsx global>{`
+        @keyframes fade-in-up {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in-up {
+          animation: fade-in-up 0.8s ease-out forwards;
+        }
+        .perspective-1000 {
+          perspective: 1000px;
+        }
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-slow {
+          animation: bounce-slow 3s infinite ease-in-out;
+        }
+        .animate-bounce-slow-delayed {
+          animation: bounce-slow 4s infinite ease-in-out 1s;
+        }
+      `}</style>
     </div>
   );
 }

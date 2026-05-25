@@ -42,8 +42,8 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
         if (formData.password.length < 6) {
           throw new Error('Le mot de passe doit contenir au moins 6 caractères');
         }
-        if (!formData.nom.trim() || !formData.prenom.trim()) {
-          throw new Error('Le nom et le prénom sont obligatoires');
+        if (!formData.prenom.trim() || !formData.nom.trim()) {
+          throw new Error('Le pr�nom et le nom sont obligatoires');
         }
 
         await signUp(formData.email, formData.password, {
@@ -340,3 +340,5 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
     </div>
   );
 }
+
+

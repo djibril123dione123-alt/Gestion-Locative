@@ -123,8 +123,8 @@ export function useExport(): UseExportReturn {
     (data: ExportLocataire[], filename = 'locataires.xlsx') => {
       run(() => {
         const rows = data.map((l) => ({
-          Nom: fmt(l.nom),
           Prénom: fmt(l.prenom),
+          Nom: fmt(l.nom),
           Téléphone: fmtPhone(l.telephone),
           Email: fmt(l.email),
           Adresse: fmt(l.adresse_personnelle),
@@ -203,8 +203,8 @@ export function useExport(): UseExportReturn {
 
         if (data.locataires?.length) {
           const rows = data.locataires.map((l) => ({
-            Nom: fmt(l.nom),
             Prénom: fmt(l.prenom),
+            Nom: fmt(l.nom),
             Téléphone: fmtPhone(l.telephone),
             Email: fmt(l.email),
           }));

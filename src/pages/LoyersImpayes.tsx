@@ -145,7 +145,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
     if (searchTerm) {
       result = result.filter(i =>
-        `${i.locataire_nom} ${i.locataire_prenom} ${i.unite_nom} ${i.immeuble_nom}`
+        `${i.locataire_prenom} ${i.locataire_nom} ${i.unite_nom} ${i.immeuble_nom}`
           .toLowerCase()
           .includes(searchTerm.toLowerCase())
       );
@@ -781,3 +781,4 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     </div>
   );
 }
+

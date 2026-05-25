@@ -14,6 +14,7 @@ import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
+import { formatPersonName } from '../lib/people';
 
 interface Locataire {
   id: string;
@@ -59,7 +60,7 @@ export function Locataires() {
   const filtered = useMemo(
     () =>
       locataires.filter((locataire) =>
-        `${locataire.nom} ${locataire.prenom} ${locataire.telephone} ${locataire.email ?? ''}`
+        `${formatPersonName(locataire, '')} ${locataire.telephone} ${locataire.email ?? ''}`
           .toLowerCase()
           .includes(searchTerm.toLowerCase()),
       ),
@@ -110,12 +111,12 @@ export function Locataires() {
       const prenom = formData.prenom.trim();
       const email = formData.email.trim();
 
-      if (!nom) {
-        notifyError('Le nom du locataire est obligatoire.');
-        return;
-      }
       if (!prenom) {
         notifyError('Le prenom du locataire est obligatoire.');
+        return;
+      }
+      if (!nom) {
+        notifyError('Le nom du locataire est obligatoire.');
         return;
       }
 
@@ -194,12 +195,12 @@ export function Locataires() {
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
-  const ALL_COLUMN_KEYS_LOCATAIRES = ['nom', 'prenom', 'telephone', 'email'] as const;
+  const ALL_COLUMN_KEYS_LOCATAIRES = ['prenom', 'nom', 'telephone', 'email'] as const;
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('locataires', [...ALL_COLUMN_KEYS_LOCATAIRES]);
 
   const allColumns = [
-    { key: 'nom', label: 'Nom' },
     { key: 'prenom', label: 'Prénom' },
+    { key: 'nom', label: 'Nom' },
     { key: 'telephone', label: 'Téléphone' },
     { key: 'email', label: 'Email' },
   ];
@@ -317,12 +318,12 @@ export function Locataires() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Nom *</label>
-              <input type="text" required value={formData.nom} onChange={(e) => setFormData({ ...formData, nom: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Prénom *</label>
               <input type="text" required value={formData.prenom} onChange={(e) => setFormData({ ...formData, prenom: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Nom *</label>
+              <input type="text" required value={formData.nom} onChange={(e) => setFormData({ ...formData, nom: e.target.value })} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -369,3 +370,6 @@ export function Locataires() {
     </div>
   );
 }
+
+
+

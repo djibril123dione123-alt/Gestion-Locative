@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages';
 import { formatDate, formatSenegalPhone, formatSenegalPhoneInput, getSenegalPhoneHref, normalizeSenegalPhone } from '../lib/formatters';
+import { formatPersonName } from '../lib/people';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
@@ -169,8 +170,7 @@ export function Bailleurs() {
     const searchLower = searchTerm.toLowerCase();
     return bailleurs.filter(b => {
       const searchableText = [
-        b.nom,
-        b.prenom,
+        formatPersonName(b, ''),
         b.telephone,
         b.email || '',
         b.adresse || '',
@@ -188,8 +188,8 @@ export function Bailleurs() {
     e.preventDefault();
     
     // Validation basique
-    if (!formData.nom.trim() || !formData.prenom.trim() || !formData.telephone.trim()) {
-      setError('Les champs Nom, Pr√©nom et T√©l√©phone sont obligatoires.');
+    if (!formData.prenom.trim() || !formData.nom.trim() || !formData.telephone.trim()) {
+      setError('Les champs PrÈnom, Nom et TÈlÈphone sont obligatoires.');
       return;
     }
 
@@ -432,22 +432,22 @@ export function Bailleurs() {
   /**
    * Configuration des colonnes du tableau
    */
-  const ALL_COLUMN_KEYS_BAILLEURS = ['nom', 'prenom', 'telephone', 'email', 'commission', 'debut_contrat', 'mandat'] as const;
+  const ALL_COLUMN_KEYS_BAILLEURS = ['prenom', 'nom', 'telephone', 'email', 'commission', 'debut_contrat', 'mandat'] as const;
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('bailleurs', [...ALL_COLUMN_KEYS_BAILLEURS]);
 
   const allColumns = [
-    { 
-      key: 'nom', 
-      label: 'Nom',
-      render: (b: Bailleur) => (
-        <span className="font-medium text-slate-900">{b.nom}</span>
-      )
-    },
     { 
       key: 'prenom', 
       label: 'Pr√©nom',
       render: (b: Bailleur) => (
         <span className="font-medium text-slate-900">{b.prenom}</span>
+      )
+    },
+    { 
+      key: 'nom', 
+      label: 'Nom',
+      render: (b: Bailleur) => (
+        <span className="font-medium text-slate-900">{b.nom}</span>
       )
     },
     { 
@@ -632,20 +632,6 @@ export function Bailleurs() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Nom <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.nom}
-                  onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                  className="sk-input"
-                  placeholder="Diop"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Pr√©nom <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -657,8 +643,20 @@ export function Bailleurs() {
                   placeholder="Amadou"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Nom <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.nom}
+                  onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
+                  className="sk-input"
+                  placeholder="Diop"
+                />
+              </div>
             </div>
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -946,3 +944,5 @@ export function Bailleurs() {
     </div>
   );
 }
+
+

@@ -753,7 +753,7 @@ export function Console() {
   });
 
   const filteredUsers = users.filter(u =>
-    `${u.nom} ${u.prenom} ${u.email} ${u.agency_name ?? ''}`
+    `${u.prenom} ${u.nom} ${u.email} ${u.agency_name ?? ''}`
       .toLowerCase()
       .includes(searchUser.toLowerCase())
   );
@@ -1341,3 +1341,4 @@ export function Console() {
     </div>
   );
 }
+

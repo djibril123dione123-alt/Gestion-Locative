@@ -333,8 +333,9 @@ BEGIN
   VALUES (v_agency_id, 'pro', 'active', v_trial_ends_at)
   ON CONFLICT DO NOTHING;
 
-  -- Rôle attribué : 'admin' pour une agence, 'bailleur' pour un compte bailleur individuel
-  v_role := CASE WHEN COALESCE(v_request.is_bailleur_account, false) THEN 'bailleur' ELSE 'admin' END;
+  -- Rôle attribué : un bailleur individuel est administrateur de son propre espace.
+  -- Le rôle 'bailleur' reste réservé aux accès propriétaires en lecture dans une agence tierce.
+  v_role := 'admin';
 
   -- Décomposition du nom complet (best-effort)
   v_first_name := COALESCE(NULLIF(split_part(COALESCE(v_request.requester_name, ''), ' ', 1), ''), '');

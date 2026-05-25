@@ -96,15 +96,15 @@ export function PageSkeleton({
     >
       <div className={`relative overflow-hidden rounded-2xl border p-4 sm:p-5 ${
         dark
-          ? 'border-white/10 bg-white/[0.045] shadow-[0_30px_90px_rgba(0,0,0,0.28)]'
-          : 'border-emerald-950/10 bg-white/78 shadow-[0_24px_70px_rgba(6,17,13,0.08)]'
+          ? 'border-white/10 bg-white/[0.045] shadow-premium-lg'
+          : 'border-emerald-950/10 bg-white/78 shadow-premium'
       }`}>
         <div className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-action-500/10 blur-3xl" />
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-3">
             <Skeleton tone={tone} className="h-4 w-28" />
             <Skeleton tone={tone} className="h-8 w-56 max-w-full" />
-            <p className={`text-xs font-black uppercase tracking-[0.22em] ${dark ? 'text-emerald-100/60' : 'text-slate-500'}`}>
+            <p className={`sk-type-caption ${dark ? 'text-emerald-100/60' : 'text-slate-500'}`}>
               {title}
             </p>
           </div>

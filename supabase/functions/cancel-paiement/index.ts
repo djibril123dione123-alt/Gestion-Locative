@@ -74,21 +74,32 @@ serve(async (req: Request) => {
 
     if (profileErr || !profile) return err("Profil introuvable.", 403, "PROFILE_NOT_FOUND");
     if (!profile.actif) return err("Compte desactive.", 403, "ACCOUNT_DISABLED");
-    if (profile.role === "bailleur") return err("Acces refuse.", 403, "FORBIDDEN_ROLE");
 
     const agencyId: string = profile.agency_id;
     if (!agencyId) return err("Aucune agence associee.", 403, "NO_AGENCY");
 
-    const { data: canDeletePaiement, error: permissionErr } = await supabaseAdmin.rpc(
-      "fn_user_can",
-      { p_user_id: user.id, p_page: "paiements", p_action: "delete" },
-    );
-    if (permissionErr) {
-      console.error("[cancel-paiement] RBAC check failed", permissionErr.message);
-      return err("Verification des permissions indisponible.", 500, "RBAC_CHECK_FAILED");
-    }
-    if (!canDeletePaiement) {
-      return err("Action refusee par les permissions de l'agence.", 403, "RBAC_FORBIDDEN");
+    const { data: agency, error: agencyErr } = await supabaseAdmin
+      .from("agencies")
+      .select("is_bailleur_account")
+      .eq("id", agencyId)
+      .single();
+    if (agencyErr || !agency) return err("Espace introuvable.", 403, "AGENCY_NOT_FOUND");
+    const isIndividualOwnerAccount = agency.is_bailleur_account === true;
+
+    if (profile.role === "bailleur" && !isIndividualOwnerAccount) return err("Acces refuse.", 403, "FORBIDDEN_ROLE");
+
+    if (!(isIndividualOwnerAccount && profile.role === "bailleur")) {
+      const { data: canDeletePaiement, error: permissionErr } = await supabaseAdmin.rpc(
+        "fn_user_can",
+        { p_user_id: user.id, p_page: "paiements", p_action: "delete" },
+      );
+      if (permissionErr) {
+        console.error("[cancel-paiement] RBAC check failed", permissionErr.message);
+        return err("Verification des permissions indisponible.", 500, "RBAC_CHECK_FAILED");
+      }
+      if (!canDeletePaiement) {
+        return err("Action refusee par les permissions de l'agence.", 403, "RBAC_FORBIDDEN");
+      }
     }
 
     const rawBody = await readBody(req);

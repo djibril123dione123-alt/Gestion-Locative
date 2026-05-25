@@ -113,7 +113,8 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 };
 
 export function Abonnement() {
-  const { profile } = useAuth();
+  const { profile, accountProfile } = useAuth();
+  const isIndividualOwner = accountProfile.isIndividualOwner;
   const toast = useToast();
   const [agency, setAgency]           = useState<Agency | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -141,13 +142,17 @@ export function Abonnement() {
 
       if (subRes.data && subRes.data.length > 0) {
         const subs = subRes.data as Subscription[];
-        setSubscription(subs[0]);
-        setCurrentPlan(subs[0].subscription_plans ?? null);
+        const activePaidSub = subs.find((sub) => sub.status === 'active' && sub.plan_id !== 'starter');
+        const effectiveSub = isIndividualOwner ? activePaidSub ?? subs[0] : subs[0];
+        setSubscription(effectiveSub);
+        setCurrentPlan(activePaidSub?.subscription_plans ?? (!isIndividualOwner ? subs[0].subscription_plans ?? null : null));
         setHistory(subs);
-      } else if (agencyRes.data?.plan) {
+      } else if (agencyRes.data?.plan && !isIndividualOwner) {
         const { data: planData } = await supabase
           .from('subscription_plans').select('*').eq('id', agencyRes.data.plan).maybeSingle();
         if (planData) setCurrentPlan(planData as Plan);
+      } else {
+        setCurrentPlan(null);
       }
 
       if (limitsRes.data?.usage) setUsage(limitsRes.data.usage as Usage);
@@ -157,7 +162,7 @@ export function Abonnement() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.agency_id, toast]);
+  }, [isIndividualOwner, profile?.agency_id, toast]);
 
   useEffect(() => { if (profile?.agency_id) load(); }, [profile?.agency_id, load]);
 
@@ -169,9 +174,21 @@ export function Abonnement() {
   const isSuspended = agency?.status === 'suspended' || agency?.status === 'past_due';
   const statusCfg   = STATUS_CONFIG[agency?.status ?? 'active'] ?? STATUS_CONFIG.active;
 
-  const currentPlanId = currentPlan?.id ?? agency?.plan ?? 'starter';
-  const catalogPlan   = PLAN_CATALOG.find((p) => p.id === currentPlanId) ?? PLAN_CATALOG[1];
+  const hasActivePaidSubscription = subscription?.status === 'active' && subscription.plan_id !== 'starter';
+  const currentPlanId = isIndividualOwner && !hasActivePaidSubscription ? 'starter' : currentPlan?.id ?? agency?.plan ?? 'starter';
+  const catalogPlan   = PLAN_CATALOG.find((p) => p.id === currentPlanId) ?? PLAN_CATALOG[0];
+  const displayedPlanName = catalogPlan.name;
   const selectedCatalogPlan = PLAN_CATALOG.find((p) => p.id === selectedPlanId) ?? PLAN_CATALOG[1];
+  const getPlanFeatures = (plan: (typeof PLAN_CATALOG)[number]) => {
+    if (!isIndividualOwner) return plan.features;
+    const individualFeatures: Record<string, readonly string[]> = {
+      starter: ['Suivi simple des loyers', 'Quittances professionnelles', 'Documents personnels', 'Support email'],
+      pro: ['Tout Starter', 'Rapports propriétaires mensuels', 'Alertes impayés', 'Paiements partiels', 'Support WhatsApp'],
+      business: ['Tout Pro', 'Portefeuille multi-biens', 'Stockage documentaire avancé', 'Reporting financier', 'Support prioritaire'],
+      enterprise: ['Capacité sur mesure', 'Accompagnement personnalisé', 'SLA contractualisé', 'Formation sur site'],
+    };
+    return individualFeatures[plan.id] ?? plan.features;
+  };
 
   const openPayment = (planId: string) => {
     setSelectedPlanId(planId);
@@ -230,14 +247,16 @@ export function Abonnement() {
             </div>
             <h1 className="mt-4 text-2xl sm:text-4xl font-black tracking-tight">Abonnement</h1>
             <p className="mt-2 text-sm sm:text-base leading-6 text-emerald-50/75">
-              Gérez votre plan, vos limites et vos paiements avec une lecture claire de votre capacité opérationnelle.
+              {isIndividualOwner
+                ? 'Gérez votre plan, vos limites et vos documents avec une lecture claire de votre capacité patrimoniale.'
+                : 'Gérez votre plan, vos limites et vos paiements avec une lecture claire de votre capacité opérationnelle.'}
             </p>
           </div>
           <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.08] p-2 backdrop-blur">
             {[
-              ['Plan', currentPlan?.name ?? catalogPlan.name],
+              ['Plan', displayedPlanName],
               ['Statut', statusCfg.label],
-              ['Usage', `${usage.unites} unités`],
+              ['Usage', `${usage.unites} ${isIndividualOwner ? 'unités suivies' : 'unités'}`],
             ].map(([label, value]) => (
               <div key={label} className="rounded-xl bg-black/15 px-3 py-2">
                 <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-100/60">{label}</p>
@@ -313,7 +332,7 @@ export function Abonnement() {
                   </span>
                 </div>
                 <p className="text-2xl font-extrabold text-slate-900 mt-0.5" data-testid="text-current-plan">
-                  {currentPlan?.name ?? catalogPlan.name}
+                  {displayedPlanName}
                 </p>
                 <p className="text-sm text-slate-400 mt-0.5">
                   {catalogPlan.price_xof > 0
@@ -348,8 +367,8 @@ export function Abonnement() {
           {/* Usage bars */}
           <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
             {renderUsageBar(<Users className="w-4 h-4" />, 'Utilisateurs', usage.users, currentPlan?.max_users ?? catalogPlan.max_users, 'usage-utilisateurs')}
-            {renderUsageBar(<Home className="w-4 h-4" />, 'Immeubles', usage.immeubles, currentPlan?.max_immeubles ?? catalogPlan.max_immeubles, 'usage-immeubles')}
-            {renderUsageBar(<DoorOpen className="w-4 h-4" />, 'Unités', usage.unites, currentPlan?.max_unites ?? catalogPlan.max_unites, 'usage-produits')}
+            {renderUsageBar(<Home className="w-4 h-4" />, isIndividualOwner ? 'Biens' : 'Immeubles', usage.immeubles, currentPlan?.max_immeubles ?? catalogPlan.max_immeubles, 'usage-immeubles')}
+            {renderUsageBar(<DoorOpen className="w-4 h-4" />, isIndividualOwner ? 'Unités locatives' : 'Unités', usage.unites, currentPlan?.max_unites ?? catalogPlan.max_unites, 'usage-produits')}
             {renderUsageBar(
               <HardDrive className="w-4 h-4" />,
               'Stockage',
@@ -420,7 +439,7 @@ export function Abonnement() {
                 </div>
 
                 <ul className="space-y-1 flex-1">
-                  {plan.features.slice(0, 4).map((f) => (
+                  {getPlanFeatures(plan).slice(0, 4).map((f) => (
                     <li key={f} className="flex items-start gap-1.5 text-xs text-slate-600">
                       <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: plan.color }} />
                       {f}

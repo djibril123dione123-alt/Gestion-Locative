@@ -118,7 +118,8 @@ const STATUS_META: Record<LoyerStatut, { label: string; classes: string }> = {
 
 export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   const { embedded = false } = _props;
-  const { profile } = useAuth();
+  const { profile, accountProfile } = useAuth();
+  const isIndividualOwner = accountProfile.isIndividualOwner;
   const [impayes, setImpayes] = useState<LoyerImpaye[]>([]);
   const [filtered, setFiltered] = useState<LoyerImpaye[]>([]);
   const [loading, setLoading] = useState(true);
@@ -445,7 +446,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       ),
     },
   ];
-  const columns = allColumns.filter((c) => c.key === 'actions' || colIsVisible(c.key));
+  const columns = allColumns.filter((c) => {
+    if (isIndividualOwner && c.key === 'bailleur') return false;
+    return c.key === 'actions' || colIsVisible(c.key);
+  });
 
   if (loading) {
     return (
@@ -484,8 +488,14 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       {!embedded && (
         <div className="sk-page-hero flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">Loyers Impayés</h1>
-            <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">Suivi des loyers en retard, reliquats et paiements partiels</p>
+            <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">
+              {isIndividualOwner ? 'Mes impayés' : 'Loyers impayés'}
+            </h1>
+            <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
+              {isIndividualOwner
+                ? 'Suivez vos loyers en retard, les reliquats et les paiements partiels.'
+                : 'Suivi des loyers en retard, reliquats et paiements partiels'}
+            </p>
           </div>
         </div>
       )}
@@ -532,23 +542,27 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
             />
           </div>
 
-          <div>
-            <select
-              value={selectedBailleur}
-              onChange={(e) => setSelectedBailleur(e.target.value)}
-              className="sk-input"
-            >
-              <option value="">Tous les bailleurs</option>
-              {bailleurs.map((b, index) => (
-                <option key={index} value={b.label}>
-                  {b.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!isIndividualOwner && (
+            <div>
+              <select
+                value={selectedBailleur}
+                onChange={(e) => setSelectedBailleur(e.target.value)}
+                className="sk-input"
+              >
+                <option value="">Tous les bailleurs</option>
+                {bailleurs.map((b, index) => (
+                  <option key={index} value={b.label}>
+                    {b.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           </div>
           <ColumnPicker
-            columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
+            columns={allColumns
+              .filter((c) => !(isIndividualOwner && c.key === 'bailleur'))
+              .map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
             visibility={colVis}
             onToggle={colToggle}
             onSetAll={colSetAll}

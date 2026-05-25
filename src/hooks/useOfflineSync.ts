@@ -19,6 +19,7 @@ import {
   type PendingMutation,
   type SyncResult,
 } from '../services/offlineQueue';
+import { useNetworkStatus } from './useNetworkStatus';
 
 export interface UseOfflineSyncReturn {
   isOnline: boolean;
@@ -33,7 +34,7 @@ export interface UseOfflineSyncReturn {
 }
 
 export function useOfflineSync(): UseOfflineSyncReturn {
-  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const { isOnline } = useNetworkStatus();
   const [pendingCount, setPendingCount] = useState(0);
   const [errorCount, setErrorCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
@@ -77,19 +78,12 @@ export function useOfflineSync(): UseOfflineSyncReturn {
   }, [refreshPendingCount]);
 
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      doSync();
-    };
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [doSync]);
+    if (isOnline) {
+      void doSync();
+    } else {
+      void refreshPendingCount();
+    }
+  }, [doSync, isOnline, refreshPendingCount]);
 
   useEffect(() => {
     if (!isOnline) return undefined;
@@ -114,11 +108,11 @@ export function useOfflineSync(): UseOfflineSyncReturn {
     async (mutation: Omit<PendingMutation, 'id' | 'status' | 'retries'>) => {
       await enqueueMutation({ ...mutation, action: mutation.action as MutationAction });
       await refreshPendingCount();
-      if (navigator.onLine) {
+      if (isOnline) {
         void doSync();
       }
     },
-    [doSync, refreshPendingCount],
+    [doSync, isOnline, refreshPendingCount],
   );
 
   return {

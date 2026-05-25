@@ -5,6 +5,8 @@ import { supabase } from '../../lib/supabase';
 import { useToast } from '../../hooks/useToast';
 import { ToastContainer } from './Toast';
 import { reloadUserProfile } from '../../lib/agencyHelper';
+import { createPaiementViaEdge } from '../../services/api/paiementApi';
+import { getOrCreateIndividualOwnerBailleur } from '../../services/individualOwner';
 import {
   CheckCircle2,
   Building2,
@@ -48,7 +50,8 @@ const steps = [
 ];
 
 export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
-  const { profile } = useAuth();
+  const { profile, agency, accountProfile } = useAuth();
+  const isIndividualOwner = accountProfile.isIndividualOwner;
   const { success, error: showError, toasts, removeToast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
   const [wizardData, setWizardData] = useState<WizardData>({});
@@ -74,7 +77,8 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
       return;
     }
 
-    if (!profile.role || !['admin', 'agent'].includes(profile.role)) {
+    const canCreateWizardData = isIndividualOwner || (profile.role && ['admin', 'agent'].includes(profile.role));
+    if (!canCreateWizardData) {
       showError('Vous n\'avez pas les permissions nécessaires pour créer des données.');
       return;
     }
@@ -83,6 +87,14 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
     try {
       switch (step) {
         case 1: {
+          if (isIndividualOwner) {
+            const ownerBailleur = await getOrCreateIndividualOwnerBailleur({ profile, agency, accountProfile });
+            setWizardData({ ...wizardData, bailleur: ownerBailleur });
+            success('Profil proprietaire rattache automatiquement');
+            setCurrentStep(2);
+            break;
+          }
+
           const normalizedPhone = normalizeSenegalPhone(formData.bailleur.telephone);
           if (!normalizedPhone) {
             throw new Error('Le téléphone du bailleur doit être un numéro sénégalais valide, par exemple 77 123 45 67.');
@@ -188,7 +200,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
               locataire_id: wizardData.locataire.id,
               unite_id: wizardData.unite.id,
               loyer_mensuel: parseFloat(formData.contrat.loyer_mensuel),
-              commission: parseFloat(formData.contrat.commission),
+              commission: isIndividualOwner ? 0 : parseFloat(formData.contrat.commission),
               date_debut: formData.contrat.date_debut,
               statut: 'actif',
               agency_id: profile.agency_id
@@ -215,29 +227,15 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
           }
 
           const montant = parseFloat(formData.contrat.loyer_mensuel);
-          const commission = parseFloat(formData.contrat.commission) || null;
-          const { calculateCommission } = await import('../../services/domain/commissionService');
-          const { partAgence, partBailleur } = commission != null
-            ? calculateCommission(montant, commission)
-            : { partAgence: 0, partBailleur: montant };
-
-          const { data, error } = await supabase
-            .from('paiements')
-            .insert({
+          const data = await createPaiementViaEdge({
               contrat_id: wizardData.contrat.id,
               montant_total: montant,
               mois_concerne: new Date().toISOString().split('T')[0].slice(0, 7) + '-01',
               date_paiement: formData.paiement.date_paiement,
-              mode_paiement: formData.paiement.mode_paiement,
+              mode_paiement: formData.paiement.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre',
               statut: 'paye',
-              part_agence: partAgence,
-              part_bailleur: partBailleur,
-              agency_id: profile.agency_id
-            })
-            .select()
-            .single();
-
-          if (error) throw error;
+              idempotency_key: `setup:${profile.agency_id}:${wizardData.contrat.id}:${Date.now()}`,
+            });
           setWizardData({ ...wizardData, paiement: data });
           success('Premier paiement enregistré avec succès');
           setCurrentStep(7);
@@ -254,6 +252,18 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
+        if (isIndividualOwner) {
+          return (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-900">
+              <p className="font-bold">Votre profil proprietaire sera utilise automatiquement.</p>
+              <p className="mt-2 text-sm leading-6 text-emerald-800">
+                Vous n'avez pas besoin de creer ou selectionner un bailleur. Vos biens, contrats,
+                paiements et documents seront rattaches a votre profil.
+              </p>
+            </div>
+          );
+        }
+
         return (
           <div className="space-y-4">
             <div>
@@ -478,20 +488,22 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
                 placeholder="250000"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Commission agence (%) *</label>
-              <input
-                type="number"
-                required
-                value={formData.contrat.commission}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  contrat: { ...formData.contrat, commission: e.target.value }
-                })}
-                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                placeholder="10"
-              />
-            </div>
+            {!isIndividualOwner && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Commission agence (%) *</label>
+                <input
+                  type="number"
+                  required
+                  value={formData.contrat.commission}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    contrat: { ...formData.contrat, commission: e.target.value }
+                  })}
+                  className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  placeholder="10"
+                />
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Date de début *</label>
               <input
@@ -543,7 +555,11 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
             <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
               <p className="text-sm text-orange-800">
                 <strong>Montant:</strong> {formatCurrency(parseInt(formData.contrat.loyer_mensuel || '0'))}<br/>
-                <strong>Commission agence:</strong> {formatCurrency(Math.round((parseInt(formData.contrat.loyer_mensuel || '0') * parseFloat(formData.contrat.commission)) / 100))}
+                {!isIndividualOwner && (
+                  <>
+                    <strong>Commission agence:</strong> {formatCurrency(Math.round((parseInt(formData.contrat.loyer_mensuel || '0') * parseFloat(formData.contrat.commission)) / 100))}
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -631,7 +647,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return formData.bailleur.nom && formData.bailleur.prenom && formData.bailleur.telephone;
+        return isIndividualOwner || (formData.bailleur.nom && formData.bailleur.prenom && formData.bailleur.telephone);
       case 2:
         return formData.immeuble.nom && formData.immeuble.adresse && formData.immeuble.ville;
       case 3:
@@ -639,7 +655,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
       case 4:
         return formData.locataire.nom && formData.locataire.prenom && formData.locataire.telephone;
       case 5:
-        return formData.contrat.loyer_mensuel && formData.contrat.commission && formData.contrat.date_debut;
+        return formData.contrat.loyer_mensuel && (isIndividualOwner || formData.contrat.commission) && formData.contrat.date_debut;
       case 6:
         return formData.paiement.date_paiement;
       default:

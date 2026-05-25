@@ -36,11 +36,11 @@ export function Tabs({ tabs, activeId, onChange, className = '' }: TabsProps) {
               ${active ? 'bg-brand-950 text-white shadow-sm' : 'text-slate-500 hover:bg-emerald-50 hover:text-brand-900'}
             `}
           >
-            {Icon && <Icon className="w-4 h-4" />}
+            {Icon && <Icon className="h-4 w-4" />}
             <span>{tab.label}</span>
             {tab.badge !== undefined && (
               <span
-                className={`inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 text-xs font-semibold rounded-full ${
+                className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold ${
                   active ? 'bg-emerald-300 text-emerald-950' : 'bg-slate-200 text-slate-700'
                 }`}
               >

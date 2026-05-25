@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Save,
   Upload,
   AlertCircle,
-  Settings,
   FileText,
   Palette,
   Building,
@@ -138,12 +137,14 @@ async function compressLogoFile(file: File): Promise<File> {
 }
 
 export function Parametres() {
-  const { profile } = useAuth();
+  const { profile, accountProfile } = useAuth();
+  const isIndividualOwner = accountProfile.isIndividualOwner;
   const { showToast, toasts, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>('general');
   const [settings, setSettings] = useState<SettingsState | null>(null);
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState('');
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [logoUploadState, setLogoUploadState] = useState<LogoUploadState>('idle');
 
@@ -168,6 +169,7 @@ export function Parametres() {
 
       if (data) {
         setSettings(data as SettingsState);
+        setLastSavedSnapshot(JSON.stringify(data));
         if (data.logo_url) {
           setLogoPreview(data.logo_url);
         }
@@ -175,6 +177,7 @@ export function Parametres() {
         const created = await createDefaultSettings(agencyId);
         if (created) {
           setSettings(created as SettingsState);
+          setLastSavedSnapshot(JSON.stringify(created));
         }
       }
     } catch (err) {
@@ -287,6 +290,16 @@ export function Parametres() {
         champs_personnalises_locataire: settings.champs_personnalises_locataire ?? 0,
       };
 
+      if ('document_mode' in settings) {
+        dataToSave.document_mode = settings.document_mode ?? (isIndividualOwner ? 'simple' : 'professional');
+      }
+      if ('enabled_modules' in settings) {
+        dataToSave.enabled_modules = settings.enabled_modules ?? {};
+      }
+      if ('proprietaire_info' in settings) {
+        dataToSave.proprietaire_info = settings.proprietaire_info ?? {};
+      }
+
       const { data: savedData, error } = await supabase
         .from('agency_settings')
         .upsert(dataToSave, { onConflict: 'agency_id', ignoreDuplicates: false })
@@ -305,6 +318,7 @@ export function Parametres() {
       }
 
       setSettings(savedData as SettingsState);
+      setLastSavedSnapshot(JSON.stringify(savedData));
       invalidateAgencySettingsCache(profile.agency_id);
       showToast('Paramètres enregistrés avec succès', 'success');
     } catch (err) {
@@ -387,6 +401,7 @@ export function Parametres() {
       }
 
       setSettings(savedSettings as SettingsState);
+      setLastSavedSnapshot(JSON.stringify(savedSettings));
       setLogoPreview(versionedLogoUrl);
       setLogoUploadState('done');
       invalidateAgencySettingsCache(profile.agency_id);
@@ -421,43 +436,69 @@ export function Parametres() {
     { id: 'modules', label: 'Modules / pages', icon: SlidersHorizontal },
   ];
 
+  const hasUnsavedChanges = useMemo(
+    () => Boolean(settings && JSON.stringify(settings) !== lastSavedSnapshot),
+    [settings, lastSavedSnapshot]
+  );
+
   if (loading || !settings) {
     return <PageSkeleton title="Paramètres" variant="form" />;
   }
+
+  const supportsDocumentMode = 'document_mode' in settings;
 
   return (
     <div className="space-y-4 px-4 py-4 sm:space-y-6 sm:px-0 sm:py-0">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="sticky top-0 z-30 -mx-4 border-b border-emerald-950/10 bg-brand-paper/95 px-4 py-2.5 backdrop-blur sm:mx-0 sm:rounded-2xl sm:border sm:bg-white/85 sm:px-4 sm:shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-black text-slate-950">
+            {hasUnsavedChanges ? 'Modifications non enregistrées' : 'Paramètres à jour'}
+          </p>
+          <p className="hidden text-xs font-semibold text-slate-500 sm:block">
+            {isIndividualOwner ? 'Espace propriétaire' : 'Identité, documents et modules'}
+          </p>
+        </div>
+        <div className="hidden">
           <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-orange-100 sm:h-14 sm:w-14">
-            <Settings className="h-7 w-7 text-orange-600 sm:h-8 sm:w-8" />
+            <span />
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Paramètres de l'agence</h1>
+            <h1 className="text-xl font-black text-slate-900 sm:text-2xl">
+              {isIndividualOwner ? 'Paramètres du compte' : "Paramètres de l'agence"}
+            </h1>
             <p className="text-sm leading-6 text-slate-600 sm:text-base">
-              Personnalisez vos documents et l'identité de votre agence
+              {isIndividualOwner
+                ? 'Personnalisez vos documents et votre identité propriétaire'
+                : "Personnalisez vos documents et l'identité de votre agence"}
             </p>
           </div>
         </div>
         <button
           onClick={handleSave}
-          disabled={saving}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-orange-500 px-5 py-3 font-black text-white transition-colors hover:bg-orange-600 disabled:opacity-50 sm:w-auto sm:px-6"
+          disabled={saving || !hasUnsavedChanges}
+          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-2 text-sm font-black text-white shadow-lg shadow-orange-500/15 transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none sm:px-5"
         >
           {saving ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
               Enregistrement...
             </>
+          ) : !hasUnsavedChanges ? (
+            <>
+              <Save className="w-5 h-5" />
+              A jour
+            </>
           ) : (
             <>
               <Save className="w-5 h-5" />
-              Enregistrer
+              Sauvegarder
             </>
           )}
         </button>
+      </div>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -489,7 +530,7 @@ export function Parametres() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Nom de l'agence
+                    {isIndividualOwner ? 'Nom affiché sur les documents' : "Nom de l'agence"}
                   </label>
                   <input
                     type="text"
@@ -544,6 +585,7 @@ export function Parametres() {
                   />
                 </div>
 
+                {!isIndividualOwner && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">NINEA</label>
                   <input
@@ -553,7 +595,9 @@ export function Parametres() {
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
+                )}
 
+                {!isIndividualOwner && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Registre de Commerce (RC)
@@ -565,10 +609,11 @@ export function Parametres() {
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Nom du représentant
+                    {isIndividualOwner ? 'Nom du propriétaire' : 'Nom du représentant'}
                   </label>
                   <input
                     type="text"
@@ -580,7 +625,7 @@ export function Parametres() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Fonction du représentant
+                    {isIndividualOwner ? 'Qualité sur les documents' : 'Fonction du représentant'}
                   </label>
                   <input
                     type="text"
@@ -588,14 +633,14 @@ export function Parametres() {
                     onChange={(e) =>
                       setSettings({ ...settings, representant_fonction: e.target.value })
                     }
-                    placeholder="ex: Gérant, Directeur"
+                    placeholder={isIndividualOwner ? 'ex: Propriétaire' : 'ex: Gérant, Directeur'}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Type de pièce d'identité du représentant
+                    {isIndividualOwner ? "Type de pièce d'identité" : "Type de pièce d'identité du représentant"}
                   </label>
                   <select
                     value={settings.manager_id_type ?? 'CNI'}
@@ -627,7 +672,7 @@ export function Parametres() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Ville de l'agence
+                    {isIndividualOwner ? 'Ville' : "Ville de l'agence"}
                   </label>
                   <input
                     type="text"
@@ -643,10 +688,13 @@ export function Parametres() {
                 <div className="flex gap-3">
                   <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
                   <div className="text-sm text-orange-800">
-                    <p className="font-medium mb-1">Informations du représentant légal</p>
+                    <p className="font-medium mb-1">
+                      {isIndividualOwner ? 'Informations propriétaire' : 'Informations du représentant légal'}
+                    </p>
                     <p className="text-orange-700">
-                      Ces informations apparaîtront dans les contrats de location et mandats de
-                      gérance. Assurez-vous qu'elles sont exactes et à jour.
+                      {isIndividualOwner
+                        ? "Ces informations apparaîtront dans les contrats et quittances. Aucun mandat de gérance n'est nécessaire pour vos propres biens."
+                        : "Ces informations apparaîtront dans les contrats de location et mandats de gérance. Assurez-vous qu'elles sont exactes et à jour."}
                     </p>
                   </div>
                 </div>
@@ -656,6 +704,26 @@ export function Parametres() {
 
           {activeTab === 'documents' && (
             <div className="space-y-6">
+              {supportsDocumentMode && (
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                  <label className="block text-sm font-black text-emerald-950 mb-2">
+                    Mode documentaire
+                  </label>
+                  <select
+                    value={settings.document_mode ?? (isIndividualOwner ? 'simple' : 'professional')}
+                    onChange={(e) => setSettings({ ...settings, document_mode: e.target.value as AgencySettings['document_mode'] })}
+                    className="w-full px-4 py-2 border border-emerald-200 bg-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="simple">Simple - proprietaire individuel</option>
+                    <option value="professional">Professionnel - agence ou cabinet</option>
+                    <option value="legal">Juridique renforce</option>
+                  </select>
+                  <p className="mt-2 text-xs leading-5 text-emerald-800">
+                    Ce reglage prepare les variantes de documents sans modifier vos regles metier.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Tribunal compétent
@@ -752,8 +820,9 @@ export function Parametres() {
                   <div className="text-sm text-blue-800">
                     <p className="font-medium mb-1">Variables disponibles dans les documents</p>
                     <p className="text-blue-700">
-                      Tous ces paramètres sont automatiquement utilisés dans les contrats, mandats
-                      et factures générés par le système.
+                      {isIndividualOwner
+                        ? 'Ces paramètres sont automatiquement utilisés dans vos contrats, quittances et factures générés par le système.'
+                        : 'Tous ces paramètres sont automatiquement utilisés dans les contrats, mandats et factures générés par le système.'}
                     </p>
                   </div>
                 </div>
@@ -765,7 +834,7 @@ export function Parametres() {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-3">
-                  Logo de l'agence
+                  {isIndividualOwner ? 'Logo ou signature visuelle' : "Logo de l'agence"}
                 </label>
                 <div className="flex items-start gap-6">
                   <div className="flex-1">

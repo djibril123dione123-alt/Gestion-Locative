@@ -106,11 +106,11 @@ export function NotificationBell({ onNavigate, compact = false, align = 'top' }:
             : 'w-full px-4 py-3 text-slate-300 hover:bg-white/10 hover:text-white'
         }`}
       >
-        <Bell className="w-5 h-5" />
+        <Bell className="h-5 w-5" />
         {!compact && <span className="font-medium text-sm">Notifications</span>}
         {unread > 0 && (
           <span
-            className={`${compact ? 'absolute -right-1 -top-1' : 'ml-auto'} inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-xs font-bold text-white`}
+            className={`${compact ? 'absolute -right-1 -top-1' : 'ml-auto'} inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold text-white`}
             data-testid="badge-notifications-count"
             style={{ backgroundColor: '#F58220' }}
           >
@@ -120,7 +120,7 @@ export function NotificationBell({ onNavigate, compact = false, align = 'top' }:
       </button>
 
       {open && (
-        <div className={`absolute ${align === 'bottom' ? 'left-0 bottom-full mb-2' : 'right-0 top-full mt-2'} z-50 flex max-h-[70vh] w-80 max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-slate-200 bg-white shadow-2xl`}>
+        <div className={`sk-notification-popover absolute ${align === 'bottom' ? 'left-0 bottom-full mb-2' : 'right-0 top-full mt-2'} z-50 flex w-80 flex-col rounded-xl border border-slate-200 bg-white shadow-2xl`}>
           <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
             <h3 className="font-semibold text-slate-900 text-sm">Notifications</h3>
             <div className="flex items-center gap-2">
@@ -135,7 +135,7 @@ export function NotificationBell({ onNavigate, compact = false, align = 'top' }:
                 </button>
               )}
               <button type="button" onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">
-                <XIcon className="w-4 h-4" />
+                <XIcon className="h-4 w-4" />
               </button>
             </div>
           </div>
@@ -157,7 +157,7 @@ export function NotificationBell({ onNavigate, compact = false, align = 'top' }:
                     <div className="flex items-start gap-3">
                       <div className="flex-shrink-0 mt-1">
                         {n.read ? (
-                          <Check className="w-4 h-4 text-slate-400" />
+                          <Check className="h-4 w-4 text-slate-400" />
                         ) : (
                           <span className="w-2 h-2 rounded-full block" style={{ backgroundColor: '#F58220' }} />
                         )}

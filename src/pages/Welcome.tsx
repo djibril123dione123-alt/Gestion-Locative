@@ -26,6 +26,7 @@ interface AgencyRequestRow {
   id: string;
   status: RequestStatus;
   agency_name: string;
+  is_bailleur_account: boolean;
   rejection_reason: string | null;
   created_at: string;
   reviewed_at: string | null;
@@ -65,7 +66,7 @@ export default function Welcome() {
       try {
         const { data, error } = await supabase
           .from('agency_creation_requests')
-          .select('id, status, agency_name, rejection_reason, created_at, reviewed_at, created_agency_id')
+          .select('id, status, agency_name, is_bailleur_account, rejection_reason, created_at, reviewed_at, created_agency_id')
           .eq('requester_id', user.id)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -96,7 +97,7 @@ export default function Welcome() {
     const interval = setInterval(async () => {
       const { data } = await supabase
         .from('agency_creation_requests')
-        .select('id, status, agency_name, rejection_reason, created_at, reviewed_at, created_agency_id')
+        .select('id, status, agency_name, is_bailleur_account, rejection_reason, created_at, reviewed_at, created_agency_id')
         .eq('id', existingRequest.id)
         .maybeSingle();
       if (data && data.status !== 'pending') {
@@ -145,7 +146,7 @@ export default function Welcome() {
           is_bailleur_account: accountType === 'bailleur',
           status: 'pending',
         })
-        .select('id, status, agency_name, rejection_reason, created_at, reviewed_at, created_agency_id')
+        .select('id, status, agency_name, is_bailleur_account, rejection_reason, created_at, reviewed_at, created_agency_id')
         .single();
       if (error) throw error;
 
@@ -208,18 +209,21 @@ export default function Welcome() {
     );
   }
 
+  const requestKindLabel = existingRequest?.is_bailleur_account ? 'espace propriétaire' : 'agence';
+  const requestCreatedLabel = existingRequest?.is_bailleur_account ? 'Votre espace propriétaire' : 'Votre agence';
+
   if (existingRequest && existingRequest.status === 'pending') {
     return (
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4">
-          <div className="max-w-lg w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+        <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden p-4">
+          <div className="sk-card-premium max-w-lg w-full bg-white/92 p-8 text-center shadow-[0_32px_120px_rgba(6,17,13,0.32)]">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-orange-100 mb-6">
               <Clock className="w-10 h-10 text-orange-600" />
             </div>
             <h1 className="text-3xl font-bold text-slate-900 mb-3">Demande en cours d'examen</h1>
             <p className="text-slate-600 mb-6">
-              Votre demande de création de l'agence{' '}
+              Votre demande de création de votre {requestKindLabel}{' '}
               <span className="font-semibold text-slate-900">« {existingRequest.agency_name} »</span>{' '}
               a bien été reçue le{' '}
               <span className="font-semibold">
@@ -266,14 +270,14 @@ export default function Welcome() {
     return (
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4">
-          <div className="max-w-lg w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+        <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden p-4">
+          <div className="sk-card-premium max-w-lg w-full bg-white/92 p-8 text-center shadow-[0_32px_120px_rgba(6,17,13,0.32)]">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-100 mb-6">
               <XCircle className="w-10 h-10 text-red-600" />
             </div>
             <h1 className="text-3xl font-bold text-slate-900 mb-3">Demande non approuvée</h1>
             <p className="text-slate-600 mb-4">
-              Votre demande pour l'agence{' '}
+              Votre demande pour votre {requestKindLabel}{' '}
               <span className="font-semibold text-slate-900">« {existingRequest.agency_name} »</span>{' '}
               n'a pas été approuvée par notre équipe.
             </p>
@@ -310,14 +314,14 @@ export default function Welcome() {
   if (existingRequest && existingRequest.status === 'approved') {
     // Race condition : la demande est approuvée mais le profil n'a pas encore été rechargé.
     return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4">
-        <div className="max-w-lg w-full bg-white rounded-2xl shadow-xl p-8 text-center">
+      <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden p-4">
+        <div className="sk-card-premium max-w-lg w-full bg-white/92 p-8 text-center shadow-[0_32px_120px_rgba(6,17,13,0.32)]">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-6">
             <CheckCircle2 className="w-10 h-10 text-green-600" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900 mb-3">Demande approuvée !</h1>
           <p className="text-slate-600 mb-6">
-            Votre agence a été créée. Cliquez ci-dessous pour accéder à votre espace.
+            {requestCreatedLabel} a été créé{existingRequest?.is_bailleur_account ? '' : 'e'}. Cliquez ci-dessous pour accéder à votre espace.
           </p>
           <button
             onClick={async () => {
@@ -344,7 +348,7 @@ export default function Welcome() {
           <div className="max-w-4xl w-full animate-fadeIn">
             <div className="text-center mb-12 animate-slideInUp">
               <BrandLogo size="lg" tone="light" animated showTagline stacked className="items-center justify-center" />
-              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-4">
+              <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-emerald-950 via-emerald-800 to-orange-600 bg-clip-text text-transparent mb-4">
                 Bienvenue sur Samay Këur
               </h1>
               <p className="text-lg md:text-xl text-gray-700">
@@ -355,23 +359,23 @@ export default function Welcome() {
             <div className="grid md:grid-cols-2 gap-6">
               <button
                 onClick={() => { setAccountType('agency'); nextStep(); }}
-                className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all text-left group hover:scale-105"
+                className="sk-card-premium bg-white/94 rounded-[1.4rem] p-8 text-left shadow-premium transition-all group hover:-translate-y-1 hover:shadow-premium-lg"
                 data-testid="card-account-agency"
               >
-                <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center mb-6 group-hover:bg-orange-200 transition-colors">
-                  <Building2 className="w-8 h-8 text-orange-600" />
+                <div className="w-16 h-16 bg-emerald-50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-emerald-100 transition-colors">
+                  <Building2 className="w-8 h-8 text-emerald-800" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-3">Agence Immobilière</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">Je gère pour des clients</h2>
                 <p className="text-gray-600 mb-6">
-                  Gérez plusieurs propriétaires et leurs biens immobiliers. Idéal pour les agences
-                  de gestion locative.
+                  Gérez des propriétaires, leurs biens, les mandats, les encaissements et les rapports.
+                  Idéal pour une agence ou un cabinet de gestion.
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600 mb-6">
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />Gestion multi-bailleurs</li>
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />Équipe collaborative</li>
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />Rapports personnalisés</li>
+                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-emerald-700 mr-2" />Gestion multi-bailleurs</li>
+                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-emerald-700 mr-2" />Équipe collaborative</li>
+                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-emerald-700 mr-2" />Rapports personnalisés</li>
                 </ul>
-                <div className="flex items-center text-orange-600 font-semibold">
+                <div className="flex items-center text-emerald-800 font-semibold">
                   Choisir ce type
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </div>
@@ -379,22 +383,22 @@ export default function Welcome() {
 
               <button
                 onClick={() => { setAccountType('bailleur'); nextStep(); }}
-                className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all text-left group hover:scale-105"
+                className="sk-card-premium bg-white/94 rounded-[1.4rem] p-8 text-left shadow-premium transition-all group hover:-translate-y-1 hover:shadow-premium-lg"
                 data-testid="card-account-bailleur"
               >
-                <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center mb-6 group-hover:bg-blue-200 transition-colors">
-                  <User className="w-8 h-8 text-blue-600" />
+                <div className="w-16 h-16 bg-orange-50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-orange-100 transition-colors">
+                  <User className="w-8 h-8 text-orange-600" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-3">Bailleur Individuel</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-3">Je gère mes propres biens</h2>
                 <p className="text-gray-600 mb-6">
-                  Gérez vos propres biens immobiliers en toute autonomie. Solution simple et efficace.
+                  Suivez vos locataires, loyers, impayés et documents sans logique d'agence inutile.
                 </p>
                 <ul className="space-y-2 text-sm text-gray-600 mb-6">
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-blue-500 mr-2" />Gestion de vos biens</li>
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-blue-500 mr-2" />Suivi des loyers</li>
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-blue-500 mr-2" />Tableaux de bord clairs</li>
+                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />Gestion de vos biens</li>
+                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />Suivi des loyers</li>
+                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />Tableaux de bord clairs</li>
                 </ul>
-                <div className="flex items-center text-blue-600 font-semibold">
+                <div className="flex items-center text-orange-600 font-semibold">
                   Choisir ce type
                   <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                 </div>
@@ -420,11 +424,11 @@ export default function Welcome() {
                 <span className="text-sm text-gray-500">Étape 1 sur 3</span>
               </div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                {accountType === 'agency' ? 'Nom de votre agence' : 'Votre nom complet'}
+                {accountType === 'agency' ? 'Nom de votre structure' : 'Votre nom complet'}
               </h2>
               <p className="text-gray-600">
                 {accountType === 'agency'
-                  ? 'Comment s\'appelle votre agence immobilière ?'
+                  ? 'Comment s\'appelle votre agence ou cabinet de gestion ?'
                   : 'Quel est votre nom complet ?'}
               </p>
             </div>
@@ -513,15 +517,19 @@ export default function Welcome() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">NINEA (optionnel)</label>
-                <input
-                  type="text"
-                  value={formData.ninea}
-                  onChange={(e) => setFormData({ ...formData, ninea: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  placeholder="00123456789"
-                  data-testid="input-ninea"
-                />
+                {accountType === 'agency' && (
+                  <>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">NINEA (optionnel au démarrage)</label>
+                    <input
+                      type="text"
+                      value={formData.ninea}
+                      onChange={(e) => setFormData({ ...formData, ninea: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      placeholder="00123456789"
+                      data-testid="input-ninea"
+                    />
+                  </>
+                )}
               </div>
 
               <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-5 border-2 border-orange-200">
@@ -559,7 +567,7 @@ export default function Welcome() {
   return (
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-orange-100 to-orange-200 flex items-center justify-center p-4">
+      <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden p-4">
         {renderStepContent()}
       </div>
     </>

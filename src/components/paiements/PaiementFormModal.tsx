@@ -2,8 +2,11 @@ import React from 'react';
 import { AlertTriangle, Building2, CreditCard, Home, Info, UserRound, Wallet, WifiOff } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { TooltipHint } from '../onboarding/TooltipHint';
 import { isCommissionMissing } from '../../services/domain/commissionService';
 import type { ContratRow, PaiementFormData, PaiementRow } from './paiementTypes';
+import { buildPaymentMonthOptions, getPaymentMonthState } from '../../services/domain/paymentSchedule';
+import { formatPersonName } from '../../lib/people';
 
 interface PaiementFormModalProps {
   isOpen: boolean;
@@ -12,6 +15,7 @@ interface PaiementFormModalProps {
   formData: PaiementFormData;
   setFormData: React.Dispatch<React.SetStateAction<PaiementFormData>>;
   contrats: ContratRow[];
+  paiements: PaiementRow[];
   isSaving: boolean;
   onSubmit: (e: React.FormEvent) => Promise<void>;
   isOnline: boolean;
@@ -24,35 +28,56 @@ export function PaiementFormModal({
   formData,
   setFormData,
   contrats,
+  paiements,
   isSaving,
   onSubmit,
   isOnline,
 }: PaiementFormModalProps) {
   const handleMoisChange = (monthValue: string) => {
+    const contrat = contrats.find((item) => item.id === formData.contrat_id);
+    const monthState = getPaymentMonthState(contrat, paiements, monthValue, editingPaiement?.id);
     setFormData((prev) => ({
       ...prev,
       mois_display: monthValue,
       mois_concerne: `${monthValue}-01`,
+      montant_total: contrat && monthState?.remainingAmount && monthState.remainingAmount > 0
+        ? String(monthState.remainingAmount)
+        : prev.montant_total,
     }));
   };
 
   const selectedContrat = contrats.find((contrat) => contrat.id === formData.contrat_id);
+  const monthOptions = React.useMemo(
+    () =>
+      buildPaymentMonthOptions(selectedContrat, paiements, {
+        excludePaymentId: editingPaiement?.id,
+        selectedMonth: formData.mois_display,
+      }),
+    [editingPaiement?.id, formData.mois_display, paiements, selectedContrat],
+  );
+  const selectedMonthState = getPaymentMonthState(
+    selectedContrat,
+    paiements,
+    formData.mois_display,
+    editingPaiement?.id,
+  );
   const commission = selectedContrat?.commission ?? selectedContrat?.pourcentage_agence ?? null;
   const montantSaisi = Number(formData.montant_total || 0);
   const loyerAttendu = Number(selectedContrat?.loyer_mensuel || 0);
-  const reliquatPreview = selectedContrat ? Math.max(loyerAttendu - montantSaisi, 0) : 0;
-  const tropPercuPreview = selectedContrat ? Math.max(montantSaisi - loyerAttendu, 0) : 0;
+  const paiementsPrecedents = selectedMonthState?.paidAmount ?? 0;
+  const totalApresPaiement = paiementsPrecedents + montantSaisi;
+  const reliquatPreview = selectedContrat ? Math.max(loyerAttendu - totalApresPaiement, 0) : 0;
+  const tropPercuPreview = selectedContrat ? Math.max(totalApresPaiement - loyerAttendu, 0) : 0;
   const tauxCouverture =
     selectedContrat && loyerAttendu > 0
-      ? Math.min(100, Math.round((montantSaisi / loyerAttendu) * 100))
+      ? Math.min(100, Math.round((totalApresPaiement / loyerAttendu) * 100))
       : 0;
-  const locataireLabel = selectedContrat
-    ? `${selectedContrat.locataires?.prenom ?? ''} ${selectedContrat.locataires?.nom ?? ''}`.trim()
-    : '';
+  const locataireLabel = selectedContrat ? formatPersonName(selectedContrat.locataires, '') : '';
   const uniteLabel = selectedContrat?.unites?.nom ?? '';
   const immeubleLabel = selectedContrat?.unites?.immeubles?.nom ?? '';
   const bailleur = selectedContrat?.unites?.immeubles?.bailleurs;
-  const bailleurLabel = bailleur ? `${bailleur.prenom ?? ''} ${bailleur.nom ?? ''}`.trim() : '';
+  const bailleurLabel = bailleur ? formatPersonName(bailleur, '') : '';
+  const canSubmit = !isSaving && (!selectedContrat || Boolean(formData.mois_display && monthOptions.length > 0 && tropPercuPreview <= 0));
 
   return (
     <Modal
@@ -124,10 +149,21 @@ export function PaiementFormModal({
             value={formData.contrat_id}
             onChange={(event) => {
               const selected = contrats.find((contrat) => contrat.id === event.target.value);
+              const options = buildPaymentMonthOptions(selected, paiements, {
+                excludePaymentId: editingPaiement?.id,
+                selectedMonth: formData.mois_display,
+              });
+              const preferredMonth = options.find((option) => !option.isSold) ?? options[0];
               setFormData((prev) => ({
                 ...prev,
                 contrat_id: event.target.value,
-                montant_total: selected?.loyer_mensuel?.toString() || '',
+                mois_display: preferredMonth?.value ?? prev.mois_display,
+                mois_concerne: preferredMonth ? `${preferredMonth.value}-01` : prev.mois_concerne,
+                montant_total: selected
+                  ? String(preferredMonth?.remainingAmount && preferredMonth.remainingAmount > 0
+                      ? preferredMonth.remainingAmount
+                      : selected.loyer_mensuel)
+                  : '',
                 statut: 'paye',
               }));
             }}
@@ -136,7 +172,7 @@ export function PaiementFormModal({
             <option value="">Sélectionner un contrat</option>
             {contrats.map((contrat) => (
               <option key={contrat.id} value={contrat.id}>
-                {contrat.locataires?.prenom} {contrat.locataires?.nom} - {contrat.unites?.nom}
+                {formatPersonName(contrat.locataires)} - {contrat.unites?.nom}
               </option>
             ))}
           </select>
@@ -162,14 +198,21 @@ export function PaiementFormModal({
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-xl border border-emerald-950/10 bg-white/75 p-3 shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Période</p>
-                <p className="mt-1 text-sm font-black text-slate-950">{formData.mois_display || '-'}</p>
+                <p className="mt-1 text-sm font-black text-slate-950">
+                  {monthOptions.find((option) => option.value === formData.mois_display)?.label ?? (formData.mois_display || '-')}
+                </p>
               </div>
               <div className="rounded-xl border border-emerald-950/10 bg-white/75 p-3 shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Montant dû</p>
                 <p className="mt-1 text-sm font-black tabular-nums text-slate-950">{loyerAttendu.toLocaleString('fr-FR')} FCFA</p>
               </div>
               <div className="rounded-xl bg-emerald-50 p-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700">Reliquat</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700">
+                  Reliquat
+                  <TooltipHint label="Comprendre le reliquat">
+                    Le reliquat est le reste a payer pour cette echeance apres le montant encaisse. Il permet de suivre les paiements partiels sans perdre le fil comptable.
+                  </TooltipHint>
+                </p>
                 <p className="mt-1 text-sm font-black tabular-nums text-emerald-950">{reliquatPreview.toLocaleString('fr-FR')} FCFA</p>
               </div>
               <div className="rounded-xl bg-orange-50 p-3">
@@ -177,6 +220,12 @@ export function PaiementFormModal({
                 <p className="mt-1 text-sm font-black tabular-nums text-orange-950">{tropPercuPreview.toLocaleString('fr-FR')} FCFA</p>
               </div>
             </div>
+            {paiementsPrecedents > 0 && (
+              <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-xs leading-5 text-slate-700">
+                Paiements deja enregistres sur ce mois : <strong>{paiementsPrecedents.toLocaleString('fr-FR')} FCFA</strong>.
+                Ce nouveau paiement portera le total du mois a <strong>{totalApresPaiement.toLocaleString('fr-FR')} FCFA</strong>.
+              </div>
+            )}
             {tropPercuPreview > 0 && (
               <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50 p-3 text-xs leading-5 text-orange-800">
                 Le montant dépasse l'échéance sélectionnée. La validation serveur doit traiter ce surplus comme avance ou régularisation selon la règle financière active.
@@ -199,7 +248,7 @@ export function PaiementFormModal({
             <input
               type="number"
               required
-              min="0"
+              min="1"
               step="any"
               value={formData.montant_total}
               onChange={(event) => setFormData((prev) => ({ ...prev, montant_total: event.target.value }))}
@@ -229,13 +278,26 @@ export function PaiementFormModal({
             <label className="mb-1 block text-sm font-medium text-slate-700">
               Mois concerné <span className="text-red-500">*</span>
             </label>
-            <input
-              type="month"
+            <select
               required
               value={formData.mois_display}
               onChange={(event) => handleMoisChange(event.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-900 shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
-            />
+            >
+              <option value="">Selectionner un mois</option>
+              {monthOptions.map((option) => (
+                <option key={option.value} value={option.value} disabled={option.isSold && option.value !== formData.mois_display}>
+                  {option.label}
+                  {option.isPartial ? ` - reliquat ${option.remainingAmount.toLocaleString('fr-FR')} FCFA` : ''}
+                  {option.isFuture ? ' - avance' : ''}
+                </option>
+              ))}
+            </select>
+            {selectedContrat && monthOptions.length === 0 && (
+              <p className="mt-2 text-xs font-semibold text-emerald-700">
+                Tous les mois couverts par ce contrat sont soldes.
+              </p>
+            )}
           </div>
 
           <div>
@@ -300,7 +362,7 @@ export function PaiementFormModal({
           <Button type="button" variant="secondary" onClick={onClose} disabled={isSaving}>
             Annuler
           </Button>
-          <Button type="submit" loading={isSaving}>
+          <Button type="submit" loading={isSaving} disabled={!canSubmit}>
             {editingPaiement ? 'Enregistrer les modifications' : 'Créer le paiement'}
           </Button>
         </div>

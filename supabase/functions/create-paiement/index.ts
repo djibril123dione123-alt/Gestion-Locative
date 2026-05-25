@@ -73,6 +73,13 @@ async function readBody(req: Request): Promise<unknown> {
 
 function mapDbError(message: string): { message: string; status: number; code: string } {
   if (message.includes("OVERPAYMENT")) {
+    if (message.includes("total deja encaisse")) {
+      return {
+        message: "Ce mois est deja solde pour ce contrat. Modifiez le paiement existant ou choisissez une autre echeance.",
+        status: 409,
+        code: "PAYMENT_MONTH_ALREADY_SETTLED",
+      };
+    }
     return {
       message: message.replace(/^.*OVERPAYMENT:\s*/i, "Surpaiement detecte : "),
       status: 409,
@@ -156,21 +163,32 @@ serve(async (req: Request) => {
 
     if (profileErr || !profile) return err("Profil utilisateur introuvable.", 403, "PROFILE_NOT_FOUND");
     if (!profile.actif) return err("Compte desactive.", 403, "ACCOUNT_DISABLED");
-    if (profile.role === "bailleur") {
-      return err("Acces refuse : les bailleurs ne peuvent pas creer de paiements.", 403, "FORBIDDEN_ROLE");
-    }
     if (!profile.agency_id) return err("Aucune agence associee a ce compte.", 403, "NO_AGENCY");
 
-    const { data: canCreatePaiement, error: permissionErr } = await supabaseAdmin.rpc(
-      "fn_user_can",
-      { p_user_id: user.id, p_page: "paiements", p_action: "create" },
-    );
-    if (permissionErr) {
-      console.error("[create-paiement] RBAC check failed", permissionErr.message);
-      return err("Verification des permissions indisponible.", 500, "RBAC_CHECK_FAILED");
+    const { data: agency, error: agencyErr } = await supabaseAdmin
+      .from("agencies")
+      .select("is_bailleur_account")
+      .eq("id", profile.agency_id)
+      .single();
+    if (agencyErr || !agency) return err("Espace introuvable.", 403, "AGENCY_NOT_FOUND");
+    const isIndividualOwnerAccount = agency.is_bailleur_account === true;
+
+    if (profile.role === "bailleur" && !isIndividualOwnerAccount) {
+      return err("Acces refuse : les bailleurs ne peuvent pas creer de paiements.", 403, "FORBIDDEN_ROLE");
     }
-    if (!canCreatePaiement) {
-      return err("Action refusee par les permissions de l'agence.", 403, "RBAC_FORBIDDEN");
+
+    if (!(isIndividualOwnerAccount && profile.role === "bailleur")) {
+      const { data: canCreatePaiement, error: permissionErr } = await supabaseAdmin.rpc(
+        "fn_user_can",
+        { p_user_id: user.id, p_page: "paiements", p_action: "create" },
+      );
+      if (permissionErr) {
+        console.error("[create-paiement] RBAC check failed", permissionErr.message);
+        return err("Verification des permissions indisponible.", 500, "RBAC_CHECK_FAILED");
+      }
+      if (!canCreatePaiement) {
+        return err("Action refusee par les permissions de l'agence.", 403, "RBAC_FORBIDDEN");
+      }
     }
 
     const rawBody = await readBody(req);

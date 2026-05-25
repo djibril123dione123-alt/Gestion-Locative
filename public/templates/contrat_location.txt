@@ -43,15 +43,14 @@ ARTICLE 5 : OBLIGATIONS DU LOCATAIRE
 12) Satisfaire à toutes les charges de ville ou de police habituelles.
 
 ARTICLE 6 : MONTANT DU LOYER
-Le montant du loyer initial est fixé à la somme {{loyer_mensuel}}
+Le montant du loyer initial est fixé à la somme {{loyer_mensuel}}.
 Le loyer est payé mensuellement d'avance avant le 05 du mois, chez le mandataire.
 
 ARTICLE 7 : DÉPÔT DE GARANTIE
-Le dépôt de garantie est fixé à la somme {{depot_garantie}}
-correspondant à un mois de loyer payé d'avance et un mois de caution.
+Le dépôt de garantie est fixé à la somme {{depot_garantie}}, correspondant à un mois de loyer payé d'avance et un mois de caution.
 
 ARTICLE 8 : PÉNALITÉS
-Il est expressément convenu qu'à défaut de paiement d'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours) des pénalités qui s'élèvent à {{penalite_montant}} par jour de retard, seront appliquées pendant {{penalite_delai}} jours. Passé ce délai, la procédure judiciaire sera enclenchée.
+Il est expressément convenu qu'à défaut de paiement d'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours), des pénalités qui s'élèvent à {{penalite_montant}} par jour de retard seront appliquées pendant {{penalite_delai}} jours. Passé ce délai, la procédure judiciaire sera enclenchée.
 
 {{mention_litige}}
 {{mention_tribunal}}

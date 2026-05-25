@@ -1,6 +1,6 @@
 # Architecture
 
-Samay Keur est une application SaaS multi-tenant construite autour d'un frontend React, d'un backend Supabase et d'une couche Edge Functions pour les operations sensibles.
+Samay Këur est une application SaaS multi-tenant construite autour d'un frontend React, d'un backend Supabase et d'une couche Edge Functions pour les operations sensibles.
 
 ## Objectifs d'architecture
 

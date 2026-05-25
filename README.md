@@ -1,6 +1,6 @@
-# Samay Keur
+# Samay Këur
 
-Samay Keur est une plateforme SaaS multi-tenant de gestion immobiliere pour agences, bailleurs et equipes de gestion locative en Afrique francophone.
+Samay Këur est une plateforme SaaS multi-tenant de gestion immobiliere pour agences, bailleurs et equipes de gestion locative en Afrique francophone.
 
 Le produit centralise les operations locatives critiques : patrimoine, locataires, contrats, encaissements, reliquats, commissions, documents, reporting, equipe, permissions, stockage documentaire et workflows terrain.
 
@@ -10,7 +10,7 @@ Production : https://samay-keur-gestion-locative.vercel.app
 
 ## Vision produit
 
-Samay Keur transforme une gestion locative dispersee entre Excel, WhatsApp, fichiers PDF et relances manuelles en une infrastructure metier structuree.
+Samay Këur transforme une gestion locative dispersee entre Excel, WhatsApp, fichiers PDF et relances manuelles en une infrastructure metier structuree.
 
 Objectifs :
 
@@ -115,6 +115,13 @@ npm run build
 npm run preview -- --host 127.0.0.1 --port 4175
 ```
 
+Vitrine marketing separee :
+
+```bash
+npm run marketing:dev
+npm run marketing:build
+```
+
 Checks recommandes avant push :
 
 ```bash
@@ -154,6 +161,7 @@ La documentation detaillee est maintenant separee par responsabilite.
 | Contribution | [docs/contributing.md](docs/contributing.md) |
 | Design system | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) |
 | Brand guidelines | [docs/BRAND_GUIDELINES.md](docs/BRAND_GUIDELINES.md) |
+| Separation vitrine / app | [docs/marketing-app-separation.md](docs/marketing-app-separation.md) |
 
 Les anciens documents de suivi et historiques restent archives dans [docs/historique](docs/historique).
 

@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle, Eye, EyeOff, LogIn, ShieldCheck, UserPlus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { BrandMark } from '../components/brand/BrandLogo';
+import { BrandLogo, BrandMark } from '../components/brand/BrandLogo';
 
-export function Auth() {
+interface AuthProps {
+  initialMode?: 'login' | 'register';
+}
+
+export function Auth({ initialMode = 'login' }: AuthProps) {
   const { signIn, signInWithGoogle, signUp } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +21,11 @@ export function Auth() {
     nom: '',
     prenom: '',
   });
+
+  useEffect(() => {
+    setMode(initialMode);
+    setError(null);
+  }, [initialMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,14 +73,37 @@ export function Auth() {
   };
 
   return (
-    <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-5">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(255,138,0,0.12),transparent_22rem),linear-gradient(115deg,rgba(8,17,14,0.92),rgba(13,27,22,0.78)_52%,rgba(242,237,227,0.9)_52%,rgba(251,250,246,0.96))]" />
+    <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-6 sm:px-6">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(255,138,0,0.12),transparent_22rem),linear-gradient(115deg,rgba(8,17,14,0.94),rgba(13,27,22,0.82)_48%,rgba(242,237,227,0.88)_48%,rgba(251,250,246,0.96))]" />
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(242,237,227,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(242,237,227,0.035)_1px,transparent_1px)] bg-[size:48px_48px]" />
       <div className="pointer-events-none absolute left-1/2 top-10 h-72 w-72 -translate-x-1/2 rounded-full bg-action-500/16 blur-3xl" />
 
-      <div className="relative w-full max-w-[calc(100vw-2rem)] min-w-0 py-3 sm:max-w-md sm:py-8">
-        <div className="sk-card-premium overflow-hidden border-white/70 bg-white/[0.9] shadow-[0_32px_120px_rgba(6,17,13,0.32)] animate-scaleIn">
-          <div className="p-5 sm:p-8">
+      <div className="relative grid w-full max-w-6xl min-w-0 gap-6 py-3 sm:py-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-stretch">
+        <aside className="relative hidden min-h-[38rem] overflow-hidden rounded-[2rem] border border-white/12 bg-emerald-950 shadow-[0_36px_140px_rgba(6,17,13,0.38)] lg:block">
+          <img
+            src="/brand/marketing/landing-centralisation.jpg"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover opacity-[0.82]"
+          />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,17,13,0.08),rgba(6,17,13,0.78)),radial-gradient(circle_at_20%_10%,rgba(255,138,0,0.22),transparent_18rem)]" />
+          <div className="relative flex h-full flex-col justify-between p-8 text-white">
+            <BrandLogo size="sm" tone="dark" showTagline />
+            <div className="max-w-md">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-100">Accès sécurisé</p>
+              <h2 className="mt-4 text-4xl font-black leading-tight tracking-tight">
+                Une infrastructure immobilière sérieuse commence dès la connexion.
+              </h2>
+              <p className="mt-5 text-sm font-semibold leading-7 text-emerald-50/72">
+                Documents, paiements, GED, rapports et permissions restent protégés dans un espace pensé pour les agences professionnelles.
+              </p>
+            </div>
+          </div>
+        </aside>
+
+        <div className="w-full min-w-0 lg:max-w-md lg:justify-self-end">
+          <div className="sk-card-premium overflow-hidden border-white/70 bg-white/[0.92] shadow-[0_32px_120px_rgba(6,17,13,0.32)] animate-scaleIn">
+            <div className="p-5 sm:p-8">
             <div className="mb-6 text-center sm:mb-8">
               <BrandMark size="lg" tone="light" animated className="mx-auto mb-4" />
               <p className="text-xs font-black uppercase tracking-[0.34em] text-action-600">Manage. Grow. Prosper.</p>
@@ -302,6 +334,7 @@ export function Auth() {
               </p>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>

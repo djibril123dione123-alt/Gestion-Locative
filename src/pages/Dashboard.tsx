@@ -23,10 +23,11 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { QuickStart } from '../components/ui/QuickStart';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
-import { SetupWizard } from '../components/ui/SetupWizard';
+import { FirstStepsChecklist } from '../components/onboarding/FirstStepsChecklist';
+import { OnboardingWizard } from '../components/onboarding/OnboardingWizard';
+import { hasCompletedOnboarding, markOnboardingComplete } from '../components/onboarding/onboardingStorage';
 
 const FR_MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
 
@@ -50,7 +51,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onNavigate }: DashboardProps = {}) {
-  const { profile, loading: authLoading } = useAuth();
+  const { profile, accountProfile, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalBailleurs: 0,
     totalImmeubles: 0,
@@ -69,7 +70,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
-  const [showWizard, setShowWizard] = useState(false);
+  const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
 
   const loadDashboardData = useCallback(async () => {
     if (!profile?.agency_id) {
@@ -156,6 +157,12 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
     }
   }, [profile?.agency_id, authLoading, profile, loadDashboardData]);
 
+  useEffect(() => {
+    if (!isNewUser || !profile?.agency_id) return;
+    if (hasCompletedOnboarding(profile.agency_id)) return;
+    setShowOnboardingWizard(true);
+  }, [isNewUser, profile?.agency_id]);
+
   const pieData = useMemo(
     () => [
       { name: 'Louées', value: stats.unitesLouees },
@@ -199,51 +206,65 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
   if (isNewUser) {
     return (
       <>
-        {showWizard && (
-          <SetupWizard
-            onClose={() => setShowWizard(false)}
-            onComplete={() => {
-              setShowWizard(false);
-              loadDashboardData();
-            }}
-          />
-        )}
+        <OnboardingWizard
+          isOpen={showOnboardingWizard}
+          onClose={() => setShowOnboardingWizard(false)}
+          onComplete={() => {
+            if (profile?.agency_id) markOnboardingComplete(profile.agency_id);
+            setShowOnboardingWizard(false);
+            loadDashboardData();
+          }}
+        />
         <div className="sk-page-shell space-y-6 lg:space-y-8 animate-fadeIn">
-          <div className="animate-slideInLeft">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950 mb-2">
-              Bienvenue sur Gestion Locative
-            </h1>
-            <p className="text-slate-600 text-base lg:text-lg">
-              Commencez par configurer votre plateforme en quelques étapes simples
-            </p>
-          </div>
-
-          <div className="sk-card-premium p-6 animate-slideInUp">
-            <div className="flex items-start gap-4">
-              <div className="flex-1">
-                <h3 className="text-lg font-black text-slate-950 mb-2">Configuration guidée recommandée</h3>
-                <p className="text-slate-700 text-sm font-medium mb-4">
-                  Laissez-vous guider étape par étape pour créer votre premier flux complet en quelques minutes.
+          <section className="sk-premium-panel relative overflow-hidden p-5 sm:p-7 lg:p-8">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-emerald-200/40 blur-3xl" />
+            <div className="pointer-events-none absolute bottom-0 left-0 h-44 w-44 rounded-full bg-orange-200/35 blur-3xl" />
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+              <div className="max-w-3xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-emerald-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-brand-800">
+                  <Sparkles className="h-4 w-4" />
+                  Premiere connexion
+                </div>
+                <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+                  Donnez vie a votre agence en moins de 3 minutes.
+                </h1>
+                <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">
+                  Configurez l'identite de l'agence, invitez l'equipe si besoin, puis ajoutez vos premieres donnees ou chargez une demo realiste.
                 </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
                 <button
-                  onClick={() => setShowWizard(true)}
-                  className="px-6 py-3 bg-brand-700 text-white rounded-lg hover:bg-brand-800 transition-all font-bold shadow-premium flex items-center gap-2"
+                  type="button"
+                  onClick={() => setShowOnboardingWizard(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/18 transition hover:-translate-y-0.5 hover:bg-brand-950"
                 >
-                  <Sparkles className="w-5 h-5" />
-                  Lancer la configuration guidée
+                  <Sparkles className="h-5 w-5" />
+                  Configurer l'agence
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onNavigate?.('immeubles')}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-900/10 bg-white px-5 py-3 text-sm font-black text-brand-800 shadow-sm transition hover:bg-emerald-50"
+                >
+                  Commencer par un immeuble
                 </button>
               </div>
             </div>
-          </div>
+          </section>
 
-          <QuickStart onNavigate={onNavigate} />
+          <FirstStepsChecklist
+            onNavigate={onNavigate}
+            onStartWizard={() => setShowOnboardingWizard(true)}
+            onDemoLoaded={loadDashboardData}
+            showDemoData
+          />
 
           <div className="sk-card-premium p-8">
             <EmptyState
               icon={Sparkles}
-              title="Votre tableau de bord est prêt !"
-              description="Une fois que vous aurez ajouté vos premiers bailleurs, immeubles et locataires, vous verrez apparaître ici toutes vos statistiques et graphiques en temps réel."
-              action={{ label: 'Commencer la configuration', onClick: () => onNavigate?.('bailleurs') }}
+              title="Votre tableau de bord est pret."
+              description="Ajoutez un immeuble, un locataire et un paiement pour voir apparaitre vos indicateurs en temps reel. La demo permet aussi d'explorer sans saisie manuelle."
+              action={{ label: 'Ajouter un immeuble', onClick: () => onNavigate?.('immeubles') }}
             />
           </div>
 
@@ -253,10 +274,10 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
                 <div className="w-10 h-10 bg-brand-700 rounded-lg flex items-center justify-center">
                   <Building2 className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="font-black text-slate-950">Gestion complète</h3>
+                <h3 className="font-black text-slate-950">Gestion complete</h3>
               </div>
               <p className="text-sm font-medium text-slate-700">
-                Gérez vos bailleurs, immeubles, unités et locataires dans une seule plateforme intuitive
+                Gere vos bailleurs, immeubles, unites et locataires dans une seule plateforme intuitive
               </p>
             </div>
             <div className="sk-card p-6">
@@ -267,7 +288,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
                 <h3 className="font-black text-slate-950">Suivi financier</h3>
               </div>
               <p className="text-sm font-medium text-slate-700">
-                Encaissements, rapports mensuels, détection des impayés automatique et exports PDF
+                Encaissements, rapports mensuels, detection des impayes automatique et exports PDF
               </p>
             </div>
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
@@ -278,7 +299,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
                 <h3 className="font-bold text-green-900">Rapports intelligents</h3>
               </div>
               <p className="text-sm text-green-800">
-                Statistiques en temps réel, graphiques mensuels et bilans automatisés pour chaque bailleur
+                Statistiques en temps reel, graphiques mensuels et bilans automatises pour chaque bailleur
               </p>
             </div>
           </div>
@@ -368,22 +389,22 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <div className="lg:col-span-1 sk-card-premium p-4 sm:p-6 transition-all duration-300 animate-scaleIn">
-          <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-2">Finances du mois</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-2">Priorites du mois</h2>
           <div className="space-y-4 mt-4">
             <div className="flex items-center justify-between p-3 sm:p-4 bg-brand-50 rounded-lg transition-all duration-300 hover:-translate-y-0.5">
               <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm text-green-700 font-medium">Revenus perçus</p>
+                <p className="text-xs sm:text-sm text-green-700 font-medium">Paiements saisis</p>
                 <p className="text-lg sm:text-2xl font-bold text-green-900 truncate">
-                  {formatCurrency(stats.revenusMois)}
+                  {stats.nbPaiementsMois} paiement{stats.nbPaiementsMois > 1 ? 's' : ''}
                 </p>
               </div>
               <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 flex-shrink-0" />
             </div>
             <div className="flex items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl transition-all duration-300 hover:scale-105">
               <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm text-red-700 font-medium">Loyers impayés</p>
+                <p className="text-xs sm:text-sm text-red-700 font-medium">Relances a suivre</p>
                 <p className="text-lg sm:text-2xl font-bold text-red-900 truncate">
-                  {formatCurrency(stats.impayesMois)}
+                  {stats.nbImpayesMois} dossier{stats.nbImpayesMois > 1 ? 's' : ''}
                 </p>
               </div>
               <AlertCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600 flex-shrink-0" />
@@ -437,8 +458,8 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
         <div className="sk-card-premium p-4 sm:p-6 transition-all duration-300 animate-scaleIn">
           <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-4">Statistiques générales</h2>
           <div className="space-y-4">
-            <StatRow label="Bailleurs enregistrés" value={stats.totalBailleurs} />
-            <StatRow label="Immeubles gérés" value={stats.totalImmeubles} />
+            {!accountProfile.isIndividualOwner && <StatRow label="Bailleurs enregistrés" value={stats.totalBailleurs} />}
+            <StatRow label={accountProfile.isIndividualOwner ? 'Biens suivis' : 'Immeubles gérés'} value={stats.totalImmeubles} />
             <StatRow label="Unités disponibles" value={stats.unitesLibres} />
             <StatRow label="Unités louées" value={stats.unitesLouees} />
             <StatRow label="Contrats en cours" value={stats.contratsActifs} />

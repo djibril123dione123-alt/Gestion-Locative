@@ -123,17 +123,9 @@ export function BrandedLoader({ label = 'Chargement...' }: { label?: string }) {
   return (
     <div className="sk-splash-screen sk-brand-board-surface sk-brand-protection flex min-h-screen items-center justify-center p-6">
       <div className="sk-splash-card text-center">
-        <div className="relative mx-auto mb-6 flex h-28 w-28 items-center justify-center overflow-hidden rounded-lg">
+        <div className="relative mx-auto mb-6 flex h-28 w-28 items-center justify-center rounded-lg">
           <div className="absolute inset-0 rounded-lg bg-action-500/18 blur-2xl sk-logo-breathe" />
-          <video
-            className="relative z-10 h-full w-full rounded-lg object-cover"
-            src="/brand/logo-loader.mp4"
-            poster="/brand/app-icon-primary.png"
-            autoPlay
-            muted
-            loop
-            playsInline
-          />
+          <BrandMark size="xl" tone="dark" animated className="relative z-10" />
         </div>
         <p className="text-sm font-black uppercase tracking-[0.28em] text-brand-paper">{label}</p>
         <p className="mt-2 text-[0.62rem] font-black uppercase tracking-[0.34em] text-action-500">Manage. Grow. Prosper.</p>

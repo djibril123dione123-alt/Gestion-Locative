@@ -93,7 +93,7 @@ export function ConfirmModal({
             <Icon className="h-5 w-5" />
           </div>
 
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-action-600">
+          <p className="sk-type-caption text-action-600">
             {styles.eyebrow}
           </p>
           <h3 className="mt-2 text-xl font-black leading-tight text-slate-950">{title}</h3>

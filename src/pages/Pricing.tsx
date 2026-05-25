@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CheckoutModal } from '../components/billing/CheckoutModal';
+import { BrandLogo } from '../components/brand/BrandLogo';
 
 type PlanId = 'starter' | 'pro' | 'business' | 'enterprise';
 
@@ -379,8 +380,18 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
       }}
     >
       {!embedded && (
-        <section className="relative mx-auto max-w-6xl overflow-hidden px-4 pb-8 pt-10 text-center sm:pb-10 sm:pt-16">
+        <section className="relative mx-auto max-w-6xl overflow-hidden rounded-b-[2.5rem] px-4 pb-9 pt-10 text-center sm:pb-12 sm:pt-16">
+          <img
+            src="/brand/marketing/landing-documents.jpg"
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 h-full w-full object-cover opacity-[0.24]"
+          />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(245,130,32,0.18),transparent_18rem),linear-gradient(180deg,rgba(6,18,15,0.86),rgba(11,27,22,0.95))]" />
           <div className="pointer-events-none absolute left-1/2 top-6 h-64 w-64 -translate-x-1/2 rounded-full bg-orange-300/10 blur-3xl" />
+          <div className="relative mb-5 flex justify-center">
+            <BrandLogo size="sm" tone="dark" showTagline />
+          </div>
           <div className="relative mx-auto inline-flex max-w-full items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-3 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-50 shadow-sm backdrop-blur sm:px-4 sm:tracking-[0.16em]">
             <ShieldCheck className="h-4 w-4 text-orange-500" />
             <span className="truncate sm:hidden">Pricing SaaS</span>

@@ -114,21 +114,32 @@ serve(async (req: Request) => {
 
     if (profileErr || !profile) return err("Profil introuvable.", 403, "PROFILE_NOT_FOUND");
     if (!profile.actif) return err("Compte désactivé.", 403, "ACCOUNT_DISABLED");
-    if (profile.role === "bailleur") return err("Accès refusé.", 403, "FORBIDDEN_ROLE");
 
     const agencyId: string = profile.agency_id;
     if (!agencyId) return err("Aucune agence associée.", 403, "NO_AGENCY");
 
-    const { data: canCreateContrat, error: permissionErr } = await supabaseAdmin.rpc(
-      "fn_user_can",
-      { p_user_id: user.id, p_page: "contrats", p_action: "create" },
-    );
-    if (permissionErr) {
-      console.error("[create-contrat] RBAC check failed", permissionErr.message);
-      return err("Vérification des permissions indisponible.", 500, "RBAC_CHECK_FAILED");
-    }
-    if (!canCreateContrat) {
-      return err("Action refusée par les permissions de l'agence.", 403, "RBAC_FORBIDDEN");
+    const { data: agency, error: agencyErr } = await supabaseAdmin
+      .from("agencies")
+      .select("is_bailleur_account")
+      .eq("id", agencyId)
+      .single();
+    if (agencyErr || !agency) return err("Espace introuvable.", 403, "AGENCY_NOT_FOUND");
+    const isIndividualOwnerAccount = agency.is_bailleur_account === true;
+
+    if (profile.role === "bailleur" && !isIndividualOwnerAccount) return err("Accès refusé.", 403, "FORBIDDEN_ROLE");
+
+    if (!(isIndividualOwnerAccount && profile.role === "bailleur")) {
+      const { data: canCreateContrat, error: permissionErr } = await supabaseAdmin.rpc(
+        "fn_user_can",
+        { p_user_id: user.id, p_page: "contrats", p_action: "create" },
+      );
+      if (permissionErr) {
+        console.error("[create-contrat] RBAC check failed", permissionErr.message);
+        return err("Vérification des permissions indisponible.", 500, "RBAC_CHECK_FAILED");
+      }
+      if (!canCreateContrat) {
+        return err("Action refusée par les permissions de l'agence.", 403, "RBAC_FORBIDDEN");
+      }
     }
 
     // ── 3. Validation Zod ────────────────────────────────────────────────────
@@ -197,7 +208,7 @@ serve(async (req: Request) => {
         date_debut: input.date_debut,
         date_fin: input.date_fin ?? defaultDateFin,
         loyer_mensuel: input.loyer_mensuel,
-        commission: input.commission ?? DEFAULT_CONTRAT_COMMISSION,
+        commission: isIndividualOwnerAccount ? 0 : input.commission ?? DEFAULT_CONTRAT_COMMISSION,
         caution: input.caution ?? defaultCaution,
         statut: input.statut,
         destination: input.destination ?? null,

@@ -98,11 +98,11 @@ export function Table<T extends { id: string }>({
                     key={col.key}
                     className={`flex items-start justify-between gap-3 px-4 ${isPrimary ? 'bg-brand-surface/75 py-4' : 'py-3'}`}
                   >
-                    <span className="w-24 flex-shrink-0 text-[11px] font-black uppercase tracking-[0.08em] text-slate-500">
+                    <span className="w-24 flex-shrink-0 text-xs font-black uppercase tracking-wide text-slate-500">
                       {col.label}
                     </span>
                     <span
-                      className={`min-w-0 flex-1 text-right leading-5 text-slate-800 [&_.sk-action-group]:justify-end ${
+                      className={`min-w-0 flex-1 text-right leading-5 text-slate-800 [&_.sk-action-group]:flex [&_.sk-action-group]:flex-wrap [&_.sk-action-group]:justify-end [&_.sk-action-group]:gap-2 [&_.sk-action-group-right]:flex [&_.sk-action-group-right]:flex-wrap [&_.sk-action-group-right]:justify-end [&_.sk-action-group-right]:gap-2 ${
                         isPrimary ? 'text-base font-black' : 'text-sm font-semibold'
                       }`}
                     >
@@ -138,7 +138,7 @@ export function Table<T extends { id: string }>({
         ))}
       </div>
 
-      <div className="hidden overflow-hidden rounded-[1.15rem] border border-emerald-950/10 bg-white/92 shadow-premium backdrop-blur sm:block">
+      <div className="hidden overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/92 shadow-premium backdrop-blur sm:block">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead className="sticky top-0 z-10 border-b border-emerald-950/10 bg-[linear-gradient(180deg,rgba(248,244,236,0.98),rgba(255,255,255,0.94))] backdrop-blur">

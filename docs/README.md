@@ -1,4 +1,4 @@
-# Documentation Samay Keur
+# Documentation Samay Këur
 
 Cette documentation est organisee pour separer les besoins des lecteurs :
 
@@ -12,6 +12,7 @@ Cette documentation est organisee pour separer les besoins des lecteurs :
 | Domaine | Document |
 |---|---|
 | Architecture globale | [architecture.md](architecture.md) |
+| Adaptabilite multi-profils | [adaptive-profiles-phase-0.md](adaptive-profiles-phase-0.md) |
 | Securite | [security.md](security.md) |
 | Finance engine | [finance-engine.md](finance-engine.md) |
 | Paiements | [payments.md](payments.md) |

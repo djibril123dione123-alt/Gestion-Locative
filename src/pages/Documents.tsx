@@ -222,7 +222,8 @@ function registryToDocumentItem(row: RegistryDocumentRow): DocumentItem {
 }
 
 export function Documents() {
-  const { profile, user } = useAuth();
+  const { profile, user, accountProfile } = useAuth();
+  const isIndividualOwner = accountProfile.isIndividualOwner;
   const toast = useToast();
   const [items, setItems] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -296,7 +297,7 @@ export function Documents() {
       setBreakdown(storageBreakdown);
 
       setEntityOptions({
-        agency: [{ id: profile.agency_id, label: 'Agence' }],
+        agency: [{ id: profile.agency_id, label: isIndividualOwner ? 'Compte propriétaire' : 'Agence' }],
         bailleur: ((bailleursRes.data ?? []) as Array<{ id: string; nom: string; prenom?: string | null }>).map((row) => ({
           id: row.id,
           label: `${row.prenom ?? ''} ${row.nom}`.trim(),
@@ -328,7 +329,7 @@ export function Documents() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.agency_id, toast]);
+  }, [isIndividualOwner, profile?.agency_id, toast]);
 
   useEffect(() => {
     if (profile?.agency_id) load();
@@ -464,6 +465,19 @@ export function Documents() {
 
   const selectedEntityType = form.entityType || ENTITY_BY_CATEGORY[form.category] || '';
   const selectedEntityOptions = selectedEntityType ? entityOptions[selectedEntityType] ?? [] : [];
+  const visibleCategories = useMemo(
+    () => CATEGORIES.filter((category) => !(isIndividualOwner && category === 'bailleurs')),
+    [isIndividualOwner]
+  );
+  const categoryLabel = (category: UserDocumentCategory) => {
+    if (isIndividualOwner && category === 'bailleurs') return 'Propriétaire';
+    return DOCUMENT_CATEGORY_LABELS[category];
+  };
+  const entityLabel = (entityType: UserDocumentEntityType) => {
+    if (isIndividualOwner && entityType === 'agency') return 'Compte propriétaire';
+    if (isIndividualOwner && entityType === 'bailleur') return 'Propriétaire';
+    return DOCUMENT_ENTITY_LABELS[entityType];
+  };
   const agencyId = profile?.agency_id ?? '';
   const usedPercent = Math.min(100, Number(usage?.usage_percent ?? 0));
   const currentUsageMessage = usageMessage(usedPercent);
@@ -484,7 +498,9 @@ export function Documents() {
             </div>
             <h1 className="mt-4 text-2xl font-extrabold tracking-tight sm:text-4xl">Documents</h1>
             <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-emerald-50/75 sm:text-base">
-              Archivez, retrouvez et sécurisez les documents métier de l'agence sans dupliquer inutilement les fichiers générés.
+              {isIndividualOwner
+                ? 'Archivez, retrouvez et sécurisez vos contrats, quittances et justificatifs sans fouiller dans vos dossiers.'
+                : "Archivez, retrouvez et sécurisez les documents métier de l'agence sans dupliquer inutilement les fichiers générés."}
             </p>
           </div>
 
@@ -531,7 +547,7 @@ export function Documents() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { label: 'Documents actifs', value: items.filter((item) => item.lifecycleStatus === 'active').length, icon: FileCheck2 },
           { label: 'Fichiers uploadés', value: items.filter((item) => item.source === 'uploaded').length, icon: Upload },
@@ -637,7 +653,7 @@ export function Documents() {
               <span>{items.length}</span>
             </button>
             <div className="flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-1 lg:overflow-visible lg:pb-0">
-              {CATEGORIES.map((category) => {
+              {visibleCategories.map((category) => {
                 const Icon = CATEGORY_ICONS[category];
                 return (
                   <button
@@ -650,7 +666,7 @@ export function Documents() {
                   >
                     <span className="flex items-center gap-2">
                       <Icon className="h-4 w-4" />
-                      {DOCUMENT_CATEGORY_LABELS[category]}
+                      {categoryLabel(category)}
                     </span>
                     <span className="text-xs text-slate-400">{categoryCounts[category] ?? 0}</span>
                   </button>
@@ -672,7 +688,7 @@ export function Documents() {
                   >
                     <p className="truncate text-sm font-semibold text-slate-800">{file.title}</p>
                     <p className="mt-1 text-xs font-semibold text-slate-500">
-                      {formatStorageSize(file.file_size)} · {DOCUMENT_CATEGORY_LABELS[normalizeCategory(file.category)]}
+                      {formatStorageSize(file.file_size)} · {categoryLabel(normalizeCategory(file.category))}
                     </p>
                   </button>
                 ))}
@@ -695,7 +711,7 @@ export function Documents() {
             <select
               value={sourceFilter}
               onChange={(event) => setSourceFilter(event.target.value as typeof sourceFilter)}
-              className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
+              className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:w-auto"
             >
               <option value="all">Toutes sources</option>
               <option value="uploaded">Uploads utilisateurs</option>
@@ -725,7 +741,7 @@ export function Documents() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                            {DOCUMENT_CATEGORY_LABELS[item.category]}
+                            {categoryLabel(item.category)}
                           </span>
                           <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-800">
                             {item.source === 'generated' ? 'Généré' : 'Upload'}
@@ -742,19 +758,19 @@ export function Documents() {
                           <span>{formatStorageSize(item.size)}</span>
                           <span>{new Date(item.createdAt).toLocaleDateString('fr-FR')}</span>
                           <span>{ENTITY_LABELS[item.lifecycleStatus] ?? item.lifecycleStatus}</span>
-                          {item.entityType && <span>{DOCUMENT_ENTITY_LABELS[item.entityType]}</span>}
+                          {item.entityType && <span>{entityLabel(item.entityType)}</span>}
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-4 grid gap-2 border-t border-slate-100 pt-3 sm:flex sm:justify-end">
+                    <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3 sm:justify-end">
                       {item.source === 'uploaded' && item.retentionPolicy !== 'critical' && item.lifecycleStatus === 'active' && (
-                        <button type="button" onClick={() => setArchiveTarget(item)} className="sk-action sk-action-secondary justify-center">
+                        <button type="button" onClick={() => setArchiveTarget(item)} className="sk-action sk-action-secondary flex-1 justify-center sm:flex-none">
                           <Archive className="h-4 w-4" />
                           Archiver
                         </button>
                       )}
-                      <button type="button" onClick={() => openDocument(item)} className="sk-action sk-action-primary justify-center">
+                      <button type="button" onClick={() => openDocument(item)} className="sk-action sk-action-primary flex-1 justify-center sm:flex-none">
                         <Download className="h-4 w-4" />
                         Ouvrir
                       </button>
@@ -812,9 +828,9 @@ export function Documents() {
                 }}
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
               >
-                {CATEGORIES.map((category) => (
+                {visibleCategories.map((category) => (
                   <option key={category} value={category}>
-                    {DOCUMENT_CATEGORY_LABELS[category]}
+                    {categoryLabel(category)}
                   </option>
                 ))}
               </select>
@@ -841,11 +857,13 @@ export function Documents() {
                 className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
               >
                 <option value="">Aucun lien</option>
-                {Object.entries(DOCUMENT_ENTITY_LABELS).map(([id, label]) => (
-                  <option key={id} value={id}>
-                    {label}
-                  </option>
-                ))}
+                {Object.keys(DOCUMENT_ENTITY_LABELS)
+                  .filter((id) => !(isIndividualOwner && id === 'bailleur'))
+                  .map((id) => (
+                    <option key={id} value={id}>
+                      {entityLabel(id as UserDocumentEntityType)}
+                    </option>
+                  ))}
               </select>
             </label>
 

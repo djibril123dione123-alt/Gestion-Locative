@@ -8,7 +8,7 @@
     <path d="M187 108L221 83V215L187 194V108Z" fill="url(#cream)"/>
     <path d="M198 96L252 59V141L198 107V96Z" fill="url(#orange)"/>
   </g>
-  <text x="306" y="128" fill="#0D1B16" font-family="Poppins, Inter, ui-sans-serif, system-ui, sans-serif" font-size="68" font-weight="700" letter-spacing="16">SAMAY KEUR</text>
+  <text x="306" y="128" fill="#0D1B16" font-family="Poppins, Inter, ui-sans-serif, system-ui, sans-serif" font-size="68" font-weight="700" letter-spacing="16">SAMAY KËUR</text>
   <text x="312" y="188" fill="#FF8A00" font-family="Poppins, Inter, ui-sans-serif, system-ui, sans-serif" font-size="24" font-weight="800" letter-spacing="14">MANAGE. GROW. PROSPER.</text>
   <defs>
     <radialGradient id="tile" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(102 56) rotate(53) scale(246)">

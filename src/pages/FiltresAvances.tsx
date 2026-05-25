@@ -44,7 +44,8 @@ interface SearchResult {
 }
 
 export function FiltresAvances() {
-  const { profile } = useAuth();
+  const { profile, accountProfile } = useAuth();
+  const isIndividualOwner = accountProfile.isIndividualOwner;
   const { error: showError, toasts, removeToast } = useToast();
   const [results, setResults] = useState<SearchResult[]>([]);
   const [bailleurs, setBailleurs] = useState<OptionRow[]>([]);
@@ -66,6 +67,18 @@ export function FiltresAvances() {
   const loadFilterOptions = useCallback(async () => {
     if (!profile?.agency_id) return;
     try {
+      if (isIndividualOwner) {
+        const { data: immeublesData } = await supabase
+          .from('immeubles')
+          .select('id, nom')
+          .eq('agency_id', profile.agency_id)
+          .eq('actif', true)
+          .order('nom');
+        setBailleurs([]);
+        setImmeubles((immeublesData || []) as OptionRow[]);
+        return;
+      }
+
       const { data: bailleursData } = await supabase
         .from('bailleurs')
         .select('id, nom, prenom')
@@ -77,7 +90,7 @@ export function FiltresAvances() {
     } catch {
       // Les options seront rechargées à la prochaine ouverture.
     }
-  }, [profile?.agency_id]);
+  }, [isIndividualOwner, profile?.agency_id]);
 
   const loadImmeublesByBailleur = useCallback(async (bailleurId: string) => {
     if (!profile?.agency_id) return;
@@ -120,13 +133,14 @@ export function FiltresAvances() {
   }, [loadFilterOptions, profile?.agency_id]);
 
   useEffect(() => {
+    if (isIndividualOwner) return;
     if (filters.bailleur_id) {
       loadImmeublesByBailleur(filters.bailleur_id);
     } else {
       setImmeubles([]);
       setUnites([]);
     }
-  }, [filters.bailleur_id, loadImmeublesByBailleur]);
+  }, [filters.bailleur_id, isIndividualOwner, loadImmeublesByBailleur]);
 
   useEffect(() => {
     if (filters.immeuble_id) {
@@ -274,7 +288,7 @@ export function FiltresAvances() {
       date_debut_max: '',
     });
     setResults([]);
-    setImmeubles([]);
+    if (!isIndividualOwner) setImmeubles([]);
     setUnites([]);
   };
 
@@ -284,7 +298,9 @@ export function FiltresAvances() {
       Téléphone: formatSenegalPhone(r.locataires?.telephone, ''),
       Unité: r.unites?.nom || '',
       Immeuble: r.unites?.immeubles?.nom || '',
-      Bailleur: r.unites?.immeubles?.bailleurs ? `${r.unites.immeubles.bailleurs.prenom} ${r.unites.immeubles.bailleurs.nom}` : '',
+      ...(!isIndividualOwner
+        ? { Bailleur: r.unites?.immeubles?.bailleurs ? `${r.unites.immeubles.bailleurs.prenom} ${r.unites.immeubles.bailleurs.nom}` : '' }
+        : {}),
       'Loyer mensuel': r.loyer_mensuel,
       'Statut produit': r.unites?.statut || '',
       'Date début': r.date_debut,
@@ -319,28 +335,30 @@ export function FiltresAvances() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Bailleur</label>
-            <select
-              value={filters.bailleur_id}
-              onChange={(e) => setFilters({ ...filters, bailleur_id: e.target.value, immeuble_id: '', unite_id: '' })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-            >
-              <option value="">Tous les bailleurs</option>
-              {bailleurs.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.prenom} {b.nom}
-                </option>
-              ))}
-            </select>
-          </div>
+          {!isIndividualOwner && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Bailleur</label>
+              <select
+                value={filters.bailleur_id}
+                onChange={(e) => setFilters({ ...filters, bailleur_id: e.target.value, immeuble_id: '', unite_id: '' })}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="">Tous les bailleurs</option>
+                {bailleurs.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.prenom} {b.nom}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Immeuble</label>
             <select
               value={filters.immeuble_id}
               onChange={(e) => setFilters({ ...filters, immeuble_id: e.target.value, unite_id: '' })}
-              disabled={!filters.bailleur_id}
+              disabled={!isIndividualOwner && !filters.bailleur_id}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 text-sm"
             >
               <option value="">Tous les immeubles</option>
@@ -483,7 +501,9 @@ export function FiltresAvances() {
                   <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Locataire</th>
                   <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Produit</th>
                   <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Immeuble</th>
-                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Bailleur</th>
+                  {!isIndividualOwner && (
+                    <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Bailleur</th>
+                  )}
                   <th className="text-right py-4 px-4 text-sm font-semibold text-slate-700">Loyer</th>
                   <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Date début</th>
                   <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Statut</th>
@@ -497,11 +517,13 @@ export function FiltresAvances() {
                     </td>
                     <td className="py-4 px-4 text-sm text-slate-700">{result.unites?.nom || '-'}</td>
                     <td className="py-4 px-4 text-sm text-slate-700">{result.unites?.immeubles?.nom || '-'}</td>
-                    <td className="py-4 px-4 text-sm text-slate-700">
-                      {result.unites?.immeubles?.bailleurs
-                        ? `${result.unites.immeubles.bailleurs.prenom} ${result.unites.immeubles.bailleurs.nom}`
-                        : '-'}
-                    </td>
+                    {!isIndividualOwner && (
+                      <td className="py-4 px-4 text-sm text-slate-700">
+                        {result.unites?.immeubles?.bailleurs
+                          ? `${result.unites.immeubles.bailleurs.prenom} ${result.unites.immeubles.bailleurs.nom}`
+                          : '-'}
+                      </td>
+                    )}
                     <td className="py-4 px-4 text-sm text-slate-700 text-right font-medium">
                       {formatCurrency(result.loyer_mensuel)}
                     </td>

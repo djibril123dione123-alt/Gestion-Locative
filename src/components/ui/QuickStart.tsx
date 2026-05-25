@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ElementType } from 'react';
 import { CheckCircle2, ChevronRight, X, Building2, Users, Home, FileText } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,7 +8,7 @@ interface QuickStartStep {
   title: string;
   description: string;
   completed: boolean;
-  icon: React.ElementType;
+  icon: ElementType;
   action?: () => void;
 }
 
@@ -17,7 +17,8 @@ interface QuickStartProps {
 }
 
 export function QuickStart({ onNavigate }: QuickStartProps) {
-  const { profile } = useAuth();
+  const { profile, accountProfile } = useAuth();
+  const isIndividualOwner = accountProfile.isIndividualOwner;
   const [steps, setSteps] = useState<QuickStartStep[]>([]);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
@@ -45,25 +46,27 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
       ]);
 
       const newSteps: QuickStartStep[] = [
-        {
-          id: 'bailleur',
-          title: 'Ajouter un bailleur',
-          description: 'Enregistrez votre premier propriétaire',
-          completed: (bailleursCount || 0) > 0,
-          icon: Users,
-          action: () => onNavigate?.('bailleurs'),
-        },
+        ...(!isIndividualOwner
+          ? [{
+              id: 'bailleur',
+              title: 'Ajouter un bailleur',
+              description: 'Enregistrez votre premier proprietaire',
+              completed: (bailleursCount || 0) > 0,
+              icon: Users,
+              action: () => onNavigate?.('bailleurs'),
+            }]
+          : []),
         {
           id: 'immeuble',
-          title: 'Ajouter un immeuble',
-          description: 'Créez votre premier bien immobilier',
+          title: isIndividualOwner ? 'Ajouter mon premier bien' : 'Ajouter un immeuble',
+          description: isIndividualOwner ? 'Creez votre premier bien locatif' : 'Creez votre premier bien immobilier',
           completed: (immeublesCount || 0) > 0,
           icon: Building2,
           action: () => onNavigate?.('immeubles'),
         },
         {
           id: 'unite',
-          title: 'Créer une unité',
+          title: isIndividualOwner ? 'Ajouter une unite' : 'Creer une unite',
           description: 'Ajoutez un appartement ou local',
           completed: (unitesCount || 0) > 0,
           icon: Home,
@@ -71,7 +74,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
         },
         {
           id: 'locataire',
-          title: 'Enregistrer un locataire',
+          title: isIndividualOwner ? 'Ajouter mon locataire' : 'Enregistrer un locataire',
           description: 'Ajoutez votre premier locataire',
           completed: (locatairesCount || 0) > 0,
           icon: Users,
@@ -79,8 +82,8 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
         },
         {
           id: 'contrat',
-          title: 'Créer un contrat',
-          description: 'Générez votre premier contrat de location',
+          title: 'Creer un contrat',
+          description: 'Generez votre premier contrat de location',
           completed: (contratsCount || 0) > 0,
           icon: FileText,
           action: () => onNavigate?.('contrats'),
@@ -89,17 +92,17 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
 
       setSteps(newSteps);
 
-      const allCompleted = newSteps.every(step => step.completed);
+      const allCompleted = newSteps.every((step) => step.completed);
       if (allCompleted) {
         setIsDismissed(true);
         localStorage.setItem('quickstart_dismissed', 'true');
       }
-    } catch (error) {
-      console.error('Error loading quick start progress:', error);
+    } catch {
+      setSteps([]);
     } finally {
       setLoading(false);
     }
-  }, [onNavigate, profile?.agency_id]);
+  }, [isIndividualOwner, onNavigate, profile?.agency_id]);
 
   useEffect(() => {
     loadProgress();
@@ -119,8 +122,12 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
     return null;
   }
 
-  const completedCount = steps.filter(s => s.completed).length;
+  const completedCount = steps.filter((step) => step.completed).length;
   const totalCount = steps.length;
+  if (totalCount === 0) {
+    return null;
+  }
+
   const progress = (completedCount / totalCount) * 100;
 
   if (isCollapsed) {
@@ -132,8 +139,8 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
               <CheckCircle2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="text-white font-semibold">Guide de démarrage</p>
-              <p className="text-white/80 text-sm">{completedCount}/{totalCount} étapes complétées</p>
+              <p className="text-white font-semibold">Guide de demarrage</p>
+              <p className="text-white/80 text-sm">{completedCount}/{totalCount} etapes completees</p>
             </div>
           </div>
           <ChevronRight className="w-5 h-5 text-white" />
@@ -147,9 +154,9 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
       <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6">
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="text-xl font-bold text-white mb-2">Démarrage rapide</h3>
+            <h3 className="text-xl font-bold text-white mb-2">Demarrage rapide</h3>
             <p className="text-white/90 text-sm">
-              Configurez votre plateforme en quelques étapes simples
+              Configurez votre espace en quelques etapes simples
             </p>
           </div>
           <button
@@ -224,7 +231,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
         {completedCount === totalCount && (
           <div className="mt-6 p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
             <p className="text-green-900 font-semibold text-center">
-              🎉 Félicitations ! Vous avez terminé la configuration initiale
+              Felicitations ! Vous avez termine la configuration initiale
             </p>
           </div>
         )}

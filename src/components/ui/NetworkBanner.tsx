@@ -1,13 +1,11 @@
 /**
- * NetworkBanner — barre de statut réseau + sync offline.
- * - Hors ligne : rouge, compte les actions en attente de sync
- * - Connexion rétablie : vert 3 s + résultat du sync
- * - En sync : bleu avec spinner
- * - Erreurs de sync : orange avec détail
+ * NetworkBanner - statut reseau + synchronisation offline.
+ * Le hook useNetworkStatus centralise la detection offline/reconnexion/lenteur.
  */
 
-import { useEffect, useState, useCallback } from 'react';
-import { WifiOff, Wifi, RefreshCw, AlertTriangle } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, Gauge, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import {
   getPendingCount,
   getErrorMutations,
@@ -20,7 +18,7 @@ interface NetworkBannerProps {
 }
 
 export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const { isOnline, isReconnecting, isSlowConnection, connectionLabel } = useNetworkStatus();
   const [showRestored, setShowRestored] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -36,13 +34,13 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
     setErrorCount(errMutations.length);
   }, []);
 
-  useEffect(() => {
-    refreshCounts();
-  }, [refreshCounts]);
-
   const doSync = useCallback(async () => {
     const count = await getPendingCount();
-    if (count === 0) return;
+    if (count === 0) {
+      await refreshCounts();
+      return;
+    }
+
     setSyncing(true);
     try {
       const result = await syncPendingMutations();
@@ -52,42 +50,41 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
     } finally {
       setSyncing(false);
     }
-  }, [refreshCounts, onSyncComplete]);
+  }, [onSyncComplete, refreshCounts]);
 
   useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      setShowRestored(true);
-      setLastResult(null);
-      doSync().then(() => {
-        setTimeout(() => setShowRestored(false), 5000);
-      });
-    };
-    const handleOffline = () => {
-      setIsOnline(false);
+    void refreshCounts();
+  }, [refreshCounts]);
+
+  useEffect(() => {
+    if (!isOnline) {
       setShowRestored(false);
       setLastResult(null);
-      refreshCounts();
-    };
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [doSync, refreshCounts]);
+      void refreshCounts();
+      return undefined;
+    }
 
-  if (isOnline && !showRestored && !syncing && errorCount === 0) return null;
+    if (!isReconnecting) return undefined;
+
+    setShowRestored(true);
+    setLastResult(null);
+    void doSync();
+
+    const timer = window.setTimeout(() => setShowRestored(false), 5200);
+    return () => window.clearTimeout(timer);
+  }, [doSync, isOnline, isReconnecting, refreshCounts]);
+
+  if (isOnline && !showRestored && !syncing && errorCount === 0 && !isSlowConnection) return null;
 
   if (!isOnline) {
     return (
-      <div className="bg-red-700 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-semibold z-50 flex-shrink-0 shadow-sm">
-        <WifiOff className="w-4 h-4 flex-shrink-0" />
+      <div className="z-50 flex flex-shrink-0 items-center gap-3 bg-red-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm">
+        <WifiOff className="h-4 w-4 flex-shrink-0" />
         <span>
-          Mode hors ligne
+          Connexion interrompue.
           {pendingCount > 0
-            ? ` — ${pendingCount} action${pendingCount > 1 ? 's' : ''} seront synchronisées automatiquement`
-            : ' — les données seront synchronisées dès le retour de connexion'}
+            ? ` ${pendingCount} action${pendingCount > 1 ? 's' : ''} en attente seront synchronisees automatiquement.`
+            : ' Vous pouvez continuer, les donnees seront synchronisees au retour du reseau.'}
         </span>
       </div>
     );
@@ -95,10 +92,11 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
 
   if (errorCount > 0 && !syncing) {
     return (
-      <div className="bg-action-700 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-semibold z-50 flex-shrink-0 shadow-sm">
-        <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+      <div className="z-50 flex flex-shrink-0 items-center gap-3 bg-action-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm">
+        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
         <span>
-          {errorCount} action{errorCount > 1 ? 's' : ''} n'ont pas pu être synchronisée{errorCount > 1 ? 's' : ''} — ouvrez le panneau de sauvegarde pour voir le détail.
+          {errorCount} action{errorCount > 1 ? 's' : ''} n'ont pas encore pu etre synchronisee{errorCount > 1 ? 's' : ''}.
+          La file locale est conservee et une nouvelle tentative sera lancee.
         </span>
       </div>
     );
@@ -106,23 +104,32 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
 
   if (syncing) {
     return (
-      <div className="bg-brand-800 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-semibold z-50 flex-shrink-0 shadow-sm">
-        <RefreshCw className="w-4 h-4 flex-shrink-0 animate-spin" />
-        <span>Synchronisation des données en cours…</span>
+      <div className="z-50 flex flex-shrink-0 items-center gap-3 bg-brand-800 px-4 py-2.5 text-sm font-semibold text-white shadow-sm">
+        <RefreshCw className="h-4 w-4 flex-shrink-0 animate-spin" />
+        <span>Connexion retrouvee, synchronisation en cours...</span>
+      </div>
+    );
+  }
+
+  if (isSlowConnection) {
+    return (
+      <div className="z-50 flex flex-shrink-0 items-center gap-3 bg-amber-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm">
+        <Gauge className="h-4 w-4 flex-shrink-0" />
+        <span>Connexion lente detectee ({connectionLabel}). L'application privilegie le cache local quand c'est possible.</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-brand-700 text-white px-4 py-2.5 flex items-center gap-3 text-sm font-semibold z-50 flex-shrink-0 shadow-sm">
-      <Wifi className="w-4 h-4 flex-shrink-0" />
+    <div className="z-50 flex flex-shrink-0 items-center gap-3 bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm">
+      <Wifi className="h-4 w-4 flex-shrink-0" />
       <span>
-        Connexion rétablie
+        Connexion retablie
         {lastResult && lastResult.synced > 0
-          ? ` — ${lastResult.synced} action${lastResult.synced > 1 ? 's' : ''} synchronisée${lastResult.synced > 1 ? 's' : ''}`
+          ? ` - ${lastResult.synced} action${lastResult.synced > 1 ? 's' : ''} synchronisee${lastResult.synced > 1 ? 's' : ''}`
           : ''}
         {lastResult && lastResult.errors > 0
-          ? ` — ${lastResult.errors} erreur${lastResult.errors > 1 ? 's' : ''}`
+          ? ` - ${lastResult.errors} erreur${lastResult.errors > 1 ? 's' : ''}`
           : ''}
       </span>
     </div>

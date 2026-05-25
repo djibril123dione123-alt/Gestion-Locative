@@ -1,6 +1,6 @@
 # RBAC et multi-tenant
 
-Le RBAC de Samay Keur combine roles globaux, permissions par page et checks serveur.
+Le RBAC de Samay Këur combine roles globaux, permissions par page et checks serveur.
 
 ## Roles
 

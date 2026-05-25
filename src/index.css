@@ -18,7 +18,7 @@
     --sk-ink: #0d1b16;
     --sk-ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
     --sk-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-    --sk-mobile-topbar-height: 4.25rem;
+    --sk-mobile-topbar-height: 3.5rem;
     --sk-mobile-bottom-nav-height: 4.15rem;
     --sk-mobile-page-padding: 1rem;
     --sk-mobile-radius: 1.25rem;
@@ -32,9 +32,11 @@
   html {
     -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
-    touch-action: manipulation;
+    touch-action: auto;
     background: var(--sk-paper);
     overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
   }
 
   body {
@@ -44,8 +46,9 @@
       radial-gradient(circle at 12% 0%, rgba(31, 59, 46, 0.12), transparent 28rem),
       linear-gradient(180deg, #f2ede3 0%, #fbfaf6 48%, #f2ede3 100%);
     text-rendering: optimizeLegibility;
-    overscroll-behavior-y: none;
+    overscroll-behavior-y: auto;
     overflow-x: hidden;
+    overflow-y: auto;
   }
 
   h1,
@@ -165,6 +168,26 @@
     transform: scale(0.985);
   }
 
+  .sk-type-display {
+    @apply text-4xl font-black leading-tight text-slate-950 sm:text-5xl lg:text-6xl;
+  }
+
+  .sk-type-title {
+    @apply text-2xl font-black leading-tight text-slate-950 sm:text-3xl lg:text-4xl;
+  }
+
+  .sk-type-section {
+    @apply text-xl font-black leading-snug text-slate-950 sm:text-2xl;
+  }
+
+  .sk-type-body {
+    @apply text-sm leading-7 text-slate-600 sm:text-base;
+  }
+
+  .sk-type-caption {
+    @apply text-xs font-black uppercase tracking-widest text-slate-500;
+  }
+
   .sk-card {
     @apply rounded-lg border border-slate-200/80 bg-white/90 shadow-sm backdrop-blur;
     background:
@@ -206,7 +229,7 @@
   }
 
   .sk-section-eyebrow {
-    @apply text-xs font-black uppercase tracking-[0.18em] text-action-600;
+    @apply text-xs font-black uppercase tracking-widest text-action-600;
   }
 
   .sk-section-title {
@@ -215,6 +238,23 @@
 
   .sk-section-lead {
     @apply mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base;
+  }
+
+  .sk-empty-state {
+    @apply relative flex flex-col items-center justify-center overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/90 p-6 text-center shadow-premium backdrop-blur sm:p-12;
+    background:
+      radial-gradient(circle at 90% 0%, rgba(255, 138, 0, 0.07), transparent 15rem),
+      radial-gradient(circle at 0% 100%, rgba(31, 59, 46, 0.06), transparent 16rem),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 244, 236, 0.92));
+  }
+
+  .sk-empty-state-icon {
+    @apply mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-900/10 bg-emerald-50 shadow-inner sm:h-20 sm:w-20;
+  }
+
+  .sk-notification-popover {
+    max-height: 70vh;
+    max-width: calc(100vw - 2rem);
   }
 
   .sk-card,

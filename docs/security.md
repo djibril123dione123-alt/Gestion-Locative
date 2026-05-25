@@ -1,6 +1,6 @@
 # Securite
 
-La securite de Samay Keur repose sur quatre couches : Supabase RLS, Edge Functions, RBAC applicatif et controle strict des acces Storage.
+La securite de Samay Këur repose sur quatre couches : Supabase RLS, Edge Functions, RBAC applicatif et controle strict des acces Storage.
 
 ## Principes
 

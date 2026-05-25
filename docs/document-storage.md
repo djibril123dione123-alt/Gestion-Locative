@@ -1,6 +1,6 @@
 # GED et stockage documentaire
 
-Samay Keur utilise une GED legere pour differencier documents generes, documents uploades et archives.
+Samay Këur utilise une GED legere pour differencier documents generes, documents uploades et archives.
 
 ## Objectifs
 

@@ -28,7 +28,7 @@ export function LoadingState({
           <div className={`absolute inset-0 rounded-lg blur-xl sk-logo-breathe ${dark ? 'bg-action-500/20' : 'bg-action-500/16'}`} />
           <BrandMark size="lg" tone={dark ? 'dark' : 'light'} animated />
         </div>
-        <p className={`text-sm font-black uppercase tracking-[0.2em] ${dark ? 'text-brand-paper' : 'text-brand-950'}`}>
+        <p className={`sk-type-caption ${dark ? 'text-brand-paper' : 'text-brand-950'}`}>
           {label}
         </p>
         {description && (

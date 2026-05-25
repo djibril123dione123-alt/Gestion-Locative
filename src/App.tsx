@@ -16,17 +16,23 @@ import { PageSkeleton } from './components/ui/Skeleton';
 import { DocumentGeneratedModal } from './components/documents/DocumentGeneratedModal';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
-import { canAccessPage, getPageAccessReason, permissionRowsToMap, type UserPermissionMap } from './lib/rbac';
+import { permissionRowsToMap, type UserPermissionMap } from './lib/rbac';
+import {
+    canAccessAccountPage,
+    getAccountPageAccessReason,
+    getAccountPageLabel,
+    getEffectiveRoleForAccount,
+} from './lib/accountProfile';
 import type { AgencySettings } from './types/agency';
 import Welcome from './pages/Welcome';
 import { runFullBackup, getLastBackupTimestamp } from './services/localBackup';
 import { recoverStaleSyncing } from './services/offlineQueue';
 import { identifyUser, trackPageView } from './lib/analytics';
 
-const LandingPage = lazy(() => import('./pages/LandingPage').then(m => ({ default: m.LandingPage })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Agences = lazy(() => import('./pages/Agences'));
 const Bailleurs = lazy(() => import('./pages/Bailleurs').then(m => ({ default: m.Bailleurs })));
+const Patrimoine = lazy(() => import('./pages/Patrimoine').then(m => ({ default: m.Patrimoine })));
 const Immeubles = lazy(() => import('./pages/Immeubles').then(m => ({ default: m.Immeubles })));
 const Unites = lazy(() => import('./pages/Unites').then(m => ({ default: m.Unites })));
 const Locataires = lazy(() => import('./pages/Locataires').then(m => ({ default: m.Locataires })));
@@ -47,10 +53,24 @@ const AuditDashboard = lazy(() => import('./pages/AuditDashboard').then(m => ({ 
 const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
 const VerifyDocument = lazy(() => import('./pages/VerifyDocument').then(m => ({ default: m.VerifyDocument })));
 
+function getExternalAuthMode(): 'login' | 'register' | null {
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
+    if (path === 'login') return 'login';
+    if (path === 'signup' || path === 'register') return 'register';
+
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode')?.toLowerCase();
+    if (mode === 'signup' || mode === 'register') return 'register';
+    if (mode === 'login') return 'login';
+
+    return null;
+}
+
 const PAGE_LABELS: Record<string, string> = {
     dashboard: 'Tableau de bord',
     agences: 'Agences',
     bailleurs: 'Bailleurs',
+    patrimoine: 'Biens',
     immeubles: 'Immeubles',
     unites: 'Unités',
     locataires: 'Locataires',
@@ -74,10 +94,17 @@ const PAGE_LABELS: Record<string, string> = {
 };
 
 function AppContent() {
-    const { user, profile, loading } = useAuth();
+    const { user, profile, accountProfile, loading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+        try {
+            return localStorage.getItem('sk_sidebar_collapsed') === 'true';
+        } catch {
+            return false;
+        }
+    });
     const { pendingCount, syncing, isOnline, errorCount } = useOfflineSync();
     const [showWelcomeAnyway, setShowWelcomeAnyway] = useState(false);
     const [moduleSettings, setModuleSettings] = useState<
@@ -99,13 +126,23 @@ function AppContent() {
     });
 
     // Derive current page from URL (React Router)
-    const currentPage = location.pathname.replace(/^\//, '') || 'dashboard';
+    const externalAuthMode = getExternalAuthMode();
+    const hashPage = location.pathname.replace(/^\//, '') || 'dashboard';
+    const currentPage = externalAuthMode ? 'auth' : hashPage;
 
     // Navigation helper - compatible avec l'interface onNavigate existante
     const handleNavigate = (page: string) => {
         navigate('/' + page);
         setSidebarOpen(false);
     };
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('sk_sidebar_collapsed', sidebarCollapsed ? 'true' : 'false');
+        } catch {
+            /* noop */
+        }
+    }, [sidebarCollapsed]);
 
     // PostHog : suivi de page à chaque changement de route
     useEffect(() => {
@@ -262,13 +299,9 @@ function AppContent() {
             );
         }
         if (currentPage === 'auth') {
-            return <Auth />;
+            return <Auth initialMode={externalAuthMode ?? 'login'} />;
         }
-        return (
-            <Suspense fallback={<BrandedLoader label="Samay Këur" />}>
-                <LandingPage onNavigate={(p) => navigate(p ? '/' + p : '/')} />
-            </Suspense>
-        );
+        return <Auth initialMode="login" />;
     }
 
     if (!profile && !showWelcomeAnyway) {
@@ -312,13 +345,13 @@ function AppContent() {
     }
 
     const renderPage = () => {
-        if (!canAccessPage(profile.role, currentPage, moduleSettings, userPermissions)) {
-            const reason = getPageAccessReason(currentPage, moduleSettings, userPermissions);
+        if (!canAccessAccountPage(profile.role, currentPage, accountProfile, moduleSettings, userPermissions)) {
+            const reason = getAccountPageAccessReason(currentPage, accountProfile, moduleSettings, userPermissions);
             return (
                 <div className="flex min-h-full items-center justify-center p-6">
                     <div className="max-w-lg rounded-3xl border border-emerald-100 bg-white p-8 text-center shadow-2xl shadow-emerald-950/10">
                         <BrandMark size="lg" tone="light" animated className="mx-auto mb-5" />
-                        <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">
+                        <p className="sk-type-caption text-orange-600">
                             Accès contrôlé
                         </p>
                         <h1 className="mt-3 text-3xl font-black text-slate-950">Page indisponible</h1>
@@ -342,6 +375,8 @@ function AppContent() {
                 return profile?.role === 'super_admin' ? <Console /> : <Agences />;
             case 'bailleurs':
                 return <Bailleurs />;
+            case 'patrimoine':
+                return <Patrimoine />;
             case 'immeubles':
                 return <Immeubles />;
             case 'unites':
@@ -387,7 +422,7 @@ function AppContent() {
         }
     };
 
-    const pageLabel = PAGE_LABELS[currentPage] ?? 'Samay Këur';
+    const pageLabel = getAccountPageLabel(currentPage, accountProfile) ?? PAGE_LABELS[currentPage] ?? 'Samay Këur';
     const mobileSyncLabel = !isOnline
         ? 'Hors ligne'
         : syncing
@@ -414,41 +449,43 @@ function AppContent() {
                 onNavigate={handleNavigate}
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
+                isCollapsed={sidebarCollapsed}
+                onToggleCollapsed={() => setSidebarCollapsed((value) => !value)}
                 moduleSettings={moduleSettings}
                 userPermissions={userPermissions}
             />
 
             <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
-                {/* Top bar - mobile only */}
-                <div className="sk-mobile-topbar sticky top-0 z-30 flex items-center gap-3 border-b border-emerald-900/10 bg-white/[0.92] px-3 pb-2.5 shadow-sm backdrop-blur-2xl lg:hidden">
-                    <button
-                        onClick={() => setSidebarOpen(true)}
-                        className="sk-pressable flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl transition-colors hover:bg-emerald-50"
-                        aria-label="Ouvrir le menu"
-                    >
-                        <Menu className="h-5 w-5 text-brand-800" />
-                    </button>
-                    <div className="min-w-0 flex-1">
-                        <span className="block truncate text-[1.05rem] font-black leading-tight text-slate-950">
-                            {pageLabel}
-                        </span>
-                        {mobileSyncLabel && (
-                            <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-brand-800">
-                                {!isOnline ? <WifiOff className="h-3 w-3" /> : <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />}
-                                <span className="truncate">{mobileSyncLabel}</span>
-                            </span>
-                        )}
-                    </div>
-                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-surface">
-                        <NotificationBell onNavigate={handleNavigate} compact />
-                    </div>
-                </div>
-
                 <NetworkBanner />
                 <TrialBanner onNavigate={handleNavigate} />
 
                 {/* Scrollable content - extra bottom padding on mobile for BottomNav */}
                 <main className="flex-1 overflow-y-auto bg-[radial-gradient(circle_at_20%_0%,rgba(52,211,153,0.08),transparent_34rem)] pb-[calc(var(--sk-mobile-bottom-nav-height)+env(safe-area-inset-bottom)+1rem)] scroll-smooth lg:pb-0">
+                    {/* Mobile top bar lives in the scroll flow, so content feels less pinned and more native. */}
+                    <div className="sk-mobile-topbar flex items-center gap-2 border-b border-emerald-900/10 bg-white/[0.88] px-3 py-2 shadow-sm backdrop-blur-2xl lg:hidden">
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="sk-pressable flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl transition-colors hover:bg-emerald-50"
+                            aria-label="Ouvrir le menu"
+                        >
+                            <Menu className="h-5 w-5 text-brand-800" />
+                        </button>
+                        <div className="min-w-0 flex-1">
+                            <span className="block truncate text-base font-black leading-tight text-slate-950">
+                                {pageLabel}
+                            </span>
+                            {mobileSyncLabel && (
+                                <span className="mt-1 inline-flex max-w-full items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-black uppercase tracking-widest text-brand-800">
+                                    {!isOnline ? <WifiOff className="h-3 w-3" /> : <RefreshCw className={`h-3 w-3 ${syncing ? 'animate-spin' : ''}`} />}
+                                    <span className="truncate">{mobileSyncLabel}</span>
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-surface">
+                            <NotificationBell onNavigate={handleNavigate} compact />
+                        </div>
+                    </div>
+
                     <Suspense fallback={<PageSkeleton title={pageLabel} variant={pageSkeletonVariant} />}>
                         <Routes>
                             <Route path="*" element={renderPage()} />
@@ -462,7 +499,8 @@ function AppContent() {
                 currentPage={currentPage}
                 onNavigate={handleNavigate}
                 onOpenMenu={() => setSidebarOpen(true)}
-                role={profile.role}
+                role={getEffectiveRoleForAccount(profile.role, accountProfile)}
+                accountProfile={accountProfile}
                 moduleSettings={moduleSettings}
                 userPermissions={userPermissions}
             />

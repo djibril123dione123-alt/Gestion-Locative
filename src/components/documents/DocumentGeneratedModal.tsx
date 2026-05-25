@@ -20,6 +20,7 @@ import {
 } from '../../lib/documentGenerated';
 import { BrandMark } from '../brand/BrandLogo';
 import { Button } from '../ui/Button';
+import { TooltipHint } from '../onboarding/TooltipHint';
 
 interface DocumentGeneratedModalProps {
   onNavigate?: (page: string) => void;
@@ -79,6 +80,7 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
   const titleId = 'document-generated-title';
   const isPdf = (documentPayload.mimeType ?? '').includes('pdf') || documentPayload.fileName.toLowerCase().endsWith('.pdf');
   const isTableExport = ['xlsx', 'csv', 'export'].includes(documentPayload.kind);
+  const isVerifiableDocument = ['contrat', 'quittance', 'facture', 'mandat', 'recu'].includes(documentPayload.kind);
   const fileSize = documentPayload.fileSize
     ? `${(documentPayload.fileSize / 1024).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} Ko`
     : 'Calcul local';
@@ -254,6 +256,20 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
                 </div>
               )}
             </div>
+
+            {isVerifiableDocument && (
+              <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-50/82">
+                <p className="font-black text-white">
+                  QR de verification
+                  <TooltipHint label="Comprendre le QR de verification">
+                    Le QR ouvre une page publique de controle pour confirmer la reference, le type de document, l'agence et son statut d'authenticite.
+                  </TooltipHint>
+                </p>
+                <p className="mt-1">
+                  Si le modele du document contient un QR, il sert de preuve documentaire et de point de controle apres partage ou impression.
+                </p>
+              </div>
+            )}
 
             {feedback && (
               <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/12 px-4 py-2 text-sm font-bold text-emerald-100 animate-slideInUp">

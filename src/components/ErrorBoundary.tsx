@@ -1,6 +1,6 @@
 import React from 'react';
 import * as Sentry from '@sentry/react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, LifeBuoy, RefreshCw } from 'lucide-react';
 import { BrandMark } from './brand/BrandLogo';
 
 interface ErrorBoundaryProps {
@@ -11,6 +11,7 @@ interface ErrorBoundaryProps {
 interface ErrorBoundaryState {
   hasError: boolean;
   error?: Error;
+  eventId?: string;
 }
 
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -24,17 +25,21 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    Sentry.captureException(error, {
+    const eventId = Sentry.captureException(error, {
       contexts: {
         react: {
           componentStack: errorInfo.componentStack,
         },
       },
+      tags: {
+        surface: 'global_error_boundary',
+      },
     });
+    this.setState({ eventId });
   }
 
   resetError = () => {
-    this.setState({ hasError: false, error: undefined });
+    this.setState({ hasError: false, error: undefined, eventId: undefined });
   };
 
   render() {
@@ -46,7 +51,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
       return (
         <div className="premium-polish flex min-h-screen items-center justify-center bg-brand-paper p-4">
-          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-emerald-900/10 bg-white p-7 text-center shadow-2xl shadow-emerald-950/10">
+          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-emerald-900/10 bg-white p-7 text-center shadow-2xl shadow-emerald-950/10">
             <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-orange-400/10 blur-3xl" />
             <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl" />
 
@@ -58,31 +63,48 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">
                 Incident applicatif
               </p>
-              <h1 className="mt-3 text-2xl font-black text-slate-950">Une erreur est survenue</h1>
+              <h1 className="mt-3 text-2xl font-black text-slate-950">
+                Oups, quelque chose s'est mal passe
+              </h1>
               <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-slate-600">
-                L'interface a été protégée pour éviter une page blanche. Vous pouvez relancer l'écran ou actualiser la page.
+                L'application a protege votre session pour eviter une page blanche. Rechargez l'ecran, ou contactez le support si le probleme revient.
               </p>
             </div>
 
-            <div className="relative mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="relative mt-6 grid gap-3 sm:grid-cols-3">
               <button
                 onClick={this.resetError}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brand-900 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
               >
                 <RefreshCw className="h-4 w-4" />
-                Réessayer
+                Reessayer
               </button>
               <button
                 onClick={() => window.location.reload()}
                 className="inline-flex items-center justify-center rounded-2xl border border-emerald-900/10 bg-brand-surface px-4 py-3 text-sm font-black text-brand-900 transition hover:-translate-y-0.5 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
               >
-                Actualiser
+                Recharger
               </button>
+              <a
+                href="mailto:support@samaykeur.com?subject=Incident%20Samay%20Keur"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-900/10 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+              >
+                <LifeBuoy className="h-4 w-4" />
+                Support
+              </a>
             </div>
+
+            {this.state.eventId && (
+              <p className="relative mt-4 text-xs font-medium text-slate-500">
+                Reference incident : {this.state.eventId}
+              </p>
+            )}
 
             {import.meta.env.DEV && (
               <details className="relative mt-5 text-left">
-                <summary className="cursor-pointer text-sm font-semibold text-slate-500">Détails de l'erreur</summary>
+                <summary className="cursor-pointer text-sm font-semibold text-slate-500">
+                  Details de l'erreur
+                </summary>
                 <pre className="mt-2 max-h-48 overflow-auto rounded-2xl bg-red-50 p-3 text-xs text-red-700">
                   {this.state.error.stack}
                 </pre>

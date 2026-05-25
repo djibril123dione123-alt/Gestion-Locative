@@ -9,7 +9,9 @@ import { formatCurrency } from '../lib/formatters';
 import {
     addFooter,
     drawDocumentHeader,
+    drawLegalVerificationFooter,
     drawPageBorder,
+    drawTotalsBlock,
     getAutoTableTheme,
     saveGeneratedPdf,
 } from '../lib/pdf';
@@ -64,6 +66,7 @@ interface BilanEntreprise {
     totalLoyers: number;
     loyersImpayes: number;
     commission: number;
+    netBailleurs: number;
     revenus_alt: number;
     totalRevenus: number;
     totalDepenses: number;
@@ -106,7 +109,7 @@ type PdfWithAutoTable = jsPDF & {
 // -------------------------------------------------------------------------
 
 export function TableauDeBordFinancierGlobal() {
-    const { profile } = useAuth();
+    const { profile, accountProfile } = useAuth();
 
     // -------------------------------------------------------------------------
     // 3. ÉTATS CENTRALISÉS [7-9, 11]
@@ -126,6 +129,12 @@ export function TableauDeBordFinancierGlobal() {
     const [bilansBailleurs, setBilansBailleurs] = useState<BilanBailleur[]>([]); 
     const [agencySettings, setAgencySettings] = useState<Partial<AgencySettings> | null>(null);
     const [currentPage, setCurrentPage] = useState<'bailleurs' | 'operationnel'>('bailleurs');
+
+    useEffect(() => {
+        if (accountProfile.isIndividualOwner && currentPage === 'operationnel') {
+            setCurrentPage('bailleurs');
+        }
+    }, [accountProfile.isIndividualOwner, currentPage]);
 
     // -------------------------------------------------------------------------
     // 4. LOGIQUE DE CHARGEMENT ET DE CALCUL UNIFIÉE
@@ -208,13 +217,16 @@ export function TableauDeBordFinancierGlobal() {
             const commission = paiementsMensuels
                 .filter(p => p.statut === 'paye' || p.statut === 'partiel')
                 .reduce((sum, p) => sum + Number(p.part_agence), 0);
+            const netBailleurs = paiementsMensuels
+                .filter(p => p.statut === 'paye' || p.statut === 'partiel')
+                .reduce((sum, p) => sum + Number(p.part_bailleur ?? (Number(p.montant_total) - Number(p.part_agence || 0))), 0);
             const revenus_alt = revenus_autresMensuels.reduce((sum, r) => sum + Number(r.montant), 0);
 
             const totalRevenus = commission + revenus_alt;
             const totalDepenses = depensesMensuels.reduce((sum, d) => sum + Number(d.montant), 0);
             const soldeNet = totalRevenus - totalDepenses;
 
-            setBilanEntreprise({ totalLoyers, loyersImpayes, commission, revenus_alt, totalRevenus, totalDepenses, soldeNet });
+            setBilanEntreprise({ totalLoyers, loyersImpayes, commission, netBailleurs, revenus_alt, totalRevenus, totalDepenses, soldeNet });
 
             
             // ---------------------------------------------------
@@ -383,29 +395,38 @@ export function TableauDeBordFinancierGlobal() {
         const recoveryRate = occupancyBase > 0
             ? Math.round((bilan.total_loyers_percus / occupancyBase) * 100)
             : 100;
+        const reportRef = `RBL-${selectedMonth}-${bilan.bailleur_id.slice(0, 8).toUpperCase()}`;
+        const pdfSettings: Partial<AgencySettings> = {
+            ...(agencySettings ?? {}),
+            is_bailleur_account: accountProfile.isIndividualOwner,
+            organization_type: accountProfile.type,
+        };
+        const reportTitle = accountProfile.isIndividualOwner ? 'Résumé mensuel propriétaire' : 'Rapport mensuel bailleur';
+        const netLabel = accountProfile.isIndividualOwner ? 'Revenus nets' : 'Net bailleur estimé';
 
-        drawPageBorder(doc, agencySettings ?? undefined);
+        drawPageBorder(doc, pdfSettings);
         const headerY = await drawDocumentHeader(
             doc,
-            agencySettings ?? {},
-            'Rapport mensuel bailleur',
+            pdfSettings,
+            reportTitle,
             `${bilan.bailleur_prenom} ${bilan.bailleur_nom}`,
             {
-                reference: `RPT-${selectedMonth.replace('-', '')}-${bilan.bailleur_id.slice(0, 6).toUpperCase()}`,
+                reference: reportRef,
                 issueDate: new Date().toLocaleDateString('fr-FR'),
+                documentType: 'Rapport financier',
             }
         );
 
         let y = headerY + 8;
         const ensureSpace = (needed: number) => {
             if (y + needed > pageHeight - 26) {
-                addFooter(doc, agencySettings ?? undefined);
+                addFooter(doc, pdfSettings);
                 doc.addPage();
-                drawPageBorder(doc, agencySettings ?? undefined);
+                drawPageBorder(doc, pdfSettings);
                 y = 24;
             }
         };
-        const tableTheme = getAutoTableTheme(agencySettings ?? undefined);
+        const tableTheme = getAutoTableTheme(pdfSettings);
         const sectionTitle = (title: string, subtitle?: string) => {
             ensureSpace(subtitle ? 18 : 13);
             doc.setFont('helvetica', 'bold');
@@ -431,7 +452,9 @@ export function TableauDeBordFinancierGlobal() {
         autoTable(doc, {
             body: [
                 ['Loyers encaissés', formatCurrency(bilan.total_loyers_percus), 'Reliquats à suivre', formatCurrency(bilan.total_impayes)],
-                ['Commissions agence', formatCurrency(bilan.total_frais), 'Net bailleur estimé', formatCurrency(bilan.total_net)],
+                accountProfile.isIndividualOwner
+                    ? ['Revenus encaissés', formatCurrency(bilan.total_loyers_percus), netLabel, formatCurrency(bilan.total_net)]
+                    : ['Commissions agence', formatCurrency(bilan.total_frais), netLabel, formatCurrency(bilan.total_net)],
                 ['Taux de recouvrement', String(recoveryRate) + '%', 'Immeubles suivis', String(bilan.immeubles.length)],
             ],
             startY: y,
@@ -487,7 +510,7 @@ export function TableauDeBordFinancierGlobal() {
             doc.setFontSize(8);
             doc.setTextColor(100, 116, 139);
             doc.text(
-                'Total encaissé ' + formatCurrency(immeuble.loyers_percus) + ' · Reliquat ' + formatCurrency(immeuble.loyers_impayes) + ' · Net ' + formatCurrency(immeuble.resultat_net),
+                'Total encaissé ' + formatCurrency(immeuble.loyers_percus) + ' · Reliquat ' + formatCurrency(immeuble.loyers_impayes) + ' · ' + netLabel + ' ' + formatCurrency(immeuble.resultat_net),
                 pageWidth - 14,
                 y,
                 { align: 'right' }
@@ -511,7 +534,7 @@ export function TableauDeBordFinancierGlobal() {
                 head: [['Unité', 'Locataire', 'Loyer', 'Statut', 'Encaissé', 'Reliquat', 'Période', 'Observation']],
                 body: [
                     ...bodyRows,
-                    ['', 'Total immeuble', '', '', formatCurrency(immeuble.loyers_percus), formatCurrency(immeuble.loyers_impayes), '', 'Net ' + formatCurrency(immeuble.resultat_net)],
+                    ['', 'Total immeuble', '', '', formatCurrency(immeuble.loyers_percus), formatCurrency(immeuble.loyers_impayes), '', netLabel + ' ' + formatCurrency(immeuble.resultat_net)],
                 ],
                 startY: y,
                 theme: 'grid',
@@ -546,28 +569,54 @@ export function TableauDeBordFinancierGlobal() {
             y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 10;
         });
 
-        addFooter(doc, agencySettings ?? undefined);
+        ensureSpace(48);
+        y = drawTotalsBlock(
+            doc,
+            14,
+            y,
+            pageWidth - 28,
+            [
+                { label: 'Loyers encaissés', value: formatCurrency(bilan.total_loyers_percus) },
+                { label: 'Reliquats à suivre', value: formatCurrency(bilan.total_impayes) },
+                ...(accountProfile.isIndividualOwner ? [] : [{ label: 'Commissions agence', value: formatCurrency(bilan.total_frais) }]),
+                { label: netLabel, value: formatCurrency(bilan.total_net), emphasis: true },
+            ],
+            pdfSettings
+        );
+
+        try {
+            await drawLegalVerificationFooter(doc, {
+                ref: reportRef,
+                type: 'rapport_bailleur',
+                agency: agencySettings?.nom_agence ?? 'Samay Këur',
+                date: new Date().toISOString(),
+                settings: pdfSettings,
+            });
+        } catch {
+            // Document verification QR is non-blocking.
+        }
+        addFooter(doc, pdfSettings);
 
         const previewRows = bilan.immeubles.flatMap((i) =>
             i.unites.map((u) => ({
                 Immeuble: i.immeuble_nom,
-                Unité: u.unite_nom,
+                Unite: u.unite_nom,
                 Locataire: u.locataire_nom,
-                Statut: u.statut_paiement === 'partiel' ? 'Partiel' : 'Payé',
-                Encaissé: formatCurrency(u.montant_encaisse),
+                Statut: u.statut_paiement === 'partiel' ? 'Partiel' : 'Paye',
+                Encaisse: formatCurrency(u.montant_encaisse),
                 Restant: formatCurrency(u.montant_restant),
             }))
         );
 
         await saveGeneratedPdf(doc, {
             kind: 'bilan',
-            title: 'Rapport bailleur',
-            fileName: `rapport-bailleur-${bilan.bailleur_nom}-${selectedMonth}.pdf`,
+            title: accountProfile.isIndividualOwner ? 'Résumé mensuel propriétaire' : 'Rapport bailleur',
+            fileName: `${accountProfile.isIndividualOwner ? 'resume-proprietaire' : 'rapport-bailleur'}-${bilan.bailleur_nom}-${selectedMonth}.pdf`,
             source: 'tableau-de-bord-financier',
             documentType: 'rapport_bailleur',
             entityId: bilan.bailleur_id,
             period: selectedMonth,
-            reference: `RBL-${selectedMonth}-${bilan.bailleur_id.slice(0, 8).toUpperCase()}`,
+            reference: reportRef,
             data: {
                 document: 'rapport_bailleur',
                 selectedMonth,
@@ -575,14 +624,14 @@ export function TableauDeBordFinancierGlobal() {
                 agencySettings,
             },
             preview: {
-                columns: ['Immeuble', 'Unité', 'Locataire', 'Statut', 'Encaissé', 'Restant'],
+                columns: ['Immeuble', 'Unite', 'Locataire', 'Statut', 'Encaisse', 'Restant'],
                 rows: previewRows.slice(0, 6),
                 rowCount: previewRows.length,
                 period: periodLabel,
                 stats: [
                     { label: 'Revenus encaissés', value: formatCurrency(bilan.total_loyers_percus) },
                     { label: 'Impayés', value: formatCurrency(bilan.total_impayes) },
-                    { label: 'Net bailleur', value: formatCurrency(bilan.total_net) },
+                    { label: accountProfile.isIndividualOwner ? 'Revenus nets' : 'Net bailleur', value: formatCurrency(bilan.total_net) },
                     { label: 'Recouvrement', value: `${recoveryRate}%` },
                 ],
             },
@@ -601,14 +650,19 @@ export function TableauDeBordFinancierGlobal() {
         <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-10">
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">Rapports financiers</h1>
 
-            <div className="grid grid-cols-1 gap-2 rounded-2xl border border-emerald-950/10 bg-white/80 p-2 shadow-sm sm:grid-cols-2">
+            <div className={`grid grid-cols-1 gap-2 rounded-2xl border border-emerald-950/10 bg-white/80 p-2 shadow-sm ${accountProfile.isIndividualOwner ? '' : 'sm:grid-cols-2'}`}>
                 <button
                     onClick={() => setCurrentPage('bailleurs')}
                     className={`rounded-xl px-4 py-3 text-left text-sm font-bold transition ${currentPage === 'bailleurs' ? 'bg-brand-950 text-white shadow-lg shadow-emerald-950/15' : 'text-slate-600 hover:bg-emerald-50 hover:text-brand-900'}`}
                 >
-                    Rapport Bailleur
-                    <span className="mt-1 block text-xs font-medium opacity-75">Vue principale de reporting propriétaire.</span>
+                    {accountProfile.isIndividualOwner ? 'Mes revenus' : 'Rapport bailleur'}
+                    <span className="mt-1 block text-xs font-medium opacity-75">
+                        {accountProfile.isIndividualOwner
+                            ? 'Synthèse mensuelle de vos loyers, impayés et revenus nets.'
+                            : 'Vue principale de reporting propriétaire.'}
+                    </span>
                 </button>
+                {!accountProfile.isIndividualOwner && (
                 <button
                     onClick={() => setCurrentPage('operationnel')}
                     className={`rounded-xl px-4 py-3 text-left text-sm font-bold transition ${currentPage === 'operationnel' ? 'bg-brand-950 text-white shadow-lg shadow-emerald-950/15' : 'text-slate-600 hover:bg-emerald-50 hover:text-brand-900'}`}
@@ -616,6 +670,7 @@ export function TableauDeBordFinancierGlobal() {
                     Vue financière opérationnelle
                     <span className="mt-1 block text-xs font-medium opacity-75">Encaissements, dépenses, solde et mouvements du mois.</span>
                 </button>
+                )}
             </div>
             
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
@@ -638,16 +693,21 @@ export function TableauDeBordFinancierGlobal() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                        {/* Carte 1: Commission agence */}
                         <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Total Gérance</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Brut encaisse</p>
+                            <p className="text-lg sm:text-2xl font-bold text-slate-900 mt-1">{formatCurrency(bilanEntreprise.totalLoyers)}</p>
+                        </div>
+
+                        {/* Carte 2: Commission agence */}
+                        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Commissions agence</p>
                             <p className="text-lg sm:text-2xl font-bold text-blue-600 mt-1">{formatCurrency(bilanEntreprise.commission)}</p>
                         </div>
 
-                        {/* Carte 3: Total dépenses */}
+                        {/* Carte 3: Net bailleurs */}
                         <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Total dépenses</p>
-                            <p className="text-lg sm:text-2xl font-bold text-red-600 mt-1">{formatCurrency(bilanEntreprise.totalDepenses)}</p>
+                            <p className="text-xs sm:text-sm font-medium text-gray-500">Net bailleurs</p>
+                            <p className="text-lg sm:text-2xl font-bold text-emerald-700 mt-1">{formatCurrency(bilanEntreprise.netBailleurs)}</p>
                         </div>
 
                         {/* Carte 4: Solde Net (Dynamique) */}
@@ -655,7 +715,7 @@ export function TableauDeBordFinancierGlobal() {
                             <div className={`${bilanEntreprise.soldeNet >= 0 ? 'bg-emerald-600' : 'bg-orange-600'} text-white rounded-lg p-2 flex items-center justify-center w-8 sm:w-10 h-8 sm:h-10`}>
                                 {bilanEntreprise.soldeNet >= 0 ? <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6" /> : <TrendingDown className="w-5 sm:w-6 h-5 sm:h-6" />}
                             </div>
-                            <p className={`${bilanEntreprise.soldeNet >= 0 ? 'text-emerald-700' : 'text-orange-700'} text-xs sm:text-sm font-medium mt-3`}>Solde net</p>
+                            <p className={`${bilanEntreprise.soldeNet >= 0 ? 'text-emerald-700' : 'text-orange-700'} text-xs sm:text-sm font-medium mt-3`}>Marge operationnelle</p>
                             <p className={`${bilanEntreprise.soldeNet >= 0 ? 'text-emerald-900' : 'text-orange-900'} text-2xl sm:text-3xl font-extrabold mt-1`}>{formatCurrency(bilanEntreprise.soldeNet)}</p>
                         </div>
                     </div>
@@ -664,7 +724,7 @@ export function TableauDeBordFinancierGlobal() {
                     <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-100">
                         <h3 className="text-base lg:text-xl font-semibold mb-4 text-gray-700">Résumé du mois</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                            <p className="text-xs sm:text-sm text-gray-600">Total loyers <span className="block font-bold text-base sm:text-lg text-blue-500 mt-1">{formatCurrency(bilanEntreprise.totalLoyers)}</span></p>
+                            <p className="text-xs sm:text-sm text-gray-600">Depenses <span className="block font-bold text-base sm:text-lg text-red-500 mt-1">{formatCurrency(bilanEntreprise.totalDepenses)}</span></p>
                             <p className="text-xs sm:text-sm text-gray-600">Impayés <span className="block font-bold text-base sm:text-lg text-red-500 mt-1">{formatCurrency(bilanEntreprise.loyersImpayes)}</span></p>
                             <p className="text-xs sm:text-sm text-gray-600">Autres revenus <span className="block font-bold text-base sm:text-lg text-green-500 mt-1">{formatCurrency(bilanEntreprise.revenus_alt)}</span></p>
                         </div>
@@ -766,7 +826,9 @@ export function TableauDeBordFinancierGlobal() {
             {/* VUE 3: BILANS MENSUELS BAILLEURS */}
             {currentPage === 'bailleurs' && (
                 <div className="space-y-6 lg:space-y-8">
-                     <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Bilans Mensuels Bailleurs (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
+                     <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">
+                        {accountProfile.isIndividualOwner ? 'Mes revenus mensuels' : 'Bilans Mensuels Bailleurs'} (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})
+                     </h2>
 
                     {bilansBailleurs.map((bilan: BilanBailleur) => (
                         <div key={bilan.bailleur_id} className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100 space-y-4">
@@ -795,8 +857,12 @@ export function TableauDeBordFinancierGlobal() {
                                         <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Immeuble</th>
                                         <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Loyers</th>
                                         <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Impayés</th>
-                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Frais</th>
-                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Net</th>
+                                        {!accountProfile.isIndividualOwner && (
+                                            <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Frais</th>
+                                        )}
+                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            {accountProfile.isIndividualOwner ? 'Revenus nets' : 'Net'}
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
@@ -805,7 +871,9 @@ export function TableauDeBordFinancierGlobal() {
                                             <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">{immeuble.immeuble_nom}</td>
                                             <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 text-right">{formatCurrency(immeuble.loyers_percus)}</td>
                                             <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 text-right">{formatCurrency(immeuble.loyers_impayes)}</td>
-                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 text-right">{formatCurrency(immeuble.frais_gestion)}</td>
+                                            {!accountProfile.isIndividualOwner && (
+                                                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 text-right">{formatCurrency(immeuble.frais_gestion)}</td>
+                                            )}
                                             <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-semibold text-right">{formatCurrency(immeuble.resultat_net)}</td>
                                         </tr>
                                     ))}
@@ -822,11 +890,17 @@ export function TableauDeBordFinancierGlobal() {
                                     <p className="text-gray-600">Total impayés:</p>
                                     <p className="font-semibold text-right text-red-600">{formatCurrency(bilan.total_impayes)}</p>
 
-                                    <p className="text-gray-600">Total frais gestion:</p>
-                                    <p className="font-semibold text-right text-blue-600">{formatCurrency(bilan.total_frais)}</p>
+                                    {!accountProfile.isIndividualOwner && (
+                                        <>
+                                            <p className="text-gray-600">Total frais gestion:</p>
+                                            <p className="font-semibold text-right text-blue-600">{formatCurrency(bilan.total_frais)}</p>
+                                        </>
+                                    )}
                                 </div>
                                 <div className="mt-4 pt-2 border-t border-gray-300 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                    <p className="text-base sm:text-lg font-bold text-gray-800">Montant à verser:</p>
+                                    <p className="text-base sm:text-lg font-bold text-gray-800">
+                                        {accountProfile.isIndividualOwner ? 'Revenus nets:' : 'Montant à verser:'}
+                                    </p>
                                     <p className="text-xl sm:text-2xl font-extrabold text-blue-800">{formatCurrency(bilan.total_net)}</p>
                                 </div>
                             </div>

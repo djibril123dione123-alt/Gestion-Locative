@@ -1,6 +1,6 @@
 # Deploiement
 
-Samay Keur est deploye sur Vercel pour le frontend et Supabase pour la base, les Edge Functions et le Storage.
+Samay Këur est deploye sur Vercel pour le frontend et Supabase pour la base, les Edge Functions et le Storage.
 
 ## Environnements
 

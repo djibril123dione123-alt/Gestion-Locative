@@ -22,6 +22,11 @@ export interface ContratPDFData extends Contrat {
 }
 
 export interface PaiementPDFData extends Paiement {
+  montant_attendu: number | null;
+  montant_encaisse_cumul: number | null;
+  paiements_precedents?: number | null;
+  total_paye_mois?: number | null;
+  statut_reel_mois?: string | null;
   contrats?: {
     loyer_mensuel: number;
     locataires?: {

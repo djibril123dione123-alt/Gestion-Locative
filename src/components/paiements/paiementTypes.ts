@@ -18,6 +18,7 @@ export interface PaiementContrats {
 
 export interface PaiementRow {
   id: string;
+  created_at?: string | null;
   contrat_id: string;
   montant_total: number;
   mois_concerne: string;
@@ -36,6 +37,8 @@ export interface PaiementRow {
 export interface ContratRow {
   id: string;
   loyer_mensuel: number;
+  date_debut?: string | null;
+  date_fin?: string | null;
   commission?: number | null;
   pourcentage_agence?: number | null;
   locataires?: { nom: string; prenom: string } | null;

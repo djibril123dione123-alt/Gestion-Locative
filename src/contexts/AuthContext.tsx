@@ -1,10 +1,14 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase, UserProfile } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
+import { deriveAccountProfile, type AccountProfile } from '../lib/accountProfile';
+import type { Agency } from '../types/database';
 
 interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
+  agency: Agency | null;
+  accountProfile: AccountProfile;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -13,14 +17,47 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AGENCY_SELECT_LEGACY = 'id,name,ninea,address,phone,email,website,logo_url,plan,status,trial_ends_at,is_bailleur_account,created_at,updated_at';
+const AGENCY_SELECT_EXTENDED = `${AGENCY_SELECT_LEGACY},organization_type`;
+
+function shouldRetryLegacyAgencySelect(error: { message?: string; code?: string } | null): boolean {
+  const message = error?.message?.toLowerCase() ?? '';
+  return error?.code === '42703' || message.includes('organization_type') || message.includes('column');
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [agency, setAgency] = useState<Agency | null>(null);
   const [loading, setLoading] = useState(true);
+  const accountProfile = useMemo(() => deriveAccountProfile(agency), [agency]);
 
   // Prevent concurrent loadProfile calls (race condition guard)
   const loadingProfileRef = useRef(false);
+
+  const loadAgency = async (agencyId: string): Promise<Agency | null> => {
+    const extended = await supabase
+      .from('agencies')
+      .select(AGENCY_SELECT_EXTENDED)
+      .eq('id', agencyId)
+      .maybeSingle();
+
+    if (!extended.error && extended.data) {
+      return extended.data as Agency;
+    }
+
+    if (!shouldRetryLegacyAgencySelect(extended.error)) {
+      return null;
+    }
+
+    const legacy = await supabase
+      .from('agencies')
+      .select(AGENCY_SELECT_LEGACY)
+      .eq('id', agencyId)
+      .maybeSingle();
+
+    return (legacy.data as Agency | null) ?? null;
+  };
 
   const loadProfile = async (userId: string, retryCount = 0): Promise<void> => {
     const MAX_RETRIES = 3;
@@ -46,9 +83,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null);
       } else {
         setProfile(data);
+        if (data.agency_id) {
+          setAgency(await loadAgency(data.agency_id));
+        } else {
+          setAgency(null);
+        }
       }
     } catch {
       setProfile(null);
+      setAgency(null);
     } finally {
       setLoading(false);
       loadingProfileRef.current = false;
@@ -75,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           void loadProfile(newUser.id);
         } else {
           setProfile(null);
+          setAgency(null);
           setLoading(false);
           loadingProfileRef.current = false;
         }
@@ -148,6 +192,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (newProfile) {
       setProfile(newProfile);
+      if (newProfile.agency_id) {
+        setAgency(await loadAgency(newProfile.agency_id));
+      }
     }
     setLoading(false);
   };
@@ -158,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signInWithGoogle, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, profile, agency, accountProfile, loading, signIn, signInWithGoogle, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );

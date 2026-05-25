@@ -33,6 +33,7 @@ import {
   buildPaiementPayload,
   formatPaiementError,
 } from '../services/domain/paiementService';
+import { getPaymentMonthState } from '../services/domain/paymentSchedule';
 import {
   createPaiementViaEdge,
   updatePaiementViaEdge,
@@ -51,17 +52,19 @@ import {
   type StatusFilter,
   type PaiementFormData,
 } from '../components/paiements/paiementTypes';
+import { formatPersonName } from '../lib/people';
 
 interface PaiementsProps {
   embedded?: boolean;
 }
 
 export function Paiements({ embedded = false }: PaiementsProps = {}) {
-  const { profile } = useAuth();
-  const { success, error: showError, toasts, removeToast } = useToast();
+  const { profile, accountProfile } = useAuth();
+  const isIndividualOwner = accountProfile.isIndividualOwner;
+  const { success, error: showError, warning: showWarning, toasts, removeToast } = useToast();
   const { track } = useTracking();
   const { exportPaiements, exporting: exportingXlsx } = useExport();
-  const { save: saveBackup } = useBackup();
+  const { save: saveBackup, getSnapshot } = useBackup();
   const { isOnline, enqueue: queueMutation } = useOfflineSync();
 
   const [paiements, setPaiements] = useState<PaiementRow[]>([]);
@@ -111,7 +114,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           .order('created_at', { ascending: false }),
         supabase
           .from('contrats')
-          .select('id, loyer_mensuel, commission, locataires(nom, prenom), unites(nom, id, immeubles(nom,bailleurs(id,nom,prenom))))')
+          .select('id, date_debut, date_fin, loyer_mensuel, commission, locataires(nom, prenom), unites(nom, id, immeubles(nom,bailleurs(id,nom,prenom))))')
           .eq('agency_id', profile.agency_id)
           .eq('statut', 'actif'),
       ]);
@@ -121,7 +124,20 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       setContrats((contratsRes.data || []) as unknown as ContratRow[]);
       saveBackup('paiements', data).catch(() => {});
     } catch {
-      showError('Impossible de charger les paiements');
+      const [cachedPaiements, cachedContrats] = await Promise.all([
+        getSnapshot('paiements'),
+        getSnapshot('contrats'),
+      ]);
+
+      if (cachedPaiements) {
+        setPaiements(cachedPaiements.data as PaiementRow[]);
+        if (cachedContrats) {
+          setContrats(cachedContrats.data as ContratRow[]);
+        }
+        showWarning('Connexion instable : affichage des paiements sauvegardes localement.');
+      } else {
+        showError('Impossible de charger les paiements. Verifiez votre connexion puis reessayez.');
+      }
     } finally {
       setLoading(false);
     }
@@ -183,7 +199,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     const addBailleur = (contrat?: PaiementRow['contrats'] | ContratRow | null) => {
       const bailleur = contrat?.unites?.immeubles?.bailleurs;
       if (bailleur?.id) {
-        map.set(bailleur.id, `${bailleur.prenom ?? ''} ${bailleur.nom ?? ''}`.trim());
+        map.set(bailleur.id, formatPersonName(bailleur));
       }
     };
     paiements.forEach((row) => addBailleur(row.contrats));
@@ -256,18 +272,53 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.agency_id) return;
+
+    const montant = Number(formData.montant_total);
+    if (!formData.contrat_id) {
+      showError('Selectionnez le contrat concerne par ce paiement.');
+      return;
+    }
+    if (!Number.isFinite(montant) || montant <= 0) {
+      showError('Le montant doit etre positif.');
+      return;
+    }
+    if (!/^\d{4}-\d{2}$/.test(formData.mois_display)) {
+      showError('Selectionnez le mois concerne par le paiement.');
+      return;
+    }
+    if (!formData.date_paiement || Number.isNaN(new Date(`${formData.date_paiement}T00:00:00`).getTime())) {
+      showError('Selectionnez une date de paiement valide.');
+      return;
+    }
+
+    const moisConcerne = `${formData.mois_display}-01`;
     setIsSaving(true);
 
     try {
       const contrat = contrats.find((c) => c.id === formData.contrat_id);
       if (!contrat) throw new Error('Contrat non trouvé');
 
-      const moisConcerne = new Date(formData.mois_display + '-01').toISOString().split('T')[0];
+      const monthState = getPaymentMonthState(
+        contrat,
+        paiements,
+        formData.mois_display,
+        editingPaiement?.id,
+      );
+      if (!editingPaiement && monthState?.isSold) {
+        showError('Ce mois est deja solde pour ce contrat. Choisissez une autre echeance ou modifiez le paiement existant.');
+        setIsSaving(false);
+        return;
+      }
+      if (monthState && montant > monthState.remainingAmount) {
+        showError(`Le reliquat de ce mois est de ${formatCurrency(monthState.remainingAmount)}. Impossible d'enregistrer un paiement superieur.`);
+        setIsSaving(false);
+        return;
+      }
 
       const data = buildPaiementPayload(
         {
           contrat_id: formData.contrat_id,
-          montant_total: parseFloat(formData.montant_total),
+          montant_total: montant,
           mois_concerne: moisConcerne,
           date_paiement: formData.date_paiement,
           mode_paiement: formData.mode_paiement,
@@ -290,7 +341,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           entity_type: 'paiements',
           payload: {
             contrat_id: formData.contrat_id,
-            montant_total: parseFloat(formData.montant_total),
+            montant_total: montant,
             mois_concerne: moisConcerne,
             date_paiement: formData.date_paiement,
             mode_paiement: formData.mode_paiement,
@@ -308,7 +359,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       if (editingPaiement) {
         await updatePaiementViaEdge({
           id: editingPaiement.id,
-          montant_total: parseFloat(formData.montant_total),
+          montant_total: montant,
           mode_paiement: formData.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre',
           statut: formData.statut as 'paye' | 'partiel',
           date_paiement: formData.date_paiement,
@@ -319,13 +370,13 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           agency_id: profile.agency_id,
           entity_type: 'paiements',
           entity_id: editingPaiement.id,
-          payload: { montant: parseFloat(formData.montant_total), mode: formData.mode_paiement },
+          payload: { montant, mode: formData.mode_paiement },
         });
       } else {
         const idempotencyKey = crypto.randomUUID();
         await createPaiementViaEdge({
           contrat_id: formData.contrat_id,
-          montant_total: parseFloat(formData.montant_total),
+          montant_total: montant,
           mois_concerne: moisConcerne,
           date_paiement: formData.date_paiement,
           mode_paiement: formData.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre',
@@ -399,7 +450,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       const { data: pmt, error: e1 } = await supabase
         .from('paiements')
         .select(
-          `id, created_at, date_paiement, mois_concerne, montant_total, reliquat, reference,
+          `id, created_at, date_paiement, mois_concerne, montant_total, montant_attendu, montant_encaisse_cumul, reliquat, reference, statut,
            contrats(id, loyer_mensuel, commission, locataires(nom, prenom), unites(id, nom))`,
         )
         .eq('agency_id', profile.agency_id)
@@ -412,8 +463,11 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         date_paiement: string;
         mois_concerne: string;
         montant_total: number;
+        montant_attendu?: number | null;
+        montant_encaisse_cumul?: number | null;
         reliquat?: number | null;
         reference: string | null;
+        statut: string;
         contrats: {
           id: string;
           loyer_mensuel: number;
@@ -428,6 +482,18 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       }
 
       let adresse = '—';
+      const paiementCreatedAt = new Date(paiement.created_at).getTime();
+      const paiementsPrecedents = paiements
+        .filter((row) => {
+          if (row.id === paiement.id) return false;
+          if (row.contrat_id !== paiement.contrats?.id) return false;
+          if ((row.mois_concerne || '').slice(0, 7) !== paiement.mois_concerne.slice(0, 7)) return false;
+          if (row.statut !== 'paye' && row.statut !== 'partiel') return false;
+          return new Date(row.created_at ?? '').getTime() < paiementCreatedAt;
+        })
+        .reduce((sum, row) => sum + Number(row.montant_total || 0), 0);
+      const totalPayeMois = paiement.montant_encaisse_cumul ?? (paiementsPrecedents + Number(paiement.montant_total || 0));
+
       try {
         const { data: u } = await supabase
           .from('unites')
@@ -443,6 +509,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
 
       const payload = {
         ...paiement,
+        paiements_precedents: paiementsPrecedents,
+        total_paye_mois: totalPayeMois,
+        statut_reel_mois: Number(paiement.reliquat || 0) > 0 ? 'Partiel' : 'Solde',
         contrats: {
           ...paiement.contrats,
           unites: { ...paiement.contrats.unites, immeubles: { adresse } },
@@ -469,9 +538,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       key: 'locataire',
       label: 'Locataire',
       render: (p: PaiementRow) =>
-        p.contrats?.locataires
-          ? `${p.contrats.locataires.prenom} ${p.contrats.locataires.nom}`
-          : '-',
+        formatPersonName(p.contrats?.locataires),
     },
     {
       key: 'unite',
@@ -585,7 +652,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     montant_total:  p.montant_total,
     statut:         p.statut,
     mode_paiement:  p.mode_paiement,
-    locataire_nom:  `${p.contrats?.locataires?.prenom ?? ''} ${p.contrats?.locataires?.nom ?? ''}`.trim(),
+    locataire_nom:  formatPersonName(p.contrats?.locataires, ''),
     unite_nom:      p.contrats?.unites?.nom ?? '',
   }));
 
@@ -594,17 +661,22 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       <div className="sk-page-shell space-y-6">
         {!embedded && (
-          <header className="sk-page-hero flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">Paiements</h1>
-              <p className="text-slate-600 text-sm font-medium mt-1">Encaissement des loyers</p>
+          <header className="rounded-2xl border border-emerald-950/10 bg-white/90 p-3 shadow-sm backdrop-blur sm:p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <h1 className="truncate text-xl font-black tracking-tight text-slate-950 sm:text-2xl">
+                {isIndividualOwner ? 'Mes loyers' : 'Paiements'}
+              </h1>
+              <p className="mt-1 text-sm font-medium text-slate-600">
+                {isIndividualOwner ? 'Suivi de vos loyers encaissés, partiels et à recouvrer' : 'Encaissement des loyers'}
+              </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
               <button
                 type="button"
                 onClick={() => exportPaiements(exportRows)}
                 disabled={exportingXlsx || loading || paiements.length === 0}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
               >
                 <Sheet className="w-4 h-4" />
                 Exporter Excel
@@ -612,6 +684,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
               <Button icon={Plus} onClick={() => setIsModalOpen(true)}>
                 Nouveau paiement
               </Button>
+            </div>
             </div>
           </header>
         )}
@@ -704,19 +777,21 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                     </option>
                   ))}
               </select>
-              <select
-                value={bailleurFilter}
-                onChange={(e) => setBailleurFilter(e.target.value)}
-                className="sk-input min-w-0 xl:w-56"
-                aria-label="Filtrer par bailleur"
-              >
-                <option value="all">Tous les bailleurs</option>
-                {bailleurOptions.map((bailleur) => (
-                  <option key={bailleur.id} value={bailleur.id}>
-                    {bailleur.label}
-                  </option>
-                ))}
-              </select>
+              {!isIndividualOwner && (
+                <select
+                  value={bailleurFilter}
+                  onChange={(e) => setBailleurFilter(e.target.value)}
+                  className="sk-input min-w-0 xl:w-56"
+                  aria-label="Filtrer par bailleur"
+                >
+                  <option value="all">Tous les bailleurs</option>
+                  {bailleurOptions.map((bailleur) => (
+                    <option key={bailleur.id} value={bailleur.id}>
+                      {bailleur.label}
+                    </option>
+                  ))}
+                </select>
+              )}
               <ColumnPicker
                 columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
                 visibility={visibility}
@@ -793,6 +868,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           formData={formData}
           setFormData={setFormData}
           contrats={contrats}
+          paiements={paiements}
           isSaving={isSaving}
           onSubmit={handleSubmit}
           isOnline={isOnline}

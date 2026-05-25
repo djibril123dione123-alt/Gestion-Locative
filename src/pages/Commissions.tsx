@@ -6,7 +6,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatCurrency } from '../lib/formatters';
-import { addFooter, drawPageBorder, drawSectionFrame, saveGeneratedPdf } from '../lib/pdf';
+import {
+  addFooter,
+  drawDocumentHeader,
+  drawPageBorder,
+  drawSectionFrame,
+  drawTotalsBlock,
+  getAutoTableTheme,
+  saveGeneratedPdf,
+} from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
 
 interface CommissionRow {
@@ -35,10 +43,6 @@ interface CommissionChartRow {
   name: string;
   commission: number;
 }
-
-type PdfWithAutoTable = jsPDF & {
-  lastAutoTable?: { finalY: number };
-};
 
 export function Commissions() {
   const { profile } = useAuth();
@@ -137,41 +141,27 @@ export function Commissions() {
     const monthName = new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
 
     drawPageBorder(doc);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(15, 23, 42);
-    doc.text('Rapport des commissions', 14, 24);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Période : ${monthName}`, 14, 31);
-    doc.setDrawColor(226, 232, 240);
-    doc.line(14, 38, 196, 38);
-
-    drawSectionFrame(doc, 14, 47, 182, 24, undefined, {
-      title: 'Synthèse financière',
-      subtitle: 'Commissions agence encaissées sur la période',
-      accent: 'orange',
+    const headerY = await drawDocumentHeader(doc, {}, 'Rapport des commissions', `Période : ${monthName}`, {
+      reference: `COMM-${selectedMonth}`,
+      issueDate: new Date().toLocaleDateString('fr-FR'),
+      documentType: 'Rapport financier',
     });
-
-    // Statistiques
-    autoTable(doc, {
-      head: [['Élément', 'Valeur']],
-      body: [
-        ['Total commissions', formatCurrency(stats.totalCommission)],
-        ['Nombre de paiements', stats.nombrePaiements.toString()],
-        ['Commission moyenne', formatCurrency(stats.commissionMoyenne)],
-      ],
-      startY: 76,
-      theme: 'grid',
-      styles: { fontSize: 9, cellPadding: 3, textColor: [30, 41, 59], lineColor: [226, 232, 240], lineWidth: 0.12 },
-      headStyles: { fillColor: [20, 83, 45], textColor: [255, 255, 255], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { left: 14, right: 14 },
-    });
+    const tableTheme = getAutoTableTheme();
+    const y = drawTotalsBlock(
+      doc,
+      14,
+      headerY + 6,
+      182,
+      [
+        { label: 'Total commissions', value: formatCurrency(stats.totalCommission), emphasis: true },
+        { label: 'Nombre de paiements', value: stats.nombrePaiements.toString() },
+        { label: 'Commission moyenne', value: formatCurrency(stats.commissionMoyenne) },
+        { label: 'Période', value: monthName },
+      ]
+    );
 
     // Détails
-    const detailsY = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? 76) + 10;
+    const detailsY = y + 2;
     drawSectionFrame(doc, 14, detailsY, 182, 12, undefined, {
       title: 'Détail des commissions',
       accent: 'primary',
@@ -188,10 +178,14 @@ export function Commissions() {
       ]),
       startY: detailsY + 16,
       theme: 'grid',
-      styles: { fontSize: 8.5, cellPadding: 2.6, textColor: [30, 41, 59], lineColor: [226, 232, 240], lineWidth: 0.12 },
-      headStyles: { fillColor: [20, 83, 45], textColor: [255, 255, 255], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
+      ...tableTheme,
+      styles: { ...tableTheme.styles, fontSize: 8.2, overflow: 'linebreak' },
+      headStyles: { ...tableTheme.headStyles, fontSize: 7.8 },
       margin: { left: 14, right: 14 },
+      columnStyles: {
+        3: { halign: 'right' },
+        4: { halign: 'right', fontStyle: 'bold' },
+      },
     });
 
     addFooter(doc);

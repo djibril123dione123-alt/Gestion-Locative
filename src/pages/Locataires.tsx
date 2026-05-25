@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
@@ -30,9 +30,8 @@ const ITEMS_PER_PAGE = 10;
 export function Locataires() {
   const { user, profile } = useAuth();
   const { exportLocataires, exporting: exportingXlsx } = useExport();
-  const { save: saveBackup } = useBackup();
+  const { save: saveBackup, getSnapshot } = useBackup();
   const [locataires, setLocataires] = useState<Locataire[]>([]);
-  const [filtered, setFiltered] = useState<Locataire[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<Locataire | null>(null);
@@ -40,7 +39,13 @@ export function Locataires() {
   const [deleting, setDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const toast = useToast();
+  const {
+    success: notifySuccess,
+    error: notifyError,
+    warning: notifyWarning,
+    toasts,
+    removeToast,
+  } = useToast();
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
@@ -51,13 +56,19 @@ export function Locataires() {
     notes: '',
   });
 
+  const filtered = useMemo(
+    () =>
+      locataires.filter((locataire) =>
+        `${locataire.nom} ${locataire.prenom} ${locataire.telephone} ${locataire.email ?? ''}`
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()),
+      ),
+    [locataires, searchTerm],
+  );
+
   useEffect(() => {
-    const f = locataires.filter(l =>
-      `${l.nom} ${l.prenom} ${l.telephone} ${l.email ?? ''}`.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFiltered(f);
     setCurrentPage(1);
-  }, [searchTerm, locataires]);
+  }, [searchTerm, locataires.length]);
 
   const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
@@ -71,14 +82,20 @@ export function Locataires() {
 
       if (error) throw error;
       setLocataires(data || []);
-      setFiltered(data || []);
       saveBackup('locataires', data || []).catch(() => {});
     } catch (error) {
-      console.error('Error:', error);
+      const cached = await getSnapshot('locataires');
+      if (cached) {
+        setLocataires(cached.data as Locataire[]);
+        notifyWarning('Connexion instable : affichage des locataires sauvegardes localement.');
+      } else {
+        console.error('[Locataires] load failed', error);
+        notifyError('Impossible de charger les locataires. Verifiez votre connexion puis reessayez.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [profile?.agency_id, saveBackup]);
+  }, [getSnapshot, notifyError, notifyWarning, profile?.agency_id, saveBackup]);
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -89,12 +106,38 @@ export function Locataires() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const normalizedPhone = normalizeSenegalPhone(formData.telephone);
-      if (!normalizedPhone) {
-        toast.error('Le numéro de téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.');
+      const nom = formData.nom.trim();
+      const prenom = formData.prenom.trim();
+      const email = formData.email.trim();
+
+      if (!nom) {
+        notifyError('Le nom du locataire est obligatoire.');
         return;
       }
-      const submitData = { ...formData, telephone: normalizedPhone };
+      if (!prenom) {
+        notifyError('Le prenom du locataire est obligatoire.');
+        return;
+      }
+
+      const normalizedPhone = normalizeSenegalPhone(formData.telephone);
+      if (!normalizedPhone) {
+        notifyError('Le telephone doit etre un numero senegalais valide, par exemple 77 123 45 67.');
+        return;
+      }
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        notifyError("L'email du locataire n'est pas valide.");
+        return;
+      }
+
+      const submitData = {
+        ...formData,
+        nom,
+        prenom,
+        telephone: normalizedPhone,
+        email: email || null,
+        adresse_personnelle: formData.adresse_personnelle.trim() || null,
+        piece_identite: formData.piece_identite.trim() || null,
+      };
       if (editing) {
         await supabase.from('locataires').update(submitData).eq('id', editing.id);
       } else {
@@ -102,10 +145,10 @@ export function Locataires() {
       }
       closeModal();
       loadData();
-      toast.success(editing ? 'Locataire mis à jour' : 'Locataire créé');
+      notifySuccess(editing ? 'Locataire mis a jour' : 'Locataire cree');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur';
-      toast.error(msg);
+      console.error('[Locataires] save failed', err);
+      notifyError("Impossible d'enregistrer le locataire. Verifiez votre connexion puis reessayez.");
     }
   };
 
@@ -131,12 +174,12 @@ export function Locataires() {
     try {
       const { error } = await supabase.from('locataires').update({ actif: false }).eq('id', deleteTarget.id);
       if (error) throw error;
-      toast.success('Locataire supprimé');
+      notifySuccess('Locataire supprime');
       setDeleteTarget(null);
       loadData();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression';
-      toast.error(msg);
+      console.error('[Locataires] delete failed', err);
+      notifyError('Impossible de supprimer ce locataire pour le moment.');
     } finally {
       setDeleting(false);
     }
@@ -322,7 +365,7 @@ export function Locataires() {
         isDestructive
         isLoading={deleting}
       />
-      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );
 }

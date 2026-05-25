@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "marketing:dev": "vite --config marketing/vite.config.ts",
     "build": "vite build",
+    "marketing:build": "vite build --config marketing/vite.config.ts",
     "vercel-build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

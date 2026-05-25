@@ -25,6 +25,7 @@ export interface Agency {
   status: 'active' | 'suspended' | 'trial' | 'cancelled';
   trial_ends_at: string | null;
   is_bailleur_account: boolean;
+  organization_type?: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -119,7 +119,8 @@ function addYearsToDateString(dateString: string, years: number): string {
 // =========================
 export function Contrats() {
   // Auth context
-  const { profile } = useAuth();
+  const { profile, accountProfile } = useAuth();
+  const isIndividualOwner = accountProfile.isIndividualOwner;
 
   // États
   const [contrats, setContrats] = useState<Contrat[]>([]);
@@ -268,6 +269,7 @@ export function Contrats() {
   const stats = useMemo(() => {
     const actifs = contrats.filter((c) => c.statut === 'actif');
     const revenuTotal = actifs.reduce((sum, c) => {
+      if (isIndividualOwner) return sum + c.loyer_mensuel;
       const partAgence = (c.loyer_mensuel * (c.commission || 0)) / 100;
       return sum + partAgence;
     }, 0);
@@ -279,7 +281,7 @@ export function Contrats() {
       resilies: contrats.filter((c) => c.statut === 'resilie').length,
       revenuTotal,
     };
-  }, [contrats]);
+  }, [contrats, isIndividualOwner]);
 
   // =========================
   // 🏢 GESTION CHANGEMENT D'UNITÉ
@@ -289,7 +291,7 @@ export function Contrats() {
       const unite = unites.find((u) => u.id === uniteId);
       let commissionBailleur = '';
 
-      if (unite && unite.immeubles?.bailleurs) {
+      if (!isIndividualOwner && unite && unite.immeubles?.bailleurs) {
         commissionBailleur = (unite.immeubles.bailleurs.commission || 0).toString();
       }
 
@@ -298,10 +300,10 @@ export function Contrats() {
         unite_id: uniteId,
         loyer_mensuel: unite ? unite.loyer_base.toString() : '',
         caution: unite ? (unite.loyer_base * 2).toString() : '',
-        commission: commissionBailleur,
+        commission: isIndividualOwner ? '' : commissionBailleur,
       }));
     },
-    [unites]
+    [isIndividualOwner, unites]
   );
 
   const handleDateDebutChange = useCallback((dateDebut: string) => {
@@ -367,7 +369,7 @@ export function Contrats() {
           date_debut: formData.date_debut,
           date_fin: formData.date_fin || null,
           loyer_mensuel: parseFloat(formData.loyer_mensuel),
-          commission: formData.commission ? parseFloat(formData.commission) : null,
+          commission: isIndividualOwner ? 0 : formData.commission ? parseFloat(formData.commission) : null,
           caution: formData.caution ? parseFloat(formData.caution) : null,
           statut: formData.statut as 'actif' | 'expire' | 'resilie',
           destination: formData.destination || null,
@@ -387,7 +389,7 @@ export function Contrats() {
         submitLockRef.current = false;
       }
     },
-    [closeModal, formData, validateForm, loadData, profile?.agency_id, submitting, toast]
+    [closeModal, formData, isIndividualOwner, validateForm, loadData, profile?.agency_id, submitting, toast]
   );
 
   // =========================
@@ -406,7 +408,7 @@ export function Contrats() {
           id: editing.id,
           statut: formData.statut as 'actif' | 'expire' | 'resilie',
           date_fin: formData.date_fin || null,
-          commission: formData.commission ? parseFloat(formData.commission) : null,
+          commission: isIndividualOwner ? 0 : formData.commission ? parseFloat(formData.commission) : null,
           caution: formData.caution ? parseFloat(formData.caution) : null,
         });
 
@@ -423,7 +425,7 @@ export function Contrats() {
         setSubmitting(false);
       }
     },
-    [closeEditModal, editing, formData, loadData, profile?.agency_id, toast]
+    [closeEditModal, editing, formData, isIndividualOwner, loadData, profile?.agency_id, toast]
   );
 
   // =========================
@@ -595,10 +597,11 @@ export function Contrats() {
       },
       {
         key: 'revenue_total',
-        label: 'Revenue',
+        label: isIndividualOwner ? 'Loyer mensuel' : 'Revenu',
         render: (c: Contrat) => {
-      const partAgence = (c.loyer_mensuel * (c.commission || 0)) / 100;
-      return formatCurrency(partAgence);
+          if (isIndividualOwner) return formatCurrency(c.loyer_mensuel);
+          const partAgence = (c.loyer_mensuel * (c.commission || 0)) / 100;
+          return formatCurrency(partAgence);
         },
       },
       {
@@ -647,11 +650,14 @@ export function Contrats() {
         ),
       },
     ],
-    [handleDownloadPDF, downloadingId, openResiliation]
+    [handleDownloadPDF, downloadingId, isIndividualOwner, openResiliation]
   );
   const columns = useMemo(
-    () => allColumns.filter((c) => c.key === 'actions' || colIsVisible(c.key)),
-    [allColumns, colIsVisible]
+    () => allColumns.filter((c) => {
+      if (isIndividualOwner && c.key === 'revenue_total') return false;
+      return c.key === 'actions' || colIsVisible(c.key);
+    }),
+    [allColumns, colIsVisible, isIndividualOwner]
   );
 
   // =========================
@@ -750,7 +756,9 @@ export function Contrats() {
         <div className="sk-card p-4">
           <div className="flex items-center gap-2 mb-1">
             <TrendingUp className="w-4 h-4 text-emerald-600" />
-            <p className="text-sm text-brand-700 font-bold">Revenue mensuel</p>
+            <p className="text-sm text-brand-700 font-bold">
+              {isIndividualOwner ? 'Loyers mensuels' : 'Revenu mensuel'}
+            </p>
           </div>
           <p className="text-2xl font-black text-slate-950">
             {formatCurrency(stats.revenuTotal)}
@@ -773,7 +781,9 @@ export function Contrats() {
               />
             </div>
             <ColumnPicker
-              columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
+              columns={allColumns
+                .filter((c) => !(isIndividualOwner && c.key === 'revenue_total'))
+                .map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
               visibility={colVis}
               onToggle={colToggle}
               onSetAll={colSetAll}
@@ -916,6 +926,7 @@ export function Contrats() {
                 className="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:outline-none"
               />
             </div>
+            {!isIndividualOwner && (
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
                 Commission (%)
@@ -934,6 +945,7 @@ export function Contrats() {
                 Taux défini par le bailleur
               </p>
             </div>
+            )}
             <div>
               <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
                 Caution (F CFA)
@@ -1112,6 +1124,7 @@ export function Contrats() {
             />
           </div>
 
+          {!isIndividualOwner && (
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
               Commission (%)
@@ -1126,6 +1139,7 @@ export function Contrats() {
               className="w-full px-4 py-2 border-2 border-slate-300 rounded-lg focus:outline-none"
             />
           </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>

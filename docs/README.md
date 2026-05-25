@@ -11,8 +11,10 @@ Cette documentation est organisee pour separer les besoins des lecteurs :
 
 | Domaine | Document |
 |---|---|
+| Etat actuel du produit | [current-state.md](current-state.md) |
 | Architecture globale | [architecture.md](architecture.md) |
 | Adaptabilite multi-profils | [adaptive-profiles-phase-0.md](adaptive-profiles-phase-0.md) |
+| Separation vitrine / app | [marketing-app-separation.md](marketing-app-separation.md) |
 | Securite | [security.md](security.md) |
 | Finance engine | [finance-engine.md](finance-engine.md) |
 | Paiements | [payments.md](payments.md) |
@@ -33,3 +35,10 @@ Cette documentation est organisee pour separer les besoins des lecteurs :
 - Docs metier : logique produit et invariants.
 - Docs techniques : architecture, securite, fonctions, deploiement.
 - Runbooks : actions operationnelles en cas d'incident.
+
+## Conventions transverses
+
+- Les noms de personnes s'affichent et se saisissent toujours dans l'ordre `Prenom Nom`.
+- Les composants doivent utiliser `formatPersonName(person)` au lieu de recreer l'ordre manuellement.
+- Les composants produit ne doivent pas lire directement `is_bailleur_account`; ils doivent passer par `accountProfile`.
+- La vitrine autonome vit dans `marketing/` et ne doit pas etre reintegree dans l'application React.

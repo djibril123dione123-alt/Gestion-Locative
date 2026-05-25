@@ -109,6 +109,35 @@ flowchart LR
   Contrat --> Documents["GED / documents lies"]
 ```
 
+## Adaptabilite multi-profils
+
+L'application utilise une couche de profil de compte pour eviter les conditions dispersees dans les composants.
+
+Phase 1 :
+
+- `agencies.is_bailleur_account = true` represente le mode bailleur individuel ;
+- tout compte absent ou non marque reste traite comme agence ;
+- `accountProfile` fournit labels, features, pages masquees et role effectif ;
+- le bailleur individuel dispose d'un proprietaire interne unique via `src/services/individualOwner.ts`.
+
+Regle de code :
+
+```ts
+const { accountProfile } = useAuth();
+```
+
+Les pages doivent consommer les labels/features du profil. Elles ne doivent pas lire directement `is_bailleur_account`, sauf dans les helpers centraux.
+
+## Convention personnes
+
+L'ordre produit est toujours :
+
+```text
+Prenom Nom
+```
+
+Utiliser `formatPersonName(person)` pour les bailleurs, locataires, utilisateurs, exports et documents.
+
 ## Invariants d'architecture
 
 - Une ligne financiere ne doit pas etre corrigee par update destructif.

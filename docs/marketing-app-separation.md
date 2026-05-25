@@ -34,6 +34,24 @@ src/
   pages/Auth.tsx    -> pont login/signup
 ```
 
+## Depot dedie
+
+La vitrine autonome est aussi poussee dans :
+
+```text
+djibril123dione123-alt/vitrine-Samay-Keur.git
+```
+
+Ce depot doit contenir :
+
+- `marketing/`
+- `public/brand/`
+- `package.json`
+- `package-lock.json`
+- `.gitignore`
+
+Le build marketing depend de `public/brand` via `publicDir: ../public`.
+
 ## Scripts
 
 ```bash

@@ -147,7 +147,9 @@ La documentation detaillee est maintenant separee par responsabilite.
 
 | Sujet | Document |
 |---|---|
+| Etat actuel du produit | [docs/current-state.md](docs/current-state.md) |
 | Architecture globale | [docs/architecture.md](docs/architecture.md) |
+| Adaptabilite multi-profils | [docs/adaptive-profiles-phase-0.md](docs/adaptive-profiles-phase-0.md) |
 | Securite | [docs/security.md](docs/security.md) |
 | Finance engine | [docs/finance-engine.md](docs/finance-engine.md) |
 | Paiements | [docs/payments.md](docs/payments.md) |
@@ -176,7 +178,15 @@ Dernieres verifications locales connues :
 - `npm run typecheck` : OK
 - `npm run lint` : OK
 - `npm run build` : OK
+- `npm run marketing:build` : OK
 - scan mojibake UTF-8 sur les fichiers touches : OK
+
+Conventions produit importantes :
+
+- l'ordre des personnes est toujours `Prenom Nom` dans l'app, les PDF, les recherches et les exports ;
+- la vitrine publique reste autonome dans `marketing/` ;
+- le mode bailleur individuel utilise `is_bailleur_account` en Phase 1 et rattache automatiquement un proprietaire interne ;
+- les comptes existants restent en fallback agence tant qu'aucun type de compte explicite n'est defini.
 
 Points d'attention production :
 

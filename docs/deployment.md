@@ -29,6 +29,36 @@ Variables Vercel a verifier :
 - `VITE_PUBLIC_APP_URL`
 - Sentry/PostHog si actives.
 
+Depot GitHub application :
+
+```text
+djibril123dione123-alt/Samay-Keur.git
+```
+
+## Vitrine marketing
+
+La vitrine est un projet autonome dans `marketing/`.
+
+Build :
+
+```bash
+npm run marketing:build
+```
+
+Preview locale :
+
+```bash
+npm run marketing:dev -- --host 127.0.0.1 --port 4176
+```
+
+Depot GitHub vitrine :
+
+```text
+djibril123dione123-alt/vitrine-Samay-Keur.git
+```
+
+La vitrine consomme `public/brand/` comme dossier public. Ne pas pousser uniquement `marketing/` sans les assets publics necessaires.
+
 ## Supabase
 
 Elements a deployer :
@@ -55,6 +85,7 @@ Elements a deployer :
 npm run typecheck
 npm run lint
 npm run build
+npm run marketing:build
 npm run test
 ```
 
@@ -80,3 +111,5 @@ npm run test
 - verifier PayDunya webhook ;
 - verifier quotas Storage ;
 - verifier que les URLs QR utilisent le domaine production.
+- verifier que la vitrine et l'application ne pointent pas vers le meme deploiement par erreur.
+- verifier dans Vercel que les deployments ne restent pas en statut `UNKNOWN`.

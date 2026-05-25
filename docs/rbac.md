@@ -70,6 +70,27 @@ Exemples :
 - chemin Storage `agencies/{agency_id}/...`
 - permissions modifiables uniquement par admin de la meme agence.
 
+## Type de compte vs role utilisateur
+
+Ne pas confondre :
+
+- type de compte : nature de l'espace (`agence`, bailleur individuel, gestionnaire, groupe) ;
+- role utilisateur : droits de l'utilisateur dans cet espace (`admin`, `agent`, `comptable`, `bailleur`, etc.).
+
+En Phase 1, un bailleur individuel est detecte via `agencies.is_bailleur_account = true`.
+
+Important :
+
+- un bailleur individuel peut etre traite comme administrateur effectif de son propre espace cote UI ;
+- le role `bailleur` reste aussi utile pour un proprietaire invite dans une agence tierce ;
+- les composants doivent demander des capacites (`features.canUseCommissions`, `features.canInviteTeam`) plutot que tester directement le role.
+
+Helper principal :
+
+```ts
+getEffectiveRoleForAccount(profile.role, accountProfile)
+```
+
 ## Checklist nouveau module
 
 - Ajouter la page dans le catalogue permissions.

@@ -397,14 +397,20 @@ function hexToRgb(hex: string | null | undefined, fallback: [number, number, num
 }
 
 function getBrandColors(settings?: Partial<AgencySettings>) {
+  const primary = hexToRgb(settings?.couleur_primaire, [20, 83, 45]);
+  const secondary = hexToRgb(settings?.couleur_secondaire, [15, 23, 42]);
   return {
-    primary: hexToRgb(settings?.couleur_primaire, [20, 83, 45]),
-    secondary: hexToRgb(settings?.couleur_secondaire, [15, 23, 42]),
-    orange: [249, 115, 22] as [number, number, number],
-    paper: [255, 251, 245] as [number, number, number],
+    primary,
+    secondary,
+    emeraldSoft: [232, 246, 240] as [number, number, number],
+    gold: [211, 139, 38] as [number, number, number],
+    goldSoft: [255, 247, 232] as [number, number, number],
+    orange: [226, 104, 22] as [number, number, number],
+    paper: [255, 252, 246] as [number, number, number],
     surface: [248, 250, 252] as [number, number, number],
     border: [226, 232, 240] as [number, number, number],
     muted: [100, 116, 139] as [number, number, number],
+    ink: [15, 23, 42] as [number, number, number],
   };
 }
 
@@ -488,25 +494,27 @@ export function drawSectionFrame(
   const colors = getBrandColors(settings);
   if (options.fill !== false) {
     doc.setFillColor(255, 255, 255);
-    doc.rect(x, y, width, height, 'F');
+    doc.roundedRect(x, y, width, height, 2.2, 2.2, 'F');
   }
-  doc.setDrawColor(...colors.border);
-  doc.setLineWidth(0.12);
-  doc.rect(x, y, width, height, 'S');
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.13);
+  doc.roundedRect(x, y, width, height, 2.2, 2.2, 'S');
+  doc.setFillColor(...(options.accent === 'orange' ? colors.gold : options.accent === 'neutral' ? colors.border : colors.primary));
+  doc.roundedRect(x, y, 1.4, height, 1.4, 1.4, 'F');
 
   let contentY = y + 5.5;
   if (options.title) {
     doc.setFont(undefined as unknown as string, 'bold');
     doc.setFontSize(8.6);
-    doc.setTextColor(31, 41, 55);
-    doc.text(options.title, x + 4, contentY);
+    doc.setTextColor(...colors.ink);
+    doc.text(options.title, x + 5, contentY);
     contentY += 4.8;
   }
   if (options.subtitle) {
     doc.setFont(undefined as unknown as string, 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(...colors.muted);
-    doc.text(options.subtitle, x + 4, contentY);
+    doc.text(options.subtitle, x + 5, contentY);
     contentY += 4;
   }
   doc.setTextColor(0, 0, 0);
@@ -648,26 +656,26 @@ export function getAutoTableTheme(settings?: Partial<AgencySettings>) {
   const colors = getBrandColors(settings);
   return {
     styles: {
-      fontSize: 8.3,
-      cellPadding: { top: 2.8, right: 3, bottom: 2.8, left: 3 },
+      fontSize: 8.1,
+      cellPadding: { top: 2.6, right: 3, bottom: 2.6, left: 3 },
       textColor: [30, 41, 59] as [number, number, number],
       lineColor: colors.border,
-      lineWidth: 0.08,
+      lineWidth: 0.1,
       valign: 'middle' as const,
     },
     headStyles: {
-      fillColor: [241, 245, 249] as [number, number, number],
-      textColor: [15, 23, 42] as [number, number, number],
+      fillColor: colors.emeraldSoft,
+      textColor: colors.primary,
       fontStyle: 'bold' as const,
       lineColor: colors.border,
-      lineWidth: 0.08,
-      minCellHeight: 8,
+      lineWidth: 0.1,
+      minCellHeight: 7.6,
     },
     bodyStyles: {
       lineColor: colors.border,
-      lineWidth: 0.08,
+      lineWidth: 0.1,
     },
-    alternateRowStyles: { fillColor: colors.surface },
+    alternateRowStyles: { fillColor: [253, 252, 248] as [number, number, number] },
     margin: { left: 14, right: 14 },
   };
 }
@@ -680,9 +688,15 @@ export function drawPageBorder(doc: jsPDF, settings?: Partial<AgencySettings>): 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const colors = getBrandColors(settings);
-  doc.setDrawColor(...colors.border);
-  doc.setLineWidth(0.1);
+  doc.setDrawColor(214, 222, 232);
+  doc.setLineWidth(0.13);
   doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
+  doc.setDrawColor(...colors.gold);
+  doc.setLineWidth(0.2);
+  doc.line(10, 10, 34, 10);
+  doc.setDrawColor(...colors.primary);
+  doc.setLineWidth(0.11);
+  doc.line(10, 10, 10, 36);
 }
 
 export function addFooter(doc: jsPDF, settings?: Partial<AgencySettings>): void {
@@ -695,7 +709,10 @@ export function addFooter(doc: jsPDF, settings?: Partial<AgencySettings>): void 
     doc.setDrawColor(232, 236, 242);
     doc.setLineWidth(0.08);
     doc.line(14, pageHeight - 16.5, pageWidth - 14, pageHeight - 16.5);
-    doc.setFontSize(6.9);
+    doc.setDrawColor(...colors.gold);
+    doc.setLineWidth(0.16);
+    doc.line(14, pageHeight - 16.5, 36, pageHeight - 16.5);
+    doc.setFontSize(6.8);
     doc.setTextColor(...colors.muted);
     doc.setFont(undefined as unknown as string, 'normal');
     const footer = settings?.pied_page_personnalise || settings?.nom_agence || 'Samay Këur';
@@ -884,18 +901,20 @@ export function drawSubtleSectionTitle(
   subtitle?: string
 ): number {
   const colors = getBrandColors(settings);
+  doc.setFillColor(...colors.gold);
+  doc.roundedRect(x, y - 3.2, 1.2, subtitle ? 9.2 : 6.4, 1, 1, 'F');
   doc.setFont(undefined as unknown as string, 'bold');
   doc.setFontSize(9.4);
-  doc.setTextColor(15, 23, 42);
-  doc.text(title, x, y);
+  doc.setTextColor(...colors.ink);
+  doc.text(title, x + 4, y);
   doc.setDrawColor(...colors.border);
   doc.setLineWidth(0.12);
-  doc.line(x, y + 3, x + width, y + 3);
+  doc.line(x + 4, y + 3, x + width, y + 3);
   if (subtitle) {
     doc.setFont(undefined as unknown as string, 'normal');
     doc.setFontSize(7.8);
     doc.setTextColor(...colors.muted);
-    doc.text(subtitle, x, y + 8);
+    doc.text(subtitle, x + 4, y + 8);
     return y + 14;
   }
   return y + 8;
@@ -981,6 +1000,69 @@ export function drawPaymentSummaryCard(
   return y + height + 8;
 }
 
+function drawCompactPaymentSummaryCard(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  values: {
+    paid: string;
+    due: string;
+    remaining: string;
+    status: string;
+    period: string;
+  },
+  settings?: Partial<AgencySettings>
+): number {
+  const colors = getBrandColors(settings);
+  const height = 28;
+  const isSettled = !/partiel/i.test(values.status);
+
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.13);
+  doc.roundedRect(x, y, width, height, 2.6, 2.6, 'FD');
+  doc.setFillColor(...colors.paper);
+  doc.roundedRect(x + 1.2, y + 1.2, width - 2.4, height - 2.4, 2.2, 2.2, 'F');
+  doc.setFillColor(...colors.gold);
+  doc.roundedRect(x + 3, y + 4, 1.3, height - 8, 1.2, 1.2, 'F');
+
+  doc.setFont(undefined as unknown as string, 'bold');
+  doc.setFontSize(6.9);
+  doc.setTextColor(...colors.gold);
+  doc.text('MONTANT ENCAISSÉ', x + 7, y + 7.4);
+  doc.setFontSize(17);
+  doc.setTextColor(...colors.primary);
+  doc.text(values.paid, x + 7, y + 18.2);
+  doc.setFont(undefined as unknown as string, 'normal');
+  doc.setFontSize(7.2);
+  doc.setTextColor(...colors.muted);
+  doc.text(`Période : ${values.period}`, x + 7, y + 24.2);
+
+  const rightX = x + width - 5;
+  const statusWidth = Math.min(40, Math.max(22, doc.getTextWidth(values.status) + 10));
+  const badgeX = x + width - statusWidth - 5;
+  doc.setFillColor(...(isSettled ? colors.emeraldSoft : colors.goldSoft));
+  doc.roundedRect(badgeX, y + 5, statusWidth, 7.5, 1.8, 1.8, 'F');
+  doc.setFont(undefined as unknown as string, 'bold');
+  doc.setFontSize(7.1);
+  doc.setTextColor(...(isSettled ? colors.primary : colors.gold));
+  doc.text(values.status, badgeX + statusWidth / 2, y + 10, { align: 'center' });
+
+  doc.setFont(undefined as unknown as string, 'normal');
+  doc.setFontSize(7.1);
+  doc.setTextColor(...colors.muted);
+  doc.text('Loyer total', rightX, y + 17.2, { align: 'right' });
+  doc.text('Reliquat', rightX, y + 23.5, { align: 'right' });
+  doc.setFont(undefined as unknown as string, 'bold');
+  doc.setTextColor(...colors.ink);
+  doc.text(values.due, rightX - 30, y + 17.2, { align: 'right' });
+  doc.text(values.remaining, rightX - 30, y + 23.5, { align: 'right' });
+
+  doc.setTextColor(0);
+  return y + height + 6;
+}
+
 export function drawTotalsBlock(
   doc: jsPDF,
   x: number,
@@ -1038,6 +1120,7 @@ async function drawVerificationBlock(
 ): Promise<void> {
   const { x, y, width, ref, type, agency, amount, date, paymentStatus, settings } = options;
   const colors = getBrandColors(settings);
+  const individualOwner = isIndividualOwnerSettings(settings);
   const verification = await registerDocumentVerification({
     type,
     ref,
@@ -1057,6 +1140,8 @@ async function drawVerificationBlock(
   drawSectionFrame(doc, x, y, width, blockHeight, settings, { accent: 'neutral', fill: true });
 
   const qrSize = 17;
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(x + 3.5, y + 4.6, qrSize + 2, qrSize + 2, 1.4, 1.4, 'F');
   doc.addImage(qrDataUrl, 'PNG', x + 4.5, y + 5.5, qrSize, qrSize);
   doc.setFont(undefined as unknown as string, 'bold');
   doc.setFontSize(7.2);
@@ -1067,7 +1152,7 @@ async function drawVerificationBlock(
   doc.setTextColor(...colors.muted);
   const textWidth = width - 31;
   doc.text(fitSingleLine(doc, `Réf. ${ref}`, textWidth), x + 24, y + 12.6);
-  doc.text(fitSingleLine(doc, `Agence : ${safeText(agency, 'Agence')}`, textWidth), x + 24, y + 16.8);
+  doc.text(fitSingleLine(doc, `${individualOwner ? 'Propriétaire' : 'Émetteur'} : ${safeText(agency, 'Samay Keur')}`, textWidth), x + 24, y + 16.8);
   doc.text(verification.registered ? 'Authenticité enregistrée' : 'Vérification disponible', x + 24, y + 21);
   doc.setTextColor(0);
 }
@@ -1402,7 +1487,7 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
   const reliquat = paiement.reliquat != null
     ? Number(paiement.reliquat)
     : Math.max(loyer - totalPayeMois, 0);
-  const statusLabel = reliquat > 0 ? 'Paiement partiel' : 'Solde';
+  const statusLabel = reliquat > 0 ? 'Paiement partiel' : 'Soldé';
   // Numéro de quittance unique (QIT-AAAAMM-XXXX) — légalement traçable
   const ref = paiement.reference ?? generateQuittanceRef(paiement);
 
@@ -1443,7 +1528,7 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
   );
 
   let y = titleY + 4;
-  y = drawPaymentSummaryCard(
+  y = drawCompactPaymentSummaryCard(
     doc,
     leftMargin,
     y,
@@ -1504,42 +1589,56 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     tableWidth: usableWidth,
   });
 
-  let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : y + 10;
-  finalY = ensureDocumentSpace(doc, finalY, 34, settings, 24, 62);
+  let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 6 : y + 8;
+  const finalBlockHeight = 30;
+  const finalBlockBottom = doc.internal.pageSize.getHeight() - 23;
+  if (finalY + finalBlockHeight > finalBlockBottom) {
+    finalY = ensureDocumentSpace(doc, finalY, finalBlockHeight, settings, 24, 23);
+  }
+  const qrWidth = settings.qr_code_quittances !== false ? 74 : 0;
+  const qrGap = qrWidth > 0 ? 7 : 0;
+  const mentionsWidth = usableWidth - qrWidth - qrGap;
 
   const mentions = [
-    "NB 1 : Le locataire ne peut déménager sans avoir payé l'intégralité du loyer dû et effectué toutes les réparations à sa charge.",
-    'NB 2 : La sous-location est strictement interdite.',
+    'Cette quittance atteste le paiement enregistré pour la période indiquée, sous réserve de vérification du document et des conditions prévues au bail.',
+    reliquat > 0
+      ? 'Tout reliquat, charge ou obligation non réglée demeure exigible conformément au bail.'
+      : null,
   ];
 
-  const mentionsTitleY = drawSubtleSectionTitle(doc, leftMargin, finalY - 2, usableWidth, 'Mentions', settings);
-
+  const colors = getBrandColors(settings);
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.13);
+  doc.roundedRect(leftMargin, finalY, mentionsWidth, finalBlockHeight, 2.2, 2.2, 'FD');
+  doc.setFillColor(...colors.goldSoft);
+  doc.roundedRect(leftMargin + 2, finalY + 2, mentionsWidth - 4, 7.2, 1.8, 1.8, 'F');
+  doc.setFont(undefined as unknown as string, 'bold');
+  doc.setFontSize(7.2);
+  doc.setTextColor(...colors.gold);
+  doc.text('Mentions légales', leftMargin + 5, finalY + 6.8);
   doc.setFont(undefined as unknown as string, 'normal');
-  doc.setFontSize(8.5);
+  doc.setFontSize(6.7);
   doc.setTextColor(30, 41, 59);
-  let yMentions = mentionsTitleY + 1;
-  for (const m of mentions) {
-    const lines = doc.splitTextToSize(`- ${m}`, usableWidth - 8) as string[];
-    doc.text(lines, leftMargin + 4, yMentions);
-    yMentions += lines.length * 5;
+  let yMentions = finalY + 13.7;
+  for (const m of mentions.filter(Boolean) as string[]) {
+    const lines = doc.splitTextToSize(`- ${m}`, mentionsWidth - 10) as string[];
+    doc.text(lines, leftMargin + 5, yMentions);
+    yMentions += lines.length * 3.6 + 1;
   }
 
   if (settings.pied_page_personnalise) {
-    const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    const footerLines = doc.splitTextToSize(settings.pied_page_personnalise, usableWidth) as string[];
-    doc.text(footerLines, leftMargin, pageHeight - 25);
+    doc.setFontSize(5.9);
+    doc.setTextColor(100, 116, 139);
+    const footerLines = doc.splitTextToSize(settings.pied_page_personnalise, mentionsWidth - 10) as string[];
+    doc.text(footerLines.slice(0, 1), leftMargin + 5, finalY + 27.2);
   }
 
-  // QR code — contrôle d'authenticité imprimable.
   if (settings.qr_code_quittances !== false) {
     try {
-      const ph = doc.internal.pageSize.getHeight();
-      const qrWidth = 78;
       await drawVerificationBlock(doc, {
-        x: pageWidth - rightMargin - qrWidth,
-        y: ph - 55,
+        x: leftMargin + mentionsWidth + qrGap,
+        y: finalY,
         width: qrWidth,
         ref,
         type: 'quittance',

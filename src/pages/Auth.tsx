@@ -7,6 +7,11 @@ interface AuthProps {
   initialMode?: 'login' | 'register';
 }
 
+const TERMS_VERSION = '2026-05-31';
+const PRIVACY_VERSION = '2026-05-31';
+const TERMS_URL = 'https://samaykeur.com/cgu';
+const PRIVACY_URL = 'https://samaykeur.com/confidentialite';
+
 export function Auth({ initialMode = 'login' }: AuthProps) {
   const { signIn, signInWithGoogle, signUp } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>(initialMode);
@@ -14,6 +19,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -25,6 +31,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
   useEffect(() => {
     setMode(initialMode);
     setError(null);
+    setAcceptedTerms(false);
   }, [initialMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,10 +53,20 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
           throw new Error('Le prÈnom et le nom sont obligatoires');
         }
 
+        if (!acceptedTerms) {
+          throw new Error('Vous devez accepter les CGU et la politique de confidentialite pour creer votre compte.');
+        }
+
+        const acceptedAt = new Date().toISOString();
+
         await signUp(formData.email, formData.password, {
           nom: formData.nom,
           prenom: formData.prenom,
           role: 'admin',
+          accepted_terms_at: acceptedAt,
+          accepted_privacy_at: acceptedAt,
+          terms_version: TERMS_VERSION,
+          privacy_version: PRIVACY_VERSION,
         });
       }
     } catch (err: unknown) {
@@ -62,6 +79,10 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
 
   const handleGoogleSignIn = async () => {
     setError(null);
+    if (mode === 'register' && !acceptedTerms) {
+      setError('Vous devez accepter les CGU et la politique de confidentialite pour creer votre compte.');
+      return;
+    }
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
@@ -123,6 +144,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                 onClick={() => {
                   setMode('login');
                   setError(null);
+                  setAcceptedTerms(false);
                 }}
                 className={`min-w-0 rounded-lg px-2 py-3 text-sm font-black transition-all duration-300 sm:px-4 sm:text-base ${
                   mode === 'login'
@@ -138,6 +160,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                 onClick={() => {
                   setMode('register');
                   setError(null);
+                  setAcceptedTerms(false);
                 }}
                 className={`min-w-0 rounded-lg px-2 py-3 text-sm font-black transition-all duration-300 sm:px-4 sm:text-base ${
                   mode === 'register'
@@ -275,9 +298,31 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                 </div>
               )}
 
+              {mode === 'register' && (
+                <label className="flex items-start gap-3 rounded-xl border border-emerald-950/10 bg-emerald-50/60 p-4 text-left text-sm leading-6 text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(e) => setAcceptedTerms(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-emerald-950/20 text-brand-700 focus:ring-action-400"
+                  />
+                  <span>
+                    J'accepte les{' '}
+                    <a href={TERMS_URL} target="_blank" rel="noreferrer" className="font-black text-brand-700 underline-offset-4 hover:underline">
+                      Conditions Generales d'Utilisation
+                    </a>{' '}
+                    et la{' '}
+                    <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="font-black text-brand-700 underline-offset-4 hover:underline">
+                      Politique de confidentialite
+                    </a>{' '}
+                    de Samay Keur.
+                  </span>
+                </label>
+              )}
+
               <button
                 type="submit"
-                disabled={loading || googleLoading}
+                disabled={loading || googleLoading || (mode === 'register' && !acceptedTerms)}
                 className="flex w-full transform items-center justify-center gap-2 rounded-lg bg-brand-700 px-6 py-3 font-bold text-white shadow-premium transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? (
@@ -330,7 +375,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
           {mode === 'register' && (
             <div className="border-t border-emerald-950/10 bg-brand-surface px-8 py-6">
               <p className="text-center text-xs text-slate-600">
-                En vous inscrivant, vous acceptez nos conditions d'utilisation et notre politique de confidentialit√©.
+                Vos acceptations CGU et confidentialite sont enregistrees lors de la creation du compte.
               </p>
             </div>
           )}

@@ -161,6 +161,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           nom: profileData.nom || '',
           prenom: profileData.prenom || '',
           role: profileData.role || 'agent',
+          accepted_terms_at: profileData.accepted_terms_at ?? null,
+          accepted_privacy_at: profileData.accepted_privacy_at ?? null,
+          terms_version: profileData.terms_version ?? null,
+          privacy_version: profileData.privacy_version ?? null,
         },
       },
     });

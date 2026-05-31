@@ -8,6 +8,10 @@ export interface UserProfile {
   bailleur_id: string | null;
   agency_id: string | null;
   actif: boolean;
+  accepted_terms_at?: string | null;
+  accepted_privacy_at?: string | null;
+  terms_version?: string | null;
+  privacy_version?: string | null;
   created_at: string;
   updated_at: string;
 }

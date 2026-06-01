@@ -42,7 +42,6 @@ import { BrandMark } from '../components/brand/BrandLogo';
 import { AgencyRequestsPanel } from '../components/console/AgencyRequestsPanel';
 import {
   CreateAgencyModal,
-  DarkConfirmModal,
   EditSubscriptionModal,
   EditUserModal,
   InviteUserModal,
@@ -220,6 +219,18 @@ interface SaasConfigRow {
   value: unknown;
   description: string | null;
   updated_at: string;
+}
+
+interface AdminReasonAction {
+  title: string;
+  message: string;
+  confirmText?: string;
+  destructive?: boolean;
+  requireText?: string;
+  reasonLabel?: string;
+  reasonPlaceholder?: string;
+  minReasonLength?: number;
+  onConfirm: (reason: string) => Promise<void> | void;
 }
 
 const NAV_GROUPS: Array<{
@@ -432,15 +443,8 @@ export function Console() {
   const [editUser, setEditUser] = useState<UserRow | null>(null);
   const [editSub, setEditSub] = useState<SubscriptionRow | null>(null);
   const [selectedAgency, setSelectedAgency] = useState<AgencyStat | null>(null);
-  const [confirm, setConfirm] = useState<{
-    title: string;
-    message: string;
-    confirmText?: string;
-    destructive?: boolean;
-    requireText?: string;
-    onConfirm: () => Promise<void> | void;
-  } | null>(null);
-  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [actionDialog, setActionDialog] = useState<AdminReasonAction | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const platformSnapshot = snapshot?.platform;
 
@@ -630,79 +634,103 @@ export function Console() {
     }
   };
 
-  const updateAgencyStatus = async (agency: AgencyStat, nextStatus: 'active' | 'suspended') => {
-    const reason = window.prompt(`Raison obligatoire pour ${nextStatus === 'active' ? 'réactiver' : 'suspendre'} ${agency.name}`);
-    if (!reason || reason.trim().length < 8) return;
-    const { error } = await supabase.from('agencies').update({ status: nextStatus }).eq('id', agency.id);
-    if (error) throw error;
-    await logAdminAction({
-      action: nextStatus === 'active' ? 'organization_reactivated' : 'organization_suspended',
-      reason,
-      targetOrganizationId: agency.id,
-      targetLabel: agency.name,
-      metadata: { previous_status: agency.status, next_status: nextStatus },
+  const updateAgencyStatus = (agency: AgencyStat, nextStatus: 'active' | 'suspended') => {
+    const isReactivation = nextStatus === 'active';
+    setActionDialog({
+      title: isReactivation ? 'Réactiver cette organisation' : 'Suspendre cette organisation',
+      message: `${agency.name} passera au statut ${isReactivation ? 'actif' : 'suspendu'}. Cette action est auditée et doit avoir une justification claire.`,
+      confirmText: isReactivation ? 'Réactiver' : 'Suspendre',
+      destructive: !isReactivation,
+      minReasonLength: 8,
+      reasonPlaceholder: isReactivation ? 'Ex : dossier régularisé, paiement confirmé...' : 'Ex : impayé SaaS, risque sécurité, demande client...',
+      onConfirm: async (reason) => {
+        const { error } = await supabase.from('agencies').update({ status: nextStatus }).eq('id', agency.id);
+        if (error) throw error;
+        await logAdminAction({
+          action: isReactivation ? 'organization_reactivated' : 'organization_suspended',
+          reason,
+          targetOrganizationId: agency.id,
+          targetLabel: agency.name,
+          metadata: { previous_status: agency.status, next_status: nextStatus },
+        });
+        setAgencies((current) => current.map((item) => item.id === agency.id ? { ...item, status: nextStatus } : item));
+        setSelectedAgency((current) => current?.id === agency.id ? { ...current, status: nextStatus } : current);
+        setFeedback({ kind: 'success', text: `${agency.name} est maintenant ${isReactivation ? 'active' : 'suspendue'}.` });
+      },
     });
-    setAgencies((current) => current.map((item) => item.id === agency.id ? { ...item, status: nextStatus } : item));
-    setSelectedAgency((current) => current?.id === agency.id ? { ...current, status: nextStatus } : current);
-    setFeedback({ kind: 'success', text: `${agency.name} est maintenant ${nextStatus === 'active' ? 'active' : 'suspendue'}.` });
   };
 
-  const updateAgencyPlan = async (agency: AgencyStat, nextPlan: string) => {
-    const reason = window.prompt(`Raison obligatoire pour passer ${agency.name} au plan ${nextPlan}`);
-    if (!reason || reason.trim().length < 8) return;
-    const { error } = await supabase.from('agencies').update({ plan: nextPlan }).eq('id', agency.id);
-    if (error) throw error;
+  const updateAgencyPlan = (agency: AgencyStat, nextPlan: string) => {
+    setActionDialog({
+      title: `Changer le plan en ${nextPlan}`,
+      message: `${agency.name} changera de plan. Les limites visibles et l'abonnement existant seront alignés si une ligne subscription existe.`,
+      confirmText: 'Changer le plan',
+      minReasonLength: 8,
+      reasonPlaceholder: 'Ex : upgrade validé par commercial, régularisation abonnement...',
+      onConfirm: async (reason) => {
+        const { error } = await supabase.from('agencies').update({ plan: nextPlan }).eq('id', agency.id);
+        if (error) throw error;
 
-    const existingSubscription = subscriptions.find((subscription) => subscription.agency_id === agency.id);
-    if (existingSubscription) {
-      await supabase.from('subscriptions').update({ plan_id: nextPlan }).eq('id', existingSubscription.id);
-    }
+        const existingSubscription = subscriptions.find((subscription) => subscription.agency_id === agency.id);
+        if (existingSubscription) {
+          const { error: subscriptionError } = await supabase.from('subscriptions').update({ plan_id: nextPlan }).eq('id', existingSubscription.id);
+          if (subscriptionError) throw subscriptionError;
+        }
 
-    await logAdminAction({
-      action: 'organization_plan_changed',
-      reason,
-      targetOrganizationId: agency.id,
-      targetLabel: agency.name,
-      metadata: { previous_plan: agency.plan, next_plan: nextPlan, subscription_id: existingSubscription?.id ?? null },
+        await logAdminAction({
+          action: 'organization_plan_changed',
+          reason,
+          targetOrganizationId: agency.id,
+          targetLabel: agency.name,
+          metadata: { previous_plan: agency.plan, next_plan: nextPlan, subscription_id: existingSubscription?.id ?? null },
+        });
+
+        setAgencies((current) => current.map((item) => item.id === agency.id ? { ...item, plan: nextPlan } : item));
+        setSelectedAgency((current) => current?.id === agency.id ? { ...current, plan: nextPlan } : current);
+        setSubscriptions((current) => current.map((item) => item.agency_id === agency.id ? { ...item, plan_id: nextPlan } : item));
+        setFeedback({ kind: 'success', text: `${agency.name} est passé au plan ${nextPlan}.` });
+      },
     });
-
-    setAgencies((current) => current.map((item) => item.id === agency.id ? { ...item, plan: nextPlan } : item));
-    setSelectedAgency((current) => current?.id === agency.id ? { ...current, plan: nextPlan } : current);
-    setSubscriptions((current) => current.map((item) => item.agency_id === agency.id ? { ...item, plan_id: nextPlan } : item));
-    setFeedback({ kind: 'success', text: `${agency.name} est passé au plan ${nextPlan}.` });
   };
 
-  const extendTrial = async (agency: AgencyStat, days: number) => {
-    const reason = window.prompt(`Raison obligatoire pour prolonger l'essai de ${agency.name} de ${days} jours`);
-    if (!reason || reason.trim().length < 8) return;
-    const baseDate = agency.trial_ends_at ? new Date(agency.trial_ends_at) : new Date();
-    const nextDate = new Date(Math.max(baseDate.getTime(), Date.now()) + days * 86_400_000).toISOString();
-    const { error } = await supabase.from('agencies').update({ status: 'trial', trial_ends_at: nextDate }).eq('id', agency.id);
-    if (error) throw error;
+  const extendTrial = (agency: AgencyStat, days: number) => {
+    setActionDialog({
+      title: `Prolonger l'essai de ${days} jours`,
+      message: `${agency.name} repassera en statut trial avec une nouvelle échéance calculée depuis la date la plus récente.`,
+      confirmText: 'Prolonger',
+      minReasonLength: 8,
+      reasonPlaceholder: 'Ex : période pilote validée, dossier commercial en cours...',
+      onConfirm: async (reason) => {
+        const baseDate = agency.trial_ends_at ? new Date(agency.trial_ends_at) : new Date();
+        const nextDate = new Date(Math.max(baseDate.getTime(), Date.now()) + days * 86_400_000).toISOString();
+        const { error } = await supabase.from('agencies').update({ status: 'trial', trial_ends_at: nextDate }).eq('id', agency.id);
+        if (error) throw error;
 
-    await logAdminAction({
-      action: 'organization_trial_extended',
-      reason,
-      targetOrganizationId: agency.id,
-      targetLabel: agency.name,
-      metadata: { days, previous_trial_ends_at: agency.trial_ends_at, next_trial_ends_at: nextDate },
+        await logAdminAction({
+          action: 'organization_trial_extended',
+          reason,
+          targetOrganizationId: agency.id,
+          targetLabel: agency.name,
+          metadata: { days, previous_trial_ends_at: agency.trial_ends_at, next_trial_ends_at: nextDate },
+        });
+
+        setAgencies((current) => current.map((item) => item.id === agency.id ? { ...item, status: 'trial', trial_ends_at: nextDate } : item));
+        setSelectedAgency((current) => current?.id === agency.id ? { ...current, status: 'trial', trial_ends_at: nextDate } : current);
+        setFeedback({ kind: 'success', text: `Essai prolongé jusqu'au ${formatDate(nextDate)}.` });
+      },
     });
-
-    setAgencies((current) => current.map((item) => item.id === agency.id ? { ...item, status: 'trial', trial_ends_at: nextDate } : item));
-    setSelectedAgency((current) => current?.id === agency.id ? { ...current, status: 'trial', trial_ends_at: nextDate } : current);
-    setFeedback({ kind: 'success', text: `Essai prolongé jusqu'au ${formatDate(nextDate)}.` });
   };
 
   const deleteAgency = (agency: AgencyStat) => {
-    setConfirm({
+    setActionDialog({
       title: 'Supprimer cette organisation ?',
-      message: `Cette action est destructive et doit rester exceptionnelle. Tapez le nom exact "${agency.name}" pour confirmer.`,
+      message: `Cette action est destructive et doit rester exceptionnelle. Tapez le nom exact "${agency.name}" et renseignez une raison complète.`,
       confirmText: 'Supprimer',
       destructive: true,
       requireText: agency.name,
-      onConfirm: async () => {
-        const reason = window.prompt(`Raison obligatoire pour supprimer ${agency.name}`);
-        if (!reason || reason.trim().length < 12) return;
+      minReasonLength: 12,
+      reasonPlaceholder: 'Ex : doublon confirmé, demande contractuelle écrite, tenant de test...',
+      onConfirm: async (reason) => {
         const { error } = await supabase.from('agencies').delete().eq('id', agency.id);
         if (error) throw error;
         await logAdminAction({
@@ -717,18 +745,6 @@ export function Console() {
         setFeedback({ kind: 'success', text: `${agency.name} a été supprimée.` });
       },
     });
-  };
-
-  const startImpersonation = async (agency: AgencyStat) => {
-    const reason = window.prompt(`Raison support obligatoire pour ouvrir une session impersonation sur ${agency.name}`);
-    if (!reason || reason.trim().length < 12) return;
-    const { error } = await supabase.rpc('admin_start_impersonation', {
-      p_target_organization_id: agency.id,
-      p_reason: reason,
-      p_duration_minutes: 30,
-    });
-    if (error) throw error;
-    setFeedback({ kind: 'success', text: `Session support préparée pour ${agency.name}. Elle est auditée et limitée à 30 minutes.` });
   };
 
   const activeItem = NAV_GROUPS.flatMap((group) => group.items).find((item) => item.id === tab);
@@ -963,7 +979,6 @@ export function Console() {
                         agencies={topOrganizations}
                         onOpenDetail={setSelectedAgency}
                         onSuspend={updateAgencyStatus}
-                        onImpersonate={startImpersonation}
                         compact
                       />
                     </SectionCard>
@@ -1005,7 +1020,6 @@ export function Console() {
                         agencies={filteredAgencies}
                         onOpenDetail={setSelectedAgency}
                         onSuspend={updateAgencyStatus}
-                        onImpersonate={startImpersonation}
                       />
                     </SectionCard>
                   </div>
@@ -1064,7 +1078,6 @@ export function Console() {
                         agencies={agencies.filter((agency) => getHealthLevel(agency) !== 'healthy').slice(0, 10)}
                         onOpenDetail={setSelectedAgency}
                         onSuspend={updateAgencyStatus}
-                        onImpersonate={startImpersonation}
                         compact
                       />
                     </SectionCard>
@@ -1115,9 +1128,9 @@ export function Console() {
                   <div className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-4">
                       <KpiCard label="Incidents ouverts" value={computed.openIncidents} icon={AlertTriangle} tone={computed.openIncidents ? 'red' : 'emerald'} />
-                      <KpiCard label="Backups" value="À vérifier" helper="Dernier statut à brancher" icon={Database} tone="blue" />
-                      <KpiCard label="Stockage total" value="Mesure" helper="samay_admin metrics" icon={HardDrive} tone="slate" />
-                      <KpiCard label="Jobs" value="Prévu" helper="refresh agrégats" icon={RefreshCw} tone="gold" />
+                      <KpiCard label="Backups" value="Non connecté" helper="Aucun statut backup live disponible" icon={Database} tone="blue" />
+                      <KpiCard label="Stockage total" value="Non mesuré" helper="Aucun compteur stockage branché" icon={HardDrive} tone="slate" />
+                      <KpiCard label="Jobs" value="Non planifié" helper="Aucun job de rafraîchissement actif" icon={RefreshCw} tone="gold" />
                     </div>
                     <SectionCard title="Monitoring technique" subtitle="Erreurs Supabase, RLS, PDF, Auth, Storage, QR et migrations" icon={Database}>
                       <IncidentsList incidents={snapshot?.incidents ?? []} agencies={agencies} />
@@ -1130,7 +1143,7 @@ export function Console() {
                     <SectionCard title="Audit global" subtitle="Actions sensibles, support, changements de plan, impersonation et sécurité" icon={ShieldCheck}>
                       <AuditTable logs={[...(snapshot?.audit_logs ?? []), ...logs].slice(0, 100)} />
                     </SectionCard>
-                    <SectionCard title="Impersonation sécurisée" subtitle="Raison obligatoire, durée limitée, audit log et bannière permanente côté client" icon={KeyRound}>
+                    <SectionCard title="Impersonation sécurisée" subtitle="Fonction verrouillée tant que le scope client et la bannière permanente ne sont pas livrés" icon={KeyRound}>
                       <div className="grid gap-4 md:grid-cols-3">
                         {[
                           ['2FA obligatoire', 'À activer avant session réelle utilisateur'],
@@ -1171,7 +1184,6 @@ export function Console() {
             onSuspend={updateAgencyStatus}
             onPlanChange={updateAgencyPlan}
             onExtendTrial={extendTrial}
-            onImpersonate={startImpersonation}
             onDelete={deleteAgency}
           />
           <CreateAgencyModal
@@ -1206,28 +1218,125 @@ export function Console() {
             actorEmail={profile?.email}
             onSaved={loadAll}
           />
-          <DarkConfirmModal
-            open={confirm !== null}
-            onClose={() => { setConfirm(null); setConfirmBusy(false); }}
-            onConfirm={async () => {
-              if (!confirm) return;
-              setConfirmBusy(true);
+          <AdminReasonDialog
+            action={actionDialog}
+            busy={actionBusy}
+            onClose={() => {
+              setActionDialog(null);
+              setActionBusy(false);
+            }}
+            onConfirm={async (reason) => {
+              if (!actionDialog) return;
+              setActionBusy(true);
+              setFeedback(null);
               try {
-                await confirm.onConfirm();
-                setConfirm(null);
+                await actionDialog.onConfirm(reason);
+                setActionDialog(null);
+              } catch (error) {
+                setFeedback({ kind: 'error', text: error instanceof Error ? error.message : 'Action impossible pour le moment.' });
               } finally {
-                setConfirmBusy(false);
+                setActionBusy(false);
               }
             }}
-            title={confirm?.title ?? ''}
-            message={confirm?.message ?? ''}
-            confirmText={confirm?.confirmText}
-            destructive={confirm?.destructive}
-            requireText={confirm?.requireText}
-            busy={confirmBusy}
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+function AdminReasonDialog({
+  action,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  action: AdminReasonAction | null;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (reason: string) => Promise<void>;
+}) {
+  const [reason, setReason] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+
+  useEffect(() => {
+    if (!action) {
+      setReason('');
+      setConfirmation('');
+    }
+  }, [action]);
+
+  if (!action) return null;
+
+  const minLength = action.minReasonLength ?? 8;
+  const reasonValid = reason.trim().length >= minLength;
+  const confirmationValid = !action.requireText || confirmation === action.requireText;
+  const canConfirm = reasonValid && confirmationValid && !busy;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <button type="button" aria-label="Fermer la confirmation" className="absolute inset-0 bg-black/72 backdrop-blur-sm" onClick={busy ? undefined : onClose} />
+      <section className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#07100d] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.55)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className={classNames(
+              'mb-3 inline-flex rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.14em]',
+              action.destructive ? 'border-red-300/30 bg-red-400/10 text-red-100' : 'border-amber-300/30 bg-amber-300/10 text-amber-100'
+            )}>
+              Action auditée
+            </div>
+            <h2 className="text-xl font-black text-white">{action.title}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-400">{action.message}</p>
+          </div>
+          <button type="button" onClick={onClose} disabled={busy} className="rounded-2xl border border-white/10 bg-white/8 p-2 text-slate-200 hover:bg-white/12 disabled:opacity-50">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {action.requireText && (
+          <label className="mt-5 block">
+            <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Confirmation exacte</span>
+            <input
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              placeholder={action.requireText}
+              className="mt-2 w-full rounded-2xl border border-white/10 bg-black/24 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-red-300/40"
+            />
+          </label>
+        )}
+
+        <label className="mt-5 block">
+          <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">{action.reasonLabel ?? 'Raison obligatoire'}</span>
+          <textarea
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            rows={4}
+            placeholder={action.reasonPlaceholder ?? 'Expliquez la raison métier ou support de cette action...'}
+            className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-black/24 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
+          />
+          <span className={classNames('mt-2 block text-xs font-semibold', reasonValid ? 'text-emerald-200' : 'text-slate-500')}>
+            {reason.trim().length}/{minLength} caractères minimum
+          </span>
+        </label>
+
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" onClick={onClose} disabled={busy} className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black text-slate-200 hover:bg-white/12 disabled:opacity-50">
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={() => void onConfirm(reason.trim())}
+            disabled={!canConfirm}
+            className={classNames(
+              'inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-black disabled:opacity-50',
+              action.destructive ? 'border-red-300/25 bg-red-500/14 text-red-100 hover:bg-red-500/20' : 'border-orange-300/25 bg-orange-300/14 text-orange-100 hover:bg-orange-300/20'
+            )}
+          >
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+            {action.confirmText ?? 'Confirmer'}
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
@@ -1240,17 +1349,15 @@ function OrganizationDetailDrawer({
   onSuspend,
   onPlanChange,
   onExtendTrial,
-  onImpersonate,
   onDelete,
 }: {
   agency: AgencyStat | null;
   users: GlobalUser[];
   subscriptions: Subscription[];
   onClose: () => void;
-  onSuspend: (agency: AgencyStat, nextStatus: 'active' | 'suspended') => Promise<void>;
-  onPlanChange: (agency: AgencyStat, nextPlan: string) => Promise<void>;
-  onExtendTrial: (agency: AgencyStat, days: number) => Promise<void>;
-  onImpersonate: (agency: AgencyStat) => Promise<void>;
+  onSuspend: (agency: AgencyStat, nextStatus: 'active' | 'suspended') => void;
+  onPlanChange: (agency: AgencyStat, nextPlan: string) => void;
+  onExtendTrial: (agency: AgencyStat, days: number) => void;
   onDelete: (agency: AgencyStat) => void;
 }) {
   if (!agency) return null;
@@ -1342,9 +1449,15 @@ function OrganizationDetailDrawer({
           <h3 className="font-black text-white">Actions sensibles</h3>
           <p className="mt-1 text-sm leading-6 text-slate-400">Chaque action demande une raison et écrit un audit log best-effort dans la console owner.</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <button type="button" onClick={() => void onImpersonate(agency)} className="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100">
-              Démarrer support audité
-            </button>
+            <div className="rounded-2xl border border-amber-300/20 bg-amber-300/8 px-4 py-3">
+              <div className="flex items-center gap-2 text-sm font-black text-amber-100">
+                <Lock className="h-4 w-4" />
+                Impersonation verrouillée
+              </div>
+              <p className="mt-2 text-xs leading-5 text-amber-50/70">
+                L'activation reste désactivée tant que le scope client, la bannière permanente et la sortie de session ne sont pas branchés côté app.
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => void onSuspend(agency, agency.status === 'suspended' ? 'active' : 'suspended')}
@@ -1371,13 +1484,11 @@ function OrganizationTable({
   agencies,
   onOpenDetail,
   onSuspend,
-  onImpersonate,
   compact = false,
 }: {
   agencies: AgencyStat[];
   onOpenDetail: (agency: AgencyStat) => void;
-  onSuspend: (agency: AgencyStat, nextStatus: 'active' | 'suspended') => Promise<void>;
-  onImpersonate: (agency: AgencyStat) => Promise<void>;
+  onSuspend: (agency: AgencyStat, nextStatus: 'active' | 'suspended') => void;
   compact?: boolean;
 }) {
   if (agencies.length === 0) {
@@ -1430,13 +1541,6 @@ function OrganizationTable({
                       className="rounded-xl border border-white/10 bg-white/8 px-3 py-2 text-xs font-black text-white hover:bg-white/12"
                     >
                       Détails
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void onImpersonate(agency)}
-                      className="rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs font-black text-amber-100 hover:bg-amber-300/16"
-                    >
-                      Support
                     </button>
                     <button
                       type="button"
@@ -1693,6 +1797,9 @@ function FeatureFlagsBoard({
   const [creating, setCreating] = useState(false);
   const [filterAgency, setFilterAgency] = useState('all');
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<(AdminFeatureFlag & { key: string; name: string }) | null>(null);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   const normalized = flags.map((flag) => ({
     ...flag,
@@ -1763,15 +1870,26 @@ function FeatureFlagsBoard({
     }
   };
 
-  const remove = async (flag: AdminFeatureFlag & { key: string }) => {
-    if (!window.confirm(`Supprimer le flag ${flag.key} ?`)) return;
+  const requestRemove = (flag: AdminFeatureFlag & { key: string; name: string }) => {
+    setDeleteTarget(flag);
+    setDeleteReason('');
+    setDeleteConfirmation('');
+    setMessage(null);
+  };
+
+  const confirmRemove = async () => {
+    if (!deleteTarget) return;
+    const flag = deleteTarget;
     setBusyId(flag.id);
     setMessage(null);
     try {
       const { error } = await supabase.from('feature_flags').delete().eq('id', flag.id);
       if (error) throw error;
-      await audit('feature_flag_deleted', { flag: flag.key, agency_id: flag.agency_id ?? null });
+      await audit('feature_flag_deleted', { flag: flag.key, agency_id: flag.agency_id ?? null, reason: deleteReason.trim() });
       setMessage({ kind: 'success', text: `${flag.key} supprimé.` });
+      setDeleteTarget(null);
+      setDeleteReason('');
+      setDeleteConfirmation('');
       onReload();
     } catch (error) {
       setMessage({ kind: 'error', text: error instanceof Error ? error.message : 'Suppression impossible' });
@@ -1870,7 +1988,7 @@ function FeatureFlagsBoard({
                 </button>
                 <button
                   type="button"
-                  onClick={() => void remove(flag)}
+                  onClick={() => requestRemove(flag)}
                   disabled={busyId === flag.id}
                   className="inline-flex items-center gap-2 rounded-xl border border-red-300/20 bg-red-400/10 px-3 py-2 text-xs font-black text-red-100 disabled:opacity-50"
                 >
@@ -1880,6 +1998,58 @@ function FeatureFlagsBoard({
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Annuler la suppression du feature flag"
+            className="absolute inset-0 bg-black/72 backdrop-blur-sm"
+            onClick={busyId ? undefined : () => setDeleteTarget(null)}
+          />
+          <section className="relative w-full max-w-lg rounded-3xl border border-red-300/20 bg-[#07100d] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.55)]">
+            <div className="mb-3 inline-flex rounded-full border border-red-300/30 bg-red-400/10 px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-red-100">
+              Suppression auditée
+            </div>
+            <h3 className="text-xl font-black text-white">Supprimer le feature flag ?</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              Cette action retire le flag <span className="font-mono font-black text-orange-100">{deleteTarget.key}</span>. Tapez la clé exacte et ajoutez une raison exploitable.
+            </p>
+            <label className="mt-5 block">
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Clé exacte</span>
+              <input
+                value={deleteConfirmation}
+                onChange={(event) => setDeleteConfirmation(event.target.value)}
+                placeholder={deleteTarget.key}
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-black/24 px-4 py-3 font-mono text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-red-300/40"
+              />
+            </label>
+            <label className="mt-5 block">
+              <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-500">Raison obligatoire</span>
+              <textarea
+                value={deleteReason}
+                onChange={(event) => setDeleteReason(event.target.value)}
+                rows={3}
+                placeholder="Ex : flag expiré, doublon confirmé, rollout remplacé..."
+                className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-black/24 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-red-300/40"
+              />
+            </label>
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setDeleteTarget(null)} disabled={Boolean(busyId)} className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black text-slate-200 hover:bg-white/12 disabled:opacity-50">
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmRemove()}
+                disabled={Boolean(busyId) || deleteConfirmation !== deleteTarget.key || deleteReason.trim().length < 8}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-300/25 bg-red-500/14 px-4 py-3 text-sm font-black text-red-100 hover:bg-red-500/20 disabled:opacity-50"
+              >
+                {busyId === deleteTarget.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                Supprimer
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </div>

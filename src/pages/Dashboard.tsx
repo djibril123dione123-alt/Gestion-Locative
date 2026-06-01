@@ -28,8 +28,10 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { FirstStepsChecklist } from '../components/onboarding/FirstStepsChecklist';
 import { OnboardingWizard } from '../components/onboarding/OnboardingWizard';
 import { hasCompletedOnboarding, markOnboardingComplete } from '../components/onboarding/onboardingStorage';
+import { readWithCache } from '../services/offlineReadCache';
+import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 
-const FR_MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+const FR_MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
 
 interface DashboardStats {
   totalBailleurs: number;
@@ -51,7 +53,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onNavigate }: DashboardProps = {}) {
-  const { profile, accountProfile, loading: authLoading } = useAuth();
+  const { profile, user, accountProfile, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalBailleurs: 0,
     totalImmeubles: 0,
@@ -71,6 +73,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
   const [error, setError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
 
   const loadDashboardData = useCallback(async () => {
     if (!profile?.agency_id) {
@@ -80,61 +83,67 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
 
     try {
       const agencyId = profile.agency_id;
-      const yearMonth = new Date().toISOString().slice(0, 7);
-      const year = new Date().getFullYear();
+      const dashboard = await readWithCache(
+        { agencyId, userId: user?.id ?? null },
+        'dashboard',
+        async () => {
+          const yearMonth = new Date().toISOString().slice(0, 7);
+          const year = new Date().getFullYear();
 
-      // Une seule RPC au lieu de 8 requêtes parallèles
-      const [statsRes, monthlyRes] = await Promise.all([
-        supabase.rpc('get_dashboard_stats', {
-          p_agency_id: agencyId,
-          p_year_month: yearMonth,
-        }),
-        supabase.rpc('get_monthly_revenue', {
-          p_agency_id: agencyId,
-          p_year: year,
-        }),
-      ]);
+          const [statsRes, monthlyRes] = await Promise.all([
+            supabase.rpc('get_dashboard_stats', {
+              p_agency_id: agencyId,
+              p_year_month: yearMonth,
+            }),
+            supabase.rpc('get_monthly_revenue', {
+              p_agency_id: agencyId,
+              p_year: year,
+            }),
+          ]);
 
-      if (statsRes.error) throw statsRes.error;
+          if (statsRes.error) throw statsRes.error;
 
-      const d = statsRes.data as Record<string, unknown>;
-      const newStats: DashboardStats = {
-        totalBailleurs:  Number(d.bailleurs       ?? 0),
-        totalImmeubles:  Number(d.immeubles        ?? 0),
-        totalUnites:     Number(d.unites           ?? 0),
-        unitesLibres:    Number(d.unites_libres    ?? 0),
-        unitesLouees:    Number(d.unites_louees    ?? 0),
-        totalLocataires: Number(d.locataires       ?? 0),
-        contratsActifs:  Number(d.contrats_actifs  ?? 0),
-        revenusMois:     Number(d.revenus_mois     ?? 0),
-        impayesMois:     Number(d.impayes_mois     ?? 0),
-        nbPaiementsMois: Number(d.nb_payes_mois    ?? 0),
-        nbImpayesMois:   Number(d.nb_impayes_mois  ?? 0),
-        tauxOccupation:
-          Number(d.unites ?? 0) > 0
-            ? (Number(d.unites_louees ?? 0) / Number(d.unites ?? 0)) * 100
-            : 0,
-      };
+          const d = statsRes.data as Record<string, unknown>;
+          const nextStats: DashboardStats = {
+            totalBailleurs:  Number(d.bailleurs       ?? 0),
+            totalImmeubles:  Number(d.immeubles        ?? 0),
+            totalUnites:     Number(d.unites           ?? 0),
+            unitesLibres:    Number(d.unites_libres    ?? 0),
+            unitesLouees:    Number(d.unites_louees    ?? 0),
+            totalLocataires: Number(d.locataires       ?? 0),
+            contratsActifs:  Number(d.contrats_actifs  ?? 0),
+            revenusMois:     Number(d.revenus_mois     ?? 0),
+            impayesMois:     Number(d.impayes_mois     ?? 0),
+            nbPaiementsMois: Number(d.nb_payes_mois    ?? 0),
+            nbImpayesMois:   Number(d.nb_impayes_mois  ?? 0),
+            tauxOccupation:
+              Number(d.unites ?? 0) > 0
+                ? (Number(d.unites_louees ?? 0) / Number(d.unites ?? 0)) * 100
+                : 0,
+          };
 
-      setStats(newStats);
-      setIsNewUser(
-        newStats.totalBailleurs === 0 &&
-        newStats.totalImmeubles === 0 &&
-        newStats.totalUnites === 0 &&
-        newStats.totalLocataires === 0,
+          const nextMonthly = !monthlyRes.error && monthlyRes.data
+            ? (monthlyRes.data as { month_num: number; revenus: number }[]).map((row) => ({
+                month: FR_MONTHS[(row.month_num ?? 1) - 1] ?? String(row.month_num),
+                revenus: Math.round(Number(row.revenus ?? 0)),
+              }))
+            : [];
+
+          return { stats: nextStats, monthlyRevenue: nextMonthly };
+        },
+        { timeoutMs: 7_000 },
       );
 
-      // Revenus mensuels — fallback vers tableau vide si l'extension pg_cron ou la RPC échoue
-      if (!monthlyRes.error && monthlyRes.data) {
-        const monthly = (monthlyRes.data as { month_num: number; revenus: number }[]).map(
-          (row) => ({
-            month: FR_MONTHS[(row.month_num ?? 1) - 1] ?? String(row.month_num),
-            revenus: Math.round(Number(row.revenus ?? 0)),
-          }),
-        );
-        setMonthlyRevenue(monthly);
-      }
-
+      setStats(dashboard.data.stats);
+      setMonthlyRevenue(dashboard.data.monthlyRevenue);
+      setCacheTimestamp(dashboard.source === 'cache' ? dashboard.timestamp : null);
+      setIsNewUser(
+        dashboard.source !== 'cache' &&
+        dashboard.data.stats.totalBailleurs === 0 &&
+        dashboard.data.stats.totalImmeubles === 0 &&
+        dashboard.data.stats.totalUnites === 0 &&
+        dashboard.data.stats.totalLocataires === 0,
+      );
       setError(null);
     } catch (err: unknown) {
       setError(
@@ -143,7 +152,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
     } finally {
       setLoading(false);
     }
-  }, [profile?.agency_id]);
+  }, [profile?.agency_id, user?.id]);
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -162,6 +171,17 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
     if (hasCompletedOnboarding(profile.agency_id)) return;
     setShowOnboardingWizard(true);
   }, [isNewUser, profile?.agency_id]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const domains = (event as CustomEvent<{ domains?: string[] }>).detail?.domains ?? [];
+      if (domains.length === 0 || domains.includes('dashboard')) {
+        void loadDashboardData();
+      }
+    };
+    window.addEventListener('samaykeur:data-changed', handler);
+    return () => window.removeEventListener('samaykeur:data-changed', handler);
+  }, [loadDashboardData]);
 
   const pieData = useMemo(
     () => [
@@ -309,13 +329,20 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
   }
 
   return (
-    <div className="sk-page-shell space-y-6 lg:space-y-8 animate-fadeIn">
+    <div className="sk-page-shell space-y-5 lg:space-y-6 animate-fadeIn">
       <div className="animate-slideInLeft">
         <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950 mb-2">
           Tableau de bord
         </h1>
         <p className="text-slate-600 text-base lg:text-lg">Vue d'ensemble de votre activité immobilière</p>
       </div>
+
+      {cacheTimestamp && (
+        <OfflineDataNotice
+          cachedAt={cacheTimestamp}
+          onRetry={loadDashboardData}
+        />
+      )}
 
       {stats.nbImpayesMois > 0 && (
         <button
@@ -342,7 +369,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
         </button>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6 2xl:gap-5">
         <KpiCard
           title="Encaissements"
           value={formatCurrency(stats.revenusMois)}
@@ -535,15 +562,15 @@ function KpiCard({ title, value, subtitle, icon: Icon, tone }: KpiCardProps) {
   const c = KPI_TONES[tone];
   return (
     <div
-      className={`min-w-0 rounded-2xl border p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-4 ${c.card}`}
+      className={`min-w-0 rounded-2xl border p-3 shadow-[0_14px_34px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.10)] sm:p-3.5 2xl:p-4 ${c.card}`}
     >
-      <div className="flex min-h-[116px] flex-col justify-between gap-3">
+      <div className="flex min-h-[96px] flex-col justify-between gap-3 2xl:min-h-[112px]">
         <div className="flex items-center justify-between gap-2">
           <p className={`min-w-0 truncate text-[0.66rem] font-black uppercase tracking-[0.14em] ${c.title}`}>
             {title}
           </p>
-          <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ring-1 ${c.iconWrap}`}>
-            <Icon className={`h-5 w-5 ${c.icon}`} />
+          <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ring-1 2xl:h-9 2xl:w-9 ${c.iconWrap}`}>
+            <Icon className={`h-4 w-4 2xl:h-5 2xl:w-5 ${c.icon}`} />
           </div>
         </div>
         <div className="min-w-0">

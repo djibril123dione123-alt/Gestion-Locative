@@ -138,18 +138,18 @@ export function Table<T extends { id: string }>({
         ))}
       </div>
 
-      <div className="hidden overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/92 shadow-premium backdrop-blur sm:block">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+      <div className="sk-table-shell hidden sm:block">
+        <div className="sk-table-scroll">
+          <table className="w-full min-w-[860px] border-collapse">
             <thead className="sticky top-0 z-10 border-b border-emerald-950/10 bg-[linear-gradient(180deg,rgba(248,244,236,0.98),rgba(255,255,255,0.94))] backdrop-blur">
               <tr>
                 {columns.map((column) => (
-                  <th key={column.key} className="px-5 py-4 text-left text-xs font-black uppercase text-slate-500">
+                  <th key={column.key} className="px-4 py-3.5 text-left text-xs font-black uppercase text-slate-500 xl:px-5 xl:py-4">
                     {column.label}
                   </th>
                 ))}
                 {(onEdit || onDelete) && (
-                  <th className="px-5 py-4 text-right text-xs font-black uppercase text-slate-500">
+                  <th className="px-4 py-3.5 text-right text-xs font-black uppercase text-slate-500 xl:px-5 xl:py-4">
                     Actions
                   </th>
                 )}
@@ -160,13 +160,13 @@ export function Table<T extends { id: string }>({
               {data.map((item) => (
                 <tr key={item.id} className="border-b border-slate-100 transition hover:bg-emerald-50/55">
                   {columns.map((column) => (
-                    <td key={column.key} className="px-5 py-4 text-sm font-medium text-slate-700">
+                    <td key={column.key} className="px-4 py-3.5 text-sm font-medium text-slate-700 xl:px-5 xl:py-4">
                       {renderContactValue(column.key, column.render ? column.render(item) : getCellValue(item, column.key))}
                     </td>
                   ))}
 
                   {(onEdit || onDelete) && (
-                    <td className="px-5 py-4 text-right">
+                    <td className="px-4 py-3.5 text-right xl:px-5 xl:py-4">
                       <div className="sk-action-group-right">
                         {onEdit && (
                           <button

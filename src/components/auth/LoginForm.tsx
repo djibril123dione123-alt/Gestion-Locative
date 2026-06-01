@@ -77,7 +77,7 @@ export function LoginForm() {
         </form>
 
         <p className="mt-6 text-center text-sm text-slate-500">
-          © 2026 Samay Këur. Tous droits réservés.
+          2026 Samay Këur. Tous droits réservés.
         </p>
       </div>
     </div>

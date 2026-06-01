@@ -50,7 +50,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
           throw new Error('Le mot de passe doit contenir au moins 6 caractÃ¨res');
         }
         if (!formData.prenom.trim() || !formData.nom.trim()) {
-          throw new Error('Le prénom et le nom sont obligatoires');
+          throw new Error('Le pr?nom et le nom sont obligatoires');
         }
 
         if (!acceptedTerms) {

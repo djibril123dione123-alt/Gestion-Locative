@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
@@ -12,6 +12,9 @@ import { emitEvent } from '../lib/eventBus';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { LoadingState } from '../components/ui/LoadingState';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { invalidateOperationalCaches, loadCachedValue, notifyDataChanged, saveCachedValue, withReadTimeout } from '../services/offlineReadCache';
+import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 
 const ITEMS_PER_PAGE = 20;
 const LOOKBACK_MONTHS = 12;
@@ -139,6 +142,8 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   const [page, setPage] = useState(1);
   const requestIdRef = useRef(0);
   const toast = useToast();
+  const { isOnline } = useNetworkStatus();
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
 
   useEffect(() => {
     let result = impayes;
@@ -163,29 +168,46 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
     const reqId = ++requestIdRef.current;
-    setLoading(true);
+    if (impayes.length === 0) setLoading(true);
     setError(null);
+    const cacheScope = { agencyId: profile.agency_id, userId: profile.id };
+    const cacheKey = 'loyers-impayes-page';
     try {
-      const { data: contratsActifs } = await supabase
-        .from('contrats')
-        .select(`
-          id,
-          loyer_mensuel,
-          date_debut,
-          date_fin,
-          locataires(nom, prenom, telephone),
-          unites(
-            nom,
-            immeubles(
-              nom,
-              bailleurs(nom, prenom)
-            )
-          )
-        `)
-        .eq('statut', 'actif')
-        .eq('agency_id', profile.agency_id);
+      const cached = await loadCachedValue<{ impayes: LoyerImpaye[]; bailleurs: BailleurOption[] }>(cacheScope, cacheKey);
+      if (!isOnline && cached) {
+        setImpayes(cached.data.impayes);
+        setFiltered(cached.data.impayes);
+        setBailleurs(cached.data.bailleurs);
+        setPage(1);
+        setCacheTimestamp(cached.timestamp);
+        return;
+      }
 
-      const contratIds = contratsActifs?.map(c => c.id) || [];
+      const { data: contratsActifs, error: contratsError } = await withReadTimeout(
+        supabase
+          .from('contrats')
+          .select(`
+            id,
+            loyer_mensuel,
+            date_debut,
+            date_fin,
+            locataires(nom, prenom, telephone),
+            unites(
+              nom,
+              immeubles(
+                nom,
+                bailleurs(nom, prenom)
+              )
+            )
+          `)
+          .eq('statut', 'actif')
+          .eq('agency_id', profile.agency_id),
+        7_000,
+      );
+      if (contratsError) throw contratsError;
+
+      const contratsRows = ((contratsActifs ?? []) as ContratActifRow[]);
+      const contratIds = contratsRows.map((c) => c.id);
       const currentDate = new Date();
       const startPeriod = monthKey(addMonths(monthStart(currentDate), -LOOKBACK_MONTHS));
       const endPeriod = monthKey(addMonths(monthStart(currentDate), LOOKAHEAD_MONTHS));
@@ -198,13 +220,17 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         return;
       }
 
-      const { data: paiementsExistants } = await supabase
-        .from('paiements')
-        .select('contrat_id, mois_concerne, statut, montant_total, date_paiement')
-        .eq('agency_id', profile.agency_id)
-        .in('contrat_id', contratIds)
-        .gte('mois_concerne', startPeriod)
-        .lte('mois_concerne', endPeriod);
+      const { data: paiementsExistants, error: paiementsError } = await withReadTimeout(
+        supabase
+          .from('paiements')
+          .select('contrat_id, mois_concerne, statut, montant_total, date_paiement')
+          .eq('agency_id', profile.agency_id)
+          .in('contrat_id', contratIds)
+          .gte('mois_concerne', startPeriod)
+          .lte('mois_concerne', endPeriod),
+        7_000,
+      );
+      if (paiementsError) throw paiementsError;
 
       const paiementsMap = new Map<string, { amount: number; earliestDate: string | null }>();
       (paiementsExistants as PaiementAggregate[] | null)?.forEach(p => {
@@ -223,7 +249,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
       const impayesList: LoyerImpaye[] = [];
 
-      ((contratsActifs as ContratActifRow[] | null) || []).forEach((contrat) => {
+      contratsRows.forEach((contrat) => {
         generateContractMonths(contrat, currentDate).forEach(mois => {
           const key = `${contrat.id}-${mois}`;
           const paiementInfo = paiementsMap.get(key) ?? { amount: 0, earliestDate: null };
@@ -282,21 +308,45 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       const uniqueBailleurs = Array.from(
         new Set(impayesList.map(i => `${i.bailleur_prenom} ${i.bailleur_nom}`))
       ).filter(b => b.trim());
-      setBailleurs(uniqueBailleurs.map(b => ({ label: b })));
+      const nextBailleurs = uniqueBailleurs.map(b => ({ label: b }));
+      setBailleurs(nextBailleurs);
+      setCacheTimestamp(null);
+      saveCachedValue(cacheScope, cacheKey, { impayes: impayesList, bailleurs: nextBailleurs }).catch(() => {});
 
     } catch (err) {
       if (reqId !== requestIdRef.current) return;
+      const cached = await loadCachedValue<{ impayes: LoyerImpaye[]; bailleurs: BailleurOption[] }>(cacheScope, cacheKey);
+      if (cached) {
+        setImpayes(cached.data.impayes);
+        setFiltered(cached.data.impayes);
+        setBailleurs(cached.data.bailleurs);
+        setPage(1);
+        setCacheTimestamp(cached.timestamp);
+        setError(null);
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement des loyers impayés');
     } finally {
       if (reqId === requestIdRef.current) setLoading(false);
     }
-  }, [profile?.agency_id]);
+  }, [impayes.length, isOnline, profile?.agency_id, profile?.id]);
 
   useEffect(() => {
     if (profile?.agency_id) {
       loadData();
     }
   }, [loadData, profile?.agency_id]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const domains = (event as CustomEvent<{ domains?: string[] }>).detail?.domains ?? [];
+      if (domains.length === 0 || domains.includes('impayes')) {
+        void loadData();
+      }
+    };
+    window.addEventListener('samaykeur:data-changed', handler);
+    return () => window.removeEventListener('samaykeur:data-changed', handler);
+  }, [loadData]);
 
 
   const handlePayerClick = (loyer: LoyerImpaye) => {
@@ -312,6 +362,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
   const handleConfirmPaiement = async () => {
     if (!selectedLoyer || !profile?.agency_id) return;
+    if (!isOnline) {
+      toast.error('Connexion indisponible : le paiement doit etre confirme par le serveur.');
+      return;
+    }
     setSubmitting(true);
     try {
       const montantSaisi = Number(paymentForm.montant);
@@ -328,8 +382,8 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       }
       const contratId = match[0];
 
-      // Création via Edge Function (validation Zod + commission + agency_id côté serveur)
-      // Le trigger trg_update_bilan_mensuel met à jour bilans_mensuels automatiquement.
+      // Creation via Edge Function (validation Zod + commission + agency_id cote serveur)
+      // Le trigger trg_update_bilan_mensuel met a jour bilans_mensuels automatiquement.
       await createPaiementViaEdge({
         contrat_id: contratId,
         montant_total: montantSaisi,
@@ -347,13 +401,16 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         payload: { source: 'loyers_impayes', montant: montantSaisi, mois: selectedLoyer.mois_concerne },
       });
 
-      // Notify sibling components (e.g. Paiements tab) to refresh their data
-      window.dispatchEvent(new CustomEvent('paiement:refresh'));
+      await invalidateOperationalCaches(
+        { agencyId: profile.agency_id, userId: profile.id },
+        ['dashboard', 'paiements', 'impayes', 'contrats', 'finances'],
+      );
+      notifyDataChanged(['paiements', 'impayes', 'dashboard', 'finances', 'contrats']);
 
       toast.success('Paiement enregistré avec succès');
       setShowModal(false);
       setSelectedLoyer(null);
-      loadData();
+      await loadData();
     } catch (err: unknown) {
       if (err instanceof PaiementApiError) {
         toast.error(err.message);
@@ -485,6 +542,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
   return (
     <div className="sk-page-shell space-y-5">
+      {cacheTimestamp && (
+        <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
+      )}
+
       {!embedded && (
         <div className="sk-page-hero flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -520,7 +581,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         </div>
 
         <div className="sk-metric-tile p-4 sm:p-5">
-          <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-sm">Solde à recouvrer</h3>
+          <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-sm">Solde a recouvrer</h3>
           <p className="text-lg font-extrabold text-slate-950 sm:text-2xl">
             {formatCurrency(totalImpaye)}
           </p>
@@ -632,7 +693,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                   </p>
                   <h2 className="mt-2 text-2xl font-black">Payer ce loyer</h2>
                   <p className="mt-1 text-sm text-emerald-100">
-                    Paiement partiel, complet ou avance avec mise à jour automatique du reliquat.
+                    Paiement partiel, complet ou avance avec mise a jour automatique du reliquat.
                   </p>
                 </div>
                 <div className="rounded-2xl bg-white/10 p-3">
@@ -650,7 +711,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                 </div>
                 <div className="sk-metric-tile">
                   <ReceiptText className="h-5 w-5 text-brand-700" />
-                  <p className="mt-3 text-xs font-black uppercase text-slate-500">Déjà encaissé</p>
+                  <p className="mt-3 text-xs font-black uppercase text-slate-500">Deja encaisse</p>
                   <p className="mt-1 text-xl font-black text-slate-950">{formatCurrency(selectedLoyer.montant_encaisse)}</p>
                 </div>
                 <div className="sk-metric-tile">

@@ -3,6 +3,7 @@ import { supabase, UserProfile } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { deriveAccountProfile, type AccountProfile } from '../lib/accountProfile';
 import type { Agency } from '../types/database';
+import { clearCachedValuesForUser, isOfflineError, withReadTimeout } from '../services/offlineReadCache';
 
 interface AuthContextType {
   user: User | null;
@@ -19,6 +20,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const AGENCY_SELECT_LEGACY = 'id,name,ninea,address,phone,email,website,logo_url,plan,status,trial_ends_at,is_bailleur_account,created_at,updated_at';
 const AGENCY_SELECT_EXTENDED = `${AGENCY_SELECT_LEGACY},organization_type`;
+const AUTH_CACHE_PREFIX = 'sk_auth_profile:';
+const AUTH_READ_TIMEOUT_MS = 5_000;
 
 function shouldRetryLegacyAgencySelect(error: { message?: string; code?: string } | null): boolean {
   const message = error?.message?.toLowerCase() ?? '';
@@ -32,15 +35,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const accountProfile = useMemo(() => deriveAccountProfile(agency), [agency]);
 
+  const readCachedAuth = (userId: string): { profile: UserProfile; agency: Agency | null } | null => {
+    try {
+      const raw = localStorage.getItem(`${AUTH_CACHE_PREFIX}${userId}`);
+      return raw ? JSON.parse(raw) as { profile: UserProfile; agency: Agency | null } : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const writeCachedAuth = (userId: string, nextProfile: UserProfile, nextAgency: Agency | null) => {
+    try {
+      localStorage.setItem(
+        `${AUTH_CACHE_PREFIX}${userId}`,
+        JSON.stringify({ profile: nextProfile, agency: nextAgency, timestamp: Date.now() }),
+      );
+    } catch {
+      /* noop */
+    }
+  };
+
+  const readStoredSupabaseUser = (): User | null => {
+    try {
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (!key || !key.startsWith('sb-') || !key.endsWith('-auth-token')) continue;
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw) as { user?: User | null; currentSession?: { user?: User | null } | null };
+        const storedUser = parsed.user ?? parsed.currentSession?.user ?? null;
+        if (storedUser?.id) return storedUser;
+      }
+    } catch {
+      /* noop */
+    }
+    return null;
+  };
+
   // Prevent concurrent loadProfile calls (race condition guard)
   const loadingProfileRef = useRef(false);
 
   const loadAgency = async (agencyId: string): Promise<Agency | null> => {
-    const extended = await supabase
-      .from('agencies')
-      .select(AGENCY_SELECT_EXTENDED)
-      .eq('id', agencyId)
-      .maybeSingle();
+    const extended = await withReadTimeout(
+      supabase
+        .from('agencies')
+        .select(AGENCY_SELECT_EXTENDED)
+        .eq('id', agencyId)
+        .maybeSingle(),
+      AUTH_READ_TIMEOUT_MS,
+    );
 
     if (!extended.error && extended.data) {
       return extended.data as Agency;
@@ -50,11 +93,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
 
-    const legacy = await supabase
-      .from('agencies')
-      .select(AGENCY_SELECT_LEGACY)
-      .eq('id', agencyId)
-      .maybeSingle();
+    const legacy = await withReadTimeout(
+      supabase
+        .from('agencies')
+        .select(AGENCY_SELECT_LEGACY)
+        .eq('id', agencyId)
+        .maybeSingle(),
+      AUTH_READ_TIMEOUT_MS,
+    );
 
     return (legacy.data as Agency | null) ?? null;
   };
@@ -64,14 +110,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const RETRY_DELAY = 1000;
 
     try {
-      const { data, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
+      const cached = readCachedAuth(userId);
+      if (typeof navigator !== 'undefined' && !navigator.onLine && cached) {
+        setProfile(cached.profile);
+        setAgency(cached.agency);
+        return;
+      }
+
+      const { data, error } = await withReadTimeout(
+        supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle(),
+        AUTH_READ_TIMEOUT_MS,
+      );
 
       if (error) {
-        setProfile(null);
+        if (cached && isOfflineError(error)) {
+          setProfile(cached.profile);
+          setAgency(cached.agency);
+        } else {
+          setProfile(null);
+        }
         return;
       }
 
@@ -83,15 +144,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null);
       } else {
         setProfile(data);
+        let loadedAgency: Agency | null = null;
         if (data.agency_id) {
-          setAgency(await loadAgency(data.agency_id));
+          loadedAgency = await loadAgency(data.agency_id);
+          setAgency(loadedAgency);
         } else {
           setAgency(null);
         }
+        writeCachedAuth(userId, data, loadedAgency);
       }
-    } catch {
-      setProfile(null);
-      setAgency(null);
+    } catch (error) {
+      const cached = readCachedAuth(userId);
+      if (cached && isOfflineError(error)) {
+        setProfile(cached.profile);
+        setAgency(cached.agency);
+      } else {
+        setProfile(null);
+        setAgency(null);
+      }
     } finally {
       setLoading(false);
       loadingProfileRef.current = false;
@@ -100,6 +170,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let fallbackTimer: number | null = null;
 
     // Rely solely on onAuthStateChange (fires INITIAL_SESSION on startup).
     // This avoids the race condition between safeGetSession + onAuthStateChange
@@ -125,8 +196,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
+    fallbackTimer = window.setTimeout(() => {
+      if (!mounted || !loadingProfileRef.current && !loading) return;
+      const storedUser = readStoredSupabaseUser();
+      if (!storedUser?.id) return;
+      const cached = readCachedAuth(storedUser.id);
+      if (!cached) return;
+      setUser(storedUser);
+      setProfile(cached.profile);
+      setAgency(cached.agency);
+      setLoading(false);
+      loadingProfileRef.current = false;
+    }, 1800);
+
     return () => {
       mounted = false;
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,8 +289,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    const userId = user?.id;
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    if (userId) {
+      try {
+        localStorage.removeItem(`${AUTH_CACHE_PREFIX}${userId}`);
+        await clearCachedValuesForUser(userId);
+      } catch {
+        /* noop */
+      }
+    }
   };
 
   return (

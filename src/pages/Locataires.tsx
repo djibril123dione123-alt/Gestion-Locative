@@ -9,12 +9,13 @@ import { Plus, Search, Sheet } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { useExport } from '../hooks/useExport';
-import { useBackup } from '../hooks/useBackup';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 import { formatPersonName } from '../lib/people';
+import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
+import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 
 interface Locataire {
   id: string;
@@ -31,9 +32,9 @@ const ITEMS_PER_PAGE = 10;
 export function Locataires() {
   const { user, profile } = useAuth();
   const { exportLocataires, exporting: exportingXlsx } = useExport();
-  const { save: saveBackup, getSnapshot } = useBackup();
   const [locataires, setLocataires] = useState<Locataire[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<Locataire | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Locataire | null>(null);
@@ -43,7 +44,6 @@ export function Locataires() {
   const {
     success: notifySuccess,
     error: notifyError,
-    warning: notifyWarning,
     toasts,
     removeToast,
   } = useToast();
@@ -73,30 +73,32 @@ export function Locataires() {
 
   const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
+    if (locataires.length === 0) setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('locataires')
-        .select('*')
-        .eq('agency_id', profile.agency_id)
-        .eq('actif', true)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setLocataires(data || []);
-      saveBackup('locataires', data || []).catch(() => {});
+      const result = await readWithCache<Locataire[]>(
+        { agencyId: profile.agency_id, userId: profile.id },
+        'locataires-page',
+        async () => {
+          const { data, error } = await supabase
+            .from('locataires')
+            .select('*')
+            .eq('agency_id', profile.agency_id)
+            .eq('actif', true)
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          return (data || []) as Locataire[];
+        },
+        { timeoutMs: 7_000 }
+      );
+      setLocataires(result.data);
+      setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
     } catch (error) {
-      const cached = await getSnapshot('locataires');
-      if (cached) {
-        setLocataires(cached.data as Locataire[]);
-        notifyWarning('Connexion instable : affichage des locataires sauvegardes localement.');
-      } else {
-        console.error('[Locataires] load failed', error);
-        notifyError('Impossible de charger les locataires. Verifiez votre connexion puis reessayez.');
-      }
+      console.error('[Locataires] load failed', error);
+      notifyError('Locataires indisponibles hors connexion sans cache local.');
     } finally {
       setLoading(false);
     }
-  }, [getSnapshot, notifyError, notifyWarning, profile?.agency_id, saveBackup]);
+  }, [locataires.length, notifyError, profile?.agency_id, profile?.id]);
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -106,6 +108,10 @@ export function Locataires() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!navigator.onLine) {
+      notifyError('Connexion indisponible : création ou modification impossible hors ligne.');
+      return;
+    }
     try {
       const nom = formData.nom.trim();
       const prenom = formData.prenom.trim();
@@ -145,7 +151,14 @@ export function Locataires() {
         await supabase.from('locataires').insert([{ ...submitData, created_by: user?.id, agency_id: profile?.agency_id }]);
       }
       closeModal();
-      loadData();
+      if (profile?.agency_id && profile?.id) {
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['dashboard', 'locataires', 'contrats', 'paiements', 'impayes', 'finances', 'documents'],
+        );
+        notifyDataChanged(['locataires', 'contrats', 'paiements', 'impayes', 'dashboard', 'finances', 'documents']);
+      }
+      await loadData();
       notifySuccess(editing ? 'Locataire mis a jour' : 'Locataire cree');
     } catch (err: unknown) {
       console.error('[Locataires] save failed', err);
@@ -171,13 +184,24 @@ export function Locataires() {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
+    if (!navigator.onLine) {
+      notifyError('Connexion indisponible : suppression impossible hors ligne.');
+      return;
+    }
     setDeleting(true);
     try {
       const { error } = await supabase.from('locataires').update({ actif: false }).eq('id', deleteTarget.id);
       if (error) throw error;
       notifySuccess('Locataire supprime');
       setDeleteTarget(null);
-      loadData();
+      if (profile?.agency_id && profile?.id) {
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['dashboard', 'locataires', 'contrats', 'paiements', 'impayes', 'finances', 'documents'],
+        );
+        notifyDataChanged(['locataires', 'contrats', 'paiements', 'impayes', 'dashboard', 'finances', 'documents']);
+      }
+      await loadData();
     } catch (err: unknown) {
       console.error('[Locataires] delete failed', err);
       notifyError('Impossible de supprimer ce locataire pour le moment.');
@@ -210,6 +234,11 @@ export function Locataires() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
+      <OfflineDataNotice
+        cachedAt={cacheTimestamp}
+        onRetry={loadData}
+        message="Les locataires affichés viennent du dernier chargement réussi. Les créations et modifications sont bloquées hors ligne."
+      />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
         <div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Locataires</h1>

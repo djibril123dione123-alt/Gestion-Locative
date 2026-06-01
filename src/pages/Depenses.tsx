@@ -12,6 +12,8 @@ import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
+import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 
 interface Depense {
   id: string;
@@ -44,12 +46,14 @@ export function Depenses() {
   const [filtered, setFiltered] = useState<Depense[]>([]);
   const [immeubles, setImmeubles] = useState<ImmeubleOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDepense, setEditingDepense] = useState<Depense | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Depense | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const toast = useToast();
+  const notifyError = toast.error;
 
   const [formData, setFormData] = useState<DepenseFormData>({
     montant: '',
@@ -82,21 +86,37 @@ export function Depenses() {
 
   const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
+    if (depenses.length === 0) setLoading(true);
     try {
-      const [depensesRes, immeublesRes] = await Promise.all([
-        supabase.from('depenses').select('*, immeubles(nom)').eq('agency_id', profile.agency_id).order('created_at', { ascending: false }),
-        supabase.from('immeubles').select('id, nom').eq('agency_id', profile.agency_id).eq('actif', true),
-      ]);
+      const result = await readWithCache<{ depenses: Depense[]; immeubles: ImmeubleOption[] }>(
+        { agencyId: profile.agency_id, userId: profile.id },
+        'depenses-page',
+        async () => {
+          const [depensesRes, immeublesRes] = await Promise.all([
+            supabase.from('depenses').select('*, immeubles(nom)').eq('agency_id', profile.agency_id).order('created_at', { ascending: false }),
+            supabase.from('immeubles').select('id, nom').eq('agency_id', profile.agency_id).eq('actif', true),
+          ]);
+          if (depensesRes.error) throw depensesRes.error;
+          if (immeublesRes.error) throw immeublesRes.error;
+          return {
+            depenses: (depensesRes.data || []) as Depense[],
+            immeubles: (immeublesRes.data || []) as ImmeubleOption[],
+          };
+        },
+        { timeoutMs: 7_000 }
+      );
 
-      setDepenses((depensesRes.data || []) as Depense[]);
-      setFiltered((depensesRes.data || []) as Depense[]);
-      setImmeubles((immeublesRes.data || []) as ImmeubleOption[]);
+      setDepenses(result.data.depenses);
+      setFiltered(result.data.depenses);
+      setImmeubles(result.data.immeubles);
+      setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
     } catch (error) {
       console.error('Erreur:', error);
+      notifyError('Dépenses indisponibles hors connexion sans cache local.');
     } finally {
       setLoading(false);
     }
-  }, [profile?.agency_id]);
+  }, [depenses.length, notifyError, profile?.agency_id, profile?.id]);
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -107,6 +127,10 @@ export function Depenses() {
   const handleSubmit = async (e: React.FormEvent) => {
     if (!profile?.agency_id) return;
     e.preventDefault();
+    if (!navigator.onLine) {
+      toast.error('Connexion indisponible : enregistrement impossible hors ligne.');
+      return;
+    }
     try {
       const data = {
         montant: parseFloat(formData.montant),
@@ -124,7 +148,12 @@ export function Depenses() {
       }
 
       closeModal();
-      loadData();
+      await invalidateOperationalCaches(
+        { agencyId: profile.agency_id, userId: profile.id },
+        ['dashboard', 'depenses', 'finances'],
+      );
+      notifyDataChanged(['depenses', 'dashboard', 'finances']);
+      await loadData();
       toast.success(editingDepense ? 'Dépense mise à jour' : 'Dépense enregistrée');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur';
@@ -152,13 +181,24 @@ export function Depenses() {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
+    if (!navigator.onLine) {
+      toast.error('Connexion indisponible : suppression impossible hors ligne.');
+      return;
+    }
     setDeleting(true);
     try {
       const { error } = await supabase.from('depenses').delete().eq('id', deleteTarget.id);
       if (error) throw error;
       toast.success('Dépense supprimée');
       setDeleteTarget(null);
-      loadData();
+      if (profile?.agency_id && profile?.id) {
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['dashboard', 'depenses', 'finances'],
+        );
+        notifyDataChanged(['depenses', 'dashboard', 'finances']);
+      }
+      await loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur';
       toast.error(msg);
@@ -197,6 +237,11 @@ export function Depenses() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+      <OfflineDataNotice
+        cachedAt={cacheTimestamp}
+        onRetry={loadData}
+        message="Les dépenses affichées viennent du dernier chargement réussi. Les écritures financières restent bloquées hors ligne."
+      />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Dépenses</h1>

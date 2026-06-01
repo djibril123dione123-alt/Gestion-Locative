@@ -182,7 +182,7 @@ export function Sidebar({
   const { profile, accountProfile, signOut } = useAuth();
   const role = getEffectiveRoleForAccount((profile?.role ?? 'agent') as Role, accountProfile) as Role;
   const showExpandedContent = !isCollapsed || isOpen;
-  const desktopWidthClass = isCollapsed ? 'lg:w-20' : 'lg:w-72';
+  const desktopWidthClass = isCollapsed ? 'lg:w-20' : 'lg:w-64 xl:w-72';
   const [openGroup, setOpenGroup] = useState<string>(() => getInitialOpenGroup(currentPage));
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -295,8 +295,8 @@ export function Sidebar({
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4">
-          <ul className="space-y-1 px-3">
+        <nav className="flex-1 overflow-y-auto py-3 xl:py-4">
+          <ul className="space-y-1 px-2.5 xl:px-3">
             {visibleNav.map((entry) => {
               if (!isGroup(entry)) {
                 const Icon = entry.icon;
@@ -306,7 +306,7 @@ export function Sidebar({
                     <button
                       onClick={() => handleNavigate(entry.id)}
                       title={entry.label}
-                      className={`group relative flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-all duration-200 ${
+                      className={`group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${
                         active ? 'bg-emerald-300/12 text-emerald-100 shadow-sm' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
                       } ${showExpandedContent ? '' : 'justify-center px-0'}`}
                     >
@@ -328,7 +328,7 @@ export function Sidebar({
                   <button
                     onClick={() => toggleGroup(entry.id)}
                     title={entry.label}
-                    className={`group relative flex w-full items-center gap-3 rounded-lg px-4 py-3 transition-all duration-200 ${
+                    className={`group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${
                       active ? 'bg-emerald-300/10 text-emerald-100' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
                     } ${showExpandedContent ? '' : 'justify-center px-0'}`}
                   >
@@ -336,7 +336,7 @@ export function Sidebar({
                     <Icon className={`h-5 w-5 flex-shrink-0 ${active ? 'text-emerald-300' : 'text-slate-500 group-hover:text-emerald-200'}`} />
                     <span className={`flex-1 text-left ${showExpandedContent ? '' : 'lg:hidden'}`}>
                       <span className="block text-sm font-bold">{entry.label}</span>
-                      <span className={`mt-1 block text-xs font-semibold ${active ? 'text-emerald-200/80' : 'text-slate-500'}`}>
+                      <span className={`mt-0.5 block text-[11px] font-semibold leading-4 xl:mt-1 xl:text-xs ${active ? 'text-emerald-200/80' : 'text-slate-500'}`}>
                         {entry.description}
                       </span>
                     </span>

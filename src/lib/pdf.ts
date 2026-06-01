@@ -496,11 +496,11 @@ export function drawSectionFrame(
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(x, y, width, height, 2.2, 2.2, 'F');
   }
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.13);
+  doc.setDrawColor(184, 196, 211);
+  doc.setLineWidth(0.2);
   doc.roundedRect(x, y, width, height, 2.2, 2.2, 'S');
   doc.setFillColor(...(options.accent === 'orange' ? colors.gold : options.accent === 'neutral' ? colors.border : colors.primary));
-  doc.roundedRect(x, y, 1.4, height, 1.4, 1.4, 'F');
+  doc.roundedRect(x, y, 1.7, height, 1.4, 1.4, 'F');
 
   let contentY = y + 5.5;
   if (options.title) {
@@ -536,19 +536,25 @@ export function drawSignatureBlocks(
   const rightX = leftX + width + gap;
 
   [leftX, rightX].forEach((x, index) => {
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(184, 196, 211);
+    doc.setLineWidth(0.2);
+    doc.roundedRect(x, y, width, 36, 2.2, 2.2, 'FD');
+    doc.setFillColor(...colors.paper);
+    doc.roundedRect(x + 1.2, y + 1.2, width - 2.4, 8.2, 1.8, 1.8, 'F');
     doc.setFont(undefined as unknown as string, 'bold');
     doc.setFontSize(8.2);
     doc.setTextColor(30, 41, 59);
-    doc.text(labels[index], x, y + 6);
-    doc.setDrawColor(205, 213, 224);
-    doc.setLineWidth(0.16);
-    doc.line(x, y + 24, x + width, y + 24);
+    doc.text(labels[index], x + 4, y + 6.2);
+    doc.setDrawColor(148, 163, 184);
+    doc.setLineWidth(0.22);
+    doc.line(x + 4, y + 24.5, x + width - 4, y + 24.5);
     doc.setFont(undefined as unknown as string, 'normal');
     doc.setFontSize(7);
     doc.setTextColor(...colors.muted);
-    doc.text('Nom, date et signature', x, y + 29);
+    doc.text('Nom, date et signature', x + 4, y + 29.5);
     if (index === 0) {
-      doc.text(individualOwner ? 'Cachet ou mention le cas échéant' : 'Cachet le cas échéant', x, y + 33);
+      doc.text(individualOwner ? 'Cachet ou mention le cas échéant' : 'Cachet le cas échéant', x + 4, y + 33.3);
     }
   });
   doc.setTextColor(0, 0, 0);
@@ -568,9 +574,12 @@ export async function drawDocumentHeader(
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, pageWidth, 66, 'F');
   doc.setFillColor(...colors.primary);
-  doc.rect(0, 0, 3.2, 66, 'F');
+  doc.rect(0, 0, 3.6, 66, 'F');
   doc.setFillColor(...colors.paper);
-  doc.rect(3.2, 0, pageWidth - 3.2, 8.5, 'F');
+  doc.rect(3.6, 0, pageWidth - 3.6, 8.5, 'F');
+  doc.setDrawColor(226, 213, 181);
+  doc.setLineWidth(0.22);
+  doc.line(3.6, 8.5, pageWidth, 8.5);
 
   let logoBottom = 26;
   const logo = await loadImageAsPngDataUrl(settings.logo_url, 420);
@@ -610,8 +619,8 @@ export async function drawDocumentHeader(
   });
 
   const separatorY = Math.max(40, logoBottom + 8);
-  doc.setDrawColor(218, 226, 232);
-  doc.setLineWidth(0.18);
+  doc.setDrawColor(191, 203, 218);
+  doc.setLineWidth(0.24);
   doc.line(14, separatorY, pageWidth - 14, separatorY);
 
   const titleY = separatorY + 10;
@@ -621,7 +630,9 @@ export async function drawDocumentHeader(
   doc.setCharSpace(0.12);
   if (meta.documentType) {
     doc.setFillColor(255, 247, 237);
-    doc.roundedRect(14, titleY - 7.4, 38, 5.8, 1.6, 1.6, 'F');
+    doc.setDrawColor(248, 197, 120);
+    doc.setLineWidth(0.16);
+    doc.roundedRect(14, titleY - 7.4, 38, 5.8, 1.6, 1.6, 'FD');
     doc.setFont(undefined as unknown as string, 'bold');
     doc.setFontSize(6.7);
     doc.setTextColor(...colors.orange);
@@ -642,10 +653,16 @@ export async function drawDocumentHeader(
   if (meta.reference) details.push(`Réf. ${meta.reference}`);
   if (meta.issueDate) details.push(`Date : ${meta.issueDate}`);
   if (details.length) {
+    const detailText = details.join(' · ');
+    const detailWidth = Math.min(74, doc.getTextWidth(detailText) + 8);
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.14);
+    doc.roundedRect(pageWidth - 14 - detailWidth, titleY - 5.2, detailWidth, 7.2, 1.8, 1.8, 'FD');
     doc.setFont(undefined as unknown as string, 'normal');
     doc.setFontSize(8);
     doc.setTextColor(...colors.muted);
-    doc.text(details.join(' · '), pageWidth - 14, titleY, { align: 'right' });
+    doc.text(fitSingleLine(doc, detailText, detailWidth - 6), pageWidth - 17, titleY, { align: 'right' });
   }
 
   doc.setTextColor(0);
@@ -659,21 +676,21 @@ export function getAutoTableTheme(settings?: Partial<AgencySettings>) {
       fontSize: 8.1,
       cellPadding: { top: 2.6, right: 3, bottom: 2.6, left: 3 },
       textColor: [30, 41, 59] as [number, number, number],
-      lineColor: colors.border,
-      lineWidth: 0.1,
+      lineColor: [190, 202, 216] as [number, number, number],
+      lineWidth: 0.16,
       valign: 'middle' as const,
     },
     headStyles: {
-      fillColor: colors.emeraldSoft,
-      textColor: colors.primary,
+      fillColor: colors.primary,
+      textColor: [255, 255, 255] as [number, number, number],
       fontStyle: 'bold' as const,
-      lineColor: colors.border,
-      lineWidth: 0.1,
+      lineColor: [20, 83, 45] as [number, number, number],
+      lineWidth: 0.16,
       minCellHeight: 7.6,
     },
     bodyStyles: {
-      lineColor: colors.border,
-      lineWidth: 0.1,
+      lineColor: [196, 207, 220] as [number, number, number],
+      lineWidth: 0.14,
     },
     alternateRowStyles: { fillColor: [253, 252, 248] as [number, number, number] },
     margin: { left: 14, right: 14 },
@@ -688,8 +705,8 @@ export function drawPageBorder(doc: jsPDF, settings?: Partial<AgencySettings>): 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const colors = getBrandColors(settings);
-  doc.setDrawColor(214, 222, 232);
-  doc.setLineWidth(0.13);
+  doc.setDrawColor(190, 202, 216);
+  doc.setLineWidth(0.2);
   doc.rect(10, 10, pageWidth - 20, pageHeight - 20);
   doc.setDrawColor(...colors.gold);
   doc.setLineWidth(0.2);
@@ -706,8 +723,8 @@ export function addFooter(doc: jsPDF, settings?: Partial<AgencySettings>): void 
     doc.setPage(i);
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setDrawColor(232, 236, 242);
-    doc.setLineWidth(0.08);
+    doc.setDrawColor(210, 220, 231);
+    doc.setLineWidth(0.13);
     doc.line(14, pageHeight - 16.5, pageWidth - 14, pageHeight - 16.5);
     doc.setDrawColor(...colors.gold);
     doc.setLineWidth(0.16);
@@ -907,8 +924,8 @@ export function drawSubtleSectionTitle(
   doc.setFontSize(9.4);
   doc.setTextColor(...colors.ink);
   doc.text(title, x + 4, y);
-  doc.setDrawColor(...colors.border);
-  doc.setLineWidth(0.12);
+  doc.setDrawColor(195, 207, 221);
+  doc.setLineWidth(0.16);
   doc.line(x + 4, y + 3, x + width, y + 3);
   if (subtitle) {
     doc.setFont(undefined as unknown as string, 'normal');
@@ -936,7 +953,8 @@ export function drawKeyValueGrid(
     const row = Math.floor(index / 2);
     const cellX = x + col * colWidth;
     const cellY = y + row * rowHeight;
-    doc.setDrawColor(...colors.border);
+    doc.setDrawColor(195, 207, 221);
+    doc.setLineWidth(0.15);
     doc.setFillColor(index % 4 < 2 ? 255 : 248, index % 4 < 2 ? 255 : 250, index % 4 < 2 ? 255 : 252);
     doc.roundedRect(cellX, cellY, colWidth - 2, rowHeight - 1.5, 1.5, 1.5, 'FD');
     doc.setFont(undefined as unknown as string, 'normal');
@@ -1019,8 +1037,8 @@ function drawCompactPaymentSummaryCard(
   const isSettled = !/partiel/i.test(values.status);
 
   doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.13);
+  doc.setDrawColor(184, 196, 211);
+  doc.setLineWidth(0.22);
   doc.roundedRect(x, y, width, height, 2.6, 2.6, 'FD');
   doc.setFillColor(...colors.paper);
   doc.roundedRect(x + 1.2, y + 1.2, width - 2.4, height - 2.4, 2.2, 2.2, 'F');
@@ -1043,7 +1061,9 @@ function drawCompactPaymentSummaryCard(
   const statusWidth = Math.min(40, Math.max(22, doc.getTextWidth(values.status) + 10));
   const badgeX = x + width - statusWidth - 5;
   doc.setFillColor(...(isSettled ? colors.emeraldSoft : colors.goldSoft));
-  doc.roundedRect(badgeX, y + 5, statusWidth, 7.5, 1.8, 1.8, 'F');
+  doc.setDrawColor(...(isSettled ? colors.primary : colors.gold));
+  doc.setLineWidth(0.12);
+  doc.roundedRect(badgeX, y + 5, statusWidth, 7.5, 1.8, 1.8, 'FD');
   doc.setFont(undefined as unknown as string, 'bold');
   doc.setFontSize(7.1);
   doc.setTextColor(...(isSettled ? colors.primary : colors.gold));
@@ -1073,15 +1093,17 @@ export function drawTotalsBlock(
 ): number {
   const colors = getBrandColors(settings);
   const height = 14 + Math.ceil(items.length / 2) * 12;
-  doc.setFillColor(255, 251, 235);
-  doc.setDrawColor(253, 186, 116);
-  doc.setLineWidth(0.12);
+  doc.setFillColor(255, 252, 246);
+  doc.setDrawColor(226, 180, 101);
+  doc.setLineWidth(0.2);
   doc.roundedRect(x, y, width, height, 2.2, 2.2, 'FD');
+  doc.setFillColor(255, 247, 232);
+  doc.roundedRect(x + 2, y + 2, width - 4, 7.4, 1.7, 1.7, 'F');
 
   doc.setFont(undefined as unknown as string, 'bold');
   doc.setFontSize(8.4);
   doc.setTextColor(...colors.orange);
-  doc.text('Synthèse financière', x + 4, y + 6.2);
+  doc.text('Synthèse du mois', x + 4, y + 6.2);
 
   const colWidth = width / 2;
   items.forEach((item, index) => {
@@ -1146,14 +1168,14 @@ async function drawVerificationBlock(
   doc.setFont(undefined as unknown as string, 'bold');
   doc.setFontSize(7.2);
   doc.setTextColor(15, 23, 42);
-  doc.text('Vérification du document', x + 24, y + 8);
+  doc.text('Authentification numérique', x + 24, y + 8);
   doc.setFont(undefined as unknown as string, 'normal');
   doc.setFontSize(6.4);
   doc.setTextColor(...colors.muted);
   const textWidth = width - 31;
   doc.text(fitSingleLine(doc, `Réf. ${ref}`, textWidth), x + 24, y + 12.6);
   doc.text(fitSingleLine(doc, `${individualOwner ? 'Propriétaire' : 'Émetteur'} : ${safeText(agency, 'Samay Keur')}`, textWidth), x + 24, y + 16.8);
-  doc.text(verification.registered ? 'Authenticité enregistrée' : 'Vérification disponible', x + 24, y + 21);
+  doc.text(verification.registered ? 'Authenticité enregistrée dans le registre' : 'Vérification disponible', x + 24, y + 21);
   doc.setTextColor(0);
 }
 
@@ -1194,9 +1216,10 @@ export async function drawLegalVerificationFooter(
   const y = pageHeight - 45;
   const textX = x + qrSize + 4;
 
-  doc.setDrawColor(...colors.border);
-  doc.setLineWidth(0.1);
-  doc.roundedRect(x, y, blockWidth, blockHeight, 1.8, 1.8, 'S');
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(184, 196, 211);
+  doc.setLineWidth(0.17);
+  doc.roundedRect(x, y, blockWidth, blockHeight, 1.8, 1.8, 'FD');
   doc.addImage(qrDataUrl, 'PNG', x + 3, y + 3.5, qrSize, qrSize);
 
   doc.setFont(undefined as unknown as string, 'bold');
@@ -1574,9 +1597,9 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     head: [['Libellé', 'Montant']],
     body: [
       ['Montant du loyer', formatCurrency(loyer, devise)],
-      ['Paiements precedents', formatCurrency(paiementsPrecedents, devise)],
+      ['Paiements précédents', formatCurrency(paiementsPrecedents, devise)],
       ['Nouveau paiement', formatCurrency(paye, devise)],
-      ['Total paye a ce jour', formatCurrency(totalPayeMois, devise)],
+      ['Total payé à ce jour', formatCurrency(totalPayeMois, devise)],
       ['Reliquat (reste à payer)', formatCurrency(reliquat, devise)],
     ],
     theme: 'grid',
@@ -1584,6 +1607,19 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     bodyStyles: { fontStyle: 'normal' },
     columnStyles: {
       1: { halign: 'right', fontStyle: 'bold' },
+    },
+    didParseCell: (data) => {
+      const raw = Array.isArray(data.row.raw) ? data.row.raw : [];
+      if (raw[0] === 'Total payé à ce jour') {
+        data.cell.styles.fillColor = [232, 246, 240];
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.textColor = [20, 83, 45];
+      }
+      if (raw[0]?.toString().startsWith('Reliquat')) {
+        data.cell.styles.fillColor = reliquat > 0 ? [255, 247, 232] : [248, 250, 252];
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.textColor = reliquat > 0 ? [180, 83, 9] : [71, 85, 105];
+      }
     },
     margin: { left: leftMargin, right: rightMargin },
     tableWidth: usableWidth,
@@ -1678,9 +1714,9 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
       columns: ['Ligne', 'Montant'],
       rows: [
         { Ligne: 'Loyer attendu', Montant: formatCurrency(loyer, devise) },
-        { Ligne: 'Paiements precedents', Montant: formatCurrency(paiementsPrecedents, devise) },
+        { Ligne: 'Paiements précédents', Montant: formatCurrency(paiementsPrecedents, devise) },
         { Ligne: 'Nouveau paiement', Montant: formatCurrency(paye, devise) },
-        { Ligne: 'Total paye a ce jour', Montant: formatCurrency(totalPayeMois, devise) },
+        { Ligne: 'Total payé à ce jour', Montant: formatCurrency(totalPayeMois, devise) },
         { Ligne: 'Reliquat', Montant: formatCurrency(reliquat, devise) },
       ],
       rowCount: 5,

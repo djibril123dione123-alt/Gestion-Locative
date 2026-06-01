@@ -396,7 +396,7 @@ export function Equipe() {
   }, {});
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 p-4 sm:p-6">
+    <div className="sk-page-shell space-y-5 sm:space-y-6">
       <section className="sk-premium-panel p-5 sm:p-6">
         <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-emerald-200/30 blur-3xl" />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">

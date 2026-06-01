@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Archive,
@@ -18,6 +18,7 @@ import {
   Upload,
   UserRound,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -43,6 +44,8 @@ import {
   type UserDocumentCategory,
   type UserDocumentEntityType,
 } from '../services/documentStorage';
+import { readWithCache } from '../services/offlineReadCache';
+import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 
 interface UserDocumentRow {
   id: string;
@@ -223,10 +226,13 @@ function registryToDocumentItem(row: RegistryDocumentRow): DocumentItem {
 
 export function Documents() {
   const { profile, user, accountProfile } = useAuth();
+  const navigate = useNavigate();
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const toast = useToast();
   const [items, setItems] = useState<DocumentItem[]>([]);
+  const hasLoadedDocumentsRef = React.useRef(false);
   const [loading, setLoading] = useState(true);
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
   const [usage, setUsage] = useState<StorageUsage | null>(null);
   const [breakdown, setBreakdown] = useState<StorageBreakdown | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -259,77 +265,82 @@ export function Documents() {
 
   const load = useCallback(async () => {
     if (!profile?.agency_id) return;
-    setLoading(true);
+    const scopedAgencyId = profile.agency_id;
+    const scopedUserId = user?.id ?? null;
+    if (!hasLoadedDocumentsRef.current) setLoading(true);
     try {
-      const [docRes, registryRes, storageUsage, storageBreakdown, bailleursRes, locatairesRes, immeublesRes, unitesRes, contratsRes] =
-        await Promise.all([
-          supabase
-            .from('documents')
-            .select(
-              'id, name, file_url, storage_path, file_type, file_size, document_category, document_scope, entity_type, entity_id, lifecycle_status, retention_policy, description, created_at'
-            )
-            .eq('agency_id', profile.agency_id)
-            .is('deleted_at', null)
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('document_registry')
-            .select('id, document_type, entity_id, period, reference, version, storage_path, file_size, mime_type, status, retention_policy, generated_at, metadata')
-            .eq('agency_id', profile.agency_id)
-            .neq('status', 'deleted')
-            .order('generated_at', { ascending: false })
-            .limit(80),
-          getAgencyStorageUsage(profile.agency_id),
-          getAgencyStorageBreakdown(profile.agency_id),
-          supabase.from('bailleurs').select('id, nom, prenom').eq('agency_id', profile.agency_id),
-          supabase.from('locataires').select('id, nom, prenom').eq('agency_id', profile.agency_id),
-          supabase.from('immeubles').select('id, nom').eq('agency_id', profile.agency_id),
-          supabase.from('unites').select('id, nom').eq('agency_id', profile.agency_id),
-          supabase.from('contrats').select('id, locataires(nom, prenom), unites(nom)').eq('agency_id', profile.agency_id),
-        ]);
+      const result = await readWithCache<{
+        items: DocumentItem[];
+        usage: StorageUsage | null;
+        breakdown: StorageBreakdown | null;
+        entityOptions: Record<UserDocumentEntityType, EntityOption[]>;
+      }>(
+        { agencyId: scopedAgencyId, userId: scopedUserId },
+        'documents-page',
+        async () => {
+          const [docRes, registryRes, storageUsage, storageBreakdown, bailleursRes, locatairesRes, immeublesRes, unitesRes, contratsRes] =
+            await Promise.all([
+              supabase
+                .from('documents')
+                .select(
+                  'id, name, file_url, storage_path, file_type, file_size, document_category, document_scope, entity_type, entity_id, lifecycle_status, retention_policy, description, created_at'
+                )
+                .eq('agency_id', scopedAgencyId)
+                .is('deleted_at', null)
+                .order('created_at', { ascending: false }),
+              supabase
+                .from('document_registry')
+                .select('id, document_type, entity_id, period, reference, version, storage_path, file_size, mime_type, status, retention_policy, generated_at, metadata')
+                .eq('agency_id', scopedAgencyId)
+                .neq('status', 'deleted')
+                .order('generated_at', { ascending: false })
+                .limit(80),
+              getAgencyStorageUsage(scopedAgencyId),
+              getAgencyStorageBreakdown(scopedAgencyId),
+              supabase.from('bailleurs').select('id, nom, prenom').eq('agency_id', scopedAgencyId),
+              supabase.from('locataires').select('id, nom, prenom').eq('agency_id', scopedAgencyId),
+              supabase.from('immeubles').select('id, nom').eq('agency_id', scopedAgencyId),
+              supabase.from('unites').select('id, nom').eq('agency_id', scopedAgencyId),
+              supabase.from('contrats').select('id, locataires(nom, prenom), unites(nom)').eq('agency_id', scopedAgencyId),
+            ]);
 
-      if (docRes.error) throw docRes.error;
-      if (registryRes.error) throw registryRes.error;
+          if (docRes.error) throw docRes.error;
+          if (registryRes.error) throw registryRes.error;
+          if (bailleursRes.error) throw bailleursRes.error;
+          if (locatairesRes.error) throw locatairesRes.error;
+          if (immeublesRes.error) throw immeublesRes.error;
+          if (unitesRes.error) throw unitesRes.error;
+          if (contratsRes.error) throw contratsRes.error;
 
-      const uploaded = ((docRes.data ?? []) as UserDocumentRow[]).map(toDocumentItem);
-      const generated = ((registryRes.data ?? []) as RegistryDocumentRow[]).map(registryToDocumentItem);
-      setItems([...uploaded, ...generated].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
-      setUsage(storageUsage);
-      setBreakdown(storageBreakdown);
+          const uploaded = ((docRes.data ?? []) as UserDocumentRow[]).map(toDocumentItem);
+          const generated = ((registryRes.data ?? []) as RegistryDocumentRow[]).map(registryToDocumentItem);
+          const nextItems = [...uploaded, ...generated].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          const nextEntityOptions = {
+            agency: [{ id: scopedAgencyId, label: isIndividualOwner ? 'Compte propriétaire' : 'Agence' }],
+            bailleur: ((bailleursRes.data ?? []) as Array<{ id: string; nom: string; prenom?: string | null }>).map((row) => ({ id: row.id, label: [row.prenom, row.nom].filter(Boolean).join(' ').trim() })),
+            locataire: ((locatairesRes.data ?? []) as Array<{ id: string; nom: string; prenom?: string | null }>).map((row) => ({ id: row.id, label: [row.prenom, row.nom].filter(Boolean).join(' ').trim() })),
+            immeuble: ((immeublesRes.data ?? []) as Array<{ id: string; nom: string }>).map((row) => ({ id: row.id, label: row.nom })),
+            unite: ((unitesRes.data ?? []) as Array<{ id: string; nom: string }>).map((row) => ({ id: row.id, label: row.nom })),
+            contrat: ((contratsRes.data ?? []) as Array<{ id: string; locataires?: { nom?: string | null; prenom?: string | null } | null; unites?: { nom?: string | null } | null; }>).map((row) => ({ id: row.id, label: ([row.locataires?.prenom, row.locataires?.nom].filter(Boolean).join(' ').trim() + ' - ' + (row.unites?.nom ?? 'Unité')).trim() })),
+            operation: [],
+          };
+          return { items: nextItems, usage: storageUsage, breakdown: storageBreakdown, entityOptions: nextEntityOptions };
+        },
+        { timeoutMs: 7_000 }
+      );
 
-      setEntityOptions({
-        agency: [{ id: profile.agency_id, label: isIndividualOwner ? 'Compte propriétaire' : 'Agence' }],
-        bailleur: ((bailleursRes.data ?? []) as Array<{ id: string; nom: string; prenom?: string | null }>).map((row) => ({
-          id: row.id,
-          label: `${row.prenom ?? ''} ${row.nom}`.trim(),
-        })),
-        locataire: ((locatairesRes.data ?? []) as Array<{ id: string; nom: string; prenom?: string | null }>).map((row) => ({
-          id: row.id,
-          label: `${row.prenom ?? ''} ${row.nom}`.trim(),
-        })),
-        immeuble: ((immeublesRes.data ?? []) as Array<{ id: string; nom: string }>).map((row) => ({
-          id: row.id,
-          label: row.nom,
-        })),
-        unite: ((unitesRes.data ?? []) as Array<{ id: string; nom: string }>).map((row) => ({
-          id: row.id,
-          label: row.nom,
-        })),
-        contrat: ((contratsRes.data ?? []) as Array<{
-          id: string;
-          locataires?: { nom?: string | null; prenom?: string | null } | null;
-          unites?: { nom?: string | null } | null;
-        }>).map((row) => ({
-          id: row.id,
-          label: `${row.locataires?.prenom ?? ''} ${row.locataires?.nom ?? ''} · ${row.unites?.nom ?? 'Unité'}`.trim(),
-        })),
-        operation: [],
-      });
+      setItems(result.data.items);
+      hasLoadedDocumentsRef.current = true;
+      setUsage(result.data.usage);
+      setBreakdown(result.data.breakdown);
+      setEntityOptions(result.data.entityOptions);
+      setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Chargement des documents impossible');
+      toast.error(error instanceof Error ? error.message : 'Documents indisponibles hors connexion sans cache local.');
     } finally {
       setLoading(false);
     }
-  }, [isIndividualOwner, profile?.agency_id, toast]);
+  }, [isIndividualOwner, profile?.agency_id, toast, user?.id]);
 
   useEffect(() => {
     if (profile?.agency_id) load();
@@ -355,6 +366,10 @@ export function Documents() {
   }, [items]);
 
   const openDocument = async (item: DocumentItem) => {
+    if (!navigator.onLine) {
+      toast.error('Connexion indisponible : ouverture du fichier impossible hors ligne.');
+      return;
+    }
     try {
       const url = await createDocumentSignedUrl(item.storagePath);
       window.open(url, '_blank', 'noopener,noreferrer');
@@ -372,6 +387,10 @@ export function Documents() {
     event.preventDefault();
     if (!profile?.agency_id || !form.file) {
       toast.warning('Sélectionnez un fichier à archiver.');
+      return;
+    }
+    if (!navigator.onLine) {
+      toast.error('Connexion indisponible : archivage impossible hors ligne.');
       return;
     }
 
@@ -425,6 +444,10 @@ export function Documents() {
 
   const archiveDocument = async () => {
     if (!archiveTarget || archiveTarget.source !== 'uploaded') return;
+    if (!navigator.onLine) {
+      toast.error('Connexion indisponible : archivage impossible hors ligne.');
+      return;
+    }
     try {
       const { error } = await supabase.rpc('archive_document_soft', { p_document_id: archiveTarget.id });
       if (error) throw error;
@@ -441,6 +464,10 @@ export function Documents() {
     runner: () => Promise<unknown>
   ) => {
     if (!profile?.agency_id) return;
+    if (!navigator.onLine) {
+      toast.error('Connexion indisponible : maintenance documentaire impossible hors ligne.');
+      return;
+    }
     setMaintenanceAction(action);
     try {
       const result = (await runner()) as Record<string, unknown>;
@@ -524,6 +551,19 @@ export function Documents() {
             </div>
           </div>
         </div>
+        <div className="relative mt-5 flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => navigate('/documents/scan')}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-orange-950/20 transition hover:-translate-y-0.5 hover:bg-orange-600"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Scanner un document
+          </button>
+          <p className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-xs font-semibold leading-5 text-emerald-50/70 sm:flex-1">
+            Vérifiez un QR Samay Këur ou une référence sans quitter votre espace documentaire.
+          </p>
+        </div>
       </div>
 
       {currentUsageMessage && (
@@ -546,6 +586,12 @@ export function Documents() {
           </button>
         </div>
       )}
+
+      <OfflineDataNotice
+        cachedAt={cacheTimestamp}
+        onRetry={load}
+        message="Les documents affichés viennent du dernier chargement réussi. Les fichiers eux-mêmes nécessitent une connexion pour être ouverts ou modifiés."
+      />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[

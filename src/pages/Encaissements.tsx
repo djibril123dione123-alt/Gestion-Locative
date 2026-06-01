@@ -31,7 +31,7 @@ export function Encaissements({ initialTab = 'recus' }: EncaissementsProps) {
 
   return (
     <div className="bg-brand-paper">
-      <div className="border-b border-emerald-950/10 bg-brand-paper/95 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="border-b border-emerald-950/10 bg-brand-paper/95 px-4 py-2.5 sm:px-6 lg:px-7">
         <Tabs
           tabs={TABS}
           activeId={active}

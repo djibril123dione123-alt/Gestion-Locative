@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, Gauge, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { AlertTriangle, Gauge, RefreshCw, Wifi, WifiOff, X } from 'lucide-react';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import {
   getPendingCount,
@@ -24,6 +24,24 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
   const [pendingCount, setPendingCount] = useState(0);
   const [errorCount, setErrorCount] = useState(0);
   const [lastResult, setLastResult] = useState<SyncResult | null>(null);
+  const [dismissedKey, setDismissedKey] = useState<string | null>(null);
+
+  const bannerKey = !isOnline
+    ? 'offline'
+    : errorCount > 0 && !syncing
+      ? 'errors'
+      : syncing
+        ? 'syncing'
+        : isSlowConnection
+          ? 'slow'
+          : showRestored
+            ? 'restored'
+            : 'none';
+
+  useEffect(() => {
+    if (bannerKey !== dismissedKey && bannerKey !== 'none') return;
+    if (bannerKey === 'none') setDismissedKey(null);
+  }, [bannerKey, dismissedKey]);
 
   const refreshCounts = useCallback(async () => {
     const [count, errMutations] = await Promise.all([
@@ -75,6 +93,18 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
   }, [doSync, isOnline, isReconnecting, refreshCounts]);
 
   if (isOnline && !showRestored && !syncing && errorCount === 0 && !isSlowConnection) return null;
+  if (dismissedKey === bannerKey && bannerKey !== 'syncing' && bannerKey !== 'errors') return null;
+
+  const dismissButton = bannerKey !== 'syncing' ? (
+    <button
+      type="button"
+      onClick={() => setDismissedKey(bannerKey)}
+      className="ml-auto inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/12 transition hover:bg-white/20"
+      aria-label="Masquer le bandeau reseau"
+    >
+      <X className="h-4 w-4" />
+    </button>
+  ) : null;
 
   if (!isOnline) {
     return (
@@ -86,6 +116,7 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
             ? ` ${pendingCount} action${pendingCount > 1 ? 's' : ''} en attente seront synchronisees automatiquement.`
             : ' Vous pouvez continuer, les donnees seront synchronisees au retour du reseau.'}
         </span>
+        {dismissButton}
       </div>
     );
   }
@@ -98,6 +129,7 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
           {errorCount} action{errorCount > 1 ? 's' : ''} n'ont pas encore pu etre synchronisee{errorCount > 1 ? 's' : ''}.
           La file locale est conservee et une nouvelle tentative sera lancee.
         </span>
+        {dismissButton}
       </div>
     );
   }
@@ -116,6 +148,7 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
       <div className="z-50 flex flex-shrink-0 items-center gap-3 bg-amber-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm">
         <Gauge className="h-4 w-4 flex-shrink-0" />
         <span>Connexion lente detectee ({connectionLabel}). L'application privilegie le cache local quand c'est possible.</span>
+        {dismissButton}
       </div>
     );
   }
@@ -132,6 +165,7 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
           ? ` - ${lastResult.errors} erreur${lastResult.errors > 1 ? 's' : ''}`
           : ''}
       </span>
+      {dismissButton}
     </div>
   );
 }

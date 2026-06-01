@@ -52,6 +52,7 @@ export const PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { id: 'equipe', label: 'Équipe', description: 'Invitations, rôles et permissions utilisateur.', category: 'Administration', sensitive: true },
   { id: 'abonnement', label: 'Abonnement', description: 'Plan, facturation SaaS et limites.', category: 'Administration', sensitive: true },
   { id: 'pricing', label: 'Tarifs', description: 'Plans et comparaison des offres.', category: 'Administration' },
+  { id: 'documents/scan', label: 'Scanner un document', description: 'Verification QR et reference documentaire.', category: 'Operations terrain' },
 ];
 
 const PAGE_ROLES: Record<string, UserRole[]> = {
@@ -77,6 +78,7 @@ const PAGE_ROLES: Record<string, UserRole[]> = {
   interventions: ['admin', 'agent'],
   calendrier: ['admin', 'agent'],
   documents: ['admin', 'agent'],
+  'documents/scan': ['admin', 'agent', 'comptable', 'bailleur'],
   audit: ['admin'],
   pricing: ['admin', 'agent', 'comptable', 'bailleur'],
 };
@@ -119,9 +121,9 @@ export function getDefaultAccessLevel(role: UserRole | null | undefined, page: s
   const roles = PAGE_ROLES[page] ?? PAGE_ROLES.dashboard;
   if (!roles.includes(role)) return 'none';
   if (role === 'admin') return 'admin';
-  if (role === 'agent') return ['dashboard', 'locataires', 'contrats', 'paiements', 'loyers-impayes', 'inventaires', 'interventions', 'calendrier', 'documents', 'notifications', 'pricing'].includes(page) ? 'write' : 'read';
-  if (role === 'comptable') return ['paiements', 'loyers-impayes', 'contrats', 'locataires', 'notifications', 'pricing'].includes(page) ? 'read' : 'none';
-  if (role === 'bailleur') return ['dashboard', 'contrats', 'paiements', 'loyers-impayes', 'notifications', 'pricing'].includes(page) ? 'read' : 'none';
+  if (role === 'agent') return ['dashboard', 'locataires', 'contrats', 'paiements', 'loyers-impayes', 'inventaires', 'interventions', 'calendrier', 'documents', 'documents/scan', 'notifications', 'pricing'].includes(page) ? 'write' : 'read';
+  if (role === 'comptable') return ['paiements', 'loyers-impayes', 'contrats', 'locataires', 'documents/scan', 'notifications', 'pricing'].includes(page) ? 'read' : 'none';
+  if (role === 'bailleur') return ['dashboard', 'contrats', 'paiements', 'loyers-impayes', 'documents/scan', 'notifications', 'pricing'].includes(page) ? 'read' : 'none';
   return 'none';
 }
 

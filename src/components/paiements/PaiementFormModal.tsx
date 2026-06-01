@@ -77,7 +77,7 @@ export function PaiementFormModal({
   const immeubleLabel = selectedContrat?.unites?.immeubles?.nom ?? '';
   const bailleur = selectedContrat?.unites?.immeubles?.bailleurs;
   const bailleurLabel = bailleur ? formatPersonName(bailleur, '') : '';
-  const canSubmit = !isSaving && (!selectedContrat || Boolean(formData.mois_display && monthOptions.length > 0 && tropPercuPreview <= 0));
+  const canSubmit = isOnline && !isSaving && (!selectedContrat || Boolean(formData.mois_display && monthOptions.length > 0 && tropPercuPreview <= 0));
 
   return (
     <Modal
@@ -234,7 +234,7 @@ export function PaiementFormModal({
             {!isOnline && (
               <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
                 <WifiOff className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                <span>Mode hors ligne : l'encaissement sera placé en file d'attente et synchronisé automatiquement au retour de connexion.</span>
+                <span>Mode hors ligne : l'encaissement est bloqué car il doit être confirmé par le serveur. Rétablissez le réseau puis réessayez.</span>
               </div>
             )}
           </div>

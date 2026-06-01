@@ -221,7 +221,7 @@ export function Abonnement() {
 
   if (loading) {
     return (
-      <div className="sk-mobile-page max-w-6xl space-y-5 sm:space-y-6">
+      <div className="sk-mobile-page sk-page-narrow space-y-5 sm:space-y-6">
         <div className="rounded-[2rem] border border-emerald-900/10 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-6 sm:p-8 shadow-2xl shadow-emerald-950/15">
           <div className="h-4 w-32 animate-pulse rounded-full bg-white/15" />
           <div className="mt-5 h-8 w-64 animate-pulse rounded-2xl bg-white/15" />
@@ -234,7 +234,7 @@ export function Abonnement() {
   }
 
   return (
-    <div className="sk-mobile-page max-w-6xl space-y-5 sm:space-y-6">
+    <div className="sk-mobile-page sk-page-narrow space-y-5 sm:space-y-6">
 
       <div className="sk-mobile-hero bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-4 text-white shadow-2xl shadow-emerald-950/15 sm:p-7">
         <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-orange-400/20 blur-3xl" />

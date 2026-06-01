@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+﻿import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { createContratViaEdge, updateContratViaEdge, ContratApiError } from '../services/api/contratApi';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,11 +11,12 @@ import { generateContratPDF } from '../lib/pdf';
 import { formatCurrency } from '../lib/formatters';
 import { useToast } from '../hooks/useToast';
 import { useExport } from '../hooks/useExport';
-import { useBackup } from '../hooks/useBackup';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
+import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 
 // =========================
-// 🎨 PALETTE CONFORT IMMO ARCHI
+//  PALETTE CONFORT IMMO ARCHI
 // =========================
 const BRAND_COLORS = {
   primary: '#166534',
@@ -25,7 +26,7 @@ const BRAND_COLORS = {
 } as const;
 
 // =========================
-// 🔸 TYPES
+//  TYPES
 // =========================
 interface Locataire {
   id: string;
@@ -92,7 +93,7 @@ type ContratStatut = FormData['statut'];
 type ContratDestination = FormData['destination'];
 
 // =========================
-// 🔸 VALEURS INITIALES
+//  VALEURS INITIALES
 // =========================
 const INITIAL_FORM_DATA: FormData = {
   locataire_id: '',
@@ -115,7 +116,7 @@ function addYearsToDateString(dateString: string, years: number): string {
 }
 
 // =========================
-// 🔸 COMPOSANT PRINCIPAL
+//  COMPOSANT PRINCIPAL
 // =========================
 export function Contrats() {
   // Auth context
@@ -145,77 +146,91 @@ export function Contrats() {
   });
   const toast = useToast();
   const { exportContrats, exporting: exportingXlsx } = useExport();
-  const { save: saveBackup } = useBackup();
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
 
   // Garde anti-race : si l'utilisateur change d'agence ou navigue
-  // rapidement, une réponse tardive ne doit pas écraser les données
-  // fraîches. Pattern identique à `Calendrier.tsx`.
+  // rapidement, une reponse tardive ne doit pas ecraser les donnees
+  // fraiches. Pattern identique a Calendrier.tsx.
   const requestIdRef = useRef(0);
 
   // =========================
-  // 🔁 CHARGEMENT DES DONNÉES
+  //  CHARGEMENT DES DONNÉES
   // =========================
   const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
     const myRequestId = ++requestIdRef.current;
 
     try {
-      setLoading(true);
+      if (contrats.length === 0) setLoading(true);
       setError(null);
 
-      const [contratsRes, locatairesRes, unitesRes] = await Promise.all([
-        supabase
-          .from('contrats')
-          .select(`
-            *,
-            locataires(nom, prenom, telephone, email, adresse_personnelle, piece_identite),
-            unites(
-              nom,
-              loyer_base,
-              immeubles(
-                nom,
-                adresse,
-                bailleurs(id, nom, prenom, telephone, adresse, commission)
-              )
-            )
-          `)
-          .eq('agency_id', profile.agency_id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('locataires')
-          .select('id, nom, prenom')
-          .eq('agency_id', profile.agency_id)
-          .eq('actif', true)
-          .order('nom', { ascending: true }),
-        supabase
-          .from('unites')
-          .select('id, nom, loyer_base, statut, immeubles(nom, bailleurs(id, nom, prenom, commission))')
-          .eq('agency_id', profile.agency_id)
-          .eq('actif', true)
-          .eq('statut', 'libre')
-          .order('nom', { ascending: true }),
-      ]);
+      const result = await readWithCache(
+        { agencyId: profile.agency_id, userId: profile.id },
+        'contrats-page',
+        async () => {
+          const [contratsRes, locatairesRes, unitesRes] = await Promise.all([
+            supabase
+              .from('contrats')
+              .select(`
+                *,
+                locataires(nom, prenom, telephone, email, adresse_personnelle, piece_identite),
+                unites(
+                  nom,
+                  loyer_base,
+                  immeubles(
+                    nom,
+                    adresse,
+                    bailleurs(id, nom, prenom, telephone, adresse, commission)
+                  )
+                )
+              `)
+              .eq('agency_id', profile.agency_id)
+              .order('created_at', { ascending: false }),
+            supabase
+              .from('locataires')
+              .select('id, nom, prenom')
+              .eq('agency_id', profile.agency_id)
+              .eq('actif', true)
+              .order('nom', { ascending: true }),
+            supabase
+              .from('unites')
+              .select('id, nom, loyer_base, statut, immeubles(nom, bailleurs(id, nom, prenom, commission))')
+              .eq('agency_id', profile.agency_id)
+              .eq('actif', true)
+              .eq('statut', 'libre')
+              .order('nom', { ascending: true }),
+          ]);
+
+          if (contratsRes.error) throw contratsRes.error;
+          if (locatairesRes.error) throw locatairesRes.error;
+          if (unitesRes.error) throw unitesRes.error;
+
+          const contratsData = Array.from(
+            new Map(
+              ((contratsRes.data || []) as unknown as Contrat[]).map((contrat) => [
+                contrat.id,
+                contrat,
+              ])
+            ).values()
+          );
+
+          return {
+            contrats: contratsData,
+            locataires: (locatairesRes.data || []) as unknown as Locataire[],
+            unites: (unitesRes.data || []) as unknown as Unite[],
+          };
+        },
+        { timeoutMs: 7_000 },
+      );
 
       // Si une nouvelle requête a été lancée entre-temps, on ignore
       // ce résultat pour ne pas écraser des données plus récentes.
       if (myRequestId !== requestIdRef.current) return;
 
-      if (contratsRes.error) throw contratsRes.error;
-      if (locatairesRes.error) throw locatairesRes.error;
-      if (unitesRes.error) throw unitesRes.error;
-
-      const contratsData = Array.from(
-        new Map(
-          ((contratsRes.data || []) as unknown as Contrat[]).map((contrat) => [
-            contrat.id,
-            contrat,
-          ])
-        ).values()
-      );
-      setContrats(contratsData);
-      setLocataires((locatairesRes.data || []) as unknown as Locataire[]);
-      setUnites((unitesRes.data || []) as unknown as Unite[]);
-      saveBackup('contrats', contratsData).catch(() => {});
+      setContrats(result.data.contrats);
+      setLocataires(result.data.locataires);
+      setUnites(result.data.unites);
+      setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
     } catch (err: unknown) {
       if (myRequestId !== requestIdRef.current) return;
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement des données');
@@ -224,7 +239,7 @@ export function Contrats() {
         setLoading(false);
       }
     }
-  }, [profile?.agency_id, saveBackup]);
+  }, [contrats.length, profile?.agency_id, profile?.id]);
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -238,7 +253,7 @@ export function Contrats() {
   }, [profile?.agency_id, loadData]);
 
   // =========================
-  // 🔍 FILTRAGE DES CONTRATS
+  //  FILTRAGE DES CONTRATS
   // =========================
   const filteredContrats = useMemo(() => {
     if (!searchTerm.trim()) return contrats;
@@ -264,7 +279,7 @@ export function Contrats() {
   }, [searchTerm, contrats]);
 
   // =========================
-  // 📊 STATISTIQUES
+  //  STATISTIQUES
   // =========================
   const stats = useMemo(() => {
     const actifs = contrats.filter((c) => c.statut === 'actif');
@@ -284,7 +299,7 @@ export function Contrats() {
   }, [contrats, isIndividualOwner]);
 
   // =========================
-  // 🏢 GESTION CHANGEMENT D'UNITÉ
+  //  GESTION CHANGEMENT D'UNITÉ
   // =========================
   const handleUniteChange = useCallback(
     (uniteId: string) => {
@@ -315,7 +330,7 @@ export function Contrats() {
   }, []);
 
   // =========================
-  // ✅ VALIDATION DU FORMULAIRE
+  // OK VALIDATION DU FORMULAIRE
   // =========================
   const validateForm = useCallback((): string | null => {
     if (!formData.locataire_id) return 'Veuillez sélectionner un locataire';
@@ -340,7 +355,7 @@ export function Contrats() {
   }, []);
 
   // =========================
-  // 📝 CRÉATION DE CONTRAT
+  //  CRÉATION DE CONTRAT
   // =========================
   const handleSubmit = useCallback(
     async (e?: React.FormEvent | React.MouseEvent) => {
@@ -350,12 +365,23 @@ export function Contrats() {
       if (submitting || submitLockRef.current) return;
       submitLockRef.current = true;
 
-      if (!profile?.agency_id) return;
+      if (!profile?.agency_id) {
+        submitLockRef.current = false;
+        return;
+      }
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const msg = 'Connexion indisponible : la création de contrat doit être confirmée par le serveur.';
+        setError(msg);
+        toast.error(msg);
+        submitLockRef.current = false;
+        return;
+      }
 
       const validationError = validateForm();
       if (validationError) {
         setError(validationError);
         toast.warning(validationError);
+        submitLockRef.current = false;
         return;
       }
 
@@ -377,7 +403,12 @@ export function Contrats() {
 
         closeModal();
         toast.success('Contrat créé avec succès');
-        loadData();
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['dashboard', 'contrats', 'paiements', 'impayes', 'patrimoine', 'finances'],
+        );
+        notifyDataChanged(['contrats', 'paiements', 'impayes', 'dashboard', 'patrimoine', 'finances']);
+        await loadData();
       } catch (err: unknown) {
         const msg = err instanceof ContratApiError
           ? err.message
@@ -389,21 +420,25 @@ export function Contrats() {
         submitLockRef.current = false;
       }
     },
-    [closeModal, formData, isIndividualOwner, validateForm, loadData, profile?.agency_id, submitting, toast]
+    [closeModal, formData, isIndividualOwner, validateForm, loadData, profile?.agency_id, profile?.id, submitting, toast]
   );
 
   // =========================
-  // ✏️ MODIFICATION DE CONTRAT
+  //  MODIFICATION DE CONTRAT
   // =========================
   const handleEditSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (!editing) return;
       if (!profile?.agency_id) return;
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        toast.error('Connexion indisponible : modification impossible hors ligne.');
+        return;
+      }
 
       setSubmitting(true);
       try {
-        // Mise à jour via Edge Function (libération unité si résiliation + event_log côté serveur)
+        // Mise a jour via Edge Function (liberation unite si resiliation + event_log cote serveur)
         await updateContratViaEdge({
           id: editing.id,
           statut: formData.statut as 'actif' | 'expire' | 'resilie',
@@ -414,7 +449,12 @@ export function Contrats() {
 
         closeEditModal();
         toast.success('Contrat modifié avec succès');
-        loadData();
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['dashboard', 'contrats', 'paiements', 'impayes', 'patrimoine', 'finances'],
+        );
+        notifyDataChanged(['contrats', 'paiements', 'impayes', 'dashboard', 'patrimoine', 'finances']);
+        await loadData();
       } catch (err: unknown) {
         console.error('Erreur modification:', err);
         const msg = err instanceof ContratApiError
@@ -425,11 +465,11 @@ export function Contrats() {
         setSubmitting(false);
       }
     },
-    [closeEditModal, editing, formData, isIndividualOwner, loadData, profile?.agency_id, toast]
+    [closeEditModal, editing, formData, isIndividualOwner, loadData, profile?.agency_id, profile?.id, toast]
   );
 
   // =========================
-  // 🖊️ OUVERTURE MODAL D'ÉDITION
+  // OUVERTURE MODAL D'ÉDITION
   // =========================
   const handleEdit = useCallback((contrat: Contrat) => {
     setEditing(contrat);
@@ -448,7 +488,7 @@ export function Contrats() {
   }, []);
 
   // =========================
-  // 📄 TÉLÉCHARGEMENT PDF
+  //  TÉLÉCHARGEMENT PDF
   // =========================
   const handleDownloadPDF = useCallback(async (contratId: string) => {
     if (!profile?.agency_id) return;
@@ -508,6 +548,10 @@ export function Contrats() {
 
   const confirmResiliation = useCallback(async () => {
     if (!profile?.agency_id || !resiliationTarget) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      toast.error('Connexion indisponible : la résiliation doit être confirmée par le serveur.');
+      return;
+    }
     if (!resiliationForm.date) {
       toast.warning('Veuillez renseigner la date de résiliation');
       return;
@@ -533,6 +577,11 @@ export function Contrats() {
         motif: '',
         observations: '',
       });
+      await invalidateOperationalCaches(
+        { agencyId: profile.agency_id, userId: profile.id },
+        ['dashboard', 'contrats', 'paiements', 'impayes', 'patrimoine', 'finances'],
+      );
+      notifyDataChanged(['contrats', 'paiements', 'impayes', 'dashboard', 'patrimoine', 'finances']);
       await loadData();
     } catch (err: unknown) {
       const msg = err instanceof ContratApiError
@@ -543,7 +592,7 @@ export function Contrats() {
     } finally {
       setResiliating(false);
     }
-  }, [loadData, profile?.agency_id, resiliationForm, resiliationTarget, toast]);
+  }, [loadData, profile?.agency_id, profile?.id, resiliationForm, resiliationTarget, toast]);
 
   // =========================
   // COLONNES DU TABLEAU
@@ -661,7 +710,7 @@ export function Contrats() {
   );
 
   // =========================
-  // 🧩 RENDU
+  //  RENDU
   // =========================
   if (loading) {
     return <PageSkeleton title="Contrats" variant="table" />;
@@ -697,7 +746,11 @@ export function Contrats() {
 
   return (
     <div className="sk-page-shell space-y-6 lg:space-y-8">
-      {/* 📊 En-tête et statistiques */}
+      {cacheTimestamp && (
+        <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
+      )}
+
+      {/*  En-tête et statistiques */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
         <div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black mb-2 text-slate-950">

@@ -1116,7 +1116,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
         </div>
 
         <div className="mx-auto mt-10 flex max-w-7xl flex-col gap-3 border-t border-white/10 pt-6 text-xs font-semibold text-emerald-50/46 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {year} Samay Këur. Tous droits réservés.</p>
+          <p>{year} Samay Këur. Tous droits réservés.</p>
           <div className="flex flex-wrap gap-5">
             <a href="#" className="hover:text-white">Confidentialité</a>
             <a href="#" className="hover:text-white">Conditions</a>

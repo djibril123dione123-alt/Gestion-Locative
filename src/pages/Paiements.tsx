@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
@@ -26,8 +26,9 @@ import { generatePaiementFacturePDF } from '../lib/pdf';
 import { useToast } from '../hooks/useToast';
 import { useTracking } from '../hooks/useTracking';
 import { useExport } from '../hooks/useExport';
-import { useBackup } from '../hooks/useBackup';
 import { useOfflineSync } from '../hooks/useOfflineSync';
+import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
+import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { formatCurrency } from '../lib/formatters';
 import {
   buildPaiementPayload,
@@ -61,11 +62,10 @@ interface PaiementsProps {
 export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const { profile, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
-  const { success, error: showError, warning: showWarning, toasts, removeToast } = useToast();
+  const { success, error: showError, toasts, removeToast } = useToast();
   const { track } = useTracking();
   const { exportPaiements, exporting: exportingXlsx } = useExport();
-  const { save: saveBackup, getSnapshot } = useBackup();
-  const { isOnline, enqueue: queueMutation } = useOfflineSync();
+  const { isOnline } = useOfflineSync();
 
   const [paiements, setPaiements] = useState<PaiementRow[]>([]);
   const [contrats, setContrats] = useState<ContratRow[]>([]);
@@ -80,6 +80,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [exportingId, setExportingId] = useState<string | null>(null);
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
 
   const today = new Date();
   const currentMonthYYYYMM = today.toISOString().slice(0, 7);
@@ -106,38 +107,38 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const loadData = async () => {
     if (!profile?.agency_id) return;
     try {
-      const [paiementsRes, contratsRes] = await Promise.all([
-        supabase
-          .from('paiements')
-          .select('*, contrats(loyer_mensuel, commission, locataires(nom, prenom), unites(nom,id,immeubles(nom,bailleurs(id,nom,prenom))))')
-          .eq('agency_id', profile.agency_id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('contrats')
-          .select('id, date_debut, date_fin, loyer_mensuel, commission, locataires(nom, prenom), unites(nom, id, immeubles(nom,bailleurs(id,nom,prenom))))')
-          .eq('agency_id', profile.agency_id)
-          .eq('statut', 'actif'),
-      ]);
+      if (paiements.length === 0) setLoading(true);
+      const result = await readWithCache(
+        { agencyId: profile.agency_id, userId: profile.id },
+        'paiements-page',
+        async () => {
+          const [paiementsRes, contratsRes] = await Promise.all([
+            supabase
+              .from('paiements')
+              .select('*, contrats(loyer_mensuel, commission, locataires(nom, prenom), unites(nom,id,immeubles(nom,bailleurs(id,nom,prenom))))')
+              .eq('agency_id', profile.agency_id)
+              .order('created_at', { ascending: false }),
+            supabase
+              .from('contrats')
+              .select('id, date_debut, date_fin, loyer_mensuel, commission, locataires(nom, prenom), unites(nom, id, immeubles(nom,bailleurs(id,nom,prenom))))')
+              .eq('agency_id', profile.agency_id)
+              .eq('statut', 'actif'),
+          ]);
+          if (paiementsRes.error) throw paiementsRes.error;
+          if (contratsRes.error) throw contratsRes.error;
+          return {
+            paiements: (paiementsRes.data || []) as unknown as PaiementRow[],
+            contrats: (contratsRes.data || []) as unknown as ContratRow[],
+          };
+        },
+        { timeoutMs: 7_000 },
+      );
 
-      const data = (paiementsRes.data || []) as unknown as PaiementRow[];
-      setPaiements(data);
-      setContrats((contratsRes.data || []) as unknown as ContratRow[]);
-      saveBackup('paiements', data).catch(() => {});
+      setPaiements(result.data.paiements);
+      setContrats(result.data.contrats);
+      setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
     } catch {
-      const [cachedPaiements, cachedContrats] = await Promise.all([
-        getSnapshot('paiements'),
-        getSnapshot('contrats'),
-      ]);
-
-      if (cachedPaiements) {
-        setPaiements(cachedPaiements.data as PaiementRow[]);
-        if (cachedContrats) {
-          setContrats(cachedContrats.data as ContratRow[]);
-        }
-        showWarning('Connexion instable : affichage des paiements sauvegardes localement.');
-      } else {
-        showError('Impossible de charger les paiements. Verifiez votre connexion puis reessayez.');
-      }
+      showError('Impossible de charger les paiements. Vérifiez votre connexion puis réessayez.');
     } finally {
       setLoading(false);
     }
@@ -150,9 +151,20 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
 
   // Listen for cross-component payment creation events (e.g. from LoyersImpayes)
   useEffect(() => {
-    const handler = () => { loadData(); };
+    const handler = (event?: Event) => {
+      const domains = event
+        ? (event as CustomEvent<{ domains?: string[] }>).detail?.domains ?? []
+        : [];
+      if (domains.length === 0 || domains.includes('paiements')) {
+        void loadData();
+      }
+    };
     window.addEventListener('paiement:refresh', handler);
-    return () => window.removeEventListener('paiement:refresh', handler);
+    window.addEventListener('samaykeur:data-changed', handler);
+    return () => {
+      window.removeEventListener('paiement:refresh', handler);
+      window.removeEventListener('samaykeur:data-changed', handler);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.agency_id]);
 
@@ -333,26 +345,8 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         profile.agency_id,
       );
 
-      // ── Mode hors ligne : on stocke uniquement les champs d'entrée de l'Edge Function
-      if (!isOnline && !editingPaiement) {
-        const idempotencyKey = crypto.randomUUID();
-        await queueMutation({
-          action: 'paiement_create',
-          entity_type: 'paiements',
-          payload: {
-            contrat_id: formData.contrat_id,
-            montant_total: montant,
-            mois_concerne: moisConcerne,
-            date_paiement: formData.date_paiement,
-            mode_paiement: formData.mode_paiement,
-            statut: formData.statut,
-            idempotency_key: idempotencyKey,
-            reference: formData.reference || null,
-          },
-          timestamp: Date.now(),
-        });
-        success('Paiement enregistré localement — il sera synchronisé dès le retour de connexion');
-        closeModal();
+      if (!isOnline) {
+        showError("Connexion indisponible : les paiements doivent etre confirmes par le serveur. Retablissez le reseau puis reessayez.");
         return;
       }
 
@@ -399,7 +393,12 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
 
       success(editingPaiement ? 'Paiement modifié avec succès' : 'Paiement enregistré avec succès');
       closeModal();
-      loadData();
+      await invalidateOperationalCaches(
+        { agencyId: profile.agency_id, userId: profile.id },
+        ['dashboard', 'paiements', 'impayes', 'contrats', 'finances'],
+      );
+      notifyDataChanged(['paiements', 'impayes', 'dashboard', 'finances', 'contrats']);
+      await loadData();
     } catch (error: unknown) {
       if (error instanceof PaiementApiError) {
         showError(error.message);
@@ -417,6 +416,10 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
 
   const confirmDelete = async () => {
     if (!profile?.agency_id || !deleteTarget) return;
+    if (!isOnline) {
+      showError('Connexion indisponible : annulation impossible hors ligne.');
+      return;
+    }
     setIsDeleting(true);
     try {
       await cancelPaiementViaEdge({ id: deleteTarget.id });
@@ -429,7 +432,12 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       });
       success('Paiement annulé avec succès');
       setDeleteTarget(null);
-      loadData();
+      await invalidateOperationalCaches(
+        { agencyId: profile.agency_id, userId: profile.id },
+        ['dashboard', 'paiements', 'impayes', 'contrats', 'finances'],
+      );
+      notifyDataChanged(['paiements', 'impayes', 'dashboard', 'finances', 'contrats']);
+      await loadData();
     } catch (error: unknown) {
       if (error instanceof PaiementApiError) {
         showError(error.message);
@@ -704,6 +712,10 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
               Nouveau paiement
             </Button>
           </div>
+        )}
+
+        {cacheTimestamp && (
+          <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
         )}
 
         {loading ? (

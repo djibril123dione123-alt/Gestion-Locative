@@ -9,11 +9,12 @@ import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { usePlanLimits } from '../hooks/usePlanLimits';
-import { useBackup } from '../hooks/useBackup';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { getOrCreateIndividualOwnerBailleur } from '../services/individualOwner';
+import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
+import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 
 interface Immeuble {
   id: string;
@@ -44,6 +45,7 @@ export function Immeubles() {
   const [immeubles, setImmeubles] = useState<Immeuble[]>([]);
   const [bailleurs, setBailleurs] = useState<Bailleur[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingImmeuble, setEditingImmeuble] = useState<Immeuble | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Immeuble | null>(null);
@@ -52,12 +54,10 @@ export function Immeubles() {
   const {
     success: notifySuccess,
     error: notifyError,
-    warning: notifyWarning,
     toasts,
     removeToast,
   } = useToast();
   const planLimits = usePlanLimits();
-  const { save: saveBackup, getSnapshot } = useBackup();
   const [formData, setFormData] = useState({
     nom: '',
     adresse: '',
@@ -80,56 +80,52 @@ export function Immeubles() {
   const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
 
+    if (immeubles.length === 0) setLoading(true);
     try {
-      const [immeublesRes, bailleursRes] = await Promise.all([
-        supabase
-          .from('immeubles')
-          .select('*, bailleurs(nom, prenom)')
-          .eq('agency_id', profile.agency_id)
-          .eq('actif', true)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('bailleurs')
-          .select('id, nom, prenom')
-          .eq('agency_id', profile.agency_id)
-          .eq('actif', true),
-      ]);
+      const result = await readWithCache<{ immeubles: Immeuble[]; bailleurs: Bailleur[] }>(
+        { agencyId: profile.agency_id, userId: profile.id },
+        'immeubles-page',
+        async () => {
+          const [immeublesRes, bailleursRes] = await Promise.all([
+            supabase
+              .from('immeubles')
+              .select('*, bailleurs(nom, prenom)')
+              .eq('agency_id', profile.agency_id)
+              .eq('actif', true)
+              .order('created_at', { ascending: false }),
+            supabase
+              .from('bailleurs')
+              .select('id, nom, prenom')
+              .eq('agency_id', profile.agency_id)
+              .eq('actif', true),
+          ]);
 
-      if (immeublesRes.error) throw immeublesRes.error;
-      if (bailleursRes.error) throw bailleursRes.error;
+          if (immeublesRes.error) throw immeublesRes.error;
+          if (bailleursRes.error) throw bailleursRes.error;
 
-      const immeublesData = immeublesRes.data || [];
-      let bailleursData = (bailleursRes.data || []) as Bailleur[];
+          const immeublesData = (immeublesRes.data || []) as Immeuble[];
+          let bailleursData = (bailleursRes.data || []) as Bailleur[];
 
-      if (isIndividualOwner) {
-        const ownerBailleur = await getOrCreateIndividualOwnerBailleur({ profile, agency, accountProfile });
-        bailleursData = [ownerBailleur];
-      }
+          if (isIndividualOwner) {
+            const ownerBailleur = await getOrCreateIndividualOwnerBailleur({ profile, agency, accountProfile });
+            bailleursData = [ownerBailleur];
+          }
 
-      setImmeubles(immeublesData);
-      setBailleurs(bailleursData);
-      saveBackup('immeubles', immeublesData).catch(() => {});
-      saveBackup('bailleurs', bailleursData).catch(() => {});
+          return { immeubles: immeublesData, bailleurs: bailleursData };
+        },
+        { timeoutMs: 7_000 }
+      );
+
+      setImmeubles(result.data.immeubles);
+      setBailleurs(result.data.bailleurs);
+      setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
     } catch (error) {
-      const [cachedImmeubles, cachedBailleurs] = await Promise.all([
-        getSnapshot('immeubles'),
-        getSnapshot('bailleurs'),
-      ]);
-
-      if (cachedImmeubles) {
-        setImmeubles(cachedImmeubles.data as Immeuble[]);
-        if (cachedBailleurs) {
-          setBailleurs(cachedBailleurs.data as Bailleur[]);
-        }
-        notifyWarning('Connexion instable : affichage des immeubles sauvegardes localement.');
-      } else {
-        console.error('[Immeubles] load failed', error);
-        notifyError('Impossible de charger les immeubles. Verifiez votre connexion puis reessayez.');
-      }
+      console.error('[Immeubles] load failed', error);
+      notifyError('Biens indisponibles hors connexion sans cache local.');
     } finally {
       setLoading(false);
     }
-  }, [accountProfile, agency, getSnapshot, isIndividualOwner, notifyError, notifyWarning, profile, saveBackup]);
+  }, [accountProfile, agency, immeubles.length, isIndividualOwner, notifyError, profile]);
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -139,6 +135,10 @@ export function Immeubles() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!navigator.onLine) {
+      notifyError('Connexion indisponible : création ou modification impossible hors ligne.');
+      return;
+    }
 
     if (!editingImmeuble && !planLimits.canAddImmeuble) {
       notifyError('Limite atteinte sur votre plan actuel. Passez au plan Pro pour continuer.');
@@ -203,7 +203,14 @@ export function Immeubles() {
       }
 
       closeModal();
-      loadData();
+      if (profile?.agency_id && profile?.id) {
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['dashboard', 'patrimoine', 'contrats', 'impayes', 'finances', 'documents'],
+        );
+        notifyDataChanged(['patrimoine', 'contrats', 'impayes', 'dashboard', 'finances', 'documents']);
+      }
+      await loadData();
       notifySuccess(editingImmeuble ? 'Bien mis a jour' : isIndividualOwner ? 'Bien cree' : 'Immeuble cree');
     } catch (err: unknown) {
       console.error('[Immeubles] save failed', err);
@@ -230,6 +237,10 @@ export function Immeubles() {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
+    if (!navigator.onLine) {
+      notifyError('Connexion indisponible : suppression impossible hors ligne.');
+      return;
+    }
     setDeleting(true);
     try {
       const { error } = await supabase
@@ -239,7 +250,14 @@ export function Immeubles() {
       if (error) throw error;
       notifySuccess('Immeuble supprime');
       setDeleteTarget(null);
-      loadData();
+      if (profile?.agency_id && profile?.id) {
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['dashboard', 'patrimoine', 'contrats', 'impayes', 'finances', 'documents'],
+        );
+        notifyDataChanged(['patrimoine', 'contrats', 'impayes', 'dashboard', 'finances', 'documents']);
+      }
+      await loadData();
     } catch (err: unknown) {
       console.error('[Immeubles] delete failed', err);
       notifyError('Impossible de supprimer cet immeuble pour le moment.');
@@ -307,6 +325,11 @@ export function Immeubles() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+      <OfflineDataNotice
+        cachedAt={cacheTimestamp}
+        onRetry={loadData}
+        message="Les biens affichés viennent du dernier chargement réussi. Les modifications restent bloquées hors ligne pour protéger les relations bailleur/bien."
+      />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2">{pageTitle}</h1>

@@ -28,6 +28,8 @@ import Welcome from './pages/Welcome';
 import { runFullBackup, getLastBackupTimestamp } from './services/localBackup';
 import { recoverStaleSyncing } from './services/offlineQueue';
 import { identifyUser, trackPageView } from './lib/analytics';
+import { readWithCache } from './services/offlineReadCache';
+import { warmOfflineRouteCache } from './services/offlineRoutePreloader';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Agences = lazy(() => import('./pages/Agences'));
@@ -48,6 +50,7 @@ const Inventaires = lazy(() => import('./pages/Inventaires').then(m => ({ defaul
 const Interventions = lazy(() => import('./pages/Interventions').then(m => ({ default: m.Interventions })));
 const Calendrier = lazy(() => import('./pages/Calendrier').then(m => ({ default: m.Calendrier })));
 const Documents = lazy(() => import('./pages/Documents').then(m => ({ default: m.Documents })));
+const DocumentScanner = lazy(() => import('./pages/DocumentScanner').then(m => ({ default: m.DocumentScanner })));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation').then(m => ({ default: m.AcceptInvitation })));
 const AuditDashboard = lazy(() => import('./pages/AuditDashboard').then(m => ({ default: m.AuditDashboard })));
 const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
@@ -89,6 +92,7 @@ const PAGE_LABELS: Record<string, string> = {
     interventions: 'Maintenance',
     calendrier: 'Calendrier',
     documents: 'Documents',
+    'documents/scan': 'Scanner un document',
     audit: 'Control Tower',
     pricing: 'Tarifs',
 };
@@ -161,13 +165,13 @@ function AppContent() {
     }, [profile]);
 
     useEffect(() => {
-        if (!loading && user && !profile) {
+        if (!loading && user && !profile && isOnline) {
             const timer = setTimeout(() => {
                 setShowWelcomeAnyway(true);
             }, 5000);
             return () => clearTimeout(timer);
         }
-    }, [loading, user, profile]);
+    }, [isOnline, loading, user, profile]);
 
     useEffect(() => {
         if (user && !invitationToken) {
@@ -187,15 +191,21 @@ function AppContent() {
         const lastTs = getLastBackupTimestamp();
         const isDue = !lastTs || (Date.now() - lastTs) > ONE_DAY_MS;
         if (!isDue) return;
-        runFullBackup(profile.agency_id).catch(() => {
+        runFullBackup(profile.agency_id, profile.id).catch(() => {
             // Fail silencieux - le prochain démarrage réessaiera
         });
-    }, [profile?.agency_id]);
+    }, [profile?.agency_id, profile?.id]);
 
     // Récupération des mutations bloquées en "syncing"
     useEffect(() => {
         recoverStaleSyncing().catch(() => { /* noop */ });
     }, []);
+
+    useEffect(() => {
+        if (profile?.agency_id && isOnline) {
+            warmOfflineRouteCache();
+        }
+    }, [isOnline, profile?.agency_id]);
 
     useEffect(() => {
         if (!profile?.agency_id || profile.role === 'super_admin') {
@@ -206,18 +216,27 @@ function AppContent() {
         let alive = true;
         void (async () => {
             try {
-                const { data } = await supabase
-                    .from('agency_settings')
-                    .select('module_depenses_actif,module_inventaires_actif,module_interventions_actif,mode_avance_actif')
-                    .eq('agency_id', profile.agency_id)
-                    .maybeSingle();
+                const result = await readWithCache(
+                    { agencyId: profile.agency_id, userId: profile.id },
+                    'app-module-settings',
+                    async () => {
+                        const { data, error } = await supabase
+                            .from('agency_settings')
+                            .select('module_depenses_actif,module_inventaires_actif,module_interventions_actif,mode_avance_actif')
+                            .eq('agency_id', profile.agency_id)
+                            .maybeSingle();
+                        if (error) throw error;
+                        return {
+                            module_depenses_actif: data?.module_depenses_actif ?? true,
+                            module_inventaires_actif: data?.module_inventaires_actif ?? false,
+                            module_interventions_actif: data?.module_interventions_actif ?? false,
+                            mode_avance_actif: data?.mode_avance_actif ?? false,
+                        };
+                    },
+                    { timeoutMs: 5_000 }
+                );
                 if (!alive) return;
-                setModuleSettings({
-                    module_depenses_actif: data?.module_depenses_actif ?? true,
-                    module_inventaires_actif: data?.module_inventaires_actif ?? false,
-                    module_interventions_actif: data?.module_interventions_actif ?? false,
-                    mode_avance_actif: data?.mode_avance_actif ?? false,
-                });
+                setModuleSettings(result.data);
             } catch {
                 if (!alive) return;
                 setModuleSettings({
@@ -232,7 +251,7 @@ function AppContent() {
         return () => {
             alive = false;
         };
-    }, [profile?.agency_id, profile?.role]);
+    }, [profile?.agency_id, profile?.id, profile?.role]);
 
     useEffect(() => {
         if (!profile?.agency_id || !profile.id || profile.role === 'super_admin' || profile.role === 'admin') {
@@ -242,19 +261,28 @@ function AppContent() {
 
         let alive = true;
         void (async () => {
-            const { data, error } = await supabase
-                .from('user_page_permissions')
-                .select('page,access_level,can_create,can_update,can_delete,can_export,can_manage')
-                .eq('agency_id', profile.agency_id)
-                .eq('user_id', profile.id);
-
-            if (!alive) return;
-            if (error) {
-                console.warn('[rbac] permissions load failed', error.message);
+            try {
+                const result = await readWithCache(
+                    { agencyId: profile.agency_id, userId: profile.id },
+                    `app-page-permissions:${profile.id}`,
+                    async () => {
+                        const { data, error } = await supabase
+                            .from('user_page_permissions')
+                            .select('page,access_level,can_create,can_update,can_delete,can_export,can_manage')
+                            .eq('agency_id', profile.agency_id)
+                            .eq('user_id', profile.id);
+                        if (error) throw error;
+                        return permissionRowsToMap(data);
+                    },
+                    { timeoutMs: 5_000 }
+                );
+                if (!alive) return;
+                setUserPermissions(result.data);
+            } catch (error) {
+                if (!alive) return;
+                console.warn('[rbac] permissions load failed', error instanceof Error ? error.message : String(error));
                 setUserPermissions({});
-                return;
             }
-            setUserPermissions(permissionRowsToMap(data));
         })();
 
         return () => {
@@ -309,8 +337,14 @@ function AppContent() {
             <div className="flex items-center justify-center min-h-screen bg-brand-paper p-4">
                 <div className="max-w-md rounded-lg border border-slate-200 bg-white p-8 text-center shadow-premium">
                     <BrandMark size="lg" tone="light" animated className="mx-auto mb-4" />
-                    <p className="text-lg text-slate-900 font-semibold mb-2">Chargement de votre profil...</p>
-                    <p className="text-sm text-slate-600 mb-6">Cela peut prendre quelques secondes</p>
+                    <p className="text-lg text-slate-900 font-semibold mb-2">
+                        {!isOnline ? 'Profil indisponible hors connexion' : 'Chargement de votre profil...'}
+                    </p>
+                    <p className="text-sm text-slate-600 mb-6">
+                        {!isOnline
+                            ? "Votre session est conservee. Reconnectez le reseau ou revenez apres un premier chargement complet pour utiliser le cache local."
+                            : 'Cela peut prendre quelques secondes'}
+                    </p>
                     <button
                         onClick={async () => {
                             try {
@@ -413,6 +447,8 @@ function AppContent() {
                 return <Calendrier />;
             case 'documents':
                 return <Documents />;
+            case 'documents/scan':
+                return <DocumentScanner />;
             case 'audit':
                 return <AuditDashboard />;
             case 'pricing':

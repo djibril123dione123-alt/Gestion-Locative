@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+﻿import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
@@ -13,6 +13,8 @@ import { formatPersonName } from '../lib/people';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
+import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import {
   updateBailleurLifecycleViaEdge,
   type BailleurLifecycleStatus,
@@ -75,7 +77,7 @@ const ErrorAlert: React.FC<{ message: string; onClose: () => void }> = ({ messag
       onClick={onClose}
       className="text-red-700 hover:text-red-900 transition"
     >
-      ✕
+      ×
     </button>
   </div>
 );
@@ -108,6 +110,7 @@ export function Bailleurs() {
   const [lifecycleImpacts, setLifecycleImpacts] = useState<BailleurLifecycleImpacts | null>(null);
   const [loadingImpacts, setLoadingImpacts] = useState(false);
   const [isLifecycleSubmitting, setIsLifecycleSubmitting] = useState(false);
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
 
   // État du formulaire avec commission et debut_contrat
   const [formData, setFormData] = useState<FormData>({
@@ -129,19 +132,28 @@ export function Bailleurs() {
     if (!profile?.agency_id) return;
 
     try {
-      setLoading(true);
+      if (bailleurs.length === 0) setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from('bailleurs')
-        .select('*')
-        .eq('agency_id', profile.agency_id)
-        .eq('actif', true)
-        .order('created_at', { ascending: false });
+      const result = await readWithCache<Bailleur[]>(
+        { agencyId: profile.agency_id, userId: user?.id ?? null },
+        'bailleurs-page',
+        async () => {
+          const { data, error: fetchError } = await supabase
+            .from('bailleurs')
+            .select('*')
+            .eq('agency_id', profile.agency_id)
+            .eq('actif', true)
+            .order('created_at', { ascending: false });
 
-      if (fetchError) throw fetchError;
+          if (fetchError) throw fetchError;
+          return (data || []) as Bailleur[];
+        },
+        { timeoutMs: 7_000 },
+      );
 
-      setBailleurs(data || []);
+      setBailleurs(result.data);
+      setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
     } catch (err) {
       console.error('Erreur lors du chargement des bailleurs:', err);
       const errorMessage = translateSupabaseError(err);
@@ -150,7 +162,7 @@ export function Bailleurs() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.agency_id, toast]);
+  }, [bailleurs.length, profile?.agency_id, toast, user?.id]);
 
   /**
    * Chargement initial des bailleurs
@@ -189,7 +201,13 @@ export function Bailleurs() {
     
     // Validation basique
     if (!formData.prenom.trim() || !formData.nom.trim() || !formData.telephone.trim()) {
-      setError('Les champs Pr�nom, Nom et T�l�phone sont obligatoires.');
+      setError('Les champs Prénom, Nom et Téléphone sont obligatoires.');
+      return;
+    }
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError('Connexion indisponible : enregistrement impossible hors ligne.');
+      toast.error('Connexion indisponible : enregistrement impossible hors ligne.');
       return;
     }
 
@@ -222,7 +240,7 @@ export function Bailleurs() {
       };
 
       if (editingBailleur) {
-        // Mise à jour
+
         const { error: updateError } = await supabase
           .from('bailleurs')
           .update(submitData)
@@ -246,6 +264,13 @@ export function Bailleurs() {
       }
 
       closeModal();
+      if (profile?.agency_id && profile?.id) {
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['bailleurs', 'patrimoine', 'dashboard', 'finances', 'documents'],
+        );
+        notifyDataChanged(['bailleurs', 'patrimoine', 'dashboard', 'finances', 'documents']);
+      }
       await loadBailleurs();
     } catch (err: unknown) {
       console.error('Erreur lors de l\'enregistrement:', err);
@@ -279,6 +304,11 @@ export function Bailleurs() {
 
   const loadLifecycleImpacts = async (bailleur: Bailleur) => {
     if (!profile?.agency_id) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setLifecycleImpacts(null);
+      setLoadingImpacts(false);
+      return;
+    }
     setLoadingImpacts(true);
     try {
       const { data: immeubles } = await supabase
@@ -355,6 +385,10 @@ export function Bailleurs() {
 
   const confirmLifecycle = async () => {
     if (!lifecycleTarget) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setError('Connexion indisponible : cette action métier doit être confirmée par le serveur.');
+      return;
+    }
     if (!lifecycleForm.motif.trim() || lifecycleForm.motif.trim().length < 3) {
       setError('Le motif doit contenir au moins 3 caracteres.');
       return;
@@ -378,6 +412,13 @@ export function Bailleurs() {
       toast.success('Cycle de vie du bailleur mis a jour');
       setLifecycleTarget(null);
       setLifecycleImpacts(null);
+      if (profile?.agency_id && profile?.id) {
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['bailleurs', 'patrimoine', 'dashboard', 'finances'],
+        );
+        notifyDataChanged(['bailleurs', 'patrimoine', 'dashboard', 'finances']);
+      }
       await loadBailleurs();
     } catch (err) {
       console.error('Erreur cycle de vie bailleur:', err);
@@ -532,7 +573,7 @@ export function Bailleurs() {
   }
 
   return (
-    <div className="sk-page-shell max-w-7xl mx-auto animate-fadeIn">
+    <div className="sk-page-shell animate-fadeIn">
       {/* En-tête */}
       <div className="sk-page-hero mb-6 flex flex-col items-start justify-between gap-4 sm:mb-6 sm:flex-row sm:items-center lg:mb-8">
         <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-action-500/10 blur-3xl" />
@@ -556,6 +597,13 @@ export function Bailleurs() {
 
       {/* Affichage des erreurs globales */}
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
+      {cacheTimestamp && (
+        <OfflineDataNotice
+          cachedAt={cacheTimestamp}
+          onRetry={loadBailleurs}
+          retrying={loading}
+        />
+      )}
 
       {/* Conteneur principal */}
       <div className="sk-card-premium overflow-hidden transition-all duration-300">
@@ -587,7 +635,7 @@ export function Bailleurs() {
         </div>
 
         {/* Tableau */}
-        <div className="p-4 sm:p-6 overflow-x-auto">
+        <div className="p-3 sm:p-4 xl:p-5">
           {filteredBailleurs.length === 0 ? (
             <div className="text-center py-12">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
@@ -944,5 +992,4 @@ export function Bailleurs() {
     </div>
   );
 }
-
 

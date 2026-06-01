@@ -45,9 +45,18 @@ export interface BackupPreview {
 }
 
 /** Sauvegarde un snapshot d'une entité dans IndexedDB */
-export async function saveSnapshot(key: SnapshotKey, data: unknown[]): Promise<void> {
+export function buildSnapshotId(key: SnapshotKey, scope?: { agencyId?: string | null; userId?: string | null }): string {
+  if (!scope?.agencyId || !scope?.userId) return key;
+  return `${scope.agencyId}:${scope.userId}:${key}`;
+}
+
+export async function saveSnapshot(
+  key: SnapshotKey,
+  data: unknown[],
+  scope?: { agencyId?: string | null; userId?: string | null },
+): Promise<void> {
   try {
-    await dbPut('snapshots', { id: key, data, timestamp: Date.now() });
+    await dbPut('snapshots', { id: buildSnapshotId(key, scope), data, timestamp: Date.now() });
     localStorage.setItem(BACKUP_TIMESTAMP_KEY, String(Date.now()));
   } catch (err) {
     console.warn('[Backup] saveSnapshot failed:', key, err);
@@ -57,9 +66,14 @@ export async function saveSnapshot(key: SnapshotKey, data: unknown[]): Promise<v
 /** Lit le dernier snapshot d'une entité */
 export async function loadSnapshot(
   key: SnapshotKey,
+  scope?: { agencyId?: string | null; userId?: string | null },
 ): Promise<{ data: unknown[]; timestamp: number } | null> {
   try {
-    const snap = await dbGet('snapshots', key);
+    const snap = await dbGet('snapshots', buildSnapshotId(key, scope));
+    if (!snap && scope?.agencyId && scope?.userId) {
+      const legacySnap = await dbGet('snapshots', key);
+      if (legacySnap) return { data: legacySnap.data as unknown[], timestamp: legacySnap.timestamp };
+    }
     if (!snap) return null;
     return { data: snap.data as unknown[], timestamp: snap.timestamp };
   } catch {
@@ -79,7 +93,7 @@ export function getLastBackupTimestamp(): number | null {
  * Sauvegarde complète depuis Supabase → IndexedDB pour toutes les tables.
  * Appelé manuellement ou automatiquement (daily).
  */
-export async function runFullBackup(agencyId: string): Promise<BackupMeta> {
+export async function runFullBackup(agencyId: string, userId?: string | null): Promise<BackupMeta> {
   const counts: Record<string, number> = {};
   const tables: { key: SnapshotKey; table: string }[] = [
     { key: 'bailleurs', table: 'bailleurs' },
@@ -99,7 +113,7 @@ export async function runFullBackup(agencyId: string): Promise<BackupMeta> {
           .eq('agency_id', agencyId);
         if (error) throw error;
         const rows = data ?? [];
-        await saveSnapshot(key, rows);
+        await saveSnapshot(key, rows, { agencyId, userId });
         counts[key] = rows.length;
       } catch (err) {
         console.warn(`[Backup] Failed to backup table ${table}:`, err);

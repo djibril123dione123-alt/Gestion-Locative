@@ -18,6 +18,7 @@ import {
   type SnapshotKey,
   type BackupPreview,
 } from '../services/localBackup';
+import { useAuth } from '../contexts/AuthContext';
 
 const DAILY_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
@@ -38,6 +39,7 @@ export interface UseBackupReturn {
 }
 
 export function useBackup(): UseBackupReturn {
+  const { profile, user } = useAuth();
   const [lastBackupTime, setLastBackupTime] = useState<number | null>(() =>
     getLastBackupTimestamp(),
   );
@@ -52,14 +54,14 @@ export function useBackup(): UseBackupReturn {
   const save = useCallback(async (key: SnapshotKey, data: unknown[]) => {
     setSaving(true);
     try {
-      await saveSnapshot(key, data);
+      await saveSnapshot(key, data, { agencyId: profile?.agency_id, userId: user?.id });
       setLastBackupTime(Date.now());
     } catch (err) {
       console.warn('[useBackup] save error:', err);
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [profile?.agency_id, user?.id]);
 
   const download = useCallback(async () => {
     setDownloading(true);
@@ -91,8 +93,8 @@ export function useBackup(): UseBackupReturn {
   );
 
   const getSnapshot = useCallback(
-    (key: SnapshotKey) => loadSnapshot(key),
-    [],
+    (key: SnapshotKey) => loadSnapshot(key, { agencyId: profile?.agency_id, userId: user?.id }),
+    [profile?.agency_id, user?.id],
   );
 
   return {

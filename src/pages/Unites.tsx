@@ -13,6 +13,8 @@ import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
+import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 
 interface Unite {
   id: string;
@@ -38,6 +40,7 @@ export function Unites() {
   const [filteredUnites, setFilteredUnites] = useState<Unite[]>([]);
   const [immeubles, setImmeubles] = useState<ImmeubleOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUnite, setEditingUnite] = useState<Unite | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Unite | null>(null);
@@ -67,33 +70,46 @@ export function Unites() {
   const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
 
+    if (unites.length === 0) setLoading(true);
     try {
-      const [unitesRes, immeublesRes] = await Promise.all([
-        supabase
-          .from('unites')
-          .select('*, immeubles(nom)')
-          .eq('agency_id', profile.agency_id)
-          .eq('actif', true)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('immeubles')
-          .select('id, nom')
-          .eq('agency_id', profile.agency_id)
-          .eq('actif', true),
-      ]);
+      const result = await readWithCache<{ unites: Unite[]; immeubles: ImmeubleOption[] }>(
+        { agencyId: profile.agency_id, userId: profile.id },
+        'unites-page',
+        async () => {
+          const [unitesRes, immeublesRes] = await Promise.all([
+            supabase
+              .from('unites')
+              .select('*, immeubles(nom)')
+              .eq('agency_id', profile.agency_id)
+              .eq('actif', true)
+              .order('created_at', { ascending: false }),
+            supabase
+              .from('immeubles')
+              .select('id, nom')
+              .eq('agency_id', profile.agency_id)
+              .eq('actif', true),
+          ]);
 
-      if (unitesRes.error) throw unitesRes.error;
-      if (immeublesRes.error) throw immeublesRes.error;
+          if (unitesRes.error) throw unitesRes.error;
+          if (immeublesRes.error) throw immeublesRes.error;
+          return {
+            unites: (unitesRes.data || []) as Unite[],
+            immeubles: (immeublesRes.data || []) as ImmeubleOption[],
+          };
+        },
+        { timeoutMs: 7_000 }
+      );
 
-      setUnites(unitesRes.data || []);
-      setFilteredUnites(unitesRes.data || []);
-      setImmeubles(immeublesRes.data || []);
+      setUnites(result.data.unites);
+      setFilteredUnites(result.data.unites);
+      setImmeubles(result.data.immeubles);
+      setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
-  }, [profile?.agency_id]);
+  }, [profile?.agency_id, profile?.id, unites.length]);
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -103,6 +119,10 @@ export function Unites() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!navigator.onLine) {
+      toast.error('Connexion indisponible : création ou modification impossible hors ligne.');
+      return;
+    }
 
     if (!editingUnite && !planLimits.canAddUnite) {
       toast.error('Limite atteinte sur votre plan actuel. Passez au plan Pro pour continuer.');
@@ -132,7 +152,14 @@ export function Unites() {
       }
 
       closeModal();
-      loadData();
+      if (profile?.agency_id && profile?.id) {
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['dashboard', 'patrimoine', 'contrats', 'paiements', 'impayes', 'finances', 'documents'],
+        );
+        notifyDataChanged(['patrimoine', 'contrats', 'paiements', 'impayes', 'dashboard', 'finances', 'documents']);
+      }
+      await loadData();
       toast.success(editingUnite ? 'Produit mis à jour' : 'Produit créé');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors de l\'enregistrement';
@@ -158,6 +185,10 @@ export function Unites() {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
+    if (!navigator.onLine) {
+      toast.error('Connexion indisponible : suppression impossible hors ligne.');
+      return;
+    }
     setDeleting(true);
     try {
       const { error } = await supabase
@@ -167,7 +198,14 @@ export function Unites() {
       if (error) throw error;
       toast.success('Produit supprimé');
       setDeleteTarget(null);
-      loadData();
+      if (profile?.agency_id && profile?.id) {
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['dashboard', 'patrimoine', 'contrats', 'paiements', 'impayes', 'finances', 'documents'],
+        );
+        notifyDataChanged(['patrimoine', 'contrats', 'paiements', 'impayes', 'dashboard', 'finances', 'documents']);
+      }
+      await loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors de la suppression';
       toast.error(msg);
@@ -218,6 +256,11 @@ export function Unites() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+      <OfflineDataNotice
+        cachedAt={cacheTimestamp}
+        onRetry={loadData}
+        message="Les unités affichées viennent du dernier chargement réussi. Les modifications sont bloquées hors ligne pour éviter une incohérence locative."
+      />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Produit</h1>

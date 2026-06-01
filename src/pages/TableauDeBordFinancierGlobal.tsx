@@ -77,12 +77,14 @@ interface BailleurRow {
     id: string;
     nom: string;
     prenom: string;
+    actif?: boolean | null;
 }
 
 interface ImmeubleRow {
     id: string;
     nom: string;
     bailleur_id: string;
+    actif?: boolean | null;
     bailleurs?: { nom?: string | null; prenom?: string | null } | null;
 }
 
@@ -187,9 +189,9 @@ export function TableauDeBordFinancierGlobal() {
                 supabase.from('depenses').select('montant, date_depense').eq('agency_id', profile.agency_id).gte('date_depense', yearStartDate),
 
                 // 3. Données Structurelles
-                supabase.from('bailleurs').select('id, nom, prenom').eq('agency_id', profile.agency_id).eq('actif', true),
-                supabase.from('immeubles').select('id, nom, bailleur_id, nombre_unites, bailleurs(nom, prenom)').eq('agency_id', profile.agency_id).eq('actif', true), // [10]
-                supabase.from('agency_settings').select('nom_agence, adresse, telephone, email, logo_url, couleur_primaire, couleur_secondaire, pied_page_personnalise').eq('agency_id', profile.agency_id).maybeSingle(),
+                supabase.from('bailleurs').select('id, nom, prenom, actif').eq('agency_id', profile.agency_id),
+                supabase.from('immeubles').select('id, nom, bailleur_id, actif, nombre_unites, bailleurs(nom, prenom)').eq('agency_id', profile.agency_id), // [10]
+                supabase.from('agency_settings').select('agency_id, nom_agence, adresse, telephone, email, logo_url, couleur_primaire, couleur_secondaire, pied_page_personnalise').eq('agency_id', profile.agency_id).maybeSingle(),
             ]);
 
             // Extraction des données
@@ -200,8 +202,8 @@ export function TableauDeBordFinancierGlobal() {
             const paiementsAnnuels = paiementsAnnuelsRes.data || [];
             const depensesAnnuelles = depensesAnnuelsRes.data || [];
 
-            const bailleurs = (bailleursRes.data || []) as BailleurRow[];
-            const immeubles = (immeublesRes.data || []) as ImmeubleRow[];
+            const bailleurs = ((bailleursRes.data || []) as BailleurRow[]).filter((bailleur) => bailleur.actif !== false);
+            const immeubles = ((immeublesRes.data || []) as ImmeubleRow[]).filter((immeuble) => immeuble.actif !== false);
             setAgencySettings((settingsRes.data || null) as Partial<AgencySettings> | null);
 
 
@@ -398,6 +400,7 @@ export function TableauDeBordFinancierGlobal() {
         const reportRef = `RBL-${selectedMonth}-${bilan.bailleur_id.slice(0, 8).toUpperCase()}`;
         const pdfSettings: Partial<AgencySettings> = {
             ...(agencySettings ?? {}),
+            agency_id: agencySettings?.agency_id ?? profile?.agency_id ?? undefined,
             is_bailleur_account: accountProfile.isIndividualOwner,
             organization_type: accountProfile.type,
         };
@@ -481,7 +484,9 @@ export function TableauDeBordFinancierGlobal() {
             bilan.total_impayes > 0
                 ? 'Les reliquats ouverts représentent ' + formatCurrency(bilan.total_impayes) + ' et doivent rester prioritaires dans le suivi de gestion.'
                 : 'Les échéances enregistrées sur la période sont soldées, sans reliquat significatif à reporter.',
-            'Après ventilation des commissions, le montant net estimé au profit du bailleur ressort à ' + formatCurrency(bilan.total_net) + '.',
+            accountProfile.isIndividualOwner
+                ? 'Le revenu net estimé du propriétaire ressort à ' + formatCurrency(bilan.total_net) + '.'
+                : 'Après ventilation des commissions, le montant net estimé au profit du bailleur ressort à ' + formatCurrency(bilan.total_net) + '.',
         ];
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9.3);
@@ -602,7 +607,7 @@ export function TableauDeBordFinancierGlobal() {
                 Immeuble: i.immeuble_nom,
                 Unite: u.unite_nom,
                 Locataire: u.locataire_nom,
-                Statut: u.statut_paiement === 'partiel' ? 'Partiel' : 'Paye',
+                Statut: u.statut_paiement === 'partiel' ? 'Partiel' : 'Soldé',
                 Encaisse: formatCurrency(u.montant_encaisse),
                 Restant: formatCurrency(u.montant_restant),
             }))

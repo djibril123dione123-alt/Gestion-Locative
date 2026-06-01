@@ -6,6 +6,8 @@ import { supabase } from '../lib/supabase';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { Immeubles } from './Immeubles';
 import { Unites } from './Unites';
+import { readWithCache } from '../services/offlineReadCache';
+import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 
 interface ImmeubleStatRow {
   id: string;
@@ -27,6 +29,7 @@ export function Patrimoine() {
   const [immeubles, setImmeubles] = useState<ImmeubleStatRow[]>([]);
   const [unites, setUnites] = useState<UniteStatRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
 
   const loadStats = useCallback(async () => {
     if (!profile?.agency_id) {
@@ -34,34 +37,44 @@ export function Patrimoine() {
       return;
     }
 
-    setLoading(true);
+    if (immeubles.length === 0 && unites.length === 0) setLoading(true);
     try {
-      const [immeublesRes, unitesRes] = await Promise.all([
-        supabase
-          .from('immeubles')
-          .select('id, bailleur_id')
-          .eq('agency_id', profile.agency_id)
-          .eq('actif', true),
-        supabase
-          .from('unites')
-          .select('id, statut, loyer_base, immeuble_id')
-          .eq('agency_id', profile.agency_id)
-          .eq('actif', true),
-      ]);
+      const result = await readWithCache<{ immeubles: ImmeubleStatRow[]; unites: UniteStatRow[] }>(
+        { agencyId: profile.agency_id, userId: profile.id },
+        'patrimoine-stats',
+        async () => {
+          const [immeublesRes, unitesRes] = await Promise.all([
+            supabase
+              .from('immeubles')
+              .select('id, bailleur_id')
+              .eq('agency_id', profile.agency_id)
+              .eq('actif', true),
+            supabase
+              .from('unites')
+              .select('id, statut, loyer_base, immeuble_id')
+              .eq('agency_id', profile.agency_id)
+              .eq('actif', true),
+          ]);
 
-      if (immeublesRes.error) throw immeublesRes.error;
-      if (unitesRes.error) throw unitesRes.error;
+          if (immeublesRes.error) throw immeublesRes.error;
+          if (unitesRes.error) throw unitesRes.error;
+          return {
+            immeubles: (immeublesRes.data ?? []) as ImmeubleStatRow[],
+            unites: (unitesRes.data ?? []) as UniteStatRow[],
+          };
+        },
+        { timeoutMs: 7_000 }
+      );
 
-      setImmeubles((immeublesRes.data ?? []) as ImmeubleStatRow[]);
-      setUnites((unitesRes.data ?? []) as UniteStatRow[]);
+      setImmeubles(result.data.immeubles);
+      setUnites(result.data.unites);
+      setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
     } catch (error) {
       console.error('Erreur chargement patrimoine:', error);
-      setImmeubles([]);
-      setUnites([]);
     } finally {
       setLoading(false);
     }
-  }, [profile?.agency_id]);
+  }, [immeubles.length, profile?.agency_id, profile?.id, unites.length]);
 
   useEffect(() => {
     void loadStats();
@@ -123,6 +136,12 @@ export function Patrimoine() {
           </div>
         </div>
       </div>
+
+      <OfflineDataNotice
+        cachedAt={cacheTimestamp}
+        onRetry={loadStats}
+        message="Les indicateurs de patrimoine affichent le dernier état connu. La création ou modification d'un bien nécessite une connexion."
+      />
 
       <div className="rounded-2xl border border-emerald-950/10 bg-white/80 p-2 shadow-sm">
         <div className="flex gap-2 overflow-x-auto">

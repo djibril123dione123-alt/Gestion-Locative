@@ -105,12 +105,28 @@
 
 @layer components {
   .sk-page-shell {
-    @apply min-h-full bg-brand-paper/70 px-4 py-4 sm:px-6 lg:px-8 lg:py-6;
+    @apply mx-auto min-h-full w-full max-w-[110rem] bg-brand-paper/70 px-4 py-4 sm:px-6 lg:px-7 lg:py-5 2xl:px-8;
   }
 
   .sk-mobile-page {
-    @apply mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-[110rem] px-4 py-4 sm:px-6 lg:px-7 2xl:px-8;
     box-sizing: border-box;
+  }
+
+  .sk-page-contained {
+    @apply mx-auto w-full max-w-[110rem];
+  }
+
+  .sk-page-narrow {
+    @apply mx-auto w-full max-w-[92rem];
+  }
+
+  .sk-table-shell {
+    @apply w-full overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/[0.92] shadow-premium backdrop-blur;
+  }
+
+  .sk-table-scroll {
+    @apply w-full overflow-x-auto;
   }
 
   .sk-mobile-hero {
@@ -121,7 +137,7 @@
   }
 
   .sk-page-hero {
-    @apply relative overflow-hidden rounded-[1.4rem] border border-emerald-900/10 p-5 shadow-premium sm:p-6;
+    @apply relative overflow-hidden rounded-[1.4rem] border border-emerald-900/10 p-4 shadow-premium sm:p-5 lg:p-6;
     background:
       radial-gradient(circle at 94% 4%, rgba(255, 138, 0, 0.14), transparent 15rem),
       radial-gradient(circle at 0% 100%, rgba(31, 59, 46, 0.12), transparent 18rem),
@@ -219,7 +235,7 @@
   }
 
   .sk-metric-tile {
-    @apply rounded-[1.15rem] border border-emerald-950/10 bg-white/[0.94] p-4 shadow-sm backdrop-blur;
+    @apply rounded-[1.15rem] border border-emerald-950/10 bg-white/[0.94] p-3 shadow-sm backdrop-blur sm:p-4;
     background:
       radial-gradient(circle at 100% 0%, rgba(255, 138, 0, 0.055), transparent 9rem),
       linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 244, 236, 0.92));
@@ -674,6 +690,80 @@
 
   .premium-polish table td:last-child {
     white-space: nowrap;
+  }
+
+  @media (min-width: 1024px) and (max-width: 1440px) {
+    :root {
+      --sk-mobile-topbar-height: 3.25rem;
+    }
+
+    .sk-page-shell,
+    .sk-mobile-page {
+      padding-left: 1.25rem;
+      padding-right: 1.25rem;
+      padding-top: 1rem;
+      padding-bottom: 1.25rem;
+    }
+
+    .sk-page-shell :is(.space-y-6 > :not([hidden]) ~ :not([hidden])) {
+      --tw-space-y-reverse: 0;
+      margin-top: calc(1rem * calc(1 - var(--tw-space-y-reverse)));
+      margin-bottom: calc(1rem * var(--tw-space-y-reverse));
+    }
+
+    .sk-page-shell :is(.lg\:space-y-8 > :not([hidden]) ~ :not([hidden])) {
+      --tw-space-y-reverse: 0;
+      margin-top: calc(1.125rem * calc(1 - var(--tw-space-y-reverse)));
+      margin-bottom: calc(1.125rem * var(--tw-space-y-reverse));
+    }
+
+    .sk-page-hero,
+    .sk-premium-panel,
+    .sk-card-premium {
+      box-shadow: 0 14px 38px rgba(6, 17, 13, 0.07);
+    }
+
+    .sk-page-hero h1,
+    .sk-mobile-hero h1,
+    .sk-premium-panel h1 {
+      font-size: clamp(1.65rem, 2.2vw, 2.35rem);
+      line-height: 1.08;
+    }
+
+    .sk-page-hero p,
+    .sk-mobile-hero p {
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    .sk-metric-tile,
+    .sk-card,
+    .sk-card-premium,
+    .sk-premium-panel {
+      border-radius: 0.75rem;
+    }
+
+    .sk-metric-tile {
+      padding: 0.85rem;
+    }
+
+    .sk-action,
+    .sk-create-cta,
+    .sk-create-cta-muted {
+      min-height: 2.4rem;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
+      font-size: 0.78rem;
+    }
+
+    .premium-polish table th {
+      padding: 0.85rem 1rem;
+    }
+
+    .premium-polish table td {
+      padding: 0.85rem 1rem;
+      font-size: 0.84rem;
+    }
   }
 
   @media (max-width: 639px) {

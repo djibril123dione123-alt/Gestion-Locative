@@ -6,21 +6,24 @@ import {
   Bell,
   Building2,
   CheckCircle,
-  ChevronRight,
   ClipboardList,
   Command,
   CreditCard,
   Database,
+  Edit3,
   FileText,
   Flag,
+  Filter,
   Gauge,
   HardDrive,
   KeyRound,
   LifeBuoy,
+  Loader2,
   Lock,
   LogOut,
   Mail,
   Pause,
+  Plus,
   RefreshCw,
   Search,
   ShieldAlert,
@@ -28,10 +31,24 @@ import {
   Sparkles,
   TrendingDown,
   TrendingUp,
+  Trash2,
+  UserCog,
+  UserPlus,
   Users,
   Wallet,
+  X,
 } from 'lucide-react';
 import { BrandMark } from '../components/brand/BrandLogo';
+import { AgencyRequestsPanel } from '../components/console/AgencyRequestsPanel';
+import {
+  CreateAgencyModal,
+  DarkConfirmModal,
+  EditSubscriptionModal,
+  EditUserModal,
+  InviteUserModal,
+  type SubscriptionRow,
+  type UserRow,
+} from '../components/console/ConsoleModals';
 import { LoadingState } from '../components/ui/LoadingState';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../lib/formatters';
@@ -44,10 +61,55 @@ type AdminTab =
   | 'users'
   | 'product'
   | 'documents'
+  | 'requests'
   | 'support'
   | 'technical'
   | 'security'
   | 'configuration';
+
+const ADMIN_ROUTE_TABS: Record<string, AdminTab> = {
+  dashboard: 'overview',
+  console: 'overview',
+  agences: 'organizations',
+  organisations: 'organizations',
+  abonnement: 'subscriptions',
+  equipe: 'users',
+  utilisateurs: 'users',
+  documents: 'documents',
+  'documents/scan': 'documents',
+  demandes: 'requests',
+  support: 'support',
+  technique: 'technical',
+  technical: 'technical',
+  securite: 'security',
+  sécurité: 'security',
+  configuration: 'configuration',
+  notifications: 'support',
+  audit: 'security',
+  parametres: 'configuration',
+  pricing: 'subscriptions',
+  'tableau-de-bord-financier': 'product',
+};
+
+const ADMIN_TAB_ROUTES: Record<AdminTab, string> = {
+  overview: 'dashboard',
+  organizations: 'agences',
+  subscriptions: 'abonnement',
+  users: 'utilisateurs',
+  product: 'tableau-de-bord-financier',
+  documents: 'documents',
+  requests: 'demandes',
+  support: 'support',
+  technical: 'technique',
+  security: 'securite',
+  configuration: 'configuration',
+};
+
+function getAdminTabFromHash(): AdminTab {
+  if (typeof window === 'undefined') return 'overview';
+  const hashPage = window.location.hash.replace(/^#\/?/, '').split('?')[0] || 'dashboard';
+  return ADMIN_ROUTE_TABS[hashPage] ?? 'overview';
+}
 
 type HealthLevel = 'healthy' | 'watch' | 'risk' | 'critical';
 
@@ -131,7 +193,9 @@ interface SupportTicket {
 
 interface AdminFeatureFlag {
   id: string;
+  agency_id?: string | null;
   key?: string;
+  flag?: string;
   flag_name?: string;
   name?: string;
   description?: string | null;
@@ -149,6 +213,13 @@ interface AdminSnapshot {
   tickets?: SupportTicket[];
   feature_flags?: AdminFeatureFlag[];
   audit_logs?: OwnerLog[];
+}
+
+interface SaasConfigRow {
+  key: string;
+  value: unknown;
+  description: string | null;
+  updated_at: string;
 }
 
 const NAV_GROUPS: Array<{
@@ -169,6 +240,7 @@ const NAV_GROUPS: Array<{
       { id: 'users', label: 'Utilisateurs', icon: Users, description: 'Rôles, sessions et accès métier' },
       { id: 'product', label: 'Usage produit', icon: Activity, description: 'Adoption, modules et activité' },
       { id: 'documents', label: 'Documents', icon: FileText, description: 'Métadonnées, QR, erreurs PDF et stockage' },
+      { id: 'requests', label: 'Demandes', icon: ClipboardList, description: 'Demandes d’intégration et validation des espaces' },
       { id: 'support', label: 'Support', icon: LifeBuoy, description: 'Tickets, incidents clients et notes internes' },
     ],
   },
@@ -342,7 +414,7 @@ function EmptyPanel({ title, text }: { title: string; text: string }) {
 
 export function Console() {
   const { profile, signOut } = useAuth();
-  const [tab, setTab] = useState<AdminTab>('overview');
+  const [tab, setTab] = useState<AdminTab>(() => getAdminTabFromHash());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState('');
@@ -355,7 +427,39 @@ export function Console() {
   const [logs, setLogs] = useState<OwnerLog[]>([]);
   const [featureFlags, setFeatureFlags] = useState<AdminFeatureFlag[]>([]);
   const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
+  const [showCreateAgency, setShowCreateAgency] = useState(false);
+  const [showInviteUser, setShowInviteUser] = useState(false);
+  const [editUser, setEditUser] = useState<UserRow | null>(null);
+  const [editSub, setEditSub] = useState<SubscriptionRow | null>(null);
+  const [selectedAgency, setSelectedAgency] = useState<AgencyStat | null>(null);
+  const [confirm, setConfirm] = useState<{
+    title: string;
+    message: string;
+    confirmText?: string;
+    destructive?: boolean;
+    requireText?: string;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
   const platformSnapshot = snapshot?.platform;
+
+  const selectAdminTab = useCallback((nextTab: AdminTab) => {
+    setTab(nextTab);
+    if (typeof window === 'undefined') return;
+    const nextRoute = ADMIN_TAB_ROUTES[nextTab];
+    const nextHash = `#/${nextRoute}`;
+    if (window.location.hash !== nextHash) {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`);
+    }
+  }, []);
+
+  useEffect(() => {
+    const syncTabWithRoute = () => setTab(getAdminTabFromHash());
+    window.addEventListener('hashchange', syncTabWithRoute);
+    syncTabWithRoute();
+    return () => window.removeEventListener('hashchange', syncTabWithRoute);
+  }, []);
 
   const loadAll = useCallback(async () => {
     setRefreshing(true);
@@ -369,8 +473,10 @@ export function Console() {
         supabase.from('feature_flags').select('*').order('updated_at', { ascending: false }).limit(80),
       ]);
 
+      let nextSnapshot: AdminSnapshot | null = null;
       if (isSettled(snapshotResult) && !snapshotResult.value.error && snapshotResult.value.data) {
-        setSnapshot(snapshotResult.value.data as AdminSnapshot);
+        nextSnapshot = snapshotResult.value.data as AdminSnapshot;
+        setSnapshot(nextSnapshot);
       }
 
       if (isSettled(agResult) && !agResult.value.error && agResult.value.data) {
@@ -402,8 +508,8 @@ export function Console() {
 
       if (isSettled(flagResult) && !flagResult.value.error && flagResult.value.data) {
         setFeatureFlags(flagResult.value.data as AdminFeatureFlag[]);
-      } else if (snapshot?.feature_flags) {
-        setFeatureFlags(snapshot.feature_flags);
+      } else if (nextSnapshot?.feature_flags) {
+        setFeatureFlags(nextSnapshot.feature_flags);
       }
 
       setLastLoadedAt(new Date().toISOString());
@@ -411,7 +517,7 @@ export function Console() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [snapshot?.feature_flags]);
+  }, []);
 
   useEffect(() => {
     void loadAll();
@@ -496,14 +602,7 @@ export function Console() {
     targetLabel?: string;
     metadata?: Record<string, unknown>;
   }) => {
-    await supabase.rpc('admin_audit_action', {
-      p_action: payload.action,
-      p_reason: payload.reason,
-      p_target_organization_id: payload.targetOrganizationId ?? null,
-      p_target_user_id: null,
-      p_metadata: payload.metadata ?? {},
-    });
-    await supabase.from('owner_actions_log').insert({
+    const auditPayload = {
       actor_id: profile?.id,
       actor_email: profile?.email,
       action: payload.action,
@@ -511,7 +610,24 @@ export function Console() {
       target_id: payload.targetOrganizationId ?? null,
       target_label: payload.targetLabel ?? null,
       details: { reason: payload.reason, ...(payload.metadata ?? {}) },
-    });
+    };
+
+    const [rpcAudit, legacyAudit] = await Promise.allSettled([
+      supabase.rpc('admin_audit_action', {
+        p_action: payload.action,
+        p_reason: payload.reason,
+        p_target_organization_id: payload.targetOrganizationId ?? null,
+        p_target_user_id: null,
+        p_metadata: payload.metadata ?? {},
+      }),
+      supabase.from('owner_actions_log').insert(auditPayload),
+    ]);
+
+    const rpcError = rpcAudit.status === 'fulfilled' ? rpcAudit.value.error : rpcAudit.reason;
+    const legacyError = legacyAudit.status === 'fulfilled' ? legacyAudit.value.error : legacyAudit.reason;
+    if (rpcError && legacyError) {
+      console.warn('[Console] audit best-effort failed', rpcError, legacyError);
+    }
   };
 
   const updateAgencyStatus = async (agency: AgencyStat, nextStatus: 'active' | 'suspended') => {
@@ -527,6 +643,80 @@ export function Console() {
       metadata: { previous_status: agency.status, next_status: nextStatus },
     });
     setAgencies((current) => current.map((item) => item.id === agency.id ? { ...item, status: nextStatus } : item));
+    setSelectedAgency((current) => current?.id === agency.id ? { ...current, status: nextStatus } : current);
+    setFeedback({ kind: 'success', text: `${agency.name} est maintenant ${nextStatus === 'active' ? 'active' : 'suspendue'}.` });
+  };
+
+  const updateAgencyPlan = async (agency: AgencyStat, nextPlan: string) => {
+    const reason = window.prompt(`Raison obligatoire pour passer ${agency.name} au plan ${nextPlan}`);
+    if (!reason || reason.trim().length < 8) return;
+    const { error } = await supabase.from('agencies').update({ plan: nextPlan }).eq('id', agency.id);
+    if (error) throw error;
+
+    const existingSubscription = subscriptions.find((subscription) => subscription.agency_id === agency.id);
+    if (existingSubscription) {
+      await supabase.from('subscriptions').update({ plan_id: nextPlan }).eq('id', existingSubscription.id);
+    }
+
+    await logAdminAction({
+      action: 'organization_plan_changed',
+      reason,
+      targetOrganizationId: agency.id,
+      targetLabel: agency.name,
+      metadata: { previous_plan: agency.plan, next_plan: nextPlan, subscription_id: existingSubscription?.id ?? null },
+    });
+
+    setAgencies((current) => current.map((item) => item.id === agency.id ? { ...item, plan: nextPlan } : item));
+    setSelectedAgency((current) => current?.id === agency.id ? { ...current, plan: nextPlan } : current);
+    setSubscriptions((current) => current.map((item) => item.agency_id === agency.id ? { ...item, plan_id: nextPlan } : item));
+    setFeedback({ kind: 'success', text: `${agency.name} est passé au plan ${nextPlan}.` });
+  };
+
+  const extendTrial = async (agency: AgencyStat, days: number) => {
+    const reason = window.prompt(`Raison obligatoire pour prolonger l'essai de ${agency.name} de ${days} jours`);
+    if (!reason || reason.trim().length < 8) return;
+    const baseDate = agency.trial_ends_at ? new Date(agency.trial_ends_at) : new Date();
+    const nextDate = new Date(Math.max(baseDate.getTime(), Date.now()) + days * 86_400_000).toISOString();
+    const { error } = await supabase.from('agencies').update({ status: 'trial', trial_ends_at: nextDate }).eq('id', agency.id);
+    if (error) throw error;
+
+    await logAdminAction({
+      action: 'organization_trial_extended',
+      reason,
+      targetOrganizationId: agency.id,
+      targetLabel: agency.name,
+      metadata: { days, previous_trial_ends_at: agency.trial_ends_at, next_trial_ends_at: nextDate },
+    });
+
+    setAgencies((current) => current.map((item) => item.id === agency.id ? { ...item, status: 'trial', trial_ends_at: nextDate } : item));
+    setSelectedAgency((current) => current?.id === agency.id ? { ...current, status: 'trial', trial_ends_at: nextDate } : current);
+    setFeedback({ kind: 'success', text: `Essai prolongé jusqu'au ${formatDate(nextDate)}.` });
+  };
+
+  const deleteAgency = (agency: AgencyStat) => {
+    setConfirm({
+      title: 'Supprimer cette organisation ?',
+      message: `Cette action est destructive et doit rester exceptionnelle. Tapez le nom exact "${agency.name}" pour confirmer.`,
+      confirmText: 'Supprimer',
+      destructive: true,
+      requireText: agency.name,
+      onConfirm: async () => {
+        const reason = window.prompt(`Raison obligatoire pour supprimer ${agency.name}`);
+        if (!reason || reason.trim().length < 12) return;
+        const { error } = await supabase.from('agencies').delete().eq('id', agency.id);
+        if (error) throw error;
+        await logAdminAction({
+          action: 'organization_deleted',
+          reason,
+          targetOrganizationId: agency.id,
+          targetLabel: agency.name,
+          metadata: { previous_status: agency.status, previous_plan: agency.plan },
+        });
+        setAgencies((current) => current.filter((item) => item.id !== agency.id));
+        setSelectedAgency(null);
+        setFeedback({ kind: 'success', text: `${agency.name} a été supprimée.` });
+      },
+    });
   };
 
   const startImpersonation = async (agency: AgencyStat) => {
@@ -538,7 +728,7 @@ export function Console() {
       p_duration_minutes: 30,
     });
     if (error) throw error;
-    alert('Session impersonation préparée et auditée. Branchez ensuite le flux de session temporaire côté auth avant activation utilisateur.');
+    setFeedback({ kind: 'success', text: `Session support préparée pour ${agency.name}. Elle est auditée et limitée à 30 minutes.` });
   };
 
   const activeItem = NAV_GROUPS.flatMap((group) => group.items).find((item) => item.id === tab);
@@ -588,7 +778,7 @@ export function Console() {
                     <button
                       key={id}
                       type="button"
-                      onClick={() => setTab(id)}
+                      onClick={() => selectAdminTab(id)}
                       className={classNames(
                         'group flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition',
                         tab === id
@@ -642,6 +832,22 @@ export function Console() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => setShowCreateAgency(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/12 px-4 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-300/18"
+                >
+                  <Plus className="h-4 w-4" />
+                  Organisation
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowInviteUser(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-orange-300/20 bg-orange-300/12 px-4 py-3 text-sm font-black text-orange-100 transition hover:bg-orange-300/18"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Invitation
+                </button>
+                <button
+                  type="button"
                   onClick={signOut}
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm font-black text-red-100 transition hover:bg-red-400/16"
                 >
@@ -656,7 +862,7 @@ export function Console() {
                 <button
                   key={id}
                   type="button"
-                  onClick={() => setTab(id)}
+                  onClick={() => selectAdminTab(id)}
                   className={classNames(
                     'inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs font-black',
                     tab === id ? 'border-emerald-300/30 bg-emerald-300/12 text-white' : 'border-white/10 bg-white/6 text-slate-300'
@@ -681,6 +887,19 @@ export function Console() {
                       <CheckCircle className="h-4 w-4" />
                       Données agrégées et accès super-admin vérifié
                     </span>
+                  </div>
+                )}
+                {feedback && (
+                  <div className={classNames(
+                    'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-bold',
+                    feedback.kind === 'success'
+                      ? 'border-emerald-300/25 bg-emerald-300/10 text-emerald-100'
+                      : 'border-red-300/25 bg-red-400/10 text-red-100'
+                  )}>
+                    <span>{feedback.text}</span>
+                    <button type="button" onClick={() => setFeedback(null)} className="rounded-lg p-1 hover:bg-white/10">
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
                 )}
 
@@ -740,7 +959,13 @@ export function Console() {
                     </div>
 
                     <SectionCard title="Top organisations" subtitle="Classement par volume d'encaissements observé" icon={TrendingUp}>
-                      <OrganizationTable agencies={topOrganizations} onSuspend={updateAgencyStatus} onImpersonate={startImpersonation} compact />
+                      <OrganizationTable
+                        agencies={topOrganizations}
+                        onOpenDetail={setSelectedAgency}
+                        onSuspend={updateAgencyStatus}
+                        onImpersonate={startImpersonation}
+                        compact
+                      />
                     </SectionCard>
                   </div>
                 )}
@@ -776,7 +1001,12 @@ export function Console() {
                         </div>
                       )}
                     >
-                      <OrganizationTable agencies={filteredAgencies} onSuspend={updateAgencyStatus} onImpersonate={startImpersonation} />
+                      <OrganizationTable
+                        agencies={filteredAgencies}
+                        onOpenDetail={setSelectedAgency}
+                        onSuspend={updateAgencyStatus}
+                        onImpersonate={startImpersonation}
+                      />
                     </SectionCard>
                   </div>
                 )}
@@ -790,7 +1020,7 @@ export function Console() {
                       <KpiCard label="Retards" value={subscriptions.filter((s) => s.status === 'past_due').length} icon={AlertTriangle} tone="red" />
                     </div>
                     <SectionCard title="Abonnements, plans et quotas" subtitle="Starter, Pro, Business, Enterprise avec limites opérationnelles" icon={CreditCard}>
-                      <SubscriptionsTable subscriptions={subscriptions} agencies={agencies} />
+                      <SubscriptionsTable subscriptions={subscriptions} agencies={agencies} onEdit={setEditSub} />
                     </SectionCard>
                     <SectionCard title="Quotas proches saturation" subtitle="Alertes à 70%, 80%, 90% avant friction client" icon={HardDrive}>
                       <QuotaBoard agencies={agencies} />
@@ -799,8 +1029,18 @@ export function Console() {
                 )}
 
                 {tab === 'users' && (
-                  <SectionCard title="Utilisateurs et rôles" subtitle="Recherche globale, statut, organisation et accès métier" icon={Users}>
-                    <UsersTable users={filteredUsers} />
+                  <SectionCard
+                    title="Utilisateurs et rôles"
+                    subtitle="Recherche globale, statut, organisation et accès métier"
+                    icon={Users}
+                    action={(
+                      <button type="button" onClick={() => setShowInviteUser(true)} className="inline-flex items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-300/12 px-3 py-2 text-xs font-black text-orange-100">
+                        <UserPlus className="h-4 w-4" />
+                        Inviter
+                      </button>
+                    )}
+                  >
+                    <UsersTable users={filteredUsers} onEdit={setEditUser} />
                   </SectionCard>
                 )}
 
@@ -820,7 +1060,13 @@ export function Console() {
                       </div>
                     </SectionCard>
                     <SectionCard title="Comptes à relancer" subtitle="Inactivité, onboarding incomplet ou faible usage" icon={TrendingDown}>
-                      <OrganizationTable agencies={agencies.filter((agency) => getHealthLevel(agency) !== 'healthy').slice(0, 10)} onSuspend={updateAgencyStatus} onImpersonate={startImpersonation} compact />
+                      <OrganizationTable
+                        agencies={agencies.filter((agency) => getHealthLevel(agency) !== 'healthy').slice(0, 10)}
+                        onOpenDetail={setSelectedAgency}
+                        onSuspend={updateAgencyStatus}
+                        onImpersonate={startImpersonation}
+                        compact
+                      />
                     </SectionCard>
                   </div>
                 )}
@@ -846,13 +1092,21 @@ export function Console() {
                   </div>
                 )}
 
+                {tab === 'requests' && (
+                  <div className="space-y-6">
+                    <SectionCard title="Demandes d'intégration" subtitle="Validation des nouveaux espaces, bailleurs individuels et agences avant accès produit" icon={ClipboardList}>
+                      <AgencyRequestsPanel />
+                    </SectionCard>
+                  </div>
+                )}
+
                 {tab === 'support' && (
                   <div className="space-y-6">
                     <SectionCard title="Tickets support" subtitle="Catégories, priorités, statuts et relation incident" icon={LifeBuoy}>
                       <TicketsList tickets={snapshot?.tickets ?? []} agencies={agencies} />
                     </SectionCard>
                     <SectionCard title="Communication admin" subtitle="Digest, annonces, maintenance et messages ciblés" icon={Mail}>
-                      <CommunicationPanel />
+                      <CommunicationPanel agencies={agencies} actorId={profile?.id} actorEmail={profile?.email} onSent={loadAll} />
                     </SectionCard>
                   </div>
                 )}
@@ -896,29 +1150,232 @@ export function Console() {
                 {tab === 'configuration' && (
                   <div className="space-y-6">
                     <SectionCard title="Feature flags" subtitle="Déploiement progressif, propriétaire, expiration et impact" icon={Flag}>
-                      <FeatureFlagsBoard flags={featureFlags} />
+                      <FeatureFlagsBoard flags={featureFlags} agencies={agencies} onReload={loadAll} actorId={profile?.id} actorEmail={profile?.email} />
                     </SectionCard>
                     <SectionCard title="Modules par organisation" subtitle="Plan, type de compte, beta, QR, offline, équipe et audit" icon={ClipboardList}>
                       <ModulesMatrix />
+                    </SectionCard>
+                    <SectionCard title="Configuration SaaS" subtitle="Maintenance, contact, essai, annonces et paramètres JSON globaux" icon={Command}>
+                      <ConfigurationPanel actorId={profile?.id} actorEmail={profile?.email} />
                     </SectionCard>
                   </div>
                 )}
               </div>
             )}
           </main>
+          <OrganizationDetailDrawer
+            agency={selectedAgency}
+            users={users.filter((user) => user.agency_id === selectedAgency?.id)}
+            subscriptions={subscriptions.filter((subscription) => subscription.agency_id === selectedAgency?.id)}
+            onClose={() => setSelectedAgency(null)}
+            onSuspend={updateAgencyStatus}
+            onPlanChange={updateAgencyPlan}
+            onExtendTrial={extendTrial}
+            onImpersonate={startImpersonation}
+            onDelete={deleteAgency}
+          />
+          <CreateAgencyModal
+            open={showCreateAgency}
+            onClose={() => setShowCreateAgency(false)}
+            actorId={profile?.id}
+            actorEmail={profile?.email}
+            onCreated={loadAll}
+          />
+          <InviteUserModal
+            open={showInviteUser}
+            onClose={() => setShowInviteUser(false)}
+            agencies={agencies.map((agency) => ({ id: agency.id, name: agency.name, status: agency.status ?? undefined, plan: agency.plan ?? undefined }))}
+            actorId={profile?.id}
+            actorEmail={profile?.email}
+            onInvited={loadAll}
+          />
+          <EditUserModal
+            open={editUser !== null}
+            onClose={() => setEditUser(null)}
+            user={editUser}
+            agencies={agencies.map((agency) => ({ id: agency.id, name: agency.name }))}
+            actorId={profile?.id}
+            actorEmail={profile?.email}
+            onSaved={loadAll}
+          />
+          <EditSubscriptionModal
+            open={editSub !== null}
+            onClose={() => setEditSub(null)}
+            subscription={editSub}
+            actorId={profile?.id}
+            actorEmail={profile?.email}
+            onSaved={loadAll}
+          />
+          <DarkConfirmModal
+            open={confirm !== null}
+            onClose={() => { setConfirm(null); setConfirmBusy(false); }}
+            onConfirm={async () => {
+              if (!confirm) return;
+              setConfirmBusy(true);
+              try {
+                await confirm.onConfirm();
+                setConfirm(null);
+              } finally {
+                setConfirmBusy(false);
+              }
+            }}
+            title={confirm?.title ?? ''}
+            message={confirm?.message ?? ''}
+            confirmText={confirm?.confirmText}
+            destructive={confirm?.destructive}
+            requireText={confirm?.requireText}
+            busy={confirmBusy}
+          />
         </div>
       </div>
     </div>
   );
 }
 
+function OrganizationDetailDrawer({
+  agency,
+  users,
+  subscriptions,
+  onClose,
+  onSuspend,
+  onPlanChange,
+  onExtendTrial,
+  onImpersonate,
+  onDelete,
+}: {
+  agency: AgencyStat | null;
+  users: GlobalUser[];
+  subscriptions: Subscription[];
+  onClose: () => void;
+  onSuspend: (agency: AgencyStat, nextStatus: 'active' | 'suspended') => Promise<void>;
+  onPlanChange: (agency: AgencyStat, nextPlan: string) => Promise<void>;
+  onExtendTrial: (agency: AgencyStat, days: number) => Promise<void>;
+  onImpersonate: (agency: AgencyStat) => Promise<void>;
+  onDelete: (agency: AgencyStat) => void;
+}) {
+  if (!agency) return null;
+  const health = healthCopy(getHealthLevel(agency));
+  const accountType = getAccountType(agency);
+  const activeSubscription = subscriptions[0];
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <button type="button" aria-label="Fermer la fiche organisation" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <aside className="relative h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-[#07100d] p-5 shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-5">
+          <div>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Badge tone={agency.status ?? 'active'}>{agency.status ?? 'active'}</Badge>
+              <span className={classNames('inline-flex rounded-full border px-2.5 py-1 text-xs font-black', health.className)}>{health.label}</span>
+              <Badge>{ACCOUNT_LABELS[accountType] ?? accountType}</Badge>
+            </div>
+            <h2 className="text-2xl font-black text-white">{agency.name}</h2>
+            <p className="mt-2 text-sm font-semibold text-slate-400">Créée {safeDate(agency.created_at)} · Dernière activité {safeDate(agency.derniere_activite)}</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-2xl border border-white/10 bg-white/8 p-2 text-slate-200 hover:bg-white/12">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          {[
+            ['Utilisateurs', agency.nb_users],
+            ['Unités', agency.nb_unites],
+            ['Contrats', agency.nb_contrats],
+            ['Paiements', agency.nb_paiements],
+            ['Volume', formatCurrency(agency.volume_paiements ?? 0)],
+            ['Bailleurs', agency.nb_bailleurs],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{label}</p>
+              <p className="mt-2 text-xl font-black text-white">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.045] p-5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="font-black text-white">Plan et abonnement</h3>
+              <p className="mt-1 text-sm font-semibold text-slate-400">
+                Plan actuel : {agency.plan ?? activeSubscription?.plan_id ?? 'starter'} · Échéance {safeDate(activeSubscription?.current_period_end ?? agency.trial_ends_at)}
+              </p>
+            </div>
+            <Badge tone={activeSubscription?.status ?? agency.status ?? 'active'}>{activeSubscription?.status ?? agency.status ?? 'active'}</Badge>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {['starter', 'pro', 'business', 'enterprise'].map((plan) => (
+              <button
+                type="button"
+                key={plan}
+                onClick={() => void onPlanChange(agency, plan)}
+                disabled={(agency.plan ?? activeSubscription?.plan_id) === plan}
+                className="rounded-xl border border-white/10 bg-white/8 px-3 py-2 text-xs font-black text-white hover:bg-white/12 disabled:opacity-40"
+              >
+                {plan}
+              </button>
+            ))}
+            <button type="button" onClick={() => void onExtendTrial(agency, 14)} className="rounded-xl border border-sky-300/20 bg-sky-300/10 px-3 py-2 text-xs font-black text-sky-100">
+              +14 jours essai
+            </button>
+          </div>
+        </section>
+
+        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.045] p-5">
+          <h3 className="font-black text-white">Utilisateurs rattachés</h3>
+          <div className="mt-4 space-y-3">
+            {users.length === 0 ? (
+              <p className="text-sm font-semibold text-slate-500">Aucun utilisateur rattaché détecté.</p>
+            ) : users.slice(0, 8).map((user) => (
+              <div key={user.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/18 p-3">
+                <div>
+                  <p className="font-black text-white">{user.prenom} {user.nom}</p>
+                  <p className="text-xs font-semibold text-slate-500">{user.email}</p>
+                </div>
+                <Badge tone={user.actif ? 'active' : 'suspended'}>{user.role}</Badge>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.045] p-5">
+          <h3 className="font-black text-white">Actions sensibles</h3>
+          <p className="mt-1 text-sm leading-6 text-slate-400">Chaque action demande une raison et écrit un audit log best-effort dans la console owner.</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <button type="button" onClick={() => void onImpersonate(agency)} className="rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-black text-amber-100">
+              Démarrer support audité
+            </button>
+            <button
+              type="button"
+              onClick={() => void onSuspend(agency, agency.status === 'suspended' ? 'active' : 'suspended')}
+              className={classNames(
+                'rounded-2xl border px-4 py-3 text-sm font-black',
+                agency.status === 'suspended'
+                  ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100'
+                  : 'border-red-300/20 bg-red-400/10 text-red-100'
+              )}
+            >
+              {agency.status === 'suspended' ? 'Réactiver' : 'Suspendre'}
+            </button>
+            <button type="button" onClick={() => onDelete(agency)} className="sm:col-span-2 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-black text-red-100">
+              Supprimer l'organisation
+            </button>
+          </div>
+        </section>
+      </aside>
+    </div>
+  );
+}
+
 function OrganizationTable({
   agencies,
+  onOpenDetail,
   onSuspend,
   onImpersonate,
   compact = false,
 }: {
   agencies: AgencyStat[];
+  onOpenDetail: (agency: AgencyStat) => void;
   onSuspend: (agency: AgencyStat, nextStatus: 'active' | 'suspended') => Promise<void>;
   onImpersonate: (agency: AgencyStat) => Promise<void>;
   compact?: boolean;
@@ -969,6 +1426,13 @@ function OrganizationTable({
                   <div className="flex justify-end gap-2">
                     <button
                       type="button"
+                      onClick={() => onOpenDetail(agency)}
+                      className="rounded-xl border border-white/10 bg-white/8 px-3 py-2 text-xs font-black text-white hover:bg-white/12"
+                    >
+                      Détails
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => void onImpersonate(agency)}
                       className="rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs font-black text-amber-100 hover:bg-amber-300/16"
                     >
@@ -997,7 +1461,15 @@ function OrganizationTable({
   );
 }
 
-function SubscriptionsTable({ subscriptions, agencies }: { subscriptions: Subscription[]; agencies: AgencyStat[] }) {
+function SubscriptionsTable({
+  subscriptions,
+  agencies,
+  onEdit,
+}: {
+  subscriptions: Subscription[];
+  agencies: AgencyStat[];
+  onEdit: (subscription: SubscriptionRow) => void;
+}) {
   const rows = subscriptions.length
     ? subscriptions
     : agencies.slice(0, 20).map((agency) => ({
@@ -1010,6 +1482,7 @@ function SubscriptionsTable({ subscriptions, agencies }: { subscriptions: Subscr
       current_period_end: agency.trial_ends_at,
       created_at: agency.created_at,
     }));
+  const canEditRows = subscriptions.length > 0;
 
   return (
     <div className="overflow-x-auto">
@@ -1022,6 +1495,7 @@ function SubscriptionsTable({ subscriptions, agencies }: { subscriptions: Subscr
             <th className="px-3 py-3 text-right">MRR</th>
             <th className="px-3 py-3">Début</th>
             <th className="px-3 py-3">Échéance</th>
+            <th className="px-3 py-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -1033,6 +1507,17 @@ function SubscriptionsTable({ subscriptions, agencies }: { subscriptions: Subscr
               <td className="px-3 py-4 text-right font-black text-white">{formatCurrency(PLAN_PRICES[subscription.plan_id] ?? 0)}</td>
               <td className="px-3 py-4 text-slate-400">{safeDate(subscription.current_period_start)}</td>
               <td className="px-3 py-4 text-slate-400">{safeDate(subscription.current_period_end)}</td>
+              <td className="px-3 py-4 text-right">
+                <button
+                  type="button"
+                  onClick={() => canEditRows && onEdit(subscription as SubscriptionRow)}
+                  disabled={!canEditRows}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/8 px-3 py-2 text-xs font-black text-white hover:bg-white/12 disabled:opacity-40"
+                >
+                  <Edit3 className="h-3.5 w-3.5" />
+                  Modifier
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -1078,7 +1563,7 @@ function QuotaBoard({ agencies }: { agencies: AgencyStat[] }) {
   );
 }
 
-function UsersTable({ users }: { users: GlobalUser[] }) {
+function UsersTable({ users, onEdit }: { users: GlobalUser[]; onEdit: (user: UserRow) => void }) {
   if (users.length === 0) return <EmptyPanel title="Aucun utilisateur trouvé" text="La recherche globale filtre nom, email, rôle et organisation." />;
   return (
     <div className="overflow-x-auto">
@@ -1090,6 +1575,7 @@ function UsersTable({ users }: { users: GlobalUser[] }) {
             <th className="px-3 py-3">Rôle</th>
             <th className="px-3 py-3">Statut</th>
             <th className="px-3 py-3 text-right">Créé</th>
+            <th className="px-3 py-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -1103,6 +1589,16 @@ function UsersTable({ users }: { users: GlobalUser[] }) {
               <td className="px-3 py-4"><Badge>{user.role}</Badge></td>
               <td className="px-3 py-4">{user.actif ? <Badge tone="active">Actif</Badge> : <Badge tone="suspended">Inactif</Badge>}</td>
               <td className="px-3 py-4 text-right text-xs font-semibold text-slate-500">{safeDate(user.created_at)}</td>
+              <td className="px-3 py-4 text-right">
+                <button
+                  type="button"
+                  onClick={() => onEdit(user as UserRow)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/8 px-3 py-2 text-xs font-black text-white hover:bg-white/12"
+                >
+                  <UserCog className="h-3.5 w-3.5" />
+                  Modifier
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
@@ -1179,36 +1675,213 @@ function AuditTable({ logs }: { logs: OwnerLog[] }) {
   );
 }
 
-function FeatureFlagsBoard({ flags }: { flags: AdminFeatureFlag[] }) {
+function FeatureFlagsBoard({
+  flags,
+  agencies,
+  onReload,
+  actorId,
+  actorEmail,
+}: {
+  flags: AdminFeatureFlag[];
+  agencies: AgencyStat[];
+  onReload: () => void;
+  actorId?: string;
+  actorEmail?: string | null;
+}) {
+  const [form, setForm] = useState({ flag: '', agency_id: '', description: '' });
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [filterAgency, setFilterAgency] = useState('all');
+  const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+
   const normalized = flags.map((flag) => ({
     ...flag,
-    key: flag.key ?? flag.flag_name ?? 'feature_flag',
-    name: flag.name ?? flag.flag_name ?? flag.key ?? 'Feature flag',
+    key: flag.key ?? flag.flag ?? flag.flag_name ?? 'feature_flag',
+    name: flag.name ?? flag.flag_name ?? flag.flag ?? flag.key ?? 'Feature flag',
     status: flag.status ?? (flag.enabled ? 'active' : 'draft'),
+    enabled: flag.enabled ?? flag.status === 'active',
   }));
 
-  if (normalized.length === 0) {
-    return <EmptyPanel title="Aucun feature flag" text="La migration crée samay_admin.feature_flags et feature_flag_targets pour piloter les rollouts proprement." />;
-  }
+  const visible = normalized.filter((flag) => {
+    if (filterAgency === 'all') return true;
+    if (filterAgency === 'global') return !flag.agency_id;
+    return flag.agency_id === filterAgency;
+  });
+
+  const audit = async (action: string, details: Record<string, unknown>) => {
+    await supabase.from('owner_actions_log').insert({
+      actor_id: actorId,
+      actor_email: actorEmail,
+      action,
+      target_type: 'feature_flag',
+      target_label: String(details.flag ?? details.key ?? 'feature_flag'),
+      details,
+    });
+  };
+
+  const create = async () => {
+    if (!form.flag.trim()) return;
+    setCreating(true);
+    setMessage(null);
+    try {
+      const row = {
+        flag: form.flag.trim(),
+        agency_id: form.agency_id || null,
+        enabled: false,
+        description: form.description.trim() || null,
+      };
+      const { error } = await supabase.from('feature_flags').insert(row);
+      if (error) throw error;
+      await audit('feature_flag_created', row);
+      setForm({ flag: '', agency_id: '', description: '' });
+      setMessage({ kind: 'success', text: 'Feature flag créé.' });
+      onReload();
+    } catch (error) {
+      setMessage({ kind: 'error', text: error instanceof Error ? error.message : 'Création impossible' });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const toggle = async (flag: AdminFeatureFlag & { key: string; enabled: boolean }) => {
+    setBusyId(flag.id);
+    setMessage(null);
+    try {
+      const nextEnabled = !flag.enabled;
+      const { error } = await supabase
+        .from('feature_flags')
+        .update({ enabled: nextEnabled, updated_at: new Date().toISOString() })
+        .eq('id', flag.id);
+      if (error) throw error;
+      await audit('feature_flag_toggled', { flag: flag.key, enabled: nextEnabled, agency_id: flag.agency_id ?? null });
+      setMessage({ kind: 'success', text: `${flag.key} ${nextEnabled ? 'activé' : 'désactivé'}.` });
+      onReload();
+    } catch (error) {
+      setMessage({ kind: 'error', text: error instanceof Error ? error.message : 'Mise à jour impossible' });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const remove = async (flag: AdminFeatureFlag & { key: string }) => {
+    if (!window.confirm(`Supprimer le flag ${flag.key} ?`)) return;
+    setBusyId(flag.id);
+    setMessage(null);
+    try {
+      const { error } = await supabase.from('feature_flags').delete().eq('id', flag.id);
+      if (error) throw error;
+      await audit('feature_flag_deleted', { flag: flag.key, agency_id: flag.agency_id ?? null });
+      setMessage({ kind: 'success', text: `${flag.key} supprimé.` });
+      onReload();
+    } catch (error) {
+      setMessage({ kind: 'error', text: error instanceof Error ? error.message : 'Suppression impossible' });
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {normalized.map((flag) => (
-        <div key={flag.id} className="rounded-2xl border border-white/10 bg-black/18 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="font-mono text-sm font-black text-orange-200">{flag.key}</p>
-              <p className="mt-1 font-black text-white">{flag.name}</p>
+    <div className="space-y-5">
+      <div className="grid gap-3 lg:grid-cols-[1fr_220px_auto]">
+        <input
+          value={form.flag}
+          onChange={(event) => setForm((current) => ({ ...current, flag: event.target.value }))}
+          placeholder="module_mobile_money, new_pdf_engine..."
+          className="rounded-2xl border border-white/10 bg-black/24 px-4 py-3 font-mono text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
+        />
+        <select
+          value={form.agency_id}
+          onChange={(event) => setForm((current) => ({ ...current, agency_id: event.target.value }))}
+          className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white"
+        >
+          <option value="">Global</option>
+          {agencies.map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
+        </select>
+        <button
+          type="button"
+          onClick={create}
+          disabled={creating || !form.flag.trim()}
+          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-orange-300/20 bg-orange-300/12 px-4 py-3 text-sm font-black text-orange-100 hover:bg-orange-300/18 disabled:opacity-50"
+        >
+          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          Créer
+        </button>
+      </div>
+      <input
+        value={form.description}
+        onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+        placeholder="Description, impact et raison du flag"
+        className="w-full rounded-2xl border border-white/10 bg-black/18 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Filter className="h-4 w-4 text-slate-500" />
+        {[
+          ['all', 'Tous'],
+          ['global', 'Global'],
+          ...agencies.slice(0, 8).map((agency) => [agency.id, agency.name] as [string, string]),
+        ].map(([id, label]) => (
+          <button
+            type="button"
+            key={id}
+            onClick={() => setFilterAgency(id)}
+            className={classNames(
+              'rounded-full border px-3 py-1.5 text-xs font-black',
+              filterAgency === id ? 'border-emerald-300/30 bg-emerald-300/12 text-white' : 'border-white/10 bg-white/6 text-slate-400'
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {message && (
+        <p className={classNames('rounded-2xl border px-4 py-3 text-sm font-bold', message.kind === 'success' ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100' : 'border-red-300/20 bg-red-400/10 text-red-100')}>
+          {message.text}
+        </p>
+      )}
+
+      {visible.length === 0 ? (
+        <EmptyPanel title="Aucun feature flag" text="Créez un flag global ou ciblé. La table legacy feature_flags reste compatible avec l'app, et samay_admin.feature_flags prendra le relais après migration." />
+      ) : (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {visible.map((flag) => (
+            <div key={flag.id} className="rounded-2xl border border-white/10 bg-black/18 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-mono text-sm font-black text-orange-200">{flag.key}</p>
+                  <p className="mt-1 font-black text-white">{flag.name}</p>
+                </div>
+                <Badge tone={flag.enabled ? 'active' : 'cancelled'}>{flag.enabled ? 'Actif' : 'Inactif'}</Badge>
+              </div>
+              {flag.description && <p className="mt-3 text-sm leading-6 text-slate-400">{flag.description}</p>}
+              <div className="mt-4 text-xs font-bold text-slate-500">
+                Cible : {flag.agency_id ? agencies.find((agency) => agency.id === flag.agency_id)?.name ?? flag.agency_id : 'Toutes les organisations'}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => void toggle(flag)}
+                  disabled={busyId === flag.id}
+                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs font-black text-emerald-100 disabled:opacity-50"
+                >
+                  {busyId === flag.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  {flag.enabled ? 'Désactiver' : 'Activer'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void remove(flag)}
+                  disabled={busyId === flag.id}
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-300/20 bg-red-400/10 px-3 py-2 text-xs font-black text-red-100 disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Supprimer
+                </button>
+              </div>
             </div>
-            <Badge tone={flag.status}>{flag.status}</Badge>
-          </div>
-          {flag.description && <p className="mt-3 text-sm leading-6 text-slate-400">{flag.description}</p>}
-          <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-slate-500">
-            <span>Owner : {flag.owner ?? 'À assigner'}</span>
-            <span>Expire : {safeDate(flag.expires_at)}</span>
-          </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -1244,23 +1917,222 @@ function ModulesMatrix() {
   );
 }
 
-function CommunicationPanel() {
+function ConfigurationPanel({
+  actorId,
+  actorEmail,
+}: {
+  actorId?: string;
+  actorEmail?: string | null;
+}) {
+  const [rows, setRows] = useState<SaasConfigRow[]>([]);
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase.from('saas_config').select('*').order('key');
+    if (!error && data) {
+      const nextRows = data as SaasConfigRow[];
+      setRows(nextRows);
+      setEdits(Object.fromEntries(nextRows.map((row) => [row.key, JSON.stringify(row.value, null, 2)])));
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const save = async (row: SaasConfigRow) => {
+    setSavingKey(row.key);
+    setMessage(null);
+    try {
+      const parsed = JSON.parse(edits[row.key] ?? 'null');
+      const { error } = await supabase
+        .from('saas_config')
+        .update({ value: parsed, updated_at: new Date().toISOString(), updated_by: actorId ?? null })
+        .eq('key', row.key);
+      if (error) throw error;
+      await supabase.from('owner_actions_log').insert({
+        actor_id: actorId,
+        actor_email: actorEmail,
+        action: 'saas_config_updated',
+        target_type: 'saas_config',
+        target_label: row.key,
+        details: { key: row.key, value: parsed },
+      });
+      setMessage({ kind: 'success', text: `${row.key} enregistré.` });
+      await load();
+    } catch (error) {
+      setMessage({ kind: 'error', text: error instanceof Error ? error.message : 'JSON invalide ou sauvegarde impossible' });
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  if (loading) {
+    return <div className="flex items-center gap-2 text-sm font-bold text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Chargement configuration...</div>;
+  }
+
+  if (rows.length === 0) {
+    return <EmptyPanel title="Configuration non initialisée" text="La table saas_config sera disponible après application des migrations owner. La console reste utilisable avec les données live." />;
+  }
+
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      {[
-        ['Digest quotidien', 'Nouveaux comptes, tickets, incidents, quotas et paiements SaaS en retard.'],
-        ['Annonces ciblées', 'Tous, plan, type de compte, organisation, rôle ou beta group.'],
-        ['Seuils intelligents', 'Alerter seulement si un signal dépasse un seuil opérationnel utile.'],
-      ].map(([title, text]) => (
-        <div key={title} className="rounded-2xl border border-white/10 bg-black/18 p-5">
-          <p className="font-black text-white">{title}</p>
-          <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
-          <button type="button" className="mt-4 inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/8 px-3 py-2 text-xs font-black text-white">
-            Configurer
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
+    <div className="space-y-4">
+      {message && (
+        <p className={classNames('rounded-2xl border px-4 py-3 text-sm font-bold', message.kind === 'success' ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100' : 'border-red-300/20 bg-red-400/10 text-red-100')}>
+          {message.text}
+        </p>
+      )}
+      {rows.map((row) => (
+        <div key={row.key} className="rounded-2xl border border-white/10 bg-black/18 p-4">
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="font-mono text-sm font-black text-orange-200">{row.key}</p>
+              {row.description && <p className="mt-1 text-sm font-semibold text-slate-400">{row.description}</p>}
+            </div>
+            <button
+              type="button"
+              onClick={() => void save(row)}
+              disabled={savingKey === row.key}
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-xs font-black text-emerald-100 disabled:opacity-50"
+            >
+              {savingKey === row.key ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+              Enregistrer
+            </button>
+          </div>
+          <textarea
+            value={edits[row.key] ?? ''}
+            onChange={(event) => setEdits((current) => ({ ...current, [row.key]: event.target.value }))}
+            rows={4}
+            className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 font-mono text-xs font-semibold text-slate-100 outline-none focus:border-orange-300/40"
+          />
         </div>
       ))}
+    </div>
+  );
+}
+
+function CommunicationPanel({
+  agencies,
+  actorId,
+  actorEmail,
+  onSent,
+}: {
+  agencies: AgencyStat[];
+  actorId?: string;
+  actorEmail?: string | null;
+  onSent: () => void;
+}) {
+  const [target, setTarget] = useState('all');
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+
+  const send = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!title.trim()) return;
+    setSending(true);
+    setFeedback(null);
+    try {
+      let query = supabase.from('user_profiles').select('id, agency_id').eq('actif', true);
+      if (target !== 'all') query = query.eq('agency_id', target);
+      const { data: recipients, error: recipientsError } = await query;
+      if (recipientsError) throw recipientsError;
+      const rows = (recipients ?? [])
+        .filter((recipient) => recipient.agency_id)
+        .map((recipient) => ({
+          user_id: recipient.id,
+          agency_id: recipient.agency_id,
+          type: 'admin_announcement',
+          title: title.trim(),
+          message: message.trim() || null,
+          read: false,
+        }));
+      if (rows.length === 0) {
+        setFeedback({ kind: 'error', text: 'Aucun utilisateur actif trouvé pour cette cible.' });
+        return;
+      }
+      const { error } = await supabase.from('notifications').insert(rows);
+      if (error) throw error;
+      await supabase.from('owner_actions_log').insert({
+        actor_id: actorId,
+        actor_email: actorEmail,
+        action: 'admin_broadcast_sent',
+        target_type: target === 'all' ? 'platform' : 'agency',
+        target_id: target === 'all' ? null : target,
+        target_label: target === 'all' ? 'Toutes les organisations' : agencies.find((agency) => agency.id === target)?.name ?? target,
+        details: { recipients: rows.length, title: title.trim() },
+      });
+      setTitle('');
+      setMessage('');
+      setFeedback({ kind: 'success', text: `Message envoyé à ${rows.length} utilisateur${rows.length > 1 ? 's' : ''}.` });
+      onSent();
+    } catch (error) {
+      setFeedback({ kind: 'error', text: error instanceof Error ? error.message : 'Envoi impossible' });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="grid gap-5 xl:grid-cols-[1fr_0.8fr]">
+      <form onSubmit={send} className="space-y-4 rounded-2xl border border-white/10 bg-black/18 p-5">
+        <div className="grid gap-3 md:grid-cols-[220px_1fr]">
+          <select
+            value={target}
+            onChange={(event) => setTarget(event.target.value)}
+            className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white"
+          >
+            <option value="all">Toutes les organisations</option>
+            {agencies.map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
+          </select>
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Titre de l'annonce ou du message support"
+            className="rounded-2xl border border-white/10 bg-black/24 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
+          />
+        </div>
+        <textarea
+          value={message}
+          onChange={(event) => setMessage(event.target.value)}
+          rows={4}
+          placeholder="Message visible dans le centre de notifications client"
+          className="w-full rounded-2xl border border-white/10 bg-black/24 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
+        />
+        {feedback && (
+          <p className={classNames('rounded-xl border px-3 py-2 text-sm font-bold', feedback.kind === 'success' ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100' : 'border-red-300/20 bg-red-400/10 text-red-100')}>
+            {feedback.text}
+          </p>
+        )}
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={sending || !title.trim()}
+            className="inline-flex items-center gap-2 rounded-2xl border border-orange-300/20 bg-orange-300/12 px-4 py-3 text-sm font-black text-orange-100 hover:bg-orange-300/18 disabled:opacity-50"
+          >
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+            Envoyer
+          </button>
+        </div>
+      </form>
+      <div className="grid gap-4">
+        {[
+          ['Digest quotidien', 'Nouveaux comptes, tickets, incidents, quotas et paiements SaaS en retard.'],
+          ['Annonces ciblées', 'Tous, plan, type de compte, organisation, rôle ou beta group.'],
+          ['Seuils intelligents', 'Alerter seulement si un signal dépasse un seuil opérationnel utile.'],
+        ].map(([cardTitle, text]) => (
+          <div key={cardTitle} className="rounded-2xl border border-white/10 bg-black/18 p-5">
+            <p className="font-black text-white">{cardTitle}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

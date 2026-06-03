@@ -34,6 +34,12 @@ function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: CORS });
 }
 
+function documentTypeAliases(type: string) {
+  if (!type) return [];
+  if (type === "rapport" || type === "rapport_bailleur") return ["rapport", "rapport_bailleur"];
+  return [type];
+}
+
 function verificationResponse(data: VerificationRow) {
   const authentic = data.document_status === "authentic";
   return json({
@@ -124,7 +130,7 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(1);
 
-    if (type) verificationQuery = verificationQuery.eq("document_type", type);
+    if (type) verificationQuery = verificationQuery.in("document_type", documentTypeAliases(type));
 
     const { data: verificationData, error: verificationError } = await verificationQuery.maybeSingle();
     if (verificationError) {
@@ -141,7 +147,7 @@ serve(async (req) => {
       .order("generated_at", { ascending: false })
       .limit(1);
 
-    if (type) registryQuery = registryQuery.eq("document_type", type);
+    if (type) registryQuery = registryQuery.in("document_type", documentTypeAliases(type));
 
     const { data: registryData, error: registryError } = await registryQuery.maybeSingle();
     if (registryError) {

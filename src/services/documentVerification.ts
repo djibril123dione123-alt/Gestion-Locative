@@ -27,7 +27,7 @@ export interface DocumentVerificationResult {
 
 interface PublicVerificationResponse {
   valid: boolean;
-  status?: 'authentic' | 'revoked' | 'superseded';
+  status?: 'authentic' | 'revoked' | 'superseded' | 'replaced';
   error?: string;
   document?: {
     reference: string;
@@ -67,9 +67,10 @@ export function extractVerificationInput(rawValue: string): { token: string | nu
     const hashQuery = url.hash.includes('?') ? url.hash.slice(url.hash.indexOf('?') + 1) : '';
     const fromHash = hashQuery ? parseParams(new URLSearchParams(hashQuery)) : { token: null, reference: null };
     const fromSearch = parseParams(url.searchParams);
+    const verifyPathValue = url.pathname.match(/\/verify\/([^/?#]+)/)?.[1] ?? null;
     return {
-      token: fromHash.token ?? fromSearch.token,
-      reference: fromHash.reference ?? fromSearch.reference,
+      token: fromHash.token ?? fromSearch.token ?? (/^[a-f0-9]{64}$/i.test(verifyPathValue ?? '') ? verifyPathValue : null),
+      reference: fromHash.reference ?? fromSearch.reference ?? (verifyPathValue && !/^[a-f0-9]{64}$/i.test(verifyPathValue) ? decodeURIComponent(verifyPathValue) : null),
     };
   } catch {
     // Not a URL: continue with plain token/reference detection.
@@ -94,9 +95,10 @@ export function getVerificationQueryParams() {
     ? window.location.hash.slice(window.location.hash.indexOf('?') + 1)
     : '';
   const params = new URLSearchParams(hashQuery || window.location.search);
+  const verifyPathValue = window.location.pathname.match(/\/verify\/([^/?#]+)/)?.[1] ?? '';
   return {
-    token: params.get('token') ?? '',
-    ref: params.get('ref') ?? '',
+    token: params.get('token') ?? (/^[a-f0-9]{64}$/i.test(verifyPathValue) ? verifyPathValue : ''),
+    ref: params.get('ref') ?? params.get('reference') ?? (verifyPathValue && !/^[a-f0-9]{64}$/i.test(verifyPathValue) ? decodeURIComponent(verifyPathValue) : ''),
     type: params.get('type') ?? '',
   };
 }
@@ -176,7 +178,7 @@ function normalizePublicResponse(data: PublicVerificationResponse): DocumentVeri
   const state: VerificationState =
     data.status === 'revoked'
       ? 'revoked'
-      : data.status === 'superseded'
+      : data.status === 'superseded' || data.status === 'replaced'
         ? 'superseded'
         : data.valid
           ? 'authentic'
@@ -228,7 +230,14 @@ export async function verifyDocumentToken(
   token: string,
   options?: { reference?: string | null; type?: string | null }
 ): Promise<DocumentVerificationResult> {
-  if (!/^[a-f0-9]{64}$/i.test(token.trim())) {
+  const cleanToken = token.trim();
+  const cleanReference = options?.reference?.trim() ?? '';
+  const cleanType = options?.type?.trim() ?? '';
+
+  if (cleanToken && !/^[a-f0-9]{64}$/i.test(cleanToken) && !cleanReference) {
+    return { state: 'invalid', message: getVerificationCopy('invalid').message };
+  }
+  if (!cleanToken && !cleanReference) {
     return { state: 'invalid', message: getVerificationCopy('invalid').message };
   }
 
@@ -239,9 +248,10 @@ export async function verifyDocumentToken(
       return { state: 'network_error', message: 'Configuration de vérification absente.' };
     }
 
-    const params = new URLSearchParams({ token: token.trim() });
-    if (options?.reference) params.set('ref', options.reference);
-    if (options?.type) params.set('type', options.type);
+    const params = new URLSearchParams();
+    if (/^[a-f0-9]{64}$/i.test(cleanToken)) params.set('token', cleanToken);
+    if (cleanReference) params.set('ref', cleanReference);
+    if (cleanType) params.set('type', cleanType);
 
     const response = await fetch(`${baseUrl}/functions/v1/verify-document?${params.toString()}`, {
       method: 'GET',

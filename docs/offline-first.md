@@ -1,92 +1,59 @@
 # Offline-first
 
-L'architecture offline-first permet aux utilisateurs de continuer a travailler avec une connexion lente, instable ou absente.
+Objectif : rendre l'app utilisable avec une connexion lente, instable ou absente, sans mentir sur les données ni confirmer des actions sensibles hors ligne.
 
-## Objectifs
+## Comportement cible
 
-- Ne pas perdre les saisies.
-- Permettre la consultation des donnees recentes.
-- Mettre les mutations critiques en attente.
-- Rejouer les operations de maniere idempotente.
-- Afficher clairement l'etat de synchronisation.
+- garder l'utilisateur dans l'app si sa session était valide ;
+- afficher les dernières données connues si disponibles ;
+- afficher `Données indisponibles hors connexion` si aucun cache n'existe ;
+- remplacer les skeleton infinis par des états bornés ;
+- rendre les bandeaux réseau fermables ;
+- bloquer proprement les paiements et documents financiers hors ligne ;
+- rafraîchir à la reconnexion.
 
-## Composants
+## Éléments à auditer régulièrement
 
-| Composant | Role |
+| Élément | Attendu |
 |---|---|
-| `src/services/db.ts` | Wrapper IndexedDB |
-| `src/services/offlineQueue.ts` | Queue des mutations |
-| `src/services/localBackup.ts` | Sauvegarde locale |
-| `src/hooks/useOfflineSync.ts` | Detection reseau et replay |
-| `NetworkBanner` | Feedback utilisateur |
-| `BackupIndicator` | Etat backup/sync |
+| `AuthContext` | ne pas rediriger vers Welcome uniquement parce que le réseau est tombé |
+| Cache local | scope par `user_id` et `agency_id` |
+| Network banner | fermable, clair, non bloquant |
+| Pages métier | pas de compteur à `0` si les données n'ont pas chargé |
+| Actions sensibles | pas de validation hors ligne |
 
-## Flux de synchronisation
+## Règle finance
 
-```mermaid
-sequenceDiagram
-  participant User as Utilisateur
-  participant UI as UI
-  participant IDB as IndexedDB
-  participant Sync as OfflineSync
-  participant Edge as Edge Function
+Les paiements, quittances et écritures financières ne doivent pas être rejoués automatiquement sans validation serveur claire et idempotente.
 
-  User->>UI: cree une operation
-  UI->>IDB: sauvegarde pending_mutation
-  UI-->>User: operation en attente
-  Sync->>Sync: detecte reconnexion
-  Sync->>IDB: charge pending
-  Sync->>Edge: replay idempotent
-  Edge-->>Sync: succes ou erreur metier
-  Sync->>IDB: supprime ou marque failed
-  Sync-->>UI: met a jour l'etat
-```
+## UX attendue
 
-## Types de mutation
+États visibles :
 
-Prioritaires :
+- en ligne ;
+- connexion lente ;
+- hors ligne avec cache ;
+- hors ligne sans cache ;
+- erreur serveur ;
+- reconnexion et rafraîchissement.
 
-- paiements ;
-- modifications de donnees metier ;
-- generation de brouillons ;
-- actions lifecycle.
+Chaque page critique doit proposer :
 
-Les operations financieres doivent toujours rejouer vers une Edge Function, jamais directement vers une table.
-
-## Gestion conflits
-
-Strategie actuelle :
-
-- privilegier l'autorite serveur ;
-- garder la mutation locale si l'erreur est reseau ;
-- marquer failed si l'erreur est metier ;
-- afficher une action utilisateur quand une decision est necessaire.
-
-## Idempotence
-
-Chaque mutation rejouable doit porter :
-
-- un identifiant client stable ;
-- le type d'operation ;
-- l'agence ;
-- l'utilisateur ;
-- la payload ;
-- le nombre de tentatives ;
-- le statut.
-
-## UX offline
-
-Bon comportement :
-
+- dernière mise à jour ;
+- bouton Réessayer ;
 - message clair ;
-- pas de reset de formulaire ;
-- boutons desactives seulement si l'action est vraiment impossible ;
-- reprise automatique ;
-- feedback apres synchronisation.
+- données cache si disponibles.
 
-Mauvais comportement :
+## Pages prioritaires
 
-- erreur technique brute ;
-- suppression de la saisie ;
-- blocage total de la page ;
-- double operation silencieuse.
+- Dashboard ;
+- Bailleurs ;
+- Contrats ;
+- Encaissements ;
+- Loyers impayés ;
+- Documents ;
+- Rapports bailleurs.
+
+## Limites
+
+L'offline-first est un chantier de résilience. Tant que toutes les mutations n'ont pas une stratégie d'idempotence, l'offline doit rester lecture/cache + blocage propre des écritures sensibles.

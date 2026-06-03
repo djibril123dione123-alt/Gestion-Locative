@@ -1,102 +1,60 @@
 # RBAC et multi-tenant
 
-Le RBAC de Samay Këur combine roles globaux, permissions par page et checks serveur.
+RBAC définit ce qu'un utilisateur peut faire. Le type de compte définit la nature de l'espace. Les deux ne doivent pas être confondus.
 
-## Roles
+## Rôles
 
-- `super_admin` : console globale et operations plateforme.
-- `admin` : administration d'agence.
-- `agent` : operations locatives.
-- `comptable` : finance, encaissements, reporting.
-- `bailleur` : acces proprietaire limite.
+Rôles courants :
 
-## Niveaux de permission
-
-- `none`
-- `read`
-- `write`
+- `super_admin`
 - `admin`
+- `agent`
+- `comptable`
+- `bailleur`
+- `viewer`
 
-Actions possibles :
+## Type de compte
 
-- `create`
-- `update`
-- `delete`
-- `export`
-- `manage`
+Phase 1 :
 
-## Modele
+- agence par défaut ;
+- bailleur individuel si `agencies.is_bailleur_account = true`.
 
-```mermaid
-flowchart TB
-  Role["role utilisateur"] --> Default["permissions par defaut"]
-  Override["user_page_permissions"] --> Effective["permissions effectives"]
-  Default --> Effective
-  Effective --> Sidebar["sidebar"]
-  Effective --> Routes["routes"]
-  Effective --> Buttons["boutons/actions"]
-  Effective --> Edge["fn_user_can cote serveur"]
-```
+Phase suivante :
 
-## Frontend
+- `individual_landlord`
+- `multi_property_landlord`
+- `property_manager`
+- `agency`
+- `group`
 
-Le frontend applique les permissions pour :
+## Rôle effectif
 
-- masquer les pages interdites ;
-- rendre certaines vues lecture seule ;
-- retirer les boutons interdits ;
-- proteger les routes ;
-- adapter la navigation mobile.
+Un bailleur individuel propriétaire de son espace peut avoir une expérience admin côté UI, même si le rôle métier `bailleur` existe pour d'autres usages.
 
-Ces protections ameliorent l'UX mais ne suffisent pas.
+Les composants doivent utiliser :
 
-## Backend
+- `getEffectiveRoleForAccount()`
+- `canAccessAccountPage()`
+- `accountProfile.features`
 
-Les actions sensibles doivent verifier :
+## Routes masquées
 
-- utilisateur authentifie ;
-- profil existant ;
-- agence valide ;
-- permission via `fn_user_can()` ;
-- RLS sur la table cible.
+Pour bailleur individuel :
+
+- Bailleurs ;
+- Mandats ;
+- Commissions ;
+- Équipe avancée ;
+- Audit complet.
+
+Accès direct URL : afficher une page de module réservé plutôt qu'une page cassée.
 
 ## Multi-tenant
 
-Regle : une requete doit toujours etre bornee par agence.
+Toute donnée métier doit être rattachée à une agence/organisation. Les policies doivent empêcher :
 
-Exemples :
-
-- `agency_id = profile.agency_id`
-- chemin Storage `agencies/{agency_id}/...`
-- permissions modifiables uniquement par admin de la meme agence.
-
-## Type de compte vs role utilisateur
-
-Ne pas confondre :
-
-- type de compte : nature de l'espace (`agence`, bailleur individuel, gestionnaire, groupe) ;
-- role utilisateur : droits de l'utilisateur dans cet espace (`admin`, `agent`, `comptable`, `bailleur`, etc.).
-
-En Phase 1, un bailleur individuel est detecte via `agencies.is_bailleur_account = true`.
-
-Important :
-
-- un bailleur individuel peut etre traite comme administrateur effectif de son propre espace cote UI ;
-- le role `bailleur` reste aussi utile pour un proprietaire invite dans une agence tierce ;
-- les composants doivent demander des capacites (`features.canUseCommissions`, `features.canInviteTeam`) plutot que tester directement le role.
-
-Helper principal :
-
-```ts
-getEffectiveRoleForAccount(profile.role, accountProfile)
-```
-
-## Checklist nouveau module
-
-- Ajouter la page dans le catalogue permissions.
-- Definir permission par defaut par role.
-- Adapter sidebar et bottom nav.
-- Proteger route.
-- Masquer actions interdites.
-- Ajouter check serveur si action sensible.
-- Verifier RLS.
+- lecture inter-agence ;
+- écriture hors agence ;
+- élévation de rôle client-side ;
+- accès aux documents privés d'un autre tenant.

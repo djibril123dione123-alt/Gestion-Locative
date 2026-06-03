@@ -1,32 +1,41 @@
 # Contribution
 
-Ce projet doit rester coherent et maintenable malgre sa richesse fonctionnelle.
+Cette application est métier, financière et multi-tenant. Les changements doivent rester ciblés, testés et documentés.
 
-## Avant de coder
+## Avant de modifier
 
-1. Identifier le domaine concerne : finance, GED, RBAC, UI, offline, document, SaaS.
-2. Lire le document `/docs` correspondant.
-3. Verifier s'il existe deja un composant ou service reutilisable.
-4. Eviter les patterns visuels ou techniques isoles.
+1. Identifier le domaine : finance, documents, RLS, UX, offline, vitrine/app.
+2. Lire la doc correspondante dans `docs/`.
+3. Vérifier les fichiers déjà existants avant de créer un nouveau pattern.
+4. Ne pas mélanger cleanup, refonte et correction métier dans un même commit.
 
-## Standards code
+## Règles strictes
 
-- TypeScript strict autant que possible.
-- Fonctions metier courtes et testables.
-- Pas d'ecriture financiere directe client.
-- Pas d'acces Storage prive sans signed URL.
-- Pas de bypass RLS.
-- Commentaires courts uniquement pour les blocs non evidents.
+- Pas de commit/push sans validation explicite.
+- Pas de migration sans analyse.
+- Pas de changement RLS sans test multi-tenant.
+- Pas de logique paiement confirmée hors ligne.
+- Pas de clé sensible dans le code.
+- Pas de QR public vers `app.samaykeur.com`.
 
 ## Standards UI
 
-- Utiliser le design system existant.
-- Harmoniser headers, cards, tables, modals, filters, empty states.
-- Mobile-first sur les pages operationnelles.
-- Pas de surcharge decorative.
-- Respecter dark mode et touch targets.
+- mobile propre ;
+- pas d'overflow horizontal ;
+- boutons accessibles ;
+- textes lisibles ;
+- états loading bornés ;
+- empty states utiles ;
+- pas de données décoratives trompeuses.
 
-## Checklist PR
+## Standards docs
+
+- docs en UTF-8 ;
+- pas de caractères d'encodage cassés dans les textes français ;
+- chaque domaine a sa page ;
+- les notes obsolètes vont dans `docs/historique`.
+
+## Checks
 
 ```bash
 npm run typecheck
@@ -34,15 +43,33 @@ npm run lint
 npm run build
 ```
 
-Si la PR touche un workflow critique :
+Si vitrine :
 
-- tester mobile ;
-- tester offline si mutation ;
-- tester utilisateur sans permission ;
-- tester deux agences ;
-- verifier absence de mojibake ;
-- verifier qu'aucune donnees critique n'est supprimee brutalement.
+```bash
+npm run typecheck
+npm run build
+```
 
-## Encodage
+## Tests métier selon domaine
 
-Les fichiers doivent rester en UTF-8. Apres modification de textes francais, lancer le scan mojibake utilise dans le projet ou verifier manuellement les sequences d'encodage cassees les plus courantes avant de committer.
+Finance :
+
+- paiement complet ;
+- paiement partiel ;
+- reliquat ;
+- mois soldé.
+
+Documents :
+
+- quittance ;
+- contrat ;
+- mandat ;
+- rapport bailleur ;
+- `/verify`.
+
+RBAC :
+
+- compte agence ;
+- compte bailleur individuel ;
+- rôle limité ;
+- accès direct URL.

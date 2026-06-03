@@ -1,69 +1,58 @@
 # Edge Functions
 
-Les Edge Functions sont la couche d'autorite pour les operations sensibles.
+Les Edge Functions sont la couche serveur pour les opérations sensibles ou publiques contrôlées.
 
-## Fonctions principales
+## Fonctions prioritaires
 
-| Fonction | Role |
+| Fonction | Rôle |
 |---|---|
-| `create-paiement` | creer un encaissement locatif |
-| `update-paiement` | modifier un paiement selon regles metier |
-| `cancel-paiement` | annuler/reverser un paiement |
-| `create-contrat` | creer un contrat cote serveur |
-| `update-contrat` | modifier ou resilier un contrat |
-| `update-bailleur-lifecycle` | lifecycle bailleur |
-| `initiate-payment` | initialiser PayDunya |
-| `paydunya-webhook` | valider webhook paiement abonnement |
-| `verify-document` | verifier QR documentaire |
-| `export-accounting-ledger` | generer export comptable |
-| `analytics-worker` | jobs analytics |
-| `finance-worker` | jobs finance |
-| `notification-worker` | notifications |
-| `subscription-scheduler` | abonnements |
+| `verify-document` | vérification publique d'un QR documentaire |
+| `create-paiement` | création serveur d'un paiement |
+| `update-paiement` | modification contrôlée d'un paiement |
+| `cancel-paiement` | annulation ou correction contrôlée |
+| `initiate-payment` | initiation abonnement/paiement externe |
+| `paydunya-webhook` | validation webhook paiement |
 | `send-email` | email transactionnel |
-| `send-sms` | SMS |
+| `send-sms` | SMS transactionnel si activé |
 
-## Pattern recommande
+## Pattern recommandé
 
 ```mermaid
 flowchart TD
-  Request["Request"] --> Cors["CORS"]
-  Cors --> Auth["getUser"]
-  Auth --> Profile["load user_profile"]
-  Profile --> Permission["fn_user_can si necessaire"]
-  Permission --> Validate["validation payload"]
-  Validate --> Service["logique metier"]
-  Service --> DB["PostgreSQL service role"]
-  DB --> Response["reponse metier"]
+  Request["Requête"] --> Cors["CORS"]
+  Cors --> Auth["Auth si route privée"]
+  Auth --> Tenant["Agence / profil"]
+  Tenant --> Permission["Permissions"]
+  Permission --> Validate["Validation payload"]
+  Validate --> Business["Logique métier"]
+  Business --> DB["Postgres"]
+  DB --> Response["Réponse claire"]
 ```
 
-## Regles
+`verify-document` est public, mais doit limiter les données retournées.
 
-- Ne jamais utiliser service role avant auth + validation.
-- Retourner des erreurs metier comprehensibles.
-- Ne pas exposer les details internes.
-- Journaliser les erreurs inattendues.
-- Garder l'idempotence sur les operations rejouables.
-- Refuser les actions hors agence.
+## Vérification documentaire
 
-## Variables d'environnement
+Entrées supportées :
 
-Voir `.env.example` et les secrets Supabase/Vercel :
+- `token`
+- `ref`
+- `type`
 
-- Supabase URL et keys ;
-- PayDunya keys ;
-- Resend ;
-- Orange SMS ;
-- URL publique frontend ;
-- Sentry/PostHog si actives.
+États attendus :
 
-## Deploiement fonctions
+- authentique ;
+- introuvable ;
+- révoqué ;
+- remplacé ;
+- erreur réseau/serveur.
 
-Utiliser Supabase CLI ou pipeline CI :
+## Déploiement
+
+Déployer avec Supabase CLI ou pipeline CI :
 
 ```bash
-supabase functions deploy create-paiement
-supabase functions deploy paydunya-webhook
+supabase functions deploy verify-document
 ```
 
-Si la CLI n'est pas disponible localement, deployer depuis l'environnement CI ou Supabase Dashboard selon le workflow equipe.
+Ne jamais mettre de clé service role dans le code frontend ou vitrine.

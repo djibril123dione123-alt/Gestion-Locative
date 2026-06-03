@@ -1,99 +1,49 @@
-# Séparation Vitrine / Application
+# Séparation vitrine / app
 
-Samay Këur est désormais pensé comme deux surfaces distinctes :
+Samay Këur utilise deux projets séparés.
 
-- **Vitrine marketing** : site public, léger, SEO-friendly, orienté conversion.
-- **Application SaaS** : espace authentifié React/Vite, connecté à Supabase et aux workflows métier.
+## Responsabilités
 
-## Domaines recommandés
+| Surface | Domaine | Dépôt | Responsabilité |
+|---|---|---|---|
+| Vitrine | `samaykeur.com` | `SamayKeur.com.git` | Marketing, pages légales, pricing public, `/verify` |
+| App | `app.samaykeur.com` | `app.SamayKeur.com.git` | Auth, métier, données privées, documents, finance |
 
-```text
-samaykeur.com       -> vitrine marketing autonome
-www.samaykeur.com   -> vitrine marketing autonome
-app.samaykeur.com   -> application SaaS
+## Règles de séparation
+
+- La vitrine ne contient pas la logique métier privée.
+- L'app ne doit pas redevenir une landing publique complète.
+- `/login` et `/signup` côté vitrine redirigent vers l'app.
+- `/verify` reste public sur la vitrine et ne demande pas de connexion.
+
+## URLs importantes
+
+```txt
+https://samaykeur.com
+https://samaykeur.com/verify?token=...&ref=...&type=...
+https://app.samaykeur.com/login
+https://app.samaykeur.com/signup
 ```
 
-La vitrine expose uniquement les pages publiques et redirige :
+## Variables d'environnement côté app
 
-- `/login` vers `https://app.samaykeur.com/login`
-- `/signup` vers `https://app.samaykeur.com/signup`
-- `/register` vers `https://app.samaykeur.com/signup`
-
-## Projets
-
-```text
-marketing/
-  index.html        -> landing statique premium
-  styles.css        -> CSS critique de la vitrine
-  script.js         -> CTA, FAQ, tracking dataLayer
-  vite.config.ts    -> build indépendant vers dist-marketing
-  vercel.json       -> config déploiement vitrine
-
-src/
-  App.tsx           -> application SaaS authentifiée
-  pages/Auth.tsx    -> pont login/signup
+```env
+VITE_PUBLIC_VERIFY_BASE_URL=https://samaykeur.com
+VITE_APP_URL=https://app.samaykeur.com
+VITE_PUBLIC_APP_URL=https://app.samaykeur.com
+VITE_MARKETING_URL=https://samaykeur.com
 ```
 
-## Depot dedie
+Les QR documentaires publics ne doivent jamais utiliser `app.samaykeur.com` comme base.
 
-La vitrine autonome est aussi poussee dans :
+## Variables côté vitrine
 
-```text
-djibril123dione123-alt/vitrine-Samay-Keur.git
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_PUBLIC_VERIFY_BASE_URL=https://samaykeur.com
+VITE_APP_URL=https://app.samaykeur.com
+VITE_MARKETING_URL=https://samaykeur.com
 ```
 
-Ce depot doit contenir :
-
-- `marketing/`
-- `public/brand/`
-- `package.json`
-- `package-lock.json`
-- `.gitignore`
-
-Le build marketing depend de `public/brand` via `publicDir: ../public`.
-
-## Scripts
-
-```bash
-npm run marketing:dev
-npm run marketing:build
-npm run dev
-npm run build
-```
-
-## Branding partagé
-
-Les deux surfaces consomment les mêmes assets publics :
-
-```text
-public/brand/
-  app-icon-primary.png
-  favicon.png
-  logo-lockup-dark.png
-  brand-tokens.css
-  marketing/
-  screens/
-```
-
-`public/brand/brand-tokens.css` contient les tokens de marque utilisables par la vitrine et par toute surface externe future.
-
-## Pont Auth
-
-L’application accepte maintenant les entrées directes :
-
-- `/login` affiche l’écran connexion ;
-- `/signup` ou `/register` affiche l’écran inscription ;
-- `/#/auth` reste compatible avec l’ancien routage interne.
-
-Si l’utilisateur non connecté arrive sur l’application sans route explicite, il est dirigé vers l’écran d’authentification plutôt que vers la vitrine React.
-
-## Analytics
-
-La vitrine pousse des événements dans `window.dataLayer` :
-
-- `marketing_page_view`
-- `marketing_cta_click`
-- `marketing_section_scroll`
-- `marketing_faq_toggle`
-
-Cela permet de brancher Google Analytics, Meta Pixel ou un tag manager sans ajouter de dépendance dans l’application SaaS.
+Ne jamais exposer de clé `service_role`.

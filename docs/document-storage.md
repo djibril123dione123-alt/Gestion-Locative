@@ -1,135 +1,69 @@
 # GED et stockage documentaire
 
-Samay Këur utilise une GED legere pour differencier documents generes, documents uploades et archives.
+La GED de Samay Këur couvre documents générés, uploads, registre, stockage et vérification publique.
 
-## Objectifs
+## Documents prioritaires
 
-- Eviter les doublons.
-- Reutiliser les documents deja generes.
-- Versionner quand les donnees changent.
-- Controler les couts Storage.
-- Respecter le multi-tenant.
-- Proteger les documents critiques.
+- quittance ;
+- facture ;
+- contrat ;
+- mandat ;
+- rapport bailleur ;
+- rapport propriétaire ;
+- export financier si activé.
 
-## Types de documents
-
-### Documents generes
-
-- contrats ;
-- mandats ;
-- quittances ;
-- factures ;
-- rapports bailleurs ;
-- exports PDF/CSV/Excel.
-
-### Documents uploades
-
-- CNI ;
-- justificatifs ;
-- assurances ;
-- documents administratifs ;
-- actes ;
-- photos ;
-- archives.
-
-## Stockage
-
-Structure cible :
-
-```text
-documents/
-  agencies/{agency_id}/
-    contrats/{year}/{month}/
-    mandats/{year}/{month}/
-    quittances/{year}/{month}/
-    factures/{year}/{month}/
-    rapports-bailleurs/{year}/{month}/
-    exports/{year}/{month}/
-    uploads/{category}/{year}/{month}/
-```
-
-## Document registry
-
-Le registre documentaire doit suivre :
-
-- `agency_id`
-- `document_type`
-- `document_scope`
-- `document_category`
-- `entity_type`
-- `entity_id`
-- `period`
-- `reference`
-- `version`
-- `storage_path`
-- `file_hash`
-- `data_hash`
-- `generated_at`
-- `generated_by`
-- `status`
-- `file_size`
-- `mime_type`
-- `retention_policy`
-- `last_accessed_at`
-
-## Idempotence documentaire
+## Chaîne documentaire cible
 
 ```mermaid
-flowchart TD
-  Request["Demande document"] --> Hash["Calcul data_hash"]
-  Hash --> Registry["Recherche registry"]
-  Registry --> Same{"Version active avec meme hash ?"}
-  Same -- oui --> StorageCheck["Verifier fichier Storage"]
-  StorageCheck --> Exists{"Accessible ?"}
-  Exists -- oui --> Reuse["Ouvrir document existant"]
-  Exists -- non --> Regenerate["Regenerer"]
-  Same -- non --> NewVersion["Creer nouvelle version"]
-  Regenerate --> Save["Upload + registry"]
-  NewVersion --> Save
+flowchart LR
+  Generate["Document généré"] --> Type["Type stable"]
+  Type --> GED["Entrée GED"]
+  GED --> Storage["Storage privé"]
+  GED --> Registry["document_verifications"]
+  Registry --> QR["QR officiel"]
+  QR --> Verify["samaykeur.com/verify"]
+  Verify --> Edge["verify-document"]
 ```
 
-## Quotas par plan
+## Types documentaires
 
-| Plan | Stockage |
-|---|---:|
-| Starter | 1 Go |
-| Pro | 20 Go |
-| Business | 100 Go |
-| Enterprise | Sur mesure / fair usage |
+| Type | Usage |
+|---|---|
+| `quittance` | quittance de loyer |
+| `facture` | facture ou reçu si distinct |
+| `contrat` | contrat de location |
+| `mandat` | mandat de gérance |
+| `rapport_bailleur` | rapport propriétaire/agence vérifiable |
+| `rapport` | compatibilité ancienne |
 
-## Lifecycle
+`rapport_bailleur` doit être accepté par le registre de vérification.
 
-Statuts :
+## QR public
 
-- `active`
-- `archived`
-- `orphaned`
-- `corrupt`
-- `deleted`
+Format obligatoire pour les nouveaux documents :
 
-Retention :
+```txt
+https://samaykeur.com/verify?token=...&ref=...&type=...
+```
 
-- `critical`
-- `standard`
-- `temporary`
+Fallback côté génération :
 
-Regle : un document legal critique ne doit pas etre supprime brutalement.
+1. `VITE_PUBLIC_VERIFY_BASE_URL`
+2. `https://samaykeur.com`
 
-## Maintenance
+Ne pas utiliser `window.location.origin` ou `app.samaykeur.com` pour les QR imprimés.
 
-Actions non destructives :
+## Sécurité stockage
 
-- archiver les anciennes versions ;
-- marquer les orphelins ;
-- nettoyer les previews temporaires ;
-- compresser les images uploades ;
-- signaler les fichiers lourds ;
-- proposer upgrade si quota proche.
+- bucket privé ;
+- chemins préfixés par agence ;
+- signed URLs pour accès privé ;
+- page `/verify` publique limitée aux métadonnées autorisées ;
+- pas d'URL Storage privée dans la vitrine.
 
-## Securite
+## Tests minimum
 
-- Bucket prive.
-- Signed URLs.
-- Prefixe par agence.
-- RLS sur registry.
-- Verification serveur avant ouverture.
+- générer quittance, contrat, mandat, rapport bailleur ;
+- vérifier type, référence, QR, registre ;
+- ouvrir l'URL `/verify` ;
+- vérifier statut authentique/introuvable/révoqué/remplacé.

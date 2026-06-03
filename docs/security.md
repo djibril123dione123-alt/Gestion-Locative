@@ -1,100 +1,60 @@
-# Securite
+# Sécurité
 
-La securite de Samay Këur repose sur quatre couches : Supabase RLS, Edge Functions, RBAC applicatif et controle strict des acces Storage.
+La sécurité de Samay Këur repose sur l'isolation multi-tenant, Supabase Auth, RLS, RBAC et une séparation stricte des surfaces publiques/privées.
 
 ## Principes
 
-- Ne jamais faire confiance aux montants ou permissions envoyes par le frontend.
-- Toujours verifier `agency_id` cote serveur.
-- Utiliser `service_role` uniquement dans les Edge Functions.
-- Garder les buckets sensibles prives.
-- Journaliser les actions sensibles.
-- Rotation obligatoire des secrets exposes pendant les phases de travail.
+- Aucune clé `service_role` dans le frontend.
+- Les données privées restent sur `app.samaykeur.com`.
+- La vitrine publique n'affiche que des informations non sensibles.
+- Les routes métier exigent une session valide et une agence autorisée.
+- Les actions sensibles passent par une Edge Function, une RPC ou une policy vérifiée.
 
-## Multi-tenant
+## RLS et multi-tenant
 
-Chaque ressource metier doit etre liee directement ou indirectement a une agence.
+Les tables métier doivent être filtrées par :
 
-```mermaid
-flowchart TB
-  User["auth.users"] --> Profile["user_profiles"]
-  Profile --> Agency["agency_id"]
-  Agency --> Data["tables metier"]
-  Agency --> Storage["documents/agencies/{agency_id}/..."]
-  Agency --> Permissions["user_page_permissions"]
-```
+- `agency_id` ;
+- relation membre/agence ;
+- rôle et permissions effectives quand nécessaire.
 
-## RLS
+Les anciens comptes restent en fallback agence pour éviter une rupture de droits.
 
-Les policies doivent respecter ces regles :
+## Vérification documentaire publique
 
-- lecture limitee aux membres de l'agence ;
-- ecriture limitee aux roles autorises ;
-- permissions speciales pour `super_admin` uniquement si necessaire ;
-- insertion financiere directe bloquee depuis le client quand une Edge Function existe.
+`samaykeur.com/verify` ne doit afficher que :
 
-## Edge Functions
+- statut ;
+- type ;
+- référence ;
+- organisation émettrice si autorisée ;
+- date de génération/vérification si disponible.
 
-Les fonctions critiques doivent :
+À ne pas exposer :
 
-- verifier l'utilisateur courant ;
-- charger son profil et son agence ;
-- appeler `fn_user_can()` quand une permission metier est necessaire ;
-- valider les inputs ;
-- utiliser le client service role seulement apres validation ;
-- retourner des erreurs metier propres.
+- coordonnées privées ;
+- téléphone ;
+- email ;
+- montants sensibles si non nécessaires ;
+- document complet ;
+- URL de stockage privée ;
+- détails internes d'erreur.
 
-## Storage
+## Auth et CGU
 
-Buckets sensibles :
+L'inscription doit collecter l'acceptation des CGU/confidentialité quand le formulaire réel le permet :
 
-- `documents` : prive, documents GED et documents generes.
-- `agency-assets` : logos et assets agence.
-- `agency-archives` : exports comptables et archives.
+- `accepted_terms_at`
+- `accepted_privacy_at`
+- `terms_version`
+- `privacy_version`
 
-Regles :
+Les colonnes doivent rester compatibles avec les anciens comptes.
 
-- chemin prefixe par `agencies/{agency_id}/` quand applicable ;
-- URLs signees pour l'ouverture ;
-- pas d'URL publique pour documents critiques ;
-- suppression brutale interdite pour les documents legaux critiques.
+## Checklist avant changement sensible
 
-## Webhooks
-
-PayDunya doit etre valide par :
-
-- hash ou signature attendue ;
-- token facture ;
-- montant ;
-- statut transaction ;
-- idempotence contre retry fournisseur.
-
-## Secrets
-
-Secrets a proteger :
-
-- Supabase service role ;
-- PayDunya keys ;
-- Resend API key ;
-- Orange SMS credentials ;
-- Sentry DSN si prive ;
-- tokens de deploiement.
-
-Avant production commerciale :
-
-1. rotation des secrets exposes ;
-2. verification Vercel env vars ;
-3. verification Supabase secrets Edge Functions ;
-4. audit des logs publics ;
-5. verification des buckets prives.
-
-## Checklist securite
-
-- `npm run lint`
-- `npm run typecheck`
-- verifier RLS sur nouvelles tables
-- verifier policies Storage
-- tester acces croise entre deux agences
-- tester utilisateur sans permission
-- tester replay webhook double
-- tester signed URL expiree
+- vérifier RLS ;
+- tester compte agence et bailleur individuel ;
+- vérifier accès direct URL ;
+- vérifier absence de fuite de données dans console/logs ;
+- lancer `npm run typecheck`, `npm run lint`, `npm run build`.

@@ -1,115 +1,98 @@
-# Deploiement
+# Déploiement
 
-Samay Këur est deploye sur Vercel pour le frontend et Supabase pour la base, les Edge Functions et le Storage.
+Samay Këur est déployé avec deux projets Vercel distincts et un backend Supabase commun.
 
-## Environnements
+## Projets
 
-- local : developpement et preview.
-- staging/beta : validation fonctionnelle.
-- production : domaine public.
+| Projet | Dépôt | Domaine |
+|---|---|---|
+| App SaaS | `app.SamayKeur.com.git` | `app.samaykeur.com` |
+| Vitrine | `SamayKeur.com.git` | `samaykeur.com` |
 
-## Frontend Vercel
+## Déploiement app
 
-Build :
+Commandes locales :
 
 ```bash
+cd "C:\Users\DELL\Documents\Samay Keur\App Samay Keur"
+npm run typecheck
+npm run lint
 npm run build
 ```
 
-Preview locale :
+Preview :
 
 ```bash
 npm run preview -- --host 127.0.0.1 --port 4175
 ```
 
-Variables Vercel a verifier :
+Variables app importantes :
 
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-- `VITE_PUBLIC_APP_URL`
-- Sentry/PostHog si actives.
-
-Depot GitHub application :
-
-```text
-djibril123dione123-alt/Samay-Keur.git
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_PUBLIC_VERIFY_BASE_URL=https://samaykeur.com
+VITE_APP_URL=https://app.samaykeur.com
+VITE_PUBLIC_APP_URL=https://app.samaykeur.com
+VITE_MARKETING_URL=https://samaykeur.com
 ```
 
-## Vitrine marketing
+Après changement d'une variable `VITE_*`, redeployer l'app.
 
-La vitrine est un projet autonome dans `marketing/`.
+## Déploiement vitrine
 
-Build :
+La vitrine est dans le projet séparé :
 
-```bash
-npm run marketing:build
+```txt
+C:\Users\DELL\Documents\Samay Keur\Vitrine Samay Keur\apps\web
 ```
 
-Preview locale :
-
-```bash
-npm run marketing:dev -- --host 127.0.0.1 --port 4176
-```
-
-Depot GitHub vitrine :
-
-```text
-djibril123dione123-alt/vitrine-Samay-Keur.git
-```
-
-La vitrine consomme `public/brand/` comme dossier public. Ne pas pousser uniquement `marketing/` sans les assets publics necessaires.
-
-## Supabase
-
-Elements a deployer :
-
-- migrations SQL ;
-- Edge Functions ;
-- secrets Edge ;
-- policies RLS ;
-- buckets Storage.
-
-## Ordre recommande
-
-1. Appliquer les migrations.
-2. Deployer les Edge Functions.
-3. Configurer les secrets.
-4. Verifier les buckets et policies.
-5. Deployer le frontend.
-6. Lancer smoke tests.
-7. Verifier monitoring.
-
-## Checks avant production
+Checks vitrine :
 
 ```bash
 npm run typecheck
-npm run lint
 npm run build
-npm run marketing:build
-npm run test
 ```
 
-## Smoke tests
+Routes publiques à vérifier :
 
-- Login admin.
-- Ouverture dashboard.
-- Creation paiement test.
-- Verification reliquat partiel.
-- Generation quittance.
-- Scan QR document.
-- Upload document GED.
-- Test permission agent sans acces.
-- Test route interdite.
-- Test preview mobile.
+- `/`
+- `/cgu`
+- `/mentions-legales`
+- `/confidentialite`
+- `/verify`
+- `/verify?ref=test&type=quittance`
 
-## Post-deploy
+## Supabase
 
-- verifier Sentry ;
-- verifier logs Edge Functions ;
-- verifier pending jobs ;
-- verifier drift ledger ;
-- verifier PayDunya webhook ;
-- verifier quotas Storage ;
-- verifier que les URLs QR utilisent le domaine production.
-- verifier que la vitrine et l'application ne pointent pas vers le meme deploiement par erreur.
-- verifier dans Vercel que les deployments ne restent pas en statut `UNKNOWN`.
+Déployer séparément :
+
+- migrations SQL ;
+- Edge Functions ;
+- secrets ;
+- buckets Storage ;
+- policies RLS.
+
+Ne pas lancer une migration sans analyse d'impact.
+
+## Smoke tests app
+
+- login ;
+- dashboard ;
+- paiement complet ;
+- paiement partiel ;
+- génération quittance ;
+- scan QR ;
+- rapport bailleur ;
+- accès bailleur individuel ;
+- accès agence ;
+- mobile sans overflow horizontal.
+
+## Smoke tests vitrine
+
+- CTA signup/login ;
+- pages légales ;
+- route `/verify` ;
+- appel `verify-document` ;
+- responsive mobile ;
+- absence de 404 assets.

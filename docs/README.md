@@ -1,44 +1,41 @@
 # Documentation Samay Këur
 
-Cette documentation est organisee pour separer les besoins des lecteurs :
+Cette documentation décrit l'application SaaS connectée. La vitrine publique est un projet séparé.
 
-- produit et vision : README principal ;
-- architecture et decisions techniques : documents dans `/docs` ;
-- exploitation : deployment, monitoring et runbooks ;
-- historique : anciens audits et notes dans `/docs/historique`.
+Dernière mise à jour : 2026-06-03.
 
 ## Navigation rapide
 
 | Domaine | Document |
 |---|---|
-| Etat actuel du produit | [current-state.md](current-state.md) |
+| État actuel du produit | [current-state.md](current-state.md) |
 | Architecture globale | [architecture.md](architecture.md) |
-| Adaptabilite multi-profils | [adaptive-profiles-phase-0.md](adaptive-profiles-phase-0.md) |
-| Separation vitrine / app | [marketing-app-separation.md](marketing-app-separation.md) |
-| Securite | [security.md](security.md) |
+| Adaptabilité multi-profils | [adaptive-profiles-phase-0.md](adaptive-profiles-phase-0.md) |
+| Séparation vitrine / app | [marketing-app-separation.md](marketing-app-separation.md) |
+| Sécurité | [security.md](security.md) |
 | Finance engine | [finance-engine.md](finance-engine.md) |
 | Paiements | [payments.md](payments.md) |
 | Offline-first | [offline-first.md](offline-first.md) |
 | GED et stockage | [document-storage.md](document-storage.md) |
 | RBAC et multi-tenant | [rbac.md](rbac.md) |
 | Edge Functions | [edge-functions.md](edge-functions.md) |
-| Deploiement | [deployment.md](deployment.md) |
+| Déploiement | [deployment.md](deployment.md) |
 | Monitoring | [monitoring.md](monitoring.md) |
 | Roadmap | [roadmap.md](roadmap.md) |
 | Contribution | [contributing.md](contributing.md) |
 | Design system | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) |
 | Brand guidelines | [BRAND_GUIDELINES.md](BRAND_GUIDELINES.md) |
+| Conventions | [conventions.md](conventions.md) |
 
-## Convention
+## Règles transverses
 
-- README : vue d'ensemble courte.
-- Docs metier : logique produit et invariants.
-- Docs techniques : architecture, securite, fonctions, deploiement.
-- Runbooks : actions operationnelles en cas d'incident.
+- L'app privée vit dans `App Samay Keur` et cible `app.samaykeur.com`.
+- La vitrine publique vit dans le dépôt `SamayKeur.com.git` et cible `samaykeur.com`.
+- Les QR documentaires publics doivent pointer vers `https://samaykeur.com/verify`.
+- Les personnes s'affichent toujours dans l'ordre `Prénom Nom`.
+- Ne pas confondre rôle utilisateur, type de compte, plan, mode documentaire et modules activés.
+- Tout changement finance, RLS, document ou paiement doit passer par `npm run typecheck`, `npm run lint` et `npm run build`.
 
-## Conventions transverses
+## Statut des docs
 
-- Les noms de personnes s'affichent et se saisissent toujours dans l'ordre `Prenom Nom`.
-- Les composants doivent utiliser `formatPersonName(person)` au lieu de recreer l'ordre manuellement.
-- Les composants produit ne doivent pas lire directement `is_bailleur_account`; ils doivent passer par `accountProfile`.
-- La vitrine autonome vit dans `marketing/` et ne doit pas etre reintegree dans l'application React.
+Les documents de ce dossier sont des références opérationnelles. Les notes historiques ou audits passés doivent rester dans `docs/historique` pour éviter de brouiller l'état courant.

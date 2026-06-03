@@ -1,147 +1,72 @@
-# Architecture
+# Architecture globale
 
-Samay Këur est une application SaaS multi-tenant construite autour d'un frontend React, d'un backend Supabase et d'une couche Edge Functions pour les operations sensibles.
+Samay Këur est une application React/Vite connectée à Supabase. Le frontend orchestre l'expérience utilisateur, mais les opérations sensibles restent côté serveur, Edge Function, RPC ou Postgres avec RLS.
 
-## Objectifs d'architecture
-
-- Isoler strictement les donnees par agence.
-- Centraliser la logique financiere cote serveur.
-- Garder un ledger append-only.
-- Permettre le travail en connexion instable.
-- Versionner les documents et eviter les doublons de stockage.
-- Rendre les workflows metier maintenables.
-
-## Vue globale
+## Vue logique
 
 ```mermaid
-flowchart TB
-  subgraph Client["Client web / mobile"]
-    UI["React UI"]
-    Hooks["Hooks"]
-    Local["IndexedDB cache + pending_mutations"]
-  end
-
-  subgraph App["Application layer"]
-    Services["Services domaine"]
-    Repos["Repositories Supabase"]
-    Guards["Navigation guards + RBAC"]
-  end
-
-  subgraph Supabase["Supabase"]
-    Auth["Auth"]
-    DB["PostgreSQL + RLS"]
-    Edge["Edge Functions Deno"]
-    Storage["Storage prive"]
-  end
-
-  subgraph Async["Async / observabilite"]
-    Queue["job_queue / event_outbox"]
-    Workers["Workers finance, analytics, notifications"]
-    Monitoring["Audit dashboard + Sentry"]
-  end
-
-  UI --> Hooks --> Services
-  Services --> Repos --> DB
-  Services --> Edge --> DB
-  Edge --> Storage
-  Local --> Services
-  DB --> Queue --> Workers --> DB
-  UI --> Guards
-  Auth --> Guards
-  Monitoring --> DB
+flowchart LR
+  UI["React + Vite"] --> Auth["AuthContext"]
+  Auth --> Profile["Account profile + RBAC"]
+  Profile --> Pages["Pages métier"]
+  Pages --> Services["Services domaine"]
+  Services --> Supabase["Supabase client"]
+  Services --> Edge["Edge Functions"]
+  Supabase --> DB["PostgreSQL + RLS"]
+  Edge --> DB
+  Edge --> Storage["Storage privé"]
+  Storage --> GED["GED"]
+  GED --> Verify["samaykeur.com/verify"]
 ```
 
 ## Frontend
 
-Principales zones :
+Zones principales :
 
-- `src/pages` : pages produit.
-- `src/components` : composants UI, layout, documents, billing.
-- `src/services` : logique domaine, API, offline queue, document registry.
-- `src/hooks` : hooks reseau, auth, permissions, colonnes.
-- `src/lib` : utilitaires partages, PDF, Supabase client.
-
-Le frontend peut afficher, filtrer, preparer et mettre en cache, mais ne doit pas devenir l'autorite pour les operations critiques.
+- `src/pages` : pages métier et parcours utilisateur.
+- `src/components` : layout, UI, tableaux, formulaires, navigation.
+- `src/services` : accès métier, orchestration et helpers persistants.
+- `src/hooks` : auth, permissions, réseau, fonctionnalités.
+- `src/lib` : Supabase client, PDF, formatters et utilitaires partagés.
+- `src/constants` : dictionnaires et configurations UI.
 
 ## Backend Supabase
 
-PostgreSQL porte :
+Supabase porte :
 
-- tables metier ;
+- Auth ;
+- tables métier ;
 - RLS multi-tenant ;
-- constraints financieres ;
-- fonctions RPC ;
-- ledger ;
-- jobs ;
-- snapshots ;
-- registry documentaire.
+- Storage privé ;
+- Edge Functions ;
+- registre documentaire ;
+- fonctions RPC si nécessaires.
 
-Edge Functions portent :
+## Frontières critiques
 
-- controles d'autorisation ;
-- validation des inputs ;
-- idempotence ;
-- appels fournisseurs ;
-- ecritures serveur.
-
-## Frontieres critiques
-
-| Domaine | Autorite |
+| Domaine | Autorité attendue |
 |---|---|
-| Paiements loyers | Edge Function + Postgres |
-| Ledger | Triggers/RPC serveur, append-only |
-| Abonnements | PayDunya webhook + service role |
-| Documents prives | Registry + Storage signed URLs |
-| Permissions utilisateur | `user_page_permissions` + RLS |
-| Offline replay | Queue locale + Edge Functions idempotentes |
+| Paiements | Edge Function ou service serveur idempotent |
+| Ledger | Postgres/RPC/trigger, append-only quand applicable |
+| Documents privés | Storage privé + registry + signed URLs |
+| QR public | `samaykeur.com/verify` + Edge Function `verify-document` |
+| Permissions | RLS + RBAC + guards UI |
+| Abonnement | source serveur ou état d'abonnement vérifié |
 
-## Flux metier immobilier
+## Profil de compte
 
-```mermaid
-flowchart LR
-  Bailleur["Bailleur"] --> Immeuble["Immeuble"]
-  Immeuble --> Unite["Unite"]
-  Unite --> Locataire["Locataire"]
-  Locataire --> Contrat["Contrat / mandat"]
-  Contrat --> Paiement["Paiement"]
-  Paiement --> Quittance["Quittance / facture"]
-  Paiement --> Rapport["Rapport bailleur"]
-  Contrat --> Documents["GED / documents lies"]
-```
-
-## Adaptabilite multi-profils
-
-L'application utilise une couche de profil de compte pour eviter les conditions dispersees dans les composants.
+Le type de compte et le rôle utilisateur sont deux notions distinctes.
 
 Phase 1 :
 
-- `agencies.is_bailleur_account = true` represente le mode bailleur individuel ;
-- tout compte absent ou non marque reste traite comme agence ;
-- `accountProfile` fournit labels, features, pages masquees et role effectif ;
-- le bailleur individuel dispose d'un proprietaire interne unique via `src/services/individualOwner.ts`.
+- `is_bailleur_account = true` active le mode bailleur individuel ;
+- fallback strict agence quand le champ est absent ou faux ;
+- les composants consomment `accountProfile`, pas directement `is_bailleur_account`.
 
-Regle de code :
+## Invariants
 
-```ts
-const { accountProfile } = useAuth();
-```
-
-Les pages doivent consommer les labels/features du profil. Elles ne doivent pas lire directement `is_bailleur_account`, sauf dans les helpers centraux.
-
-## Convention personnes
-
-L'ordre produit est toujours :
-
-```text
-Prenom Nom
-```
-
-Utiliser `formatPersonName(person)` pour les bailleurs, locataires, utilisateurs, exports et documents.
-
-## Invariants d'architecture
-
-- Une ligne financiere ne doit pas etre corrigee par update destructif.
-- Une agence ne doit jamais lire les donnees d'une autre agence.
-- Un document identique ne doit pas etre regenere inutilement.
-- Une mutation offline doit etre rejouable sans double effet.
-- Les workflows destructifs doivent devenir des workflows de lifecycle : resilier, archiver, suspendre, cloturer.
+- Une agence ne lit jamais les données d'une autre agence.
+- Un bailleur individuel n'a pas besoin de sélectionner un bailleur.
+- Les calculs financiers ne sont pas corrigés par du code UI décoratif.
+- Un document vérifiable doit avoir un type stable, une référence, un QR et une entrée de registre.
+- Les secrets service role ne vont jamais dans le frontend.

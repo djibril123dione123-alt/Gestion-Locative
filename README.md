@@ -1,110 +1,61 @@
-# Samay Këur
+# Samay Këur - Application SaaS
 
-Samay Këur est une plateforme SaaS multi-tenant de gestion immobiliere pour agences, bailleurs et equipes de gestion locative en Afrique francophone.
+Samay Këur est l'application connectée de gestion locative pour agences, gestionnaires et bailleurs individuels.
 
-Le produit centralise les operations locatives critiques : patrimoine, locataires, contrats, encaissements, reliquats, commissions, documents, reporting, equipe, permissions, stockage documentaire et workflows terrain.
+Ce dépôt contient l'app privée cible :
 
-Production : https://samay-keur-gestion-locative.vercel.app
-
----
-
-## Vision produit
-
-Samay Këur transforme une gestion locative dispersee entre Excel, WhatsApp, fichiers PDF et relances manuelles en une infrastructure metier structuree.
-
-Objectifs :
-
-- fiabiliser les encaissements et les soldes locatifs ;
-- produire des documents professionnels et verifiables ;
-- donner aux agences une GED simple, securisee et economique ;
-- fonctionner avec des connexions instables grace a une logique offline-first ;
-- proteger les donnees par agence avec RLS, RBAC et Edge Functions ;
-- offrir une experience premium mobile-first pour le terrain.
-
----
-
-## Capacites principales
-
-### Gestion locative
-
-- Bailleurs, immeubles, unites, locataires.
-- Contrats, mandats, resiliations, cycles de vie metier.
-- Paiements, loyers impayes, paiements partiels, reliquats et avances.
-- Commissions agence, reversements bailleurs et tableaux de bord.
-- Interventions, inventaires, calendrier et activites.
-
-### Finance
-
-- Ledger append-only.
-- Paiements idempotents via Edge Functions.
-- Reliquats calcules cote serveur.
-- Commissions separees du montant paye par le locataire.
-- Exports comptables certifies.
-- Reconciliation et monitoring du drift financier.
-
-### Documents et GED
-
-- Generation de contrats, mandats, quittances, factures et rapports.
-- Registre documentaire avec `data_hash`, `file_hash`, versioning et statuts.
-- Reutilisation des documents deja generes quand les donnees n'ont pas change.
-- Stockage prive Supabase par agence.
-- Quotas par plan et maintenance non destructive.
-- QR codes de verification documentaire.
-
-### SaaS enterprise
-
-- Multi-tenant par agence.
-- Roles : `super_admin`, `admin`, `agent`, `comptable`, `bailleur`.
-- Permissions dynamiques par utilisateur et par page.
-- Console super-admin.
-- Abonnements PayDunya.
-- Pricing par valeur metier, stockage, collaboration et gouvernance.
-
-### Mobile et offline-first
-
-- Interface mobile terrain.
-- IndexedDB pour cache local, backup et mutations en attente.
-- Replay de la queue offline a la reconnexion.
-- Etats reseau visibles et experience stable en connexion degradee.
-
----
-
-## Architecture en bref
-
-```mermaid
-flowchart LR
-  UI["React + Vite"] --> Services["Services domaine"]
-  Services --> Repos["Repositories / Supabase client"]
-  Repos --> DB["Supabase PostgreSQL + RLS"]
-  Services --> Edge["Supabase Edge Functions"]
-  Edge --> DB
-  Edge --> Storage["Supabase Storage"]
-  UI --> IDB["IndexedDB offline queue"]
-  IDB --> Edge
-  DB --> Workers["Workers / jobs / snapshots"]
+```txt
+app.samaykeur.com
 ```
 
-Regle de production : les operations sensibles ne doivent pas etre ecrites directement depuis le client. Paiements, contrats critiques, abonnements, ledger, QR verification et documents prives passent par une Edge Function, une RPC securisee ou une policy RLS explicite.
+La vitrine publique est séparée et vit dans le dépôt `SamayKeur.com.git`.
 
----
+## Séparation des surfaces
 
-## Stack
+```txt
+samaykeur.com
+-> vitrine publique, pages légales, route /verify
 
-- React 18, TypeScript, Vite 5.
-- TailwindCSS, Framer Motion, Recharts.
-- Supabase Auth, PostgreSQL, RLS, Edge Functions Deno, Storage.
-- IndexedDB pour offline-first.
-- PayDunya pour Wave, Orange Money, Djamo et carte.
-- Resend, Orange SMS API.
-- Sentry, PostHog.
-- Vercel.
+app.samaykeur.com
+-> application SaaS connectée, données privées, workflows métier
+```
 
----
+Ne pas mélanger les deux projets.
 
-## Lancer le projet
+## Capacités principales
+
+- portefeuille locatif : bailleurs, biens, unités, locataires ;
+- contrats, mandats, résiliations ;
+- encaissements, paiements partiels, reliquats et impayés ;
+- rapports bailleurs/propriétaires ;
+- GED, documents PDF et QR de vérification ;
+- RBAC, multi-tenant, paramètres, abonnement ;
+- mode bailleur individuel avec propriétaire unique interne.
+
+## Documents vérifiables
+
+Les nouveaux QR documentaires doivent pointer vers :
+
+```txt
+https://samaykeur.com/verify?token=...&ref=...&type=...
+```
+
+La route `/verify` est publique côté vitrine et appelle l'Edge Function Supabase `verify-document`.
+
+## Installation
 
 ```bash
+cd "C:\Users\DELL\Documents\Samay Keur\App Samay Keur"
 npm install
+```
+
+Créer un `.env.local` à partir de `.env.example`.
+
+Ne jamais écrire de clé `service_role` dans le frontend.
+
+## Développement
+
+```bash
 npm run dev
 ```
 
@@ -115,14 +66,7 @@ npm run build
 npm run preview -- --host 127.0.0.1 --port 4175
 ```
 
-Vitrine marketing separee :
-
-```bash
-npm run marketing:dev
-npm run marketing:build
-```
-
-Checks recommandes avant push :
+## Checks avant push
 
 ```bash
 npm run typecheck
@@ -130,72 +74,49 @@ npm run lint
 npm run build
 ```
 
-Tests :
+Tests disponibles selon le chantier :
 
 ```bash
 npm run test
 npm run test:unit
 ```
 
-Les variables d'environnement attendues sont documentees dans `.env.example`.
+## Variables importantes
 
----
+```env
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_PUBLIC_VERIFY_BASE_URL=https://samaykeur.com
+VITE_APP_URL=https://app.samaykeur.com
+VITE_PUBLIC_APP_URL=https://app.samaykeur.com
+VITE_MARKETING_URL=https://samaykeur.com
+```
 
-## Documentation
+Après modification d'une variable `VITE_*`, redeployer l'app.
 
-La documentation detaillee est maintenant separee par responsabilite.
+## Documentation interne
 
-| Sujet | Document |
-|---|---|
-| Etat actuel du produit | [docs/current-state.md](docs/current-state.md) |
-| Architecture globale | [docs/architecture.md](docs/architecture.md) |
-| Adaptabilite multi-profils | [docs/adaptive-profiles-phase-0.md](docs/adaptive-profiles-phase-0.md) |
-| Securite | [docs/security.md](docs/security.md) |
-| Finance engine | [docs/finance-engine.md](docs/finance-engine.md) |
-| Paiements | [docs/payments.md](docs/payments.md) |
-| Offline-first | [docs/offline-first.md](docs/offline-first.md) |
-| GED et stockage | [docs/document-storage.md](docs/document-storage.md) |
-| RBAC et multi-tenant | [docs/rbac.md](docs/rbac.md) |
-| Edge Functions | [docs/edge-functions.md](docs/edge-functions.md) |
-| Deploiement | [docs/deployment.md](docs/deployment.md) |
-| Monitoring | [docs/monitoring.md](docs/monitoring.md) |
-| Roadmap | [docs/roadmap.md](docs/roadmap.md) |
-| Contribution | [docs/contributing.md](docs/contributing.md) |
-| Design system | [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) |
-| Brand guidelines | [docs/BRAND_GUIDELINES.md](docs/BRAND_GUIDELINES.md) |
-| Separation vitrine / app | [docs/marketing-app-separation.md](docs/marketing-app-separation.md) |
+La documentation est organisée par domaine dans [`docs/README.md`](docs/README.md).
 
-Les anciens documents de suivi et historiques restent archives dans [docs/historique](docs/historique).
+Entrées principales :
 
----
+- état actuel : [`docs/current-state.md`](docs/current-state.md)
+- architecture : [`docs/architecture.md`](docs/architecture.md)
+- profils adaptatifs : [`docs/adaptive-profiles-phase-0.md`](docs/adaptive-profiles-phase-0.md)
+- finance : [`docs/finance-engine.md`](docs/finance-engine.md)
+- paiements : [`docs/payments.md`](docs/payments.md)
+- GED : [`docs/document-storage.md`](docs/document-storage.md)
+- sécurité : [`docs/security.md`](docs/security.md)
+- conventions : [`docs/conventions.md`](docs/conventions.md)
 
-## Maturite actuelle
+## Conventions clés
 
-Etat : beta avancee stabilisee.
-
-Dernieres verifications locales connues :
-
-- `npm run typecheck` : OK
-- `npm run lint` : OK
-- `npm run build` : OK
-- `npm run marketing:build` : OK
-- scan mojibake UTF-8 sur les fichiers touches : OK
-
-Conventions produit importantes :
-
-- l'ordre des personnes est toujours `Prenom Nom` dans l'app, les PDF, les recherches et les exports ;
-- la vitrine publique reste autonome dans `marketing/` ;
-- le mode bailleur individuel utilise `is_bailleur_account` en Phase 1 et rattache automatiquement un proprietaire interne ;
-- les comptes existants restent en fallback agence tant qu'aucun type de compte explicite n'est defini.
-
-Points d'attention production :
-
-- Supabase CLI n'est pas toujours disponible localement ; certaines migrations peuvent devoir etre appliquees via CI ou l'editeur SQL Supabase.
-- Les secrets exposes pendant les sessions de travail doivent etre rotates avant lancement commercial.
-- Les documents legaux critiques ne doivent jamais etre supprimes brutalement : ils doivent etre archives, versionnes ou marques comme obsoletes.
-
----
+- afficher les personnes en ordre `Prénom Nom` ;
+- utiliser `accountProfile` pour les variantes de compte ;
+- ne jamais confirmer un paiement hors ligne ;
+- garder les QR publics sur `samaykeur.com/verify` ;
+- ne pas commit/push sans validation explicite.
 
 ## Licence
 
-Projet prive. Toute utilisation, distribution ou deploiement hors du cadre autorise doit etre valide par l'equipe proprietaire.
+Projet privé. Toute utilisation, distribution ou déploiement hors cadre autorisé doit être validé par l'équipe propriétaire.

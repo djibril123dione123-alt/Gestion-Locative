@@ -1,77 +1,54 @@
 # Paiements
 
-Les paiements couvrent deux familles : encaissements locatifs et abonnements SaaS.
+Cette page décrit les règles opérationnelles des encaissements.
 
-## Encaissements locatifs
+## Sélecteur de mois
 
-Operations :
+Le mois concerné doit être basé sur l'état réel du contrat :
+
+- mois soldé : non sélectionnable ;
+- mois partiel : sélectionnable avec reliquat visible ;
+- mois futur : sélectionnable pour avance ;
+- mois hors période de contrat : masqué ou bloqué.
+
+## Paiement partiel
+
+Document attendu :
+
+- loyer total du mois ;
+- paiements précédents ;
+- nouveau paiement ;
+- total payé à date ;
+- reliquat ;
+- statut `Partiel` ou `Soldé`.
+
+## Protection anti-doublon
+
+Un paiement sur un mois déjà soldé doit être refusé sauf workflow explicite de correction.
+
+Le message utilisateur doit expliquer :
+
+- le mois est déjà payé ;
+- la référence du paiement existant si disponible ;
+- l'action recommandée.
+
+## Offline
+
+Hors ligne :
+
+- ne pas confirmer un paiement ;
+- ne pas générer une quittance comme si le serveur avait validé ;
+- afficher un message clair ;
+- garder le formulaire si possible.
+
+## Tests minimum
 
 - paiement complet ;
 - paiement partiel ;
-- regularisation ;
-- avance ;
-- annulation ;
-- modification controlee.
-
-Fonctions principales :
-
-- `create-paiement`
-- `update-paiement`
-- `cancel-paiement`
-
-## Flux d'encaissement
-
-```mermaid
-flowchart TB
-  Form["Module Payer ce loyer"] --> Validate["Validation frontend minimale"]
-  Validate --> Offline{"Offline ?"}
-  Offline -- oui --> Queue["pending_mutations IndexedDB"]
-  Offline -- non --> Edge["create-paiement"]
-  Queue --> Replay["Replay a la reconnexion"]
-  Replay --> Edge
-  Edge --> Rbac["fn_user_can"]
-  Rbac --> Compute["Calcul serveur: du, deja paye, reliquat"]
-  Compute --> Insert["Paiement idempotent"]
-  Insert --> Ledger["Ledger append-only"]
-  Insert --> UI["Feedback + documents"]
-```
-
-## Regles metier
-
-- Les paiements partiels sont autorises.
-- Un paiement ne doit pas creer de reliquat negatif non controle.
-- Les impayes ne doivent pas apparaitre dans "Paiements recus".
-- Le statut "Tous" dans paiements recus signifie : payes + partiels.
-- Les impayes sont geres dans leur vue dediee.
-- Les commissions ne doivent pas influencer le controle de surpaiement.
-
-## Abonnements SaaS
-
-Flux :
-
-1. Le frontend demande une facture PayDunya via `initiate-payment`.
-2. Une transaction pending est creee.
-3. PayDunya retourne une URL ou un provider flow.
-4. Le webhook `paydunya-webhook` valide le retour.
-5. L'abonnement est active cote serveur.
-
-## Idempotence
-
-Idempotence requise sur :
-
-- double clic ;
-- refresh navigateur ;
-- retry reseau ;
-- replay offline ;
-- webhook fournisseur repete.
-
-## Erreurs utilisateur
-
-Les erreurs doivent rester metier :
-
-- montant invalide ;
-- contrat introuvable ;
-- permission insuffisante ;
-- surpaiement ;
-- connexion indisponible, operation mise en attente ;
-- transaction fournisseur refusee.
+- paiement de reliquat ;
+- mois soldé ;
+- mois futur ;
+- génération quittance ;
+- rapport bailleur ;
+- mode agence ;
+- mode bailleur individuel.

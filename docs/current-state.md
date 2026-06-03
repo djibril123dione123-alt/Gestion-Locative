@@ -1,221 +1,75 @@
-# Etat actuel de Samay Keur
+# État actuel du produit
 
-Derniere mise a jour : 2026-05-25
+Dernière mise à jour : 2026-06-03.
 
-Ce document resume l'etat fonctionnel actuel de Samay Keur apres la separation vitrine/application, l'adaptation au mode bailleur individuel et les dernieres passes UX.
+Samay Këur est une plateforme SaaS de gestion locative pour agences, gestionnaires et bailleurs individuels en Afrique francophone.
 
-## Positionnement produit
+## Surfaces en production
 
-Samay Keur est une plateforme SaaS proptech pour l'Afrique francophone. Elle centralise :
+| Surface | Dépôt | Domaine | Rôle |
+|---|---|---|---|
+| Application SaaS | `djibril123dione123-alt/app.SamayKeur.com.git` | `app.samaykeur.com` | Espace connecté, métier, données privées |
+| Vitrine publique | `djibril123dione123-alt/SamayKeur.com.git` | `samaykeur.com` | Marketing, pages légales, `/verify` public |
 
-- bailleurs et proprietaires ;
-- biens, immeubles et unites ;
-- locataires ;
-- contrats et mandats ;
-- encaissements, paiements partiels et reliquats ;
-- impayes ;
-- quittances, factures, contrats, mandats et rapports ;
-- GED, QR de verification et stockage documentaire ;
-- equipe, roles, permissions et reporting financier.
+Les deux projets doivent rester séparés. La vitrine ne doit pas être réintégrée dans l'app.
 
-Le produit doit rester une infrastructure de gestion immobiliere, pas une simple application de quittances.
+## Capacités produit actives
 
-## Surfaces applicatives
+- Portefeuille locatif : bailleurs, biens, unités, locataires, contrats.
+- Encaissements : paiements complets, paiements partiels, reliquats et impayés.
+- Documents : quittances, factures, contrats, mandats, rapports bailleurs/propriétaires.
+- GED : stockage, registre documentaire, QR de vérification publique.
+- Finance : rapports, commissions agence, revenus propriétaires, exports.
+- Administration : rôles, équipe, paramètres, abonnement, console admin.
+- Profil bailleur individuel : UX simplifiée et bailleur unique interne.
 
-| Surface | Chemin local | Role |
-|---|---|---|
-| Application SaaS | `src/` | Espace authentifie React/Vite connecte a Supabase |
-| Vitrine marketing | `marketing/` | Landing autonome HTML/CSS/JS, build separe |
-| Assets partages | `public/brand/` | Logos, images marketing, screenshots, tokens |
-| Documentation | `docs/` | Architecture, runbooks, produit, securite |
+## Mode bailleur individuel
 
-La vitrine ne doit pas etre reintegree dans l'ancienne landing React.
+En Phase 1, la source de vérité reste :
 
-## Repositories GitHub
-
-| Depot | Contenu |
-|---|---|
-| `djibril123dione123-alt/Samay-Keur.git` | Application SaaS principale + migrations + documentation |
-| `djibril123dione123-alt/vitrine-Samay-Keur.git` | Vitrine marketing autonome + assets publics necessaires |
-
-Le remote principal local doit pointer vers `Samay-Keur.git`.
-
-## Scripts importants
-
-```bash
-npm run dev
-npm run build
-npm run preview -- --host 127.0.0.1 --port 4175
+```txt
+agencies.is_bailleur_account = true
 ```
 
-```bash
-npm run marketing:dev
-npm run marketing:build
+Comportement attendu :
+
+- l'utilisateur est le propriétaire principal de son espace ;
+- les pages `Bailleurs`, `Mandats`, `Commissions agence` sont masquées si non pertinentes ;
+- les formulaires qui exigent un bailleur utilisent automatiquement le bailleur interne unique ;
+- les documents parlent de propriétaire direct, pas de mandataire ;
+- le plan affiché par défaut est Starter si aucun abonnement payant réel n'est actif.
+
+## Documents vérifiables
+
+Les nouveaux QR générés par l'app doivent utiliser :
+
+```txt
+https://samaykeur.com/verify?token=...&ref=...&type=...
 ```
 
-Checks avant push :
+La route `/verify` vit côté vitrine et appelle l'Edge Function `verify-document`.
+
+Types prioritaires :
+
+- `quittance`
+- `contrat`
+- `mandat`
+- `rapport_bailleur`
+- `rapport_proprietaire`
+
+## État connu et limites
+
+- Le mode agence reste le fallback pour les anciens comptes.
+- `organization_type`, `document_mode` et `enabled_modules` sont préparés progressivement, mais ne doivent pas être utilisés comme seule source tant que la migration produit n'est pas complète.
+- L'offline-first est une cible de robustesse terrain. Les actions financières ne doivent pas être confirmées hors ligne.
+- Les QR anciens ne changent pas automatiquement ; seuls les documents régénérés après déploiement utilisent la nouvelle URL publique.
+
+## Checks obligatoires
 
 ```bash
 npm run typecheck
 npm run lint
 npm run build
-npm run marketing:build
 ```
 
-## Mode bailleur individuel
-
-Le mode bailleur individuel est active via `agencies.is_bailleur_account = true` pour la Phase 1.
-
-Comportement attendu :
-
-- l'utilisateur est le proprietaire unique de son espace ;
-- aucun select bailleur ne doit etre impose ;
-- un bailleur interne est cree ou rattache automatiquement ;
-- les immeubles/biens sont rattaches au proprietaire unique ;
-- les contrats utilisent une commission a `0` ;
-- les modules agence non pertinents sont masques ;
-- les documents parlent de proprietaire direct, pas de mandataire ;
-- le plan affiche par defaut est Starter s'il n'existe pas d'abonnement payant actif.
-
-Fichiers principaux :
-
-- `src/lib/accountProfile.ts`
-- `src/constants/dictionary.ts`
-- `src/services/individualOwner.ts`
-- `src/hooks/usePlanLimits.ts`
-- `src/pages/Abonnement.tsx`
-- `src/pages/Immeubles.tsx`
-- `src/pages/Contrats.tsx`
-- `src/lib/pdf.ts`
-
-## Navigation adaptative
-
-La navigation doit etre construite depuis le contexte compte, pas depuis des conditions dispersees.
-
-Regle cible :
-
-```ts
-sidebarItems = getSidebarItems(accountType, role, enabledModules, plan)
-```
-
-En Phase 1, les composants doivent consommer :
-
-- `accountProfile.labels`
-- `accountProfile.features`
-- `getAccountPageLabel()`
-- `canAccessAccountPage()`
-- `getEffectiveRoleForAccount()`
-
-Ils ne doivent pas lire directement `is_bailleur_account` sauf dans les helpers centraux.
-
-## Documents PDF
-
-La charte documentaire commune couvre :
-
-- en-tete ;
-- footer ;
-- titres de section ;
-- tableaux ;
-- blocs totaux ;
-- signatures ;
-- QR de verification ;
-- fallbacks en cas de donnees manquantes.
-
-Pour bailleur individuel :
-
-- quittance emise par le proprietaire ;
-- contrat direct proprietaire / locataire ;
-- rapport nomme `Resume mensuel proprietaire` ;
-- mandat de gerance bloque ou masque ;
-- pas de commission agence ;
-- NINEA/RC secondaires ou absents si non renseignes.
-
-Pour agence :
-
-- logique mandataire conservee ;
-- commissions conservees ;
-- rapports bailleurs conserves ;
-- NINEA/RC, representant, cachet et signature restent pertinents.
-
-## Convention noms de personnes
-
-Dans toute l'application, l'ordre d'affichage et de saisie est :
-
-```text
-Prenom Nom
-```
-
-Cette convention s'applique aux :
-
-- locataires ;
-- bailleurs/proprietaires ;
-- utilisateurs equipe ;
-- contrats ;
-- rapports ;
-- quittances/factures ;
-- exports ;
-- recherches ;
-- notifications.
-
-Utiliser le helper :
-
-```ts
-formatPersonName(person)
-```
-
-Ne pas recreer manuellement des chaines `nom + prenom`.
-
-## Paiements et reliquats
-
-Le workflow paiement doit rester serveur-centrique :
-
-- creation via Edge Function ;
-- idempotency key obligatoire ;
-- mois soldes bloques ;
-- mois partiels selectionnables ;
-- total paye a date calcule avec l'historique du mois ;
-- reliquat affiche comme difference entre loyer total et total paye ;
-- quittance/facture explicite les paiements precedents si le paiement courant solde un reliquat.
-
-## Migrations recentes
-
-Migrations importantes :
-
-- `20260524000001_individual_landlord_owner_profile.sql`
-- `20260524000002_account_profile_structuring.sql`
-
-Objectifs :
-
-- autoriser commission `0` pour bailleur individuel ;
-- ajouter le proprietaire interne unique ;
-- preparer `organization_type`, `document_mode` et `enabled_modules` ;
-- conserver la compatibilite avec les anciens comptes agence.
-
-Avant toute nouvelle migration :
-
-- verifier les comptes existants ;
-- garder fallback agence ;
-- ne pas casser RLS ;
-- ne pas casser le ledger ;
-- documenter les policies modifiees.
-
-## Etat QA local connu
-
-Dernieres commandes executees avec succes :
-
-- `npm run typecheck`
-- `npm run lint`
-- `npm run build`
-- `npm run marketing:build`
-
-Previews locales :
-
-- Application : `http://127.0.0.1:4175/`
-- Vitrine : `http://127.0.0.1:4176/`
-
-## Points de vigilance restants
-
-- Les profils `property_manager`, `multi_property_landlord` et `group` sont prepares conceptuellement mais pas finalises.
-- Le mode documentaire `simple / professional / legal` existe progressivement, mais tous les templates ne sont pas encore entierement modulaires.
-- Les deployments Vercel CLI peuvent rester en statut `UNKNOWN`; verifier le dashboard Vercel apres chaque push.
-- Toute evolution RLS doit etre testee avec au minimum un compte agence et un compte bailleur individuel.
+Pour la vitrine, exécuter les checks dans le projet vitrine séparé.

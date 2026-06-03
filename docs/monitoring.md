@@ -1,53 +1,50 @@
 # Monitoring
 
-Le monitoring doit couvrir la stabilite applicative, la finance, les jobs, les webhooks, le stockage et l'experience utilisateur.
+Le monitoring doit couvrir l'app, la vitrine, Supabase, les documents, les paiements et l'expérience terrain.
 
-## Surfaces
+## Signaux critiques
 
-- Sentry : erreurs frontend.
-- Supabase logs : Edge Functions, DB.
-- Audit dashboard : sante systeme, finance, jobs.
-- PostHog : analytics produit si active.
-- Vercel logs : build, runtime, routing.
-
-## Indicateurs critiques
-
-| Domaine | Signal |
+| Domaine | Signal à surveiller |
 |---|---|
-| Finance | ledger drift, exports, reversals |
-| Jobs | pending, stuck, failed |
-| Webhooks | PayDunya pending > 24h, erreurs hash |
-| Storage | quota, fichiers lourds, orphelins |
-| Offline | pending mutations, sync failures |
-| Security | refus RLS, permissions refusees |
-| UX | erreurs JS, pages blanches, temps chargement |
+| Frontend | page blanche, erreur JS, route cassée |
+| Paiements | doublons, mois soldés repassés payables, reliquats incorrects |
+| Documents | QR absent, URL QR mauvaise, type incohérent |
+| Vérification | erreurs `verify-document`, document authentique affiché introuvable |
+| RLS | refus inattendu ou fuite inter-agence |
+| Storage | fichier absent, signed URL expirée, quota proche |
+| Offline | skeleton infini, données à `0`, redirection Welcome hors ligne |
+| Vercel | build échoué, domaine mal lié, rewrite cassé |
 
-## Dashboard systeme
+## Alertes recommandées
 
-```mermaid
-flowchart LR
-  DB["PostgreSQL"] --> Snapshots["system_health / snapshots"]
-  Edge["Edge logs"] --> Alerts["Alertes"]
-  Front["Frontend errors"] --> Sentry["Sentry"]
-  Snapshots --> Audit["Audit dashboard"]
-  Alerts --> Audit
-  Sentry --> Audit
-```
-
-## Alertes recommandees
-
-- Page blanche ou erreur JS critique.
-- `ledger_drift > 0`.
-- `job_queue failed > 0`.
-- webhook PayDunya invalide repete.
-- Storage > 80% quota.
-- pending mutations qui ne diminuent pas.
-- erreur RLS bloquante sur route critique.
+- erreur critique sur `/verify` ;
+- Edge Function `verify-document` en erreur ;
+- génération document sans entrée registre ;
+- paiement créé sans document attendu ;
+- `document_type` inconnu ;
+- échec build Vercel ;
+- erreurs Supabase Auth répétées ;
+- Storage > 80% du quota.
 
 ## Runbooks
 
 Voir :
 
+- [runbooks/DEPLOYMENT.md](runbooks/DEPLOYMENT.md)
 - [runbooks/INCIDENT_JS_ERRORS.md](runbooks/INCIDENT_JS_ERRORS.md)
 - [runbooks/INCIDENT_RLS_BLOCKING.md](runbooks/INCIDENT_RLS_BLOCKING.md)
-- [runbooks/DEPLOYMENT.md](runbooks/DEPLOYMENT.md)
+
+## Vérification post-déploiement
+
+Après chaque push app :
+
+- ouvrir `app.samaykeur.com` ;
+- générer un document test ;
+- vérifier le QR sur `samaykeur.com/verify` ;
+- tester dashboard et paiements.
+
+Après chaque push vitrine :
+
+- ouvrir `samaykeur.com` ;
+- ouvrir `/verify` avec et sans paramètres ;
+- vérifier les pages légales et CTA.

@@ -220,18 +220,23 @@ async function buildVerificationUrl(payload: {
   token?: string;
 }) {
   const token = payload.token ?? await sha256Hex(`${payload.type}|${payload.ref}|${payload.agency}|${payload.amount ?? 0}|${payload.date ?? ''}`);
-  const configuredBase =
-    (import.meta.env.VITE_PUBLIC_VERIFY_BASE_URL as string | undefined) ||
-    (import.meta.env.VITE_MARKETING_URL as string | undefined) ||
-    'https://samaykeur.com';
-  const isLocalBase = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?/i.test(configuredBase);
-  const base = (isLocalBase ? 'https://samaykeur.com' : configuredBase).replace(/\/+$/, '');
+  const base = getPublicVerifyBaseUrl();
   const params = new URLSearchParams({
     token,
     ref: payload.ref,
     type: payload.type,
   });
   return `${base}/verify?${params.toString()}`;
+}
+
+function getPublicVerifyBaseUrl() {
+  const configuredBase = (import.meta.env.VITE_PUBLIC_VERIFY_BASE_URL as string | undefined)?.trim();
+  if (!configuredBase) return 'https://samaykeur.com';
+
+  const isLocalBase = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?/i.test(configuredBase);
+  if (isLocalBase) return 'https://samaykeur.com';
+
+  return configuredBase.replace(/\/+$/, '') || 'https://samaykeur.com';
 }
 
 async function createDocumentVerificationToken(payload: DocumentVerificationPayload): Promise<string> {

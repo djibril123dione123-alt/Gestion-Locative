@@ -11,7 +11,10 @@ import { ToastContainer } from '../ui/Toast';
 interface DemoDataLoaderProps {
   onLoaded?: () => void;
   compact?: boolean;
+  variant?: 'full' | 'compact' | 'resetBanner';
 }
+
+const DEMO_TABLES = ['bailleurs', 'immeubles', 'unites', 'locataires', 'contrats', 'paiements'] as const;
 
 const DEMO_DATA = {
   bailleur: {
@@ -39,7 +42,7 @@ const DEMO_DATA = {
   ],
 };
 
-export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProps) {
+export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: DemoDataLoaderProps) {
   const { profile, agency, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const toast = useToast();
@@ -61,18 +64,29 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
     }
   };
 
+  const refreshDemoPresence = async (agencyId: string) => {
+    const checks = await Promise.allSettled(
+      DEMO_TABLES.map((table) =>
+        supabase
+          .from(table)
+          .select('id', { count: 'exact', head: true })
+          .eq('agency_id', agencyId)
+          .eq('is_demo_data', true),
+      ),
+    );
+
+    return checks.some((result) => result.status === 'fulfilled' && (result.value.count ?? 0) > 0);
+  };
+
   useEffect(() => {
     if (!profile?.agency_id) return;
+    const agencyId = profile.agency_id;
     let alive = true;
     void (async () => {
       try {
-        const { count, error } = await supabase
-          .from('immeubles')
-          .select('id', { count: 'exact', head: true })
-          .eq('agency_id', profile.agency_id)
-          .eq('is_demo_data', true);
-        if (!alive || error) return;
-        setDemoPresent((count ?? 0) > 0);
+        const hasDemoData = await refreshDemoPresence(agencyId);
+        if (!alive) return;
+        setDemoPresent(hasDemoData);
       } catch {
         if (alive) setDemoPresent(false);
       }
@@ -290,7 +304,7 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
       if (resetError) throw resetError;
 
       setDone(false);
-      setDemoPresent(false);
+      setDemoPresent(await refreshDemoPresence(agencyId));
       setConfirmReset(false);
       toast.success('Les donnees exemples ont ete supprimees. Vos vraies donnees sont conservees.');
       onLoaded?.();
@@ -302,6 +316,46 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
     }
   };
 
+  if (variant === 'resetBanner') {
+    if (!demoPresent) return null;
+
+    return (
+      <>
+        <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+        <div className="rounded-2xl border border-orange-200 bg-gradient-to-r from-orange-50 via-white to-emerald-50 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+          {confirmReset && (
+            <div className="mb-3 flex items-start gap-2 rounded-xl border border-orange-200 bg-white/85 p-3 text-sm font-semibold text-orange-900">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <span>Supprimer les donnees exemples ? Cette action retire uniquement les exemples generes par Samay Keur. Vos vraies donnees ne seront pas supprimees.</span>
+            </div>
+          )}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-black text-slate-950">Donnees exemples actives</p>
+                <p className="mt-0.5 text-sm font-semibold leading-5 text-slate-600">
+                  Vous explorez Samay Keur avec des donnees de test. Vous pouvez les supprimer sans toucher a vos vraies donnees.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void resetDemo()}
+              disabled={resetting || loading}
+              className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 py-2.5 text-sm font-black text-orange-700 shadow-sm transition hover:bg-orange-50 disabled:opacity-50"
+            >
+              {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {confirmReset ? 'Confirmer le reset' : 'Reinitialiser les exemples'}
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   if (done && compact) {
     return (
       <div className={`flex items-center gap-2 ${compact ? 'text-sm' : 'text-base'} font-bold text-emerald-700`}>
@@ -311,7 +365,7 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
     );
   }
 
-  if (compact) {
+  if (compact || variant === 'compact') {
     return (
       <>
         <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />

@@ -29,6 +29,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { FirstStepsChecklist } from '../components/onboarding/FirstStepsChecklist';
 import { readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { DemoDataLoader } from '../components/billing/DemoDataLoader';
 
 const FR_MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
 
@@ -347,6 +348,8 @@ export function Dashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {
           onRetry={loadDashboardData}
         />
       )}
+
+      <DemoDataLoader variant="resetBanner" onLoaded={loadDashboardData} />
 
       {stats.nbImpayesMois > 0 && (
         <button

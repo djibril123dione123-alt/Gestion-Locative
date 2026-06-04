@@ -30,18 +30,18 @@ const MAX_LOGO_SIZE = 5 * 1024 * 1024;
 
 const STEPS = [
   {
-    title: 'Identite',
-    eyebrow: 'Etape 1',
+    title: 'Identité officielle',
+    eyebrow: 'Étape 1',
     icon: Building2,
   },
   {
     title: 'Cadre de travail',
-    eyebrow: 'Etape 2',
+    eyebrow: 'Étape 2',
     icon: CheckCircle2,
   },
   {
-    title: 'Equipe',
-    eyebrow: 'Etape 3',
+    title: 'Équipe',
+    eyebrow: 'Étape 3',
     icon: Users,
   },
 ] as const;
@@ -72,6 +72,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
   const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
   const [form, setForm] = useState({
     agencyName: '',
+    representativeName: '',
     devise: 'XOF',
     timezone: 'Africa/Dakar',
     inviteEmail: '',
@@ -85,7 +86,11 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
     void (async () => {
       const [agencyRes, settingsRes] = await Promise.all([
         supabase.from('agencies').select('name, logo_url').eq('id', profile.agency_id).maybeSingle(),
-        supabase.from('agency_settings').select('nom_agence, devise, logo_url').eq('agency_id', profile.agency_id).maybeSingle(),
+        supabase
+          .from('agency_settings')
+          .select('nom_agence, devise, logo_url, representant_nom')
+          .eq('agency_id', profile.agency_id)
+          .maybeSingle(),
       ]);
 
       if (!alive) return;
@@ -100,6 +105,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
       setForm((prev) => ({
         ...prev,
         agencyName: settingsRes.data?.nom_agence || agencyRes.data?.name || prev.agencyName,
+        representativeName: settingsRes.data?.representant_nom || prev.representativeName,
         devise: settingsRes.data?.devise || prev.devise,
         timezone: storedTimezone,
       }));
@@ -123,11 +129,17 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
   if (!isOpen || !profile?.agency_id) return null;
 
   const canContinue = step !== 0 || form.agencyName.trim().length >= 2;
+  const fieldClass =
+    'h-12 w-full rounded-2xl border border-emerald-950/10 bg-white/95 px-4 py-3 text-base font-bold text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-300/25';
+  const labelClass = 'mb-2 block text-sm font-black text-slate-700';
+  const mutedCopyClass = 'text-sm leading-6 text-slate-600';
+  const currentTitle = isIndividualOwner && STEPS[step].title === 'Équipe' ? 'Préférences' : STEPS[step].title;
+  const skipLabel = step === 2 && !isIndividualOwner ? 'Inviter plus tard' : "Passer pour l'instant";
 
   const uploadLogo = async () => {
     if (!logoFile || !profile?.agency_id) return logoPreview;
     if (!logoFile.type.startsWith('image/')) {
-      throw new Error('Le logo doit etre une image.');
+      throw new Error('Le logo doit être une image.');
     }
     if (logoFile.size > MAX_LOGO_SIZE) {
       throw new Error('Le logo doit peser moins de 5 Mo.');
@@ -189,6 +201,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
       const { error: settingsError } = await supabase.from('agency_settings').upsert({
         agency_id: profile.agency_id,
         nom_agence: agencyName,
+        representant_nom: isIndividualOwner ? null : form.representativeName.trim() || null,
         devise: form.devise,
         city: form.timezone.includes('Abidjan') ? 'Abidjan' : 'Dakar',
         logo_url: logoUrl || null,
@@ -238,7 +251,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
   const skip = () => {
     if (!profile.agency_id) return;
     markOnboardingComplete(profile.agency_id);
-    toast.success('Vous pourrez terminer la configuration depuis les parametres.');
+    toast.success('Vous pourrez terminer la configuration depuis les paramètres.');
     onComplete();
     onClose();
   };
@@ -248,59 +261,60 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
   return (
     <>
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
-      <div className="fixed inset-0 z-[85] flex items-center justify-center overflow-y-auto bg-slate-950/70 px-3 py-5 backdrop-blur-xl">
-        <section className="relative w-full max-w-5xl overflow-hidden rounded-[1.75rem] border border-white/14 bg-white shadow-[0_34px_120px_rgba(6,17,13,0.32)]">
+      <div className="fixed inset-0 z-[85] flex items-center justify-center overflow-y-auto bg-slate-950/76 px-3 py-4 backdrop-blur-2xl">
+        <section className="relative w-full max-w-5xl overflow-hidden rounded-[2rem] border border-white/14 bg-[linear-gradient(135deg,rgba(255,250,240,0.98),rgba(248,244,236,0.94))] shadow-[0_34px_120px_rgba(6,17,13,0.36)]">
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 z-10 rounded-full border border-slate-200 bg-white/90 p-2 text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+            className="absolute right-4 top-4 z-10 rounded-full border border-white/25 bg-white/90 p-2 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-200"
             aria-label="Fermer l'onboarding"
           >
             <X className="h-5 w-5" />
           </button>
 
           <div className="grid lg:grid-cols-[0.78fr_1.22fr]">
-            <aside className="relative overflow-hidden bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-6 text-white sm:p-8">
+            <aside className="relative overflow-hidden bg-[radial-gradient(circle_at_18%_8%,rgba(251,191,36,0.2),transparent_30%),radial-gradient(circle_at_90%_100%,rgba(16,185,129,0.26),transparent_34%),linear-gradient(145deg,#02140f,#053426_48%,#06110e)] p-6 text-white sm:p-8 [@media(max-height:800px)]:p-6">
               <div className="pointer-events-none absolute -left-20 -top-20 h-56 w-56 rounded-full bg-emerald-400/16 blur-3xl" />
               <div className="pointer-events-none absolute bottom-0 right-0 h-52 w-52 rounded-full bg-orange-500/20 blur-3xl" />
               <div className="relative">
                 <span className="inline-flex rounded-full border border-orange-300/25 bg-orange-300/10 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-orange-200">
-                  Time-to-value
+                  Mise en route
                 </span>
-                <h2 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
+                <h2 className="mt-5 text-3xl font-black tracking-tight text-[#fff7e6] sm:text-4xl [@media(max-height:800px)]:text-3xl">
                   {isIndividualOwner ? 'Configurez votre espace propriétaire en moins de 3 minutes.' : 'Configurez votre agence en moins de 3 minutes.'}
                 </h2>
-                <p className="mt-4 text-sm leading-6 text-emerald-50/72">
+                <p className="mt-4 text-sm leading-6 text-emerald-50/76">
                   {isIndividualOwner
                     ? 'On garde uniquement ce qui débloque la valeur tout de suite : identité, devise, puis premiers pas métier.'
                     : 'On garde uniquement ce qui débloque la valeur tout de suite : identité, devise, équipe, puis premiers pas métier.'}
                 </p>
 
-                <div className="mt-8 space-y-3">
+                <div className="mt-8 space-y-3 [@media(max-height:800px)]:mt-6">
                   {STEPS.map((item, index) => {
                     const Icon = item.icon;
                     const active = index === step;
                     const done = index < step;
+                    const title = isIndividualOwner && item.title === 'Équipe' ? 'Préférences' : item.title;
                     return (
                       <div
                         key={item.title}
                         className={`flex items-center gap-3 rounded-2xl border p-3 transition ${
                           active
-                            ? 'border-orange-300/35 bg-white/12'
+                            ? 'border-orange-300/35 bg-white/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]'
                             : done
                               ? 'border-emerald-300/25 bg-emerald-300/10'
-                              : 'border-white/10 bg-white/[0.04]'
+                              : 'border-white/10 bg-white/[0.05]'
                         }`}
                       >
                         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${done ? 'bg-emerald-300 text-emerald-950' : 'bg-white/10 text-orange-200'}`}>
                           {done ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
                         </div>
                         <div>
-                          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-100/55">
+                          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-100/60">
                             {item.eyebrow}
                           </p>
                           <p className="text-sm font-black text-white">
-                            {isIndividualOwner && item.title === 'Equipe' ? 'Préférences' : item.title}
+                            {title}
                           </p>
                         </div>
                       </div>
@@ -310,8 +324,8 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
               </div>
             </aside>
 
-            <div className="p-5 sm:p-8">
-              <div className="mb-7">
+            <div className="max-h-[92vh] overflow-y-auto p-5 sm:p-8 [@media(max-height:800px)]:p-6">
+              <div className="mb-6">
                 <div className="flex items-center gap-3">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-brand-800 ring-1 ring-emerald-100">
                     <StepIcon className="h-6 w-6" />
@@ -321,7 +335,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                       {STEPS[step].eyebrow}
                     </p>
                     <h3 className="text-2xl font-black text-slate-950">
-                      {isIndividualOwner && STEPS[step].title === 'Equipe' ? 'Préférences' : STEPS[step].title}
+                      {currentTitle}
                     </h3>
                   </div>
                 </div>
@@ -332,28 +346,51 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
 
               {step === 0 && (
                 <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-end">
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-black text-slate-700">
-                      {isIndividualOwner ? 'Nom du propriétaire' : "Nom de l'agence"}
-                    </span>
-                    <input
-                      value={form.agencyName}
-                      onChange={(event) => setForm((prev) => ({ ...prev, agencyName: event.target.value }))}
-                      placeholder={isIndividualOwner ? 'Ex: Moussa Diop' : 'Ex: Teranga Gestion Immobilière'}
-                      className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-bold text-slate-950 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                      autoFocus
-                    />
-                  </label>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-lg font-black text-slate-950">Identité officielle</p>
+                      <p className={mutedCopyClass}>
+                        Vérifiez les informations qui apparaîtront sur vos documents, rapports et invitations.
+                      </p>
+                    </div>
+                    <label className="block">
+                      <span className={labelClass}>
+                        {isIndividualOwner ? 'Nom du propriétaire' : "Nom de l'agence"}
+                      </span>
+                      <input
+                        value={form.agencyName}
+                        onChange={(event) => setForm((prev) => ({ ...prev, agencyName: event.target.value }))}
+                        placeholder={isIndividualOwner ? 'Ex: Moussa Diop' : 'Ex: Teranga Gestion Immobilière'}
+                        className={fieldClass}
+                        autoFocus
+                      />
+                    </label>
+                    {!isIndividualOwner && (
+                      <label className="block">
+                        <span className={labelClass}>Nom du représentant</span>
+                        <input
+                          value={form.representativeName}
+                          onChange={(event) => setForm((prev) => ({ ...prev, representativeName: event.target.value }))}
+                          placeholder="Ex: Awa Ndiaye"
+                          className={fieldClass}
+                        />
+                        <span className="mt-2 block text-xs font-semibold text-slate-500">
+                          Utilisé sur les contrats, mandats, rapports et signatures si renseigné.
+                        </span>
+                      </label>
+                    )}
+                  </div>
 
-                  <label className="group flex min-h-[8rem] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/50 px-5 py-4 text-center transition hover:border-emerald-400 hover:bg-emerald-50">
+                  <label className="group flex min-h-[9rem] cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-300/70 bg-emerald-50/60 px-5 py-4 text-center shadow-inner transition hover:border-amber-400 hover:bg-amber-50/70 sm:w-44">
                     {logoPreview ? (
-                      <img src={logoPreview} alt={isIndividualOwner ? 'Visuel propriétaire' : 'Logo agence'} className="h-14 w-20 object-contain" />
+                      <img src={logoPreview} alt={isIndividualOwner ? 'Visuel propriétaire' : 'Logo agence'} className="h-16 w-24 object-contain" />
                     ) : (
                       <Upload className="h-7 w-7 text-brand-800" />
                     )}
                     <span className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-brand-800">
                       Logo optionnel
                     </span>
+                    <span className="mt-1 text-xs font-semibold text-slate-500">PNG, JPG, SVG</span>
                     <input
                       type="file"
                       accept="image/*"
@@ -366,12 +403,18 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
 
               {step === 1 && (
                 <div className="grid gap-5 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <p className="text-lg font-black text-slate-950">Cadre de travail</p>
+                    <p className={mutedCopyClass}>
+                      Ces réglages cadrent les montants, les dates et les documents générés par Samay Këur.
+                    </p>
+                  </div>
                   <label className="block">
-                    <span className="mb-2 block text-sm font-black text-slate-700">Devise principale</span>
+                    <span className={labelClass}>Devise principale</span>
                     <select
                       value={form.devise}
                       onChange={(event) => setForm((prev) => ({ ...prev, devise: event.target.value }))}
-                      className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-bold text-slate-950 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      className={fieldClass}
                     >
                       <option value="XOF">FCFA BCEAO (XOF)</option>
                       <option value="EUR">Euro (EUR)</option>
@@ -379,11 +422,11 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                     </select>
                   </label>
                   <label className="block">
-                    <span className="mb-2 block text-sm font-black text-slate-700">Fuseau horaire</span>
+                    <span className={labelClass}>Fuseau horaire</span>
                     <select
                       value={form.timezone}
                       onChange={(event) => setForm((prev) => ({ ...prev, timezone: event.target.value }))}
-                      className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-bold text-slate-950 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                      className={fieldClass}
                     >
                       {TIMEZONES.map((timezone) => (
                         <option key={timezone.value} value={timezone.value}>
@@ -392,9 +435,9 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                       ))}
                     </select>
                   </label>
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 sm:col-span-2">
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/75 p-4 sm:col-span-2">
                     <p className="text-sm font-semibold leading-6 text-emerald-900">
-                      Ces reglages alimentent les documents, les rapports et les dates affichees dans l'application.
+                      Ces réglages alimentent les documents, les rapports et les dates affichées dans l'application.
                     </p>
                   </div>
                 </div>
@@ -402,7 +445,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
 
               {step === 2 && (
                 <div className="space-y-5">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="rounded-2xl border border-emerald-950/10 bg-white/75 p-4 shadow-sm">
                     <div className="flex items-start gap-3">
                       <Mail className="mt-1 h-5 w-5 text-brand-800" />
                       <div>
@@ -417,33 +460,35 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                       </div>
                     </div>
                   </div>
-                  {!isIndividualOwner && <div className="grid gap-4 sm:grid-cols-[1fr_13rem]">
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-black text-slate-700">Email collaborateur optionnel</span>
-                      <input
-                        type="email"
-                        value={form.inviteEmail}
-                        onChange={(event) => setForm((prev) => ({ ...prev, inviteEmail: event.target.value }))}
-                        placeholder="agent@agence.com"
-                        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-bold text-slate-950 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-black text-slate-700">Role</span>
-                      <select
-                        value={form.inviteRole}
-                        onChange={(event) => setForm((prev) => ({ ...prev, inviteRole: event.target.value as RoleOption }))}
-                        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-base font-bold text-slate-950 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
-                      >
-                        <option value="agent">Agent</option>
-                        <option value="comptable">Comptable</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </label>
-                  </div>}
+                  {!isIndividualOwner && (
+                    <div className="grid gap-4 sm:grid-cols-[1fr_13rem]">
+                      <label className="block">
+                        <span className={labelClass}>Email collaborateur optionnel</span>
+                        <input
+                          type="email"
+                          value={form.inviteEmail}
+                          onChange={(event) => setForm((prev) => ({ ...prev, inviteEmail: event.target.value }))}
+                          placeholder="agent@agence.com"
+                          className={fieldClass}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className={labelClass}>Rôle</span>
+                        <select
+                          value={form.inviteRole}
+                          onChange={(event) => setForm((prev) => ({ ...prev, inviteRole: event.target.value as RoleOption }))}
+                          className={fieldClass}
+                        >
+                          <option value="agent">Agent</option>
+                          <option value="comptable">Comptable</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      </label>
+                    </div>
+                  )}
                   {generatedInviteLink && (
                     <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">
-                      Invitation creee : {generatedInviteLink}
+                      Invitation créée : {generatedInviteLink}
                     </div>
                   )}
                 </div>
@@ -453,9 +498,9 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                 <button
                   type="button"
                   onClick={skip}
-                  className="rounded-xl px-4 py-3 text-sm font-black text-slate-500 transition hover:bg-slate-50 hover:text-slate-800"
+                  className="rounded-xl px-4 py-3 text-sm font-black text-slate-500 transition hover:bg-white/70 hover:text-slate-800"
                 >
-                  Passer pour l'instant
+                  {skipLabel}
                 </button>
                 <div className="flex gap-3">
                   {step > 0 && (
@@ -473,7 +518,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                     type="button"
                     onClick={next}
                     disabled={loading || !canContinue}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/18 transition hover:-translate-y-0.5 hover:bg-brand-950 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/18 transition hover:-translate-y-0.5 hover:bg-brand-950 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 disabled:shadow-none"
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : step === STEPS.length - 1 ? <CheckCircle2 className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
                     {step === STEPS.length - 1 ? 'Terminer' : 'Continuer'}

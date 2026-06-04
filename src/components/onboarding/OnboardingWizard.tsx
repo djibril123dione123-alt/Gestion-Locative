@@ -5,7 +5,9 @@ import {
   Building2,
   CheckCircle2,
   Loader2,
+  MapPin,
   Mail,
+  Phone,
   Upload,
   Users,
   X,
@@ -15,7 +17,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../hooks/useToast';
 import { ToastContainer } from '../ui/Toast';
-import { getTimezoneKey, markOnboardingComplete } from './onboardingStorage';
+import { getTimezoneKey, markOnboardingComplete, markOnboardingCompletePersisted } from './onboardingStorage';
+import { formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
 
 interface OnboardingWizardProps {
   isOpen: boolean;
@@ -73,6 +76,8 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
   const [form, setForm] = useState({
     agencyName: '',
     representativeName: '',
+    ownerPhone: '',
+    ownerAddress: '',
     devise: 'XOF',
     timezone: 'Africa/Dakar',
     inviteEmail: '',
@@ -85,10 +90,10 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
 
     void (async () => {
       const [agencyRes, settingsRes] = await Promise.all([
-        supabase.from('agencies').select('name, logo_url').eq('id', profile.agency_id).maybeSingle(),
+        supabase.from('agencies').select('name, logo_url, phone, address').eq('id', profile.agency_id).maybeSingle(),
         supabase
           .from('agency_settings')
-          .select('nom_agence, devise, logo_url, representant_nom')
+          .select('nom_agence, devise, logo_url, representant_nom, telephone, adresse')
           .eq('agency_id', profile.agency_id)
           .maybeSingle(),
       ]);
@@ -106,6 +111,8 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
         ...prev,
         agencyName: settingsRes.data?.nom_agence || agencyRes.data?.name || prev.agencyName,
         representativeName: settingsRes.data?.representant_nom || prev.representativeName,
+        ownerPhone: settingsRes.data?.telephone || agencyRes.data?.phone || prev.ownerPhone,
+        ownerAddress: settingsRes.data?.adresse || agencyRes.data?.address || prev.ownerAddress,
         devise: settingsRes.data?.devise || prev.devise,
         timezone: storedTimezone,
       }));
@@ -186,26 +193,51 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
       setStep(0);
       return;
     }
+    const normalizedOwnerPhone = isIndividualOwner && form.ownerPhone.trim()
+      ? normalizeSenegalPhone(form.ownerPhone)
+      : null;
+    if (isIndividualOwner && form.ownerPhone.trim() && !normalizedOwnerPhone) {
+      toast.warning('Le téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.');
+      setStep(0);
+      return;
+    }
 
     setLoading(true);
     try {
       const logoUrl = await uploadLogo();
       const agencyName = form.agencyName.trim();
+      const agencyUpdate: Record<string, string | null> = {
+        name: agencyName,
+        logo_url: logoUrl || null,
+      };
+      if (isIndividualOwner) {
+        if (normalizedOwnerPhone || form.ownerPhone.trim()) {
+          agencyUpdate.phone = normalizedOwnerPhone || form.ownerPhone.trim();
+        }
+        agencyUpdate.address = form.ownerAddress.trim() || null;
+      }
 
       const { error: agencyError } = await supabase
         .from('agencies')
-        .update({ name: agencyName, logo_url: logoUrl || null })
+        .update(agencyUpdate)
         .eq('id', profile.agency_id);
       if (agencyError) throw agencyError;
 
-      const { error: settingsError } = await supabase.from('agency_settings').upsert({
+      const settingsPayload: Record<string, unknown> = {
         agency_id: profile.agency_id,
         nom_agence: agencyName,
         representant_nom: isIndividualOwner ? null : form.representativeName.trim() || null,
         devise: form.devise,
         city: form.timezone.includes('Abidjan') ? 'Abidjan' : 'Dakar',
         logo_url: logoUrl || null,
-      });
+        onboarding_completed_at: new Date().toISOString(),
+      };
+      if (isIndividualOwner) {
+        settingsPayload.telephone = normalizedOwnerPhone || form.ownerPhone.trim() || null;
+        settingsPayload.adresse = form.ownerAddress.trim() || null;
+      }
+
+      const { error: settingsError } = await supabase.from('agency_settings').upsert(settingsPayload);
       if (settingsError) throw settingsError;
 
       let inviteLink: string | null = null;
@@ -248,12 +280,20 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
     void save();
   };
 
-  const skip = () => {
+  const skip = async () => {
     if (!profile.agency_id) return;
-    markOnboardingComplete(profile.agency_id);
+    setLoading(true);
+    try {
+      await markOnboardingCompletePersisted(profile.agency_id);
     toast.success('Vous pourrez terminer la configuration depuis les paramètres.');
     onComplete();
-    onClose();
+      onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Impossible d'enregistrer l'Ã©tat de configuration.";
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const StepIcon = STEPS[step].icon;
@@ -348,9 +388,13 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                 <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-end">
                   <div className="space-y-4">
                     <div>
-                      <p className="text-lg font-black text-slate-950">Identité officielle</p>
+                      <p className="text-lg font-black text-slate-950">
+                        {isIndividualOwner ? 'Profil propriétaire' : 'Identité officielle'}
+                      </p>
                       <p className={mutedCopyClass}>
-                        Vérifiez les informations qui apparaîtront sur vos documents, rapports et invitations.
+                        {isIndividualOwner
+                          ? 'Vérifiez les informations associées à votre espace propriétaire.'
+                          : 'Vérifiez les informations qui apparaîtront sur vos documents, rapports et invitations.'}
                       </p>
                     </div>
                     <label className="block">
@@ -379,6 +423,37 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                         </span>
                       </label>
                     )}
+                    {isIndividualOwner && (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <label className="block">
+                          <span className={labelClass}>
+                            <Phone className="mr-1 inline h-4 w-4 text-brand-800" />
+                            Téléphone
+                          </span>
+                          <input
+                            value={formatSenegalPhoneInput(form.ownerPhone)}
+                            onChange={(event) => setForm((prev) => ({ ...prev, ownerPhone: formatSenegalPhoneInput(event.target.value) }))}
+                            placeholder="Ex: 77 123 45 67"
+                            className={fieldClass}
+                          />
+                        </label>
+                        <label className="block">
+                          <span className={labelClass}>
+                            <MapPin className="mr-1 inline h-4 w-4 text-brand-800" />
+                            Adresse
+                          </span>
+                          <input
+                            value={form.ownerAddress}
+                            onChange={(event) => setForm((prev) => ({ ...prev, ownerAddress: event.target.value }))}
+                            placeholder="Ex: Ouakam, Dakar"
+                            className={fieldClass}
+                          />
+                        </label>
+                        <p className="rounded-2xl border border-amber-200/60 bg-amber-50/80 p-3 text-xs font-semibold leading-5 text-amber-900 sm:col-span-2">
+                          Ces informations pourront être utilisées dans vos documents, rapports et quittances.
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <label className="group flex min-h-[9rem] cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-300/70 bg-emerald-50/60 px-5 py-4 text-center shadow-inner transition hover:border-amber-400 hover:bg-amber-50/70 sm:w-44">
@@ -406,7 +481,9 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                   <div className="sm:col-span-2">
                     <p className="text-lg font-black text-slate-950">Cadre de travail</p>
                     <p className={mutedCopyClass}>
-                      Ces réglages cadrent les montants, les dates et les documents générés par Samay Këur.
+                      {isIndividualOwner
+                        ? 'Définissez les paramètres qui alimenteront vos loyers, documents et dates.'
+                        : 'Ces réglages cadrent les montants, les dates et les documents générés par Samay Këur.'}
                     </p>
                   </div>
                   <label className="block">
@@ -450,11 +527,11 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                       <Mail className="mt-1 h-5 w-5 text-brand-800" />
                       <div>
                         <p className="font-black text-slate-950">
-                          {isIndividualOwner ? 'Votre espace est prêt pour vos premiers biens.' : "Inviter l'équipe maintenant ou plus tard."}
+                          {isIndividualOwner ? 'Préférences de démarrage' : "Inviter l'équipe maintenant ou plus tard."}
                         </p>
                         <p className="mt-1 text-sm leading-6 text-slate-600">
                           {isIndividualOwner
-                            ? 'Vous pourrez ajouter vos biens, locataires et paiements depuis le tableau de bord.'
+                            ? 'Votre espace propriétaire est prêt. Vous pourrez maintenant ajouter votre premier bien, suivre vos loyers et générer vos documents.'
                             : "Cette étape est optionnelle. Vous pouvez démarrer seul et inviter vos collaborateurs depuis la page Équipe."}
                         </p>
                       </div>
@@ -497,8 +574,9 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
               <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
                 <button
                   type="button"
-                  onClick={skip}
-                  className="rounded-xl px-4 py-3 text-sm font-black text-slate-500 transition hover:bg-white/70 hover:text-slate-800"
+                  onClick={() => void skip()}
+                  disabled={loading}
+                  className="rounded-xl px-4 py-3 text-sm font-black text-slate-500 transition hover:bg-white/70 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {skipLabel}
                 </button>

@@ -26,8 +26,6 @@ import {
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { FirstStepsChecklist } from '../components/onboarding/FirstStepsChecklist';
-import { OnboardingWizard } from '../components/onboarding/OnboardingWizard';
-import { hasCompletedOnboarding, markOnboardingComplete } from '../components/onboarding/onboardingStorage';
 import { readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 
@@ -50,9 +48,10 @@ interface DashboardStats {
 
 interface DashboardProps {
   onNavigate?: (page: string) => void;
+  onStartSetupWizard?: () => void;
 }
 
-export function Dashboard({ onNavigate }: DashboardProps = {}) {
+export function Dashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}) {
   const { profile, user, accountProfile, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalBailleurs: 0,
@@ -72,7 +71,6 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
-  const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
   const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
 
   const loadDashboardData = useCallback(async () => {
@@ -167,12 +165,6 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
   }, [profile?.agency_id, authLoading, profile, loadDashboardData]);
 
   useEffect(() => {
-    if (!isNewUser || !profile?.agency_id) return;
-    if (hasCompletedOnboarding(profile.agency_id)) return;
-    setShowOnboardingWizard(true);
-  }, [isNewUser, profile?.agency_id]);
-
-  useEffect(() => {
     const handler = (event: Event) => {
       const domains = (event as CustomEvent<{ domains?: string[] }>).detail?.domains ?? [];
       if (domains.length === 0 || domains.includes('dashboard')) {
@@ -226,15 +218,6 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
   if (isNewUser) {
     return (
       <>
-        <OnboardingWizard
-          isOpen={showOnboardingWizard}
-          onClose={() => setShowOnboardingWizard(false)}
-          onComplete={() => {
-            if (profile?.agency_id) markOnboardingComplete(profile.agency_id);
-            setShowOnboardingWizard(false);
-            loadDashboardData();
-          }}
-        />
         <div className="sk-page-shell space-y-6 lg:space-y-8 animate-fadeIn">
           <section className="sk-premium-panel relative overflow-hidden p-5 sm:p-7 lg:p-8">
             <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-emerald-200/40 blur-3xl" />
@@ -243,30 +226,34 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
               <div className="max-w-3xl">
                 <div className="inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-emerald-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-brand-800">
                   <Sparkles className="h-4 w-4" />
-                  Premiere connexion
+                  Première connexion
                 </div>
                 <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-                  Donnez vie a votre agence en moins de 3 minutes.
+                  {accountProfile.isIndividualOwner
+                    ? 'Votre espace propriétaire est prêt à démarrer.'
+                    : 'Donnez vie à votre agence en moins de 3 minutes.'}
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">
-                  Configurez l'identite de l'agence, invitez l'equipe si besoin, puis ajoutez vos premieres donnees ou chargez une demo realiste.
+                  {accountProfile.isIndividualOwner
+                    ? 'Vérifiez votre profil propriétaire, confirmez vos préférences, puis ajoutez votre premier bien quand vous êtes prêt.'
+                    : "Configurez l'identité de l'agence, invitez l'équipe si besoin, puis ajoutez vos premières données ou chargez une démo réaliste."}
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
                 <button
                   type="button"
-                  onClick={() => setShowOnboardingWizard(true)}
+                  onClick={onStartSetupWizard}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/18 transition hover:-translate-y-0.5 hover:bg-brand-950"
                 >
                   <Sparkles className="h-5 w-5" />
-                  Configurer l'agence
+                  {accountProfile.isIndividualOwner ? 'Configurer mon compte' : "Configurer l'agence"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => onNavigate?.('immeubles')}
+                  onClick={() => onNavigate?.(accountProfile.isIndividualOwner ? 'patrimoine' : 'immeubles')}
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-900/10 bg-white px-5 py-3 text-sm font-black text-brand-800 shadow-sm transition hover:bg-emerald-50"
                 >
-                  Commencer par un immeuble
+                  {accountProfile.isIndividualOwner ? 'Ajouter un bien plus tard' : 'Commencer par un immeuble'}
                 </button>
               </div>
             </div>
@@ -274,7 +261,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
 
           <FirstStepsChecklist
             onNavigate={onNavigate}
-            onStartWizard={() => setShowOnboardingWizard(true)}
+            onStartWizard={onStartSetupWizard}
             onDemoLoaded={loadDashboardData}
             showDemoData
           />
@@ -282,9 +269,13 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
           <div className="sk-card-premium p-8">
             <EmptyState
               icon={Sparkles}
-              title="Votre tableau de bord est pret."
-              description="Ajoutez un immeuble, un locataire et un paiement pour voir apparaitre vos indicateurs en temps reel. La demo permet aussi d'explorer sans saisie manuelle."
-              action={{ label: 'Ajouter un immeuble', onClick: () => onNavigate?.('immeubles') }}
+              title="Votre tableau de bord est prêt."
+              description={
+                accountProfile.isIndividualOwner
+                  ? 'Ajoutez votre premier bien, puis un locataire et un paiement pour voir vos revenus, impayés et documents se structurer.'
+                  : "Ajoutez un immeuble, un locataire et un paiement pour voir apparaître vos indicateurs en temps réel. La démo permet aussi d'explorer sans saisie manuelle."
+              }
+              action={{ label: accountProfile.isIndividualOwner ? 'Ajouter un bien' : 'Ajouter un immeuble', onClick: () => onNavigate?.(accountProfile.isIndividualOwner ? 'patrimoine' : 'immeubles') }}
             />
           </div>
 
@@ -294,10 +285,12 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
                 <div className="w-10 h-10 bg-brand-700 rounded-lg flex items-center justify-center">
                   <Building2 className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="font-black text-slate-950">Gestion complete</h3>
+                <h3 className="font-black text-slate-950">Gestion complète</h3>
               </div>
               <p className="text-sm font-medium text-slate-700">
-                Gere vos bailleurs, immeubles, unites et locataires dans une seule plateforme intuitive
+                {accountProfile.isIndividualOwner
+                  ? 'Gérez vos biens, unités et locataires dans une seule plateforme intuitive'
+                  : 'Gérez vos bailleurs, immeubles, unités et locataires dans une seule plateforme intuitive'}
               </p>
             </div>
             <div className="sk-card p-6">
@@ -308,7 +301,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
                 <h3 className="font-black text-slate-950">Suivi financier</h3>
               </div>
               <p className="text-sm font-medium text-slate-700">
-                Encaissements, rapports mensuels, detection des impayes automatique et exports PDF
+                Encaissements, rapports mensuels, détection des impayés automatique et exports PDF
               </p>
             </div>
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
@@ -319,7 +312,7 @@ export function Dashboard({ onNavigate }: DashboardProps = {}) {
                 <h3 className="font-bold text-green-900">Rapports intelligents</h3>
               </div>
               <p className="text-sm text-green-800">
-                Statistiques en temps reel, graphiques mensuels et bilans automatises pour chaque bailleur
+                Statistiques en temps réel, graphiques mensuels et bilans automatisés pour chaque bailleur
               </p>
             </div>
           </div>

@@ -47,6 +47,7 @@ export interface AgencySettings {
   email_notifications_actif: boolean;
   sms_notifications_actif: boolean;
   champs_personnalises_locataire: number;
+  onboarding_completed_at?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -96,4 +97,5 @@ export const DEFAULT_AGENCY_SETTINGS: AgencySettingsFormInput = {
   email_notifications_actif: false,
   sms_notifications_actif: false,
   champs_personnalises_locataire: 0,
+  onboarding_completed_at: null,
 };

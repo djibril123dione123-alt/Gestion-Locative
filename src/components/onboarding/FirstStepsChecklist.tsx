@@ -128,8 +128,6 @@ export function FirstStepsChecklist({
   const completedCount = steps.filter((step) => step.completed).length;
   const progress = Math.round((completedCount / steps.length) * 100);
   const isComplete = completedCount === steps.length;
-  const isEmpty = counts.immeubles === 0 && counts.locataires === 0 && counts.paiements === 0;
-
   if (loading) {
     return (
       <div className="sk-premium-panel p-6">
@@ -240,7 +238,7 @@ export function FirstStepsChecklist({
       </div>
 
       <div className="border-t border-slate-100 p-4 sm:p-5">
-        {showDemoData && isEmpty ? (
+        {showDemoData ? (
           <DemoDataLoader
             onLoaded={() => {
               void loadProgress();

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Loader2, Sparkles, Trash2 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
@@ -44,7 +44,43 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const toast = useToast();
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [done, setDone] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [demoPresent, setDemoPresent] = useState(false);
+
+  const ensureDemoFlagReady = async (agencyId: string) => {
+    const { error } = await supabase
+      .from('immeubles')
+      .select('is_demo_data')
+      .eq('agency_id', agencyId)
+      .limit(1);
+
+    if (error) {
+      throw new Error("Le marquage des donnees exemples n'est pas encore disponible. Appliquez la migration demo data avant de charger les exemples.");
+    }
+  };
+
+  useEffect(() => {
+    if (!profile?.agency_id) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const { count, error } = await supabase
+          .from('immeubles')
+          .select('id', { count: 'exact', head: true })
+          .eq('agency_id', profile.agency_id)
+          .eq('is_demo_data', true);
+        if (!alive || error) return;
+        setDemoPresent((count ?? 0) > 0);
+      } catch {
+        if (alive) setDemoPresent(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [profile?.agency_id]);
 
   const loadDemo = async () => {
     if (!profile?.agency_id) return;
@@ -52,11 +88,17 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
 
     try {
       const agencyId = profile.agency_id;
+      await ensureDemoFlagReady(agencyId);
+      if (demoPresent) {
+        toast.warning('Des donnees exemples sont deja presentes. Reinitialisez-les avant de relancer un jeu de test.');
+        return;
+      }
 
       const { count: existingCount } = await supabase
         .from('immeubles')
         .select('id', { count: 'exact', head: true })
-        .eq('agency_id', agencyId);
+        .eq('agency_id', agencyId)
+        .or('is_demo_data.is.false,is_demo_data.is.null');
 
       if ((existingCount ?? 0) > 0) {
         toast.warning(
@@ -72,7 +114,7 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
         : await (async () => {
             const { data, error } = await supabase
               .from('bailleurs')
-              .insert({ ...DEMO_DATA.bailleur, agency_id: agencyId })
+              .insert({ ...DEMO_DATA.bailleur, agency_id: agencyId, is_demo_data: true })
               .select('id')
               .single();
             if (error) throw error;
@@ -87,7 +129,7 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
 
       const { data: immeuble, error: immeubleError } = await supabase
         .from('immeubles')
-        .insert({ ...DEMO_DATA.immeuble, agency_id: agencyId, bailleur_id: bailleur.id })
+        .insert({ ...DEMO_DATA.immeuble, agency_id: agencyId, bailleur_id: bailleur.id, is_demo_data: true })
         .select('id')
         .single();
       if (immeubleError) throw immeubleError;
@@ -101,6 +143,7 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
             immeuble_id: immeuble.id,
             statut: 'libre',
             actif: true,
+            is_demo_data: true,
           })),
         )
         .select('id, loyer_base');
@@ -109,7 +152,7 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
 
       const { data: locataires, error: locatairesError } = await supabase
         .from('locataires')
-        .insert(DEMO_DATA.locataires.map((locataire) => ({ ...locataire, agency_id: agencyId })))
+        .insert(DEMO_DATA.locataires.map((locataire) => ({ ...locataire, agency_id: agencyId, is_demo_data: true })))
         .select('id');
       if (locatairesError) throw locatairesError;
       if (!locataires || locataires.length < 2) throw new Error('Les locataires de demo n ont pas pu etre crees.');
@@ -124,6 +167,7 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
           commission: commissionRate,
           date_debut: today,
           statut: 'actif',
+          is_demo_data: true,
         },
         {
           agency_id: agencyId,
@@ -133,6 +177,7 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
           commission: commissionRate,
           date_debut: today,
           statut: 'actif',
+          is_demo_data: true,
         },
       ];
 
@@ -177,6 +222,18 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
       ]);
 
       const paiementFailures = paiementResults.filter((result) => result.status === 'rejected');
+      const paiementIds = paiementResults
+        .flatMap((result) => result.status === 'fulfilled' ? [result.value.id] : []);
+      if (paiementIds.length > 0) {
+        const { error: markPaymentsError } = await supabase
+          .from('paiements')
+          .update({ is_demo_data: true })
+          .in('id', paiementIds)
+          .eq('agency_id', agencyId);
+        if (markPaymentsError) {
+          throw new Error("Les paiements exemples ont ete crees mais n'ont pas pu etre marques comme exemples. Reset bloque par securite.");
+        }
+      }
       if (paiementFailures.length > 0) {
         console.warn('[DemoDataLoader] paiements demo partiellement indisponibles', paiementFailures);
       }
@@ -190,6 +247,7 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
       }
 
       setDone(true);
+      setDemoPresent(true);
       if (paiementFailures.length > 0) {
         toast.warning(
           isIndividualOwner
@@ -216,7 +274,35 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
     }
   };
 
-  if (done) {
+  const resetDemo = async () => {
+    if (!profile?.agency_id) return;
+    if (!confirmReset) {
+      setConfirmReset(true);
+      return;
+    }
+
+    const agencyId = profile.agency_id;
+    setResetting(true);
+    try {
+      await ensureDemoFlagReady(agencyId);
+
+      const { error: resetError } = await supabase.rpc('reset_demo_data', { p_agency_id: agencyId });
+      if (resetError) throw resetError;
+
+      setDone(false);
+      setDemoPresent(false);
+      setConfirmReset(false);
+      toast.success('Les donnees exemples ont ete supprimees. Vos vraies donnees sont conservees.');
+      onLoaded?.();
+    } catch (err) {
+      console.warn('[DemoDataLoader] reset exemples indisponible', err);
+      toast.error(err instanceof Error ? err.message : 'Impossible de supprimer les donnees exemples.');
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  if (done && compact) {
     return (
       <div className={`flex items-center gap-2 ${compact ? 'text-sm' : 'text-base'} font-bold text-emerald-700`}>
         <CheckCircle2 className="h-4 w-4" />
@@ -232,11 +318,11 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
         <button
           type="button"
           onClick={loadDemo}
-          disabled={loading}
+          disabled={loading || demoPresent}
           className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-black text-brand-800 transition hover:bg-emerald-100 disabled:opacity-50"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {loading ? 'Chargement...' : 'Remplir avec des exemples'}
+          {loading ? 'Chargement...' : demoPresent ? 'Exemples deja charges' : 'Remplir avec des exemples'}
         </button>
       </>
     );
@@ -260,12 +346,34 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
             <button
               type="button"
               onClick={loadDemo}
-              disabled={loading}
+              disabled={loading || demoPresent}
               className="mt-4 inline-flex items-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:bg-brand-950 disabled:opacity-50"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {loading ? 'Chargement en cours...' : 'Remplir avec des exemples'}
+              {loading ? 'Chargement en cours...' : demoPresent ? 'Exemples deja charges' : 'Remplir avec des exemples'}
             </button>
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white/80 p-3">
+              {confirmReset && (
+                <div className="mb-3 flex items-start gap-2 rounded-xl border border-orange-200 bg-orange-50 p-3 text-sm font-semibold text-orange-900">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  <span>Cette action supprimera uniquement les exemples generes par Samay Keur. Vos vraies donnees ne seront pas supprimees.</span>
+                </div>
+              )}
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs font-semibold leading-5 text-slate-500">
+                  Besoin de repartir proprement ? Le reset cible seulement les lignes marquees comme exemples.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void resetDemo()}
+                  disabled={resetting || loading}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 py-2 text-xs font-black text-orange-700 transition hover:bg-orange-50 disabled:opacity-50"
+                >
+                  {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                  {confirmReset ? 'Supprimer les exemples' : 'Reinitialiser les exemples'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -74,6 +74,7 @@ const EMPTY_SETTINGS: Omit<SettingsState, 'agency_id'> = {
   email_notifications_actif: false,
   sms_notifications_actif: false,
   champs_personnalises_locataire: 0,
+  onboarding_completed_at: null,
 };
 
 function getLogoExtension(file: File) {
@@ -137,7 +138,7 @@ async function compressLogoFile(file: File): Promise<File> {
 }
 
 export function Parametres() {
-  const { profile, accountProfile } = useAuth();
+  const { profile, agency, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const { showToast, toasts, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -147,6 +148,11 @@ export function Parametres() {
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState('');
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [logoUploadState, setLogoUploadState] = useState<LogoUploadState>('idle');
+
+  const getOwnerNameFallback = () => {
+    const profileName = [profile?.prenom, profile?.nom].filter(Boolean).join(' ').trim();
+    return profileName || agency?.name || DEFAULT_AGENCY_SETTINGS.nom_agence || 'Proprietaire';
+  };
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -168,8 +174,15 @@ export function Parametres() {
       if (error) throw error;
 
       if (data) {
-        setSettings(data as SettingsState);
-        setLastSavedSnapshot(JSON.stringify(data));
+        const nextSettings = data as SettingsState;
+        if (isIndividualOwner) {
+          const ownerName = nextSettings.representant_nom || nextSettings.nom_agence || getOwnerNameFallback();
+          nextSettings.representant_nom = ownerName;
+          nextSettings.nom_agence = nextSettings.nom_agence || ownerName;
+          nextSettings.representant_fonction = nextSettings.representant_fonction || 'Proprietaire';
+        }
+        setSettings(nextSettings);
+        setLastSavedSnapshot(JSON.stringify(nextSettings));
         if (data.logo_url) {
           setLogoPreview(data.logo_url);
         }
@@ -197,14 +210,21 @@ export function Parametres() {
         .eq('id', agencyId)
         .maybeSingle();
 
+      const ownerName = [profile?.prenom, profile?.nom].filter(Boolean).join(' ').trim()
+        || agency?.name
+        || DEFAULT_AGENCY_SETTINGS.nom_agence
+        || 'Proprietaire';
+
       const rowToInsert = {
         ...EMPTY_SETTINGS,
         agency_id: agencyId,
-        nom_agence: agency?.name ?? DEFAULT_AGENCY_SETTINGS.nom_agence ?? 'Mon Agence',
+        nom_agence: isIndividualOwner ? ownerName : agency?.name ?? DEFAULT_AGENCY_SETTINGS.nom_agence ?? 'Mon Agence',
         adresse: agency?.address ?? '',
         telephone: normalizeSenegalPhone(agency?.phone ?? '') ?? agency?.phone ?? '',
         email: agency?.email ?? '',
         ninea: agency?.ninea ?? '',
+        representant_nom: isIndividualOwner ? ownerName : '',
+        representant_fonction: isIndividualOwner ? 'Proprietaire' : EMPTY_SETTINGS.representant_fonction,
       };
 
       const { data, error } = await supabase
@@ -244,16 +264,19 @@ export function Parametres() {
         setSaving(false);
         return;
       }
+      const ownerNameForDocuments = isIndividualOwner
+        ? (settings.representant_nom || settings.nom_agence || getOwnerNameFallback()).trim()
+        : '';
       const dataToSave: Omit<AgencySettings, 'created_at' | 'updated_at'> = {
         agency_id: profile.agency_id,
-        nom_agence: settings.nom_agence ?? '',
+        nom_agence: isIndividualOwner ? ownerNameForDocuments : settings.nom_agence ?? '',
         adresse: settings.adresse ?? '',
         telephone: normalizedPhone ?? '',
         email: settings.email ?? '',
         site_web: settings.site_web ?? '',
         ninea: settings.ninea ?? '',
         rc: settings.rc ?? '',
-        representant_nom: settings.representant_nom ?? '',
+        representant_nom: isIndividualOwner ? ownerNameForDocuments : settings.representant_nom ?? '',
         representant_fonction: settings.representant_fonction ?? 'Gérant',
         manager_id_type: settings.manager_id_type ?? 'CNI',
         manager_id_number: settings.manager_id_number ?? '',
@@ -288,6 +311,7 @@ export function Parametres() {
         email_notifications_actif: settings.email_notifications_actif ?? false,
         sms_notifications_actif: settings.sms_notifications_actif ?? false,
         champs_personnalises_locataire: settings.champs_personnalises_locataire ?? 0,
+        onboarding_completed_at: settings.onboarding_completed_at ?? null,
       };
 
       if ('document_mode' in settings) {
@@ -534,10 +558,20 @@ export function Parametres() {
                   </label>
                   <input
                     type="text"
-                    value={settings.nom_agence ?? ''}
-                    onChange={(e) => setSettings({ ...settings, nom_agence: e.target.value })}
+                    value={isIndividualOwner ? settings.representant_nom ?? settings.nom_agence ?? '' : settings.nom_agence ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSettings(isIndividualOwner
+                        ? { ...settings, representant_nom: value, nom_agence: value }
+                        : { ...settings, nom_agence: value });
+                    }}
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
+                  {isIndividualOwner && (
+                    <p className="mt-2 text-xs font-semibold text-slate-500">
+                      Ce nom sert aussi de nom affichÃ© sur les documents propriÃ©taire.
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -611,6 +645,7 @@ export function Parametres() {
                 </div>
                 )}
 
+                {!isIndividualOwner && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     {isIndividualOwner ? 'Nom du propriétaire' : 'Nom du représentant'}
@@ -622,6 +657,7 @@ export function Parametres() {
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   />
                 </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">

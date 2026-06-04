@@ -14,6 +14,7 @@ import { NotificationBell } from './components/ui/NotificationBell';
 import { BrandMark, BrandedLoader } from './components/brand/BrandLogo';
 import { PageSkeleton } from './components/ui/Skeleton';
 import { DocumentGeneratedModal } from './components/documents/DocumentGeneratedModal';
+import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
 import { permissionRowsToMap, type UserPermissionMap } from './lib/rbac';
@@ -30,6 +31,7 @@ import { recoverStaleSyncing } from './services/offlineQueue';
 import { identifyUser, trackPageView } from './lib/analytics';
 import { readWithCache } from './services/offlineReadCache';
 import { warmOfflineRouteCache } from './services/offlineRoutePreloader';
+import { getOnboardingCompletionStatus, markOnboardingComplete } from './components/onboarding/onboardingStorage';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Agences = lazy(() => import('./pages/Agences'));
@@ -128,6 +130,7 @@ function AppContent() {
             return null;
         }
     });
+    const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
 
     // Derive current page from URL (React Router)
     const externalAuthMode = getExternalAuthMode();
@@ -206,6 +209,26 @@ function AppContent() {
             warmOfflineRouteCache();
         }
     }, [isOnline, profile?.agency_id]);
+
+    useEffect(() => {
+        if (!profile?.agency_id || profile.role === 'super_admin') {
+            setShowOnboardingWizard(false);
+            return;
+        }
+
+        const agencyId = profile.agency_id;
+        let alive = true;
+
+        void (async () => {
+            const completion = await getOnboardingCompletionStatus(agencyId);
+            if (!alive) return;
+            setShowOnboardingWizard(!completion.completed);
+        })();
+
+        return () => {
+            alive = false;
+        };
+    }, [profile?.agency_id, profile?.role]);
 
     useEffect(() => {
         if (!profile?.agency_id || profile.role === 'super_admin') {
@@ -404,7 +427,7 @@ function AppContent() {
 
         switch (currentPage) {
             case 'dashboard':
-                return <Dashboard onNavigate={handleNavigate} />;
+                return <Dashboard onNavigate={handleNavigate} onStartSetupWizard={() => setShowOnboardingWizard(true)} />;
             case 'agences':
                 return profile?.role === 'super_admin' ? <Console /> : <Agences />;
             case 'bailleurs':
@@ -454,7 +477,7 @@ function AppContent() {
             case 'pricing':
                 return <Pricing onNavigate={handleNavigate} />;
             default:
-                return <Dashboard onNavigate={handleNavigate} />;
+                return <Dashboard onNavigate={handleNavigate} onStartSetupWizard={() => setShowOnboardingWizard(true)} />;
         }
     };
 
@@ -544,6 +567,15 @@ function AppContent() {
             {/* Backup + offline status indicator - floating badge */}
             <BackupIndicator syncing={syncing} pendingCount={pendingCount} />
             <DocumentGeneratedModal onNavigate={handleNavigate} />
+            <OnboardingWizard
+                isOpen={showOnboardingWizard}
+                onClose={() => setShowOnboardingWizard(false)}
+                onComplete={() => {
+                    if (profile?.agency_id) markOnboardingComplete(profile.agency_id);
+                    setShowOnboardingWizard(false);
+                    window.dispatchEvent(new CustomEvent('samaykeur:data-changed', { detail: { domains: [] } }));
+                }}
+            />
         </div>
     );
 }

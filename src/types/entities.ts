@@ -10,6 +10,7 @@ export interface Bailleur {
   notes: string | null;
   actif: boolean;
   commission: number | null;
+  is_demo_data?: boolean;
   debut_contrat: string | null;
   created_at: string;
   updated_at: string;
@@ -30,6 +31,7 @@ export interface Immeuble {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  is_demo_data?: boolean;
 }
 
 export interface Unite {
@@ -47,6 +49,7 @@ export interface Unite {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  is_demo_data?: boolean;
 }
 
 export interface Locataire {
@@ -63,6 +66,7 @@ export interface Locataire {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  is_demo_data?: boolean;
 }
 
 export interface Contrat {
@@ -81,6 +85,7 @@ export interface Contrat {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  is_demo_data?: boolean;
 }
 
 export type ModePayment = 'especes' | 'cheque' | 'virement' | 'mobile_money' | 'autre';
@@ -108,6 +113,7 @@ export interface Paiement {
   created_by: string | null;
   actif: boolean;
   deleted_at: string | null;
+  is_demo_data?: boolean;
 }
 
 export interface Depense {

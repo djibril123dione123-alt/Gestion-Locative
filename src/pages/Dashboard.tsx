@@ -136,13 +136,17 @@ export function Dashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {
       setStats(dashboard.data.stats);
       setMonthlyRevenue(dashboard.data.monthlyRevenue);
       setCacheTimestamp(dashboard.source === 'cache' ? dashboard.timestamp : null);
-      setIsNewUser(
-        dashboard.source !== 'cache' &&
-        dashboard.data.stats.totalBailleurs === 0 &&
-        dashboard.data.stats.totalImmeubles === 0 &&
-        dashboard.data.stats.totalUnites === 0 &&
-        dashboard.data.stats.totalLocataires === 0,
-      );
+      const stats = dashboard.data.stats;
+      const hasBusinessData =
+        stats.totalImmeubles > 0 ||
+        stats.totalUnites > 0 ||
+        stats.totalLocataires > 0 ||
+        stats.contratsActifs > 0 ||
+        stats.nbPaiementsMois > 0;
+      const isEmptyAgency = stats.totalBailleurs === 0 && !hasBusinessData;
+      const isEmptyIndividualOwner = accountProfile.isIndividualOwner && !hasBusinessData;
+
+      setIsNewUser(dashboard.source !== 'cache' && (isEmptyIndividualOwner || isEmptyAgency));
       setError(null);
     } catch (err: unknown) {
       setError(
@@ -151,7 +155,7 @@ export function Dashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {
     } finally {
       setLoading(false);
     }
-  }, [profile?.agency_id, user?.id]);
+  }, [accountProfile.isIndividualOwner, profile?.agency_id, user?.id]);
 
   useEffect(() => {
     if (profile?.agency_id) {

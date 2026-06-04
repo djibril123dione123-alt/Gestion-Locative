@@ -10,6 +10,7 @@ import {
   DoorOpen,
   Sparkles,
   FileText,
+  UserRound,
 } from 'lucide-react';
 import {
   BarChart,
@@ -230,30 +231,31 @@ export function Dashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {
                 </div>
                 <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
                   {accountProfile.isIndividualOwner
-                    ? 'Votre espace propriétaire est prêt à démarrer.'
-                    : 'Donnez vie à votre agence en moins de 3 minutes.'}
+                    ? 'Votre espace proprietaire est pret a demarrer.'
+                    : 'Structurez votre agence en commencant par un bailleur.'}
                 </h1>
                 <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">
                   {accountProfile.isIndividualOwner
-                    ? 'Vérifiez votre profil propriétaire, confirmez vos préférences, puis ajoutez votre premier bien quand vous êtes prêt.'
-                    : "Configurez l'identité de l'agence, invitez l'équipe si besoin, puis ajoutez vos premières données ou chargez une démo réaliste."}
+                    ? 'Ajoutez votre premier bien, puis reliez un locataire, un bail et un premier loyer pour donner vie au tableau de bord.'
+                    : "Creez d'abord le bailleur, puis rattachez son bien, ses locataires, ses encaissements et ses quittances."}
                 </p>
               </div>
               <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
                 <button
                   type="button"
-                  onClick={onStartSetupWizard}
+                  onClick={() => onNavigate?.(accountProfile.isIndividualOwner ? 'patrimoine' : 'bailleurs')}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/18 transition hover:-translate-y-0.5 hover:bg-brand-950"
                 >
-                  <Sparkles className="h-5 w-5" />
-                  {accountProfile.isIndividualOwner ? 'Configurer mon compte' : "Configurer l'agence"}
+                  {accountProfile.isIndividualOwner ? <Building2 className="h-5 w-5" /> : <UserRound className="h-5 w-5" />}
+                  {accountProfile.isIndividualOwner ? 'Ajouter mon premier bien' : 'Creer mon premier bailleur'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => onNavigate?.(accountProfile.isIndividualOwner ? 'patrimoine' : 'immeubles')}
+                  onClick={onStartSetupWizard}
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-900/10 bg-white px-5 py-3 text-sm font-black text-brand-800 shadow-sm transition hover:bg-emerald-50"
                 >
-                  {accountProfile.isIndividualOwner ? 'Ajouter un bien plus tard' : 'Commencer par un immeuble'}
+                  <Sparkles className="h-5 w-5" />
+                  {accountProfile.isIndividualOwner ? 'Ajuster mon profil' : "Ajuster l'agence"}
                 </button>
               </div>
             </div>
@@ -269,13 +271,16 @@ export function Dashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {
           <div className="sk-card-premium p-8">
             <EmptyState
               icon={Sparkles}
-              title="Votre tableau de bord est prêt."
+              title={accountProfile.isIndividualOwner ? 'Votre espace proprietaire attend son premier bien.' : 'Votre agence attend son premier bailleur.'}
               description={
                 accountProfile.isIndividualOwner
-                  ? 'Ajoutez votre premier bien, puis un locataire et un paiement pour voir vos revenus, impayés et documents se structurer.'
-                  : "Ajoutez un immeuble, un locataire et un paiement pour voir apparaître vos indicateurs en temps réel. La démo permet aussi d'explorer sans saisie manuelle."
+                  ? 'Ajoutez un bien, une unite, un locataire et un bail pour activer le suivi des loyers, impayes et quittances.'
+                  : "Creez un bailleur, rattachez son bien, puis ajoutez locataire, bail et paiement pour activer les indicateurs agence."
               }
-              action={{ label: accountProfile.isIndividualOwner ? 'Ajouter un bien' : 'Ajouter un immeuble', onClick: () => onNavigate?.(accountProfile.isIndividualOwner ? 'patrimoine' : 'immeubles') }}
+              action={{
+                label: accountProfile.isIndividualOwner ? 'Ajouter mon premier bien' : 'Ajouter un bailleur',
+                onClick: () => onNavigate?.(accountProfile.isIndividualOwner ? 'patrimoine' : 'bailleurs'),
+              }}
             />
           </div>
 
@@ -285,12 +290,12 @@ export function Dashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {
                 <div className="w-10 h-10 bg-brand-700 rounded-lg flex items-center justify-center">
                   <Building2 className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="font-black text-slate-950">Gestion complète</h3>
+                <h3 className="font-black text-slate-950">{accountProfile.isIndividualOwner ? 'Parcours proprietaire' : 'Portefeuille agence'}</h3>
               </div>
               <p className="text-sm font-medium text-slate-700">
                 {accountProfile.isIndividualOwner
-                  ? 'Gérez vos biens, unités et locataires dans une seule plateforme intuitive'
-                  : 'Gérez vos bailleurs, immeubles, unités et locataires dans une seule plateforme intuitive'}
+                  ? 'Gerez vos biens, unites, locataires et baux dans une seule plateforme intuitive'
+                  : 'Gerez vos bailleurs, biens, unites et locataires dans une seule plateforme intuitive'}
               </p>
             </div>
             <div className="sk-card p-6">
@@ -301,7 +306,7 @@ export function Dashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {
                 <h3 className="font-black text-slate-950">Suivi financier</h3>
               </div>
               <p className="text-sm font-medium text-slate-700">
-                Encaissements, rapports mensuels, détection des impayés automatique et exports PDF
+                Encaissements, rapports mensuels, detection des impayes automatique et exports PDF
               </p>
             </div>
             <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
@@ -312,7 +317,9 @@ export function Dashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {
                 <h3 className="font-bold text-green-900">Rapports intelligents</h3>
               </div>
               <p className="text-sm text-green-800">
-                Statistiques en temps réel, graphiques mensuels et bilans automatisés pour chaque bailleur
+                {accountProfile.isIndividualOwner
+                  ? 'Statistiques en temps reel, revenus mensuels et resume proprietaire automatises'
+                  : 'Statistiques en temps reel, graphiques mensuels et bilans automatises pour chaque bailleur'}
               </p>
             </div>
           </div>

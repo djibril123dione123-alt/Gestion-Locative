@@ -23,15 +23,19 @@ interface FirstStepsChecklistProps {
 }
 
 interface ProgressCounts {
+  bailleurs: number;
   immeubles: number;
   locataires: number;
+  contrats: number;
   paiements: number;
   quittances: number;
 }
 
 const DEFAULT_COUNTS: ProgressCounts = {
+  bailleurs: 0,
   immeubles: 0,
   locataires: 0,
+  contrats: 0,
   paiements: 0,
   quittances: 0,
 };
@@ -56,9 +60,11 @@ export function FirstStepsChecklist({
     setLoading(true);
     try {
       const agencyId = profile.agency_id;
-      const [immeublesRes, locatairesRes, paiementsRes, quittancesRes] = await Promise.all([
+      const [bailleursRes, immeublesRes, locatairesRes, contratsRes, paiementsRes, quittancesRes] = await Promise.all([
+        supabase.from('bailleurs').select('id', { count: 'exact', head: true }).eq('agency_id', agencyId),
         supabase.from('immeubles').select('id', { count: 'exact', head: true }).eq('agency_id', agencyId),
         supabase.from('locataires').select('id', { count: 'exact', head: true }).eq('agency_id', agencyId),
+        supabase.from('contrats').select('id', { count: 'exact', head: true }).eq('agency_id', agencyId),
         supabase.from('paiements').select('id', { count: 'exact', head: true }).eq('agency_id', agencyId),
         supabase
           .from('document_registry')
@@ -69,8 +75,10 @@ export function FirstStepsChecklist({
       ]);
 
       setCounts({
+        bailleurs: bailleursRes.count ?? 0,
         immeubles: immeublesRes.count ?? 0,
         locataires: locatairesRes.count ?? 0,
+        contrats: contratsRes.count ?? 0,
         paiements: paiementsRes.count ?? 0,
         quittances: quittancesRes.error ? 0 : quittancesRes.count ?? 0,
       });
@@ -83,30 +91,16 @@ export function FirstStepsChecklist({
     void loadProgress();
   }, [loadProgress]);
 
-  const steps = useMemo(
-    () => [
-      {
-        id: 'immeuble',
-        title: 'Creer un immeuble',
-        description: 'Posez le premier bien de votre portefeuille.',
-        completed: counts.immeubles > 0,
-        icon: Building2,
-        actionLabel: 'Ajouter',
-        action: () => onNavigate?.('immeubles'),
-      },
-      {
-        id: 'locataire',
-        title: 'Ajouter un locataire',
-        description: 'Rattachez une personne au suivi de location.',
-        completed: counts.locataires > 0,
-        icon: UserRound,
-        actionLabel: 'Ajouter',
-        action: () => onNavigate?.('locataires'),
-      },
+  const isIndividualOwner = accountProfile.isIndividualOwner;
+
+  const steps = useMemo(() => {
+    const paymentSteps = [
       {
         id: 'paiement',
         title: 'Enregistrer un paiement',
-        description: 'Voyez tout de suite ce qui est paye ou partiel.',
+        description: isIndividualOwner
+          ? 'Saisissez un loyer recu, total ou partiel.'
+          : 'Encaissez un loyer et suivez le net bailleur.',
         completed: counts.paiements > 0,
         icon: ReceiptText,
         actionLabel: 'Encaisser',
@@ -115,15 +109,78 @@ export function FirstStepsChecklist({
       {
         id: 'quittance',
         title: 'Generer une quittance',
-        description: 'Transformez un paiement en document propre.',
+        description: 'Transformez un paiement en document verifiable.',
         completed: counts.quittances > 0,
         icon: FileText,
         actionLabel: 'Ouvrir',
         action: () => onNavigate?.('paiements'),
       },
-    ],
-    [counts, onNavigate],
-  );
+    ];
+
+    if (isIndividualOwner) {
+      return [
+        {
+          id: 'bien',
+          title: 'Ajouter mon premier bien',
+          description: 'Creez la base de votre espace proprietaire.',
+          completed: counts.immeubles > 0,
+          icon: Building2,
+          actionLabel: 'Ajouter',
+          action: () => onNavigate?.('patrimoine'),
+        },
+        {
+          id: 'locataire',
+          title: 'Ajouter un locataire',
+          description: 'Reliez votre logement a son occupant.',
+          completed: counts.locataires > 0,
+          icon: UserRound,
+          actionLabel: 'Ajouter',
+          action: () => onNavigate?.('locataires'),
+        },
+        {
+          id: 'contrat',
+          title: 'Creer le bail',
+          description: 'Formalisez la location avant les paiements.',
+          completed: counts.contrats > 0,
+          icon: FileText,
+          actionLabel: 'Creer',
+          action: () => onNavigate?.('contrats'),
+        },
+        ...paymentSteps,
+      ];
+    }
+
+    return [
+      {
+        id: 'bailleur',
+        title: 'Creer mon premier bailleur',
+        description: 'Le portefeuille agence commence par le proprietaire.',
+        completed: counts.bailleurs > 0,
+        icon: UserRound,
+        actionLabel: 'Ajouter',
+        action: () => onNavigate?.('bailleurs'),
+      },
+      {
+        id: 'bien',
+        title: 'Ajouter un bien',
+        description: 'Rattachez immeuble et unites au bailleur.',
+        completed: counts.immeubles > 0,
+        icon: Building2,
+        actionLabel: 'Ajouter',
+        action: () => onNavigate?.('patrimoine'),
+      },
+      {
+        id: 'locataire',
+        title: 'Ajouter un locataire',
+        description: 'Preparez le suivi locatif operationnel.',
+        completed: counts.locataires > 0,
+        icon: UserRound,
+        actionLabel: 'Ajouter',
+        action: () => onNavigate?.('locataires'),
+      },
+      ...paymentSteps,
+    ];
+  }, [counts, isIndividualOwner, onNavigate]);
 
   const completedCount = steps.filter((step) => step.completed).length;
   const progress = Math.round((completedCount / steps.length) * 100);
@@ -184,10 +241,14 @@ export function FirstStepsChecklist({
               Mise en route
             </div>
             <h2 className="mt-4 text-2xl font-black tracking-tight sm:text-3xl">
-              Votre premiere victoire, pas un tableau vide.
+              {isIndividualOwner
+                ? 'Votre espace proprietaire est pret.'
+                : 'Votre premiere victoire commence par un bailleur.'}
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-emerald-50/72">
-              Suivez ces actions simples ou chargez des donnees exemples pour explorer l'application tout de suite.
+              {isIndividualOwner
+                ? "Ajoutez un bien, un locataire, un bail puis un premier loyer. Vous pouvez aussi charger des exemples pour explorer l'espace sans attendre."
+                : "Creez d'abord un bailleur, puis son bien, ses locataires, ses encaissements et ses quittances. Les exemples permettent de tester le parcours complet."}
             </p>
           </div>
 
@@ -248,18 +309,18 @@ export function FirstStepsChecklist({
         ) : isComplete ? (
           <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
             <p className="font-black text-emerald-950">
-              {accountProfile.isIndividualOwner ? 'Espace propriétaire prêt.' : 'Agence prête à être présentée.'}
+              {isIndividualOwner ? 'Espace proprietaire lance.' : 'Portefeuille agence lance.'}
             </p>
             <p className="mt-1 text-sm font-semibold text-emerald-700">
-              Vos premiers biens, paiements et documents donnent maintenant de la matiere au dashboard.
+              Vos premieres donnees donnent maintenant de la matiere au tableau de bord.
             </p>
           </div>
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-semibold leading-6 text-slate-600">
-              {accountProfile.isIndividualOwner
-                ? 'Vous pouvez aussi finaliser votre identité propriétaire avant de saisir les données métier.'
-                : "Vous pouvez aussi finaliser l'identité de l'agence avant de saisir les données métier."}
+              {isIndividualOwner
+                ? 'Vous pouvez aussi finaliser votre profil proprietaire avant de saisir vos biens.'
+                : "Vous pouvez aussi finaliser l'identite de l'agence avant de structurer le portefeuille."}
             </p>
             <div className="flex gap-2">
               <button
@@ -267,7 +328,7 @@ export function FirstStepsChecklist({
                 onClick={onStartWizard}
                 className="rounded-xl border border-emerald-900/10 bg-white px-4 py-2.5 text-sm font-black text-brand-800 shadow-sm transition hover:bg-emerald-50"
               >
-                {accountProfile.isIndividualOwner ? 'Configurer mon compte' : "Configurer l'agence"}
+                {isIndividualOwner ? 'Ajuster mon profil' : "Ajuster l'agence"}
               </button>
               <button
                 type="button"

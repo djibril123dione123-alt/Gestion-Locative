@@ -337,11 +337,13 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
             <Sparkles className="h-6 w-6" />
           </div>
           <div className="flex-1">
-            <h3 className="font-black text-slate-950">Remplir avec des donnees exemples</h3>
+            <h3 className="font-black text-slate-950">
+              {isIndividualOwner ? 'Explorer avec des exemples proprietaire' : 'Explorer avec des exemples agence'}
+            </h3>
             <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
               {isIndividualOwner
-                ? 'Ajoute vos premiers biens, unites, locataires, contrats et paiements exemples, sans selection manuelle de bailleur.'
-                : 'Ajoute un bailleur, un immeuble, trois unites, deux locataires, deux contrats et deux paiements pour explorer sans repartir de zero.'}
+                ? 'Ajoute un bien, des unites, des locataires, des baux et des paiements exemples sans vous demander de selectionner un bailleur.'
+                : 'Ajoute un bailleur, un bien, trois unites, deux locataires, deux contrats et deux paiements pour explorer sans repartir de zero.'}
             </p>
             <button
               type="button"
@@ -361,7 +363,7 @@ export function DemoDataLoader({ onLoaded, compact = false }: DemoDataLoaderProp
               )}
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs font-semibold leading-5 text-slate-500">
-                  Besoin de repartir proprement ? Le reset cible seulement les lignes marquees comme exemples.
+                  Besoin de repartir proprement ? Le reset supprime uniquement les lignes marquees comme exemples et conserve la fin du wizard.
                 </p>
                 <button
                   type="button"

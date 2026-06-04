@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AlertCircle, Eye, EyeOff, LogIn, ShieldCheck, UserPlus } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, LogIn, ShieldCheck, Sparkles, UserPlus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { BrandLogo, BrandMark } from '../components/brand/BrandLogo';
 
@@ -11,6 +11,21 @@ const TERMS_VERSION = '2026-05-31';
 const PRIVACY_VERSION = '2026-05-31';
 const TERMS_URL = 'https://samaykeur.com/cgu';
 const PRIVACY_URL = 'https://samaykeur.com/confidentialite';
+const GOOGLE_OAUTH_CONFIG_ERROR =
+  'Connexion Google indisponible pour le moment. Vérifiez la configuration OAuth côté Supabase.';
+
+function getGoogleAuthErrorMessage(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err ?? '');
+  const lowerMessage = message.toLowerCase();
+  if (
+    lowerMessage.includes('unsupported provider') ||
+    lowerMessage.includes('provider is not enabled') ||
+    lowerMessage.includes('google provider')
+  ) {
+    return GOOGLE_OAUTH_CONFIG_ERROR;
+  }
+  return err instanceof Error ? err.message : 'Connexion Google impossible pour le moment.';
+}
 
 export function Auth({ initialMode = 'login' }: AuthProps) {
   const { signIn, signInWithGoogle, signUp } = useAuth();
@@ -34,6 +49,27 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
     setAcceptedTerms(false);
   }, [initialMode]);
 
+  const switchMode = (nextMode: 'login' | 'register') => {
+    setMode(nextMode);
+    setError(null);
+    setAcceptedTerms(false);
+  };
+
+  const validateRegisterForm = () => {
+    if (formData.password !== formData.confirmPassword) {
+      throw new Error('Les mots de passe ne correspondent pas.');
+    }
+    if (formData.password.length < 6) {
+      throw new Error('Le mot de passe doit contenir au moins 6 caractères.');
+    }
+    if (!formData.prenom.trim() || !formData.nom.trim()) {
+      throw new Error('Le prénom et le nom sont obligatoires.');
+    }
+    if (!acceptedTerms) {
+      throw new Error('Vous devez accepter les CGU et la politique de confidentialité pour créer votre compte.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -43,25 +79,12 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
       if (mode === 'login') {
         await signIn(formData.email, formData.password);
       } else {
-        if (formData.password !== formData.confirmPassword) {
-          throw new Error('Les mots de passe ne correspondent pas');
-        }
-        if (formData.password.length < 6) {
-          throw new Error('Le mot de passe doit contenir au moins 6 caractères');
-        }
-        if (!formData.prenom.trim() || !formData.nom.trim()) {
-          throw new Error('Le pr?nom et le nom sont obligatoires');
-        }
-
-        if (!acceptedTerms) {
-          throw new Error('Vous devez accepter les CGU et la politique de confidentialite pour creer votre compte.');
-        }
-
+        validateRegisterForm();
         const acceptedAt = new Date().toISOString();
 
         await signUp(formData.email, formData.password, {
-          nom: formData.nom,
-          prenom: formData.prenom,
+          nom: formData.nom.trim(),
+          prenom: formData.prenom.trim(),
           role: 'admin',
           accepted_terms_at: acceptedAt,
           accepted_privacy_at: acceptedAt,
@@ -71,7 +94,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
       }
     } catch (err: unknown) {
       console.error('Auth error:', err);
-      setError(err instanceof Error ? err.message : 'Une erreur est survenue');
+      setError(err instanceof Error ? err.message : 'Une erreur est survenue.');
     } finally {
       setLoading(false);
     }
@@ -80,310 +103,339 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
   const handleGoogleSignIn = async () => {
     setError(null);
     if (mode === 'register' && !acceptedTerms) {
-      setError('Vous devez accepter les CGU et la politique de confidentialite pour creer votre compte.');
+      setError('Vous devez accepter les CGU et la politique de confidentialité pour créer votre compte.');
       return;
     }
+
+    const acceptedAt = mode === 'register' ? new Date().toISOString() : undefined;
+
     setGoogleLoading(true);
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(
+        acceptedAt
+          ? {
+              acceptedTermsAt: acceptedAt,
+              acceptedPrivacyAt: acceptedAt,
+              termsVersion: TERMS_VERSION,
+              privacyVersion: PRIVACY_VERSION,
+            }
+          : undefined,
+      );
     } catch (err: unknown) {
       console.error('Google auth error:', err);
-      setError(err instanceof Error ? err.message : 'Connexion Google impossible pour le moment');
+      setError(getGoogleAuthErrorMessage(err));
       setGoogleLoading(false);
     }
   };
 
   return (
-    <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-6 sm:px-6">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(255,138,0,0.12),transparent_22rem),linear-gradient(115deg,rgba(8,17,14,0.94),rgba(13,27,22,0.82)_48%,rgba(242,237,227,0.88)_48%,rgba(251,250,246,0.96))]" />
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(242,237,227,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(242,237,227,0.035)_1px,transparent_1px)] bg-[size:48px_48px]" />
-      <div className="pointer-events-none absolute left-1/2 top-10 h-72 w-72 -translate-x-1/2 rounded-full bg-action-500/16 blur-3xl" />
+    <main className="relative min-h-screen overflow-hidden bg-brand-950 text-white">
+      <img
+        src="/brand/image-fond-page-connexion-samay-keur.png"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover object-[58%_center] opacity-95 sm:object-center"
+      />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(4,10,8,0.86)_0%,rgba(6,17,13,0.72)_34%,rgba(6,17,13,0.34)_62%,rgba(6,17,13,0.72)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(255,138,0,0.16),transparent_22rem),radial-gradient(circle_at_78%_84%,rgba(52,211,153,0.12),transparent_20rem)]" />
+      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/55 to-transparent" />
 
-      <div className="relative grid w-full max-w-6xl min-w-0 gap-6 py-3 sm:py-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-stretch">
-        <aside className="relative hidden min-h-[38rem] overflow-hidden rounded-[2rem] border border-white/12 bg-emerald-950 shadow-[0_36px_140px_rgba(6,17,13,0.38)] lg:block">
-          <img
-            src="/brand/marketing/landing-centralisation.jpg"
-            alt=""
-            aria-hidden="true"
-            className="absolute inset-0 h-full w-full object-cover opacity-[0.82]"
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,17,13,0.08),rgba(6,17,13,0.78)),radial-gradient(circle_at_20%_10%,rgba(255,138,0,0.22),transparent_18rem)]" />
-          <div className="relative flex h-full flex-col justify-between p-8 text-white">
+      <section className="relative z-10 flex min-h-screen items-center px-4 py-5 sm:px-6 lg:px-10">
+        <div className="mx-auto grid w-full max-w-7xl items-center gap-7 lg:grid-cols-[1.02fr_0.78fr]">
+          <aside className="hidden min-h-[40rem] flex-col justify-between rounded-[1.75rem] border border-white/12 bg-white/[0.045] p-8 shadow-[0_34px_120px_rgba(0,0,0,0.42)] backdrop-blur-md lg:flex">
             <BrandLogo size="sm" tone="dark" showTagline />
-            <div className="max-w-md">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-100">Accès sécurisé</p>
-              <h2 className="mt-4 text-4xl font-black leading-tight tracking-tight">
-                Une infrastructure immobilière sérieuse commence dès la connexion.
-              </h2>
-              <p className="mt-5 text-sm font-semibold leading-7 text-emerald-50/72">
-                Documents, paiements, GED, rapports et permissions restent protégés dans un espace pensé pour les agences professionnelles.
-              </p>
-            </div>
-          </div>
-        </aside>
 
-        <div className="w-full min-w-0 lg:max-w-md lg:justify-self-end">
-          <div className="sk-card-premium overflow-hidden border-white/70 bg-white/[0.92] shadow-[0_32px_120px_rgba(6,17,13,0.32)] animate-scaleIn">
-            <div className="p-5 sm:p-8">
-            <div className="mb-6 text-center sm:mb-8">
-              <BrandMark size="lg" tone="light" animated className="mx-auto mb-4" />
-              <p className="text-xs font-black uppercase tracking-[0.34em] text-action-600">Manage. Grow. Prosper.</p>
-              <h1 className="mt-3 text-xl font-black tracking-[0.12em] text-brand-950 sm:text-2xl">SAMAY KËUR</h1>
-              <p className="mx-auto mt-4 max-w-xs text-sm leading-6 text-slate-600 sm:text-base">
-                Votre gestion locative, simplifiée et automatisée.
-              </p>
-              <div className="mx-auto mt-4 inline-flex items-center gap-2 rounded-lg border border-emerald-900/10 bg-emerald-50 px-3 py-2 text-xs font-black text-brand-800">
+            <div className="max-w-xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/20 bg-amber-100/10 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-amber-100">
                 <ShieldCheck className="h-4 w-4" />
-                Espace sécurisé
+                Accès sécurisé
               </div>
-            </div>
-
-            <div className="mb-6 grid grid-cols-2 gap-1 rounded-lg border border-emerald-950/10 bg-brand-surface p-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('login');
-                  setError(null);
-                  setAcceptedTerms(false);
-                }}
-                className={`min-w-0 rounded-lg px-2 py-3 text-sm font-black transition-all duration-300 sm:px-4 sm:text-base ${
-                  mode === 'login'
-                    ? 'bg-brand-950 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                }`}
-              >
-                <LogIn className="mr-1.5 inline-block h-4 w-4 sm:mr-2 sm:h-5 sm:w-5" />
-                Connexion
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('register');
-                  setError(null);
-                  setAcceptedTerms(false);
-                }}
-                className={`min-w-0 rounded-lg px-2 py-3 text-sm font-black transition-all duration-300 sm:px-4 sm:text-base ${
-                  mode === 'register'
-                    ? 'bg-brand-950 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                }`}
-              >
-                <UserPlus className="mr-1.5 inline-block h-4 w-4 sm:mr-2 sm:h-5 sm:w-5" />
-                <span className="sm:hidden">Créer</span>
-                <span className="hidden sm:inline">Inscription</span>
-              </button>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={loading || googleLoading}
-              className="group mb-5 flex w-full items-center justify-center gap-3 rounded-xl border border-emerald-950/10 bg-white px-4 py-3 font-black text-slate-900 shadow-[0_14px_38px_rgba(6,17,13,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50/40 hover:shadow-[0_20px_48px_rgba(6,17,13,0.12)] focus:outline-none focus:ring-2 focus:ring-action-400 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-black text-slate-950 shadow-sm transition-transform duration-300 group-hover:scale-105">
-                {googleLoading ? (
-                  <span className="h-4 w-4 rounded-full border-2 border-brand-700 border-t-transparent animate-spin" />
-                ) : (
-                  <img src="/brand/google-g.png" alt="" className="h-5 w-5 object-contain" />
-                )}
-              </span>
-              <span>{googleLoading ? 'Ouverture de Google...' : 'Continuer avec Google'}</span>
-            </button>
-
-            <div className="mb-5 flex items-center gap-3">
-              <span className="h-px flex-1 bg-emerald-950/10" />
-              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">ou par email</span>
-              <span className="h-px flex-1 bg-emerald-950/10" />
-            </div>
-
-            {error && (
-              <div id="auth-error" className="mb-6 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 animate-slideInUp">
-                <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
-                <p className="text-sm text-red-800">{error}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-5" aria-describedby={error ? 'auth-error' : undefined}>
-              {mode === 'register' && (
-                <div className="grid grid-cols-2 gap-4 animate-slideInLeft">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                      Prénom <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      autoComplete="given-name"
-                      value={formData.prenom}
-                      onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
-                      className="sk-input w-full px-4 py-3"
-                      placeholder="Amadou"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                      Nom <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      autoComplete="family-name"
-                      value={formData.nom}
-                      onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                      className="sk-input w-full px-4 py-3"
-                      placeholder="Diop"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  required
-                  autoComplete="email"
-                  aria-invalid={!!error}
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="sk-input w-full px-4 py-3"
-                  placeholder="votre@email.com"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Mot de passe <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                    aria-invalid={!!error}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="sk-input w-full px-4 py-3 pr-12"
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
-                    aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-                {mode === 'register' && <p className="mt-2 text-xs text-slate-500">Minimum 6 caractères</p>}
-              </div>
-
-              {mode === 'register' && (
-                <div className="animate-slideInRight">
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Confirmer le mot de passe <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    autoComplete="new-password"
-                    aria-invalid={!!error}
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                    className="sk-input w-full px-4 py-3"
-                    placeholder="••••••••"
-                  />
-                </div>
-              )}
-
-              {mode === 'register' && (
-                <label className="flex items-start gap-3 rounded-xl border border-emerald-950/10 bg-emerald-50/60 p-4 text-left text-sm leading-6 text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={acceptedTerms}
-                    onChange={(e) => setAcceptedTerms(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-emerald-950/20 text-brand-700 focus:ring-action-400"
-                  />
-                  <span>
-                    J'accepte les{' '}
-                    <a href={TERMS_URL} target="_blank" rel="noreferrer" className="font-black text-brand-700 underline-offset-4 hover:underline">
-                      Conditions Generales d'Utilisation
-                    </a>{' '}
-                    et la{' '}
-                    <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="font-black text-brand-700 underline-offset-4 hover:underline">
-                      Politique de confidentialite
-                    </a>{' '}
-                    de Samay Keur.
-                  </span>
-                </label>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || googleLoading || (mode === 'register' && !acceptedTerms)}
-                className="flex w-full transform items-center justify-center gap-2 rounded-lg bg-brand-700 px-6 py-3 font-bold text-white shadow-premium transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading ? (
-                  <>
-                    <span className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                    <span>{mode === 'login' ? 'Connexion...' : 'Inscription...'}</span>
-                  </>
-                ) : (
-                  <>
-                    {mode === 'login' ? <LogIn className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
-                    <span>{mode === 'login' ? 'Se connecter' : "S'inscrire"}</span>
-                  </>
-                )}
-              </button>
-            </form>
-
-            <div className="mt-6 text-center">
-              {mode === 'login' ? (
-                <p className="text-sm text-slate-600">
-                  Pas encore de compte ?{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode('register');
-                      setError(null);
-                    }}
-                    className="font-bold text-brand-700 transition-colors hover:text-brand-900 hover:underline"
-                  >
-                    Créez-en un
-                  </button>
-                </p>
-              ) : (
-                <p className="text-sm text-slate-600">
-                  Vous avez déjà un compte ?{' '}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode('login');
-                      setError(null);
-                    }}
-                    className="font-bold text-brand-700 transition-colors hover:text-brand-900 hover:underline"
-                  >
-                    Connectez-vous
-                  </button>
-                </p>
-              )}
-            </div>
-          </div>
-
-          {mode === 'register' && (
-            <div className="border-t border-emerald-950/10 bg-brand-surface px-8 py-6">
-              <p className="text-center text-xs text-slate-600">
-                Vos acceptations CGU et confidentialite sont enregistrees lors de la creation du compte.
+              <h1 className="mt-6 text-5xl font-black leading-[1.02] tracking-tight text-white drop-shadow-2xl">
+                L'immobilier maîtrisé commence par un accès fiable.
+              </h1>
+              <p className="mt-5 max-w-lg text-base font-semibold leading-8 text-emerald-50/78">
+                Paiements, documents vérifiables, rapports bailleurs et permissions restent protégés dans une infrastructure pensée pour les professionnels.
               </p>
             </div>
-          )}
+
+            <div className="grid max-w-xl grid-cols-3 gap-3">
+              {['Contrôle total', 'Transparence QR', 'Finance claire'].map((item) => (
+                <div key={item} className="rounded-2xl border border-white/10 bg-black/22 px-4 py-3 backdrop-blur">
+                  <p className="text-[11px] font-black uppercase tracking-[0.15em] text-amber-100">{item}</p>
+                </div>
+              ))}
+            </div>
+          </aside>
+
+          <div className="mx-auto w-full max-w-[28rem] lg:mx-0 lg:justify-self-end">
+            <div className="mb-4 flex justify-center lg:hidden">
+              <BrandLogo size="sm" tone="dark" showTagline />
+            </div>
+
+            <div className="overflow-hidden rounded-[1.65rem] border border-white/35 bg-white/[0.88] text-brand-950 shadow-[0_34px_120px_rgba(0,0,0,0.38)] backdrop-blur-2xl">
+              <div className="border-b border-emerald-950/10 bg-gradient-to-br from-white/92 to-brand-surface/88 px-5 py-5 sm:px-7">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-brand-800">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Espace privé
+                    </div>
+                    <h2 className="mt-4 text-2xl font-black tracking-tight text-brand-950">
+                      {mode === 'login' ? 'Connexion' : 'Créer votre espace'}
+                    </h2>
+                    <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
+                      {mode === 'login'
+                        ? 'Accédez à votre console de gestion locative.'
+                        : 'Lancez votre espace sécurisé Samay Këur.'}
+                    </p>
+                  </div>
+                  <BrandMark size="md" tone="light" animated className="mt-1 flex-shrink-0" />
+                </div>
+              </div>
+
+              <div className="px-5 py-5 sm:px-7 sm:py-6">
+                <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl border border-emerald-950/10 bg-brand-surface p-1">
+                  <button
+                    type="button"
+                    onClick={() => switchMode('login')}
+                    className={`min-h-11 rounded-lg px-3 text-sm font-black transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 ${
+                      mode === 'login'
+                        ? 'bg-brand-950 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-white hover:text-brand-900'
+                    }`}
+                  >
+                    <LogIn className="mr-1.5 inline-block h-4 w-4" />
+                    Connexion
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => switchMode('register')}
+                    className={`min-h-11 rounded-lg px-3 text-sm font-black transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 ${
+                      mode === 'register'
+                        ? 'bg-brand-950 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-white hover:text-brand-900'
+                    }`}
+                  >
+                    <UserPlus className="mr-1.5 inline-block h-4 w-4" />
+                    <span className="sm:hidden">Créer</span>
+                    <span className="hidden sm:inline">Inscription</span>
+                  </button>
+                </div>
+
+                {mode === 'register' && (
+                  <TermsConsent accepted={acceptedTerms} onChange={setAcceptedTerms} compact />
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading || googleLoading || (mode === 'register' && !acceptedTerms)}
+                  className="group mb-5 mt-4 flex w-full items-center justify-center gap-3 rounded-xl border border-emerald-950/10 bg-white px-4 py-3.5 font-black text-slate-900 shadow-[0_16px_44px_rgba(6,17,13,0.1)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-[0_22px_54px_rgba(6,17,13,0.15)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-black text-slate-950 shadow-sm transition-transform duration-300 group-hover:scale-105">
+                    {googleLoading ? (
+                      <span className="h-4 w-4 rounded-full border-2 border-brand-700 border-t-transparent animate-spin" />
+                    ) : (
+                      <img src="/brand/google-g.png" alt="" className="h-5 w-5 object-contain" />
+                    )}
+                  </span>
+                  <span>
+                    {googleLoading
+                      ? 'Ouverture de Google...'
+                      : mode === 'register' && !acceptedTerms
+                        ? 'Acceptez les CGU'
+                        : 'Continuer avec Google'}
+                  </span>
+                </button>
+
+                <div className="mb-5 flex items-center gap-3">
+                  <span className="h-px flex-1 bg-emerald-950/10" />
+                  <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">ou par email</span>
+                  <span className="h-px flex-1 bg-emerald-950/10" />
+                </div>
+
+                {error && (
+                  <div id="auth-error" className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 animate-slideInUp">
+                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
+                    <p className="text-sm font-semibold leading-6 text-red-800">{error}</p>
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-4" aria-describedby={error ? 'auth-error' : undefined}>
+                  {mode === 'register' && (
+                    <div className="grid grid-cols-2 gap-3 animate-slideInLeft">
+                      <Field
+                        label="Prénom"
+                        required
+                        inputProps={{
+                          type: 'text',
+                          autoComplete: 'given-name',
+                          value: formData.prenom,
+                          onChange: (e) => setFormData({ ...formData, prenom: e.target.value }),
+                          placeholder: 'Amadou',
+                        }}
+                      />
+                      <Field
+                        label="Nom"
+                        required
+                        inputProps={{
+                          type: 'text',
+                          autoComplete: 'family-name',
+                          value: formData.nom,
+                          onChange: (e) => setFormData({ ...formData, nom: e.target.value }),
+                          placeholder: 'Diop',
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <Field
+                    label="Email"
+                    required
+                    inputProps={{
+                      type: 'email',
+                      autoComplete: 'email',
+                      value: formData.email,
+                      onChange: (e) => setFormData({ ...formData, email: e.target.value }),
+                      placeholder: 'votre@email.com',
+                    }}
+                  />
+
+                  <div>
+                    <label className="mb-2 block text-sm font-black text-slate-700">
+                      Mot de passe <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                        aria-invalid={!!error}
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="sk-input min-h-12 w-full border-emerald-950/10 bg-white/92 px-4 py-3 pr-12 font-semibold shadow-sm transition hover:border-emerald-200 focus:border-action-500"
+                        placeholder="••••••••"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-emerald-50 hover:text-brand-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20"
+                        aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+                    {mode === 'register' && <p className="mt-2 text-xs font-semibold text-slate-500">Minimum 6 caractères.</p>}
+                  </div>
+
+                  {mode === 'register' && (
+                    <Field
+                      label="Confirmer le mot de passe"
+                      required
+                      inputProps={{
+                        type: 'password',
+                        autoComplete: 'new-password',
+                        value: formData.confirmPassword,
+                        onChange: (e) => setFormData({ ...formData, confirmPassword: e.target.value }),
+                        placeholder: '••••••••',
+                      }}
+                    />
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={loading || googleLoading || (mode === 'register' && !acceptedTerms)}
+                    className="flex min-h-12 w-full transform items-center justify-center gap-2 rounded-xl bg-brand-700 px-6 py-3 font-black text-white shadow-[0_18px_48px_rgba(31,59,46,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <>
+                        <span className="h-5 w-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                        <span>{mode === 'login' ? 'Connexion...' : 'Inscription...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        {mode === 'login' ? <LogIn className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+                        <span>{mode === 'login' ? 'Se connecter' : "S'inscrire"}</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+
+                <p className="mt-5 text-center text-sm font-semibold text-slate-600">
+                  {mode === 'login' ? 'Pas encore de compte ?' : 'Vous avez déjà un compte ?'}{' '}
+                  <button
+                    type="button"
+                    onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
+                    className="font-black text-brand-700 underline-offset-4 transition-colors hover:text-brand-950 hover:underline"
+                  >
+                    {mode === 'login' ? 'Créer un espace' : 'Se connecter'}
+                  </button>
+                </p>
+              </div>
+
+              <div className="border-t border-emerald-950/10 bg-brand-surface/90 px-5 py-4 sm:px-7">
+                <p className="text-center text-xs font-semibold leading-5 text-slate-600">
+                  Authentification protégée par Supabase Auth. Les données métier restent isolées par organisation.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+    </main>
+  );
+}
+
+type FieldProps = {
+  label: string;
+  required?: boolean;
+  inputProps: React.InputHTMLAttributes<HTMLInputElement>;
+};
+
+function Field({ label, required = false, inputProps }: FieldProps) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-black text-slate-700">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        required={required}
+        aria-invalid={inputProps['aria-invalid']}
+        {...inputProps}
+        className={`sk-input min-h-12 w-full border-emerald-950/10 bg-white/92 px-4 py-3 font-semibold shadow-sm transition hover:border-emerald-200 focus:border-action-500 ${inputProps.className ?? ''}`}
+      />
     </div>
   );
 }
 
-
+function TermsConsent({
+  accepted,
+  onChange,
+  compact = false,
+}: {
+  accepted: boolean;
+  onChange: (accepted: boolean) => void;
+  compact?: boolean;
+}) {
+  return (
+    <label className={`mb-4 flex items-start gap-3 rounded-xl border border-emerald-950/10 bg-emerald-50/70 text-left text-sm leading-6 text-slate-700 ${compact ? 'p-3' : 'p-4'}`}>
+      <input
+        type="checkbox"
+        checked={accepted}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-1 h-4 w-4 rounded border-emerald-950/20 text-brand-700 focus:ring-action-400"
+      />
+      <span>
+        J'accepte les{' '}
+        <a href={TERMS_URL} target="_blank" rel="noreferrer" className="font-black text-brand-700 underline-offset-4 hover:underline">
+          Conditions Générales d'Utilisation
+        </a>{' '}
+        et la{' '}
+        <a href={PRIVACY_URL} target="_blank" rel="noreferrer" className="font-black text-brand-700 underline-offset-4 hover:underline">
+          Politique de confidentialité
+        </a>{' '}
+        de Samay Këur.
+      </span>
+    </label>
+  );
+}

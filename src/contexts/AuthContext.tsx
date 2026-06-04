@@ -12,7 +12,7 @@ interface AuthContextType {
   accountProfile: AccountProfile;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (options?: GoogleSignInOptions) => Promise<void>;
   signUp: (email: string, password: string, profileData: Partial<UserProfile>) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -22,10 +22,70 @@ const AGENCY_SELECT_LEGACY = 'id,name,ninea,address,phone,email,website,logo_url
 const AGENCY_SELECT_EXTENDED = `${AGENCY_SELECT_LEGACY},organization_type`;
 const AUTH_CACHE_PREFIX = 'sk_auth_profile:';
 const AUTH_READ_TIMEOUT_MS = 5_000;
+const OAUTH_TERMS_STORAGE_KEY = 'sk_oauth_terms_acceptance';
+
+type GoogleSignInOptions = {
+  acceptedTermsAt?: string;
+  acceptedPrivacyAt?: string;
+  termsVersion?: string;
+  privacyVersion?: string;
+};
 
 function shouldRetryLegacyAgencySelect(error: { message?: string; code?: string } | null): boolean {
   const message = error?.message?.toLowerCase() ?? '';
   return error?.code === '42703' || message.includes('organization_type') || message.includes('column');
+}
+
+function getOAuthRedirectUrl(): string {
+  const appUrl = (import.meta.env.VITE_PUBLIC_APP_URL || import.meta.env.VITE_APP_URL || '').replace(/\/+$/, '');
+  const isLocal =
+    typeof window !== 'undefined' &&
+    ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+
+  const origin = isLocal || !appUrl ? window.location.origin : appUrl;
+  return `${origin}/login`;
+}
+
+function readPendingOAuthTerms(): GoogleSignInOptions | null {
+  try {
+    const raw = sessionStorage.getItem(OAUTH_TERMS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) as GoogleSignInOptions : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingOAuthTerms() {
+  try {
+    sessionStorage.removeItem(OAUTH_TERMS_STORAGE_KEY);
+  } catch {
+    /* noop */
+  }
+}
+
+async function assertGoogleOAuthUrlIsUsable(url: string) {
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      redirect: 'manual',
+      credentials: 'omit',
+    });
+
+    if (response.status >= 400) {
+      const text = await response.text();
+      if (text.toLowerCase().includes('unsupported provider') || text.toLowerCase().includes('provider is not enabled')) {
+        throw new Error('Unsupported provider: provider is not enabled');
+      }
+      throw new Error('Connexion Google indisponible pour le moment.');
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    if (message.includes('unsupported provider') || message.includes('provider is not enabled')) {
+      throw error;
+    }
+    // If the browser blocks the preflight because the provider redirects to Google,
+    // continue with the real OAuth navigation.
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -143,15 +203,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setProfile(null);
       } else {
-        setProfile(data);
+        let nextProfile = data as UserProfile;
+        const pendingTerms = readPendingOAuthTerms();
+        if (pendingTerms?.acceptedTermsAt && !nextProfile.accepted_terms_at) {
+          const { data: updatedProfile, error: termsError } = await supabase
+            .from('user_profiles')
+            .update({
+              accepted_terms_at: pendingTerms.acceptedTermsAt,
+              accepted_privacy_at: pendingTerms.acceptedPrivacyAt ?? pendingTerms.acceptedTermsAt,
+              terms_version: pendingTerms.termsVersion ?? null,
+              privacy_version: pendingTerms.privacyVersion ?? null,
+            })
+            .eq('id', userId)
+            .select('*')
+            .maybeSingle();
+
+          if (!termsError && updatedProfile) {
+            nextProfile = updatedProfile as UserProfile;
+            clearPendingOAuthTerms();
+          }
+        }
+
+        setProfile(nextProfile);
         let loadedAgency: Agency | null = null;
-        if (data.agency_id) {
-          loadedAgency = await loadAgency(data.agency_id);
+        if (nextProfile.agency_id) {
+          loadedAgency = await loadAgency(nextProfile.agency_id);
           setAgency(loadedAgency);
         } else {
           setAgency(null);
         }
-        writeCachedAuth(userId, data, loadedAgency);
+        writeCachedAuth(userId, nextProfile, loadedAgency);
       }
     } catch (error) {
       const cached = readCachedAuth(userId);
@@ -222,12 +303,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
-  const signInWithGoogle = async () => {
-    const redirectTo = `${window.location.origin}${window.location.pathname}`;
-    const { error } = await supabase.auth.signInWithOAuth({
+  const signInWithGoogle = async (options?: GoogleSignInOptions) => {
+    if (options?.acceptedTermsAt) {
+      sessionStorage.setItem(OAUTH_TERMS_STORAGE_KEY, JSON.stringify(options));
+    } else {
+      clearPendingOAuthTerms();
+    }
+
+    const redirectTo = getOAuthRedirectUrl();
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo,
+        skipBrowserRedirect: true,
         queryParams: {
           access_type: 'offline',
           prompt: 'select_account',
@@ -235,6 +323,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
     if (error) throw error;
+    if (!data?.url) throw new Error('Connexion Google indisponible pour le moment.');
+
+    await assertGoogleOAuthUrlIsUsable(data.url);
+    window.location.assign(data.url);
   };
 
   const signUp = async (email: string, password: string, profileData: Partial<UserProfile>) => {

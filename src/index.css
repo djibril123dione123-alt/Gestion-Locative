@@ -571,7 +571,7 @@
   .sk-splash-screen {
     background-image:
       linear-gradient(180deg, rgba(8, 17, 14, 0.34), rgba(8, 17, 14, 0.94)),
-      image-set(url('/brand/splash-mobile.png') 1x);
+      image-set(url('/brand/image-premium-page-accueil-mobile.png') 1x);
     background-position: center;
     background-size: cover;
   }
@@ -580,7 +580,7 @@
     .sk-splash-screen {
       background-image:
         linear-gradient(180deg, rgba(8, 17, 14, 0.26), rgba(8, 17, 14, 0.92)),
-        image-set(url('/brand/splash-desktop.png') 1x);
+        image-set(url('/brand/image-premium-page-accueil-desktop.png') 1x);
     }
   }
 

@@ -1,5 +1,5 @@
-const APP_SHELL_CACHE = 'samay-keur-shell-v1';
-const RUNTIME_CACHE = 'samay-keur-runtime-v1';
+const APP_SHELL_CACHE = 'samay-keur-shell-v2';
+const RUNTIME_CACHE = 'samay-keur-runtime-v2';
 const APP_SHELL_URLS = ['/', '/index.html', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
@@ -53,6 +53,19 @@ async function cacheFirstAsset(request) {
   return response;
 }
 
+async function networkFirstAsset(request) {
+  try {
+    const response = await fetch(request);
+    if (response && response.ok) {
+      const cache = await caches.open(RUNTIME_CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return (await caches.match(request)) || Response.error();
+  }
+}
+
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(RUNTIME_CACHE);
   const cached = await cache.match(request);
@@ -77,7 +90,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (['script', 'style', 'worker', 'font', 'image'].includes(request.destination)) {
+  if (['script', 'style', 'worker'].includes(request.destination)) {
+    event.respondWith(networkFirstAsset(request));
+    return;
+  }
+
+  if (['font', 'image'].includes(request.destination)) {
     event.respondWith(cacheFirstAsset(request));
     return;
   }
@@ -86,4 +104,3 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(staleWhileRevalidate(request));
   }
 });
-

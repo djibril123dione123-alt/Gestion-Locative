@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   Building2,
   User,
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
+  Home,
+  ShieldCheck,
+  Sparkles,
+  Users,
   Clock,
   XCircle,
   RefreshCw,
@@ -33,16 +37,43 @@ interface AgencyRequestRow {
   created_agency_id: string | null;
 }
 
+const welcomeInputClass =
+  'w-full rounded-2xl border border-emerald-950/10 bg-white/90 px-4 py-3.5 text-base font-semibold text-brand-950 shadow-inner shadow-emerald-950/[0.03] outline-none transition placeholder:text-slate-400 focus:border-amber-500/70 focus:bg-white focus:ring-4 focus:ring-amber-400/20 disabled:cursor-not-allowed disabled:opacity-60';
+
+const welcomePrimaryButtonClass =
+  'flex w-full min-h-12 items-center justify-center rounded-2xl border border-amber-300/30 bg-[linear-gradient(135deg,#B86B18_0%,#D08A24_46%,#8F4A12_100%)] px-6 py-3.5 text-sm font-black text-white shadow-[0_18px_46px_rgba(130,72,18,0.28)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(130,72,18,0.32)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/50 disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-white/20 disabled:bg-none disabled:bg-slate-700/80 disabled:text-slate-200 disabled:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]';
+
+function WelcomeShell({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) {
+  return (
+    <div className={`relative flex min-h-screen items-center justify-center overflow-hidden bg-brand-950 p-4 sm:p-6 [@media(max-height:800px)]:items-start [@media(max-height:800px)]:p-3 ${compact ? 'items-start' : ''}`}>
+      <picture className="pointer-events-none absolute inset-0">
+        <source media="(max-width: 767px)" srcSet="/brand/image-premium-page-accueil-mobile.png" />
+        <img
+          src="/brand/image-premium-page-accueil-desktop.png"
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover object-center"
+        />
+      </picture>
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(6,17,13,0.66)_0%,rgba(6,17,13,0.28)_42%,rgba(6,17,13,0.74)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_18%,rgba(255,138,0,0.13),transparent_22rem),radial-gradient(circle_at_16%_76%,rgba(52,211,153,0.12),transparent_18rem)]" />
+      <div className="relative z-10 flex w-full justify-center py-6 sm:py-8 [@media(max-height:800px)]:py-3 [@media(max-height:760px)]:py-2">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function Welcome() {
   const { user } = useAuth();
   const { showToast, toasts, removeToast } = useToast();
 
-  // ─── État de la demande existante (pour gérer pending / rejected) ─────────
+  // État de la demande existante (pour gérer pending / rejected)
   const [requestLoading, setRequestLoading] = useState(true);
   const [existingRequest, setExistingRequest] = useState<AgencyRequestRow | null>(null);
   const [resetting, setResetting] = useState(false);
 
-  // ─── État du formulaire (mode "création de demande") ──────────────────────
+  // État du formulaire (mode "création de demande")
   const [step, setStep] = useState(0);
   const [accountType, setAccountType] = useState<AccountType | null>(null);
   const [loading, setLoading] = useState(false);
@@ -195,57 +226,63 @@ export default function Welcome() {
     if (step > 0) setStep(step - 1);
   };
 
-  // ─── Vues d'état ──────────────────────────────────────────────────────────
+  // Vues d'état
 
   if (requestLoading) {
     return (
-      <div className="min-h-screen bg-brand-paper">
+      <WelcomeShell compact>
         <LoadingState
           label="Initialisation"
           description="Préparation de votre espace Samay Këur."
-          className="min-h-screen"
+          className="min-h-[420px] rounded-[1.75rem] border border-white/15 bg-white/88 px-8 shadow-[0_34px_120px_rgba(6,17,13,0.30)] backdrop-blur-2xl"
         />
-      </div>
+      </WelcomeShell>
     );
   }
 
-  const requestKindLabel = existingRequest?.is_bailleur_account ? 'espace propriétaire' : 'agence';
+  const requestKindLabel = existingRequest?.is_bailleur_account ? 'espace propriétaire' : 'espace agence';
   const requestCreatedLabel = existingRequest?.is_bailleur_account ? 'Votre espace propriétaire' : 'Votre agence';
 
   if (existingRequest && existingRequest.status === 'pending') {
     return (
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
-        <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden p-4">
-          <div className="sk-card-premium max-w-lg w-full bg-white/92 p-8 text-center shadow-[0_32px_120px_rgba(6,17,13,0.32)]">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-orange-100 mb-6">
-              <Clock className="w-10 h-10 text-orange-600" />
+        <WelcomeShell compact>
+          <div className="w-full max-w-xl animate-fadeIn">
+            <div className="mb-5 flex justify-center">
+              <BrandLogo size="sm" tone="dark" animated showTagline stacked className="items-center justify-center" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-3">Demande en cours d'examen</h1>
-            <p className="text-slate-600 mb-6">
-              Votre demande de création de votre {requestKindLabel}{' '}
-              <span className="font-semibold text-slate-900">« {existingRequest.agency_name} »</span>{' '}
-              a bien été reçue le{' '}
-              <span className="font-semibold">
-                {new Date(existingRequest.created_at).toLocaleDateString('fr-FR')}
-              </span>
-              . Notre équipe l'examinera dans les meilleurs délais.
-            </p>
-            <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 mb-6 text-left">
-              <p className="text-sm text-orange-900 flex items-start gap-2">
-                <Mail className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                <span>
-                  Vous recevrez une notification dès l'approbation. Vous pouvez fermer cet onglet
-                  et revenir plus tard.
+            <div className="rounded-[1.75rem] border border-amber-200/35 bg-[#fffaf0]/94 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8 [@media(max-height:800px)]:p-6">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/35 bg-[linear-gradient(135deg,#F7E6BF,#C8872E)] text-brand-950 shadow-[0_18px_48px_rgba(143,74,18,0.20)] [@media(max-height:800px)]:mb-4 [@media(max-height:800px)]:h-14 [@media(max-height:800px)]:w-14">
+                <Clock className="h-8 w-8 [@media(max-height:800px)]:h-7 [@media(max-height:800px)]:w-7" />
+              </div>
+              <div className="mb-3 inline-flex rounded-full border border-amber-300/30 bg-amber-50 px-3 py-1 text-[11px] font-black uppercase text-amber-800">
+                Validation manuelle
+              </div>
+              <h1 className="mb-3 text-3xl font-black text-brand-950 [@media(max-height:800px)]:text-2xl">Demande en cours d'examen</h1>
+              <p className="mx-auto mb-5 max-w-md text-sm font-semibold leading-7 text-slate-600 sm:text-base">
+                Votre demande de création d'{requestKindLabel}{' '}
+                <span className="font-black text-brand-950">« {existingRequest.agency_name} »</span>{' '}
+                a bien été reçue le{' '}
+                <span className="font-black text-brand-950">
+                  {new Date(existingRequest.created_at).toLocaleDateString('fr-FR')}
                 </span>
+                . Notre équipe l'examinera dans les meilleurs délais.
               </p>
-            </div>
+              <div className="mb-5 rounded-2xl border border-amber-200/60 bg-amber-50/80 p-4 text-left shadow-inner shadow-white/50">
+                <p className="flex items-start gap-3 text-sm font-semibold leading-6 text-amber-950">
+                  <Mail className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+                  <span>
+                    Vous recevrez une notification par email dès l'approbation. Vous pouvez fermer cet onglet
+                    et revenir plus tard.
+                  </span>
+                </p>
+              </div>
             <button
               onClick={async () => {
                 window.location.reload();
               }}
-              className="w-full px-6 py-3 rounded-lg text-white font-semibold flex items-center justify-center gap-2"
-              style={{ backgroundColor: '#F58220' }}
+              className={`${welcomePrimaryButtonClass} gap-2`}
               data-testid="button-refresh-pending"
             >
               <RefreshCw className="w-5 h-5" />
@@ -256,12 +293,13 @@ export default function Welcome() {
                 await supabase.auth.signOut();
                 window.location.reload();
               }}
-              className="mt-3 text-sm text-slate-500 hover:text-slate-700 underline"
+              className="mt-4 text-sm font-bold text-slate-500 transition hover:text-brand-800"
             >
               Se déconnecter
             </button>
           </div>
-        </div>
+          </div>
+        </WelcomeShell>
       </>
     );
   }
@@ -270,19 +308,23 @@ export default function Welcome() {
     return (
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
-        <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden p-4">
-          <div className="sk-card-premium max-w-lg w-full bg-white/92 p-8 text-center shadow-[0_32px_120px_rgba(6,17,13,0.32)]">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-100 mb-6">
-              <XCircle className="w-10 h-10 text-red-600" />
+        <WelcomeShell compact>
+          <div className="w-full max-w-xl animate-fadeIn">
+            <div className="mb-5 flex justify-center">
+              <BrandLogo size="sm" tone="dark" animated showTagline stacked className="items-center justify-center" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-3">Demande non approuvée</h1>
-            <p className="text-slate-600 mb-4">
+            <div className="rounded-[1.75rem] border border-red-200/40 bg-[#fffaf0]/94 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-red-200 bg-red-50 text-red-700 shadow-[0_18px_48px_rgba(153,27,27,0.14)]">
+                <XCircle className="h-8 w-8" />
+              </div>
+              <h1 className="mb-3 text-3xl font-black text-brand-950">Demande non approuvée</h1>
+              <p className="mx-auto mb-4 max-w-md text-sm font-semibold leading-7 text-slate-600 sm:text-base">
               Votre demande pour votre {requestKindLabel}{' '}
-              <span className="font-semibold text-slate-900">« {existingRequest.agency_name} »</span>{' '}
-              n'a pas été approuvée par notre équipe.
+                <span className="font-black text-brand-950">« {existingRequest.agency_name} »</span>{' '}
+                n'a pas été approuvée par notre équipe.
             </p>
             {existingRequest.rejection_reason && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 mb-6 text-left">
+                <div className="mb-5 rounded-2xl border border-red-200 bg-red-50/80 p-4 text-left">
                 <p className="text-sm font-semibold text-red-900 mb-1">Motif :</p>
                 <p className="text-sm text-red-800">{existingRequest.rejection_reason}</p>
               </div>
@@ -290,8 +332,7 @@ export default function Welcome() {
             <button
               onClick={handleResetRequest}
               disabled={resetting}
-              className="w-full px-6 py-3 rounded-lg text-white font-semibold disabled:opacity-50"
-              style={{ backgroundColor: '#F58220' }}
+              className={welcomePrimaryButtonClass}
               data-testid="button-new-request"
             >
               {resetting ? 'Préparation…' : 'Soumettre une nouvelle demande'}
@@ -301,12 +342,13 @@ export default function Welcome() {
                 await supabase.auth.signOut();
                 window.location.reload();
               }}
-              className="mt-3 text-sm text-slate-500 hover:text-slate-700 underline"
+              className="mt-4 text-sm font-bold text-slate-500 transition hover:text-brand-800"
             >
               Se déconnecter
             </button>
           </div>
-        </div>
+          </div>
+        </WelcomeShell>
       </>
     );
   }
@@ -314,13 +356,17 @@ export default function Welcome() {
   if (existingRequest && existingRequest.status === 'approved') {
     // Race condition : la demande est approuvée mais le profil n'a pas encore été rechargé.
     return (
-      <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden p-4">
-        <div className="sk-card-premium max-w-lg w-full bg-white/92 p-8 text-center shadow-[0_32px_120px_rgba(6,17,13,0.32)]">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-6">
-            <CheckCircle2 className="w-10 h-10 text-green-600" />
+      <WelcomeShell compact>
+        <div className="w-full max-w-xl animate-fadeIn">
+          <div className="mb-5 flex justify-center">
+            <BrandLogo size="sm" tone="dark" animated showTagline stacked className="items-center justify-center" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-3">Demande approuvée !</h1>
-          <p className="text-slate-600 mb-6">
+          <div className="rounded-[1.75rem] border border-emerald-200/45 bg-[#fffaf0]/94 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-800 shadow-[0_18px_48px_rgba(6,95,70,0.16)]">
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
+            <h1 className="mb-3 text-3xl font-black text-brand-950">Demande approuvée !</h1>
+            <p className="mb-6 text-sm font-semibold leading-7 text-slate-600 sm:text-base">
             {requestCreatedLabel} a été créé{existingRequest?.is_bailleur_account ? '' : 'e'}. Cliquez ci-dessous pour accéder à votre espace.
           </p>
           <button
@@ -328,85 +374,139 @@ export default function Welcome() {
               await reloadUserProfile();
               window.location.href = '/';
             }}
-            className="w-full px-6 py-3 rounded-lg text-white font-semibold"
-            style={{ backgroundColor: '#F58220' }}
+            className={welcomePrimaryButtonClass}
             data-testid="button-enter-app"
           >
             Accéder à mon espace
           </button>
         </div>
-      </div>
+        </div>
+      </WelcomeShell>
     );
   }
 
-  // ─── Vue formulaire (création de la demande) ──────────────────────────────
+  // Vue formulaire (création de la demande)
+
+  const formSteps = accountType === 'agency'
+    ? ['Structure', 'Contact', 'Détails']
+    : ['Identité', 'Contact', 'Adresse'];
+
+  const renderStepper = () => (
+    <div className="mx-auto mb-4 w-full max-w-2xl rounded-2xl border border-white/22 bg-brand-950/50 px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:px-5 [@media(max-height:800px)]:mb-3 [@media(max-height:800px)]:py-2.5">
+      <div className="grid grid-cols-3 items-center gap-2">
+        {formSteps.map((label, index) => {
+          const itemStep = index + 1;
+          const isActive = step === itemStep;
+          const isDone = step > itemStep;
+          return (
+            <div key={label} className="flex items-center gap-2">
+              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-black transition [@media(max-height:800px)]:h-7 [@media(max-height:800px)]:w-7 ${
+                isActive
+                  ? 'border-amber-200 bg-amber-200 text-brand-950 shadow-[0_10px_26px_rgba(208,138,36,0.26)]'
+                  : isDone
+                    ? 'border-emerald-200/70 bg-emerald-200/90 text-brand-950'
+                    : 'border-white/26 bg-white/12 text-slate-200'
+              }`}>
+                {String(itemStep).padStart(2, '0')}
+              </div>
+              <span className={`min-w-0 text-[11px] font-black uppercase leading-tight sm:text-xs ${
+                isActive ? 'text-amber-100' : isDone ? 'text-emerald-100' : 'text-slate-200/86'
+              }`}>
+                {label}
+              </span>
+              {index < formSteps.length - 1 && (
+                <div className={`hidden h-px flex-1 sm:block ${isDone ? 'bg-emerald-200/70' : 'bg-white/28'}`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const renderFormCard = (children: React.ReactNode) => (
+    <div className="w-full max-w-2xl animate-fadeIn">
+      {renderStepper()}
+      <div className="rounded-[1.75rem] border border-white/18 bg-brand-950/68 p-5 shadow-[0_34px_120px_rgba(6,17,13,0.34)] backdrop-blur-2xl sm:p-8 [@media(max-height:800px)]:p-5">
+        {children}
+      </div>
+    </div>
+  );
 
   const renderStepContent = () => {
     switch (step) {
       case 0:
         return (
-          <div className="max-w-4xl w-full animate-fadeIn">
-            <div className="text-center mb-12 animate-slideInUp">
-              <BrandLogo size="lg" tone="light" animated showTagline stacked className="items-center justify-center" />
-              <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-emerald-950 via-emerald-800 to-orange-600 bg-clip-text text-transparent mb-4">
+          <div className="w-full max-w-6xl animate-fadeIn [@media(max-height:800px)]:max-w-5xl">
+            <div className="mx-auto mb-7 max-w-3xl text-center text-white sm:mb-10 animate-slideInUp [@media(max-height:800px)]:mb-4 [@media(max-height:760px)]:mb-3">
+              <div className="mb-5 flex origin-top justify-center [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:scale-90 [@media(max-height:760px)]:scale-[0.84]">
+                <BrandLogo size="md" tone="dark" animated showTagline stacked className="items-center justify-center" />
+              </div>
+              <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-amber-200/20 bg-white/[0.08] px-4 py-2 text-[11px] font-black uppercase text-amber-100 shadow-[0_14px_44px_rgba(0,0,0,0.18)] backdrop-blur-xl [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:px-3 [@media(max-height:800px)]:py-1.5 [@media(max-height:800px)]:text-[10px]">
+                <ShieldCheck className="h-4 w-4 [@media(max-height:800px)]:h-3.5 [@media(max-height:800px)]:w-3.5" />
+                Configuration de votre espace
+              </div>
+              <h1 className="text-4xl font-black leading-tight text-white drop-shadow-2xl md:text-5xl 2xl:text-6xl [@media(max-height:800px)]:text-4xl [@media(max-height:760px)]:text-3xl">
                 Bienvenue sur Samay Këur
               </h1>
-              <p className="text-lg md:text-xl text-gray-700">
-                Choisissez le type de compte qui vous correspond
+              <p className="mx-auto mt-4 max-w-2xl text-base font-semibold leading-7 text-emerald-50/80 md:text-xl md:leading-8 [@media(max-height:800px)]:mt-2 [@media(max-height:800px)]:max-w-xl [@media(max-height:800px)]:text-sm [@media(max-height:800px)]:leading-6 md:[@media(max-height:800px)]:text-base">
+                Choisissez le mode de gestion qui correspond à votre activité. Votre espace,
+                vos documents et vos rapports seront adaptés dès le départ.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid gap-5 md:grid-cols-2 md:gap-7 [@media(max-height:800px)]:gap-4">
               <button
                 onClick={() => { setAccountType('agency'); nextStep(); }}
-                className="sk-card-premium bg-white/94 rounded-[1.4rem] p-8 text-left shadow-premium transition-all group hover:-translate-y-1 hover:shadow-premium-lg"
+                className="group relative min-h-full overflow-hidden rounded-[1.65rem] border border-emerald-200/40 bg-white/[0.88] p-5 text-left text-brand-950 shadow-[0_28px_90px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:bg-white/[0.94] hover:shadow-[0_34px_120px_rgba(6,17,13,0.34)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/50 sm:p-7 [@media(max-height:800px)]:rounded-2xl [@media(max-height:800px)]:p-4 sm:[@media(max-height:800px)]:p-5"
                 data-testid="card-account-agency"
               >
-                <div className="w-16 h-16 bg-emerald-50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-emerald-100 transition-colors">
-                  <Building2 className="w-8 h-8 text-emerald-800" />
+                <div className="mb-6 flex items-start justify-between gap-4 [@media(max-height:800px)]:mb-3">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-900/10 bg-gradient-to-br from-emerald-950 to-brand-700 text-white shadow-[0_18px_42px_rgba(31,59,46,0.28)] transition duration-300 group-hover:scale-[1.03] [@media(max-height:800px)]:h-12 [@media(max-height:800px)]:w-12 [@media(max-height:800px)]:rounded-xl">
+                    <Building2 className="h-8 w-8 [@media(max-height:800px)]:h-6 [@media(max-height:800px)]:w-6" />
+                  </div>
+                  <span className="rounded-full border border-emerald-900/10 bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase text-brand-800 [@media(max-height:800px)]:px-2.5 [@media(max-height:800px)]:py-1 [@media(max-height:800px)]:text-[10px]">
+                    Agence / cabinet
+                  </span>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-3">Je gère pour des clients</h2>
-                <p className="text-gray-600 mb-6">
-                  Gérez des propriétaires, leurs biens, les mandats, les encaissements et les rapports.
-                  Idéal pour une agence ou un cabinet de gestion.
-                </p>
-                <ul className="space-y-2 text-sm text-gray-600 mb-6">
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-emerald-700 mr-2" />Gestion multi-bailleurs</li>
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-emerald-700 mr-2" />Équipe collaborative</li>
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-emerald-700 mr-2" />Rapports personnalisés</li>
-                </ul>
-                <div className="flex items-center text-emerald-800 font-semibold">
-                  Choisir ce type
-                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </div>
+                <h2 className="mb-3 text-2xl font-black text-brand-950 md:text-3xl [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:text-xl md:[@media(max-height:800px)]:text-2xl">Je gère pour des clients</h2>
+                <p className="mb-6 text-sm font-semibold leading-7 text-slate-600 md:text-base [@media(max-height:800px)]:mb-3 [@media(max-height:800px)]:text-sm [@media(max-height:800px)]:leading-6">Un espace structuré pour gérer des propriétaires, des mandats, des encaissements et des rapports professionnels.</p>
+                <ul className="mb-6 grid gap-3 text-sm [@media(max-height:800px)]:mb-4 [@media(max-height:800px)]:gap-2"><li className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><Users className="h-4 w-4 text-brand-800" />Gestion multi-bailleurs</li><li className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><ShieldCheck className="h-4 w-4 text-brand-800" />Équipe collaborative</li><li className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><Sparkles className="h-4 w-4 text-brand-800" />Rapports personnalisés</li></ul>
+                <div className="flex min-h-12 items-center justify-between rounded-xl bg-brand-950 px-4 py-3 text-sm font-black text-white shadow-[0_18px_40px_rgba(6,17,13,0.22)] transition group-hover:bg-brand-800 [@media(max-height:800px)]:min-h-10 [@media(max-height:800px)]:px-3 [@media(max-height:800px)]:py-2.5">Créer un espace agence<ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1 [@media(max-height:800px)]:h-4 [@media(max-height:800px)]:w-4" /></div>
               </button>
 
               <button
                 onClick={() => { setAccountType('bailleur'); nextStep(); }}
-                className="sk-card-premium bg-white/94 rounded-[1.4rem] p-8 text-left shadow-premium transition-all group hover:-translate-y-1 hover:shadow-premium-lg"
+                className="group relative min-h-full overflow-hidden rounded-[1.65rem] border border-amber-200/50 bg-white/[0.88] p-5 text-left text-brand-950 shadow-[0_28px_90px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-amber-200 hover:bg-white/[0.94] hover:shadow-[0_34px_120px_rgba(120,62,0,0.24)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/50 sm:p-7 [@media(max-height:800px)]:rounded-2xl [@media(max-height:800px)]:p-4 sm:[@media(max-height:800px)]:p-5"
                 data-testid="card-account-bailleur"
               >
-                <div className="w-16 h-16 bg-orange-50 rounded-lg flex items-center justify-center mb-6 group-hover:bg-orange-100 transition-colors">
-                  <User className="w-8 h-8 text-orange-600" />
+                <div className="mb-6 flex items-start justify-between gap-4 [@media(max-height:800px)]:mb-3">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-900/10 bg-gradient-to-br from-amber-500 to-action-500 text-white shadow-[0_18px_42px_rgba(255,138,0,0.22)] transition duration-300 group-hover:scale-[1.03] [@media(max-height:800px)]:h-12 [@media(max-height:800px)]:w-12 [@media(max-height:800px)]:rounded-xl">
+                    <Home className="h-8 w-8 [@media(max-height:800px)]:h-6 [@media(max-height:800px)]:w-6" />
+                  </div>
+                  <span className="rounded-full border border-amber-900/10 bg-amber-50 px-3 py-1.5 text-[11px] font-black uppercase text-amber-800 [@media(max-height:800px)]:px-2.5 [@media(max-height:800px)]:py-1 [@media(max-height:800px)]:text-[10px]">
+                    Patrimoine privé
+                  </span>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-3">Je gère mes propres biens</h2>
-                <p className="text-gray-600 mb-6">
-                  Suivez vos locataires, loyers, impayés et documents sans logique d'agence inutile.
+                <h2 className="mb-3 text-2xl font-black text-brand-950 md:text-3xl [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:text-xl md:[@media(max-height:800px)]:text-2xl">Je gère mes propres biens</h2>
+                <p className="mb-6 text-sm font-semibold leading-7 text-slate-600 md:text-base [@media(max-height:800px)]:mb-3 [@media(max-height:800px)]:text-sm [@media(max-height:800px)]:leading-6">
+                  Un espace propriétaire plus simple pour suivre vos locataires, vos loyers,
+                  vos impayés et vos documents.
                 </p>
-                <ul className="space-y-2 text-sm text-gray-600 mb-6">
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />Gestion de vos biens</li>
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />Suivi des loyers</li>
-                  <li className="flex items-center"><CheckCircle2 className="w-4 h-4 text-orange-500 mr-2" />Tableaux de bord clairs</li>
+                <ul className="mb-6 grid gap-3 text-sm [@media(max-height:800px)]:mb-4 [@media(max-height:800px)]:gap-2">
+                  <li className="flex items-center gap-3 rounded-xl border border-amber-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><Home className="h-4 w-4 text-action-600" />Gestion de vos biens</li>
+                  <li className="flex items-center gap-3 rounded-xl border border-amber-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><CheckCircle2 className="h-4 w-4 text-action-600" />Suivi des loyers</li>
+                  <li className="flex items-center gap-3 rounded-xl border border-amber-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><User className="h-4 w-4 text-action-600" />Tableau de bord clair</li>
                 </ul>
-                <div className="flex items-center text-orange-600 font-semibold">
-                  Choisir ce type
-                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                <div className="flex min-h-12 items-center justify-between rounded-xl bg-action-500 px-4 py-3 text-sm font-black text-white shadow-[0_18px_40px_rgba(255,138,0,0.22)] transition group-hover:bg-action-600 [@media(max-height:800px)]:min-h-10 [@media(max-height:800px)]:px-3 [@media(max-height:800px)]:py-2.5">
+                  Créer un espace bailleur
+                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1 [@media(max-height:800px)]:h-4 [@media(max-height:800px)]:w-4" />
                 </div>
               </button>
             </div>
 
-            <div className="text-center mt-8">
-              <p className="text-sm text-gray-500">
+            <div className="mt-7 text-center [@media(max-height:800px)]:mt-4">
+              <p className="inline-flex rounded-full border border-white/10 bg-black/25 px-4 py-2 text-xs font-bold text-emerald-50/80 backdrop-blur-xl [@media(max-height:760px)]:hidden">
                 Toute demande est validée par notre équipe sous 24h ouvrées.
               </p>
             </div>
@@ -415,30 +515,31 @@ export default function Welcome() {
 
       case 1:
         return (
-          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <button onClick={prevStep} className="flex items-center text-gray-600 hover:text-gray-900 transition-colors">
-                  <ArrowLeft className="w-5 h-5 mr-2" />Retour
+          renderFormCard(
+            <>
+            <div className="mb-7 [@media(max-height:800px)]:mb-5">
+              <div className="mb-5 flex items-center justify-between [@media(max-height:800px)]:mb-4">
+                <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-3 py-2 text-sm font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
+                  <ArrowLeft className="mr-2 h-4 w-4" />Retour
                 </button>
-                <span className="text-sm text-gray-500">Étape 1 sur 3</span>
+                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-3 py-1 text-[11px] font-black uppercase text-emerald-100">Étape 1 sur 3</span>
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              <h2 className="mb-2 text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">
                 {accountType === 'agency' ? 'Nom de votre structure' : 'Votre nom complet'}
               </h2>
-              <p className="text-gray-600">
+              <p className="text-sm font-semibold leading-6 text-slate-200 sm:text-base">
                 {accountType === 'agency'
                   ? 'Comment s\'appelle votre agence ou cabinet de gestion ?'
-                  : 'Quel est votre nom complet ?'}
+                  : 'Indiquez le nom qui sera associé à votre espace propriétaire.'}
               </p>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-5">
               <input
                 type="text"
                 autoFocus
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
+                className={welcomeInputClass}
                 placeholder={accountType === 'agency' ? 'Ex: Immobilier Premium Dakar' : 'Ex: Moussa Diop'}
                 onKeyPress={(e) => e.key === 'Enter' && formData.name.trim() && nextStep()}
                 data-testid="input-name"
@@ -446,35 +547,37 @@ export default function Welcome() {
               <button
                 onClick={nextStep}
                 disabled={!formData.name.trim()}
-                className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center"
+                className={welcomePrimaryButtonClass}
                 data-testid="button-next-step-1"
               >
-                Continuer<ArrowRight className="w-5 h-5 ml-2" />
+                Continuer<ArrowRight className="ml-2 h-5 w-5" />
               </button>
             </div>
-          </div>
+            </>,
+          )
         );
 
       case 2:
         return (
-          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <button onClick={prevStep} className="flex items-center text-gray-600 hover:text-gray-900 transition-colors">
-                  <ArrowLeft className="w-5 h-5 mr-2" />Retour
+          renderFormCard(
+            <>
+            <div className="mb-7 [@media(max-height:800px)]:mb-5">
+              <div className="mb-5 flex items-center justify-between [@media(max-height:800px)]:mb-4">
+                <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-3 py-2 text-sm font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
+                  <ArrowLeft className="mr-2 h-4 w-4" />Retour
                 </button>
-                <span className="text-sm text-gray-500">Étape 2 sur 3</span>
+                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-3 py-1 text-[11px] font-black uppercase text-emerald-100">Étape 2 sur 3</span>
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Numéro de téléphone</h2>
-              <p className="text-gray-600">Pour que nous puissions vous joindre concernant votre demande.</p>
+              <h2 className="mb-2 text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">Numéro de téléphone</h2>
+              <p className="text-sm font-semibold leading-6 text-slate-200 sm:text-base">À quel numéro notre équipe peut-elle vous joindre ?</p>
             </div>
-            <div className="space-y-6">
+            <div className="space-y-5">
               <input
                 type="tel"
                 autoFocus
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: formatSenegalPhoneInput(e.target.value) })}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg"
+                className={welcomeInputClass}
                 placeholder="+221 77 123 45 67"
                 onKeyPress={(e) => e.key === 'Enter' && formData.phone.trim() && nextStep()}
                 data-testid="input-phone"
@@ -482,36 +585,44 @@ export default function Welcome() {
               <button
                 onClick={nextStep}
                 disabled={!formData.phone.trim()}
-                className="w-full px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center"
+                className={welcomePrimaryButtonClass}
                 data-testid="button-next-step-2"
               >
-                Continuer<ArrowRight className="w-5 h-5 ml-2" />
+                Continuer<ArrowRight className="ml-2 h-5 w-5" />
               </button>
             </div>
-          </div>
+            </>,
+          )
         );
 
       case 3:
         return (
-          <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg p-8 animate-fadeIn">
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <button onClick={prevStep} className="flex items-center text-gray-600 hover:text-gray-900 transition-colors">
-                  <ArrowLeft className="w-5 h-5 mr-2" />Retour
+          renderFormCard(
+            <>
+            <div className="mb-7 [@media(max-height:800px)]:mb-5">
+              <div className="mb-5 flex items-center justify-between [@media(max-height:800px)]:mb-4">
+                <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-3 py-2 text-sm font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
+                  <ArrowLeft className="mr-2 h-4 w-4" />Retour
                 </button>
-                <span className="text-sm text-gray-500">Étape 3 sur 3</span>
+                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-3 py-1 text-[11px] font-black uppercase text-emerald-100">Étape 3 sur 3</span>
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Informations complémentaires</h2>
-              <p className="text-gray-600">Quelques détails optionnels pour finaliser votre demande.</p>
+              <h2 className="mb-2 text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">
+                {accountType === 'agency' ? 'Détails de votre structure' : 'Adresse'}
+              </h2>
+              <p className="text-sm font-semibold leading-6 text-slate-200 sm:text-base">
+                {accountType === 'agency'
+                  ? 'Ajoutez votre adresse et, si disponible, votre NINEA.'
+                  : 'Ajoutez votre adresse pour finaliser votre demande.'}
+              </p>
             </div>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">Adresse</label>
+                <label className="mb-2 block text-sm font-black text-slate-100">Adresse</label>
                 <input
                   type="text"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  className={welcomeInputClass}
                   placeholder="Sacré-Cœur 3, Dakar"
                   data-testid="input-address"
                 />
@@ -519,12 +630,12 @@ export default function Welcome() {
               <div>
                 {accountType === 'agency' && (
                   <>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">NINEA (optionnel au démarrage)</label>
+                    <label className="mb-2 block text-sm font-black text-slate-100">NINEA (optionnel au démarrage)</label>
                     <input
                       type="text"
                       value={formData.ninea}
                       onChange={(e) => setFormData({ ...formData, ninea: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      className={welcomeInputClass}
                       placeholder="00123456789"
                       data-testid="input-ninea"
                     />
@@ -532,10 +643,13 @@ export default function Welcome() {
                 )}
               </div>
 
-              <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-5 border-2 border-orange-200">
-                <h3 className="font-bold text-orange-900 mb-2">Validation par notre équipe</h3>
-                <p className="text-sm text-orange-800">
-                  Votre demande est examinée sous 24h ouvrées. Vous recevrez une notification
+              <div className="rounded-2xl border border-amber-200/30 bg-amber-100/12 p-4 shadow-inner shadow-white/5">
+                <div className="mb-2 flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-amber-200" />
+                  <h3 className="font-black text-amber-100">Validation par notre équipe</h3>
+                </div>
+                <p className="text-sm font-semibold leading-6 text-amber-50/86">
+                  Votre demande sera examinée sous 24h ouvrées. Vous recevrez une notification
                   par email dès l'approbation.
                 </p>
               </div>
@@ -543,7 +657,7 @@ export default function Welcome() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center shadow-lg hover:shadow-xl"
+                className={welcomePrimaryButtonClass}
                 data-testid="button-submit-request"
               >
                 {loading ? (
@@ -556,7 +670,8 @@ export default function Welcome() {
                 )}
               </button>
             </form>
-          </div>
+            </>,
+          )
         );
 
       default:
@@ -567,9 +682,8 @@ export default function Welcome() {
   return (
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      <div className="sk-splash-screen relative flex min-h-screen items-center justify-center overflow-hidden p-4">
-        {renderStepContent()}
-      </div>
+      <WelcomeShell>{renderStepContent()}</WelcomeShell>
     </>
   );
 }
+

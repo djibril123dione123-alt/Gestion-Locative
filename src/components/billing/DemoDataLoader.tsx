@@ -301,7 +301,17 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
       await ensureDemoFlagReady(agencyId);
 
       const { error: resetError } = await supabase.rpc('reset_demo_data', { p_agency_id: agencyId });
-      if (resetError) throw resetError;
+      if (resetError) {
+        if (import.meta.env.DEV) {
+          console.error('[DemoDataLoader] reset_demo_data RPC error', resetError);
+        }
+        throw new Error(
+          resetError.message ||
+            resetError.details ||
+            resetError.hint ||
+            'Impossible de supprimer les donnees exemples.',
+        );
+      }
 
       setDone(false);
       setDemoPresent(await refreshDemoPresence(agencyId));

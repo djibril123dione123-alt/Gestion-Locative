@@ -1,5 +1,5 @@
-const APP_SHELL_CACHE = 'samay-keur-shell-v2';
-const RUNTIME_CACHE = 'samay-keur-runtime-v2';
+const APP_SHELL_CACHE = 'samay-keur-shell-v3';
+const RUNTIME_CACHE = 'samay-keur-runtime-v3';
 const APP_SHELL_URLS = ['/', '/index.html', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
@@ -33,8 +33,10 @@ function isSupabaseRequest(url) {
 async function networkFirstNavigation(request) {
   try {
     const response = await fetch(request);
-    const cache = await caches.open(APP_SHELL_CACHE);
-    cache.put('/index.html', response.clone());
+    if (response && response.ok) {
+      const cache = await caches.open(APP_SHELL_CACHE);
+      cache.put('/index.html', response.clone());
+    }
     return response;
   } catch {
     return (await caches.match('/index.html')) || (await caches.match('/'));

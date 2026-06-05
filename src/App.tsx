@@ -1,5 +1,5 @@
 ﻿import { useState, lazy, Suspense, useEffect } from 'react';
-import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { HashRouter, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, RefreshCw, WifiOff } from 'lucide-react';
 
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -15,6 +15,7 @@ import { BrandMark, BrandedLoader } from './components/brand/BrandLogo';
 import { PageSkeleton } from './components/ui/Skeleton';
 import { DocumentGeneratedModal } from './components/documents/DocumentGeneratedModal';
 import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
+import ErrorBoundary from './components/ErrorBoundary';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
 import { permissionRowsToMap, type UserPermissionMap } from './lib/rbac';
@@ -136,12 +137,32 @@ function AppContent() {
     const externalAuthMode = getExternalAuthMode();
     const hashPage = location.pathname.replace(/^\//, '') || 'dashboard';
     const currentPage = externalAuthMode ? 'auth' : hashPage;
+    const routeKey = `${currentPage}:${location.pathname}${location.search}`;
 
     // Navigation helper - compatible avec l'interface onNavigate existante
     const handleNavigate = (page: string) => {
+        if (import.meta.env.DEV) {
+            console.debug('[Navigation] request', {
+                from: currentPage,
+                to: page,
+                pathname: location.pathname,
+                search: location.search,
+            });
+        }
         navigate('/' + page);
         setSidebarOpen(false);
     };
+
+    useEffect(() => {
+        if (!import.meta.env.DEV) return;
+        console.debug('[Navigation] route-change', {
+            currentPage,
+            pathname: location.pathname,
+            search: location.search,
+            key: location.key,
+            routeKey,
+        });
+    }, [currentPage, location.key, location.pathname, location.search, routeKey]);
 
     useEffect(() => {
         try {
@@ -545,11 +566,13 @@ function AppContent() {
                         </div>
                     </div>
 
-                    <Suspense fallback={<PageSkeleton title={pageLabel} variant={pageSkeletonVariant} />}>
-                        <Routes>
-                            <Route path="*" element={renderPage()} />
-                        </Routes>
-                    </Suspense>
+                    <ErrorBoundary key={`error:${routeKey}`}>
+                        <Suspense key={`suspense:${routeKey}`} fallback={<PageSkeleton title={pageLabel} variant={pageSkeletonVariant} />}>
+                            <div key={`page:${routeKey}`} className="min-h-full" data-route-page={currentPage}>
+                                {renderPage()}
+                            </div>
+                        </Suspense>
+                    </ErrorBoundary>
                 </main>
             </div>
 
@@ -582,7 +605,7 @@ function AppContent() {
 
 function App() {
     return (
-        <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <HashRouter>
             <AuthProvider>
                 <AppContent />
             </AuthProvider>

@@ -84,7 +84,7 @@ const PAGE_LABELS: Record<string, string> = {
     'loyers-impayes': 'Impayés',
     depenses: 'Dépenses',
     commissions: 'Commissions',
-    'tableau-de-bord-financier': 'Rapports',
+    'tableau-de-bord-financier': 'Pilotage financier',
     'filtres-avances': 'Rapports',
     parametres: 'Paramètres',
     equipe: 'Équipe',

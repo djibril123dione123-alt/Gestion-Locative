@@ -130,7 +130,9 @@ export function TableauDeBordFinancierGlobal() {
     const [monthlyData, setMonthlyData] = useState<MonthlyStat[]>([]); // [9, 11]
     const [bilansBailleurs, setBilansBailleurs] = useState<BilanBailleur[]>([]); 
     const [agencySettings, setAgencySettings] = useState<Partial<AgencySettings> | null>(null);
-    const [currentPage, setCurrentPage] = useState<'bailleurs' | 'operationnel'>('bailleurs');
+    const [currentPage, setCurrentPage] = useState<'bailleurs' | 'operationnel'>(() =>
+        accountProfile.isIndividualOwner ? 'bailleurs' : 'operationnel'
+    );
 
     useEffect(() => {
         if (accountProfile.isIndividualOwner && currentPage === 'operationnel') {
@@ -657,14 +659,20 @@ export function TableauDeBordFinancierGlobal() {
 
             <div className={`grid grid-cols-1 gap-2 rounded-2xl border border-emerald-950/10 bg-white/80 p-2 shadow-sm ${accountProfile.isIndividualOwner ? '' : 'sm:grid-cols-2'}`}>
                 <button
-                    onClick={() => setCurrentPage('bailleurs')}
+                    onClick={() => {
+                        if (accountProfile.isIndividualOwner) {
+                            setCurrentPage('bailleurs');
+                        } else {
+                            window.location.hash = '#/bailleurs';
+                        }
+                    }}
                     className={`rounded-xl px-4 py-3 text-left text-sm font-bold transition ${currentPage === 'bailleurs' ? 'bg-brand-950 text-white shadow-lg shadow-emerald-950/15' : 'text-slate-600 hover:bg-emerald-50 hover:text-brand-900'}`}
                 >
-                    {accountProfile.isIndividualOwner ? 'Mes revenus' : 'Rapport bailleur'}
+                    {accountProfile.isIndividualOwner ? 'Mes revenus' : 'Fiches bailleurs'}
                     <span className="mt-1 block text-xs font-medium opacity-75">
                         {accountProfile.isIndividualOwner
                             ? 'Synthèse mensuelle de vos loyers, impayés et revenus nets.'
-                            : 'Vue principale de reporting propriétaire.'}
+                            : 'Les rapports par proprietaire se generent depuis la page Bailleurs.'}
                     </span>
                 </button>
                 {!accountProfile.isIndividualOwner && (

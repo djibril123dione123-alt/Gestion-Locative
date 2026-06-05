@@ -31,7 +31,7 @@ export interface PermissionCatalogItem {
 
 export const PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { id: 'dashboard', label: 'Vue d’ensemble', description: 'Synthèse opérationnelle, KPIs et activité récente.', category: 'Pilotage' },
-  { id: 'tableau-de-bord-financier', label: 'Rapports', description: 'Rapports bailleurs, finance et exports.', category: 'Finance & reporting', sensitive: true },
+  { id: 'tableau-de-bord-financier', label: 'Pilotage financier', description: 'Finance consolidée, indicateurs et exports.', category: 'Finance & reporting', sensitive: true },
   { id: 'bailleurs', label: 'Bailleurs', description: 'Propriétaires, coordonnées et mandats.', category: 'Portefeuille locatif' },
   { id: 'patrimoine', label: 'Biens', description: 'Vue patrimoine, immeubles, unites et occupation.', category: 'Portefeuille locatif' },
   { id: 'immeubles', label: 'Immeubles', description: 'Immeubles, adresses et regroupements.', category: 'Portefeuille locatif' },

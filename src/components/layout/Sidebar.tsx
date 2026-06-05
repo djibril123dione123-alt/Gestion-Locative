@@ -93,13 +93,13 @@ const NAV: Array<MenuLeaf | MenuGroup> = [
   {
     id: 'finance',
     label: 'Finances',
-    description: 'Encaissements, charges et rapports',
+    description: 'Encaissements, charges et pilotage global',
     icon: Wallet,
     roles: ['admin', 'agent', 'comptable', 'bailleur'],
     items: [
       { id: 'paiements', label: 'Encaissements', icon: CreditCard, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
       { id: 'depenses', label: 'Depenses', icon: TrendingDown, roles: ['admin'] },
-      { id: 'tableau-de-bord-financier', label: 'Rapports', icon: BarChart3, roles: ['admin'] },
+      { id: 'tableau-de-bord-financier', label: 'Pilotage financier', icon: BarChart3, roles: ['admin'] },
     ],
   },
   {
@@ -261,12 +261,13 @@ export function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col border-r border-white/10 bg-brand-950 text-white shadow-premium-lg
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col overflow-hidden border-r border-emerald-300/10 bg-[radial-gradient(circle_at_20%_0%,rgba(16,185,129,0.16),transparent_18rem),linear-gradient(180deg,#031f1a,#062b23_48%,#041b17)] text-white shadow-[18px_0_60px_rgba(2,6,23,0.24)]
           transform transition-[transform,width] duration-300 ease-in-out lg:static ${desktopWidthClass}
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        <div className={`relative flex items-center overflow-hidden border-b border-white/10 p-4 ${showExpandedContent ? 'justify-between' : 'justify-center'}`}>
-          <div className="absolute -left-8 top-0 h-24 w-24 rounded-full bg-emerald-300/12 blur-2xl" />
+        <div className={`relative flex items-center overflow-hidden border-b border-white/10 px-4 py-5 ${showExpandedContent ? 'justify-between' : 'justify-center'}`}>
+          <div className="absolute -left-8 top-0 h-28 w-28 rounded-full bg-emerald-300/15 blur-2xl" />
+          <div className="absolute right-0 top-0 h-px w-2/3 bg-gradient-to-r from-transparent via-orange-300/60 to-transparent" />
           <div className="relative flex min-w-0 items-center gap-3">
             <BrandMark size="md" tone="dark" animated withTile={false} />
             <div className={`min-w-0 ${showExpandedContent ? '' : 'lg:hidden'}`}>
@@ -296,7 +297,7 @@ export function Sidebar({
         </div>
 
         <nav className="flex-1 overflow-y-auto py-3 xl:py-4">
-          <ul className="space-y-1 px-2.5 xl:px-3">
+          <ul className="space-y-1.5 px-3">
             {visibleNav.map((entry) => {
               if (!isGroup(entry)) {
                 const Icon = entry.icon;
@@ -306,8 +307,8 @@ export function Sidebar({
                     <button
                       onClick={() => handleNavigate(entry.id)}
                       title={entry.label}
-                      className={`group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${
-                        active ? 'bg-emerald-300/12 text-emerald-100 shadow-sm' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
+                      className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${
+                        active ? 'bg-white/[0.09] text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.16)] ring-1 ring-emerald-300/10' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
                       } ${showExpandedContent ? '' : 'justify-center px-0'}`}
                     >
                       {active && <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r bg-emerald-300" />}
@@ -328,8 +329,8 @@ export function Sidebar({
                   <button
                     onClick={() => toggleGroup(entry.id)}
                     title={entry.label}
-                    className={`group relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${
-                      active ? 'bg-emerald-300/10 text-emerald-100' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
+                    className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${
+                      active ? 'bg-white/[0.09] text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.16)] ring-1 ring-emerald-300/10' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
                     } ${showExpandedContent ? '' : 'justify-center px-0'}`}
                   >
                     {active && <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r bg-emerald-300" />}
@@ -344,7 +345,7 @@ export function Sidebar({
                   </button>
 
                   {open && showExpandedContent && (
-                    <ul className="ml-3 mt-1 space-y-1 border-l border-white/10 pl-3">
+                    <ul className="ml-4 mt-1.5 space-y-1 rounded-2xl border border-white/5 bg-black/10 p-1.5 shadow-inner">
                       {entry.items.map((leaf) => {
                         const LeafIcon = leaf.icon;
                         const leafActive = isLeafActive(leaf.id);
@@ -352,8 +353,8 @@ export function Sidebar({
                           <li key={leaf.id}>
                             <button
                               onClick={() => handleNavigate(leaf.id)}
-                              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all duration-200 ${
-                                leafActive ? 'bg-emerald-300/12 text-emerald-100' : 'text-slate-500 hover:bg-white/[0.055] hover:text-slate-200'
+                              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-all duration-200 ${
+                                leafActive ? 'bg-emerald-300/14 text-emerald-50 ring-1 ring-emerald-300/10' : 'text-slate-500 hover:bg-white/[0.055] hover:text-slate-200'
                               }`}
                             >
                               <LeafIcon className={`h-4 w-4 flex-shrink-0 ${leafActive ? 'text-emerald-300' : 'text-slate-600'}`} />
@@ -370,15 +371,15 @@ export function Sidebar({
           </ul>
         </nav>
 
-        <div className="relative border-t border-white/10 p-4">
+        <div className="relative border-t border-white/10 bg-black/10 p-4">
           <button
             type="button"
             onClick={() => setUserMenuOpen((value) => !value)}
-            className={`w-full rounded-lg border border-white/10 bg-white/[0.055] px-3 py-3 text-left transition hover:bg-white/[0.085] ${showExpandedContent ? '' : 'lg:flex lg:justify-center lg:px-0'}`}
+            className={`w-full rounded-2xl border border-white/10 bg-white/[0.065] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.095] ${showExpandedContent ? '' : 'lg:flex lg:justify-center lg:px-0'}`}
             aria-expanded={userMenuOpen}
           >
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-300 to-brand-700 text-sm font-black text-white">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-300 to-brand-700 text-sm font-black text-white shadow-lg shadow-emerald-900/20">
                 {initials}
               </div>
               <div className={`min-w-0 flex-1 ${showExpandedContent ? '' : 'lg:hidden'}`}>

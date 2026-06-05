@@ -1,14 +1,47 @@
 ﻿import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
-import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
-import { Plus, Search, FileText, AlertCircle, Ban, ShieldAlert, Building2, Home, ClipboardList } from 'lucide-react';
-import { generateMandatBailleurPDF } from '../lib/pdf';
+import {
+  Plus,
+  Search,
+  FileText,
+  AlertCircle,
+  Ban,
+  ShieldAlert,
+  Building2,
+  Home,
+  ClipboardList,
+  Wallet,
+  ReceiptText,
+  Users,
+  Phone,
+  Mail,
+  MapPin,
+  Download,
+  SlidersHorizontal,
+  X,
+  BarChart3,
+  FolderOpen,
+  CreditCard,
+  MoreHorizontal,
+} from 'lucide-react';
+import {
+  addFooter,
+  drawDocumentHeader,
+  drawLegalVerificationFooter,
+  drawPageBorder,
+  drawTotalsBlock,
+  generateMandatBailleurPDF,
+  getAutoTableTheme,
+  saveGeneratedPdf,
+} from '../lib/pdf';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages';
-import { formatDate, formatSenegalPhone, formatSenegalPhoneInput, getSenegalPhoneHref, normalizeSenegalPhone } from '../lib/formatters';
+import { formatDate, formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 import { formatPersonName } from '../lib/people';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
@@ -20,6 +53,7 @@ import {
   type BailleurLifecycleStatus,
   type BailleurLifecycleImpacts,
 } from '../services/api/bailleurApi';
+import type { AgencySettings } from '../types/agency';
 
 /**
  * Interface Bailleur avec les champs commission et debut_contrat
@@ -64,6 +98,129 @@ interface LifecycleFormData {
   acknowledge_impacts: boolean;
 }
 
+interface DetailImmeuble {
+  id: string;
+  nom: string;
+  adresse: string | null;
+  quartier?: string | null;
+  ville?: string | null;
+  bailleur_id: string | null;
+  nombre_unites?: number | null;
+  actif?: boolean | null;
+}
+
+interface DetailUnite {
+  id: string;
+  nom: string;
+  immeuble_id: string | null;
+  loyer_base: number | null;
+  statut: string | null;
+  actif?: boolean | null;
+}
+
+interface DetailContrat {
+  id: string;
+  unite_id: string | null;
+  date_debut: string | null;
+  date_fin: string | null;
+  loyer_mensuel: number | null;
+  statut: string | null;
+  locataires?: { nom?: string | null; prenom?: string | null } | null;
+}
+
+interface DetailPaiement {
+  id: string;
+  contrat_id: string | null;
+  montant_total: number | null;
+  part_agence: number | null;
+  part_bailleur: number | null;
+  reliquat: number | null;
+  statut: string | null;
+  mois_concerne: string | null;
+  date_paiement: string | null;
+  reference?: string | null;
+  deleted_at?: string | null;
+}
+
+interface DetailDepense {
+  id: string;
+  immeuble_id: string | null;
+  montant: number | null;
+  date_depense: string | null;
+  categorie: string | null;
+  description: string | null;
+  actif?: boolean | null;
+  deleted_at?: string | null;
+}
+
+interface DetailDocument {
+  id: string;
+  name?: string | null;
+  document_category?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  bailleur_id?: string | null;
+  lifecycle_status?: string | null;
+  created_at?: string | null;
+}
+
+interface BailleurPageData {
+  bailleurs: Bailleur[];
+  immeubles: DetailImmeuble[];
+  unites: DetailUnite[];
+  contrats: DetailContrat[];
+  paiements: DetailPaiement[];
+  depenses: DetailDepense[];
+  documents: DetailDocument[];
+  agencySettings: Partial<AgencySettings> | null;
+}
+
+interface BailleurSummary {
+  immeubles: DetailImmeuble[];
+  unites: DetailUnite[];
+  contrats: DetailContrat[];
+  paiements: DetailPaiement[];
+  depenses: DetailDepense[];
+  documents: DetailDocument[];
+  loyers: number;
+  reliquats: number;
+  commissions: number;
+  net: number;
+  occupiedUnits: number;
+  activeContracts: number;
+}
+
+type DrawerTab = 'overview' | 'biens' | 'contrats' | 'paiements' | 'depenses' | 'rapports' | 'documents';
+type BailleurFilter = 'all' | 'with_reliquats' | 'without_reliquats' | 'with_biens' | 'without_biens' | 'high_commission' | 'active' | 'inactive';
+
+const EMPTY_PAGE_DATA: BailleurPageData = {
+  bailleurs: [],
+  immeubles: [],
+  unites: [],
+  contrats: [],
+  paiements: [],
+  depenses: [],
+  documents: [],
+  agencySettings: null,
+};
+
+type PdfWithAutoTable = jsPDF & {
+  lastAutoTable?: { finalY: number };
+};
+
+const DRAWER_PRIMARY_TABS: Array<{ id: DrawerTab; label: string }> = [
+  { id: 'overview', label: "Vue d'ensemble" },
+  { id: 'biens', label: 'Biens' },
+  { id: 'paiements', label: 'Paiements' },
+  { id: 'documents', label: 'Documents' },
+];
+
+const DRAWER_MORE_TABS: Array<{ id: DrawerTab; label: string }> = [
+  { id: 'contrats', label: 'Contrats' },
+  { id: 'depenses', label: 'Dépenses' },
+  { id: 'rapports', label: 'Rapports' },
+];
+
 /**
  * Composant d'alerte pour les erreurs
  */
@@ -82,17 +239,245 @@ const ErrorAlert: React.FC<{ message: string; onClose: () => void }> = ({ messag
   </div>
 );
 
+function EmptyDrawerState({
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  description: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-dashed border-emerald-950/15 bg-white/80 p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100">
+        <FolderOpen className="h-4 w-4" />
+      </div>
+      <p className="mt-3 text-sm font-bold text-slate-950">{title}</p>
+      <p className="mx-auto mt-1.5 max-w-md text-xs leading-5 text-slate-500">{description}</p>
+      {actionLabel && onAction && (
+        <button
+          type="button"
+          onClick={onAction}
+          className="mt-3 inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100"
+        >
+          {actionLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function CompactList({
+  rows,
+}: {
+  rows: Array<{ id: string; title: string; subtitle: string; value?: string; badge?: string }>;
+}) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
+      {rows.map((row) => (
+        <div key={row.id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-3.5 py-2.5 last:border-b-0">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-950">{row.title}</p>
+            <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">{row.subtitle}</p>
+          </div>
+          <div className="shrink-0 text-right">
+            {row.value && <p className="text-sm font-bold text-slate-950">{row.value}</p>}
+            {row.badge && <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800">{row.badge}</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function KpiTile({
+  icon: Icon,
+  label,
+  value,
+  helper,
+  tone,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  helper: string;
+  tone: 'emerald' | 'gold' | 'red' | 'blue';
+}) {
+  const toneClass = {
+    emerald: 'bg-emerald-50 text-emerald-800',
+    gold: 'bg-amber-50 text-amber-800',
+    red: 'bg-red-50 text-red-700',
+    blue: 'bg-sky-50 text-sky-700',
+  }[tone];
+  return (
+    <div className="group rounded-2xl border border-emerald-950/10 bg-white/95 p-3.5 shadow-[0_14px_32px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.07)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+          <p className="mt-1.5 text-lg font-extrabold text-slate-950 tabular-nums">{value}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{helper}</p>
+        </div>
+        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${toneClass} ring-1 ring-white/80 transition group-hover:scale-105`}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DrawerMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: 'emerald' | 'red' | 'blue' | 'gold' | 'slate';
+}) {
+  const toneClass = {
+    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+    red: 'border-red-200 bg-red-50 text-red-800',
+    blue: 'border-sky-200 bg-sky-50 text-sky-800',
+    gold: 'border-amber-200 bg-amber-50 text-amber-900',
+    slate: 'border-slate-200 bg-slate-50 text-slate-900',
+  }[tone];
+  return (
+    <div className={`rounded-xl border px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] ${toneClass}`}>
+      <p className="text-[10px] font-bold uppercase tracking-[0.1em] opacity-70">{label}</p>
+      <p className="mt-0.5 truncate text-xs font-extrabold tabular-nums sm:text-sm">{value}</p>
+    </div>
+  );
+}
+
 const todayInput = () => new Date().toISOString().split('T')[0];
+const currentMonthInput = () => new Date().toISOString().slice(0, 7);
+
+const formatCurrency = (value: number | null | undefined) => {
+  const amount = Number(value ?? 0);
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
+  const formatted = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(safeAmount)).replace(/\u202f|\u00a0/g, ' ');
+  return `${formatted} F CFA`;
+};
+
+const formatMonthLabel = (month: string) => {
+  const [year, monthNumber] = month.split('-').map(Number);
+  if (!year || !monthNumber) return 'Période non renseignée';
+  return new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(year, monthNumber - 1, 1));
+};
+
+const getInitials = (bailleur?: Pick<Bailleur, 'prenom' | 'nom'> | null) => {
+  const letters = [bailleur?.prenom?.[0], bailleur?.nom?.[0]].filter(Boolean).join('');
+  return letters.toUpperCase() || 'SK';
+};
+
+const AVATAR_TONES = [
+  'bg-emerald-100 text-emerald-800 ring-emerald-200/70',
+  'bg-teal-100 text-teal-800 ring-teal-200/70',
+  'bg-amber-100 text-amber-800 ring-amber-200/70',
+  'bg-sky-100 text-sky-800 ring-sky-200/70',
+  'bg-violet-100 text-violet-800 ring-violet-200/70',
+  'bg-stone-100 text-stone-800 ring-stone-200/70',
+];
+
+const getAvatarTone = (bailleur?: Pick<Bailleur, 'id' | 'prenom' | 'nom'> | null, selected = false) => {
+  if (selected) return 'bg-emerald-800 text-white ring-emerald-700/70';
+  const seed = `${bailleur?.id ?? ''}${bailleur?.prenom ?? ''}${bailleur?.nom ?? ''}`;
+  const total = seed.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return AVATAR_TONES[total % AVATAR_TONES.length];
+};
+
+const getStatusLabel = (bailleur: Bailleur) => {
+  if (bailleur.statut && bailleur.statut !== 'actif') return bailleur.statut;
+  return bailleur.actif ? 'Actif' : 'Inactif';
+};
+
+const getDocumentRoleLabel = (document: DetailDocument) => {
+  const raw = [document.document_category, document.entity_type, document.name]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  if (raw.includes('mandat')) return 'Mandat';
+  if (raw.includes('contrat') || raw.includes('bail')) return 'Contrat';
+  if (raw.includes('quittance') || raw.includes('facture')) return 'Quittance';
+  if (raw.includes('rapport') || raw.includes('bilan')) return 'Rapport';
+  return 'Document';
+};
+
+const isReportDocument = (document: DetailDocument) => getDocumentRoleLabel(document) === 'Rapport';
+
+const emptySummary = (): BailleurSummary => ({
+  immeubles: [],
+  unites: [],
+  contrats: [],
+  paiements: [],
+  depenses: [],
+  documents: [],
+  loyers: 0,
+  reliquats: 0,
+  commissions: 0,
+  net: 0,
+  occupiedUnits: 0,
+  activeContracts: 0,
+});
+
+function buildBailleurSummary(bailleurId: string, data: BailleurPageData): BailleurSummary {
+  const immeubles = data.immeubles.filter((item) => item.bailleur_id === bailleurId && item.actif !== false);
+  const immeubleIds = new Set(immeubles.map((item) => item.id));
+  const unites = data.unites.filter((item) => item.immeuble_id && immeubleIds.has(item.immeuble_id) && item.actif !== false);
+  const uniteIds = new Set(unites.map((item) => item.id));
+  const contrats = data.contrats.filter((item) => item.unite_id && uniteIds.has(item.unite_id));
+  const contratIds = new Set(contrats.map((item) => item.id));
+  const paiements = data.paiements.filter((item) => item.contrat_id && contratIds.has(item.contrat_id) && item.deleted_at == null && item.statut !== 'annule');
+  const depenses = data.depenses.filter((item) => item.immeuble_id && immeubleIds.has(item.immeuble_id) && item.deleted_at == null && item.actif !== false);
+  const entityIds = new Set<string>([
+    bailleurId,
+    ...immeubles.map((item) => item.id),
+    ...unites.map((item) => item.id),
+    ...contrats.map((item) => item.id),
+    ...paiements.map((item) => item.id),
+  ]);
+  const documents = data.documents.filter((item) => {
+    if (item.lifecycle_status === 'deleted' || item.lifecycle_status === 'archived') return false;
+    if (item.bailleur_id === bailleurId) return true;
+    return Boolean(item.entity_id && entityIds.has(item.entity_id));
+  });
+
+  return {
+    immeubles,
+    unites,
+    contrats,
+    paiements,
+    depenses,
+    documents,
+    loyers: paiements.reduce((sum, item) => sum + Number(item.montant_total ?? 0), 0),
+    reliquats: paiements.reduce((sum, item) => sum + Math.max(Number(item.reliquat ?? 0), 0), 0),
+    commissions: paiements.reduce((sum, item) => sum + Number(item.part_agence ?? 0), 0),
+    net: paiements.reduce((sum, item) => sum + Number(item.part_bailleur ?? 0), 0),
+    occupiedUnits: unites.filter((item) => item.statut === 'loue').length,
+    activeContracts: contrats.filter((item) => item.statut === 'actif').length,
+  };
+}
 
 /**
  * Composant principal - Gestion des Bailleurs
  */
 export function Bailleurs() {
-  const { user, profile } = useAuth();
+  const { user, profile, accountProfile } = useAuth();
   const toast = useToast();
 
   // États
   const [bailleurs, setBailleurs] = useState<Bailleur[]>([]);
+  const [pageData, setPageData] = useState<BailleurPageData>(EMPTY_PAGE_DATA);
+  const [selectedBailleurId, setSelectedBailleurId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [activeDrawerTab, setActiveDrawerTab] = useState<DrawerTab>('overview');
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<BailleurFilter>('all');
+  const [reportMonth, setReportMonth] = useState(currentMonthInput);
+  const [generatingReport, setGeneratingReport] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBailleur, setEditingBailleur] = useState<Bailleur | null>(null);
@@ -135,24 +520,86 @@ export function Bailleurs() {
       if (bailleurs.length === 0) setLoading(true);
       setError(null);
 
-      const result = await readWithCache<Bailleur[]>(
+      const result = await readWithCache<BailleurPageData>(
         { agencyId: profile.agency_id, userId: user?.id ?? null },
         'bailleurs-page',
         async () => {
-          const { data, error: fetchError } = await supabase
-            .from('bailleurs')
-            .select('*')
-            .eq('agency_id', profile.agency_id)
-            .eq('actif', true)
-            .order('created_at', { ascending: false });
+          const [
+            bailleursRes,
+            immeublesRes,
+            unitesRes,
+            contratsRes,
+            paiementsRes,
+            depensesRes,
+            settingsRes,
+          ] = await Promise.all([
+            supabase
+              .from('bailleurs')
+              .select('*')
+              .eq('agency_id', profile.agency_id)
+              .eq('actif', true)
+              .order('created_at', { ascending: false }),
+            supabase
+              .from('immeubles')
+              .select('id, nom, adresse, quartier, ville, bailleur_id, nombre_unites, actif')
+              .eq('agency_id', profile.agency_id),
+            supabase
+              .from('unites')
+              .select('id, nom, immeuble_id, loyer_base, statut, actif')
+              .eq('agency_id', profile.agency_id),
+            supabase
+              .from('contrats')
+              .select('id, unite_id, date_debut, date_fin, loyer_mensuel, statut, locataires(nom, prenom)')
+              .eq('agency_id', profile.agency_id),
+            supabase
+              .from('paiements')
+              .select('id, contrat_id, montant_total, part_agence, part_bailleur, reliquat, statut, mois_concerne, date_paiement, reference, deleted_at')
+              .eq('agency_id', profile.agency_id),
+            supabase
+              .from('depenses')
+              .select('id, immeuble_id, montant, date_depense, categorie, description, actif, deleted_at')
+              .eq('agency_id', profile.agency_id),
+            supabase
+              .from('agency_settings')
+              .select('agency_id, nom_agence, adresse, telephone, email, logo_url, couleur_primaire, couleur_secondaire, pied_page_personnalise')
+              .eq('agency_id', profile.agency_id)
+              .maybeSingle(),
+          ]);
 
-          if (fetchError) throw fetchError;
-          return (data || []) as Bailleur[];
+          if (bailleursRes.error) throw bailleursRes.error;
+          if (immeublesRes.error) throw immeublesRes.error;
+          if (unitesRes.error) throw unitesRes.error;
+          if (contratsRes.error) throw contratsRes.error;
+          if (paiementsRes.error) throw paiementsRes.error;
+          if (depensesRes.error) throw depensesRes.error;
+          if (settingsRes.error) throw settingsRes.error;
+
+          let documents: DetailDocument[] = [];
+          const documentsRes = await supabase
+            .from('documents')
+            .select('id, name, document_category, entity_type, entity_id, bailleur_id, lifecycle_status, created_at')
+            .eq('agency_id', profile.agency_id)
+            .limit(300);
+          if (!documentsRes.error) {
+            documents = (documentsRes.data || []) as DetailDocument[];
+          }
+
+          return {
+            bailleurs: (bailleursRes.data || []) as Bailleur[],
+            immeubles: (immeublesRes.data || []) as DetailImmeuble[],
+            unites: (unitesRes.data || []) as DetailUnite[],
+            contrats: (contratsRes.data || []) as DetailContrat[],
+            paiements: (paiementsRes.data || []) as DetailPaiement[],
+            depenses: (depensesRes.data || []) as DetailDepense[],
+            documents,
+            agencySettings: (settingsRes.data || null) as Partial<AgencySettings> | null,
+          };
         },
         { timeoutMs: 7_000 },
       );
 
-      setBailleurs(result.data);
+      setPageData(result.data);
+      setBailleurs(result.data.bailleurs);
       setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
     } catch (err) {
       console.error('Erreur lors du chargement des bailleurs:', err);
@@ -174,9 +621,9 @@ export function Bailleurs() {
   }, [loadBailleurs, profile?.agency_id]);
 
   /**
-   * Filtrage des bailleurs
+   * Recherche textuelle des bailleurs
    */
-  const filteredBailleurs = useMemo(() => {
+  const searchedBailleurs = useMemo(() => {
     if (!searchTerm.trim()) return bailleurs;
 
     const searchLower = searchTerm.toLowerCase();
@@ -192,6 +639,70 @@ export function Bailleurs() {
       return searchableText.includes(searchLower);
     });
   }, [searchTerm, bailleurs]);
+
+  const summariesByBailleur = useMemo(() => {
+    return bailleurs.reduce<Record<string, BailleurSummary>>((acc, bailleur) => {
+      acc[bailleur.id] = buildBailleurSummary(bailleur.id, pageData);
+      return acc;
+    }, {});
+  }, [bailleurs, pageData]);
+
+  /**
+   * Filtrage métier des bailleurs, combiné avec la recherche.
+   */
+  const filteredBailleurs = useMemo(() => {
+    return searchedBailleurs.filter((bailleur) => {
+      const summary = summariesByBailleur[bailleur.id] ?? emptySummary();
+      switch (activeFilter) {
+        case 'with_reliquats':
+          return summary.reliquats > 0;
+        case 'without_reliquats':
+          return summary.reliquats <= 0;
+        case 'with_biens':
+          return summary.immeubles.length > 0;
+        case 'without_biens':
+          return summary.immeubles.length === 0;
+        case 'high_commission':
+          return Number(bailleur.commission ?? 0) >= 10;
+        case 'active':
+          return bailleur.actif && (bailleur.statut ?? 'actif') === 'actif';
+        case 'inactive':
+          return !bailleur.actif || (bailleur.statut != null && bailleur.statut !== 'actif');
+        case 'all':
+        default:
+          return true;
+      }
+    });
+  }, [activeFilter, searchedBailleurs, summariesByBailleur]);
+
+  useEffect(() => {
+    if (filteredBailleurs.length === 0) {
+      setSelectedBailleurId(null);
+      return;
+    }
+    if (!selectedBailleurId || !filteredBailleurs.some((item) => item.id === selectedBailleurId)) {
+      setSelectedBailleurId(filteredBailleurs[0].id);
+      setActiveDrawerTab('overview');
+    }
+  }, [filteredBailleurs, selectedBailleurId]);
+
+  const selectedBailleur = useMemo(
+    () => bailleurs.find((item) => item.id === selectedBailleurId) ?? null,
+    [bailleurs, selectedBailleurId],
+  );
+  const selectedSummary = selectedBailleur ? summariesByBailleur[selectedBailleur.id] ?? emptySummary() : emptySummary();
+
+  const globalKpis = useMemo(() => {
+    const summaries = Object.values(summariesByBailleur);
+    return {
+      activeBailleurs: bailleurs.filter((item) => item.actif && (item.statut ?? 'actif') === 'actif').length,
+      reliquats: summaries.reduce((sum, item) => sum + item.reliquats, 0),
+      net: summaries.reduce((sum, item) => sum + item.net, 0),
+      commissions: summaries.reduce((sum, item) => sum + item.commissions, 0),
+      immeubles: summaries.reduce((sum, item) => sum + item.immeubles.length, 0),
+      unites: summaries.reduce((sum, item) => sum + item.unites.length, 0),
+    };
+  }, [bailleurs, summariesByBailleur]);
 
   /**
    * Soumission du formulaire
@@ -390,11 +901,11 @@ export function Bailleurs() {
       return;
     }
     if (!lifecycleForm.motif.trim() || lifecycleForm.motif.trim().length < 3) {
-      setError('Le motif doit contenir au moins 3 caracteres.');
+      setError('Le motif doit contenir au moins 3 caractères.');
       return;
     }
     if (!lifecycleForm.date) {
-      setError('La date de prise d effet est obligatoire.');
+      setError("La date de prise d'effet est obligatoire.");
       return;
     }
 
@@ -409,7 +920,7 @@ export function Bailleurs() {
         observations: lifecycleForm.observations.trim() || null,
         acknowledge_impacts: lifecycleForm.acknowledge_impacts,
       });
-      toast.success('Cycle de vie du bailleur mis a jour');
+      toast.success('Cycle de vie du bailleur mis à jour');
       setLifecycleTarget(null);
       setLifecycleImpacts(null);
       if (profile?.agency_id && profile?.id) {
@@ -440,6 +951,310 @@ export function Bailleurs() {
       console.error('Erreur génération PDF:', err);
       setError('Impossible de générer le mandat PDF.');
     }
+  };
+
+  const handleGenerateBailleurReport = async (bailleur: Bailleur) => {
+    const summary = summariesByBailleur[bailleur.id] ?? emptySummary();
+    const reportPaiements = summary.paiements.filter((paiement) => String(paiement.mois_concerne ?? paiement.date_paiement ?? '').startsWith(reportMonth));
+    const reportDepenses = summary.depenses.filter((depense) => String(depense.date_depense ?? '').startsWith(reportMonth));
+    const getPaymentNet = (paiement: DetailPaiement) => Number(paiement.part_bailleur ?? (Number(paiement.montant_total ?? 0) - Number(paiement.part_agence ?? 0)));
+    const totalLoyers = reportPaiements.reduce((sum, paiement) => sum + Number(paiement.montant_total ?? 0), 0);
+    const totalReliquats = reportPaiements.reduce((sum, paiement) => sum + Math.max(Number(paiement.reliquat ?? 0), 0), 0);
+    const totalCommissions = reportPaiements.reduce((sum, paiement) => sum + Number(paiement.part_agence ?? 0), 0);
+    const totalNet = reportPaiements.reduce((sum, paiement) => sum + getPaymentNet(paiement), 0);
+    const totalDepenses = reportDepenses.reduce((sum, depense) => sum + Number(depense.montant ?? 0), 0);
+
+    if (reportPaiements.length === 0 && summary.immeubles.length === 0) {
+      toast.warning('Aucune donnée à consolider pour ce bailleur sur la période sélectionnée.');
+      return;
+    }
+
+    try {
+      setGeneratingReport(true);
+      const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const settings: Partial<AgencySettings> = {
+        ...(pageData.agencySettings ?? {}),
+        agency_id: pageData.agencySettings?.agency_id ?? profile?.agency_id ?? undefined,
+        is_bailleur_account: accountProfile.isIndividualOwner,
+        organization_type: accountProfile.type,
+      };
+      const periodLabel = formatMonthLabel(reportMonth);
+      const reportRef = `RBL-${reportMonth}-${bailleur.id.slice(0, 8).toUpperCase()}`;
+      const reportTitle = accountProfile.isIndividualOwner ? 'Résumé mensuel propriétaire' : 'Rapport mensuel bailleur';
+      const netLabel = accountProfile.isIndividualOwner ? 'Revenus nets' : 'Net à reverser';
+      const tableTheme = getAutoTableTheme(settings);
+      const recoveryBase = totalLoyers + totalReliquats;
+      const recoveryRate = recoveryBase > 0 ? Math.round((totalLoyers / recoveryBase) * 100) : 100;
+
+      drawPageBorder(doc, settings);
+      let y = await drawDocumentHeader(doc, settings, reportTitle, formatPersonName(bailleur, ''), {
+        reference: reportRef,
+        issueDate: new Date().toLocaleDateString('fr-FR'),
+        documentType: 'Rapport financier',
+      }) + 8;
+
+      const ensureSpace = (needed: number) => {
+        if (y + needed > pageHeight - 26) {
+          addFooter(doc, settings);
+          doc.addPage();
+          drawPageBorder(doc, settings);
+          y = 24;
+        }
+      };
+
+      const sectionTitle = (title: string, subtitle?: string) => {
+        ensureSpace(subtitle ? 18 : 12);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10.5);
+        doc.setTextColor(15, 23, 42);
+        doc.text(title, 14, y);
+        if (subtitle) {
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8.2);
+          doc.setTextColor(100, 116, 139);
+          doc.text(subtitle, 14, y + 5);
+          y += 10;
+        } else {
+          y += 5.5;
+        }
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.12);
+        doc.line(14, y, pageWidth - 14, y);
+        y += 5.5;
+      };
+
+      sectionTitle('Indicateurs du mois', `Période analysée : ${periodLabel}`);
+      autoTable(doc, {
+        body: [
+          ['Loyers encaissés', formatCurrency(totalLoyers), 'Reliquats à suivre', formatCurrency(totalReliquats)],
+          [accountProfile.isIndividualOwner ? 'Frais / dépenses' : 'Commissions agence', formatCurrency(accountProfile.isIndividualOwner ? totalDepenses : totalCommissions), netLabel, formatCurrency(totalNet)],
+          ['Taux de recouvrement', `${recoveryRate}%`, 'Biens concernés', String(summary.immeubles.length)],
+        ],
+        startY: y,
+        theme: 'grid',
+        ...tableTheme,
+        styles: {
+          ...tableTheme.styles,
+          fontSize: 8.5,
+          cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
+        },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          0: { fontStyle: 'bold', textColor: [71, 85, 105], cellWidth: 42 },
+          1: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 40 },
+          2: { fontStyle: 'bold', textColor: [71, 85, 105], cellWidth: 44 },
+          3: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42] },
+        },
+      });
+      y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 11;
+
+      sectionTitle('Synthèse propriétaire');
+      const summaryText = [
+        `Sur la période ${periodLabel}, ${formatPersonName(bailleur, '')} présente ${formatCurrency(totalLoyers)} de loyers encaissés.`,
+        totalReliquats > 0
+          ? `Les reliquats ouverts représentent ${formatCurrency(totalReliquats)} et doivent rester prioritaires dans le suivi de gestion.`
+          : 'Aucun reliquat significatif n’est rattaché aux paiements enregistrés sur cette période.',
+        `Le montant ${netLabel.toLowerCase()} ressort à ${formatCurrency(totalNet)}.`,
+      ].join(' ');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      const summaryLines = doc.splitTextToSize(summaryText, 178);
+      doc.text(summaryLines, 14, y);
+      y += summaryLines.length * 4.7 + 9;
+
+      sectionTitle('Détail par bien', 'Lecture par immeuble, unité, locataire et situation financière.');
+      const contractById = new Map(summary.contrats.map((contrat) => [contrat.id, contrat]));
+      const unitById = new Map(summary.unites.map((unite) => [unite.id, unite]));
+      const rows = reportPaiements.map((paiement) => {
+        const contrat = paiement.contrat_id ? contractById.get(paiement.contrat_id) : null;
+        const unite = contrat?.unite_id ? unitById.get(contrat.unite_id) : null;
+        const immeuble = summary.immeubles.find((item) => item.id === unite?.immeuble_id);
+        return {
+          id: paiement.id,
+          immeuble: immeuble?.nom ?? 'Bien non renseigné',
+          unite: unite?.nom ?? 'Unité non renseignée',
+          locataire: contrat?.locataires ? formatPersonName(contrat.locataires, '') : 'Locataire non renseigné',
+          loyer: formatCurrency(contrat?.loyer_mensuel ?? 0),
+          statut: Number(paiement.reliquat ?? 0) > 0 ? 'Partiel' : 'Soldé',
+          encaisse: formatCurrency(paiement.montant_total),
+          reliquat: formatCurrency(paiement.reliquat),
+          net: formatCurrency(getPaymentNet(paiement)),
+        };
+      });
+
+      autoTable(doc, {
+        head: [['Bien', 'Unité', 'Locataire', 'Loyer', 'Statut', 'Encaissé', 'Reliquat', 'Net']],
+        body: rows.length
+          ? rows.map((row) => [row.immeuble, row.unite, row.locataire, row.loyer, row.statut, row.encaisse, row.reliquat, row.net])
+          : [['-', '-', 'Aucun paiement enregistré sur la période', '-', '-', '-', '-', '-']],
+        startY: y,
+        theme: 'grid',
+        ...tableTheme,
+        styles: {
+          ...tableTheme.styles,
+          fontSize: 7.4,
+          cellPadding: { top: 2.4, right: 2.1, bottom: 2.4, left: 2.1 },
+          overflow: 'linebreak',
+        },
+        headStyles: {
+          ...tableTheme.headStyles,
+          fontSize: 7.2,
+        },
+        margin: { left: 14, right: 14 },
+        columnStyles: {
+          3: { halign: 'right', cellWidth: 20 },
+          5: { halign: 'right', cellWidth: 22 },
+          6: { halign: 'right', cellWidth: 22 },
+          7: { halign: 'right', cellWidth: 24 },
+        },
+      });
+      y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 10;
+
+      if (reportDepenses.length > 0) {
+        ensureSpace(34);
+        sectionTitle('Dépenses rattachées');
+        autoTable(doc, {
+          head: [['Date', 'Catégorie', 'Description', 'Montant']],
+          body: reportDepenses.slice(0, 12).map((depense) => [
+            formatDate(depense.date_depense),
+            depense.categorie ?? 'Dépense',
+            depense.description ?? 'Sans description',
+            formatCurrency(depense.montant),
+          ]),
+          startY: y,
+          theme: 'grid',
+          ...tableTheme,
+          margin: { left: 14, right: 14 },
+          columnStyles: { 3: { halign: 'right' } },
+        });
+        y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 10;
+      }
+
+      ensureSpace(42);
+      y = drawTotalsBlock(
+        doc,
+        14,
+        y,
+        pageWidth - 28,
+        [
+          { label: 'Loyers encaissés', value: formatCurrency(totalLoyers) },
+          { label: 'Reliquats à suivre', value: formatCurrency(totalReliquats) },
+          ...(accountProfile.isIndividualOwner ? [{ label: 'Dépenses', value: formatCurrency(totalDepenses) }] : [{ label: 'Commissions agence', value: formatCurrency(totalCommissions) }]),
+          { label: netLabel, value: formatCurrency(totalNet), emphasis: true },
+        ],
+        settings,
+      );
+
+      try {
+        await drawLegalVerificationFooter(doc, {
+          ref: reportRef,
+          type: 'rapport_bailleur',
+          agency: settings.nom_agence ?? 'Samay Këur',
+          date: new Date().toISOString(),
+          settings,
+        });
+      } catch {
+        // Le QR de vérification est non bloquant pour ne pas empêcher la génération.
+      }
+      addFooter(doc, settings);
+
+      await saveGeneratedPdf(doc, {
+        kind: 'bilan',
+        title: accountProfile.isIndividualOwner ? 'Résumé mensuel propriétaire' : 'Rapport bailleur',
+        fileName: `${accountProfile.isIndividualOwner ? 'resume-proprietaire' : 'rapport-bailleur'}-${bailleur.nom}-${reportMonth}.pdf`,
+        source: 'bailleurs',
+        documentType: 'rapport_bailleur',
+        entityId: bailleur.id,
+        period: reportMonth,
+        reference: reportRef,
+        data: {
+          document: 'rapport_bailleur',
+          reportMonth,
+          bailleur,
+          totals: { totalLoyers, totalReliquats, totalCommissions, totalDepenses, totalNet, recoveryRate },
+        },
+        preview: {
+          columns: ['Bien', 'Unité', 'Locataire', 'Statut', 'Encaissé', 'Reliquat', 'Net'],
+          rows: rows.slice(0, 6).map((row) => ({
+            Bien: row.immeuble,
+            Unite: row.unite,
+            Locataire: row.locataire,
+            Statut: row.statut,
+            Encaisse: row.encaisse,
+            Reliquat: row.reliquat,
+            Net: row.net,
+          })),
+          rowCount: rows.length,
+          period: periodLabel,
+          stats: [
+            { label: 'Loyers encaissés', value: formatCurrency(totalLoyers) },
+            { label: 'Reliquats', value: formatCurrency(totalReliquats) },
+            { label: netLabel, value: formatCurrency(totalNet) },
+            { label: 'Recouvrement', value: `${recoveryRate}%` },
+          ],
+        },
+      });
+
+      toast.success('Rapport bailleur généré et archivé.');
+      if (profile?.agency_id && profile?.id) {
+        await invalidateOperationalCaches(
+          { agencyId: profile.agency_id, userId: profile.id },
+          ['bailleurs', 'documents', 'finances'],
+        );
+        notifyDataChanged(['bailleurs', 'documents', 'finances']);
+      }
+      await loadBailleurs();
+      setActiveDrawerTab('rapports');
+    } catch (err) {
+      console.error('Erreur génération rapport bailleur:', err);
+      const errorMessage = translateSupabaseError(err);
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  const handleExportCsv = () => {
+    const rows = filteredBailleurs.map((bailleur) => {
+      const summary = summariesByBailleur[bailleur.id] ?? emptySummary();
+      return {
+        Bailleur: formatPersonName(bailleur, ''),
+        Telephone: formatSenegalPhone(bailleur.telephone, ''),
+        Email: bailleur.email ?? '',
+        Commission: formatCommission(bailleur.commission),
+        Biens: summary.immeubles.length,
+        Unites: summary.unites.length,
+        Reliquats: Math.round(summary.reliquats),
+        Net: Math.round(summary.net),
+        Statut: getStatusLabel(bailleur),
+      };
+    });
+    const headers = Object.keys(rows[0] ?? {
+      Bailleur: '',
+      Telephone: '',
+      Email: '',
+      Commission: '',
+      Biens: '',
+      Unites: '',
+      Reliquats: '',
+      Net: '',
+      Statut: '',
+    });
+    const csv = [
+      headers.join(';'),
+      ...rows.map((row) => headers.map((header) => `"${String(row[header as keyof typeof row] ?? '').replace(/"/g, '""')}"`).join(';')),
+    ].join('\n');
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bailleurs-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   /**
@@ -473,97 +1288,261 @@ export function Bailleurs() {
   /**
    * Configuration des colonnes du tableau
    */
-  const ALL_COLUMN_KEYS_BAILLEURS = ['prenom', 'nom', 'telephone', 'email', 'commission', 'debut_contrat', 'mandat'] as const;
+  const ALL_COLUMN_KEYS_BAILLEURS = ['bailleur', 'email', 'telephone', 'commission', 'biens', 'unites', 'reliquats', 'net', 'actions'] as const;
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('bailleurs', [...ALL_COLUMN_KEYS_BAILLEURS]);
 
   const allColumns = [
-    { 
-      key: 'prenom', 
-      label: 'Prénom',
-      render: (b: Bailleur) => (
-        <span className="font-medium text-slate-900">{b.prenom}</span>
-      )
-    },
-    { 
-      key: 'nom', 
-      label: 'Nom',
-      render: (b: Bailleur) => (
-        <span className="font-medium text-slate-900">{b.nom}</span>
-      )
-    },
-    { 
-      key: 'telephone', 
-      label: 'Téléphone',
-      render: (b: Bailleur) => (
-        <a 
-          href={getSenegalPhoneHref(b.telephone) ?? undefined}
-          className="font-medium text-brand-700 hover:text-brand-900 hover:underline"
-        >
-          {formatSenegalPhone(b.telephone)}
-        </a>
-      )
-    },
-    { 
-      key: 'email', 
-      label: 'Email', 
-      render: (b: Bailleur) => b.email ? (
-        <a 
-          href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(b.email)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-brand-700 hover:text-brand-900 hover:underline"
-        >
-          {b.email}
-        </a>
-      ) : (
-        <span className="text-slate-400">-</span>
-      )
-    },
-    { 
-      key: 'commission', 
-      label: 'Commission', 
-      render: (b: Bailleur) => (
-        <span className="font-semibold text-slate-700">
-          {formatCommission(b.commission)}
-        </span>
-      )
-    },
-    { 
-      key: 'debut_contrat', 
-      label: 'Début contrat', 
-      render: (b: Bailleur) => (
-        <span className={b.debut_contrat ? 'text-slate-700' : 'text-slate-400'}>
-          {formatDate(b.debut_contrat)}
-        </span>
-      )
-    },
-    { 
-      key: 'mandat', 
-      label: 'Actions', 
-      render: (b: Bailleur) => (
-        <div className="sk-action-group-right">
-          <button
-            onClick={() => handleGenerateMandat(b)}
-            className="sk-action sk-action-financial"
-            title="Generer le mandat de gerance"
-          >
-            <FileText className="w-4 h-4" />
-            Mandat PDF
-          </button>
-          <button
-            type="button"
-            onClick={() => openLifecycleModal(b)}
-            className="sk-action sk-action-danger"
-            title="Ouvrir le workflow de resiliation"
-          >
-            <Ban className="w-4 h-4" />
-            Resilier
-          </button>
-        </div>
-      )
-    },
+    { key: 'bailleur', label: 'Bailleur', required: true },
+    { key: 'email', label: 'Email' },
+    { key: 'telephone', label: 'Téléphone' },
+    { key: 'commission', label: 'Commission' },
+    { key: 'biens', label: 'Biens' },
+    { key: 'unites', label: 'Unités' },
+    { key: 'reliquats', label: 'Reliquats' },
+    { key: 'net', label: 'Net' },
+    { key: 'actions', label: 'Actions', required: true },
   ];
-  const columns = allColumns.filter((c) => c.key === 'mandat' || colIsVisible(c.key));
+
+  const filterOptions: Array<{ id: BailleurFilter; label: string; helper: string }> = [
+    { id: 'all', label: 'Tous', helper: 'Toute la base active' },
+    { id: 'with_reliquats', label: 'Avec reliquats', helper: 'Paiements à suivre' },
+    { id: 'without_reliquats', label: 'Sans reliquats', helper: 'Dossiers soldés' },
+    { id: 'with_biens', label: 'Avec biens', helper: 'Portefeuille rattaché' },
+    { id: 'without_biens', label: 'Sans biens', helper: 'À compléter' },
+    { id: 'high_commission', label: 'Commission élevée', helper: '10% et plus' },
+    { id: 'active', label: 'Actifs', helper: 'Mandats en cours' },
+    { id: 'inactive', label: 'Résiliés / suspendus', helper: 'Hors cycle actif' },
+  ];
+  const activeFilterLabel = filterOptions.find((option) => option.id === activeFilter)?.label ?? 'Tous';
+  const activeFilterCount = activeFilter === 'all' ? 0 : 1;
+
+  const renderDrawerTab = () => {
+    if (!selectedBailleur) return null;
+    const recentPaiements = selectedSummary.paiements
+      .slice()
+      .sort((a, b) => String(b.date_paiement ?? '').localeCompare(String(a.date_paiement ?? '')))
+      .slice(0, 5);
+    const recentActivity = [
+      ...selectedSummary.paiements.slice(0, 3).map((paiement) => ({
+        id: `paiement-${paiement.id}`,
+        icon: CreditCard,
+        title: 'Paiement reçu',
+        detail: `${formatCurrency(paiement.montant_total)} · ${paiement.mois_concerne ?? 'Période non renseignée'}`,
+        date: paiement.date_paiement,
+      })),
+      ...selectedSummary.contrats.slice(0, 2).map((contrat) => ({
+        id: `contrat-${contrat.id}`,
+        icon: FileText,
+        title: 'Contrat suivi',
+        detail: `${contrat.locataires ? formatPersonName(contrat.locataires, '') : 'Locataire non renseigné'} · ${formatCurrency(contrat.loyer_mensuel)}`,
+        date: contrat.date_debut,
+      })),
+    ].slice(0, 5);
+    const reportDocuments = selectedSummary.documents.filter(isReportDocument);
+    const reportPaiements = selectedSummary.paiements.filter((paiement) => String(paiement.mois_concerne ?? paiement.date_paiement ?? '').startsWith(reportMonth));
+    const reportDepenses = selectedSummary.depenses.filter((depense) => String(depense.date_depense ?? '').startsWith(reportMonth));
+    const reportLoyers = reportPaiements.reduce((sum, paiement) => sum + Number(paiement.montant_total ?? 0), 0);
+    const reportReliquats = reportPaiements.reduce((sum, paiement) => sum + Math.max(Number(paiement.reliquat ?? 0), 0), 0);
+    const reportCommissions = reportPaiements.reduce((sum, paiement) => sum + Number(paiement.part_agence ?? 0), 0);
+    const reportNet = reportPaiements.reduce((sum, paiement) => sum + Number(paiement.part_bailleur ?? 0), 0);
+    const reportExpenses = reportDepenses.reduce((sum, depense) => sum + Number(depense.montant ?? 0), 0);
+
+    if (activeDrawerTab === 'overview') {
+      const paidBase = selectedSummary.loyers + selectedSummary.reliquats;
+      const paidRate = paidBase > 0 ? Math.min(100, Math.round((selectedSummary.loyers / paidBase) * 100)) : 100;
+      return (
+        <div className="grid gap-3 xl:grid-cols-2">
+          <section className="rounded-2xl border border-emerald-950/10 bg-white p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Résumé paiements</p>
+                <p className="mt-1 text-xl font-extrabold tabular-nums text-slate-950">{formatCurrency(selectedSummary.loyers)}</p>
+              </div>
+              <div
+                className="flex h-16 w-16 items-center justify-center rounded-full text-center text-[11px] font-black text-brand-950 shadow-inner"
+                style={{ background: `conic-gradient(#047857 ${paidRate}%, #d1fae5 0)` }}
+                aria-label={`Taux de recouvrement ${paidRate}%`}
+              >
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white">{paidRate}%</span>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2.5 text-sm">
+              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Commissions</span><strong className="font-bold">{formatCurrency(selectedSummary.commissions)}</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Net à reverser</span><strong className="font-bold text-emerald-800">{formatCurrency(selectedSummary.net)}</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Reliquats</span><strong className={`font-bold ${selectedSummary.reliquats > 0 ? 'text-red-600' : 'text-slate-900'}`}>{formatCurrency(selectedSummary.reliquats)}</strong></div>
+            </div>
+          </section>
+          <section className="rounded-2xl border border-emerald-950/10 bg-white p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Activité récente</p>
+              <button type="button" onClick={() => setActiveDrawerTab('paiements')} className="text-xs font-bold text-emerald-800 hover:text-emerald-950">Voir tout</button>
+            </div>
+            <div className="mt-3 space-y-2">
+              {recentActivity.length === 0 ? (
+                <EmptyDrawerState title="Aucune activité récente" description="Les contrats, paiements et documents de ce bailleur apparaîtront ici." />
+              ) : recentActivity.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.id} className="flex items-start gap-2.5 rounded-xl bg-slate-50/80 px-3 py-2 ring-1 ring-slate-100">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-emerald-700 shadow-sm"><Icon className="h-3.5 w-3.5" /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-slate-900">{item.title}</p>
+                      <p className="truncate text-xs text-slate-500">{item.detail}</p>
+                    </div>
+                    <span className="text-[10px] font-semibold text-slate-400">{formatDate(item.date)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    if (activeDrawerTab === 'biens') {
+      return selectedSummary.immeubles.length === 0 ? (
+        <EmptyDrawerState title="Aucun bien rattaché" description="Ajoutez un bien pour commencer à suivre les unités, locataires et loyers de ce bailleur." actionLabel="Ajouter un bien" onAction={() => { window.location.hash = '#/patrimoine'; }} />
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white">
+          {selectedSummary.immeubles.map((immeuble) => {
+            const units = selectedSummary.unites.filter((unite) => unite.immeuble_id === immeuble.id);
+            const occupied = units.filter((unite) => unite.statut === 'loue').length;
+            const potential = units.reduce((sum, unite) => sum + Number(unite.loyer_base ?? 0), 0);
+            const rate = units.length ? Math.round((occupied / units.length) * 100) : 0;
+            return (
+              <div key={immeuble.id} className="grid gap-2.5 border-b border-slate-100 px-3.5 py-3 last:border-b-0 sm:grid-cols-[1.2fr_0.7fr_0.7fr] sm:items-center">
+                <div>
+                  <p className="font-semibold text-slate-950">{immeuble.nom}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{[immeuble.adresse, immeuble.quartier, immeuble.ville].filter(Boolean).join(', ') || 'Adresse non renseignée'}</p>
+                </div>
+                <div className="text-sm text-slate-600">{units.length} unité{units.length > 1 ? 's' : ''} · {rate}% occupé</div>
+                <div className="text-right text-sm font-bold text-slate-950">{formatCurrency(potential)}</div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    if (activeDrawerTab === 'contrats') {
+      return selectedSummary.contrats.length === 0 ? (
+        <EmptyDrawerState title="Aucun contrat lié" description="Les baux associés aux unités de ce bailleur apparaîtront ici." />
+      ) : (
+        <CompactList rows={selectedSummary.contrats.map((contrat) => ({
+          id: contrat.id,
+          title: contrat.locataires ? formatPersonName(contrat.locataires, '') : 'Locataire non renseigné',
+          subtitle: `Début ${formatDate(contrat.date_debut)} · Fin ${formatDate(contrat.date_fin)}`,
+          value: formatCurrency(contrat.loyer_mensuel),
+          badge: contrat.statut ?? '—',
+        }))} />
+      );
+    }
+
+    if (activeDrawerTab === 'paiements') {
+      return recentPaiements.length === 0 ? (
+        <EmptyDrawerState title="Aucun paiement enregistré" description="Les encaissements apparaîtront ici dès les premiers loyers saisis." />
+      ) : (
+        <CompactList rows={recentPaiements.map((paiement) => ({
+          id: paiement.id,
+          title: paiement.mois_concerne ?? 'Mois non renseigné',
+          subtitle: `${formatDate(paiement.date_paiement)} · reliquat ${formatCurrency(paiement.reliquat)}`,
+          value: formatCurrency(paiement.montant_total),
+          badge: paiement.statut ?? '—',
+        }))} />
+      );
+    }
+
+    if (activeDrawerTab === 'depenses') {
+      return selectedSummary.depenses.length === 0 ? (
+        <EmptyDrawerState title="Aucune dépense liée" description="Les charges rattachées aux biens de ce bailleur apparaîtront ici." />
+      ) : (
+        <CompactList rows={selectedSummary.depenses.slice(0, 8).map((depense) => ({
+          id: depense.id,
+          title: depense.categorie ?? 'Dépense',
+          subtitle: `${formatDate(depense.date_depense)} · ${depense.description ?? 'Sans description'}`,
+          value: formatCurrency(depense.montant),
+        }))} />
+      );
+    }
+
+    if (activeDrawerTab === 'rapports') {
+      return (
+        <div className="space-y-3">
+          <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white shadow-[0_16px_42px_rgba(15,23,42,0.055)]">
+            <div className="bg-[linear-gradient(135deg,#063f35,#0f766e)] p-4 text-white">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-100/80">Registre financier</p>
+                  <p className="mt-1 text-base font-black">Rapport bailleur</p>
+                  <p className="mt-1 max-w-xs text-xs leading-5 text-emerald-50/80">
+                    Synthèse propriétaire préparée depuis cette fiche et archivée dans la GED.
+                  </p>
+                </div>
+                <label className="min-w-[10rem] text-xs font-semibold text-emerald-50/85">
+                  Période
+                  <input
+                    type="month"
+                    value={reportMonth}
+                    onChange={(event) => setReportMonth(event.target.value || currentMonthInput())}
+                    className="mt-1 w-full rounded-xl border border-white/15 bg-white/95 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-emerald-200 focus:ring-4 focus:ring-white/20"
+                  />
+                </label>
+              </div>
+            </div>
+            <div className="p-4">
+              <div className="rounded-xl border border-emerald-950/10 bg-emerald-50/60 px-3 py-2 text-xs text-emerald-900">
+                Bilan préparé pour <strong className="font-black">{formatMonthLabel(reportMonth)}</strong> · {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {reportPaiements.length} paiement{reportPaiements.length > 1 ? 's' : ''}
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <DrawerMetric label="Loyers" value={formatCurrency(reportLoyers)} tone="emerald" />
+                <DrawerMetric label="Reliquats" value={formatCurrency(reportReliquats)} tone="red" />
+                <DrawerMetric label="Commissions" value={formatCurrency(reportCommissions)} tone="gold" />
+                <DrawerMetric label="Dépenses" value={formatCurrency(reportExpenses)} tone="blue" />
+                <DrawerMetric label="Net" value={formatCurrency(reportNet)} tone="slate" />
+                <DrawerMetric label="Documents" value={String(reportDocuments.length)} tone="slate" />
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleGenerateBailleurReport(selectedBailleur)}
+                disabled={generatingReport}
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-emerald-700 to-emerald-900 px-3.5 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <BarChart3 className="h-4 w-4" />
+                {generatingReport ? 'Génération...' : 'Générer bilan PDF'}
+              </button>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                Le PDF est archivé avec le type <strong className="font-bold text-slate-700">rapport_bailleur</strong>, rattaché à cette fiche et vérifiable depuis la GED.
+              </p>
+            </div>
+          </section>
+          {reportDocuments.length === 0 ? (
+            <EmptyDrawerState
+              title="Aucun rapport généré pour ce bailleur"
+              description="Les rapports permettront de résumer les loyers, reliquats, commissions, dépenses et net à reverser."
+            />
+          ) : (
+            <CompactList rows={reportDocuments.slice(0, 5).map((document) => ({
+              id: document.id,
+              title: document.name ?? 'Rapport bailleur',
+              subtitle: `${getDocumentRoleLabel(document)} · ${formatDate(document.created_at)}`,
+              value: document.lifecycle_status ?? 'actif',
+            }))} />
+          )}
+        </div>
+      );
+    }
+
+    return selectedSummary.documents.length === 0 ? (
+      <EmptyDrawerState title="Aucun document lié" description="Mandats, contrats, quittances et rapports apparaîtront ici lorsqu’ils seront générés ou uploadés." />
+    ) : (
+      <CompactList rows={selectedSummary.documents.slice(0, 8).map((document) => ({
+        id: document.id,
+        title: document.name ?? 'Document',
+        subtitle: `${getDocumentRoleLabel(document)} · ${formatDate(document.created_at)}`,
+        value: document.lifecycle_status ?? 'actif',
+      }))} />
+    );
+  };
 
   /**
    * Affichage du loader
@@ -573,29 +1552,35 @@ export function Bailleurs() {
   }
 
   return (
-    <div className="sk-page-shell animate-fadeIn">
-      {/* En-tête */}
-      <div className="sk-page-hero mb-6 flex flex-col items-start justify-between gap-4 sm:mb-6 sm:flex-row sm:items-center lg:mb-8">
-        <div className="pointer-events-none absolute -right-12 -top-16 h-44 w-44 rounded-full bg-action-500/10 blur-3xl" />
-        <div className="animate-slideInLeft relative w-full">
-          <p className="sk-section-eyebrow">Portefeuille propriétaire</p>
-          <h1 className="mt-2 text-2xl font-black text-slate-950 sm:text-3xl lg:text-4xl">
-            Bailleurs
-          </h1>
-          <p className="mt-2 text-base leading-7 text-slate-600 lg:text-lg">
-            Gestion des propriétaires · {bailleurs.length} bailleur{bailleurs.length > 1 ? 's' : ''}
+    <div className="sk-page-shell max-w-none animate-fadeIn bg-[radial-gradient(circle_at_top_left,rgba(255,247,230,0.9),transparent_28rem),linear-gradient(180deg,#fffdf8,#f8fafc)]">
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Portefeuille propriétaire</p>
+          <h1 className="mt-1.5 font-serif text-3xl font-black tracking-tight text-brand-950 lg:text-4xl">Bailleurs</h1>
+          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
+            Gérez vos propriétaires, leurs revenus locatifs et tous les documents associés.
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="sk-create-cta relative w-full animate-slideInRight sm:w-auto"
-        >
-          <Plus className="w-5 h-5" />
-          Nouveau bailleur
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={filteredBailleurs.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Download className="h-4 w-4" />
+            Exporter CSV
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#b96b16] to-[#8a4f12] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-900/15 transition hover:-translate-y-0.5 hover:shadow-amber-900/25"
+          >
+            <Plus className="h-5 w-5" />
+            Nouveau bailleur
+          </button>
+        </div>
       </div>
 
-      {/* Affichage des erreurs globales */}
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
       {cacheTimestamp && (
         <OfflineDataNotice
@@ -605,60 +1590,259 @@ export function Bailleurs() {
         />
       )}
 
-      {/* Conteneur principal */}
-      <div className="sk-card-premium overflow-hidden transition-all duration-300">
-        {/* Barre de recherche */}
-        <div className="p-4 sm:p-6 border-b border-emerald-950/10 bg-brand-surface">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-brand-700 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Rechercher par nom, prénom, téléphone, email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="sk-input pl-10 pr-4"
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiTile icon={Users} label="Bailleurs actifs" value={globalKpis.activeBailleurs.toString()} helper={`${bailleurs.length} propriétaire${bailleurs.length > 1 ? 's' : ''} dans la base`} tone="emerald" />
+        <KpiTile icon={AlertCircle} label="Reliquats totaux" value={formatCurrency(globalKpis.reliquats)} helper="À suivre sur les paiements partiels" tone="red" />
+        <KpiTile icon={Wallet} label="Net à reverser" value={formatCurrency(globalKpis.net)} helper="Somme des parts bailleurs" tone="emerald" />
+        <KpiTile icon={ReceiptText} label="Commissions" value={formatCurrency(globalKpis.commissions)} helper={`${globalKpis.immeubles} biens · ${globalKpis.unites} unités`} tone="gold" />
+      </div>
+
+      <div className="grid min-h-[31rem] gap-4 xl:grid-cols-[minmax(0,1fr)_28rem] 2xl:grid-cols-[minmax(0,1fr)_34rem]">
+        <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
+          <div className="border-b border-emerald-950/10 bg-[linear-gradient(180deg,#fffbf2,#fff)] p-3.5 sm:p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+              <div className="relative min-w-0 flex-1">
+                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-emerald-800" />
+                <input
+                  type="text"
+                  placeholder="Rechercher par nom, téléphone, email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="sk-input pl-10 pr-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFilters((value) => !value)}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-bold shadow-sm transition ${showFilters || activeFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filtres
+                  {activeFilterCount > 0 && (
+                    <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">{activeFilterCount}</span>
+                  )}
+                </button>
+                <ColumnPicker
+                  columns={allColumns}
+                  visibility={colVis}
+                  onToggle={colToggle}
+                  onSetAll={colSetAll}
+                />
+              </div>
+            </div>
+            <div className="mt-2.5 flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                {filteredBailleurs.length} résultat{filteredBailleurs.length > 1 ? 's' : ''} · cliquez sur une ligne pour ouvrir la fiche propriétaire.
+              </p>
+              {activeFilterCount > 0 && (
+                <button type="button" onClick={() => setActiveFilter('all')} className="self-start rounded-full bg-white px-2.5 py-1 font-semibold text-emerald-800 ring-1 ring-emerald-100 hover:bg-emerald-50 sm:self-auto">
+                  {activeFilterLabel} · Réinitialiser
+                </button>
+              )}
+            </div>
+            {showFilters && (
+              <div className="mt-3 rounded-2xl border border-emerald-950/10 bg-white/85 p-2.5 shadow-sm">
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {filterOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setActiveFilter(option.id)}
+                      className={`rounded-xl border px-3 py-2 text-left transition ${activeFilter === option.id ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-100 bg-white text-slate-600 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+                    >
+                      <span className="block text-xs font-bold">{option.label}</span>
+                      <span className="mt-0.5 block text-[11px] text-slate-500">{option.helper}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {filteredBailleurs.length === 0 ? (
+            <div className="p-8">
+              <EmptyDrawerState
+                title={searchTerm ? 'Aucun bailleur trouvé' : 'Aucun bailleur enregistré'}
+                description={searchTerm ? 'Essayez une autre recherche ou retirez les filtres.' : 'Ajoutez votre premier bailleur pour structurer votre portefeuille locatif.'}
+                actionLabel={!searchTerm ? 'Créer mon premier bailleur' : undefined}
+                onAction={!searchTerm ? () => setIsModalOpen(true) : undefined}
               />
             </div>
-            <ColumnPicker
-              columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'mandat' }))}
-              visibility={colVis}
-              onToggle={colToggle}
-              onSetAll={colSetAll}
-            />
-          </div>
-          {searchTerm && (
-            <p className="mt-2 text-sm text-slate-600">
-              {filteredBailleurs.length} résultat{filteredBailleurs.length > 1 ? 's' : ''} trouvé{filteredBailleurs.length > 1 ? 's' : ''}
-            </p>
-          )}
-        </div>
-
-        {/* Tableau */}
-        <div className="p-3 sm:p-4 xl:p-5">
-          {filteredBailleurs.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-                <Search className="w-8 h-8 text-slate-400" />
+          ) : (
+            <>
+              <div className="hidden overflow-x-auto lg:block">
+                <table className="w-full min-w-[920px] border-collapse">
+                  <thead className="bg-slate-50/70">
+                    <tr>
+                      {colIsVisible('bailleur') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Bailleur</th>}
+                      {colIsVisible('email') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Email</th>}
+                      {colIsVisible('telephone') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Téléphone</th>}
+                      {colIsVisible('commission') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Commission</th>}
+                      {colIsVisible('biens') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Biens</th>}
+                      {colIsVisible('unites') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Unités</th>}
+                      {colIsVisible('reliquats') && <th className="px-3.5 py-2.5 text-right text-[11px] font-bold uppercase text-slate-500">Reliquats</th>}
+                      {colIsVisible('net') && <th className="px-3.5 py-2.5 text-right text-[11px] font-bold uppercase text-slate-500">Net</th>}
+                      {colIsVisible('actions') && <th className="px-3.5 py-2.5 text-right text-[11px] font-bold uppercase text-slate-500">Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredBailleurs.map((bailleur) => {
+                      const summary = summariesByBailleur[bailleur.id] ?? emptySummary();
+                      const selected = bailleur.id === selectedBailleurId;
+                      return (
+                        <tr
+                          key={bailleur.id}
+                          onClick={() => { setSelectedBailleurId(bailleur.id); setDetailOpen(true); }}
+                          className={`cursor-pointer border-b border-slate-100 transition ${selected ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200' : 'hover:bg-emerald-50/45'}`}
+                        >
+                          {colIsVisible('bailleur') && <td className="px-3.5 py-2.5">
+                            <div className="flex items-center gap-3">
+                              <div className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black shadow-inner ring-1 ${getAvatarTone(bailleur, selected)}`}>{getInitials(bailleur)}</div>
+                              <div>
+                                <p className="font-semibold text-slate-950">{formatPersonName(bailleur, '')}</p>
+                                <p className="text-xs text-slate-500">{getStatusLabel(bailleur)}</p>
+                              </div>
+                            </div>
+                          </td>}
+                          {colIsVisible('email') && <td className="max-w-[13rem] px-3.5 py-2.5 text-sm text-slate-600"><span className="block truncate">{bailleur.email || 'Email non renseigné'}</span></td>}
+                          {colIsVisible('telephone') && <td className="px-3.5 py-2.5 text-sm text-slate-700">{formatSenegalPhone(bailleur.telephone)}</td>}
+                          {colIsVisible('commission') && <td className="px-3.5 py-2.5 text-sm font-semibold text-slate-700">{formatCommission(bailleur.commission)}</td>}
+                          {colIsVisible('biens') && <td className="px-3.5 py-2.5 text-sm font-semibold text-slate-700">{summary.immeubles.length}</td>}
+                          {colIsVisible('unites') && <td className="px-3.5 py-2.5 text-sm font-semibold text-slate-700">{summary.unites.length}</td>}
+                          {colIsVisible('reliquats') && <td className="px-3.5 py-2.5 text-right text-sm font-bold tabular-nums text-red-600">{formatCurrency(summary.reliquats)}</td>}
+                          {colIsVisible('net') && <td className="px-3.5 py-2.5 text-right text-sm font-bold tabular-nums text-emerald-800">{formatCurrency(summary.net)}</td>}
+                          {colIsVisible('actions') && <td className="px-3.5 py-2.5 text-right">
+                            <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedBailleurId(bailleur.id); setDetailOpen(true); }} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-950">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </button>
+                          </td>}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <p className="text-lg font-medium text-slate-900 mb-1">
-                Aucun bailleur trouvé
-              </p>
-              <p className="text-slate-600 text-sm sm:text-base">
-                {searchTerm
-                  ? 'Essayez de modifier votre recherche'
-                  : 'Commencez par créer votre premier bailleur'
-                }
-              </p>
+
+              <div className="grid gap-3 p-3 lg:hidden">
+                {filteredBailleurs.map((bailleur) => {
+                  const summary = summariesByBailleur[bailleur.id] ?? emptySummary();
+                  return (
+                    <button
+                      key={bailleur.id}
+                      type="button"
+                      onClick={() => { setSelectedBailleurId(bailleur.id); setDetailOpen(true); }}
+                      className="rounded-2xl border border-emerald-950/10 bg-white p-4 text-left shadow-sm transition active:scale-[0.99]"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black shadow-inner ring-1 ${getAvatarTone(bailleur)}`}>{getInitials(bailleur)}</div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-black text-slate-950">{formatPersonName(bailleur, '')}</p>
+                          <p className="mt-1 text-sm font-semibold text-slate-500">{formatSenegalPhone(bailleur.telephone)}</p>
+                        </div>
+                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-black uppercase text-emerald-800">{getStatusLabel(bailleur)}</span>
+                      </div>
+                      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                        <div className="rounded-xl bg-slate-50 px-2 py-2"><p className="text-xs text-slate-500">Biens</p><p className="font-black">{summary.immeubles.length}</p></div>
+                        <div className="rounded-xl bg-slate-50 px-2 py-2"><p className="text-xs text-slate-500">Reliquat</p><p className="font-black text-red-600">{formatCurrency(summary.reliquats)}</p></div>
+                        <div className="rounded-xl bg-slate-50 px-2 py-2"><p className="text-xs text-slate-500">Net</p><p className="font-black text-emerald-800">{formatCurrency(summary.net)}</p></div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </section>
+
+        <aside className={`fixed inset-0 z-50 overflow-y-auto bg-white transition-transform duration-300 xl:sticky xl:top-4 xl:z-auto xl:block xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)] ${detailOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'}`}>
+          {!selectedBailleur ? (
+            <div className="flex min-h-full items-center justify-center p-6">
+              <EmptyDrawerState title="Sélectionnez un bailleur" description="Consultez ses biens, paiements, documents et rapports sans quitter le portefeuille." />
             </div>
           ) : (
-            <Table
-              columns={columns}
-              data={filteredBailleurs}
-              onEdit={handleEdit}
-            />
+            <div className="min-h-full bg-[linear-gradient(180deg,#fffaf0,#fff_10.5rem)]">
+              <div className="border-b border-emerald-950/10 p-4">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-action-600">Fiche propriétaire</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <h2 className="truncate text-xl font-black text-brand-950">{formatPersonName(selectedBailleur, '')}</h2>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                        {getStatusLabel(selectedBailleur)}
+                      </span>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => setDetailOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 xl:hidden" aria-label="Fermer la fiche">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl font-black shadow-lg shadow-emerald-900/15 ring-1 ${getAvatarTone(selectedBailleur, true)}`}>
+                    {getInitials(selectedBailleur)}
+                    <span className="absolute -right-1 bottom-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-400" />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1.5 text-sm text-slate-600">
+                    <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-slate-400" />{formatSenegalPhone(selectedBailleur.telephone)}</p>
+                    <p className="flex items-center gap-2 truncate"><Mail className="h-4 w-4 text-slate-400" />{selectedBailleur.email || 'Email non renseigné'}</p>
+                    <p className="flex items-center gap-2 truncate"><MapPin className="h-4 w-4 text-slate-400" />{selectedBailleur.adresse || 'Adresse non renseignée'}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 shadow-sm hover:bg-slate-50"><FileText className="h-4 w-4" />Modifier</button>
+                  <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100"><FileText className="h-4 w-4" />Mandat PDF</button>
+                  <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-700 bg-emerald-700 px-3 py-2 text-sm font-black text-white shadow-lg shadow-emerald-900/15 hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"><BarChart3 className="h-4 w-4" />Générer rapport</button>
+                  <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
+                </div>
+              </div>
+
+              <div className="space-y-2 p-3">
+                <div className="grid grid-cols-3 gap-2">
+                  <DrawerMetric label="Loyers" value={formatCurrency(selectedSummary.loyers)} tone="emerald" />
+                  <DrawerMetric label="Reliquats" value={formatCurrency(selectedSummary.reliquats)} tone="red" />
+                  <DrawerMetric label="Net" value={formatCurrency(selectedSummary.net)} tone="emerald" />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <DrawerMetric label="Biens" value={String(selectedSummary.immeubles.length)} tone="blue" />
+                  <DrawerMetric label="Unités" value={String(selectedSummary.unites.length)} tone="gold" />
+                  <DrawerMetric label="Contrats" value={String(selectedSummary.activeContracts)} tone="slate" />
+                </div>
+              </div>
+
+              <div className="border-y border-emerald-950/10 bg-white/80 p-2.5">
+                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+                  {DRAWER_PRIMARY_TABS.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveDrawerTab(tab.id)}
+                      className={`rounded-xl px-2.5 py-2 text-xs font-bold transition ${activeDrawerTab === tab.id ? 'bg-emerald-900 text-white shadow-sm' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-900'}`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                  <select
+                    aria-label="Autres onglets bailleur"
+                    value={DRAWER_MORE_TABS.some((tab) => tab.id === activeDrawerTab) ? activeDrawerTab : ''}
+                    onChange={(event) => {
+                      if (event.target.value) setActiveDrawerTab(event.target.value as DrawerTab);
+                    }}
+                    className={`rounded-xl border-0 px-2.5 py-2 text-xs font-bold outline-none transition ${DRAWER_MORE_TABS.some((tab) => tab.id === activeDrawerTab) ? 'bg-emerald-900 text-white' : 'bg-transparent text-slate-500 hover:bg-emerald-50 hover:text-emerald-900'}`}
+                  >
+                    <option value="">Plus</option>
+                    {DRAWER_MORE_TABS.map((tab) => (
+                      <option key={tab.id} value={tab.id}>{tab.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-3.5">{renderDrawerTab()}</div>
+            </div>
           )}
-        </div>
+        </aside>
       </div>
 
       {/* Modal de création/édition */}

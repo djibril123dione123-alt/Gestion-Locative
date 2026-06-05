@@ -210,15 +210,15 @@ type PdfWithAutoTable = jsPDF & {
 
 const DRAWER_PRIMARY_TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: 'overview', label: "Vue d'ensemble" },
+  { id: 'rapports', label: 'Rapports' },
   { id: 'biens', label: 'Biens' },
   { id: 'paiements', label: 'Paiements' },
-  { id: 'documents', label: 'Documents' },
 ];
 
 const DRAWER_MORE_TABS: Array<{ id: DrawerTab; label: string }> = [
+  { id: 'documents', label: 'Documents' },
   { id: 'contrats', label: 'Contrats' },
   { id: 'depenses', label: 'Dépenses' },
-  { id: 'rapports', label: 'Rapports' },
 ];
 
 /**
@@ -251,8 +251,8 @@ function EmptyDrawerState({
   onAction?: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-emerald-950/15 bg-white/80 p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-      <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100">
+    <div className="rounded-2xl border border-dashed border-emerald-950/15 bg-[#fffdf7]/85 p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50/85 text-emerald-800 ring-1 ring-emerald-100">
         <FolderOpen className="h-4 w-4" />
       </div>
       <p className="mt-3 text-sm font-bold text-slate-950">{title}</p>
@@ -276,7 +276,7 @@ function CompactList({
   rows: Array<{ id: string; title: string; subtitle: string; value?: string; badge?: string }>;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
+    <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8] shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
       {rows.map((row) => (
         <div key={row.id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-3.5 py-2.5 last:border-b-0">
           <div className="min-w-0">
@@ -313,14 +313,14 @@ function KpiTile({
     blue: 'bg-sky-50 text-sky-700',
   }[tone];
   return (
-    <div className="group rounded-2xl border border-emerald-950/10 bg-white/95 p-3.5 shadow-[0_14px_32px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.07)]">
+    <div className="group rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/95 p-3 shadow-[0_14px_32px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.07)] sm:p-3.5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
-          <p className="mt-1.5 text-lg font-extrabold text-slate-950 tabular-nums">{value}</p>
-          <p className="mt-0.5 text-xs text-slate-500">{helper}</p>
+          <p className="mt-1 text-base font-extrabold text-slate-950 tabular-nums sm:mt-1.5 sm:text-lg">{value}</p>
+          <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">{helper}</p>
         </div>
-        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${toneClass} ring-1 ring-white/80 transition group-hover:scale-105`}>
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${toneClass} ring-1 ring-white/80 transition group-hover:scale-105 sm:h-10 sm:w-10`}>
           <Icon className="h-4 w-4" />
         </div>
       </div>
@@ -347,7 +347,7 @@ function DrawerMetric({
   return (
     <div className={`rounded-xl border px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] ${toneClass}`}>
       <p className="text-[10px] font-bold uppercase tracking-[0.1em] opacity-70">{label}</p>
-      <p className="mt-0.5 truncate text-xs font-extrabold tabular-nums sm:text-sm">{value}</p>
+      <p className="mt-0.5 break-words text-xs font-extrabold leading-tight tabular-nums sm:text-sm">{value}</p>
     </div>
   );
 }
@@ -1288,12 +1288,11 @@ export function Bailleurs() {
   /**
    * Configuration des colonnes du tableau
    */
-  const ALL_COLUMN_KEYS_BAILLEURS = ['bailleur', 'email', 'telephone', 'commission', 'biens', 'unites', 'reliquats', 'net', 'actions'] as const;
+  const ALL_COLUMN_KEYS_BAILLEURS = ['bailleur', 'telephone', 'commission', 'biens', 'unites', 'reliquats', 'net', 'actions'] as const;
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('bailleurs', [...ALL_COLUMN_KEYS_BAILLEURS]);
 
   const allColumns = [
     { key: 'bailleur', label: 'Bailleur', required: true },
-    { key: 'email', label: 'Email' },
     { key: 'telephone', label: 'Téléphone' },
     { key: 'commission', label: 'Commission' },
     { key: 'biens', label: 'Biens' },
@@ -1352,7 +1351,7 @@ export function Bailleurs() {
       const paidRate = paidBase > 0 ? Math.min(100, Math.round((selectedSummary.loyers / paidBase) * 100)) : 100;
       return (
         <div className="grid gap-3 xl:grid-cols-2">
-          <section className="rounded-2xl border border-emerald-950/10 bg-white p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
+          <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Résumé paiements</p>
@@ -1363,7 +1362,7 @@ export function Bailleurs() {
                 style={{ background: `conic-gradient(#047857 ${paidRate}%, #d1fae5 0)` }}
                 aria-label={`Taux de recouvrement ${paidRate}%`}
               >
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white">{paidRate}%</span>
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fffdf8]">{paidRate}%</span>
               </div>
             </div>
             <div className="mt-4 space-y-2.5 text-sm">
@@ -1372,7 +1371,7 @@ export function Bailleurs() {
               <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Reliquats</span><strong className={`font-bold ${selectedSummary.reliquats > 0 ? 'text-red-600' : 'text-slate-900'}`}>{formatCurrency(selectedSummary.reliquats)}</strong></div>
             </div>
           </section>
-          <section className="rounded-2xl border border-emerald-950/10 bg-white p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
+          <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
             <div className="flex items-center justify-between">
               <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Activité récente</p>
               <button type="button" onClick={() => setActiveDrawerTab('paiements')} className="text-xs font-bold text-emerald-800 hover:text-emerald-950">Voir tout</button>
@@ -1384,7 +1383,7 @@ export function Bailleurs() {
                 const Icon = item.icon;
                 return (
                   <div key={item.id} className="flex items-start gap-2.5 rounded-xl bg-slate-50/80 px-3 py-2 ring-1 ring-slate-100">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-emerald-700 shadow-sm"><Icon className="h-3.5 w-3.5" /></div>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#fffdf8] text-emerald-700 shadow-sm"><Icon className="h-3.5 w-3.5" /></div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-slate-900">{item.title}</p>
                       <p className="truncate text-xs text-slate-500">{item.detail}</p>
@@ -1403,7 +1402,7 @@ export function Bailleurs() {
       return selectedSummary.immeubles.length === 0 ? (
         <EmptyDrawerState title="Aucun bien rattaché" description="Ajoutez un bien pour commencer à suivre les unités, locataires et loyers de ce bailleur." actionLabel="Ajouter un bien" onAction={() => { window.location.hash = '#/patrimoine'; }} />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white">
+        <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8]">
           {selectedSummary.immeubles.map((immeuble) => {
             const units = selectedSummary.unites.filter((unite) => unite.immeuble_id === immeuble.id);
             const occupied = units.filter((unite) => unite.statut === 'loue').length;
@@ -1468,29 +1467,29 @@ export function Bailleurs() {
     if (activeDrawerTab === 'rapports') {
       return (
         <div className="space-y-3">
-          <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white shadow-[0_16px_42px_rgba(15,23,42,0.055)]">
-            <div className="bg-[linear-gradient(135deg,#063f35,#0f766e)] p-4 text-white">
+          <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8] shadow-[0_16px_42px_rgba(15,23,42,0.055)]">
+            <div className="bg-[linear-gradient(135deg,#fff4d8,#fffdf8)] p-4 text-brand-950">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-emerald-100/80">Registre financier</p>
+                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#9a5b17]">Registre financier</p>
                   <p className="mt-1 text-base font-black">Rapport bailleur</p>
-                  <p className="mt-1 max-w-xs text-xs leading-5 text-emerald-50/80">
+                  <p className="mt-1 max-w-xs text-xs leading-5 text-slate-600">
                     Synthèse propriétaire préparée depuis cette fiche et archivée dans la GED.
                   </p>
                 </div>
-                <label className="min-w-[10rem] text-xs font-semibold text-emerald-50/85">
+                <label className="min-w-[10rem] text-xs font-semibold text-slate-600">
                   Période
                   <input
                     type="month"
                     value={reportMonth}
                     onChange={(event) => setReportMonth(event.target.value || currentMonthInput())}
-                    className="mt-1 w-full rounded-xl border border-white/15 bg-white/95 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-emerald-200 focus:ring-4 focus:ring-white/20"
+                    className="mt-1 w-full rounded-xl border border-amber-200 bg-[#fffdf8] px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-emerald-200 focus:ring-4 focus:ring-emerald-100"
                   />
                 </label>
               </div>
             </div>
             <div className="p-4">
-              <div className="rounded-xl border border-emerald-950/10 bg-emerald-50/60 px-3 py-2 text-xs text-emerald-900">
+              <div className="rounded-xl border border-emerald-950/10 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-900">
                 Bilan préparé pour <strong className="font-black">{formatMonthLabel(reportMonth)}</strong> · {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {reportPaiements.length} paiement{reportPaiements.length > 1 ? 's' : ''}
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -1552,7 +1551,7 @@ export function Bailleurs() {
   }
 
   return (
-    <div className="sk-page-shell max-w-none animate-fadeIn bg-[radial-gradient(circle_at_top_left,rgba(255,247,230,0.9),transparent_28rem),linear-gradient(180deg,#fffdf8,#f8fafc)]">
+    <div className="sk-page-shell max-w-none animate-fadeIn bg-[radial-gradient(circle_at_top_left,rgba(255,247,230,0.95),transparent_28rem),linear-gradient(180deg,#fffaf1,#f8f4ea_48%,#f7faf8)]">
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Portefeuille propriétaire</p>
@@ -1566,7 +1565,7 @@ export function Bailleurs() {
             type="button"
             onClick={handleExportCsv}
             disabled={filteredBailleurs.length === 0}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3.5 py-2.5 text-sm font-bold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Download className="h-4 w-4" />
             Exporter CSV
@@ -1590,7 +1589,7 @@ export function Bailleurs() {
         />
       )}
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         <KpiTile icon={Users} label="Bailleurs actifs" value={globalKpis.activeBailleurs.toString()} helper={`${bailleurs.length} propriétaire${bailleurs.length > 1 ? 's' : ''} dans la base`} tone="emerald" />
         <KpiTile icon={AlertCircle} label="Reliquats totaux" value={formatCurrency(globalKpis.reliquats)} helper="À suivre sur les paiements partiels" tone="red" />
         <KpiTile icon={Wallet} label="Net à reverser" value={formatCurrency(globalKpis.net)} helper="Somme des parts bailleurs" tone="emerald" />
@@ -1598,8 +1597,8 @@ export function Bailleurs() {
       </div>
 
       <div className="grid min-h-[31rem] gap-4 xl:grid-cols-[minmax(0,1fr)_28rem] 2xl:grid-cols-[minmax(0,1fr)_34rem]">
-        <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
-          <div className="border-b border-emerald-950/10 bg-[linear-gradient(180deg,#fffbf2,#fff)] p-3.5 sm:p-4">
+        <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
+          <div className="border-b border-emerald-950/10 bg-[linear-gradient(180deg,#fff6df,#fffdf7)] p-3.5 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
               <div className="relative min-w-0 flex-1">
                 <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-emerald-800" />
@@ -1615,7 +1614,7 @@ export function Bailleurs() {
                 <button
                   type="button"
                   onClick={() => setShowFilters((value) => !value)}
-                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-bold shadow-sm transition ${showFilters || activeFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-bold shadow-sm transition ${showFilters || activeFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
                   Filtres
@@ -1636,20 +1635,20 @@ export function Bailleurs() {
                 {filteredBailleurs.length} résultat{filteredBailleurs.length > 1 ? 's' : ''} · cliquez sur une ligne pour ouvrir la fiche propriétaire.
               </p>
               {activeFilterCount > 0 && (
-                <button type="button" onClick={() => setActiveFilter('all')} className="self-start rounded-full bg-white px-2.5 py-1 font-semibold text-emerald-800 ring-1 ring-emerald-100 hover:bg-emerald-50 sm:self-auto">
+                <button type="button" onClick={() => setActiveFilter('all')} className="self-start rounded-full bg-[#fffdf8] px-2.5 py-1 font-semibold text-emerald-800 ring-1 ring-emerald-100 hover:bg-emerald-50 sm:self-auto">
                   {activeFilterLabel} · Réinitialiser
                 </button>
               )}
             </div>
             {showFilters && (
-              <div className="mt-3 rounded-2xl border border-emerald-950/10 bg-white/85 p-2.5 shadow-sm">
+              <div className="mt-3 rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/90 p-2.5 shadow-sm">
                 <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                   {filterOptions.map((option) => (
                     <button
                       key={option.id}
                       type="button"
                       onClick={() => setActiveFilter(option.id)}
-                      className={`rounded-xl border px-3 py-2 text-left transition ${activeFilter === option.id ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-100 bg-white text-slate-600 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+                      className={`rounded-xl border px-3 py-2 text-left transition ${activeFilter === option.id ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-100 bg-[#fffdf8] text-slate-600 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
                     >
                       <span className="block text-xs font-bold">{option.label}</span>
                       <span className="mt-0.5 block text-[11px] text-slate-500">{option.helper}</span>
@@ -1672,11 +1671,10 @@ export function Bailleurs() {
           ) : (
             <>
               <div className="hidden overflow-x-auto lg:block">
-                <table className="w-full min-w-[920px] border-collapse">
-                  <thead className="bg-slate-50/70">
+                <table className="w-full min-w-[840px] border-collapse">
+                  <thead className="bg-[#f8f3e8]/80">
                     <tr>
                       {colIsVisible('bailleur') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Bailleur</th>}
-                      {colIsVisible('email') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Email</th>}
                       {colIsVisible('telephone') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Téléphone</th>}
                       {colIsVisible('commission') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Commission</th>}
                       {colIsVisible('biens') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Biens</th>}
@@ -1705,7 +1703,6 @@ export function Bailleurs() {
                               </div>
                             </div>
                           </td>}
-                          {colIsVisible('email') && <td className="max-w-[13rem] px-3.5 py-2.5 text-sm text-slate-600"><span className="block truncate">{bailleur.email || 'Email non renseigné'}</span></td>}
                           {colIsVisible('telephone') && <td className="px-3.5 py-2.5 text-sm text-slate-700">{formatSenegalPhone(bailleur.telephone)}</td>}
                           {colIsVisible('commission') && <td className="px-3.5 py-2.5 text-sm font-semibold text-slate-700">{formatCommission(bailleur.commission)}</td>}
                           {colIsVisible('biens') && <td className="px-3.5 py-2.5 text-sm font-semibold text-slate-700">{summary.immeubles.length}</td>}
@@ -1732,7 +1729,7 @@ export function Bailleurs() {
                       key={bailleur.id}
                       type="button"
                       onClick={() => { setSelectedBailleurId(bailleur.id); setDetailOpen(true); }}
-                      className="rounded-2xl border border-emerald-950/10 bg-white p-4 text-left shadow-sm transition active:scale-[0.99]"
+                      className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3.5 text-left shadow-sm transition active:scale-[0.99]"
                     >
                       <div className="flex items-start gap-3">
                         <div className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black shadow-inner ring-1 ${getAvatarTone(bailleur)}`}>{getInitials(bailleur)}</div>
@@ -1755,51 +1752,49 @@ export function Bailleurs() {
           )}
         </section>
 
-        <aside className={`fixed inset-0 z-50 overflow-y-auto bg-white transition-transform duration-300 xl:sticky xl:top-4 xl:z-auto xl:block xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)] ${detailOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'}`}>
+        <aside className={`fixed inset-0 z-50 overflow-y-auto bg-[#fffdf8] transition-transform duration-300 xl:sticky xl:top-4 xl:z-auto xl:block xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)] ${detailOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'}`}>
           {!selectedBailleur ? (
             <div className="flex min-h-full items-center justify-center p-6">
               <EmptyDrawerState title="Sélectionnez un bailleur" description="Consultez ses biens, paiements, documents et rapports sans quitter le portefeuille." />
             </div>
           ) : (
-            <div className="min-h-full bg-[linear-gradient(180deg,#fffaf0,#fff_10.5rem)]">
-              <div className="border-b border-emerald-950/10 p-4">
+            <div className="min-h-full bg-[linear-gradient(180deg,#fff5dc,#fffdf8_10.5rem)]">
+              <div className="border-b border-emerald-950/10 p-3.5 sm:p-4">
                 <div className="mb-3 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-black uppercase tracking-[0.14em] text-action-600">Fiche propriétaire</p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <h2 className="truncate text-xl font-black text-brand-950">{formatPersonName(selectedBailleur, '')}</h2>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
-                        {getStatusLabel(selectedBailleur)}
-                      </span>
-                    </div>
-                  </div>
+                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#9a5b17]">Fiche propriétaire</p>
                   <button type="button" onClick={() => setDetailOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 xl:hidden" aria-label="Fermer la fiche">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex items-start gap-3">
                   <div className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl font-black shadow-lg shadow-emerald-900/15 ring-1 ${getAvatarTone(selectedBailleur, true)}`}>
                     {getInitials(selectedBailleur)}
                     <span className="absolute -right-1 bottom-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-400" />
                   </div>
                   <div className="min-w-0 flex-1 space-y-1.5 text-sm text-slate-600">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="min-w-0 flex-1 truncate text-lg font-black text-brand-950 sm:text-xl">{formatPersonName(selectedBailleur, '')}</h2>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                        {getStatusLabel(selectedBailleur)}
+                      </span>
+                    </div>
                     <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-slate-400" />{formatSenegalPhone(selectedBailleur.telephone)}</p>
                     <p className="flex items-center gap-2 truncate"><Mail className="h-4 w-4 text-slate-400" />{selectedBailleur.email || 'Email non renseigné'}</p>
                     <p className="flex items-center gap-2 truncate"><MapPin className="h-4 w-4 text-slate-400" />{selectedBailleur.adresse || 'Adresse non renseignée'}</p>
                   </div>
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 shadow-sm hover:bg-slate-50"><FileText className="h-4 w-4" />Modifier</button>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 py-2 text-sm font-bold text-slate-800 shadow-sm hover:bg-slate-50"><FileText className="h-4 w-4" />Modifier</button>
                   <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100"><FileText className="h-4 w-4" />Mandat PDF</button>
                   <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-700 bg-emerald-700 px-3 py-2 text-sm font-black text-white shadow-lg shadow-emerald-900/15 hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"><BarChart3 className="h-4 w-4" />Générer rapport</button>
-                  <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
+                  <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-red-600 hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
                 </div>
               </div>
 
               <div className="space-y-2 p-3">
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-1 gap-2 min-[430px]:grid-cols-3">
                   <DrawerMetric label="Loyers" value={formatCurrency(selectedSummary.loyers)} tone="emerald" />
                   <DrawerMetric label="Reliquats" value={formatCurrency(selectedSummary.reliquats)} tone="red" />
                   <DrawerMetric label="Net" value={formatCurrency(selectedSummary.net)} tone="emerald" />
@@ -1811,7 +1806,7 @@ export function Bailleurs() {
                 </div>
               </div>
 
-              <div className="border-y border-emerald-950/10 bg-white/80 p-2.5">
+              <div className="border-y border-emerald-950/10 bg-[#fffdf8]/85 p-2.5">
                 <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
                   {DRAWER_PRIMARY_TABS.map((tab) => (
                     <button

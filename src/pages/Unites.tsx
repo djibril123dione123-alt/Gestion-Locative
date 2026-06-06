@@ -160,7 +160,7 @@ export function Unites() {
         notifyDataChanged(['patrimoine', 'contrats', 'paiements', 'impayes', 'dashboard', 'finances', 'documents']);
       }
       await loadData();
-      toast.success(editingUnite ? 'Produit mis à jour' : 'Produit créé');
+      toast.success(editingUnite ? 'Unité locative mise à jour' : 'Unité locative créée');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors de l\'enregistrement';
       toast.error(msg);
@@ -196,7 +196,7 @@ export function Unites() {
         .update({ actif: false })
         .eq('id', deleteTarget.id);
       if (error) throw error;
-      toast.success('Produit supprimé');
+      toast.success('Unité locative supprimée');
       setDeleteTarget(null);
       if (profile?.agency_id && profile?.id) {
         await invalidateOperationalCaches(
@@ -251,7 +251,7 @@ export function Unites() {
   const columns = allColumns.filter((c) => colIsVisible(c.key));
 
   if (loading) {
-    return <PageSkeleton title="Produits" variant="table" />;
+    return <PageSkeleton title="Unités locatives" variant="table" />;
   }
 
   return (
@@ -263,11 +263,11 @@ export function Unites() {
       />
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
         <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Produit</h1>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Unités locatives</h1>
           <p className="text-slate-600 text-sm lg:text-base">Gestion des appartements et locaux</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)} icon={Plus} className="w-full sm:w-auto">
-          Nouveau produit
+          Nouvelle unité
         </Button>
       </div>
 
@@ -278,7 +278,7 @@ export function Unites() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Rechercher un produit..."
+                placeholder="Rechercher une unité..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -301,7 +301,7 @@ export function Unites() {
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
-        title={editingUnite ? 'Modifier le produit' : 'Nouveau produit'}
+        title={editingUnite ? 'Modifier l’unité' : 'Nouvelle unité'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -408,7 +408,7 @@ export function Unites() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
-        title="Supprimer ce produit ?"
+        title="Supprimer cette unité ?"
         message={`Voulez-vous vraiment supprimer "${deleteTarget?.nom ?? ''}" ?`}
         confirmLabel="Supprimer"
         cancelLabel="Annuler"

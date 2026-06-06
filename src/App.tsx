@@ -38,8 +38,6 @@ const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m
 const Agences = lazy(() => import('./pages/Agences'));
 const Bailleurs = lazy(() => import('./pages/Bailleurs').then(m => ({ default: m.Bailleurs })));
 const Patrimoine = lazy(() => import('./pages/Patrimoine').then(m => ({ default: m.Patrimoine })));
-const Immeubles = lazy(() => import('./pages/Immeubles').then(m => ({ default: m.Immeubles })));
-const Unites = lazy(() => import('./pages/Unites').then(m => ({ default: m.Unites })));
 const Locataires = lazy(() => import('./pages/Locataires').then(m => ({ default: m.Locataires })));
 const Contrats = lazy(() => import('./pages/Contrats').then(m => ({ default: m.Contrats })));
 const Encaissements = lazy(() => import('./pages/Encaissements').then(m => ({ default: m.Encaissements })));
@@ -456,9 +454,9 @@ function AppContent() {
             case 'patrimoine':
                 return <Patrimoine />;
             case 'immeubles':
-                return <Immeubles />;
+                return <Patrimoine initialTab="biens" />;
             case 'unites':
-                return <Unites />;
+                return <Patrimoine initialTab="unites" />;
             case 'locataires':
                 return <Locataires />;
             case 'contrats':

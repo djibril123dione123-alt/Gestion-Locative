@@ -278,7 +278,7 @@ function inferUnitType(unit: UnitRow) {
   if (source.includes('depot')) return 'Depot';
   if (source.includes('local')) return 'Local commercial';
   if (source.includes('appartement') || source.includes('f')) return 'Appartement';
-  return 'Unite locative';
+  return 'Unité locative';
 }
 
 function getPropertyVisual(property: PropertyRow): { icon: LucideIcon; bg: string; color: string } {
@@ -646,7 +646,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
             next.bailleur_id = owner.id;
           } catch (error) {
             console.error('[Patrimoine] owner bailleur unavailable', error);
-            toast.error('Impossible de preparer votre profil proprietaire. Reessayez avec une connexion stable.');
+            toast.error('Impossible de préparer votre profil propriétaire. Réessayez avec une connexion stable.');
             return;
           }
         }
@@ -724,7 +724,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
     event.preventDefault();
     if (!profile?.agency_id) return;
     if (!navigator.onLine) {
-      toast.error('Connexion indisponible : creation ou modification impossible hors ligne.');
+      toast.error('Connexion indisponible : création ou modification impossible hors ligne.');
       return;
     }
     if (!editingProperty && !planLimits.canAddImmeuble) {
@@ -748,7 +748,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
         bailleurId = owner.id;
       }
       if (!bailleurId) {
-        toast.error(isIndividualOwner ? 'Profil proprietaire indisponible.' : 'Selectionnez un bailleur pour rattacher ce bien.');
+        toast.error(isIndividualOwner ? 'Profil propriétaire indisponible.' : 'Sélectionnez un bailleur pour rattacher ce bien.');
         return;
       }
 
@@ -769,7 +769,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
         if (error) throw error;
       }
 
-      toast.success(editingProperty ? 'Bien mis a jour.' : 'Bien cree.');
+      toast.success(editingProperty ? 'Bien mis à jour.' : 'Bien créé.');
       closePropertyModal();
       await reloadAfterMutation();
     } catch (error) {
@@ -784,7 +784,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
     event.preventDefault();
     if (!profile?.agency_id) return;
     if (!navigator.onLine) {
-      toast.error('Connexion indisponible : creation ou modification impossible hors ligne.');
+      toast.error('Connexion indisponible : création ou modification impossible hors ligne.');
       return;
     }
     if (!editingUnit && !planLimits.canAddUnite) {
@@ -792,11 +792,11 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
       return;
     }
     if (!unitForm.immeuble_id) {
-      toast.error('Selectionnez un bien parent pour cette unite.');
+      toast.error('Sélectionnez un bien parent pour cette unité.');
       return;
     }
     if (!unitForm.nom.trim() || !unitForm.loyer_base.trim()) {
-      toast.error("Type d'unite et loyer sont obligatoires.");
+      toast.error("Type d'unité et loyer sont obligatoires.");
       return;
     }
 
@@ -820,12 +820,12 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
         if (error) throw error;
       }
 
-      toast.success(editingUnit ? 'Unite mise a jour.' : 'Unite creee.');
+      toast.success(editingUnit ? 'Unité mise à jour.' : 'Unité créée.');
       closeUnitModal();
       await reloadAfterMutation();
     } catch (error) {
       console.error('[Patrimoine] save unit failed', error);
-      toast.error("Impossible d'enregistrer cette unite.");
+      toast.error("Impossible d'enregistrer cette unité.");
     } finally {
       setSaving(false);
     }
@@ -842,13 +842,13 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
       const table = dangerTarget.type === 'bien' ? 'immeubles' : 'unites';
       const { error } = await supabase.from(table).update({ actif: false }).eq('id', dangerTarget.id).eq('agency_id', profile.agency_id);
       if (error) throw error;
-      toast.success(dangerTarget.type === 'bien' ? 'Bien archive.' : 'Unite archivee.');
+      toast.success(dangerTarget.type === 'bien' ? 'Bien archivé.' : 'Unité archivée.');
       setDangerTarget(null);
       setDrawer(null);
       await reloadAfterMutation();
     } catch (error) {
       console.error('[Patrimoine] archive failed', error);
-      toast.error("Impossible d'archiver cet element.");
+      toast.error("Impossible d'archiver cet élément.");
     } finally {
       setDeleting(false);
     }
@@ -858,34 +858,34 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   const selectUnit = (unit: UnitRow) => setDrawer({ type: 'unite', id: unit.id });
 
   const pageSubtitle = isIndividualOwner
-    ? 'Suivez vos biens, vos unites, vos locataires et vos loyers depuis un espace unique.'
-    : 'Suivez les biens rattaches aux bailleurs, leurs unites, leur occupation et leur potentiel locatif.';
+    ? 'Suivez vos biens, vos unités, vos locataires et vos loyers depuis un espace unique.'
+    : 'Suivez les biens rattachés aux bailleurs, leurs unités, leur occupation et leur potentiel locatif.';
 
   if (loading) {
     return <PageSkeleton title={isIndividualOwner ? 'Mes biens' : 'Biens & patrimoine'} variant="analytics" />;
   }
 
   return (
-    <div className="min-h-full overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,244,214,0.9),transparent_28rem),linear-gradient(180deg,#fffaf0,#f8f4ea_48%,#f7fbf8)] px-4 py-4 sm:px-6 lg:px-7">
+    <div className="min-h-full overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,247,230,0.95),transparent_28rem),linear-gradient(180deg,#fffaf1,#f8f4ea_48%,#f7faf8)] px-4 py-4 sm:px-6 lg:px-7">
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
       <div className="mx-auto max-w-[118rem] space-y-4">
         <OfflineDataNotice
           cachedAt={cacheTimestamp}
           onRetry={loadData}
-          message="Le patrimoine affiche le dernier etat connu. La creation et les modifications restent bloquees hors ligne pour proteger les rattachements."
+          message="Le patrimoine affiche le dernier état connu. La création et les modifications restent bloquées hors ligne pour protéger les rattachements."
         />
 
-        <header className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-[0.68rem] font-bold uppercase tracking-[0.18em] text-orange-600">Portefeuille locatif</p>
-            <h1 className="mt-1.5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Biens & patrimoine</h1>
-            <p className="mt-1.5 max-w-3xl text-sm font-medium leading-6 text-slate-600 sm:text-[0.95rem]">{pageSubtitle}</p>
+            <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-action-600">Portefeuille locatif</p>
+            <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">Biens & patrimoine</h1>
+            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-600">{pageSubtitle}</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
               onClick={() => void openPropertyModal()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-900 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-brand-950"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-brand-900 to-brand-950 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:shadow-emerald-950/25"
             >
               <Plus className="h-4 w-4" />
               {isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'}
@@ -896,37 +896,37 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 setActiveTab('unites');
                 openUnitModal(null, selectedProperty?.id ?? '');
               }}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-4 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50"
             >
               <DoorOpen className="h-4 w-4 text-brand-800" />
-              Nouvelle unite
+              Nouvelle unité
             </button>
           </div>
         </header>
 
-        <section className="grid grid-cols-2 gap-3 xl:grid-cols-6">
+        <section className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-6">
           <MetricCard label={isIndividualOwner ? 'Biens' : 'Biens'} value={pageStats.properties} icon={Building2} tone="emerald" />
-          <MetricCard label="Unites" value={pageStats.units} icon={DoorOpen} tone="blue" />
-          <MetricCard label="Occupees" value={pageStats.occupied} icon={Home} tone="emerald" />
+          <MetricCard label="Unités" value={pageStats.units} icon={DoorOpen} tone="blue" />
+          <MetricCard label="Occupées" value={pageStats.occupied} icon={Home} tone="emerald" />
           <MetricCard label="Occupation" value={`${pageStats.occupancyRate}%`} icon={Percent} tone="amber" />
           <MetricCard label="Loyers attendus" value={<CurrencyValue value={pageStats.expectedRent} compact />} icon={Wallet} tone="green" wide />
           <MetricCard label="Reliquats" value={<CurrencyValue value={pageStats.reliquats} compact />} icon={AlertCircle} tone="red" wide />
         </section>
 
-        <section className="rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 p-3 shadow-[0_18px_54px_rgba(15,23,42,0.07)]">
+        <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/95 p-3 shadow-[0_14px_40px_rgba(15,23,42,0.055)] ring-1 ring-white/80">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex gap-2 overflow-x-auto">
+            <div className="flex gap-1.5 overflow-x-auto rounded-xl bg-[#f7f1e7]/75 p-1">
               {[
                 { id: 'biens' as const, label: 'Biens' },
-                { id: 'unites' as const, label: 'Unites locatives' },
+                { id: 'unites' as const, label: 'Unités locatives' },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`h-10 whitespace-nowrap rounded-xl px-4 text-sm font-bold transition ${
+                  className={`h-9 whitespace-nowrap rounded-lg px-3.5 text-sm font-semibold transition ${
                     activeTab === tab.id
-                      ? 'bg-brand-950 text-white shadow-lg shadow-emerald-950/15'
+                      ? 'bg-brand-950 text-white shadow-sm'
                       : 'text-slate-600 hover:bg-emerald-50 hover:text-brand-900'
                   }`}
                 >
@@ -940,8 +940,8 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 <input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder={activeTab === 'biens' ? 'Rechercher nom, adresse, bailleur...' : 'Rechercher unite, bien, locataire...'}
-                  className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white pl-9 pr-3 text-sm font-medium text-slate-800 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                  placeholder={activeTab === 'biens' ? 'Rechercher nom, adresse, bailleur...' : 'Rechercher unité, bien, locataire...'}
+                  className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                 />
               </div>
               {activeTab === 'biens' ? (
@@ -950,7 +950,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     <select
                       value={ownerFilter}
                       onChange={(event) => setOwnerFilter(event.target.value)}
-                      className="h-10 rounded-xl border border-emerald-950/10 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                      className="h-10 rounded-xl border border-emerald-950/10 bg-white/95 px-3 text-sm font-medium text-slate-700 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                     >
                       <option value="all">Tous les bailleurs</option>
                       {data.bailleurs.map((owner) => (
@@ -963,13 +963,13 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                   <select
                     value={propertyFilter}
                     onChange={(event) => setPropertyFilter(event.target.value as PropertyFilter)}
-                    className="h-10 rounded-xl border border-emerald-950/10 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                    className="h-10 rounded-xl border border-emerald-950/10 bg-white/95 px-3 text-sm font-medium text-slate-700 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                   >
                     <option value="all">Tous les biens</option>
                     <option value="with_reliquats">Avec reliquats</option>
-                    <option value="without_units">Sans unite</option>
+                    <option value="without_units">Sans unité</option>
                     <option value="complete">Complets</option>
-                    <option value="incomplete">A completer</option>
+                    <option value="incomplete">À compléter</option>
                   </select>
                   <ColumnPicker
                     columns={PROPERTY_COLUMN_KEYS.filter((key) => !isIndividualOwner || key !== 'bailleur').map((key) => ({ key, label: getPropertyColumnLabel(key), required: key === 'bien' }))}
@@ -983,11 +983,11 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                   <select
                     value={unitFilter}
                     onChange={(event) => setUnitFilter(event.target.value as UnitFilter)}
-                    className="h-10 rounded-xl border border-emerald-950/10 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                    className="h-10 rounded-xl border border-emerald-950/10 bg-white/95 px-3 text-sm font-medium text-slate-700 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                   >
-                    <option value="all">Toutes les unites</option>
+                    <option value="all">Toutes les unités</option>
                     <option value="libre">Libres</option>
-                    <option value="loue">Louees</option>
+                    <option value="loue">Louées</option>
                     <option value="maintenance">Maintenance</option>
                     <option value="late">Avec reliquat</option>
                     <option value="without_contract">Sans bail</option>
@@ -1014,6 +1014,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 isIndividualOwner={isIndividualOwner}
                 isVisible={propertyColumns.isVisible}
                 compact={detailPanelOpen}
+                selectedId={selectedProperty?.id ?? null}
                 onSelect={selectProperty}
                 onCreate={() => void openPropertyModal()}
               />
@@ -1024,6 +1025,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 propertyById={propertyById}
                 isVisible={unitColumns.isVisible}
                 compact={detailPanelOpen}
+                selectedId={selectedUnit?.id ?? null}
                 onSelect={selectUnit}
                 onCreate={() => openUnitModal()}
               />
@@ -1091,7 +1093,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
         isOpen={!!dangerTarget}
         onClose={() => setDangerTarget(null)}
         onConfirm={confirmDelete}
-        title={dangerTarget?.type === 'bien' ? 'Archiver ce bien ?' : 'Archiver cette unite ?'}
+        title={dangerTarget?.type === 'bien' ? 'Archiver ce bien ?' : 'Archiver cette unité ?'}
         message={buildDangerMessage(dangerTarget, selectedProperty, selectedPropertySummary, selectedUnit, selectedUnitSummary)}
         confirmLabel="Archiver"
         cancelLabel="Annuler"
@@ -1108,7 +1110,7 @@ function getPropertyColumnLabel(key: PropertyColumnKey) {
     type: 'Type',
     adresse: 'Adresse',
     bailleur: 'Bailleur',
-    unites: 'Unites',
+    unites: 'Unités',
     occupation: 'Occupation',
     loyer: 'Loyer attendu',
     reliquats: 'Reliquats',
@@ -1119,7 +1121,7 @@ function getPropertyColumnLabel(key: PropertyColumnKey) {
 
 function getUnitColumnLabel(key: UnitColumnKey) {
   const labels: Record<UnitColumnKey, string> = {
-    unite: 'Unite',
+    unite: 'Unité',
     type: 'Type',
     bien: 'Bien parent',
     locataire: 'Locataire',
@@ -1144,29 +1146,29 @@ function buildDangerMessage(
     const contracts = propertySummary?.contracts.length ?? 0;
     const payments = propertySummary?.payments.length ?? 0;
     const documents = propertySummary?.documents.length ?? 0;
-    return `Vous allez archiver "${property?.nom ?? dangerTarget.name}". Relations detectees : ${units} unite(s), ${contracts} contrat(s), ${payments} paiement(s), ${documents} document(s). Les donnees restent conservees, mais le bien ne sera plus actif.`;
+    return `Vous allez archiver "${property?.nom ?? dangerTarget.name}". Relations détectées : ${units} unité(s), ${contracts} contrat(s), ${payments} paiement(s), ${documents} document(s). Les données restent conservées, mais le bien ne sera plus actif.`;
   }
-  return `Vous allez archiver "${unit?.nom ?? dangerTarget.name}". Relations detectees : ${unitSummary?.contract ? '1 bail actif ou historique' : 'aucun bail actif'}, ${unitSummary?.payments.length ?? 0} paiement(s), ${unitSummary?.documents.length ?? 0} document(s).`;
+  return `Vous allez archiver "${unit?.nom ?? dangerTarget.name}". Relations détectées : ${unitSummary?.contract ? '1 bail actif ou historique' : 'aucun bail actif'}, ${unitSummary?.payments.length ?? 0} paiement(s), ${unitSummary?.documents.length ?? 0} document(s).`;
 }
 
 function MetricCard({ label, value, icon: Icon, tone, wide = false }: { label: string; value: ReactNode; icon: LucideIcon; tone: 'emerald' | 'blue' | 'amber' | 'green' | 'red'; wide?: boolean }) {
   const tones = {
-    emerald: { gradient: 'from-white to-emerald-50/70', text: 'text-brand-800', icon: 'bg-emerald-100 text-brand-800' },
-    blue: { gradient: 'from-white to-sky-50/70', text: 'text-sky-800', icon: 'bg-sky-100 text-sky-800' },
-    amber: { gradient: 'from-white to-amber-50/70', text: 'text-amber-800', icon: 'bg-amber-100 text-amber-800' },
-    green: { gradient: 'from-white to-lime-50/70', text: 'text-emerald-800', icon: 'bg-emerald-100 text-emerald-800' },
-    red: { gradient: 'from-white to-red-50/70', text: 'text-red-700', icon: 'bg-red-100 text-red-700' },
+    emerald: { gradient: 'from-white to-emerald-50/65', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100' },
+    blue: { gradient: 'from-white to-sky-50/65', text: 'text-sky-800', icon: 'bg-sky-50 text-sky-800 ring-sky-100' },
+    amber: { gradient: 'from-white to-amber-50/65', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100' },
+    green: { gradient: 'from-white to-lime-50/65', text: 'text-emerald-800', icon: 'bg-emerald-50 text-emerald-800 ring-emerald-100' },
+    red: { gradient: 'from-white to-red-50/65', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100' },
   }[tone];
 
   return (
-    <article className={`min-w-0 rounded-2xl border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-3 shadow-[0_12px_36px_rgba(15,23,42,0.06)] ${wide ? 'xl:col-span-1' : ''}`}>
-      <div className="flex items-start justify-between gap-2.5">
+    <article className={`min-w-0 rounded-2xl border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-3 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70 ${wide ? 'xl:col-span-1' : ''}`}>
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className={`truncate text-[0.66rem] font-bold uppercase tracking-[0.14em] ${tones.text}`}>{label}</p>
-          <p className="mt-1.5 truncate text-lg font-black tracking-tight text-slate-950 sm:text-xl">{value}</p>
+          <p className={`truncate text-[0.64rem] font-bold uppercase tracking-[0.13em] ${tones.text}`}>{label}</p>
+          <p className="mt-1.5 truncate text-lg font-extrabold tracking-tight text-slate-950 sm:text-[1.22rem]">{value}</p>
         </div>
-        <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${tones.icon}`}>
-          <Icon className="h-5 w-5" />
+        <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ring-1 ${tones.icon}`}>
+          <Icon className="h-4 w-4" />
         </div>
       </div>
     </article>
@@ -1174,7 +1176,7 @@ function MetricCard({ label, value, icon: Icon, tone, wide = false }: { label: s
 }
 
 function StatusBadge({ label }: { label: string }) {
-  return <span className={`inline-flex rounded-full border px-2.5 py-1 text-[0.68rem] font-bold ${statusBadgeClass(label)}`}>{label}</span>;
+  return <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[0.67rem] font-semibold ${statusBadgeClass(label)}`}>{label}</span>;
 }
 
 function PropertiesTable({
@@ -1184,6 +1186,7 @@ function PropertiesTable({
   isIndividualOwner,
   isVisible,
   compact,
+  selectedId,
   onSelect,
   onCreate,
 }: {
@@ -1193,6 +1196,7 @@ function PropertiesTable({
   isIndividualOwner: boolean;
   isVisible: (key: string) => boolean;
   compact: boolean;
+  selectedId: string | null;
   onSelect: (property: PropertyRow) => void;
   onCreate: () => void;
 }) {
@@ -1203,23 +1207,23 @@ function PropertiesTable({
       <EmptyState
         icon={Building2}
         title="Aucun bien ajoute pour le moment."
-        description="Ajoutez votre premier bien pour commencer a suivre vos unites, locataires et loyers."
+        description="Ajoutez votre premier bien pour commencer à suivre vos unités, locataires et loyers."
         action={{ label: 'Ajouter un bien', onClick: onCreate }}
       />
     );
   }
 
   return (
-    <section className="overflow-hidden rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 shadow-[0_18px_54px_rgba(15,23,42,0.07)]">
+    <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_18px_48px_rgba(15,23,42,0.06)] ring-1 ring-white/80">
       <div className={`hidden md:block ${compact ? 'overflow-hidden' : 'overflow-x-auto'}`}>
         <table className={`${compact ? 'w-full table-fixed' : 'min-w-[920px]'} divide-y divide-slate-100`}>
-          <thead className="bg-white/70 text-left text-[0.68rem] font-black uppercase tracking-[0.12em] text-slate-500">
+          <thead className="bg-[#f8f3e8]/70 text-left text-[0.66rem] font-bold uppercase tracking-[0.12em] text-slate-500">
             <tr>
               {showColumn('bien') && <th className={`${compact ? 'w-[32%] px-3' : 'px-4'} py-3`}>Bien</th>}
               {showColumn('type') && <th className="px-4 py-3">Type</th>}
               {showColumn('adresse') && <th className="px-4 py-3">Adresse</th>}
               {!isIndividualOwner && showColumn('bailleur') && <th className={`${compact ? 'w-[19%] px-3' : 'px-4'} py-3`}>Bailleur</th>}
-              {showColumn('unites') && <th className={`${compact ? 'w-[10%] px-2' : 'px-4'} py-3 text-center`}>Unites</th>}
+              {showColumn('unites') && <th className={`${compact ? 'w-[10%] px-2' : 'px-4'} py-3 text-center`}>Unités</th>}
               {showColumn('occupation') && <th className={`${compact ? 'w-[18%] px-3' : 'px-4'} py-3`}>Occupation</th>}
               {showColumn('loyer') && <th className="px-4 py-3 text-right">Loyer attendu</th>}
               {showColumn('reliquats') && <th className={`${compact ? 'w-[15%] px-3' : 'px-4'} py-3 text-right`}>Reliquats</th>}
@@ -1233,27 +1237,28 @@ function PropertiesTable({
               const owner = property.bailleur_id ? ownerById.get(property.bailleur_id) ?? property.bailleurs : property.bailleurs;
               const visual = getPropertyVisual(property);
               const Icon = visual.icon;
+              const selected = property.id === selectedId;
               return (
-                <tr key={property.id} className="cursor-pointer transition hover:bg-emerald-50/50" onClick={() => onSelect(property)}>
+                <tr key={property.id} className={`cursor-pointer transition ${selected ? 'bg-emerald-50/85 ring-1 ring-inset ring-emerald-200' : 'hover:bg-emerald-50/45'}`} onClick={() => onSelect(property)}>
                   {showColumn('bien') && (
-                    <td className={`${compact ? 'px-3' : 'px-4'} py-3`}>
+                    <td className={`${compact ? 'px-3' : 'px-4'} py-2.5`}>
                       <div className="flex items-center gap-3">
-                        <div className={`flex ${compact ? 'h-9 w-9 rounded-xl' : 'h-10 w-10 rounded-2xl'} items-center justify-center ${visual.bg} ${visual.color}`}>
-                          <Icon className="h-5 w-5" />
+                        <div className={`flex ${compact ? 'h-8 w-8 rounded-xl' : 'h-9 w-9 rounded-xl'} items-center justify-center ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
+                          <Icon className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-slate-950">{property.nom}</p>
-                          <p className="truncate text-xs font-medium text-slate-500">{property.quartier || property.ville || 'Localisation a completer'}</p>
+                          <p className="truncate text-sm font-semibold text-slate-950">{property.nom}</p>
+                          <p className="truncate text-xs font-medium text-slate-500">{property.quartier || property.ville || 'Localisation à compléter'}</p>
                         </div>
                       </div>
                     </td>
                   )}
-                  {showColumn('type') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{inferPropertyType(property)}</td>}
-                  {showColumn('adresse') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{property.adresse || '-'}</td>}
-                  {!isIndividualOwner && showColumn('bailleur') && <td className={`${compact ? 'px-3' : 'px-4'} py-3 text-sm font-semibold text-slate-700`}><p className="truncate">{ownerName(owner)}</p></td>}
-                  {showColumn('unites') && <td className={`${compact ? 'px-2' : 'px-4'} py-3 text-center text-sm font-bold text-slate-900`}>{summary?.units.length ?? 0}</td>}
+                  {showColumn('type') && <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{inferPropertyType(property)}</td>}
+                  {showColumn('adresse') && <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{property.adresse || '-'}</td>}
+                  {!isIndividualOwner && showColumn('bailleur') && <td className={`${compact ? 'px-3' : 'px-4'} py-2.5 text-sm font-medium text-slate-700`}><p className="truncate">{ownerName(owner)}</p></td>}
+                  {showColumn('unites') && <td className={`${compact ? 'px-2' : 'px-4'} py-2.5 text-center text-sm font-semibold text-slate-900`}>{summary?.units.length ?? 0}</td>}
                   {showColumn('occupation') && (
-                    <td className={`${compact ? 'px-3' : 'px-4'} py-3`}>
+                    <td className={`${compact ? 'px-3' : 'px-4'} py-2.5`}>
                       <div className="flex items-center gap-2">
                         <div className={`${compact ? 'w-14' : 'w-20'} h-2 overflow-hidden rounded-full bg-slate-100`}>
                           <div className="h-full rounded-full bg-brand-800" style={{ width: `${summary?.occupancyRate ?? 0}%` }} />
@@ -1262,10 +1267,10 @@ function PropertiesTable({
                       </div>
                     </td>
                   )}
-                  {showColumn('loyer') && <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-bold tabular-nums text-slate-900">{formatCurrency(summary?.expectedRent ?? 0)}</td>}
-                  {showColumn('reliquats') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-3 text-right text-sm font-bold tabular-nums text-red-600`}>{formatCurrency(summary?.reliquats ?? 0)}</td>}
-                  {showColumn('statut') && <td className="px-4 py-3"><StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unite'} /></td>}
-                  <td className={`${compact ? 'px-2' : 'px-4'} py-3 text-right`}>
+                  {showColumn('loyer') && <td className="whitespace-nowrap px-4 py-2.5 text-right text-sm font-semibold tabular-nums text-slate-900">{formatCurrency(summary?.expectedRent ?? 0)}</td>}
+                  {showColumn('reliquats') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-red-600`}>{formatCurrency(summary?.reliquats ?? 0)}</td>}
+                  {showColumn('statut') && <td className="px-4 py-2.5"><StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unité'} /></td>}
+                  <td className={`${compact ? 'px-2' : 'px-4'} py-2.5 text-right`}>
                     <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(property); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
                       <MoreHorizontal className="h-5 w-5" />
                     </button>
@@ -1283,7 +1288,7 @@ function PropertiesTable({
           const visual = getPropertyVisual(property);
           const Icon = visual.icon;
           return (
-            <button key={property.id} type="button" onClick={() => onSelect(property)} className="rounded-2xl border border-emerald-950/10 bg-white p-3 text-left shadow-sm">
+            <button key={property.id} type="button" onClick={() => onSelect(property)} className="rounded-2xl border border-emerald-950/10 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]">
               <div className="flex items-start gap-3">
                 <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${visual.bg} ${visual.color}`}>
                   <Icon className="h-5 w-5" />
@@ -1292,7 +1297,7 @@ function PropertiesTable({
                   <p className="font-bold text-slate-950">{property.nom}</p>
                   <p className="mt-1 text-xs font-medium text-slate-500">{property.adresse || property.quartier || property.ville || 'Adresse a completer'}</p>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                    <MiniMetric label="Unites" value={summary?.units.length ?? 0} />
+                    <MiniMetric label="Unités" value={summary?.units.length ?? 0} />
                     <MiniMetric label="Occupation" value={`${summary?.occupancyRate ?? 0}%`} />
                     <MiniMetric label="Loyer" value={formatCurrency(summary?.expectedRent ?? 0)} />
                   </div>
@@ -1312,6 +1317,7 @@ function UnitsTable({
   propertyById,
   isVisible,
   compact,
+  selectedId,
   onSelect,
   onCreate,
 }: {
@@ -1320,6 +1326,7 @@ function UnitsTable({
   propertyById: Map<string, PropertyRow>;
   isVisible: (key: string) => boolean;
   compact: boolean;
+  selectedId: string | null;
   onSelect: (unit: UnitRow) => void;
   onCreate: () => void;
 }) {
@@ -1329,20 +1336,20 @@ function UnitsTable({
     return (
       <EmptyState
         icon={DoorOpen}
-        title="Aucune unite enregistree."
-        description="Ajoutez une unite pour preparer la mise en location."
-        action={{ label: 'Ajouter une unite', onClick: onCreate }}
+        title="Aucune unité enregistrée."
+        description="Ajoutez une unité pour préparer la mise en location."
+        action={{ label: 'Ajouter une unité', onClick: onCreate }}
       />
     );
   }
 
   return (
-    <section className="overflow-hidden rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 shadow-[0_18px_54px_rgba(15,23,42,0.07)]">
+    <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_18px_48px_rgba(15,23,42,0.06)] ring-1 ring-white/80">
       <div className={`hidden md:block ${compact ? 'overflow-hidden' : 'overflow-x-auto'}`}>
         <table className={`${compact ? 'w-full table-fixed' : 'min-w-[900px]'} divide-y divide-slate-100`}>
-          <thead className="bg-white/70 text-left text-[0.68rem] font-black uppercase tracking-[0.12em] text-slate-500">
+          <thead className="bg-[#f8f3e8]/70 text-left text-[0.66rem] font-bold uppercase tracking-[0.12em] text-slate-500">
             <tr>
-              {showColumn('unite') && <th className={`${compact ? 'w-[23%] px-3' : 'px-4'} py-3`}>Unite</th>}
+              {showColumn('unite') && <th className={`${compact ? 'w-[23%] px-3' : 'px-4'} py-3`}>Unité</th>}
               {showColumn('type') && <th className="px-4 py-3">Type</th>}
               {showColumn('bien') && <th className={`${compact ? 'w-[20%] px-3' : 'px-4'} py-3`}>Bien parent</th>}
               {showColumn('locataire') && <th className={`${compact ? 'w-[19%] px-3' : 'px-4'} py-3`}>Locataire</th>}
@@ -1360,29 +1367,30 @@ function UnitsTable({
               const visual = getUnitVisual(unit);
               const Icon = visual.icon;
               const status = getUnitStatusLabel(unit, summary);
+              const selected = unit.id === selectedId;
               return (
-                <tr key={unit.id} className="cursor-pointer transition hover:bg-emerald-50/50" onClick={() => onSelect(unit)}>
+                <tr key={unit.id} className={`cursor-pointer transition ${selected ? 'bg-emerald-50/85 ring-1 ring-inset ring-emerald-200' : 'hover:bg-emerald-50/45'}`} onClick={() => onSelect(unit)}>
                   {showColumn('unite') && (
-                    <td className={`${compact ? 'px-3' : 'px-4'} py-3`}>
+                    <td className={`${compact ? 'px-3' : 'px-4'} py-2.5`}>
                       <div className="flex items-center gap-3">
-                        <div className={`flex ${compact ? 'h-9 w-9 rounded-xl' : 'h-10 w-10 rounded-2xl'} items-center justify-center ${visual.bg} ${visual.color}`}>
-                          <Icon className="h-5 w-5" />
+                        <div className={`flex ${compact ? 'h-8 w-8 rounded-xl' : 'h-9 w-9 rounded-xl'} items-center justify-center ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
+                          <Icon className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-slate-950">{unit.nom}</p>
-                          <p className="truncate text-xs font-medium text-slate-500">{unit.numero || unit.etage || 'Reference a completer'}</p>
+                          <p className="truncate text-sm font-semibold text-slate-950">{unit.nom}</p>
+                          <p className="truncate text-xs font-medium text-slate-500">{unit.numero || unit.etage || 'Référence à compléter'}</p>
                         </div>
                       </div>
                     </td>
                   )}
-                  {showColumn('type') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{inferUnitType(unit)}</td>}
-                  {showColumn('bien') && <td className={`${compact ? 'px-3' : 'px-4'} py-3 text-sm font-semibold text-slate-700`}><p className="truncate">{property?.nom ?? unit.immeubles?.nom ?? '-'}</p></td>}
-                  {showColumn('locataire') && <td className={`${compact ? 'px-3' : 'px-4'} py-3 text-sm font-medium text-slate-600`}><p className="truncate">{summary?.tenantLabel ?? 'Aucun locataire'}</p></td>}
-                  {showColumn('loyer') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-3 text-right text-sm font-bold tabular-nums text-slate-900`}>{formatCurrency(unit.loyer_base ?? 0)}</td>}
-                  {showColumn('statut') && <td className={`${compact ? 'px-3' : 'px-4'} py-3`}><StatusBadge label={status} /></td>}
-                  {showColumn('reliquat') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-3 text-right text-sm font-bold tabular-nums text-red-600`}>{formatCurrency(summary?.reliquat ?? 0)}</td>}
-                  {showColumn('bail') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{summary?.contract ? 'Oui' : 'Non'}</td>}
-                  <td className={`${compact ? 'px-2' : 'px-4'} py-3 text-right`}>
+                  {showColumn('type') && <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{inferUnitType(unit)}</td>}
+                  {showColumn('bien') && <td className={`${compact ? 'px-3' : 'px-4'} py-2.5 text-sm font-medium text-slate-700`}><p className="truncate">{property?.nom ?? unit.immeubles?.nom ?? '-'}</p></td>}
+                  {showColumn('locataire') && <td className={`${compact ? 'px-3' : 'px-4'} py-2.5 text-sm font-medium text-slate-600`}><p className="truncate">{summary?.tenantLabel ?? 'Aucun locataire'}</p></td>}
+                  {showColumn('loyer') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-slate-900`}>{formatCurrency(unit.loyer_base ?? 0)}</td>}
+                  {showColumn('statut') && <td className={`${compact ? 'px-3' : 'px-4'} py-2.5`}><StatusBadge label={status} /></td>}
+                  {showColumn('reliquat') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-red-600`}>{formatCurrency(summary?.reliquat ?? 0)}</td>}
+                  {showColumn('bail') && <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{summary?.contract ? 'Oui' : 'Non'}</td>}
+                  <td className={`${compact ? 'px-2' : 'px-4'} py-2.5 text-right`}>
                     <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(unit); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
                       <MoreHorizontal className="h-5 w-5" />
                     </button>
@@ -1402,7 +1410,7 @@ function UnitsTable({
           const visual = getUnitVisual(unit);
           const Icon = visual.icon;
           return (
-            <button key={unit.id} type="button" onClick={() => onSelect(unit)} className="rounded-2xl border border-emerald-950/10 bg-white p-3 text-left shadow-sm">
+            <button key={unit.id} type="button" onClick={() => onSelect(unit)} className="rounded-2xl border border-emerald-950/10 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]">
               <div className="flex items-start gap-3">
                 <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${visual.bg} ${visual.color}`}>
                   <Icon className="h-5 w-5" />
@@ -1412,7 +1420,7 @@ function UnitsTable({
                     <p className="font-bold text-slate-950">{unit.nom}</p>
                     <StatusBadge label={status} />
                   </div>
-                  <p className="mt-1 text-xs font-medium text-slate-500">{property?.nom ?? unit.immeubles?.nom ?? 'Bien parent a choisir'}</p>
+                  <p className="mt-1 text-xs font-medium text-slate-500">{property?.nom ?? unit.immeubles?.nom ?? 'Bien parent à choisir'}</p>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                     <MiniMetric label="Loyer" value={formatCurrency(unit.loyer_base ?? 0)} />
                     <MiniMetric label="Reliquat" value={formatCurrency(summary?.reliquat ?? 0)} />
@@ -1430,16 +1438,16 @@ function UnitsTable({
 
 function MiniMetric({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-xl border border-emerald-950/10 bg-slate-50 px-2 py-2">
-      <p className="text-[0.62rem] font-bold uppercase tracking-[0.1em] text-slate-400">{label}</p>
-      <p className="mt-1 truncate text-xs font-bold text-slate-800">{value}</p>
+    <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-2.5 py-2 shadow-[0_8px_18px_rgba(15,23,42,0.025)]">
+      <p className="text-[0.61rem] font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</p>
+      <p className="mt-1 truncate whitespace-nowrap text-xs font-semibold tabular-nums text-slate-800">{value}</p>
     </div>
   );
 }
 
 function DrawerShell({ children }: { children: ReactNode }) {
   return (
-    <section className="h-full max-h-[100dvh] overflow-hidden bg-[#fffdf8]/98 shadow-[0_18px_54px_rgba(15,23,42,0.08)] xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:rounded-[1.4rem] xl:border xl:border-emerald-950/10">
+    <section className="h-full max-h-[100dvh] overflow-hidden bg-[#fffdf8]/98 shadow-[0_24px_70px_rgba(15,23,42,0.09)] xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:ring-1 xl:ring-white/80">
       <div className="h-full max-h-[100dvh] overflow-y-auto xl:max-h-[calc(100vh-2rem)]">
         {children}
       </div>
@@ -1449,18 +1457,18 @@ function DrawerShell({ children }: { children: ReactNode }) {
 
 function DrawerHeader({ icon: Icon, iconClass, title, subtitle, onClose }: { icon: LucideIcon; iconClass: string; title: string; subtitle: string; onClose: () => void }) {
   return (
-    <div className="border-b border-emerald-950/10 p-4">
+    <div className="border-b border-emerald-950/10 bg-gradient-to-br from-[#fffaf1] via-white to-emerald-50/40 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${iconClass}`}>
-            <Icon className="h-6 w-6" />
+          <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl ring-1 ring-black/5 ${iconClass}`}>
+            <Icon className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <h2 className="truncate text-xl font-black text-slate-950">{title}</h2>
-            <p className="mt-1 text-sm font-medium text-slate-500">{subtitle}</p>
+            <h2 className="truncate font-serif text-xl font-bold tracking-tight text-brand-950">{title}</h2>
+            <p className="mt-1 line-clamp-2 text-sm font-medium text-slate-500">{subtitle}</p>
           </div>
         </div>
-        <button type="button" onClick={onClose} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900">
+        <button type="button" onClick={onClose} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-white hover:text-slate-900 hover:shadow-sm">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -1496,13 +1504,13 @@ function PropertyDrawer({
         icon={visual.icon}
         iconClass={`${visual.bg} ${visual.color}`}
         title={property.nom}
-        subtitle={`${inferPropertyType(property)} · ${property.quartier || property.ville || 'Localisation a completer'}`}
+        subtitle={`${inferPropertyType(property)} - ${property.quartier || property.ville || 'Localisation à compléter'}`}
         onClose={onClose}
       />
-      <div className="space-y-4 p-4">
+      <div className="space-y-3.5 p-3.5 sm:p-4">
         <div className="grid grid-cols-2 gap-2">
-          <MiniMetric label="Unites" value={summary.units.length} />
-          <MiniMetric label="Occupees" value={summary.occupiedUnits} />
+          <MiniMetric label="Unités" value={summary.units.length} />
+          <MiniMetric label="Occupées" value={summary.occupiedUnits} />
           <MiniMetric label="Libres" value={summary.freeUnits} />
           <MiniMetric label="Occupation" value={`${summary.occupancyRate}%`} />
           <MiniMetric label="Loyers attendus" value={formatCurrency(summary.expectedRent)} />
@@ -1510,48 +1518,48 @@ function PropertyDrawer({
         </div>
 
         <InfoBlock title="Informations">
-          <InfoLine icon={MapPin} label="Adresse" value={property.adresse || 'Adresse a completer'} />
-          <InfoLine icon={MapPin} label="Ville" value={property.ville || 'Ville a completer'} />
+          <InfoLine icon={MapPin} label="Adresse" value={property.adresse || 'Adresse à compléter'} />
+          <InfoLine icon={MapPin} label="Ville" value={property.ville || 'Ville à compléter'} />
           {!isIndividualOwner && <InfoLine icon={Users} label="Bailleur" value={ownerName(owner)} />}
         </InfoBlock>
 
         <div className="grid grid-cols-2 gap-2">
           <DrawerAction icon={Pencil} label="Modifier" onClick={onEdit} />
-          <DrawerAction icon={DoorOpen} label="Ajouter une unite" onClick={onAddUnit} />
-          <DrawerAction icon={Wallet} label="Paiements lies" onClick={() => onNavigate('/paiements')} />
+          <DrawerAction icon={DoorOpen} label="Ajouter une unité" onClick={onAddUnit} />
+          <DrawerAction icon={Wallet} label="Paiements liés" onClick={() => onNavigate('/paiements')} />
           <DrawerAction icon={FolderOpen} label="Documents" onClick={() => onNavigate('/documents')} />
         </div>
 
         <DrawerTabs
           tabs={[
             {
-              label: 'Unites',
+              label: 'Unités',
               content: summary.units.length === 0 ? (
-                <SoftEmpty text="Aucune unite enregistree pour ce bien." />
+                <SoftEmpty text="Aucune unité enregistrée pour ce bien." />
               ) : (
                 <CompactList rows={summary.units.slice(0, 6).map((unit) => ({
                   icon: DoorOpen,
                   title: unit.nom,
-                  subtitle: `${formatCurrency(unit.loyer_base ?? 0)} · ${getUnitStatusLabel(unit)}`,
+                  subtitle: `${formatCurrency(unit.loyer_base ?? 0)} - ${getUnitStatusLabel(unit)}`,
                 }))} />
               ),
             },
             {
               label: 'Contrats',
               content: summary.contracts.length === 0 ? (
-                <SoftEmpty text="Les contrats lies a ce bien apparaitront ici." />
+                <SoftEmpty text="Les contrats liés à ce bien apparaîtront ici." />
               ) : (
                 <CompactList rows={summary.contracts.slice(0, 6).map((contract) => ({
                   icon: ClipboardList,
                   title: formatPersonName(contract.locataires, 'Locataire'),
-                  subtitle: `${formatCurrency(contract.loyer_mensuel ?? 0)} · ${contract.statut ?? 'Bail'}`,
+                  subtitle: `${formatCurrency(contract.loyer_mensuel ?? 0)} - ${contract.statut ?? 'Bail'}`,
                 }))} />
               ),
             },
             {
               label: 'Documents',
               content: summary.documents.length === 0 ? (
-                <SoftEmpty text="Les documents lies a ce bien apparaitront ici." />
+                <SoftEmpty text="Les documents liés à ce bien apparaîtront ici." />
               ) : (
                 <CompactList rows={summary.documents.slice(0, 6).map((document) => ({
                   icon: FileText,
@@ -1563,7 +1571,7 @@ function PropertyDrawer({
           ]}
         />
 
-        <button type="button" onClick={onArchive} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100">
+        <button type="button" onClick={onArchive} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-[#fffdf8] px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50">
           <Trash2 className="h-4 w-4" />
           Archiver ce bien
         </button>
@@ -1593,8 +1601,8 @@ function UnitDrawer({
   const status = getUnitStatusLabel(unit, summary);
   return (
     <DrawerShell>
-      <DrawerHeader icon={visual.icon} iconClass={`${visual.bg} ${visual.color}`} title={unit.nom} subtitle={`${inferUnitType(unit)} · ${property?.nom ?? unit.immeubles?.nom ?? 'Bien parent a choisir'}`} onClose={onClose} />
-      <div className="space-y-4 p-4">
+      <DrawerHeader icon={visual.icon} iconClass={`${visual.bg} ${visual.color}`} title={unit.nom} subtitle={`${inferUnitType(unit)} - ${property?.nom ?? unit.immeubles?.nom ?? 'Bien parent à choisir'}`} onClose={onClose} />
+      <div className="space-y-3.5 p-3.5 sm:p-4">
         <div className="grid grid-cols-2 gap-2">
           <MiniMetric label="Loyer mensuel" value={formatCurrency(unit.loyer_base ?? 0)} />
           <MiniMetric label="Statut" value={status} />
@@ -1604,14 +1612,14 @@ function UnitDrawer({
 
         <InfoBlock title="Occupation">
           <InfoLine icon={Users} label="Locataire" value={summary.tenantLabel} />
-          <InfoLine icon={Building2} label="Bien parent" value={property?.nom ?? unit.immeubles?.nom ?? 'Non rattache'} />
+          <InfoLine icon={Building2} label="Bien parent" value={property?.nom ?? unit.immeubles?.nom ?? 'Non rattaché'} />
           <InfoLine icon={Banknote} label="Dernier paiement" value={summary.latestPayment ? formatDate(summary.latestPayment.date_paiement) : 'Aucun paiement'} />
         </InfoBlock>
 
         <div className="grid grid-cols-2 gap-2">
           <DrawerAction icon={Pencil} label="Modifier" onClick={onEdit} />
           <DrawerAction icon={Users} label={summary.contract ? 'Voir locataire' : 'Associer locataire'} onClick={() => onNavigate('/locataires')} />
-          <DrawerAction icon={KeyRound} label={summary.contract ? 'Voir bail' : 'Creer bail'} onClick={() => onNavigate('/contrats')} />
+          <DrawerAction icon={KeyRound} label={summary.contract ? 'Voir bail' : 'Créer bail'} onClick={() => onNavigate('/contrats')} />
           <DrawerAction icon={Wallet} label="Paiement" onClick={() => onNavigate('/paiements')} />
         </div>
 
@@ -1620,19 +1628,19 @@ function UnitDrawer({
             {
               label: 'Paiements',
               content: summary.payments.length === 0 ? (
-                <SoftEmpty text="Les paiements de cette unite apparaitront ici." />
+                <SoftEmpty text="Les paiements de cette unité apparaîtront ici." />
               ) : (
                 <CompactList rows={summary.payments.slice(0, 6).map((payment) => ({
                   icon: Wallet,
                   title: formatCurrency(payment.montant_total ?? 0),
-                  subtitle: `${payment.mois_concerne ?? 'Mois'} · ${formatDate(payment.date_paiement)}`,
+                  subtitle: `${payment.mois_concerne ?? 'Mois'} - ${formatDate(payment.date_paiement)}`,
                 }))} />
               ),
             },
             {
               label: 'Documents',
               content: summary.documents.length === 0 ? (
-                <SoftEmpty text="Les documents lies a cette unite apparaitront ici." />
+                <SoftEmpty text="Les documents liés à cette unité apparaîtront ici." />
               ) : (
                 <CompactList rows={summary.documents.slice(0, 6).map((document) => ({
                   icon: FileText,
@@ -1644,9 +1652,9 @@ function UnitDrawer({
           ]}
         />
 
-        <button type="button" onClick={onArchive} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100">
+        <button type="button" onClick={onArchive} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-[#fffdf8] px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50">
           <Trash2 className="h-4 w-4" />
-          Archiver cette unite
+          Archiver cette unité
         </button>
       </div>
     </DrawerShell>
@@ -1655,8 +1663,8 @@ function UnitDrawer({
 
 function DrawerAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="inline-flex min-h-16 flex-col items-center justify-center gap-1.5 rounded-2xl border border-emerald-950/10 bg-white px-3 py-2 text-center text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-emerald-50 hover:text-brand-900">
-      <Icon className="h-5 w-5 text-slate-500" />
+    <button type="button" onClick={onClick} className="inline-flex min-h-14 flex-col items-center justify-center gap-1.5 rounded-xl border border-emerald-950/10 bg-white px-3 py-2 text-center text-xs font-medium text-slate-700 shadow-[0_8px_18px_rgba(15,23,42,0.035)] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
+      <Icon className="h-4 w-4 text-slate-500" />
       {label}
     </button>
   );
@@ -1664,8 +1672,8 @@ function DrawerAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label:
 
 function InfoBlock({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-emerald-950/10 bg-white p-3">
-      <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">{title}</p>
+    <div className="rounded-2xl border border-emerald-950/10 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
+      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-slate-400">{title}</p>
       <div className="mt-3 space-y-2">{children}</div>
     </div>
   );
@@ -1674,9 +1682,9 @@ function InfoBlock({ title, children }: { title: string; children: ReactNode }) 
 function InfoLine({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: ReactNode }) {
   return (
     <div className="flex items-start gap-2 text-sm">
-      <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400" />
+      <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-700/55" />
       <div className="min-w-0">
-        <p className="text-xs font-semibold text-slate-400">{label}</p>
+        <p className="text-[0.7rem] font-medium uppercase tracking-[0.06em] text-slate-400">{label}</p>
         <p className="break-words font-medium text-slate-700">{value}</p>
       </div>
     </div>
@@ -1686,14 +1694,14 @@ function InfoLine({ icon: Icon, label, value }: { icon: LucideIcon; label: strin
 function DrawerTabs({ tabs }: { tabs: Array<{ label: string; content: ReactNode }> }) {
   const [active, setActive] = useState(0);
   return (
-    <div className="rounded-2xl border border-emerald-950/10 bg-white p-3">
-      <div className="flex gap-2 overflow-x-auto">
+    <div className="rounded-2xl border border-emerald-950/10 bg-white p-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
+      <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-50 p-1">
         {tabs.map((tab, index) => (
           <button
             key={tab.label}
             type="button"
             onClick={() => setActive(index)}
-            className={`whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition ${active === index ? 'bg-brand-900 text-white' : 'bg-slate-50 text-slate-600 hover:bg-emerald-50'}`}
+            className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${active === index ? 'bg-white text-brand-900 shadow-sm ring-1 ring-emerald-950/10' : 'text-slate-500 hover:bg-white/80 hover:text-slate-800'}`}
           >
             {tab.label}
           </button>
@@ -1710,8 +1718,8 @@ function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: string; 
       {rows.map((row, index) => {
         const Icon = row.icon;
         return (
-          <div key={`${row.title}-${index}`} className="flex items-center gap-2 rounded-xl bg-slate-50 p-2">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white text-brand-800">
+          <div key={`${row.title}-${index}`} className="flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-[0_6px_16px_rgba(15,23,42,0.025)]">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white text-brand-800 shadow-sm ring-1 ring-black/5">
               <Icon className="h-4 w-4" />
             </div>
             <div className="min-w-0">
@@ -1726,7 +1734,7 @@ function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: string; 
 }
 
 function SoftEmpty({ text }: { text: string }) {
-  return <p className="rounded-xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-3 text-xs font-medium leading-5 text-slate-500">{text}</p>;
+  return <p className="rounded-xl border border-dashed border-emerald-950/15 bg-[#fffaf1] px-3 py-3 text-xs font-medium leading-5 text-slate-500">{text}</p>;
 }
 
 function PropertyModal({
@@ -1752,7 +1760,7 @@ function PropertyModal({
 }) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editingProperty ? 'Modifier le bien' : isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'}>
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={onSubmit} className="space-y-3.5">
         <Field label="Nom du bien *">
           <input required value={form.nom} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value }))} className="sk-input" placeholder="Residence Keur Amitie" />
         </Field>
@@ -1765,9 +1773,9 @@ function PropertyModal({
             </select>
           </Field>
           {!isIndividualOwner && (
-            <Field label="Bailleur rattache *">
+            <Field label="Bailleur rattaché *">
               <select required value={form.bailleur_id} onChange={(event) => onChange((current) => ({ ...current, bailleur_id: event.target.value }))} className="sk-input">
-                <option value="">Selectionner un bailleur</option>
+                <option value="">Sélectionner un bailleur</option>
                 {owners.map((owner) => <option key={owner.id} value={owner.id}>{ownerName(owner)}</option>)}
               </select>
             </Field>
@@ -1775,7 +1783,7 @@ function PropertyModal({
         </div>
         {isIndividualOwner && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
-            Votre profil proprietaire sera rattache automatiquement a ce bien.
+            Votre profil propriétaire sera rattaché automatiquement à ce bien.
           </div>
         )}
         <Field label="Adresse *">
@@ -1792,7 +1800,7 @@ function PropertyModal({
         <Field label="Description optionnelle">
           <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="sk-input min-h-24" />
         </Field>
-        <ModalActions onClose={onClose} saving={saving} submitLabel={editingProperty ? 'Mettre a jour' : 'Creer le bien'} />
+        <ModalActions onClose={onClose} saving={saving} submitLabel={editingProperty ? 'Mettre à jour' : 'Créer le bien'} />
       </form>
     </Modal>
   );
@@ -1818,27 +1826,27 @@ function UnitModal({
   onChange: React.Dispatch<React.SetStateAction<UnitFormState>>;
 }) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingUnit ? 'Modifier l’unite' : 'Nouvelle unite locative'}>
-      <form onSubmit={onSubmit} className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title={editingUnit ? "Modifier l'unité" : 'Nouvelle unité locative'}>
+      <form onSubmit={onSubmit} className="space-y-3.5">
         <Field label="Bien parent *">
           <select required value={form.immeuble_id} onChange={(event) => onChange((current) => ({ ...current, immeuble_id: event.target.value }))} className="sk-input">
-            <option value="">Selectionner un bien</option>
+            <option value="">Sélectionner un bien</option>
             {properties.map((property) => <option key={property.id} value={property.id}>{property.nom}</option>)}
           </select>
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Type / nom de l’unite *">
+          <Field label="Type / nom de l'unité *">
             <select required value={form.nom} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value }))} className="sk-input">
-              <option value="">Selectionner</option>
+              <option value="">Sélectionner</option>
               {UNIT_TYPES.map((type) => <option key={type}>{type}</option>)}
             </select>
           </Field>
-          <Field label="Numero / code">
+          <Field label="Numéro / code">
             <input value={form.numero} onChange={(event) => onChange((current) => ({ ...current, numero: event.target.value }))} className="sk-input" placeholder="A1, Boutique 3..." />
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Etage">
+          <Field label="Étage">
             <input value={form.etage} onChange={(event) => onChange((current) => ({ ...current, etage: event.target.value }))} className="sk-input" />
           </Field>
           <Field label="Loyer mensuel *">
@@ -1853,7 +1861,7 @@ function UnitModal({
         <Field label="Description optionnelle">
           <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="sk-input min-h-24" />
         </Field>
-        <ModalActions onClose={onClose} saving={saving} submitLabel={editingUnit ? 'Mettre a jour' : 'Creer l’unite'} />
+        <ModalActions onClose={onClose} saving={saving} submitLabel={editingUnit ? 'Mettre à jour' : "Créer l'unité"} />
       </form>
     </Modal>
   );
@@ -1867,7 +1875,7 @@ function inferTypeFromName(name: string, options: string[]) {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{label}</span>
+      <span className="mb-2 block text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</span>
       {children}
     </label>
   );
@@ -1876,10 +1884,10 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 function ModalActions({ onClose, saving, submitLabel }: { onClose: () => void; saving: boolean; submitLabel: string }) {
   return (
     <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-      <button type="button" onClick={onClose} className="inline-flex h-11 items-center justify-center rounded-xl border border-emerald-950/10 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+      <button type="button" onClick={onClose} className="inline-flex h-11 items-center justify-center rounded-xl border border-emerald-950/10 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
         Annuler
       </button>
-      <button type="submit" disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-900 px-5 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 hover:bg-brand-950 disabled:cursor-not-allowed disabled:opacity-70">
+      <button type="submit" disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-900 to-brand-950 px-5 text-sm font-semibold text-white shadow-lg shadow-emerald-950/15 transition hover:translate-y-[-1px] hover:shadow-xl disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-70">
         {saving ? 'Enregistrement...' : submitLabel}
       </button>
     </div>

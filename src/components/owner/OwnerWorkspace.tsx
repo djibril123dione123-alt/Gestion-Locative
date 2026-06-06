@@ -937,21 +937,21 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
   }
 
   return (
-    <div className="min-h-full bg-[radial-gradient(circle_at_top_left,rgba(255,244,214,0.95),transparent_30rem),linear-gradient(180deg,#fffaf0,#f8f4ea_46%,#f7fbf8)] px-4 py-5 sm:px-6 lg:px-7">
+    <div className="min-h-full bg-[radial-gradient(circle_at_top_left,rgba(255,244,214,0.95),transparent_30rem),linear-gradient(180deg,#fffaf0,#f8f4ea_46%,#f7fbf8)] px-4 py-4 sm:px-6 lg:px-7">
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
-      <div className="mx-auto max-w-[118rem] space-y-5">
+      <div className="mx-auto max-w-[118rem] space-y-4">
         {cacheTimestamp && <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadOwnerWorkspace} />}
 
-        <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <section className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50 px-3 py-1 text-[0.68rem] font-black uppercase tracking-[0.18em] text-amber-700">
+            <div className="inline-flex items-center gap-2 rounded-full border border-amber-200/80 bg-amber-50 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.18em] text-amber-700">
               <Sparkles className="h-3.5 w-3.5" />
               Espace propriétaire
             </div>
-            <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
               Espace propriétaire
             </h1>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">
+            <p className="mt-1.5 max-w-2xl text-sm font-medium leading-6 text-slate-600 sm:text-[0.95rem]">
               Bienvenue {profile?.prenom || ownerName.split(' ')[0] || 'propriétaire'}, suivez vos biens, vos loyers, vos documents et vos rapports depuis un espace unique.
             </p>
           </div>
@@ -960,7 +960,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               type="button"
               onClick={() => void handleGenerateOwnerReport()}
               disabled={generatingReport}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-4 py-3 text-sm font-black text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3.5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
             >
               {generatingReport ? <Loader2 className="h-4 w-4 animate-spin text-brand-800" /> : <FileText className="h-4 w-4 text-brand-800" />}
               Générer rapport PDF
@@ -968,7 +968,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             <button
               type="button"
               onClick={navigateToCreateProperty}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-900 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-brand-950"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-900 px-3.5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-brand-950"
             >
               <Plus className="h-4 w-4" />
               Ajouter un bien
@@ -983,15 +983,15 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
           <OwnerKpi title="Taux d'occupation" value={`${summary.occupationRate}%`} subtitle={`${summary.occupiedUnits} unité${summary.occupiedUnits > 1 ? 's' : ''} sur ${summary.totalUnits} occupée${summary.totalUnits > 1 ? 's' : ''}`} icon={Building2} tone="amber" />
         </section>
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_28rem]">
-          <div className="space-y-5">
-            <section className="rounded-3xl border border-emerald-950/10 bg-[#fffdf8]/95 p-4 shadow-[0_20px_70px_rgba(15,23,42,0.08)] sm:p-5">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-xl font-black text-slate-950">Mes biens</h2>
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_27rem]">
+          <div className="space-y-4">
+            <section className="rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 p-4 shadow-[0_18px_54px_rgba(15,23,42,0.07)]">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-lg font-bold text-slate-950">Mes biens</h2>
                 <button
                   type="button"
                   onClick={() => onNavigate?.('patrimoine')}
-                  className="rounded-xl border border-emerald-950/10 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-emerald-50"
+                  className="rounded-xl border border-emerald-950/10 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-emerald-50"
                 >
                   Voir tous mes biens
                 </button>
@@ -1005,7 +1005,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                   action={{ label: 'Ajouter un bien', onClick: navigateToCreateProperty }}
                 />
               ) : (
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+                <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-5">
                   {propertyCards.map(({ property, units, occupation, expectedRent, accent }) => {
                     const Icon = accent.icon;
                     return (
@@ -1013,19 +1013,19 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                         key={property.id}
                         type="button"
                         onClick={() => onNavigate?.('patrimoine')}
-                        className="group overflow-hidden rounded-2xl border border-emerald-950/10 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-950/10"
+                        className="group overflow-hidden rounded-2xl border border-emerald-950/10 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-950/10"
                       >
-                        <div className={`flex h-24 items-center justify-center bg-gradient-to-br ${accent.bg}`}>
-                          <div className={`flex h-16 w-16 items-center justify-center rounded-3xl bg-white/70 ring-1 ${accent.ring}`}>
-                            <Icon className={`h-8 w-8 ${accent.color}`} />
+                        <div className={`flex h-20 items-center justify-center bg-gradient-to-br ${accent.bg}`}>
+                          <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-white/70 ring-1 ${accent.ring}`}>
+                            <Icon className={`h-7 w-7 ${accent.color}`} />
                           </div>
                         </div>
                         <div className="p-3">
                           <p className="line-clamp-2 min-h-[2.4rem] text-sm font-bold leading-tight text-slate-950">{property.nom}</p>
                           <p className="mt-1 truncate text-xs font-semibold text-slate-500">{property.quartier || property.ville || property.adresse || 'Adresse à compléter'}</p>
                           <div className="mt-3 flex flex-wrap gap-1.5">
-                            <span className="rounded-full bg-emerald-50 px-2 py-1 text-[0.68rem] font-black text-emerald-800">{units.length} unité{units.length > 1 ? 's' : ''}</span>
-                            <span className="rounded-full bg-amber-50 px-2 py-1 text-[0.68rem] font-black text-amber-800">{occupation}%</span>
+                            <span className="rounded-full bg-emerald-50 px-2 py-1 text-[0.68rem] font-bold text-emerald-800">{units.length} unité{units.length > 1 ? 's' : ''}</span>
+                            <span className="rounded-full bg-amber-50 px-2 py-1 text-[0.68rem] font-bold text-amber-800">{occupation}%</span>
                           </div>
                           <p className="mt-3 text-xs font-bold text-slate-800">{formatCurrency(expectedRent)} / mois</p>
                         </div>
@@ -1035,38 +1035,38 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                   <button
                     type="button"
                     onClick={navigateToCreateProperty}
-                    className="flex min-h-[12.5rem] flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-900/20 bg-white/70 p-4 text-center font-black text-brand-900 transition hover:border-brand-700 hover:bg-emerald-50"
+                    className="flex min-h-[10.75rem] flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-900/20 bg-white/70 p-4 text-center text-sm font-bold text-brand-900 transition hover:border-brand-700 hover:bg-emerald-50"
                   >
-                    <Plus className="mb-3 h-8 w-8 rounded-full bg-emerald-50 p-1.5 text-brand-800" />
+                    <Plus className="mb-2 h-7 w-7 rounded-full bg-emerald-50 p-1.5 text-brand-800" />
                     Ajouter un bien
                   </button>
                 </div>
               )}
             </section>
 
-            <section className="rounded-3xl border border-emerald-950/10 bg-[#fffdf8]/95 p-4 shadow-[0_20px_70px_rgba(15,23,42,0.08)] sm:p-5">
+            <section className="rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 p-4 shadow-[0_18px_54px_rgba(15,23,42,0.07)]">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[0.68rem] font-black uppercase tracking-[0.14em] text-emerald-800">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.14em] text-emerald-800">
                     <BarChart3 className="h-3.5 w-3.5" />
                     Bilan propriétaire
                   </div>
                   <h2 className="mt-3 text-xl font-bold text-slate-950">Rapports & revenus</h2>
-                  <p className="mt-1 text-sm font-semibold text-slate-500">Une synthèse claire de vos encaissements, reliquats et charges.</p>
+                  <p className="mt-1 text-sm font-medium text-slate-500">Une synthèse claire de vos encaissements, reliquats et charges.</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <input
                     type="month"
                     value={reportPeriod}
                     onChange={(event) => setReportPeriod(event.target.value || getCurrentMonthKey())}
-                    className="h-11 rounded-xl border border-emerald-950/10 bg-white px-3 text-sm font-black text-slate-800 shadow-sm outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                    className="h-10 rounded-xl border border-emerald-950/10 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                     aria-label="Période du rapport propriétaire"
                   />
                   <button
                     type="button"
                     onClick={() => void handleGenerateOwnerReport()}
                     disabled={generatingReport}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-900 px-4 text-sm font-black text-white shadow-lg shadow-emerald-950/15 transition hover:bg-brand-950 disabled:cursor-not-allowed disabled:opacity-70"
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand-900 px-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 transition hover:bg-brand-950 disabled:cursor-not-allowed disabled:opacity-70"
                   >
                     {generatingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                     Générer mon rapport PDF
@@ -1074,15 +1074,15 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                 </div>
               </div>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
                 <MiniStat label="Encaissé" value={formatCurrency(reportSummary.collected)} tone="blue" />
                 <MiniStat label="Reliquats" value={formatCurrency(reportSummary.reliquats)} tone="amber" />
                 <MiniStat label="Charges" value={formatCurrency(reportSummary.expenses)} tone="orange" />
                 <MiniStat label="Net propriétaire" value={formatCurrency(reportSummary.netOwner)} tone="blue" />
               </div>
 
-              <div className="mt-4 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
-                <div className="rounded-2xl border border-emerald-950/10 bg-white p-4">
+              <div className="mt-3 grid gap-2.5 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-2xl border border-emerald-950/10 bg-white p-3.5">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-sm font-bold text-slate-950">Situation de {formatMonthLabel(reportPeriod)}</p>
@@ -1090,16 +1090,16 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                         {reportSummary.activeContracts} contrat{reportSummary.activeContracts > 1 ? 's' : ''} actif{reportSummary.activeContracts > 1 ? 's' : ''} analysé{reportSummary.activeContracts > 1 ? 's' : ''}
                       </p>
                     </div>
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-800">{reportSummary.recoveryRate}% recouvré</span>
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">{reportSummary.recoveryRate}% recouvré</span>
                   </div>
                   <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
                     <div className="h-full rounded-full bg-gradient-to-r from-brand-800 to-amber-400" style={{ width: `${Math.min(100, reportSummary.recoveryRate)}%` }} />
                   </div>
                   <p className="mt-3 text-xs font-semibold text-slate-500">
-                    Loyer attendu : <span className="font-black text-slate-800">{formatCurrency(reportSummary.expectedRent)}</span>
+                    Loyer attendu : <span className="font-bold text-slate-800">{formatCurrency(reportSummary.expectedRent)}</span>
                   </p>
                 </div>
-                <div className="rounded-2xl border border-emerald-950/10 bg-white p-4">
+                <div className="rounded-2xl border border-emerald-950/10 bg-white p-3.5">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-bold text-slate-950">Derniers rapports</p>
                     <button type="button" onClick={() => onNavigate?.('documents')} className="text-xs font-semibold text-brand-800">Voir GED</button>
@@ -1125,7 +1125,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               </div>
             </section>
 
-            <section className="grid gap-4 lg:grid-cols-3">
+            <section className="grid gap-3 lg:grid-cols-3">
               <OwnerListCard
                 title="Paiements récents"
                 actionLabel="Voir tous"
@@ -1186,34 +1186,34 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             </section>
           </div>
 
-          <aside className="space-y-5">
-            <section className="rounded-3xl border border-emerald-950/10 bg-[#fffdf8]/95 p-5 shadow-[0_20px_70px_rgba(15,23,42,0.08)]">
-              <div className="mb-5 flex items-center justify-between">
+          <aside className="space-y-4">
+            <section className="rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 p-4 shadow-[0_18px_54px_rgba(15,23,42,0.07)]">
+              <div className="mb-4 flex items-center justify-between">
                 <h2 className="text-xl font-bold text-slate-950">Mon profil</h2>
                 <button
                   type="button"
                   onClick={() => setIsProfileModalOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-emerald-50"
+                  className="inline-flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:bg-emerald-50"
                 >
                   <Settings className="h-4 w-4" />
                   Modifier
                 </button>
               </div>
               <div className="flex items-center gap-4">
-                <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-emerald-100 to-amber-100 ring-8 ring-white shadow-lg">
+                <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-emerald-100 to-amber-100 ring-4 ring-white shadow-lg">
                   {avatarUrl ? (
                     <img src={avatarUrl} alt={ownerName} className="h-full w-full object-cover" />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-2xl font-black text-brand-900">{initials}</div>
+                    <div className="flex h-full w-full items-center justify-center text-xl font-bold text-brand-900">{initials}</div>
                   )}
-                  <span className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-brand-700 text-white ring-4 ring-white">
-                    <Camera className="h-4 w-4" />
+                  <span className="absolute bottom-0.5 right-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-brand-700 text-white ring-4 ring-white">
+                    <Camera className="h-3.5 w-3.5" />
                   </span>
                 </div>
                 <div className="min-w-0">
-                  <h3 className="truncate text-2xl font-black text-slate-950">{ownerName}</h3>
-                  <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-800">Propriétaire</span>
-                  <div className="mt-3 space-y-1.5 text-sm font-semibold text-slate-600">
+                  <h3 className="truncate text-xl font-bold text-slate-950">{ownerName}</h3>
+                  <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800">Propriétaire</span>
+                  <div className="mt-3 space-y-1.5 text-sm font-medium text-slate-600">
                     <p className="flex items-center gap-2"><CreditCard className="h-4 w-4 text-slate-400" />{formatSenegalPhone(data.settings?.telephone || profile?.telephone || agency?.phone, 'Téléphone à compléter')}</p>
                     <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-slate-400" />{data.settings?.email || profile?.email || agency?.email}</p>
                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-400" />{data.settings?.adresse || agency?.address || 'Adresse à compléter'}</p>
@@ -1223,7 +1223,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               <button
                 type="button"
                 onClick={() => onNavigate?.('documents')}
-                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm hover:bg-emerald-50"
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-emerald-50"
               >
                 <Download className="h-4 w-4" />
                 Voir mes documents propriétaire
@@ -1236,9 +1236,9 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               </div>
             </section>
 
-            <section className="rounded-3xl border border-emerald-950/10 bg-[#fffdf8]/95 p-5 shadow-[0_18px_54px_rgba(15,23,42,0.06)]">
-              <h2 className="text-lg font-black text-slate-950">Accès rapides</h2>
-              <div className="mt-4 grid grid-cols-2 gap-2">
+            <section className="rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 p-4 shadow-[0_16px_44px_rgba(15,23,42,0.05)]">
+              <h2 className="text-base font-bold text-slate-950">Accès rapides</h2>
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 <QuickAction icon={Building2} label="Ajouter un bien" onClick={navigateToCreateProperty} />
                 <QuickAction icon={FileText} label="Générer rapport" onClick={() => void handleGenerateOwnerReport()} />
                 <QuickAction icon={FolderOpen} label="Mes documents" onClick={() => onNavigate?.('documents')} />
@@ -1246,15 +1246,15 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               </div>
             </section>
 
-            <section className="relative overflow-hidden rounded-3xl border border-emerald-200/20 bg-[radial-gradient(circle_at_15%_35%,rgba(245,158,11,0.18),transparent_10rem),linear-gradient(135deg,#063226,#03251f)] p-5 text-white shadow-2xl shadow-emerald-950/20">
+            <section className="relative overflow-hidden rounded-[1.4rem] border border-emerald-200/20 bg-[radial-gradient(circle_at_15%_35%,rgba(245,158,11,0.15),transparent_10rem),linear-gradient(135deg,#063226,#03251f)] p-4 text-white shadow-xl shadow-emerald-950/15">
               <div className="absolute -right-8 -bottom-8 h-32 w-32 rounded-full border border-emerald-200/10" />
               <div className="relative flex items-start gap-4">
-                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-200 ring-1 ring-amber-200/20">
-                  <Sparkles className="h-7 w-7" />
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-200 ring-1 ring-amber-200/20">
+                  <Sparkles className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-black">Conseil du jour</h2>
-                  <p className="mt-2 text-sm font-semibold leading-6 text-emerald-50/85">
+                  <h2 className="text-sm font-bold">Conseil du jour</h2>
+                  <p className="mt-1.5 text-sm font-medium leading-5 text-emerald-50/85">
                     Maintenez vos documents à jour pour faciliter la gestion de vos biens et accélérer vos rapports mensuels.
                   </p>
                 </div>
@@ -1264,10 +1264,10 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         </div>
       </div>
       <Modal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} title="Modifier mon profil propriétaire">
-        <div className="space-y-5">
+        <div className="space-y-4">
           <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/60 p-4">
-            <p className="text-sm font-black text-brand-900">Profil utilisé dans l'espace propriétaire</p>
-            <p className="mt-1 text-xs font-semibold leading-5 text-emerald-900/70">
+            <p className="text-sm font-bold text-brand-900">Profil utilisé dans l'espace propriétaire</p>
+            <p className="mt-1 text-xs font-medium leading-5 text-emerald-900/70">
               Ces informations alimentent votre carte profil, votre bailleur interne et les documents propriétaire.
             </p>
           </div>
@@ -1283,12 +1283,12 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               </span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-black text-slate-900">Photo de profil propriétaire</p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+              <p className="text-sm font-bold text-slate-900">Photo de profil propriétaire</p>
+              <p className="mt-1 text-xs font-medium leading-5 text-slate-500">
                 Cette photo personnalise votre espace et peut être reprise dans vos documents propriétaire.
               </p>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-brand-900 px-4 text-xs font-black text-white shadow-sm transition hover:bg-brand-950">
+                <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-brand-900 px-4 text-xs font-bold text-white shadow-sm transition hover:bg-brand-950">
                   <Camera className="h-4 w-4" />
                   Importer une photo
                   <input
@@ -1310,7 +1310,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                       setProfileAvatarPreview(null);
                       setRemoveProfileAvatar(true);
                     }}
-                    className="inline-flex h-10 items-center justify-center rounded-xl border border-emerald-950/10 bg-white px-4 text-xs font-black text-slate-600 transition hover:bg-slate-50"
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-emerald-950/10 bg-white px-4 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
                   >
                     Retirer la photo importée
                   </button>
@@ -1320,7 +1320,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">Prénom</span>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Prénom</span>
               <input
                 value={profileForm.prenom}
                 onChange={(event) => setProfileForm((current) => ({ ...current, prenom: event.target.value }))}
@@ -1329,7 +1329,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               />
             </label>
             <label className="block">
-              <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">Nom</span>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Nom</span>
               <input
                 value={profileForm.nom}
                 onChange={(event) => setProfileForm((current) => ({ ...current, nom: event.target.value }))}
@@ -1338,7 +1338,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               />
             </label>
             <label className="block">
-              <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">Téléphone</span>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Téléphone</span>
               <input
                 value={formatSenegalPhoneInput(profileForm.telephone)}
                 onChange={(event) => setProfileForm((current) => ({ ...current, telephone: formatSenegalPhoneInput(event.target.value) }))}
@@ -1347,7 +1347,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               />
             </label>
             <label className="block">
-              <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">Email documentaire</span>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Email documentaire</span>
               <input
                 type="email"
                 value={profileForm.email}
@@ -1357,7 +1357,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               />
             </label>
             <label className="block sm:col-span-2">
-              <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">Adresse</span>
+              <span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Adresse</span>
               <input
                 value={profileForm.adresse}
                 onChange={(event) => setProfileForm((current) => ({ ...current, adresse: event.target.value }))}
@@ -1370,7 +1370,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             <button
               type="button"
               onClick={() => setIsProfileModalOpen(false)}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-emerald-950/10 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-emerald-950/10 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Annuler
             </button>
@@ -1378,7 +1378,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               type="button"
               onClick={() => void handleSaveOwnerProfile()}
               disabled={savingProfile}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-900 px-5 text-sm font-black text-white shadow-lg shadow-emerald-950/15 hover:bg-brand-950 disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-900 px-5 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 hover:bg-brand-950 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {savingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Enregistrer
@@ -1408,15 +1408,15 @@ const KPI_TONES: Record<OwnerKpiProps['tone'], { title: string; icon: string; bg
 function OwnerKpi({ title, value, subtitle, icon: Icon, tone }: OwnerKpiProps) {
   const colors = KPI_TONES[tone];
   return (
-    <article className={`min-w-0 rounded-2xl border border-emerald-950/10 bg-gradient-to-br ${colors.bg} p-3 shadow-[0_14px_44px_rgba(15,23,42,0.07)] sm:p-4`}>
-      <div className="flex items-start justify-between gap-3">
+    <article className={`min-w-0 rounded-2xl border border-emerald-950/10 bg-gradient-to-br ${colors.bg} p-3 shadow-[0_12px_36px_rgba(15,23,42,0.06)]`}>
+      <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
-          <p className={`truncate text-[0.68rem] font-black uppercase tracking-[0.14em] ${colors.title}`}>{title}</p>
-          <p className="mt-2 truncate text-xl font-black tracking-tight text-slate-950 sm:text-2xl">{value}</p>
-          <p className="mt-1 truncate text-xs font-bold text-slate-500">{subtitle}</p>
+          <p className={`truncate text-[0.66rem] font-bold uppercase tracking-[0.14em] ${colors.title}`}>{title}</p>
+          <p className="mt-1.5 truncate text-lg font-black tracking-tight text-slate-950 sm:text-xl">{value}</p>
+          <p className="mt-1 truncate text-xs font-medium text-slate-500">{subtitle}</p>
         </div>
-        <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ${colors.icon}`}>
-          <Icon className="h-6 w-6" />
+        <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${colors.icon}`}>
+          <Icon className="h-5 w-5" />
         </div>
       </div>
     </article>
@@ -1440,19 +1440,19 @@ function OwnerListCard({
 }) {
   const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children);
   return (
-    <section className="rounded-3xl border border-emerald-950/10 bg-[#fffdf8]/95 p-4 shadow-[0_18px_54px_rgba(15,23,42,0.06)]">
-      <div className="mb-3 flex items-center justify-between gap-3">
+    <section className="rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 p-3.5 shadow-[0_16px_44px_rgba(15,23,42,0.05)]">
+      <div className="mb-2.5 flex items-center justify-between gap-3">
         <h2 className="text-base font-bold text-slate-950">{title}</h2>
         <button type="button" onClick={onAction} className="text-xs font-semibold text-brand-800 hover:text-brand-950">
           {actionLabel}
         </button>
       </div>
       {hasChildren ? (
-        <div className="space-y-2">{children}</div>
+        <div className="space-y-1.5">{children}</div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-emerald-950/10 bg-white/70 p-4">
+        <div className="rounded-2xl border border-dashed border-emerald-950/10 bg-white/70 p-3.5">
           <p className="text-sm font-bold text-slate-800">{emptyTitle}</p>
-          <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{emptyText}</p>
+          <p className="mt-1 text-xs font-medium leading-5 text-slate-500">{emptyText}</p>
         </div>
       )}
     </section>
@@ -1484,15 +1484,15 @@ function CompactRow({
     blue: 'bg-blue-50 text-blue-700 border-blue-100',
   };
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-transparent p-2 transition hover:border-emerald-950/10 hover:bg-white">
-      <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border text-xs font-bold ${badgeClassName ?? customTone ?? tones[tone]}`}>
+    <div className="flex items-center gap-2.5 rounded-2xl border border-transparent p-2 transition hover:border-emerald-950/10 hover:bg-white">
+      <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border text-[0.66rem] font-bold ${badgeClassName ?? customTone ?? tones[tone]}`}>
         {badge ?? (Icon ? <Icon className="h-4 w-4" /> : null)}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-slate-900">{title}</p>
-        <p className="truncate text-xs font-semibold text-slate-500">{subtitle}</p>
+        <p className="line-clamp-2 text-xs font-medium leading-4 text-slate-500">{subtitle}</p>
       </div>
-      {value && <p className="flex-shrink-0 text-xs font-bold text-brand-800">{value}</p>}
+      {value && <p className="flex-shrink-0 text-right text-xs font-bold text-brand-800">{value}</p>}
     </div>
   );
 }
@@ -1504,7 +1504,7 @@ function MiniStat({ label, value, tone }: { label: string; value: string | numbe
     amber: 'from-amber-50 to-orange-50 border-amber-100 text-amber-900',
   };
   return (
-    <div className={`rounded-2xl border bg-gradient-to-br p-3 ${tones[tone]}`}>
+    <div className={`rounded-2xl border bg-gradient-to-br p-2.5 ${tones[tone]}`}>
       <p className="truncate text-[0.66rem] font-semibold uppercase tracking-[0.12em] opacity-80">{label}</p>
       <p className="mt-2 truncate text-base font-bold">{value}</p>
     </div>
@@ -1516,9 +1516,9 @@ function QuickAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: 
     <button
       type="button"
       onClick={onClick}
-      className="group flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-950/10 bg-white p-3 text-center text-xs font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50 hover:text-brand-900"
+      className="group flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-2xl border border-emerald-950/10 bg-white p-3 text-center text-xs font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50 hover:text-brand-900"
     >
-      <Icon className="h-6 w-6 text-slate-600 transition group-hover:text-brand-800" />
+      <Icon className="h-5 w-5 text-slate-600 transition group-hover:text-brand-800" />
       {label}
       <ArrowRight className="h-3.5 w-3.5 text-transparent transition group-hover:text-brand-700" />
     </button>

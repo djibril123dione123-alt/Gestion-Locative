@@ -30,6 +30,7 @@ import { FirstStepsChecklist } from '../components/onboarding/FirstStepsChecklis
 import { readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { DemoDataLoader } from '../components/billing/DemoDataLoader';
+import { OwnerWorkspace } from '../components/owner/OwnerWorkspace';
 
 const FR_MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
 
@@ -54,6 +55,16 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}) {
+  const { accountProfile } = useAuth();
+
+  if (accountProfile.isIndividualOwner) {
+    return <OwnerWorkspace onNavigate={onNavigate} onStartSetupWizard={onStartSetupWizard} />;
+  }
+
+  return <AgencyDashboard onNavigate={onNavigate} onStartSetupWizard={onStartSetupWizard} />;
+}
+
+function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}) {
   const { profile, user, accountProfile, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalBailleurs: 0,

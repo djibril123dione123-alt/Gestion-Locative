@@ -45,7 +45,7 @@ export interface SemanticDictionaryEntry {
 export const ADAPTIVE_DICTIONARY: Record<OrganizationType, SemanticDictionaryEntry> = {
   individual: {
     labels: {
-      workspace: 'Mon espace proprietaire',
+      workspace: 'Espace propriétaire',
       workspaceSettings: 'Parametres du compte',
       owners: 'Mon profil proprietaire',
       properties: 'Mes biens',
@@ -65,20 +65,20 @@ export const ADAPTIVE_DICTIONARY: Record<OrganizationType, SemanticDictionaryEnt
     },
     navigationGroups: {
       portefeuille: {
-        label: 'Patrimoine',
-        description: 'Bien -> unite -> locataire -> bail',
+        label: 'Mes biens',
+        description: 'Immeubles & propriétés',
       },
       finance: {
-        label: 'Revenus locatifs',
-        description: 'Paiements, impayes, charges et revenus',
+        label: 'Loyers & paiements',
+        description: 'Encaissements & reliquats',
       },
       operations: {
         label: 'Suivi terrain',
         description: 'Planning, maintenance et documents',
       },
       administration: {
-        label: 'Compte',
-        description: 'Profil, abonnement et preferences',
+        label: 'Paramètres',
+        description: 'Compte & préférences',
       },
     },
     hiddenPages: ['bailleurs', 'commissions', 'equipe', 'audit', 'mandats'],
@@ -260,7 +260,7 @@ export function getSemanticPageLabel(page: string, type: OrganizationType): stri
   const entry = getSemanticDictionary(type);
   const labelKey = PAGE_LABEL_KEYS[page];
   if (!labelKey) return null;
-  if (labelKey === 'dashboard') return type === 'individual' ? "Vue d'ensemble" : 'Tableau de bord';
+  if (labelKey === 'dashboard') return type === 'individual' ? 'Espace propriétaire' : 'Tableau de bord';
   if (labelKey === 'contracts') return 'Contrats';
   if (labelKey === 'subscription') return 'Abonnement';
   if (labelKey === 'pricing') return 'Tarifs';

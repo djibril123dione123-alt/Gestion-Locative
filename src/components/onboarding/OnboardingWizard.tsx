@@ -140,7 +140,13 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
     'h-12 w-full rounded-2xl border border-emerald-950/10 bg-white/95 px-4 py-3 text-base font-bold text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-300/25';
   const labelClass = 'mb-2 block text-sm font-black text-slate-700';
   const mutedCopyClass = 'text-sm leading-6 text-slate-600';
-  const currentTitle = isIndividualOwner && STEPS[step].title === 'Équipe' ? 'Préférences' : STEPS[step].title;
+  const getVisibleStepTitle = (index: number) => {
+    if (!isIndividualOwner) return STEPS[index].title;
+    if (index === 0) return 'Profil propriétaire';
+    if (index === 2) return 'Préférences';
+    return STEPS[index].title;
+  };
+  const currentTitle = getVisibleStepTitle(step);
   const skipLabel = step === 2 && !isIndividualOwner ? 'Inviter plus tard' : "Passer pour l'instant";
 
   const uploadLogo = async () => {
@@ -153,7 +159,9 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
     }
 
     const fileExt = getLogoExtension(logoFile);
-    const filePath = `${profile.agency_id}/logos/onboarding-${Date.now()}.${fileExt}`;
+    const filePath = isIndividualOwner
+      ? `${profile.agency_id}/owners/profile-onboarding-${Date.now()}.${fileExt}`
+      : `${profile.agency_id}/logos/onboarding-${Date.now()}.${fileExt}`;
     const { error: uploadError } = await supabase.storage
       .from(AGENCY_ASSETS_BUCKET)
       .upload(filePath, logoFile, {
@@ -334,7 +342,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                     const Icon = item.icon;
                     const active = index === step;
                     const done = index < step;
-                    const title = isIndividualOwner && item.title === 'Équipe' ? 'Préférences' : item.title;
+                    const title = getVisibleStepTitle(index);
                     return (
                       <div
                         key={item.title}

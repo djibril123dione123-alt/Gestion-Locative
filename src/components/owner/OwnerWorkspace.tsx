@@ -159,6 +159,16 @@ const PROPERTY_ACCENTS = [
   { bg: 'from-violet-50 to-purple-100/70', icon: Landmark, color: 'text-violet-800', ring: 'ring-violet-200' },
 ];
 
+const AGENCY_ASSETS_BUCKET = 'agency-assets';
+const MAX_OWNER_AVATAR_SIZE = 5 * 1024 * 1024;
+
+function getImageExtension(file: File) {
+  if (file.type === 'image/webp') return 'webp';
+  if (file.type === 'image/jpeg') return 'jpg';
+  if (file.type === 'image/svg+xml') return 'svg';
+  return 'png';
+}
+
 function getCurrentMonthBounds() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -229,6 +239,9 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
   const [generatingReport, setGeneratingReport] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [profileAvatarFile, setProfileAvatarFile] = useState<File | null>(null);
+  const [profileAvatarPreview, setProfileAvatarPreview] = useState<string | null>(null);
+  const [removeProfileAvatar, setRemoveProfileAvatar] = useState(false);
   const [profileForm, setProfileForm] = useState({
     prenom: '',
     nom: '',
@@ -404,6 +417,9 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
   useEffect(() => {
     if (!isProfileModalOpen) return;
     const nameParts = ownerName.split(/\s+/).filter(Boolean);
+    setProfileAvatarFile(null);
+    setProfileAvatarPreview(null);
+    setRemoveProfileAvatar(false);
     setProfileForm({
       prenom: profile?.prenom || data.ownerBailleur?.prenom || nameParts[0] || '',
       nom: profile?.nom || data.ownerBailleur?.nom || nameParts.slice(1).join(' ') || '',
@@ -431,10 +447,22 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
     profile?.telephone,
   ]);
 
+  useEffect(() => {
+    if (!profileAvatarFile) {
+      setProfileAvatarPreview(null);
+      return;
+    }
+    const preview = URL.createObjectURL(profileAvatarFile);
+    setProfileAvatarPreview(preview);
+    setRemoveProfileAvatar(false);
+    return () => URL.revokeObjectURL(preview);
+  }, [profileAvatarFile]);
+
   const avatarUrl = useMemo(() => {
     const metadata = user?.user_metadata as { avatar_url?: string; picture?: string } | undefined;
-    return metadata?.avatar_url || metadata?.picture || data.settings?.logo_url || agency?.logo_url || null;
-  }, [agency?.logo_url, data.settings?.logo_url, user?.user_metadata]);
+    if (removeProfileAvatar) return metadata?.avatar_url || metadata?.picture || null;
+    return profileAvatarPreview || data.settings?.logo_url || agency?.logo_url || metadata?.avatar_url || metadata?.picture || null;
+  }, [agency?.logo_url, data.settings?.logo_url, profileAvatarPreview, removeProfileAvatar, user?.user_metadata]);
 
   const initials = useMemo(() => {
     const parts = ownerName.split(/\s+/).filter(Boolean);
@@ -588,6 +616,34 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       .slice(0, 5);
   }, [data.contracts, data.documents, data.payments]);
 
+  const navigateToCreateProperty = useCallback(() => {
+    onNavigate?.('patrimoine?action=new');
+  }, [onNavigate]);
+
+  const uploadOwnerAvatar = async () => {
+    if (!profileAvatarFile || !profile?.agency_id) return null;
+    if (!profileAvatarFile.type.startsWith('image/')) {
+      throw new Error('La photo de profil doit être une image.');
+    }
+    if (profileAvatarFile.size > MAX_OWNER_AVATAR_SIZE) {
+      throw new Error('La photo de profil doit peser moins de 5 Mo.');
+    }
+
+    const fileExt = getImageExtension(profileAvatarFile);
+    const filePath = `${profile.agency_id}/owners/profile-${Date.now()}.${fileExt}`;
+    const { error: uploadError } = await supabase.storage
+      .from(AGENCY_ASSETS_BUCKET)
+      .upload(filePath, profileAvatarFile, {
+        cacheControl: '31536000',
+        contentType: profileAvatarFile.type,
+        upsert: false,
+      });
+    if (uploadError) throw uploadError;
+
+    const { data: publicUrlData } = supabase.storage.from(AGENCY_ASSETS_BUCKET).getPublicUrl(filePath);
+    return `${publicUrlData.publicUrl}?v=${Date.now()}`;
+  };
+
   const handleSaveOwnerProfile = async () => {
     if (!profile?.agency_id) return;
     const prenom = profileForm.prenom.trim();
@@ -606,6 +662,9 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
     try {
       const email = profileForm.email.trim() || null;
       const adresse = profileForm.adresse.trim() || null;
+      const uploadedAvatarUrl = await uploadOwnerAvatar();
+      const existingOwnerAvatarUrl = data.settings?.logo_url || agency?.logo_url || null;
+      const nextAvatarUrl = removeProfileAvatar ? null : uploadedAvatarUrl || existingOwnerAvatarUrl;
 
       const updates = [
         supabase
@@ -616,6 +675,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             telephone: normalizedPhone,
             email,
             adresse,
+            logo_url: nextAvatarUrl,
           }),
         supabase
           .from('agencies')
@@ -623,6 +683,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             name: ownerFullName,
             phone: normalizedPhone,
             address: adresse,
+            logo_url: nextAvatarUrl,
           })
           .eq('id', profile.agency_id),
       ];
@@ -668,6 +729,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
           telephone: normalizedPhone,
           email,
           adresse,
+          logo_url: nextAvatarUrl,
         },
         ownerBailleur: current.ownerBailleur
           ? {
@@ -683,6 +745,9 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       await invalidateOperationalCaches({ agencyId: profile.agency_id, userId: profile.id }, ['dashboard', 'documents', 'bailleurs']);
       notifyDataChanged(['dashboard', 'documents', 'bailleurs']);
       toast.success('Profil propriétaire mis à jour.');
+      setProfileAvatarFile(null);
+      setProfileAvatarPreview(null);
+      setRemoveProfileAvatar(false);
       setIsProfileModalOpen(false);
       void loadOwnerWorkspace();
     } catch (err) {
@@ -902,7 +967,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             </button>
             <button
               type="button"
-              onClick={() => onNavigate?.('patrimoine')}
+              onClick={navigateToCreateProperty}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-900 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-brand-950"
             >
               <Plus className="h-4 w-4" />
@@ -937,7 +1002,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                   icon={Building2}
                   title="Aucun bien ajouté pour le moment."
                   description="Ajoutez votre premier bien pour commencer le suivi des unités, locataires, loyers et documents."
-                  action={{ label: 'Ajouter un bien', onClick: () => onNavigate?.('patrimoine') }}
+                  action={{ label: 'Ajouter un bien', onClick: navigateToCreateProperty }}
                 />
               ) : (
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
@@ -956,20 +1021,20 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                           </div>
                         </div>
                         <div className="p-3">
-                          <p className="line-clamp-2 min-h-[2.4rem] text-sm font-black leading-tight text-slate-950">{property.nom}</p>
+                          <p className="line-clamp-2 min-h-[2.4rem] text-sm font-bold leading-tight text-slate-950">{property.nom}</p>
                           <p className="mt-1 truncate text-xs font-semibold text-slate-500">{property.quartier || property.ville || property.adresse || 'Adresse à compléter'}</p>
                           <div className="mt-3 flex flex-wrap gap-1.5">
                             <span className="rounded-full bg-emerald-50 px-2 py-1 text-[0.68rem] font-black text-emerald-800">{units.length} unité{units.length > 1 ? 's' : ''}</span>
                             <span className="rounded-full bg-amber-50 px-2 py-1 text-[0.68rem] font-black text-amber-800">{occupation}%</span>
                           </div>
-                          <p className="mt-3 text-xs font-black text-slate-800">{formatCurrency(expectedRent)} / mois</p>
+                          <p className="mt-3 text-xs font-bold text-slate-800">{formatCurrency(expectedRent)} / mois</p>
                         </div>
                       </button>
                     );
                   })}
                   <button
                     type="button"
-                    onClick={() => onNavigate?.('patrimoine')}
+                    onClick={navigateToCreateProperty}
                     className="flex min-h-[12.5rem] flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-900/20 bg-white/70 p-4 text-center font-black text-brand-900 transition hover:border-brand-700 hover:bg-emerald-50"
                   >
                     <Plus className="mb-3 h-8 w-8 rounded-full bg-emerald-50 p-1.5 text-brand-800" />
@@ -986,7 +1051,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                     <BarChart3 className="h-3.5 w-3.5" />
                     Bilan propriétaire
                   </div>
-                  <h2 className="mt-3 text-xl font-black text-slate-950">Rapports & revenus</h2>
+                  <h2 className="mt-3 text-xl font-bold text-slate-950">Rapports & revenus</h2>
                   <p className="mt-1 text-sm font-semibold text-slate-500">Une synthèse claire de vos encaissements, reliquats et charges.</p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -1020,7 +1085,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                 <div className="rounded-2xl border border-emerald-950/10 bg-white p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-black text-slate-950">Situation de {formatMonthLabel(reportPeriod)}</p>
+                      <p className="text-sm font-bold text-slate-950">Situation de {formatMonthLabel(reportPeriod)}</p>
                       <p className="mt-1 text-xs font-semibold text-slate-500">
                         {reportSummary.activeContracts} contrat{reportSummary.activeContracts > 1 ? 's' : ''} actif{reportSummary.activeContracts > 1 ? 's' : ''} analysé{reportSummary.activeContracts > 1 ? 's' : ''}
                       </p>
@@ -1036,8 +1101,8 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                 </div>
                 <div className="rounded-2xl border border-emerald-950/10 bg-white p-4">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-sm font-black text-slate-950">Derniers rapports</p>
-                    <button type="button" onClick={() => onNavigate?.('documents')} className="text-xs font-black text-brand-800">Voir GED</button>
+                    <p className="text-sm font-bold text-slate-950">Derniers rapports</p>
+                    <button type="button" onClick={() => onNavigate?.('documents')} className="text-xs font-semibold text-brand-800">Voir GED</button>
                   </div>
                   <div className="mt-3 space-y-2">
                     {reportSummary.generatedReports.length > 0 ? (
@@ -1066,7 +1131,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                 actionLabel="Voir tous"
                 onAction={() => onNavigate?.('paiements')}
                 emptyTitle="Aucun paiement récent"
-                emptyText="Les loyers encaissés apparaîtront ici."
+                emptyText="Les loyers encaissés apparaîtront ici dès qu'un paiement sera enregistré."
               >
                 {recentPayments.map((payment) => (
                   <CompactRow
@@ -1124,7 +1189,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
           <aside className="space-y-5">
             <section className="rounded-3xl border border-emerald-950/10 bg-[#fffdf8]/95 p-5 shadow-[0_20px_70px_rgba(15,23,42,0.08)]">
               <div className="mb-5 flex items-center justify-between">
-                <h2 className="text-xl font-black text-slate-950">Mon profil</h2>
+                <h2 className="text-xl font-bold text-slate-950">Mon profil</h2>
                 <button
                   type="button"
                   onClick={() => setIsProfileModalOpen(true)}
@@ -1174,7 +1239,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             <section className="rounded-3xl border border-emerald-950/10 bg-[#fffdf8]/95 p-5 shadow-[0_18px_54px_rgba(15,23,42,0.06)]">
               <h2 className="text-lg font-black text-slate-950">Accès rapides</h2>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <QuickAction icon={Building2} label="Ajouter un bien" onClick={() => onNavigate?.('patrimoine')} />
+                <QuickAction icon={Building2} label="Ajouter un bien" onClick={navigateToCreateProperty} />
                 <QuickAction icon={FileText} label="Générer rapport" onClick={() => void handleGenerateOwnerReport()} />
                 <QuickAction icon={FolderOpen} label="Mes documents" onClick={() => onNavigate?.('documents')} />
                 <QuickAction icon={Wallet} label="Mes paiements" onClick={() => onNavigate?.('paiements')} />
@@ -1205,6 +1270,53 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             <p className="mt-1 text-xs font-semibold leading-5 text-emerald-900/70">
               Ces informations alimentent votre carte profil, votre bailleur interne et les documents propriétaire.
             </p>
+          </div>
+          <div className="flex flex-col gap-4 rounded-2xl border border-emerald-950/10 bg-white/80 p-4 sm:flex-row sm:items-center">
+            <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-emerald-100 to-amber-100 ring-4 ring-white shadow-md">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={ownerName} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xl font-black text-brand-900">{initials}</div>
+              )}
+              <span className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-brand-700 text-white ring-4 ring-white">
+                <Camera className="h-3.5 w-3.5" />
+              </span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-slate-900">Photo de profil propriétaire</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                Cette photo personnalise votre espace et peut être reprise dans vos documents propriétaire.
+              </p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl bg-brand-900 px-4 text-xs font-black text-white shadow-sm transition hover:bg-brand-950">
+                  <Camera className="h-4 w-4" />
+                  Importer une photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      setProfileAvatarFile(file);
+                      if (file) setRemoveProfileAvatar(false);
+                    }}
+                  />
+                </label>
+                {(profileAvatarPreview || data.settings?.logo_url || agency?.logo_url) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileAvatarFile(null);
+                      setProfileAvatarPreview(null);
+                      setRemoveProfileAvatar(true);
+                    }}
+                    className="inline-flex h-10 items-center justify-center rounded-xl border border-emerald-950/10 bg-white px-4 text-xs font-black text-slate-600 transition hover:bg-slate-50"
+                  >
+                    Retirer la photo importée
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
@@ -1330,8 +1442,8 @@ function OwnerListCard({
   return (
     <section className="rounded-3xl border border-emerald-950/10 bg-[#fffdf8]/95 p-4 shadow-[0_18px_54px_rgba(15,23,42,0.06)]">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-base font-black text-slate-950">{title}</h2>
-        <button type="button" onClick={onAction} className="text-xs font-black text-brand-800 hover:text-brand-950">
+        <h2 className="text-base font-bold text-slate-950">{title}</h2>
+        <button type="button" onClick={onAction} className="text-xs font-semibold text-brand-800 hover:text-brand-950">
           {actionLabel}
         </button>
       </div>
@@ -1339,7 +1451,7 @@ function OwnerListCard({
         <div className="space-y-2">{children}</div>
       ) : (
         <div className="rounded-2xl border border-dashed border-emerald-950/10 bg-white/70 p-4">
-          <p className="text-sm font-black text-slate-800">{emptyTitle}</p>
+          <p className="text-sm font-bold text-slate-800">{emptyTitle}</p>
           <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">{emptyText}</p>
         </div>
       )}
@@ -1373,14 +1485,14 @@ function CompactRow({
   };
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-transparent p-2 transition hover:border-emerald-950/10 hover:bg-white">
-      <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border text-xs font-black ${badgeClassName ?? customTone ?? tones[tone]}`}>
+      <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border text-xs font-bold ${badgeClassName ?? customTone ?? tones[tone]}`}>
         {badge ?? (Icon ? <Icon className="h-4 w-4" /> : null)}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-black text-slate-900">{title}</p>
+        <p className="truncate text-sm font-semibold text-slate-900">{title}</p>
         <p className="truncate text-xs font-semibold text-slate-500">{subtitle}</p>
       </div>
-      {value && <p className="flex-shrink-0 text-xs font-black text-brand-800">{value}</p>}
+      {value && <p className="flex-shrink-0 text-xs font-bold text-brand-800">{value}</p>}
     </div>
   );
 }
@@ -1393,8 +1505,8 @@ function MiniStat({ label, value, tone }: { label: string; value: string | numbe
   };
   return (
     <div className={`rounded-2xl border bg-gradient-to-br p-3 ${tones[tone]}`}>
-      <p className="truncate text-[0.66rem] font-black uppercase tracking-[0.12em] opacity-80">{label}</p>
-      <p className="mt-2 truncate text-base font-black">{value}</p>
+      <p className="truncate text-[0.66rem] font-semibold uppercase tracking-[0.12em] opacity-80">{label}</p>
+      <p className="mt-2 truncate text-base font-bold">{value}</p>
     </div>
   );
 }
@@ -1404,7 +1516,7 @@ function QuickAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: 
     <button
       type="button"
       onClick={onClick}
-      className="group flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-950/10 bg-white p-3 text-center text-xs font-black text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50 hover:text-brand-900"
+      className="group flex min-h-24 flex-col items-center justify-center gap-2 rounded-2xl border border-emerald-950/10 bg-white p-3 text-center text-xs font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50 hover:text-brand-900"
     >
       <Icon className="h-6 w-6 text-slate-600 transition group-hover:text-brand-800" />
       {label}

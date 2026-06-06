@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
@@ -41,6 +42,8 @@ interface Bailleur {
 
 export function Immeubles() {
   const { user, profile, agency, accountProfile } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const [immeubles, setImmeubles] = useState<Immeuble[]>([]);
   const [bailleurs, setBailleurs] = useState<Bailleur[]>([]);
@@ -279,7 +282,7 @@ export function Immeubles() {
     });
   };
 
-  const openCreateModal = async () => {
+  const openCreateModal = useCallback(async () => {
     if (isIndividualOwner) {
       try {
         const ownerBailleur = await getOrCreateIndividualOwnerBailleur({ profile, agency, accountProfile });
@@ -293,7 +296,23 @@ export function Immeubles() {
     }
 
     setIsModalOpen(true);
-  };
+  }, [accountProfile, agency, isIndividualOwner, notifyError, profile]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('action') !== 'new') return;
+    if (loading || isModalOpen || editingImmeuble) return;
+
+    void openCreateModal();
+    params.delete('action');
+    navigate(
+      {
+        pathname: location.pathname,
+        search: params.toString() ? `?${params.toString()}` : '',
+      },
+      { replace: true },
+    );
+  }, [editingImmeuble, isModalOpen, loading, location.pathname, location.search, navigate, openCreateModal]);
 
   const ALL_COLUMN_KEYS_IMMEUBLES = ['nom', 'adresse', 'quartier', 'ville', 'bailleur', 'nombre_unites'] as const;
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('immeubles', [...ALL_COLUMN_KEYS_IMMEUBLES]);

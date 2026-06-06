@@ -139,7 +139,7 @@ export const ADAPTIVE_DICTIONARY: Record<OrganizationType, SemanticDictionaryEnt
       workspace: 'Agence',
       workspaceSettings: 'Parametres agence',
       owners: 'Bailleurs',
-      properties: 'Immeubles',
+      properties: 'Biens & patrimoine',
       units: 'Unites',
       tenants: 'Locataires',
       payments: 'Encaissements',

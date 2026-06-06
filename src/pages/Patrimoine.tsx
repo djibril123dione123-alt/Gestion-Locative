@@ -202,6 +202,8 @@ const EMPTY_DATA: PatrimoineData = {
 
 const PROPERTY_COLUMN_KEYS: PropertyColumnKey[] = ['bien', 'type', 'adresse', 'bailleur', 'unites', 'occupation', 'loyer', 'reliquats', 'statut'];
 const UNIT_COLUMN_KEYS: UnitColumnKey[] = ['unite', 'type', 'bien', 'locataire', 'loyer', 'statut', 'reliquat', 'bail'];
+const PROPERTY_DRAWER_HIDDEN_COLUMNS = new Set<PropertyColumnKey>(['type', 'adresse', 'loyer', 'statut']);
+const UNIT_DRAWER_HIDDEN_COLUMNS = new Set<UnitColumnKey>(['type', 'bail']);
 
 const PROPERTY_TYPES = ['Immeuble', 'Maison', 'Villa', 'Appartement', 'Boutique', 'Bureau', 'Terrain', 'Local commercial', 'Depot', 'Mixte'];
 const UNIT_TYPES = ['Appartement', 'Studio', 'Chambre', 'Boutique', 'Bureau', 'Depot', 'Local commercial', 'Autre'];
@@ -231,6 +233,23 @@ function isActiveContract(contract?: ContractRow | null) {
 function amount(value: unknown) {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatCompactCurrency(value: number) {
+  const numeric = amount(value);
+  if (Math.abs(numeric) >= 1_000_000) {
+    return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(numeric / 1_000_000)} M F CFA`;
+  }
+  return formatCurrency(numeric);
+}
+
+function CurrencyValue({ value, compact = false }: { value: number; compact?: boolean }) {
+  const fullValue = formatCurrency(value);
+  return (
+    <span className="whitespace-nowrap tabular-nums" title={fullValue}>
+      {compact ? formatCompactCurrency(value) : fullValue}
+    </span>
+  );
 }
 
 function ownerName(owner?: BailleurRow | PropertyRow['bailleurs'] | null) {
@@ -604,6 +623,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   const selectedUnit = drawer?.type === 'unite' ? data.units.find((unit) => unit.id === drawer.id) ?? null : null;
   const selectedPropertySummary = selectedProperty ? summaries.property.get(selectedProperty.id) ?? getPropertySummary(selectedProperty) : null;
   const selectedUnitSummary = selectedUnit ? summaries.unit.get(selectedUnit.id) ?? getUnitSummary(selectedUnit) : null;
+  const detailPanelOpen = drawer !== null;
 
   const openPropertyModal = useCallback(
     async (property?: PropertyRow | null) => {
@@ -846,7 +866,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   }
 
   return (
-    <div className="min-h-full bg-[radial-gradient(circle_at_top_left,rgba(255,244,214,0.9),transparent_28rem),linear-gradient(180deg,#fffaf0,#f8f4ea_48%,#f7fbf8)] px-4 py-4 sm:px-6 lg:px-7">
+    <div className="min-h-full overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,244,214,0.9),transparent_28rem),linear-gradient(180deg,#fffaf0,#f8f4ea_48%,#f7fbf8)] px-4 py-4 sm:px-6 lg:px-7">
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
       <div className="mx-auto max-w-[118rem] space-y-4">
         <OfflineDataNotice
@@ -889,8 +909,8 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           <MetricCard label="Unites" value={pageStats.units} icon={DoorOpen} tone="blue" />
           <MetricCard label="Occupees" value={pageStats.occupied} icon={Home} tone="emerald" />
           <MetricCard label="Occupation" value={`${pageStats.occupancyRate}%`} icon={Percent} tone="amber" />
-          <MetricCard label="Loyers attendus" value={formatCurrency(pageStats.expectedRent)} icon={Wallet} tone="green" wide />
-          <MetricCard label="Reliquats" value={formatCurrency(pageStats.reliquats)} icon={AlertCircle} tone="red" wide />
+          <MetricCard label="Loyers attendus" value={<CurrencyValue value={pageStats.expectedRent} compact />} icon={Wallet} tone="green" wide />
+          <MetricCard label="Reliquats" value={<CurrencyValue value={pageStats.reliquats} compact />} icon={AlertCircle} tone="red" wide />
         </section>
 
         <section className="rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 p-3 shadow-[0_18px_54px_rgba(15,23,42,0.07)]">
@@ -984,7 +1004,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           </div>
         </section>
 
-        <div className={`grid gap-4 ${drawer ? 'xl:grid-cols-[minmax(0,1fr)_28rem]' : ''}`}>
+        <div className={`grid min-w-0 gap-4 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)] 2xl:grid-cols-[minmax(0,1fr)_30rem]' : 'grid-cols-1'}`}>
           <main className="min-w-0">
             {activeTab === 'biens' ? (
               <PropertiesTable
@@ -993,6 +1013,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 ownerById={ownerById}
                 isIndividualOwner={isIndividualOwner}
                 isVisible={propertyColumns.isVisible}
+                compact={detailPanelOpen}
                 onSelect={selectProperty}
                 onCreate={() => void openPropertyModal()}
               />
@@ -1002,6 +1023,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 summaries={summaries.unit}
                 propertyById={propertyById}
                 isVisible={unitColumns.isVisible}
+                compact={detailPanelOpen}
                 onSelect={selectUnit}
                 onCreate={() => openUnitModal()}
               />
@@ -1009,7 +1031,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           </main>
 
           {drawer && (
-            <aside className="min-w-0">
+            <aside className="fixed inset-0 z-50 min-w-0 bg-[#fffdf8] p-0 xl:static xl:z-auto xl:bg-transparent">
               {selectedProperty && selectedPropertySummary && (
                 <PropertyDrawer
                   property={selectedProperty}
@@ -1161,6 +1183,7 @@ function PropertiesTable({
   ownerById,
   isIndividualOwner,
   isVisible,
+  compact,
   onSelect,
   onCreate,
 }: {
@@ -1169,9 +1192,12 @@ function PropertiesTable({
   ownerById: Map<string, BailleurRow>;
   isIndividualOwner: boolean;
   isVisible: (key: string) => boolean;
+  compact: boolean;
   onSelect: (property: PropertyRow) => void;
   onCreate: () => void;
 }) {
+  const showColumn = (key: PropertyColumnKey) => isVisible(key) && !(compact && PROPERTY_DRAWER_HIDDEN_COLUMNS.has(key));
+
   if (properties.length === 0) {
     return (
       <EmptyState
@@ -1185,20 +1211,20 @@ function PropertiesTable({
 
   return (
     <section className="overflow-hidden rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 shadow-[0_18px_54px_rgba(15,23,42,0.07)]">
-      <div className="hidden overflow-x-auto md:block">
-        <table className="min-w-full divide-y divide-slate-100">
+      <div className={`hidden md:block ${compact ? 'overflow-hidden' : 'overflow-x-auto'}`}>
+        <table className={`${compact ? 'w-full table-fixed' : 'min-w-[920px]'} divide-y divide-slate-100`}>
           <thead className="bg-white/70 text-left text-[0.68rem] font-black uppercase tracking-[0.12em] text-slate-500">
             <tr>
-              {isVisible('bien') && <th className="px-4 py-3">Bien</th>}
-              {isVisible('type') && <th className="px-4 py-3">Type</th>}
-              {isVisible('adresse') && <th className="px-4 py-3">Adresse</th>}
-              {!isIndividualOwner && isVisible('bailleur') && <th className="px-4 py-3">Bailleur</th>}
-              {isVisible('unites') && <th className="px-4 py-3 text-center">Unites</th>}
-              {isVisible('occupation') && <th className="px-4 py-3">Occupation</th>}
-              {isVisible('loyer') && <th className="px-4 py-3 text-right">Loyer attendu</th>}
-              {isVisible('reliquats') && <th className="px-4 py-3 text-right">Reliquats</th>}
-              {isVisible('statut') && <th className="px-4 py-3">Statut</th>}
-              <th className="px-4 py-3 text-right">Actions</th>
+              {showColumn('bien') && <th className={`${compact ? 'w-[32%] px-3' : 'px-4'} py-3`}>Bien</th>}
+              {showColumn('type') && <th className="px-4 py-3">Type</th>}
+              {showColumn('adresse') && <th className="px-4 py-3">Adresse</th>}
+              {!isIndividualOwner && showColumn('bailleur') && <th className={`${compact ? 'w-[19%] px-3' : 'px-4'} py-3`}>Bailleur</th>}
+              {showColumn('unites') && <th className={`${compact ? 'w-[10%] px-2' : 'px-4'} py-3 text-center`}>Unites</th>}
+              {showColumn('occupation') && <th className={`${compact ? 'w-[18%] px-3' : 'px-4'} py-3`}>Occupation</th>}
+              {showColumn('loyer') && <th className="px-4 py-3 text-right">Loyer attendu</th>}
+              {showColumn('reliquats') && <th className={`${compact ? 'w-[15%] px-3' : 'px-4'} py-3 text-right`}>Reliquats</th>}
+              {showColumn('statut') && <th className="px-4 py-3">Statut</th>}
+              <th className={`${compact ? 'w-12 px-2' : 'px-4'} py-3 text-right`}>Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1209,10 +1235,10 @@ function PropertiesTable({
               const Icon = visual.icon;
               return (
                 <tr key={property.id} className="cursor-pointer transition hover:bg-emerald-50/50" onClick={() => onSelect(property)}>
-                  {isVisible('bien') && (
-                    <td className="px-4 py-3">
+                  {showColumn('bien') && (
+                    <td className={`${compact ? 'px-3' : 'px-4'} py-3`}>
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${visual.bg} ${visual.color}`}>
+                        <div className={`flex ${compact ? 'h-9 w-9 rounded-xl' : 'h-10 w-10 rounded-2xl'} items-center justify-center ${visual.bg} ${visual.color}`}>
                           <Icon className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
@@ -1222,24 +1248,24 @@ function PropertiesTable({
                       </div>
                     </td>
                   )}
-                  {isVisible('type') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{inferPropertyType(property)}</td>}
-                  {isVisible('adresse') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{property.adresse || '-'}</td>}
-                  {!isIndividualOwner && isVisible('bailleur') && <td className="px-4 py-3 text-sm font-semibold text-slate-700">{ownerName(owner)}</td>}
-                  {isVisible('unites') && <td className="px-4 py-3 text-center text-sm font-bold text-slate-900">{summary?.units.length ?? 0}</td>}
-                  {isVisible('occupation') && (
-                    <td className="px-4 py-3">
+                  {showColumn('type') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{inferPropertyType(property)}</td>}
+                  {showColumn('adresse') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{property.adresse || '-'}</td>}
+                  {!isIndividualOwner && showColumn('bailleur') && <td className={`${compact ? 'px-3' : 'px-4'} py-3 text-sm font-semibold text-slate-700`}><p className="truncate">{ownerName(owner)}</p></td>}
+                  {showColumn('unites') && <td className={`${compact ? 'px-2' : 'px-4'} py-3 text-center text-sm font-bold text-slate-900`}>{summary?.units.length ?? 0}</td>}
+                  {showColumn('occupation') && (
+                    <td className={`${compact ? 'px-3' : 'px-4'} py-3`}>
                       <div className="flex items-center gap-2">
-                        <div className="h-2 w-20 overflow-hidden rounded-full bg-slate-100">
+                        <div className={`${compact ? 'w-14' : 'w-20'} h-2 overflow-hidden rounded-full bg-slate-100`}>
                           <div className="h-full rounded-full bg-brand-800" style={{ width: `${summary?.occupancyRate ?? 0}%` }} />
                         </div>
                         <span className="text-xs font-bold text-slate-600">{summary?.occupancyRate ?? 0}%</span>
                       </div>
                     </td>
                   )}
-                  {isVisible('loyer') && <td className="px-4 py-3 text-right text-sm font-bold text-slate-900">{formatCurrency(summary?.expectedRent ?? 0)}</td>}
-                  {isVisible('reliquats') && <td className="px-4 py-3 text-right text-sm font-bold text-red-600">{formatCurrency(summary?.reliquats ?? 0)}</td>}
-                  {isVisible('statut') && <td className="px-4 py-3"><StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unite'} /></td>}
-                  <td className="px-4 py-3 text-right">
+                  {showColumn('loyer') && <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-bold tabular-nums text-slate-900">{formatCurrency(summary?.expectedRent ?? 0)}</td>}
+                  {showColumn('reliquats') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-3 text-right text-sm font-bold tabular-nums text-red-600`}>{formatCurrency(summary?.reliquats ?? 0)}</td>}
+                  {showColumn('statut') && <td className="px-4 py-3"><StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unite'} /></td>}
+                  <td className={`${compact ? 'px-2' : 'px-4'} py-3 text-right`}>
                     <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(property); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
                       <MoreHorizontal className="h-5 w-5" />
                     </button>
@@ -1285,6 +1311,7 @@ function UnitsTable({
   summaries,
   propertyById,
   isVisible,
+  compact,
   onSelect,
   onCreate,
 }: {
@@ -1292,9 +1319,12 @@ function UnitsTable({
   summaries: Map<string, UnitSummary>;
   propertyById: Map<string, PropertyRow>;
   isVisible: (key: string) => boolean;
+  compact: boolean;
   onSelect: (unit: UnitRow) => void;
   onCreate: () => void;
 }) {
+  const showColumn = (key: UnitColumnKey) => isVisible(key) && !(compact && UNIT_DRAWER_HIDDEN_COLUMNS.has(key));
+
   if (units.length === 0) {
     return (
       <EmptyState
@@ -1308,19 +1338,19 @@ function UnitsTable({
 
   return (
     <section className="overflow-hidden rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 shadow-[0_18px_54px_rgba(15,23,42,0.07)]">
-      <div className="hidden overflow-x-auto md:block">
-        <table className="min-w-full divide-y divide-slate-100">
+      <div className={`hidden md:block ${compact ? 'overflow-hidden' : 'overflow-x-auto'}`}>
+        <table className={`${compact ? 'w-full table-fixed' : 'min-w-[900px]'} divide-y divide-slate-100`}>
           <thead className="bg-white/70 text-left text-[0.68rem] font-black uppercase tracking-[0.12em] text-slate-500">
             <tr>
-              {isVisible('unite') && <th className="px-4 py-3">Unite</th>}
-              {isVisible('type') && <th className="px-4 py-3">Type</th>}
-              {isVisible('bien') && <th className="px-4 py-3">Bien parent</th>}
-              {isVisible('locataire') && <th className="px-4 py-3">Locataire</th>}
-              {isVisible('loyer') && <th className="px-4 py-3 text-right">Loyer</th>}
-              {isVisible('statut') && <th className="px-4 py-3">Statut</th>}
-              {isVisible('reliquat') && <th className="px-4 py-3 text-right">Reliquat</th>}
-              {isVisible('bail') && <th className="px-4 py-3">Bail actif</th>}
-              <th className="px-4 py-3 text-right">Actions</th>
+              {showColumn('unite') && <th className={`${compact ? 'w-[23%] px-3' : 'px-4'} py-3`}>Unite</th>}
+              {showColumn('type') && <th className="px-4 py-3">Type</th>}
+              {showColumn('bien') && <th className={`${compact ? 'w-[20%] px-3' : 'px-4'} py-3`}>Bien parent</th>}
+              {showColumn('locataire') && <th className={`${compact ? 'w-[19%] px-3' : 'px-4'} py-3`}>Locataire</th>}
+              {showColumn('loyer') && <th className={`${compact ? 'w-[14%] px-3' : 'px-4'} py-3 text-right`}>Loyer</th>}
+              {showColumn('statut') && <th className={`${compact ? 'w-[14%] px-3' : 'px-4'} py-3`}>Statut</th>}
+              {showColumn('reliquat') && <th className={`${compact ? 'w-[14%] px-3' : 'px-4'} py-3 text-right`}>Reliquat</th>}
+              {showColumn('bail') && <th className="px-4 py-3">Bail actif</th>}
+              <th className={`${compact ? 'w-12 px-2' : 'px-4'} py-3 text-right`}>Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1332,10 +1362,10 @@ function UnitsTable({
               const status = getUnitStatusLabel(unit, summary);
               return (
                 <tr key={unit.id} className="cursor-pointer transition hover:bg-emerald-50/50" onClick={() => onSelect(unit)}>
-                  {isVisible('unite') && (
-                    <td className="px-4 py-3">
+                  {showColumn('unite') && (
+                    <td className={`${compact ? 'px-3' : 'px-4'} py-3`}>
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${visual.bg} ${visual.color}`}>
+                        <div className={`flex ${compact ? 'h-9 w-9 rounded-xl' : 'h-10 w-10 rounded-2xl'} items-center justify-center ${visual.bg} ${visual.color}`}>
                           <Icon className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
@@ -1345,14 +1375,14 @@ function UnitsTable({
                       </div>
                     </td>
                   )}
-                  {isVisible('type') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{inferUnitType(unit)}</td>}
-                  {isVisible('bien') && <td className="px-4 py-3 text-sm font-semibold text-slate-700">{property?.nom ?? unit.immeubles?.nom ?? '-'}</td>}
-                  {isVisible('locataire') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{summary?.tenantLabel ?? 'Aucun locataire'}</td>}
-                  {isVisible('loyer') && <td className="px-4 py-3 text-right text-sm font-bold text-slate-900">{formatCurrency(unit.loyer_base ?? 0)}</td>}
-                  {isVisible('statut') && <td className="px-4 py-3"><StatusBadge label={status} /></td>}
-                  {isVisible('reliquat') && <td className="px-4 py-3 text-right text-sm font-bold text-red-600">{formatCurrency(summary?.reliquat ?? 0)}</td>}
-                  {isVisible('bail') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{summary?.contract ? 'Oui' : 'Non'}</td>}
-                  <td className="px-4 py-3 text-right">
+                  {showColumn('type') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{inferUnitType(unit)}</td>}
+                  {showColumn('bien') && <td className={`${compact ? 'px-3' : 'px-4'} py-3 text-sm font-semibold text-slate-700`}><p className="truncate">{property?.nom ?? unit.immeubles?.nom ?? '-'}</p></td>}
+                  {showColumn('locataire') && <td className={`${compact ? 'px-3' : 'px-4'} py-3 text-sm font-medium text-slate-600`}><p className="truncate">{summary?.tenantLabel ?? 'Aucun locataire'}</p></td>}
+                  {showColumn('loyer') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-3 text-right text-sm font-bold tabular-nums text-slate-900`}>{formatCurrency(unit.loyer_base ?? 0)}</td>}
+                  {showColumn('statut') && <td className={`${compact ? 'px-3' : 'px-4'} py-3`}><StatusBadge label={status} /></td>}
+                  {showColumn('reliquat') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-3 text-right text-sm font-bold tabular-nums text-red-600`}>{formatCurrency(summary?.reliquat ?? 0)}</td>}
+                  {showColumn('bail') && <td className="px-4 py-3 text-sm font-medium text-slate-600">{summary?.contract ? 'Oui' : 'Non'}</td>}
+                  <td className={`${compact ? 'px-2' : 'px-4'} py-3 text-right`}>
                     <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(unit); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
                       <MoreHorizontal className="h-5 w-5" />
                     </button>
@@ -1409,8 +1439,10 @@ function MiniMetric({ label, value }: { label: string; value: ReactNode }) {
 
 function DrawerShell({ children }: { children: ReactNode }) {
   return (
-    <section className="sticky top-4 overflow-hidden rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/98 shadow-[0_18px_54px_rgba(15,23,42,0.08)]">
-      {children}
+    <section className="h-full max-h-[100dvh] overflow-hidden bg-[#fffdf8]/98 shadow-[0_18px_54px_rgba(15,23,42,0.08)] xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:rounded-[1.4rem] xl:border xl:border-emerald-950/10">
+      <div className="h-full max-h-[100dvh] overflow-y-auto xl:max-h-[calc(100vh-2rem)]">
+        {children}
+      </div>
     </section>
   );
 }

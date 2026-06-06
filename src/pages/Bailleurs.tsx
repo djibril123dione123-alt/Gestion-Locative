@@ -678,11 +678,13 @@ export function Bailleurs() {
   useEffect(() => {
     if (filteredBailleurs.length === 0) {
       setSelectedBailleurId(null);
+      setDetailOpen(false);
       return;
     }
     if (!selectedBailleurId || !filteredBailleurs.some((item) => item.id === selectedBailleurId)) {
       setSelectedBailleurId(filteredBailleurs[0].id);
       setActiveDrawerTab('overview');
+      setDetailOpen(true);
     }
   }, [filteredBailleurs, selectedBailleurId]);
 
@@ -691,6 +693,7 @@ export function Bailleurs() {
     [bailleurs, selectedBailleurId],
   );
   const selectedSummary = selectedBailleur ? summariesByBailleur[selectedBailleur.id] ?? emptySummary() : emptySummary();
+  const detailPanelOpen = detailOpen && !!selectedBailleur;
 
   const globalKpis = useMemo(() => {
     const summaries = Object.values(summariesByBailleur);
@@ -1289,7 +1292,10 @@ export function Bailleurs() {
    * Configuration des colonnes du tableau
    */
   const ALL_COLUMN_KEYS_BAILLEURS = ['bailleur', 'telephone', 'commission', 'biens', 'unites', 'reliquats', 'net', 'actions'] as const;
+  type BailleurColumnKey = typeof ALL_COLUMN_KEYS_BAILLEURS[number];
+  const DETAIL_OPEN_HIDDEN_COLUMNS = new Set<BailleurColumnKey>(['telephone', 'commission']);
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('bailleurs', [...ALL_COLUMN_KEYS_BAILLEURS]);
+  const showBailleurColumn = (key: BailleurColumnKey) => colIsVisible(key) && !(detailPanelOpen && DETAIL_OPEN_HIDDEN_COLUMNS.has(key));
 
   const allColumns = [
     { key: 'bailleur', label: 'Bailleur', required: true },
@@ -1596,7 +1602,7 @@ export function Bailleurs() {
         <KpiTile icon={ReceiptText} label="Commissions" value={formatCurrency(globalKpis.commissions)} helper={`${globalKpis.immeubles} biens · ${globalKpis.unites} unités`} tone="gold" />
       </div>
 
-      <div className="grid min-h-[31rem] gap-4 xl:grid-cols-[minmax(0,1fr)_28rem] 2xl:grid-cols-[minmax(0,1fr)_34rem]">
+      <div className={`grid min-h-[31rem] min-w-0 gap-4 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_28rem] 2xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
         <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
           <div className="border-b border-emerald-950/10 bg-[linear-gradient(180deg,#fff6df,#fffdf7)] p-3.5 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -1670,18 +1676,18 @@ export function Bailleurs() {
             </div>
           ) : (
             <>
-              <div className="hidden overflow-x-auto lg:block">
-                <table className="w-full min-w-[840px] border-collapse">
+              <div className={`hidden lg:block ${detailPanelOpen ? 'overflow-hidden' : 'overflow-x-auto'}`}>
+                <table className={`w-full border-collapse ${detailPanelOpen ? 'min-w-[620px] table-fixed' : 'min-w-[840px]'}`}>
                   <thead className="bg-[#f8f3e8]/80">
                     <tr>
-                      {colIsVisible('bailleur') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Bailleur</th>}
-                      {colIsVisible('telephone') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Téléphone</th>}
-                      {colIsVisible('commission') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Commission</th>}
-                      {colIsVisible('biens') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Biens</th>}
-                      {colIsVisible('unites') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Unités</th>}
-                      {colIsVisible('reliquats') && <th className="px-3.5 py-2.5 text-right text-[11px] font-bold uppercase text-slate-500">Reliquats</th>}
-                      {colIsVisible('net') && <th className="px-3.5 py-2.5 text-right text-[11px] font-bold uppercase text-slate-500">Net</th>}
-                      {colIsVisible('actions') && <th className="px-3.5 py-2.5 text-right text-[11px] font-bold uppercase text-slate-500">Actions</th>}
+                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[34%] px-3' : 'px-3.5'} py-2.5 text-left text-[11px] font-bold uppercase text-slate-500`}>Bailleur</th>}
+                      {showBailleurColumn('telephone') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Téléphone</th>}
+                      {showBailleurColumn('commission') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Commission</th>}
+                      {showBailleurColumn('biens') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-2.5 text-left text-[11px] font-bold uppercase text-slate-500`}>Biens</th>}
+                      {showBailleurColumn('unites') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-2.5 text-left text-[11px] font-bold uppercase text-slate-500`}>Unités</th>}
+                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-2.5 text-right text-[11px] font-bold uppercase text-slate-500`}>Reliquats</th>}
+                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-2.5 text-right text-[11px] font-bold uppercase text-slate-500`}>Net</th>}
+                      {showBailleurColumn('actions') && <th className={`${detailPanelOpen ? 'w-12 px-2' : 'px-3.5'} py-2.5 text-right text-[11px] font-bold uppercase text-slate-500`}>Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1694,22 +1700,22 @@ export function Bailleurs() {
                           onClick={() => { setSelectedBailleurId(bailleur.id); setDetailOpen(true); }}
                           className={`cursor-pointer border-b border-slate-100 transition ${selected ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200' : 'hover:bg-emerald-50/45'}`}
                         >
-                          {colIsVisible('bailleur') && <td className="px-3.5 py-2.5">
+                          {showBailleurColumn('bailleur') && <td className={`${detailPanelOpen ? 'px-3' : 'px-3.5'} py-2.5`}>
                             <div className="flex items-center gap-3">
-                              <div className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-black shadow-inner ring-1 ${getAvatarTone(bailleur, selected)}`}>{getInitials(bailleur)}</div>
-                              <div>
-                                <p className="font-semibold text-slate-950">{formatPersonName(bailleur, '')}</p>
+                              <div className={`flex ${detailPanelOpen ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-xl text-xs font-black shadow-inner ring-1 ${getAvatarTone(bailleur, selected)}`}>{getInitials(bailleur)}</div>
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-slate-950">{formatPersonName(bailleur, '')}</p>
                                 <p className="text-xs text-slate-500">{getStatusLabel(bailleur)}</p>
                               </div>
                             </div>
                           </td>}
-                          {colIsVisible('telephone') && <td className="px-3.5 py-2.5 text-sm text-slate-700">{formatSenegalPhone(bailleur.telephone)}</td>}
-                          {colIsVisible('commission') && <td className="px-3.5 py-2.5 text-sm font-semibold text-slate-700">{formatCommission(bailleur.commission)}</td>}
-                          {colIsVisible('biens') && <td className="px-3.5 py-2.5 text-sm font-semibold text-slate-700">{summary.immeubles.length}</td>}
-                          {colIsVisible('unites') && <td className="px-3.5 py-2.5 text-sm font-semibold text-slate-700">{summary.unites.length}</td>}
-                          {colIsVisible('reliquats') && <td className="px-3.5 py-2.5 text-right text-sm font-bold tabular-nums text-red-600">{formatCurrency(summary.reliquats)}</td>}
-                          {colIsVisible('net') && <td className="px-3.5 py-2.5 text-right text-sm font-bold tabular-nums text-emerald-800">{formatCurrency(summary.net)}</td>}
-                          {colIsVisible('actions') && <td className="px-3.5 py-2.5 text-right">
+                          {showBailleurColumn('telephone') && <td className="whitespace-nowrap px-3.5 py-2.5 text-sm text-slate-700">{formatSenegalPhone(bailleur.telephone)}</td>}
+                          {showBailleurColumn('commission') && <td className="whitespace-nowrap px-3.5 py-2.5 text-sm font-semibold text-slate-700">{formatCommission(bailleur.commission)}</td>}
+                          {showBailleurColumn('biens') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-sm font-semibold text-slate-700`}>{summary.immeubles.length}</td>}
+                          {showBailleurColumn('unites') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-sm font-semibold text-slate-700`}>{summary.unites.length}</td>}
+                          {showBailleurColumn('reliquats') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} whitespace-nowrap py-2.5 text-right text-sm font-bold tabular-nums text-red-600`}>{formatCurrency(summary.reliquats)}</td>}
+                          {showBailleurColumn('net') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} whitespace-nowrap py-2.5 text-right text-sm font-bold tabular-nums text-emerald-800`}>{formatCurrency(summary.net)}</td>}
+                          {showBailleurColumn('actions') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-right`}>
                             <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedBailleurId(bailleur.id); setDetailOpen(true); }} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-950">
                               <MoreHorizontal className="h-4 w-4" />
                             </button>
@@ -1752,7 +1758,8 @@ export function Bailleurs() {
           )}
         </section>
 
-        <aside className={`fixed inset-0 z-50 overflow-y-auto bg-[#fffdf8] transition-transform duration-300 xl:sticky xl:top-4 xl:z-auto xl:block xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)] ${detailOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'}`}>
+        {detailPanelOpen && (
+        <aside className="fixed inset-0 z-50 overflow-y-auto bg-[#fffdf8] transition-transform duration-300 xl:sticky xl:top-4 xl:z-auto xl:block xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)]">
           {!selectedBailleur ? (
             <div className="flex min-h-full items-center justify-center p-6">
               <EmptyDrawerState title="Sélectionnez un bailleur" description="Consultez ses biens, paiements, documents et rapports sans quitter le portefeuille." />
@@ -1762,7 +1769,7 @@ export function Bailleurs() {
               <div className="border-b border-emerald-950/10 p-3.5 sm:p-4">
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#9a5b17]">Fiche propriétaire</p>
-                  <button type="button" onClick={() => setDetailOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 xl:hidden" aria-label="Fermer la fiche">
+                  <button type="button" onClick={() => setDetailOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900" aria-label="Fermer la fiche">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
@@ -1838,6 +1845,7 @@ export function Bailleurs() {
             </div>
           )}
         </aside>
+        )}
       </div>
 
       {/* Modal de création/édition */}

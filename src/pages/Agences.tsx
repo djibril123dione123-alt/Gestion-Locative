@@ -183,7 +183,10 @@ export default function Agences() {
       // Récupérer les infos de l'agence avant suppression pour l'audit log
       const targetAgency = agencies.find((a) => a.id === deleteTargetId);
 
-      const { error } = await supabase.from('agencies').delete().eq('id', deleteTargetId);
+      const { error } = await supabase.rpc('delete_agency_cascade', {
+        p_agency_id: deleteTargetId,
+        p_reason: `Suppression depuis l'ancien écran Agences super-admin : ${targetAgency?.name ?? deleteTargetId}`,
+      });
       if (error) throw error;
 
       // Trace de l'action dans owner_actions_log (best-effort, ne bloque pas)

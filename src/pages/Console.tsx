@@ -724,25 +724,28 @@ export function Console() {
   const deleteAgency = (agency: AgencyStat) => {
     setActionDialog({
       title: 'Supprimer cette organisation ?',
-      message: `Cette action est destructive et doit rester exceptionnelle. Tapez le nom exact "${agency.name}" et renseignez une raison complète.`,
+      message: `Cette action est irréversible. Elle supprime l'organisation "${agency.name}", ses accès applicatifs, paramètres, bailleurs, biens, unités, locataires, contrats, paiements, documents/GED, registres QR, invitations et données opérationnelles rattachées. Les comptes Supabase Auth ne sont pas supprimés, mais leurs profils liés à cette organisation sont retirés. Tapez le nom exact et renseignez une raison complète.`,
       confirmText: 'Supprimer',
       destructive: true,
       requireText: agency.name,
       minReasonLength: 12,
       reasonPlaceholder: 'Ex : doublon confirmé, demande contractuelle écrite, tenant de test...',
       onConfirm: async (reason) => {
-        const { error } = await supabase.from('agencies').delete().eq('id', agency.id);
-        if (error) throw error;
-        await logAdminAction({
-          action: 'organization_deleted',
-          reason,
-          targetOrganizationId: agency.id,
-          targetLabel: agency.name,
-          metadata: { previous_status: agency.status, previous_plan: agency.plan },
+        const { data, error } = await supabase.rpc('delete_agency_cascade', {
+          p_agency_id: agency.id,
+          p_reason: reason,
         });
+        if (error) throw error;
+        const deletionResult = data as { deleted?: Record<string, number>; user_profiles_deleted?: number; storage_objects_deleted?: number } | null;
+        const userProfilesDeleted = deletionResult?.user_profiles_deleted ?? deletionResult?.deleted?.user_profiles ?? 0;
+        const storageObjectsDeleted = deletionResult?.storage_objects_deleted ?? 0;
         setAgencies((current) => current.filter((item) => item.id !== agency.id));
         setSelectedAgency(null);
-        setFeedback({ kind: 'success', text: `${agency.name} a été supprimée.` });
+        setFeedback({
+          kind: 'success',
+          text: `${agency.name} a été supprimée via la cascade sécurisée. ${userProfilesDeleted} profil(s) d'accès retiré(s), ${storageObjectsDeleted} objet(s) storage supprimé(s).`,
+        });
+        void loadAll();
       },
     });
   };

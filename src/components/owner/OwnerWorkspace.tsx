@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   AlertCircle,
   ArrowRight,
+  BarChart3,
   Banknote,
   Building2,
   CalendarClock,
@@ -13,11 +16,13 @@ import {
   FolderOpen,
   Home,
   Landmark,
+  Loader2,
   Mail,
   MapPin,
   Plus,
   ReceiptText,
   RefreshCw,
+  Save,
   Settings,
   Sparkles,
   Store,
@@ -28,12 +33,26 @@ import {
 
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { formatCurrency, formatDate, formatSenegalPhone } from '../../lib/formatters';
+import { formatCurrency, formatDate, formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
 import { formatPersonName } from '../../lib/people';
-import { readWithCache } from '../../services/offlineReadCache';
+import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../../services/offlineReadCache';
+import { getOrCreateIndividualOwnerBailleur, type OwnerBailleur } from '../../services/individualOwner';
+import {
+  addFooter,
+  drawDocumentHeader,
+  drawLegalVerificationFooter,
+  drawPageBorder,
+  drawTotalsBlock,
+  getAutoTableTheme,
+  saveGeneratedPdf,
+} from '../../lib/pdf';
+import type { AgencySettings } from '../../types';
+import { useToast } from '../../hooks/useToast';
 import { OfflineDataNotice } from '../ui/OfflineDataNotice';
 import { PageSkeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/EmptyState';
+import { Modal } from '../ui/Modal';
+import { ToastContainer } from '../ui/Toast';
 
 type OwnerNavigate = (page: string) => void;
 
@@ -113,6 +132,7 @@ interface OwnerSettings {
 
 interface OwnerWorkspaceData {
   settings: OwnerSettings | null;
+  ownerBailleur: OwnerBailleur | null;
   properties: OwnerProperty[];
   units: OwnerUnit[];
   contracts: OwnerContract[];
@@ -123,6 +143,7 @@ interface OwnerWorkspaceData {
 
 const EMPTY_DATA: OwnerWorkspaceData = {
   settings: null,
+  ownerBailleur: null,
   properties: [],
   units: [],
   contracts: [],
@@ -146,6 +167,29 @@ function getCurrentMonthBounds() {
     start: start.toISOString().slice(0, 10),
     end: end.toISOString().slice(0, 10),
   };
+}
+
+function getMonthKey(value?: string | null) {
+  return value ? value.slice(0, 7) : '';
+}
+
+function getCurrentMonthKey() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function formatMonthLabel(period: string) {
+  const [year, month] = period.split('-').map(Number);
+  if (!year || !month) return period;
+  return new Intl.DateTimeFormat('fr-FR', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, 1));
+}
+
+function createOwnerReportReference(period: string) {
+  const compactPeriod = period.replace('-', '');
+  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `RPR-${compactPeriod}-${suffix}`;
 }
 
 function parseAmount(value: number | string | null | undefined) {
@@ -174,12 +218,24 @@ function getDocumentKind(type: string) {
   return { label: 'GED', tone: 'text-emerald-700 bg-emerald-50 border-emerald-100' };
 }
 
-export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspaceProps) {
-  const { profile, user, agency } = useAuth();
+export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
+  const { profile, user, agency, accountProfile } = useAuth();
+  const toast = useToast();
   const [data, setData] = useState<OwnerWorkspaceData>(EMPTY_DATA);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
+  const [reportPeriod, setReportPeriod] = useState(getCurrentMonthKey());
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    prenom: '',
+    nom: '',
+    telephone: '',
+    email: '',
+    adresse: '',
+  });
 
   const loadOwnerWorkspace = useCallback(async () => {
     if (!profile?.agency_id) {
@@ -194,12 +250,17 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
         { agencyId: scopedAgencyId, userId: profile.id },
         'owner-workspace-dashboard',
         async () => {
-          const [settingsRes, propertiesRes, unitsRes, contractsRes, paymentsRes, expensesRes, docsRes, registryRes] = await Promise.all([
+          const [settingsRes, ownerBailleur, propertiesRes, unitsRes, contractsRes, paymentsRes, expensesRes, docsRes, registryRes] = await Promise.all([
             supabase
               .from('agency_settings')
               .select('nom_agence, telephone, email, adresse, logo_url')
               .eq('agency_id', scopedAgencyId)
               .maybeSingle(),
+            getOrCreateIndividualOwnerBailleur({
+              profile,
+              agency,
+              accountProfile,
+            }),
             supabase
               .from('immeubles')
               .select('id, nom, adresse, quartier, ville, nombre_unites, actif, created_at')
@@ -221,7 +282,7 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
               .select('id, contrat_id, montant_total, part_agence, part_bailleur, statut, mois_concerne, date_paiement, created_at, contrats(loyer_mensuel, locataires(nom, prenom), unites(nom, immeubles(nom)))')
               .eq('agency_id', scopedAgencyId)
               .order('date_paiement', { ascending: false })
-              .limit(40),
+              .limit(120),
             supabase
               .from('depenses')
               .select('id, montant, date_depense')
@@ -241,7 +302,7 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
               .eq('agency_id', scopedAgencyId)
               .neq('status', 'deleted')
               .order('generated_at', { ascending: false })
-              .limit(8),
+              .limit(12),
           ]);
 
           if (settingsRes.error) throw settingsRes.error;
@@ -288,6 +349,7 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
 
           return {
             settings: (settingsRes.data as OwnerSettings | null) ?? null,
+            ownerBailleur,
             properties: (propertiesRes.data ?? []) as OwnerProperty[],
             units: (unitsRes.data ?? []) as OwnerUnit[],
             contracts: (contractsRes.data ?? []) as unknown as OwnerContract[],
@@ -307,7 +369,7 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
     } finally {
       setLoading(false);
     }
-  }, [profile?.agency_id, profile?.id]);
+  }, [accountProfile, agency, profile]);
 
   useEffect(() => {
     void loadOwnerWorkspace();
@@ -334,10 +396,40 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
   const ownerName = useMemo(() => {
     const configured = data.settings?.nom_agence?.trim();
     const profileName = formatPersonName(profile, '');
-    if (profileName) return profileName;
     if (configured && configured.toLowerCase() !== 'gestion locative') return configured;
+    if (profileName) return profileName;
     return agency?.name || 'Propriétaire';
   }, [agency?.name, data.settings?.nom_agence, profile]);
+
+  useEffect(() => {
+    if (!isProfileModalOpen) return;
+    const nameParts = ownerName.split(/\s+/).filter(Boolean);
+    setProfileForm({
+      prenom: profile?.prenom || data.ownerBailleur?.prenom || nameParts[0] || '',
+      nom: profile?.nom || data.ownerBailleur?.nom || nameParts.slice(1).join(' ') || '',
+      telephone: data.settings?.telephone || profile?.telephone || data.ownerBailleur?.telephone || agency?.phone || '',
+      email: data.settings?.email || profile?.email || data.ownerBailleur?.email || agency?.email || '',
+      adresse: data.settings?.adresse || data.ownerBailleur?.adresse || agency?.address || '',
+    });
+  }, [
+    agency?.address,
+    agency?.email,
+    agency?.phone,
+    data.ownerBailleur?.adresse,
+    data.ownerBailleur?.email,
+    data.ownerBailleur?.nom,
+    data.ownerBailleur?.prenom,
+    data.ownerBailleur?.telephone,
+    data.settings?.adresse,
+    data.settings?.email,
+    data.settings?.telephone,
+    isProfileModalOpen,
+    ownerName,
+    profile?.email,
+    profile?.nom,
+    profile?.prenom,
+    profile?.telephone,
+  ]);
 
   const avatarUrl = useMemo(() => {
     const metadata = user?.user_metadata as { avatar_url?: string; picture?: string } | undefined;
@@ -406,15 +498,63 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
     data.properties.slice(0, 4).map((property, index) => {
       const units = data.units.filter((unit) => unit.immeuble_id === property.id);
       const occupied = units.filter((unit) => isOccupiedStatus(unit.statut)).length;
+      const expectedRent = units.reduce((sum, unit) => sum + parseAmount(unit.loyer_base), 0);
       return {
         property,
         units,
         occupied,
+        expectedRent,
         occupation: units.length > 0 ? Math.round((occupied / units.length) * 100) : 0,
         accent: PROPERTY_ACCENTS[index % PROPERTY_ACCENTS.length],
       };
     })
   ), [data.properties, data.units]);
+
+  const reportSummary = useMemo(() => {
+    const periodPayments = data.payments.filter((payment) => getMonthKey(payment.mois_concerne ?? payment.date_paiement) === reportPeriod);
+    const periodExpenses = data.expenses.filter((expense) => getMonthKey(expense.date_depense) === reportPeriod);
+    const activeContracts = data.contracts.filter((contract) => isActiveStatus(contract.statut));
+    const paidByContract = new Map<string, number>();
+    periodPayments.forEach((payment) => {
+      if (!payment.contrat_id) return;
+      paidByContract.set(payment.contrat_id, (paidByContract.get(payment.contrat_id) ?? 0) + parseAmount(payment.montant_total));
+    });
+
+    const rows = activeContracts.map((contract) => {
+      const paid = paidByContract.get(contract.id) ?? 0;
+      const rent = parseAmount(contract.loyer_mensuel);
+      const remaining = Math.max(0, rent - paid);
+      return {
+        contract,
+        rent,
+        paid,
+        remaining,
+        status: paid >= rent && rent > 0 ? 'Soldé' : paid > 0 ? 'Partiel' : 'Impayé',
+      };
+    });
+
+    const collected = periodPayments.reduce((sum, payment) => sum + parseAmount(payment.montant_total), 0);
+    const expenses = periodExpenses.reduce((sum, expense) => sum + parseAmount(expense.montant), 0);
+    const netOwner = periodPayments.reduce((sum, payment) => sum + paymentOwnerNet(payment), 0) - expenses;
+    const expectedRent = rows.reduce((sum, row) => sum + row.rent, 0);
+    const reliquats = rows.reduce((sum, row) => sum + row.remaining, 0);
+    const generatedReports = data.documents
+      .filter((document) => document.type.toLowerCase().includes('rapport') || document.title.toLowerCase().includes('rapport'))
+      .slice(0, 3);
+
+    return {
+      periodPayments,
+      rows,
+      collected,
+      expenses,
+      netOwner,
+      expectedRent,
+      reliquats,
+      recoveryRate: expectedRent > 0 ? Math.round((collected / expectedRent) * 100) : 0,
+      activeContracts: activeContracts.length,
+      generatedReports,
+    };
+  }, [data.contracts, data.documents, data.expenses, data.payments, reportPeriod]);
 
   const recentPayments = data.payments.slice(0, 5);
   const recentDocuments = data.documents.slice(0, 5);
@@ -448,6 +588,265 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
       .slice(0, 5);
   }, [data.contracts, data.documents, data.payments]);
 
+  const handleSaveOwnerProfile = async () => {
+    if (!profile?.agency_id) return;
+    const prenom = profileForm.prenom.trim();
+    const nom = profileForm.nom.trim();
+    const ownerFullName = [prenom, nom].filter(Boolean).join(' ').trim();
+    if (ownerFullName.length < 2) {
+      toast.warning('Indiquez au moins votre prénom ou votre nom.');
+      return;
+    }
+
+    const normalizedPhone = profileForm.telephone.trim()
+      ? normalizeSenegalPhone(profileForm.telephone) || profileForm.telephone.trim()
+      : null;
+
+    setSavingProfile(true);
+    try {
+      const email = profileForm.email.trim() || null;
+      const adresse = profileForm.adresse.trim() || null;
+
+      const updates = [
+        supabase
+          .from('agency_settings')
+          .upsert({
+            agency_id: profile.agency_id,
+            nom_agence: ownerFullName,
+            telephone: normalizedPhone,
+            email,
+            adresse,
+          }),
+        supabase
+          .from('agencies')
+          .update({
+            name: ownerFullName,
+            phone: normalizedPhone,
+            address: adresse,
+          })
+          .eq('id', profile.agency_id),
+      ];
+
+      if (profile.id) {
+        updates.push(
+          supabase
+            .from('user_profiles')
+            .update({
+              prenom: prenom || null,
+              nom: nom || null,
+              telephone: normalizedPhone,
+            })
+            .eq('id', profile.id),
+        );
+      }
+
+      if (data.ownerBailleur?.id) {
+        updates.push(
+          supabase
+            .from('bailleurs')
+            .update({
+              prenom: prenom || data.ownerBailleur.prenom,
+              nom: nom || data.ownerBailleur.nom,
+              telephone: normalizedPhone,
+              email,
+              adresse,
+            })
+            .eq('id', data.ownerBailleur.id)
+            .eq('agency_id', profile.agency_id),
+        );
+      }
+
+      const results = await Promise.all(updates);
+      const firstError = results.find((result) => result.error)?.error;
+      if (firstError) throw firstError;
+
+      setData((current) => ({
+        ...current,
+        settings: {
+          ...current.settings,
+          nom_agence: ownerFullName,
+          telephone: normalizedPhone,
+          email,
+          adresse,
+        },
+        ownerBailleur: current.ownerBailleur
+          ? {
+              ...current.ownerBailleur,
+              prenom: prenom || current.ownerBailleur.prenom,
+              nom: nom || current.ownerBailleur.nom,
+              telephone: normalizedPhone,
+              email,
+              adresse,
+            }
+          : current.ownerBailleur,
+      }));
+      await invalidateOperationalCaches({ agencyId: profile.agency_id, userId: profile.id }, ['dashboard', 'documents', 'bailleurs']);
+      notifyDataChanged(['dashboard', 'documents', 'bailleurs']);
+      toast.success('Profil propriétaire mis à jour.');
+      setIsProfileModalOpen(false);
+      void loadOwnerWorkspace();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Impossible de mettre à jour votre profil propriétaire.';
+      toast.error(message);
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleGenerateOwnerReport = async () => {
+    if (!profile?.agency_id) return;
+    setGeneratingReport(true);
+    try {
+      const periodLabel = formatMonthLabel(reportPeriod);
+      const reportRef = createOwnerReportReference(reportPeriod);
+      const settings: Partial<AgencySettings> = {
+        agency_id: profile.agency_id,
+        is_bailleur_account: true,
+        organization_type: 'individual_landlord',
+        document_mode: 'simple',
+        nom_agence: ownerName,
+        adresse: data.settings?.adresse || agency?.address || null,
+        telephone: data.settings?.telephone || profile?.telephone || agency?.phone || null,
+        email: data.settings?.email || profile?.email || agency?.email || null,
+        logo_url: data.settings?.logo_url || agency?.logo_url || null,
+        couleur_primaire: '#064E3B',
+        couleur_secondaire: '#F59E0B',
+        pied_page_personnalise: `${ownerName} - Résumé propriétaire`,
+      };
+
+      const doc = new jsPDF('p', 'mm', 'a4');
+      drawPageBorder(doc, settings);
+      let y = await drawDocumentHeader(doc, settings, 'Résumé mensuel propriétaire', `Période : ${periodLabel}`, {
+        documentType: 'rapport propriétaire',
+        reference: reportRef,
+        issueDate: formatDate(new Date().toISOString()),
+      });
+
+      doc.setFont(undefined as unknown as string, 'normal');
+      doc.setFontSize(8.4);
+      doc.setTextColor(71, 85, 105);
+      doc.text(
+        'Synthèse des revenus encaissés, reliquats, charges et contrats actifs de votre espace propriétaire.',
+        14,
+        y + 2,
+      );
+      y += 9;
+
+      y = drawTotalsBlock(
+        doc,
+        14,
+        y,
+        doc.internal.pageSize.getWidth() - 28,
+        [
+          { label: 'Loyers encaissés', value: formatCurrency(reportSummary.collected) },
+          { label: 'Reliquats', value: formatCurrency(reportSummary.reliquats) },
+          { label: 'Dépenses', value: formatCurrency(reportSummary.expenses) },
+          { label: 'Net propriétaire', value: formatCurrency(reportSummary.netOwner), emphasis: true },
+        ],
+        settings,
+      );
+
+      const rows = reportSummary.rows.map((row) => [
+        row.contract.unites?.immeubles?.nom ?? 'Bien',
+        row.contract.unites?.nom ?? 'Unité',
+        formatPersonName(row.contract.locataires, 'Locataire'),
+        formatCurrency(row.rent),
+        formatCurrency(row.paid),
+        formatCurrency(row.remaining),
+        row.status,
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        head: [['Bien', 'Unité', 'Locataire', 'Loyer', 'Encaissé', 'Reliquat', 'Statut']],
+        body: rows.length > 0 ? rows : [['-', '-', 'Aucun contrat actif', formatCurrency(0), formatCurrency(0), formatCurrency(0), '-']],
+        ...getAutoTableTheme(settings),
+        columnStyles: {
+          3: { halign: 'right' },
+          4: { halign: 'right' },
+          5: { halign: 'right' },
+          6: { halign: 'center' },
+        },
+        didDrawPage: () => {
+          drawPageBorder(doc, settings);
+        },
+      });
+
+      const tableEnd = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? y + 34;
+      doc.setFont(undefined as unknown as string, 'bold');
+      doc.setFontSize(8.4);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Taux de recouvrement : ${reportSummary.recoveryRate}%`, 14, Math.min(tableEnd + 9, 258));
+
+      try {
+        await drawLegalVerificationFooter(doc, {
+          ref: reportRef,
+          type: 'rapport_bailleur',
+          agency: ownerName,
+          date: new Date().toISOString(),
+          settings,
+        });
+      } catch {
+        // La vérification QR reste non bloquante.
+      }
+      addFooter(doc, settings);
+
+      await saveGeneratedPdf(doc, {
+        kind: 'bilan',
+        title: 'Résumé mensuel propriétaire',
+        fileName: `resume-proprietaire-${reportPeriod}.pdf`,
+        source: 'owner-workspace',
+        documentType: 'rapport_bailleur',
+        entityId: data.ownerBailleur?.id ?? profile.agency_id,
+        period: reportPeriod,
+        reference: reportRef,
+        data: {
+          document: 'rapport_bailleur',
+          accountType: 'individual_landlord',
+          reportPeriod,
+          ownerName,
+          totals: {
+            collected: reportSummary.collected,
+            reliquats: reportSummary.reliquats,
+            expenses: reportSummary.expenses,
+            netOwner: reportSummary.netOwner,
+            recoveryRate: reportSummary.recoveryRate,
+          },
+        },
+        preview: {
+          columns: ['Bien', 'Unité', 'Locataire', 'Loyer', 'Encaissé', 'Reliquat', 'Statut'],
+          rows: reportSummary.rows.slice(0, 6).map((row) => ({
+            Bien: row.contract.unites?.immeubles?.nom ?? 'Bien',
+            Unite: row.contract.unites?.nom ?? 'Unité',
+            Locataire: formatPersonName(row.contract.locataires, 'Locataire'),
+            Loyer: formatCurrency(row.rent),
+            Encaisse: formatCurrency(row.paid),
+            Reliquat: formatCurrency(row.remaining),
+            Statut: row.status,
+          })),
+          rowCount: reportSummary.rows.length,
+          period: periodLabel,
+          stats: [
+            { label: 'Loyers encaissés', value: formatCurrency(reportSummary.collected) },
+            { label: 'Reliquats', value: formatCurrency(reportSummary.reliquats) },
+            { label: 'Net propriétaire', value: formatCurrency(reportSummary.netOwner) },
+            { label: 'Recouvrement', value: `${reportSummary.recoveryRate}%` },
+          ],
+        },
+      });
+
+      await invalidateOperationalCaches({ agencyId: profile.agency_id, userId: profile.id }, ['dashboard', 'documents', 'finances']);
+      notifyDataChanged(['dashboard', 'documents', 'finances']);
+      toast.success('Résumé mensuel propriétaire généré et archivé.');
+      void loadOwnerWorkspace();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Impossible de générer le rapport propriétaire.';
+      toast.error(message);
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
   if (loading) {
     return <PageSkeleton title="Espace propriétaire" variant="dashboard" />;
   }
@@ -474,6 +873,7 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
 
   return (
     <div className="min-h-full bg-[radial-gradient(circle_at_top_left,rgba(255,244,214,0.95),transparent_30rem),linear-gradient(180deg,#fffaf0,#f8f4ea_46%,#f7fbf8)] px-4 py-5 sm:px-6 lg:px-7">
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
       <div className="mx-auto max-w-[118rem] space-y-5">
         {cacheTimestamp && <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadOwnerWorkspace} />}
 
@@ -493,10 +893,11 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
-              onClick={() => onNavigate?.('tableau-de-bord-financier')}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-4 py-3 text-sm font-black text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+              onClick={() => void handleGenerateOwnerReport()}
+              disabled={generatingReport}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-4 py-3 text-sm font-black text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
             >
-              <FileText className="h-4 w-4 text-brand-800" />
+              {generatingReport ? <Loader2 className="h-4 w-4 animate-spin text-brand-800" /> : <FileText className="h-4 w-4 text-brand-800" />}
               Générer rapport PDF
             </button>
             <button
@@ -540,7 +941,7 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
                 />
               ) : (
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-                  {propertyCards.map(({ property, units, occupation, accent }) => {
+                  {propertyCards.map(({ property, units, occupation, expectedRent, accent }) => {
                     const Icon = accent.icon;
                     return (
                       <button
@@ -561,6 +962,7 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
                             <span className="rounded-full bg-emerald-50 px-2 py-1 text-[0.68rem] font-black text-emerald-800">{units.length} unité{units.length > 1 ? 's' : ''}</span>
                             <span className="rounded-full bg-amber-50 px-2 py-1 text-[0.68rem] font-black text-amber-800">{occupation}%</span>
                           </div>
+                          <p className="mt-3 text-xs font-black text-slate-800">{formatCurrency(expectedRent)} / mois</p>
                         </div>
                       </button>
                     );
@@ -575,6 +977,87 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
                   </button>
                 </div>
               )}
+            </section>
+
+            <section className="rounded-3xl border border-emerald-950/10 bg-[#fffdf8]/95 p-4 shadow-[0_20px_70px_rgba(15,23,42,0.08)] sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[0.68rem] font-black uppercase tracking-[0.14em] text-emerald-800">
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    Bilan propriétaire
+                  </div>
+                  <h2 className="mt-3 text-xl font-black text-slate-950">Rapports & revenus</h2>
+                  <p className="mt-1 text-sm font-semibold text-slate-500">Une synthèse claire de vos encaissements, reliquats et charges.</p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <input
+                    type="month"
+                    value={reportPeriod}
+                    onChange={(event) => setReportPeriod(event.target.value || getCurrentMonthKey())}
+                    className="h-11 rounded-xl border border-emerald-950/10 bg-white px-3 text-sm font-black text-slate-800 shadow-sm outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                    aria-label="Période du rapport propriétaire"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleGenerateOwnerReport()}
+                    disabled={generatingReport}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-900 px-4 text-sm font-black text-white shadow-lg shadow-emerald-950/15 transition hover:bg-brand-950 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {generatingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                    Générer mon rapport PDF
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <MiniStat label="Encaissé" value={formatCurrency(reportSummary.collected)} tone="blue" />
+                <MiniStat label="Reliquats" value={formatCurrency(reportSummary.reliquats)} tone="amber" />
+                <MiniStat label="Charges" value={formatCurrency(reportSummary.expenses)} tone="orange" />
+                <MiniStat label="Net propriétaire" value={formatCurrency(reportSummary.netOwner)} tone="blue" />
+              </div>
+
+              <div className="mt-4 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="rounded-2xl border border-emerald-950/10 bg-white p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-black text-slate-950">Situation de {formatMonthLabel(reportPeriod)}</p>
+                      <p className="mt-1 text-xs font-semibold text-slate-500">
+                        {reportSummary.activeContracts} contrat{reportSummary.activeContracts > 1 ? 's' : ''} actif{reportSummary.activeContracts > 1 ? 's' : ''} analysé{reportSummary.activeContracts > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-800">{reportSummary.recoveryRate}% recouvré</span>
+                  </div>
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-full rounded-full bg-gradient-to-r from-brand-800 to-amber-400" style={{ width: `${Math.min(100, reportSummary.recoveryRate)}%` }} />
+                  </div>
+                  <p className="mt-3 text-xs font-semibold text-slate-500">
+                    Loyer attendu : <span className="font-black text-slate-800">{formatCurrency(reportSummary.expectedRent)}</span>
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-emerald-950/10 bg-white p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-black text-slate-950">Derniers rapports</p>
+                    <button type="button" onClick={() => onNavigate?.('documents')} className="text-xs font-black text-brand-800">Voir GED</button>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {reportSummary.generatedReports.length > 0 ? (
+                      reportSummary.generatedReports.map((document) => (
+                        <CompactRow
+                          key={document.id}
+                          badge="PDF"
+                          badgeClassName="bg-red-50 text-red-700 border-red-100"
+                          title={document.title}
+                          subtitle={`${document.subtitle} · ${formatDate(document.createdAt)}`}
+                        />
+                      ))
+                    ) : (
+                      <p className="rounded-xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-3 text-xs font-semibold leading-5 text-slate-500">
+                        Aucun rapport propriétaire généré pour le moment.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
             </section>
 
             <section className="grid gap-4 lg:grid-cols-3">
@@ -644,7 +1127,7 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
                 <h2 className="text-xl font-black text-slate-950">Mon profil</h2>
                 <button
                   type="button"
-                  onClick={onStartSetupWizard ?? (() => onNavigate?.('parametres'))}
+                  onClick={() => setIsProfileModalOpen(true)}
                   className="inline-flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm hover:bg-emerald-50"
                 >
                   <Settings className="h-4 w-4" />
@@ -692,7 +1175,7 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
               <h2 className="text-lg font-black text-slate-950">Accès rapides</h2>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <QuickAction icon={Building2} label="Ajouter un bien" onClick={() => onNavigate?.('patrimoine')} />
-                <QuickAction icon={FileText} label="Générer rapport" onClick={() => onNavigate?.('tableau-de-bord-financier')} />
+                <QuickAction icon={FileText} label="Générer rapport" onClick={() => void handleGenerateOwnerReport()} />
                 <QuickAction icon={FolderOpen} label="Mes documents" onClick={() => onNavigate?.('documents')} />
                 <QuickAction icon={Wallet} label="Mes paiements" onClick={() => onNavigate?.('paiements')} />
               </div>
@@ -715,6 +1198,82 @@ export function OwnerWorkspace({ onNavigate, onStartSetupWizard }: OwnerWorkspac
           </aside>
         </div>
       </div>
+      <Modal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} title="Modifier mon profil propriétaire">
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/60 p-4">
+            <p className="text-sm font-black text-brand-900">Profil utilisé dans l'espace propriétaire</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-emerald-900/70">
+              Ces informations alimentent votre carte profil, votre bailleur interne et les documents propriétaire.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">Prénom</span>
+              <input
+                value={profileForm.prenom}
+                onChange={(event) => setProfileForm((current) => ({ ...current, prenom: event.target.value }))}
+                className="h-12 w-full rounded-2xl border border-emerald-950/10 bg-white px-4 text-sm font-bold text-slate-950 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                placeholder="Ex: Matar"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">Nom</span>
+              <input
+                value={profileForm.nom}
+                onChange={(event) => setProfileForm((current) => ({ ...current, nom: event.target.value }))}
+                className="h-12 w-full rounded-2xl border border-emerald-950/10 bg-white px-4 text-sm font-bold text-slate-950 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                placeholder="Ex: Diouf"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">Téléphone</span>
+              <input
+                value={formatSenegalPhoneInput(profileForm.telephone)}
+                onChange={(event) => setProfileForm((current) => ({ ...current, telephone: formatSenegalPhoneInput(event.target.value) }))}
+                className="h-12 w-full rounded-2xl border border-emerald-950/10 bg-white px-4 text-sm font-bold text-slate-950 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                placeholder="77 123 45 67"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">Email documentaire</span>
+              <input
+                type="email"
+                value={profileForm.email}
+                onChange={(event) => setProfileForm((current) => ({ ...current, email: event.target.value }))}
+                className="h-12 w-full rounded-2xl border border-emerald-950/10 bg-white px-4 text-sm font-bold text-slate-950 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                placeholder="proprietaire@email.com"
+              />
+            </label>
+            <label className="block sm:col-span-2">
+              <span className="mb-2 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">Adresse</span>
+              <input
+                value={profileForm.adresse}
+                onChange={(event) => setProfileForm((current) => ({ ...current, adresse: event.target.value }))}
+                className="h-12 w-full rounded-2xl border border-emerald-950/10 bg-white px-4 text-sm font-bold text-slate-950 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                placeholder="Quartier, ville"
+              />
+            </label>
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(false)}
+              className="inline-flex h-11 items-center justify-center rounded-xl border border-emerald-950/10 bg-white px-4 text-sm font-black text-slate-700 hover:bg-slate-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSaveOwnerProfile()}
+              disabled={savingProfile}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-900 px-5 text-sm font-black text-white shadow-lg shadow-emerald-950/15 hover:bg-brand-950 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {savingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Enregistrer
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

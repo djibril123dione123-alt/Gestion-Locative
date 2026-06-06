@@ -146,10 +146,10 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
   const uploadLogo = async () => {
     if (!logoFile || !profile?.agency_id) return logoPreview;
     if (!logoFile.type.startsWith('image/')) {
-      throw new Error('Le logo doit être une image.');
+      throw new Error(isIndividualOwner ? 'La photo de profil doit être une image.' : 'Le logo doit être une image.');
     }
     if (logoFile.size > MAX_LOGO_SIZE) {
-      throw new Error('Le logo doit peser moins de 5 Mo.');
+      throw new Error(isIndividualOwner ? 'La photo de profil doit peser moins de 5 Mo.' : 'Le logo doit peser moins de 5 Mo.');
     }
 
     const fileExt = getLogoExtension(logoFile);
@@ -458,14 +458,16 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
 
                   <label className="group flex min-h-[9rem] cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-300/70 bg-emerald-50/60 px-5 py-4 text-center shadow-inner transition hover:border-amber-400 hover:bg-amber-50/70 sm:w-44">
                     {logoPreview ? (
-                      <img src={logoPreview} alt={isIndividualOwner ? 'Visuel propriétaire' : 'Logo agence'} className="h-16 w-24 object-contain" />
+                      <img src={logoPreview} alt={isIndividualOwner ? 'Photo de profil propriétaire' : 'Logo agence'} className={isIndividualOwner ? 'h-16 w-16 rounded-full object-cover ring-4 ring-white/80' : 'h-16 w-24 object-contain'} />
                     ) : (
                       <Upload className="h-7 w-7 text-brand-800" />
                     )}
                     <span className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-brand-800">
-                      Logo optionnel
+                      {isIndividualOwner ? 'Photo optionnelle' : 'Logo optionnel'}
                     </span>
-                    <span className="mt-1 text-xs font-semibold text-slate-500">PNG, JPG, SVG</span>
+                    <span className="mt-1 text-xs font-semibold text-slate-500">
+                      {isIndividualOwner ? 'Avatar propriétaire · PNG, JPG' : 'PNG, JPG, SVG'}
+                    </span>
                     <input
                       type="file"
                       accept="image/*"

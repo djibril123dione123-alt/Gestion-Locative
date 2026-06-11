@@ -34,7 +34,7 @@ const PAYDUNYA_CHECKOUT_BASE = IS_LIVE ? "https://paydunya.com/checkout/invoice"
 
 const SUPABASE_URL         = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const APP_URL              = Deno.env.get("APP_URL") ?? "https://samaykeur.replit.app";
+const APP_URL              = Deno.env.get("APP_URL") ?? "https://app.samaykeur.com";
 const WEBHOOK_URL          = `${SUPABASE_URL}/functions/v1/paydunya-webhook`;
 
 // Softpay provider slugs PayDunya

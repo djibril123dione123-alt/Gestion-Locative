@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
@@ -345,9 +345,9 @@ function DrawerMetric({
     slate: 'border-slate-200 bg-slate-50 text-slate-900',
   }[tone];
   return (
-    <div className={`rounded-xl border px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] ${toneClass}`}>
-      <p className="text-[10px] font-bold uppercase tracking-[0.1em] opacity-70">{label}</p>
-      <p className="mt-0.5 break-words text-xs font-extrabold leading-tight tabular-nums sm:text-sm">{value}</p>
+    <div className={`rounded-xl border px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] ${toneClass}`}>
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-current opacity-60">{label}</p>
+      <p className="mt-1 break-words text-sm font-extrabold leading-tight tabular-nums">{value}</p>
     </div>
   );
 }
@@ -1668,10 +1668,10 @@ export function Bailleurs() {
           {filteredBailleurs.length === 0 ? (
             <div className="p-8">
               <EmptyDrawerState
-                title={searchTerm ? 'Aucun bailleur trouvé' : 'Aucun bailleur enregistré'}
-                description={searchTerm ? 'Essayez une autre recherche ou retirez les filtres.' : 'Ajoutez votre premier bailleur pour structurer votre portefeuille locatif.'}
-                actionLabel={!searchTerm ? 'Créer mon premier bailleur' : undefined}
-                onAction={!searchTerm ? () => setIsModalOpen(true) : undefined}
+                title={searchTerm || activeFilter !== 'all' ? 'Aucun bailleur trouvé' : 'Aucun bailleur enregistré'}
+                description={searchTerm || activeFilter !== 'all' ? 'Essayez une autre recherche ou retirez les filtres actifs.' : 'Ajoutez votre premier bailleur pour structurer votre portefeuille locatif.'}
+                actionLabel={!searchTerm && activeFilter === 'all' ? 'Créer mon premier bailleur' : (activeFilter !== 'all' ? 'Réinitialiser les filtres' : undefined)}
+                onAction={!searchTerm && activeFilter === 'all' ? () => setIsModalOpen(true) : (activeFilter !== 'all' ? () => setActiveFilter('all') : undefined)}
               />
             </div>
           ) : (
@@ -1680,14 +1680,14 @@ export function Bailleurs() {
                 <table className={`w-full border-collapse ${detailPanelOpen ? 'min-w-[620px] table-fixed' : 'min-w-[840px]'}`}>
                   <thead className="bg-[#f8f3e8]/80">
                     <tr>
-                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[34%] px-3' : 'px-3.5'} py-2.5 text-left text-[11px] font-bold uppercase text-slate-500`}>Bailleur</th>}
-                      {showBailleurColumn('telephone') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Téléphone</th>}
-                      {showBailleurColumn('commission') && <th className="px-3.5 py-2.5 text-left text-[11px] font-bold uppercase text-slate-500">Commission</th>}
-                      {showBailleurColumn('biens') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-2.5 text-left text-[11px] font-bold uppercase text-slate-500`}>Biens</th>}
-                      {showBailleurColumn('unites') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-2.5 text-left text-[11px] font-bold uppercase text-slate-500`}>Unités</th>}
-                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-2.5 text-right text-[11px] font-bold uppercase text-slate-500`}>Reliquats</th>}
-                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-2.5 text-right text-[11px] font-bold uppercase text-slate-500`}>Net</th>}
-                      {showBailleurColumn('actions') && <th className={`${detailPanelOpen ? 'w-12 px-2' : 'px-3.5'} py-2.5 text-right text-[11px] font-bold uppercase text-slate-500`}>Actions</th>}
+                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[34%] px-3' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Bailleur</th>}
+                      {showBailleurColumn('telephone') && <th className="px-3.5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Téléphone</th>}
+                      {showBailleurColumn('commission') && <th className="px-3.5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Commission</th>}
+                      {showBailleurColumn('biens') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Biens</th>}
+                      {showBailleurColumn('unites') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Unités</th>}
+                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Reliquats</th>}
+                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Net</th>}
+                      {showBailleurColumn('actions') && <th className={`${detailPanelOpen ? 'w-12 px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Actions</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1759,7 +1759,9 @@ export function Bailleurs() {
         </section>
 
         {detailPanelOpen && (
-        <aside className="fixed inset-0 z-50 overflow-y-auto bg-[#fffdf8] transition-transform duration-300 xl:sticky xl:top-4 xl:z-auto xl:block xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)]">
+        <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] transition-all duration-300 xl:sticky xl:top-4 xl:z-auto xl:flex xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)]">
+          <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={() => setDetailOpen(false)} aria-hidden="true" />
+          <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
           {!selectedBailleur ? (
             <div className="flex min-h-full items-center justify-center p-6">
               <EmptyDrawerState title="Sélectionnez un bailleur" description="Consultez ses biens, paiements, documents et rapports sans quitter le portefeuille." />
@@ -1793,10 +1795,10 @@ export function Bailleurs() {
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 py-2 text-sm font-bold text-slate-800 shadow-sm hover:bg-slate-50"><FileText className="h-4 w-4" />Modifier</button>
-                  <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800 hover:bg-amber-100"><FileText className="h-4 w-4" />Mandat PDF</button>
-                  <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-700 bg-emerald-700 px-3 py-2 text-sm font-black text-white shadow-lg shadow-emerald-900/15 hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"><BarChart3 className="h-4 w-4" />Générer rapport</button>
-                  <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-red-600 hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
+                  <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"><FileText className="h-4 w-4" />Modifier</button>
+                  <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"><FileText className="h-4 w-4" />Mandat PDF</button>
+                  <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-600 bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"><BarChart3 className="h-4 w-4" />Rapport PDF</button>
+                  <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 bg-white px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
                 </div>
               </div>
 
@@ -1813,37 +1815,29 @@ export function Bailleurs() {
                 </div>
               </div>
 
-              <div className="border-y border-emerald-950/10 bg-[#fffdf8]/85 p-2.5">
-                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
-                  {DRAWER_PRIMARY_TABS.map((tab) => (
+              <div className="border-y border-emerald-950/10 bg-[#fffdf8]/85 px-2.5 py-2">
+                <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-50/80 p-1 scrollbar-none">
+                  {[...DRAWER_PRIMARY_TABS, ...DRAWER_MORE_TABS].map((tab) => (
                     <button
                       key={tab.id}
                       type="button"
                       onClick={() => setActiveDrawerTab(tab.id)}
-                      className={`rounded-xl px-2.5 py-2 text-xs font-bold transition ${activeDrawerTab === tab.id ? 'bg-emerald-900 text-white shadow-sm' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-900'}`}
+                      className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                        activeDrawerTab === tab.id
+                          ? 'bg-emerald-900 text-white shadow-sm'
+                          : 'text-slate-500 hover:bg-white hover:text-emerald-900'
+                      }`}
                     >
                       {tab.label}
                     </button>
                   ))}
-                  <select
-                    aria-label="Autres onglets bailleur"
-                    value={DRAWER_MORE_TABS.some((tab) => tab.id === activeDrawerTab) ? activeDrawerTab : ''}
-                    onChange={(event) => {
-                      if (event.target.value) setActiveDrawerTab(event.target.value as DrawerTab);
-                    }}
-                    className={`rounded-xl border-0 px-2.5 py-2 text-xs font-bold outline-none transition ${DRAWER_MORE_TABS.some((tab) => tab.id === activeDrawerTab) ? 'bg-emerald-900 text-white' : 'bg-transparent text-slate-500 hover:bg-emerald-50 hover:text-emerald-900'}`}
-                  >
-                    <option value="">Plus</option>
-                    {DRAWER_MORE_TABS.map((tab) => (
-                      <option key={tab.id} value={tab.id}>{tab.label}</option>
-                    ))}
-                  </select>
                 </div>
               </div>
 
               <div className="p-3.5">{renderDrawerTab()}</div>
             </div>
           )}
+          </div>
         </aside>
         )}
       </div>

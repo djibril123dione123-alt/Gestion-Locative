@@ -303,18 +303,19 @@ function getUnitVisual(unit: UnitRow): { icon: LucideIcon; bg: string; color: st
 function statusBadgeClass(status: string) {
   const normalized = normalizeText(status);
   if (normalized.includes('retard')) return 'bg-red-50 text-red-700 border-red-100';
-  if (normalized.includes('loue')) return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+  if (normalized.includes('lou')) return 'bg-emerald-50 text-emerald-700 border-emerald-100';
   if (normalized.includes('maintenance')) return 'bg-amber-50 text-amber-700 border-amber-100';
   if (normalized.includes('libre')) return 'bg-sky-50 text-sky-700 border-sky-100';
+  if (normalized.includes('reserv')) return 'bg-violet-50 text-violet-700 border-violet-100';
   return 'bg-slate-50 text-slate-700 border-slate-100';
 }
 
 function getUnitStatusLabel(unit: UnitRow, summary?: UnitSummary) {
   if (summary?.isLate) return 'En retard';
   const normalized = normalizeText(unit.statut);
-  if (normalized === 'loue' || normalized === 'louee') return 'Louee';
+  if (normalized === 'loue' || normalized === 'louee') return 'Louée';
   if (normalized === 'maintenance') return 'Maintenance';
-  if (normalized === 'reservee') return 'Reservee';
+  if (normalized === 'reservee') return 'Réservée';
   return 'Libre';
 }
 
@@ -611,7 +612,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
       const searchable = normalizeText(`${unit.nom} ${unit.numero ?? ''} ${unit.etage ?? ''} ${property?.nom ?? ''} ${summary?.tenantLabel ?? ''} ${inferUnitType(unit)}`);
       if (search && !searchable.includes(search)) return false;
       if (unitFilter === 'libre' && getUnitStatusLabel(unit, summary) !== 'Libre') return false;
-      if (unitFilter === 'loue' && getUnitStatusLabel(unit, summary) !== 'Louee') return false;
+      if (unitFilter === 'loue' && getUnitStatusLabel(unit, summary) !== 'Lou\u00e9e') return false;
       if (unitFilter === 'maintenance' && getUnitStatusLabel(unit, summary) !== 'Maintenance') return false;
       if (unitFilter === 'late' && !(summary?.isLate)) return false;
       if (unitFilter === 'without_contract' && summary?.contract) return false;
@@ -1033,7 +1034,9 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           </main>
 
           {drawer && (
-            <aside className="fixed inset-0 z-50 min-w-0 bg-[#fffdf8] p-0 xl:static xl:z-auto xl:bg-transparent">
+            <aside className="fixed inset-0 z-50 flex min-w-0 flex-col overflow-hidden bg-[#fffdf8] p-0 xl:static xl:z-auto xl:flex xl:bg-transparent">
+              <div className="absolute inset-0 bg-slate-900/30 xl:hidden" onClick={() => setDrawer(null)} aria-hidden="true" />
+              <div className="relative flex-1 overflow-y-auto">
               {selectedProperty && selectedPropertySummary && (
                 <PropertyDrawer
                   property={selectedProperty}
@@ -1061,6 +1064,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                   onNavigate={navigate}
                 />
               )}
+              </div>
             </aside>
           )}
         </div>
@@ -1164,8 +1168,8 @@ function MetricCard({ label, value, icon: Icon, tone, wide = false }: { label: s
     <article className={`min-w-0 rounded-2xl border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-3 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70 ${wide ? 'xl:col-span-1' : ''}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className={`truncate text-[0.64rem] font-bold uppercase tracking-[0.13em] ${tones.text}`}>{label}</p>
-          <p className="mt-1.5 truncate text-lg font-extrabold tracking-tight text-slate-950 sm:text-[1.22rem]">{value}</p>
+          <p className={`truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] ${tones.text}`}>{label}</p>
+          <p className="mt-1.5 truncate text-[1.1rem] font-extrabold tracking-tight text-slate-950 sm:text-[1.18rem]" title={typeof value === 'string' ? value : undefined}>{value}</p>
         </div>
         <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ring-1 ${tones.icon}`}>
           <Icon className="h-4 w-4" />
@@ -1217,7 +1221,7 @@ function PropertiesTable({
     <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_18px_48px_rgba(15,23,42,0.06)] ring-1 ring-white/80">
       <div className={`hidden md:block ${compact ? 'overflow-hidden' : 'overflow-x-auto'}`}>
         <table className={`${compact ? 'w-full table-fixed' : 'min-w-[920px]'} divide-y divide-slate-100`}>
-          <thead className="bg-[#f8f3e8]/70 text-left text-[0.66rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+          <thead className="bg-[#f8f3e8]/70 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">
             <tr>
               {showColumn('bien') && <th className={`${compact ? 'w-[32%] px-3' : 'px-4'} py-3`}>Bien</th>}
               {showColumn('type') && <th className="px-4 py-3">Type</th>}
@@ -1347,7 +1351,7 @@ function UnitsTable({
     <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_18px_48px_rgba(15,23,42,0.06)] ring-1 ring-white/80">
       <div className={`hidden md:block ${compact ? 'overflow-hidden' : 'overflow-x-auto'}`}>
         <table className={`${compact ? 'w-full table-fixed' : 'min-w-[900px]'} divide-y divide-slate-100`}>
-          <thead className="bg-[#f8f3e8]/70 text-left text-[0.66rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+          <thead className="bg-[#f8f3e8]/70 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">
             <tr>
               {showColumn('unite') && <th className={`${compact ? 'w-[23%] px-3' : 'px-4'} py-3`}>Unité</th>}
               {showColumn('type') && <th className="px-4 py-3">Type</th>}
@@ -1663,8 +1667,8 @@ function UnitDrawer({
 
 function DrawerAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="inline-flex min-h-14 flex-col items-center justify-center gap-1.5 rounded-xl border border-emerald-950/10 bg-white px-3 py-2 text-center text-xs font-medium text-slate-700 shadow-[0_8px_18px_rgba(15,23,42,0.035)] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-      <Icon className="h-4 w-4 text-slate-500" />
+    <button type="button" onClick={onClick} className="inline-flex min-h-12 flex-col items-center justify-center gap-1.5 rounded-xl border border-emerald-950/10 bg-white px-3 py-2 text-center text-xs font-semibold text-slate-700 shadow-[0_8px_18px_rgba(15,23,42,0.035)] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
+      <Icon className="h-4 w-4 text-slate-400" />
       {label}
     </button>
   );
@@ -1734,7 +1738,7 @@ function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: string; 
 }
 
 function SoftEmpty({ text }: { text: string }) {
-  return <p className="rounded-xl border border-dashed border-emerald-950/15 bg-[#fffaf1] px-3 py-3 text-xs font-medium leading-5 text-slate-500">{text}</p>;
+  return <p className="rounded-xl border border-dashed border-emerald-950/15 bg-[#fffaf1] px-4 py-4 text-xs font-medium leading-5 text-slate-500">{text}</p>;
 }
 
 function PropertyModal({

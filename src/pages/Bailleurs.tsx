@@ -44,6 +44,7 @@ import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages'
 import { formatDate, formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 import { formatPersonName } from '../lib/people';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
@@ -1602,7 +1603,7 @@ export function Bailleurs() {
         <KpiTile icon={ReceiptText} label="Commissions" value={formatCurrency(globalKpis.commissions)} helper={`${globalKpis.immeubles} biens · ${globalKpis.unites} unités`} tone="gold" />
       </div>
 
-      <div className={`grid min-h-[31rem] min-w-0 gap-4 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_28rem] 2xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
+      <div className={`grid min-h-[31rem] min-w-0 gap-4 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
         <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
           <div className="border-b border-emerald-950/10 bg-[linear-gradient(180deg,#fff6df,#fffdf7)] p-3.5 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -1759,7 +1760,7 @@ export function Bailleurs() {
         </section>
 
         {detailPanelOpen && (
-          <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] transition-all duration-300 xl:sticky xl:top-4 xl:z-auto xl:flex xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)]">
+            <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] transition-all duration-300 xl:sticky xl:top-4 xl:z-auto xl:flex xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-3xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)]">
             <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={() => setDetailOpen(false)} aria-hidden="true" />
             <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
               {!selectedBailleur ? (
@@ -2089,16 +2090,18 @@ export function Bailleurs() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-bold text-slate-700">Statut</label>
-                <select
+                <SearchableSelect
                   value={lifecycleForm.statut}
-                  onChange={(e) => setLifecycleForm({ ...lifecycleForm, statut: e.target.value as BailleurLifecycleStatus })}
-                  className="sk-input"
-                >
-                  <option value="resilie">Résilié</option>
-                  <option value="suspendu">Suspendu</option>
-                  <option value="cloture">Clôturé</option>
-                  <option value="archive">Archivé</option>
-                </select>
+                  options={[
+                    { value: 'resilie', label: 'Résilié' },
+                    { value: 'suspendu', label: 'Suspendu' },
+                    { value: 'cloture', label: 'Clôturé' },
+                    { value: 'archive', label: 'Archivé' },
+                  ]}
+                  onChange={(next) => setLifecycleForm({ ...lifecycleForm, statut: next as BailleurLifecycleStatus })}
+                  placeholder="Statut"
+                  searchPlaceholder="Rechercher un statut..."
+                />
               </div>
               <div>
                 <label className="mb-2 block text-sm font-bold text-slate-700">Date d'effet</label>

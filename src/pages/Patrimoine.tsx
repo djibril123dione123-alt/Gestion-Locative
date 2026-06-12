@@ -33,6 +33,7 @@ import { ToastContainer } from '../components/ui/Toast';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { EmptyState } from '../components/ui/EmptyState';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { useAuth } from '../contexts/AuthContext';
 import { usePlanLimits } from '../hooks/usePlanLimits';
@@ -625,6 +626,39 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   const selectedPropertySummary = selectedProperty ? summaries.property.get(selectedProperty.id) ?? getPropertySummary(selectedProperty) : null;
   const selectedUnitSummary = selectedUnit ? summaries.unit.get(selectedUnit.id) ?? getUnitSummary(selectedUnit) : null;
   const detailPanelOpen = drawer !== null;
+  const ownerFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: 'Tous les bailleurs', subtitle: 'Portefeuille complet' },
+      ...data.bailleurs.map((owner) => ({
+        value: owner.id,
+        label: ownerName(owner),
+        subtitle: [owner.telephone, owner.email].filter(Boolean).join(' - ') || 'Propriétaire',
+        keywords: `${owner.nom ?? ''} ${owner.prenom ?? ''} ${owner.telephone ?? ''} ${owner.email ?? ''}`,
+      })),
+    ],
+    [data.bailleurs],
+  );
+  const propertyFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: 'Tous les biens', subtitle: 'Aucun filtre métier' },
+      { value: 'with_reliquats', label: 'Avec reliquats', subtitle: 'Biens avec reste à recouvrer' },
+      { value: 'without_units', label: 'Sans unité', subtitle: 'Biens à structurer' },
+      { value: 'complete', label: 'Complets', subtitle: 'Adresse, ville et unités renseignées' },
+      { value: 'incomplete', label: 'À compléter', subtitle: 'Informations manquantes' },
+    ],
+    [],
+  );
+  const unitFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: 'Toutes les unités', subtitle: 'Aucun filtre métier' },
+      { value: 'libre', label: 'Libres', subtitle: 'Disponibles pour une location' },
+      { value: 'loue', label: 'Louées', subtitle: 'Avec bail actif ou occupation' },
+      { value: 'maintenance', label: 'Maintenance', subtitle: 'Indisponibles temporairement' },
+      { value: 'late', label: 'Avec reliquat', subtitle: 'Paiement incomplet détecté' },
+      { value: 'without_contract', label: 'Sans bail', subtitle: 'À rattacher à une location' },
+    ],
+    [],
+  );
 
   const openPropertyModal = useCallback(
     async (property?: PropertyRow | null) => {
@@ -947,30 +981,23 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
               {activeTab === 'biens' ? (
                 <>
                   {!isIndividualOwner && (
-                    <select
+                    <SearchableSelect
                       value={ownerFilter}
-                      onChange={(event) => setOwnerFilter(event.target.value)}
-                      className="h-10 rounded-xl border border-emerald-950/10 bg-white/95 px-3 text-sm font-medium text-slate-700 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                    >
-                      <option value="all">Tous les bailleurs</option>
-                      {data.bailleurs.map((owner) => (
-                        <option key={owner.id} value={owner.id}>
-                          {ownerName(owner)}
-                        </option>
-                      ))}
-                    </select>
+                      options={ownerFilterOptions}
+                      onChange={setOwnerFilter}
+                      placeholder="Tous les bailleurs"
+                      searchPlaceholder="Rechercher un bailleur..."
+                      className="w-full sm:w-56"
+                    />
                   )}
-                  <select
+                  <SearchableSelect
                     value={propertyFilter}
-                    onChange={(event) => setPropertyFilter(event.target.value as PropertyFilter)}
-                    className="h-10 rounded-xl border border-emerald-950/10 bg-white/95 px-3 text-sm font-medium text-slate-700 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                  >
-                    <option value="all">Tous les biens</option>
-                    <option value="with_reliquats">Avec reliquats</option>
-                    <option value="without_units">Sans unité</option>
-                    <option value="complete">Complets</option>
-                    <option value="incomplete">À compléter</option>
-                  </select>
+                    options={propertyFilterOptions}
+                    onChange={(next) => setPropertyFilter(next as PropertyFilter)}
+                    placeholder="Tous les biens"
+                    searchPlaceholder="Rechercher un filtre..."
+                    className="w-full sm:w-52"
+                  />
                   <ColumnPicker
                     columns={PROPERTY_COLUMN_KEYS.filter((key) => !isIndividualOwner || key !== 'bailleur').map((key) => ({ key, label: getPropertyColumnLabel(key), required: key === 'bien' }))}
                     visibility={propertyColumns.visibility}
@@ -980,18 +1007,14 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 </>
               ) : (
                 <>
-                  <select
+                  <SearchableSelect
                     value={unitFilter}
-                    onChange={(event) => setUnitFilter(event.target.value as UnitFilter)}
-                    className="h-10 rounded-xl border border-emerald-950/10 bg-white/95 px-3 text-sm font-medium text-slate-700 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                  >
-                    <option value="all">Toutes les unités</option>
-                    <option value="libre">Libres</option>
-                    <option value="loue">Louées</option>
-                    <option value="maintenance">Maintenance</option>
-                    <option value="late">Avec reliquat</option>
-                    <option value="without_contract">Sans bail</option>
-                  </select>
+                    options={unitFilterOptions}
+                    onChange={(next) => setUnitFilter(next as UnitFilter)}
+                    placeholder="Toutes les unités"
+                    searchPlaceholder="Rechercher un filtre..."
+                    className="w-full sm:w-56"
+                  />
                   <ColumnPicker
                     columns={UNIT_COLUMN_KEYS.map((key) => ({ key, label: getUnitColumnLabel(key), required: key === 'unite' }))}
                     visibility={unitColumns.visibility}
@@ -1004,7 +1027,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           </div>
         </section>
 
-        <div className={`grid min-w-0 gap-4 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)] 2xl:grid-cols-[minmax(0,1fr)_30rem]' : 'grid-cols-1'}`}>
+        <div className={`grid min-w-0 gap-4 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
           <main className="min-w-0">
             {activeTab === 'biens' ? (
               <PropertiesTable
@@ -1450,7 +1473,7 @@ function MiniMetric({ label, value }: { label: string; value: ReactNode }) {
 
 function DrawerShell({ children }: { children: ReactNode }) {
   return (
-    <section className="h-full max-h-[100dvh] overflow-hidden bg-[#fffdf8]/98 shadow-[0_24px_70px_rgba(15,23,42,0.09)] xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:ring-1 xl:ring-white/80">
+      <section className="h-full max-h-[100dvh] overflow-hidden bg-[#fffdf8]/98 shadow-[0_24px_70px_rgba(15,23,42,0.09)] xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:rounded-3xl xl:border xl:border-emerald-950/10 xl:ring-1 xl:ring-white/80">
       <div className="h-full max-h-[100dvh] overflow-y-auto xl:max-h-[calc(100vh-2rem)]">
         {children}
       </div>
@@ -1777,10 +1800,21 @@ function PropertyModal({
           </Field>
           {!isIndividualOwner && (
             <Field label="Bailleur rattaché *">
-              <select required value={form.bailleur_id} onChange={(event) => onChange((current) => ({ ...current, bailleur_id: event.target.value }))} className="sk-input">
-                <option value="">Sélectionner un bailleur</option>
-                {owners.map((owner) => <option key={owner.id} value={owner.id}>{ownerName(owner)}</option>)}
-              </select>
+              <SearchableSelect
+                value={form.bailleur_id}
+                options={[
+                  { value: '', label: 'Sélectionner un bailleur' },
+                  ...owners.map((owner) => ({
+                    value: owner.id,
+                    label: ownerName(owner),
+                    subtitle: [owner.telephone, owner.email].filter(Boolean).join(' - ') || 'Propriétaire',
+                    keywords: `${owner.nom ?? ''} ${owner.prenom ?? ''} ${owner.telephone ?? ''} ${owner.email ?? ''}`,
+                  })),
+                ]}
+                onChange={(next) => onChange((current) => ({ ...current, bailleur_id: next }))}
+                placeholder="Sélectionner un bailleur"
+                searchPlaceholder="Rechercher un bailleur..."
+              />
             </Field>
           )}
         </div>
@@ -1832,10 +1866,21 @@ function UnitModal({
     <Modal isOpen={isOpen} onClose={onClose} title={editingUnit ? "Modifier l'unité" : 'Nouvelle unité locative'}>
       <form onSubmit={onSubmit} className="space-y-3.5">
         <Field label="Bien parent *">
-          <select required value={form.immeuble_id} onChange={(event) => onChange((current) => ({ ...current, immeuble_id: event.target.value }))} className="sk-input">
-            <option value="">Sélectionner un bien</option>
-            {properties.map((property) => <option key={property.id} value={property.id}>{property.nom}</option>)}
-          </select>
+          <SearchableSelect
+            value={form.immeuble_id}
+            options={[
+              { value: '', label: 'Sélectionner un bien' },
+              ...properties.map((property) => ({
+                value: property.id,
+                label: property.nom,
+                subtitle: [property.quartier, property.ville, property.adresse].filter(Boolean).join(' - ') || 'Bien',
+                keywords: `${property.nom} ${property.adresse ?? ''} ${property.quartier ?? ''} ${property.ville ?? ''}`,
+              })),
+            ]}
+            onChange={(next) => onChange((current) => ({ ...current, immeuble_id: next }))}
+            placeholder="Sélectionner un bien"
+            searchPlaceholder="Rechercher un bien..."
+          />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Type / nom de l'unité *">

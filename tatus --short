@@ -1,0 +1,20 @@
+warning: in the working copy of 'src/App.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/lib/rbac.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Auth.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Bailleurs.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Patrimoine.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/TableauDeBordFinancierGlobal.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/pages/Welcome.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/repositories/occupantsBauxRepository.ts', LF will be replaced by CRLF the next time Git touches it
+ src/App.tsx                                 |   2 [32m+[m[31m-[m
+ src/components/layout/Sidebar.tsx           |   4 [32m+[m[31m-[m
+ src/components/ui/EmptyState.tsx            |  25 [32m++[m[31m-[m
+ src/lib/rbac.ts                             |   2 [32m+[m[31m-[m
+ src/pages/Auth.tsx                          |   2 [32m+[m[31m-[m
+ src/pages/Bailleurs.tsx                     |  48 [32m+++[m[31m--[m
+ src/pages/OccupantsBaux.tsx                 |  29 [32m++[m[31m-[m
+ src/pages/Patrimoine.tsx                    | 226 [32m++++++++++[m[31m----------[m
+ src/pages/TableauDeBordFinancierGlobal.tsx  | 313 [32m+++++++++++++++++[m[31m-----------[m
+ src/pages/Welcome.tsx                       |  18 [32m+[m[31m-[m
+ src/repositories/occupantsBauxRepository.ts | 186 [32m+++++++++++++++++[m
+ 11 files changed, 571 insertions(+), 284 deletions(-)

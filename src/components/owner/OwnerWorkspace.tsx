@@ -27,6 +27,7 @@ import {
   Sparkles,
   Store,
   TrendingUp,
+  Users,
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
@@ -983,7 +984,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
           <OwnerKpi title="Taux d'occupation" value={`${summary.occupationRate}%`} subtitle={`${summary.occupiedUnits} unité${summary.occupiedUnits > 1 ? 's' : ''} sur ${summary.totalUnits} occupée${summary.totalUnits > 1 ? 's' : ''}`} icon={Building2} tone="amber" />
         </section>
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_27rem]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_34rem]">
           <div className="space-y-4">
             <section className="rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 p-4 shadow-[0_18px_54px_rgba(15,23,42,0.07)]">
               <div className="mb-3 flex items-center justify-between gap-3">
@@ -1231,7 +1232,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <MiniStat label="Biens" value={data.properties.length} tone="blue" />
                 <MiniStat label="Unités" value={summary.totalUnits} tone="orange" />
-                <MiniStat label="Contrats actifs" value={summary.activeContracts} tone="blue" />
+                <MiniStat label="Locations actives" value={summary.activeContracts} tone="blue" />
                 <MiniStat label="Reliquats" value={formatCurrency(summary.reliquats)} tone="amber" />
               </div>
             </section>
@@ -1240,6 +1241,8 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               <h2 className="text-base font-bold text-slate-950">Accès rapides</h2>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <QuickAction icon={Building2} label="Ajouter un bien" onClick={navigateToCreateProperty} />
+                <QuickAction icon={Home} label="Mes biens" onClick={() => onNavigate?.('patrimoine')} />
+                <QuickAction icon={Users} label="Mes locations" onClick={() => onNavigate?.('occupants-baux')} />
                 <QuickAction icon={FileText} label="Générer rapport" onClick={() => void handleGenerateOwnerReport()} />
                 <QuickAction icon={FolderOpen} label="Mes documents" onClick={() => onNavigate?.('documents')} />
                 <QuickAction icon={Wallet} label="Mes paiements" onClick={() => onNavigate?.('paiements')} />

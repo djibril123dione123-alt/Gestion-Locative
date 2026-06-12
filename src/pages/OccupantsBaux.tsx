@@ -44,6 +44,7 @@ import { PageSkeleton } from '../components/ui/Skeleton';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { Modal } from '../components/ui/Modal';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { SearchableSelect } from '../components/ui/SearchableSelect';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 import {
@@ -829,6 +830,27 @@ export function OccupantsBaux() {
     return Array.from(properties.entries()).sort((a, b) => a[1].localeCompare(b[1]));
   }, [rows]);
 
+  const ownerSelectOptions = useMemo(
+    () => [
+      { value: 'all', label: 'Tous les propriétaires', subtitle: 'Toutes les locations' },
+      ...ownerOptions.map(([id, label]) => ({ value: id, label, subtitle: 'Portefeuille propriétaire' })),
+    ],
+    [ownerOptions],
+  );
+
+  const propertySelectOptions = useMemo(
+    () => [
+      { value: 'all', label: 'Tous les biens', subtitle: 'Toutes les locations' },
+      ...propertyOptions.map(([id, label]) => ({ value: id, label, subtitle: 'Bien locatif' })),
+    ],
+    [propertyOptions],
+  );
+
+  const periodSelectOptions = useMemo(
+    () => PERIOD_FILTERS.map((filter) => ({ value: filter.id, label: filter.label })),
+    [],
+  );
+
   const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
     const currentMonth = todayIso().slice(0, 7);
@@ -914,7 +936,7 @@ export function OccupantsBaux() {
         message="Les données affichées viennent du dernier chargement réussi."
       />
 
-      <div className={`grid items-start gap-5 ${selectedRow ? 'xl:grid-cols-[minmax(0,1fr)_35rem]' : 'grid-cols-1'}`}>
+      <div className={`grid items-start gap-5 ${selectedRow ? 'xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
         <section className="min-w-0 space-y-6">
           {/* En-tête */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -998,35 +1020,30 @@ export function OccupantsBaux() {
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <select
+                  <SearchableSelect
                     value={ownerFilter}
-                    onChange={(event) => setOwnerFilter(event.target.value)}
-                    className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                  >
-                    <option value="all">Tous les propriétaires</option>
-                    {ownerOptions.map(([id, label]) => (
-                      <option key={id} value={id}>{label}</option>
-                    ))}
-                  </select>
-                  <select
+                    options={ownerSelectOptions}
+                    onChange={setOwnerFilter}
+                    placeholder="Tous les propriétaires"
+                    searchPlaceholder="Rechercher un propriétaire..."
+                    className="w-full sm:w-56"
+                  />
+                  <SearchableSelect
                     value={propertyFilter}
-                    onChange={(event) => setPropertyFilter(event.target.value)}
-                    className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                  >
-                    <option value="all">Tous les biens</option>
-                    {propertyOptions.map(([id, label]) => (
-                      <option key={id} value={id}>{label}</option>
-                    ))}
-                  </select>
-                  <select
+                    options={propertySelectOptions}
+                    onChange={setPropertyFilter}
+                    placeholder="Tous les biens"
+                    searchPlaceholder="Rechercher un bien..."
+                    className="w-full sm:w-52"
+                  />
+                  <SearchableSelect
                     value={periodFilter}
-                    onChange={(event) => setPeriodFilter(event.target.value as PeriodFilter)}
-                    className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                  >
-                    {PERIOD_FILTERS.map((filter) => (
-                      <option key={filter.id} value={filter.id}>{filter.label}</option>
-                    ))}
-                  </select>
+                    options={periodSelectOptions}
+                    onChange={(next) => setPeriodFilter(next as PeriodFilter)}
+                    placeholder="Période"
+                    searchPlaceholder="Rechercher une période..."
+                    className="w-full sm:w-48"
+                  />
                   <ColumnPicker
                     columns={OCCUPANTS_BAUX_COLUMN_KEYS.map((key) => ({
                       key,
@@ -1813,17 +1830,20 @@ function LifecycleModals({
           </label>
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Motif</span>
-            <select
+            <SearchableSelect
               value={resiliationForm.motif}
-              onChange={(event) => onResiliationChange({ ...resiliationForm, motif: event.target.value })}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-            >
-              <option value="">Sélectionner un motif</option>
-              <option value="Départ volontaire">Départ volontaire</option>
-              <option value="Fin de contrat">Fin de contrat</option>
-              <option value="Impayés">Impayés</option>
-              <option value="Autre">Autre</option>
-            </select>
+              options={[
+                { value: '', label: 'Sélectionner un motif' },
+                { value: 'Départ volontaire', label: 'Départ volontaire' },
+                { value: 'Fin de contrat', label: 'Fin de contrat' },
+                { value: 'Impayés', label: 'Impayés' },
+                { value: 'Autre', label: 'Autre' },
+              ]}
+              onChange={(next) => onResiliationChange({ ...resiliationForm, motif: next })}
+              placeholder="Sélectionner un motif"
+              searchPlaceholder="Rechercher un motif..."
+              className="mt-1"
+            />
           </label>
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Commentaire optionnel</span>

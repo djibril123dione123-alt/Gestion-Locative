@@ -1,4 +1,4 @@
-﻿import { useState, lazy, Suspense, useEffect } from 'react';
+import { useState, lazy, Suspense, useEffect } from 'react';
 import { HashRouter, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, RefreshCw, WifiOff } from 'lucide-react';
 
@@ -40,6 +40,7 @@ const Bailleurs = lazy(() => import('./pages/Bailleurs').then(m => ({ default: m
 const Patrimoine = lazy(() => import('./pages/Patrimoine').then(m => ({ default: m.Patrimoine })));
 const Locataires = lazy(() => import('./pages/Locataires').then(m => ({ default: m.Locataires })));
 const Contrats = lazy(() => import('./pages/Contrats').then(m => ({ default: m.Contrats })));
+const OccupantsBaux = lazy(() => import('./pages/OccupantsBaux').then(m => ({ default: m.OccupantsBaux })));
 const Encaissements = lazy(() => import('./pages/Encaissements').then(m => ({ default: m.Encaissements })));
 const Depenses = lazy(() => import('./pages/Depenses').then(m => ({ default: m.Depenses })));
 const Commissions = lazy(() => import('./pages/Commissions').then(m => ({ default: m.Commissions })));
@@ -79,6 +80,7 @@ const PAGE_LABELS: Record<string, string> = {
     unites: 'Unités',
     locataires: 'Locataires',
     contrats: 'Contrats',
+    'occupants-baux': 'Occupants & Baux',
     paiements: 'Encaissements',
     'loyers-impayes': 'Impayés',
     depenses: 'Dépenses',
@@ -461,6 +463,8 @@ function AppContent() {
                 return <Locataires />;
             case 'contrats':
                 return <Contrats />;
+            case 'occupants-baux':
+                return <OccupantsBaux />;
             case 'paiements':
                 return <Encaissements initialTab="recus" />;
             case 'loyers-impayes':

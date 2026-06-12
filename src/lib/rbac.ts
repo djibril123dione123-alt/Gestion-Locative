@@ -38,6 +38,7 @@ export const PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { id: 'unites', label: 'Unités', description: 'Lots, loyers, disponibilités et états.', category: 'Portefeuille locatif' },
   { id: 'locataires', label: 'Locataires', description: 'Fiches locataires, contacts et historique.', category: 'Portefeuille locatif' },
   { id: 'contrats', label: 'Contrats & baux', description: 'Création, modification et suivi des baux.', category: 'Portefeuille locatif', sensitive: true },
+  { id: 'occupants-baux', label: 'Occupants & Baux', description: 'Vue unifiée occupant → bail → unité, loyer et statut.', category: 'Portefeuille locatif' },
   { id: 'paiements', label: 'Encaissements', description: 'Paiements reçus, reçus et actions financières.', category: 'Finance & reporting', sensitive: true },
   { id: 'loyers-impayes', label: 'Loyers impayés', description: 'Suivi des reliquats et relances.', category: 'Finance & reporting', sensitive: true },
   { id: 'depenses', label: 'Dépenses', description: 'Charges, dépenses et justificatifs.', category: 'Finance & reporting', sensitive: true },
@@ -64,6 +65,7 @@ const PAGE_ROLES: Record<string, UserRole[]> = {
   unites: ['admin'],
   locataires: ['admin', 'agent', 'comptable'],
   contrats: ['admin', 'agent', 'comptable', 'bailleur'],
+  'occupants-baux': ['admin', 'agent', 'comptable'],
   paiements: ['admin', 'agent', 'comptable', 'bailleur'],
   'loyers-impayes': ['admin', 'agent', 'comptable', 'bailleur'],
   depenses: ['admin'],
@@ -121,8 +123,8 @@ export function getDefaultAccessLevel(role: UserRole | null | undefined, page: s
   const roles = PAGE_ROLES[page] ?? PAGE_ROLES.dashboard;
   if (!roles.includes(role)) return 'none';
   if (role === 'admin') return 'admin';
-  if (role === 'agent') return ['dashboard', 'locataires', 'contrats', 'paiements', 'loyers-impayes', 'inventaires', 'interventions', 'calendrier', 'documents', 'documents/scan', 'notifications', 'pricing'].includes(page) ? 'write' : 'read';
-  if (role === 'comptable') return ['paiements', 'loyers-impayes', 'contrats', 'locataires', 'documents/scan', 'notifications', 'pricing'].includes(page) ? 'read' : 'none';
+  if (role === 'agent') return ['dashboard', 'locataires', 'contrats', 'occupants-baux', 'paiements', 'loyers-impayes', 'inventaires', 'interventions', 'calendrier', 'documents', 'documents/scan', 'notifications', 'pricing'].includes(page) ? 'write' : 'read';
+  if (role === 'comptable') return ['paiements', 'loyers-impayes', 'contrats', 'locataires', 'occupants-baux', 'documents/scan', 'notifications', 'pricing'].includes(page) ? 'read' : 'none';
   if (role === 'bailleur') return ['dashboard', 'contrats', 'paiements', 'loyers-impayes', 'documents/scan', 'notifications', 'pricing'].includes(page) ? 'read' : 'none';
   return 'none';
 }

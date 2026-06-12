@@ -88,6 +88,7 @@ const NAV: Array<MenuLeaf | MenuGroup> = [
       { id: 'patrimoine', label: 'Biens', icon: Building2, roles: ['admin'] },
       { id: 'locataires', label: 'Locataires', icon: Users, roles: ['admin', 'agent', 'comptable'] },
       { id: 'contrats', label: 'Contrats & baux', icon: FileText, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
+      { id: 'occupants-baux', label: 'Occupants & Baux', icon: Users, roles: ['admin', 'agent', 'comptable'] },
     ],
   },
   {
@@ -142,6 +143,7 @@ const PARENT_OF: Record<string, string> = {
   unites: 'portefeuille',
   locataires: 'portefeuille',
   contrats: 'portefeuille',
+  'occupants-baux': 'portefeuille',
   paiements: 'finance',
   depenses: 'finance',
   'tableau-de-bord-financier': 'finance',

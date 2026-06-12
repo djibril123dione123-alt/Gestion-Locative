@@ -12,6 +12,38 @@ import { supabase } from '../lib/supabase';
 
 export type ContratStatut = 'actif' | 'resilie' | 'expire' | 'archive' | 'en_attente';
 
+export interface OccupantBailPayment {
+  id: string;
+  montant_total: number;
+  mois_concerne: string;
+  date_paiement: string;
+  statut: string;
+  reliquat: number | null;
+  reference: string | null;
+}
+
+export interface OccupantBailDocument {
+  id: string;
+  title: string;
+  subtitle: string;
+  source: 'documents' | 'registry' | 'profile';
+  status: string | null;
+  created_at: string | null;
+}
+
+export interface OccupantBailEvent {
+  id: string;
+  event_type: string;
+  created_at: string;
+  payload: Record<string, unknown> | null;
+}
+
+export interface OccupantBailDetails {
+  payments: OccupantBailPayment[];
+  documents: OccupantBailDocument[];
+  events: OccupantBailEvent[];
+}
+
 export interface OccupantBailRow {
   /** Identifiant du contrat (bail) */
   contrat_id: string;
@@ -21,6 +53,8 @@ export interface OccupantBailRow {
   prenom: string;
   telephone: string | null;
   email: string | null;
+  adresse_personnelle: string | null;
+  piece_identite: string | null;
 
   /** Référence du contrat – numéro court lisible */
   contrat_ref: string;
@@ -31,6 +65,7 @@ export interface OccupantBailRow {
   loyer_mensuel: number;
   statut: ContratStatut;
   destination: string;
+  created_at: string;
 
   /** Unité */
   unite_id: string;
@@ -42,6 +77,7 @@ export interface OccupantBailRow {
   immeuble_adresse: string | null;
 
   /** Bailleur */
+  bailleur_id: string | null;
   bailleur_nom: string | null;
   bailleur_prenom: string | null;
 }
@@ -62,7 +98,8 @@ const OCCUPANTS_BAUX_SELECT = `
   loyer_mensuel,
   statut,
   destination,
-  locataires(id, nom, prenom, telephone, email),
+  created_at,
+  locataires(id, nom, prenom, telephone, email, adresse_personnelle, piece_identite),
   unites(
     id,
     nom,
@@ -83,7 +120,16 @@ type RawRow = {
   loyer_mensuel: number;
   statut: string;
   destination: string;
-  locataires: { id: string; nom: string; prenom: string; telephone: string | null; email: string | null } | null;
+  created_at: string;
+  locataires: {
+    id: string;
+    nom: string;
+    prenom: string;
+    telephone: string | null;
+    email: string | null;
+    adresse_personnelle: string | null;
+    piece_identite: string | null;
+  } | null;
   unites: {
     id: string;
     nom: string;
@@ -96,6 +142,41 @@ type RawRow = {
   } | null;
 };
 
+type RawPayment = {
+  id: string;
+  montant_total: number;
+  mois_concerne: string;
+  date_paiement: string;
+  statut: string;
+  reliquat: number | null;
+  reference: string | null;
+};
+
+type RawDocument = {
+  id: string;
+  name: string | null;
+  document_category: string | null;
+  entity_type: string | null;
+  lifecycle_status: string | null;
+  created_at: string | null;
+};
+
+type RawRegistryDocument = {
+  id: string;
+  document_type: string;
+  reference: string | null;
+  version: number | null;
+  status: string | null;
+  generated_at: string | null;
+};
+
+type RawEvent = {
+  id: string;
+  event_type: string;
+  created_at: string;
+  payload: Record<string, unknown> | null;
+};
+
 function mapRow(row: RawRow): OccupantBailRow {
   return {
     contrat_id: row.id,
@@ -104,17 +185,21 @@ function mapRow(row: RawRow): OccupantBailRow {
     prenom: row.locataires?.prenom ?? '',
     telephone: row.locataires?.telephone ?? null,
     email: row.locataires?.email ?? null,
+    adresse_personnelle: row.locataires?.adresse_personnelle ?? null,
+    piece_identite: row.locataires?.piece_identite ?? null,
     contrat_ref: buildContratRef(row.id),
     date_debut: row.date_debut,
     date_fin: row.date_fin,
     loyer_mensuel: row.loyer_mensuel,
     statut: row.statut as ContratStatut,
     destination: row.destination,
+    created_at: row.created_at,
     unite_id: row.unites?.id ?? '',
     unite_nom: row.unites?.nom ?? '—',
     immeuble_id: row.unites?.immeubles?.id ?? null,
     immeuble_nom: row.unites?.immeubles?.nom ?? null,
     immeuble_adresse: row.unites?.immeubles?.adresse ?? null,
+    bailleur_id: row.unites?.immeubles?.bailleurs?.id ?? null,
     bailleur_nom: row.unites?.immeubles?.bailleurs?.nom ?? null,
     bailleur_prenom: row.unites?.immeubles?.bailleurs?.prenom ?? null,
   };
@@ -146,5 +231,104 @@ export const occupantsBauxRepository = {
 
     const rows = (data as unknown as RawRow[]).map(mapRow);
     return { data: rows, error: null };
+  },
+
+  async details(input: {
+    agencyId: string;
+    contratId: string;
+    locataireId: string;
+    pieceIdentite?: string | null;
+  }): Promise<{ data: OccupantBailDetails; error: unknown }> {
+    const [paymentsRes, documentsRes, registryRes, eventsRes] = await Promise.all([
+      supabase
+        .from('paiements')
+        .select('id, montant_total, mois_concerne, date_paiement, statut, reliquat, reference')
+        .eq('agency_id', input.agencyId)
+        .eq('contrat_id', input.contratId)
+        .eq('actif', true)
+        .order('date_paiement', { ascending: false })
+        .limit(8),
+      supabase
+        .from('documents')
+        .select('id, name, document_category, entity_type, lifecycle_status, created_at')
+        .eq('agency_id', input.agencyId)
+        .neq('lifecycle_status', 'deleted')
+        .or(`entity_id.eq.${input.contratId},entity_id.eq.${input.locataireId},contrat_id.eq.${input.contratId},locataire_id.eq.${input.locataireId}`)
+        .order('created_at', { ascending: false })
+        .limit(8),
+      supabase
+        .from('document_registry')
+        .select('id, document_type, reference, version, status, generated_at')
+        .eq('agency_id', input.agencyId)
+        .neq('status', 'deleted')
+        .in('entity_id', [input.contratId, input.locataireId])
+        .order('generated_at', { ascending: false })
+        .limit(8),
+      supabase
+        .from('event_log')
+        .select('id, event_type, created_at, payload')
+        .eq('agency_id', input.agencyId)
+        .eq('entity_type', 'contrats')
+        .eq('entity_id', input.contratId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ]);
+
+    const firstError = paymentsRes.error ?? documentsRes.error ?? registryRes.error ?? eventsRes.error;
+    if (firstError) {
+      return {
+        data: { payments: [], documents: [], events: [] },
+        error: firstError,
+      };
+    }
+
+    const payments = ((paymentsRes.data ?? []) as unknown as RawPayment[]).map((payment) => ({
+      id: payment.id,
+      montant_total: payment.montant_total,
+      mois_concerne: payment.mois_concerne,
+      date_paiement: payment.date_paiement,
+      statut: payment.statut,
+      reliquat: payment.reliquat,
+      reference: payment.reference,
+    }));
+
+    const documents: OccupantBailDocument[] = [
+      ...((documentsRes.data ?? []) as unknown as RawDocument[]).map((document) => ({
+        id: document.id,
+        title: document.name || document.document_category || 'Document',
+        subtitle: document.entity_type || 'Fichier GED',
+        source: 'documents' as const,
+        status: document.lifecycle_status,
+        created_at: document.created_at,
+      })),
+      ...((registryRes.data ?? []) as unknown as RawRegistryDocument[]).map((document) => ({
+        id: document.id,
+        title: document.document_type.replace(/_/g, ' '),
+        subtitle: `${document.reference ?? 'Sans référence'} · v${document.version ?? 1}`,
+        source: 'registry' as const,
+        status: document.status,
+        created_at: document.generated_at,
+      })),
+    ];
+
+    if (input.pieceIdentite) {
+      documents.push({
+        id: `piece-identite-${input.locataireId}`,
+        title: "Pièce d'identité renseignée",
+        subtitle: input.pieceIdentite,
+        source: 'profile',
+        status: 'available',
+        created_at: null,
+      });
+    }
+
+    const events = ((eventsRes.data ?? []) as unknown as RawEvent[]).map((event) => ({
+      id: event.id,
+      event_type: event.event_type,
+      created_at: event.created_at,
+      payload: event.payload,
+    }));
+
+    return { data: { payments, documents, events }, error: null };
   },
 };

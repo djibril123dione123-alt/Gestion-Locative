@@ -24,6 +24,13 @@ export interface UpdateContratInput {
   resiliation_observations?: string | null;
 }
 
+export interface RenewContratInput {
+  id: string;
+  nouvelle_date_fin: string;
+  nouveau_loyer?: number | null;
+  remarques?: string | null;
+}
+
 export interface DeleteContratInput {
   id: string;
 }
@@ -102,6 +109,10 @@ export async function createContratViaEdge(input: CreateContratInput): Promise<C
 
 export async function updateContratViaEdge(input: UpdateContratInput): Promise<ContratApiResult> {
   return invokeContratFunction<ContratApiResult>('update-contrat', input);
+}
+
+export async function renewContratViaEdge(input: RenewContratInput): Promise<ContratApiResult> {
+  return invokeContratFunction<ContratApiResult>('renew-contrat', input);
 }
 
 export async function deleteContrat(input: DeleteContratInput): Promise<void> {

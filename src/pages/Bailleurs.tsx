@@ -682,10 +682,9 @@ export function Bailleurs() {
       setDetailOpen(false);
       return;
     }
-    if (!selectedBailleurId || !filteredBailleurs.some((item) => item.id === selectedBailleurId)) {
-      setSelectedBailleurId(filteredBailleurs[0].id);
-      setActiveDrawerTab('overview');
-      setDetailOpen(true);
+    if (selectedBailleurId && !filteredBailleurs.some((item) => item.id === selectedBailleurId)) {
+      setSelectedBailleurId(null);
+      setDetailOpen(false);
     }
   }, [filteredBailleurs, selectedBailleurId]);
 
@@ -1596,15 +1595,16 @@ export function Bailleurs() {
         />
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-        <KpiTile icon={Users} label="Bailleurs actifs" value={globalKpis.activeBailleurs.toString()} helper={`${bailleurs.length} propriétaire${bailleurs.length > 1 ? 's' : ''} dans la base`} tone="emerald" />
-        <KpiTile icon={AlertCircle} label="Reliquats totaux" value={formatCurrency(globalKpis.reliquats)} helper="À suivre sur les paiements partiels" tone="red" />
-        <KpiTile icon={Wallet} label="Net à reverser" value={formatCurrency(globalKpis.net)} helper="Somme des parts bailleurs" tone="emerald" />
-        <KpiTile icon={ReceiptText} label="Commissions" value={formatCurrency(globalKpis.commissions)} helper={`${globalKpis.immeubles} biens · ${globalKpis.unites} unités`} tone="gold" />
-      </div>
+      <div className={`grid items-start gap-5 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
+        <section className="min-w-0 space-y-6">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+            <KpiTile icon={Users} label="Bailleurs actifs" value={globalKpis.activeBailleurs.toString()} helper={`${bailleurs.length} propriétaire${bailleurs.length > 1 ? 's' : ''} dans la base`} tone="emerald" />
+            <KpiTile icon={AlertCircle} label="Reliquats totaux" value={formatCurrency(globalKpis.reliquats)} helper="À suivre sur les paiements partiels" tone="red" />
+            <KpiTile icon={Wallet} label="Net à reverser" value={formatCurrency(globalKpis.net)} helper="Somme des parts bailleurs" tone="emerald" />
+            <KpiTile icon={ReceiptText} label="Commissions" value={formatCurrency(globalKpis.commissions)} helper={`${globalKpis.immeubles} biens à ${globalKpis.unites} unités`} tone="gold" />
+          </div>
 
-      <div className={`grid min-h-[31rem] min-w-0 gap-4 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
-        <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
+          <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
           <div className="border-b border-emerald-950/10 bg-[linear-gradient(180deg,#fff6df,#fffdf7)] p-3.5 sm:p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
               <div className="relative min-w-0 flex-1">
@@ -1757,10 +1757,11 @@ export function Bailleurs() {
               </div>
             </>
           )}
+          </section>
         </section>
 
         {detailPanelOpen && (
-            <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] transition-all duration-300 xl:sticky xl:top-4 xl:z-auto xl:flex xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-3xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)]">
+          <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:sticky xl:top-4 xl:inset-auto xl:z-auto xl:h-[calc(100vh-2rem)] xl:w-full xl:rounded-3xl xl:border xl:border-emerald-950/10">
             <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={() => setDetailOpen(false)} aria-hidden="true" />
             <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
               {!selectedBailleur ? (
@@ -1849,183 +1850,49 @@ export function Bailleurs() {
         title={editingBailleur ? 'Modifier le bailleur' : 'Nouveau bailleur'}
       >
         <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
-          {/* Erreurs dans le modal */}
           {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
 
-          {/* Informations principales */}
           <div className="space-y-4">
-            <h3 className="text-xs sm:text-sm font-semibold text-slate-900 uppercase tracking-wide">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">
               Informations principales
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Prénom <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.prenom}
-                  onChange={(e) => setFormData({ ...formData, prenom: e.target.value })}
-                  className="sk-input"
-                  placeholder="Amadou"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Nom <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.nom}
-                  onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                  className="sk-input"
-                  placeholder="Diop"
-                />
-              </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-4">
+              <TextField label="Prénom" value={formData.prenom} onChange={(v) => setFormData({ ...formData, prenom: v })} required placeholder="Amadou" />
+              <TextField label="Nom" value={formData.nom} onChange={(v) => setFormData({ ...formData, nom: v })} required placeholder="Diop" />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Téléphone <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={formData.telephone}
-                  onChange={(e) => setFormData({ ...formData, telephone: formatSenegalPhoneInput(e.target.value) })}
-                  className="sk-input"
-                  placeholder="+221 77 123 45 67"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="sk-input"
-                  placeholder="amadou.diop@example.com"
-                />
-              </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-4">
+              <TextField type="tel" label="Téléphone" value={formData.telephone} onChange={(v) => setFormData({ ...formData, telephone: formatSenegalPhoneInput(v) })} required placeholder="+221 77 123 45 67" />
+              <TextField type="email" label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} placeholder="amadou.diop@example.com" />
             </div>
           </div>
 
-          {/* Informations complémentaires */}
-          <div className="space-y-4 pt-4 border-t border-slate-200">
-            <h3 className="text-xs sm:text-sm font-semibold text-slate-900 uppercase tracking-wide">
+          <div className="space-y-4 border-t border-slate-200 pt-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">
               Informations complémentaires
             </h3>
+            
+            <TextField label="Adresse" value={formData.adresse} onChange={(v) => setFormData({ ...formData, adresse: v })} placeholder="123 Avenue Blaise Diagne, Dakar" />
+            <TextField label="Pièce d'identité" value={formData.piece_identite} onChange={(v) => setFormData({ ...formData, piece_identite: v })} placeholder="CNI N° 1234567890123" />
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Adresse
-              </label>
-              <input
-                type="text"
-                value={formData.adresse}
-                onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
-                className="sk-input"
-                placeholder="123 Avenue Blaise Diagne, Dakar"
-              />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-4">
+              <TextField type="number" step="0.1" min="0" max="100" label="Commission (%)" value={formData.commission} onChange={(v) => setFormData({ ...formData, commission: v })} required placeholder="10" helperText="Taux de commission appliqué aux contrats" />
+              <TextField type="date" label="Début du contrat" value={formData.debut_contrat} onChange={(v) => setFormData({ ...formData, debut_contrat: v })} required />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Pièce d'identité
-              </label>
-              <input
-                type="text"
-                value={formData.piece_identite}
-                onChange={(e) => setFormData({ ...formData, piece_identite: e.target.value })}
-                className="sk-input"
-                placeholder="CNI N° 1234567890123"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Commission (%) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  required
-                  step="0.1"
-                  min="0"
-                  max="100"
-                  value={formData.commission}
-                  onChange={(e) => setFormData({ ...formData, commission: e.target.value })}
-                  className="sk-input"
-                  placeholder="10"
-                />
-                <p className="mt-1 text-xs text-slate-500">
-                  Taux de commission appliqué aux contrats
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Début du contrat <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={formData.debut_contrat}
-                  onChange={(e) => setFormData({ ...formData, debut_contrat: e.target.value })}
-                  className="sk-input"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Notes
-              </label>
+              <label className="mb-2 block text-sm font-medium text-slate-700">Notes</label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
-                className="sk-input resize-none"
+                className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
                 placeholder="Notes supplémentaires..."
               />
             </div>
           </div>
 
-          {/* Boutons d'action */}
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-6 border-t border-slate-200">
-            <button
-              type="button"
-              onClick={closeModal}
-              disabled={isSubmitting}
-              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base border border-slate-300 text-slate-700 rounded-lg
-                       hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 sm:px-6 sm:py-2 text-sm sm:text-base bg-brand-700 text-white rounded-lg font-bold
-                       shadow-premium hover:bg-brand-800 transition-all duration-300
-                       disabled:opacity-50 disabled:cursor-not-allowed
-                       flex items-center justify-center gap-2 transform hover:scale-105 w-full sm:w-auto"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Enregistrement...
-                </>
-              ) : (
-                editingBailleur ? 'Mettre à jour' : 'Créer'
-              )}
-            </button>
-          </div>
+          <ModalActions submitting={isSubmitting} submitLabel={editingBailleur ? 'Mettre à jour' : 'Créer'} onCancel={closeModal} />
         </form>
       </Modal>
 
@@ -2172,6 +2039,94 @@ export function Bailleurs() {
 
       {/* Conteneur de toasts */}
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+    </div>
+  );
+}
+
+// ─── Sous-composants Formulaires Premium ─────────────────────────────────────
+
+function TextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+  disabled = false,
+  required = false,
+  step,
+  min,
+  max,
+  helperText,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: 'text' | 'email' | 'tel' | 'number' | 'date';
+  disabled?: boolean;
+  required?: boolean;
+  step?: string;
+  min?: string;
+  max?: string;
+  helperText?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{label} {required && <span className="text-red-500">*</span>}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        required={required}
+        step={step}
+        min={min}
+        max={max}
+        inputMode={type === 'number' ? 'numeric' : undefined}
+        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:bg-slate-50 disabled:text-slate-500"
+      />
+      {helperText && <p className="mt-1 text-xs text-slate-500">{helperText}</p>}
+    </label>
+  );
+}
+
+function ModalActions({
+  submitting,
+  submitLabel,
+  onCancel,
+  onSubmit,
+}: {
+  submitting: boolean;
+  submitLabel: string;
+  onCancel: () => void;
+  onSubmit?: () => void;
+}) {
+  return (
+    <div className="mt-8 flex flex-col-reverse justify-end gap-3 sm:flex-row">
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={submitting}
+        className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+      >
+        Annuler
+      </button>
+      <button
+        type={onSubmit ? 'button' : 'submit'}
+        onClick={onSubmit}
+        disabled={submitting}
+        className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-700 disabled:opacity-50"
+      >
+        {submitting ? (
+          <>
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            Traitement...
+          </>
+        ) : (
+          submitLabel
+        )}
+      </button>
     </div>
   );
 }

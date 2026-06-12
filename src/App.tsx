@@ -165,6 +165,12 @@ function AppContent() {
     }, [currentPage, location.key, location.pathname, location.search, routeKey]);
 
     useEffect(() => {
+        if (currentPage === 'locataires' || currentPage === 'contrats') {
+            navigate('/occupants-baux', { replace: true });
+        }
+    }, [currentPage, navigate]);
+
+    useEffect(() => {
         try {
             localStorage.setItem('sk_sidebar_collapsed', sidebarCollapsed ? 'true' : 'false');
         } catch {
@@ -460,8 +466,11 @@ function AppContent() {
             case 'unites':
                 return <Patrimoine initialTab="unites" />;
             case 'locataires':
-                return <Locataires />;
             case 'contrats':
+                return <OccupantsBaux />;
+            case 'legacy-locataires':
+                return <Locataires />;
+            case 'legacy-contrats':
                 return <Contrats />;
             case 'occupants-baux':
                 return <OccupantsBaux />;

@@ -722,9 +722,9 @@ export function TableauDeBordFinancierGlobal() {
                         <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Bilan de l'Entreprise (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                         {/* Carte 4: Solde Net (Dynamique) - BENTO MAIN CARD */}
-                        <article className={`col-span-1 md:col-span-2 xl:col-span-2 rounded-3xl border p-5 sm:p-6 shadow-[0_14px_40px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${bilanEntreprise.soldeNet >= 0 ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 via-emerald-50/50 to-white' : 'border-red-200 bg-gradient-to-br from-red-50 via-red-50/50 to-white'}`}>
+                        <article className={`col-span-2 md:col-span-2 xl:col-span-2 rounded-3xl border p-5 sm:p-6 shadow-[0_14px_40px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${bilanEntreprise.soldeNet >= 0 ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 via-emerald-50/50 to-white' : 'border-red-200 bg-gradient-to-br from-red-50 via-red-50/50 to-white'}`}>
                             <div className="flex h-full flex-col justify-between">
                                 <div className="flex items-start justify-between">
                                     <div>
@@ -818,7 +818,7 @@ export function TableauDeBordFinancierGlobal() {
                         <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Comptabilité (Année {new Date().getFullYear()})</h2>
                     </div>
 
-                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+                     <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                         {/* Total Revenus (Commission annuelle) */}
                         <article className="rounded-2xl border border-blue-950/10 bg-gradient-to-br from-blue-50 to-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70">
                             <p className="truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] text-blue-600">Total Revenus</p>
@@ -832,7 +832,7 @@ export function TableauDeBordFinancierGlobal() {
                         </article>
 
                         {/* Solde Net (Annuel) */}
-                        <article className={`rounded-2xl border p-4 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70 ${statsAnnuel.soldeNet >= 0 ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white' : 'border-orange-200 bg-gradient-to-br from-orange-50 to-white'}`}>
+                        <article className={`col-span-2 sm:col-span-1 rounded-2xl border p-4 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70 ${statsAnnuel.soldeNet >= 0 ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white' : 'border-orange-200 bg-gradient-to-br from-orange-50 to-white'}`}>
                             <p className={`truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] ${statsAnnuel.soldeNet >= 0 ? 'text-emerald-700' : 'text-orange-700'}`}>Solde Net</p>
                              <p className={`mt-1.5 truncate text-[1.4rem] font-extrabold tracking-tight ${statsAnnuel.soldeNet >= 0 ? 'text-emerald-900' : 'text-orange-900'}`}>
                                 {formatCurrency(statsAnnuel.soldeNet)}

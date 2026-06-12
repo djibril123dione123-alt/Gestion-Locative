@@ -910,7 +910,9 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           message="Le patrimoine affiche le dernier état connu. La création et les modifications restent bloquées hors ligne pour protéger les rattachements."
         />
 
-        <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div className={`grid items-start gap-5 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
+          <div className="min-w-0 space-y-4">
+            <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-action-600">Portefeuille locatif</p>
             <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">Biens & patrimoine</h1>
@@ -1027,8 +1029,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           </div>
         </section>
 
-        <div className={`grid min-w-0 gap-4 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
-          <main className="min-w-0">
+        <main className="min-w-0">
             {activeTab === 'biens' ? (
               <PropertiesTable
                 properties={filteredProperties}
@@ -1054,11 +1055,12 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
               />
             )}
           </main>
+          </div>
 
           {drawer && (
-            <aside className="fixed inset-0 z-50 flex min-w-0 flex-col overflow-hidden bg-[#fffdf8] p-0 xl:static xl:z-auto xl:flex xl:bg-transparent">
-              <div className="absolute inset-0 bg-slate-900/30 xl:hidden" onClick={() => setDrawer(null)} aria-hidden="true" />
-              <div className="relative flex-1 overflow-y-auto">
+            <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:sticky xl:top-4 xl:inset-auto xl:z-auto xl:h-[calc(100vh-2rem)] xl:w-full xl:rounded-3xl xl:border xl:border-emerald-950/10">
+              <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={() => setDrawer(null)} aria-hidden="true" />
+              <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
                 {selectedProperty && selectedPropertySummary && (
                   <PropertyDrawer
                     property={selectedProperty}
@@ -1787,18 +1789,20 @@ function PropertyModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editingProperty ? 'Modifier le bien' : isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'}>
       <form onSubmit={onSubmit} className="space-y-3.5">
-        <Field label="Nom du bien *">
-          <input required value={form.nom} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value }))} className="sk-input" placeholder="Residence Keur Amitie" />
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Type">
-            <select value={inferTypeFromName(form.nom, PROPERTY_TYPES)} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value === 'Autre' ? current.nom : event.target.value }))} className="sk-input">
-              <option value="">Choisir un type</option>
-              {PROPERTY_TYPES.map((type) => <option key={type}>{type}</option>)}
-              <option>Autre</option>
-            </select>
+        <div className="space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Informations principales</h3>
+          <Field label="Nom du bien *">
+            <input required value={form.nom} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Residence Keur Amitie" />
           </Field>
-          {!isIndividualOwner && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Type">
+              <select value={inferTypeFromName(form.nom, PROPERTY_TYPES)} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value === 'Autre' ? current.nom : event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
+                <option value="">Choisir un type</option>
+                {PROPERTY_TYPES.map((type) => <option key={type}>{type}</option>)}
+                <option>Autre</option>
+              </select>
+            </Field>
+            {!isIndividualOwner && (
             <Field label="Bailleur rattaché *">
               <SearchableSelect
                 value={form.bailleur_id}
@@ -1816,27 +1820,32 @@ function PropertyModal({
                 searchPlaceholder="Rechercher un bailleur..."
               />
             </Field>
-          )}
+            )}
+          </div>
         </div>
+
         {isIndividualOwner && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
             Votre profil propriétaire sera rattaché automatiquement à ce bien.
           </div>
         )}
-        <Field label="Adresse *">
-          <input required value={form.adresse} onChange={(event) => onChange((current) => ({ ...current, adresse: event.target.value }))} className="sk-input" placeholder="Rue, avenue, adresse principale" />
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Quartier">
-            <input value={form.quartier} onChange={(event) => onChange((current) => ({ ...current, quartier: event.target.value }))} className="sk-input" placeholder="Ouakam, Medina..." />
+        <div className="space-y-4 border-t border-slate-200 pt-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Adresse et description</h3>
+          <Field label="Adresse *">
+            <input required value={form.adresse} onChange={(event) => onChange((current) => ({ ...current, adresse: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Rue, avenue, adresse principale" />
           </Field>
-          <Field label="Ville *">
-            <input required value={form.ville} onChange={(event) => onChange((current) => ({ ...current, ville: event.target.value }))} className="sk-input" placeholder="Dakar" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Quartier">
+              <input value={form.quartier} onChange={(event) => onChange((current) => ({ ...current, quartier: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Ouakam, Medina..." />
+            </Field>
+            <Field label="Ville *">
+              <input required value={form.ville} onChange={(event) => onChange((current) => ({ ...current, ville: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Dakar" />
+            </Field>
+          </div>
+          <Field label="Description optionnelle">
+            <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Description du bien..." />
           </Field>
         </div>
-        <Field label="Description optionnelle">
-          <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="sk-input min-h-24" />
-        </Field>
         <ModalActions onClose={onClose} saving={saving} submitLabel={editingProperty ? 'Mettre à jour' : 'Créer le bien'} />
       </form>
     </Modal>
@@ -1865,50 +1874,53 @@ function UnitModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editingUnit ? "Modifier l'unité" : 'Nouvelle unité locative'}>
       <form onSubmit={onSubmit} className="space-y-3.5">
-        <Field label="Bien parent *">
-          <SearchableSelect
-            value={form.immeuble_id}
-            options={[
-              { value: '', label: 'Sélectionner un bien' },
-              ...properties.map((property) => ({
-                value: property.id,
-                label: property.nom,
-                subtitle: [property.quartier, property.ville, property.adresse].filter(Boolean).join(' - ') || 'Bien',
-                keywords: `${property.nom} ${property.adresse ?? ''} ${property.quartier ?? ''} ${property.ville ?? ''}`,
-              })),
-            ]}
-            onChange={(next) => onChange((current) => ({ ...current, immeuble_id: next }))}
-            placeholder="Sélectionner un bien"
-            searchPlaceholder="Rechercher un bien..."
-          />
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Type / nom de l'unité *">
-            <select required value={form.nom} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value }))} className="sk-input">
-              <option value="">Sélectionner</option>
+        <div className="space-y-4">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Caractéristiques de l'unité</h3>
+          <Field label="Bien parent *">
+            <SearchableSelect
+              value={form.immeuble_id}
+              options={[
+                { value: '', label: 'Sélectionner un bien' },
+                ...properties.map((property) => ({
+                  value: property.id,
+                  label: property.nom,
+                  subtitle: [property.quartier, property.ville, property.adresse].filter(Boolean).join(' - ') || 'Bien',
+                  keywords: `${property.nom} ${property.adresse ?? ''} ${property.quartier ?? ''} ${property.ville ?? ''}`,
+                })),
+              ]}
+              onChange={(next) => onChange((current) => ({ ...current, immeuble_id: next }))}
+              placeholder="Sélectionner un bien"
+              searchPlaceholder="Rechercher un bien..."
+            />
+          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Type / nom de l'unité *">
+              <select required value={form.nom} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
+                <option value="">Sélectionner</option>
               {UNIT_TYPES.map((type) => <option key={type}>{type}</option>)}
             </select>
           </Field>
           <Field label="Numéro / code">
-            <input value={form.numero} onChange={(event) => onChange((current) => ({ ...current, numero: event.target.value }))} className="sk-input" placeholder="A1, Boutique 3..." />
+            <input value={form.numero} onChange={(event) => onChange((current) => ({ ...current, numero: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="A1, Boutique 3..." />
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Étage">
-            <input value={form.etage} onChange={(event) => onChange((current) => ({ ...current, etage: event.target.value }))} className="sk-input" />
+            <input value={form.etage} onChange={(event) => onChange((current) => ({ ...current, etage: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="RDC, 1er..." />
           </Field>
           <Field label="Loyer mensuel *">
-            <input required type="number" min="0" value={form.loyer_base} onChange={(event) => onChange((current) => ({ ...current, loyer_base: event.target.value }))} className="sk-input" />
+            <input required type="number" min="0" value={form.loyer_base} onChange={(event) => onChange((current) => ({ ...current, loyer_base: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="150000" />
           </Field>
         </div>
         <Field label="Statut">
-          <select value={form.statut} onChange={(event) => onChange((current) => ({ ...current, statut: event.target.value }))} className="sk-input">
+          <select value={form.statut} onChange={(event) => onChange((current) => ({ ...current, statut: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
             {UNIT_STATUSES.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
           </select>
         </Field>
         <Field label="Description optionnelle">
-          <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="sk-input min-h-24" />
+          <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Détails de l'unité..." />
         </Field>
+        </div>
         <ModalActions onClose={onClose} saving={saving} submitLabel={editingUnit ? 'Mettre à jour' : "Créer l'unité"} />
       </form>
     </Modal>
@@ -1923,7 +1935,7 @@ function inferTypeFromName(name: string, options: string[]) {
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</span>
+      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{label}</span>
       {children}
     </label>
   );
@@ -1931,12 +1943,19 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function ModalActions({ onClose, saving, submitLabel }: { onClose: () => void; saving: boolean; submitLabel: string }) {
   return (
-    <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-      <button type="button" onClick={onClose} className="inline-flex h-11 items-center justify-center rounded-xl border border-emerald-950/10 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+    <div className="mt-8 flex flex-col-reverse justify-end gap-3 sm:flex-row">
+      <button type="button" onClick={onClose} disabled={saving} className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
         Annuler
       </button>
-      <button type="submit" disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-900 to-brand-950 px-5 text-sm font-semibold text-white shadow-lg shadow-emerald-950/15 transition hover:translate-y-[-1px] hover:shadow-xl disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-70">
-        {saving ? 'Enregistrement...' : submitLabel}
+      <button type="submit" disabled={saving} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-700 disabled:opacity-50">
+        {saving ? (
+          <>
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            Enregistrement...
+          </>
+        ) : (
+          submitLabel
+        )}
       </button>
     </div>
   );

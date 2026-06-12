@@ -1090,7 +1090,7 @@ export function OccupantsBaux() {
                           </th>
                         )}
                         {occupantColumns.isVisible('telephone') && (
-                          <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400">
+                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : ''}`}>
                             <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Téléphone</span>
                           </th>
                         )}
@@ -1100,12 +1100,12 @@ export function OccupantsBaux() {
                           </th>
                         )}
                         {occupantColumns.isVisible('proprietaire') && (
-                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden 2xl:table-cell' : ''}`}>
+                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : ''}`}>
                             <span className="flex items-center gap-1.5"><Home className="h-3.5 w-3.5" /> Propriétaire</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('reference') && (
-                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden 2xl:table-cell' : ''}`}>
+                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : ''}`}>
                             <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Référence</span>
                           </th>
                         )}
@@ -1115,7 +1115,7 @@ export function OccupantsBaux() {
                           </th>
                         )}
                         {occupantColumns.isVisible('periode') && (
-                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden 2xl:table-cell' : ''}`}>
+                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : ''}`}>
                             <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Période</span>
                           </th>
                         )}
@@ -1296,7 +1296,7 @@ function DesktopRow({
       )}
       {/* Téléphone */}
       {isVisible('telephone') && (
-        <td className="px-5 py-3.5">
+        <td className={`px-5 py-3.5 ${compact ? 'hidden' : ''}`}>
           {row.telephone ? (
             <a
               href={`tel:${row.telephone}`}
@@ -1321,13 +1321,13 @@ function DesktopRow({
       )}
       {/* Propriétaire */}
       {isVisible('proprietaire') && (
-        <td className={`px-5 py-3.5 ${compact ? 'hidden 2xl:table-cell' : ''}`}>
+        <td className={`px-5 py-3.5 ${compact ? 'hidden' : ''}`}>
           <p className="max-w-[150px] truncate text-sm font-medium text-slate-700">{ownerName(row)}</p>
         </td>
       )}
       {/* Référence */}
       {isVisible('reference') && (
-        <td className={`px-5 py-3.5 ${compact ? 'hidden 2xl:table-cell' : ''}`}>
+        <td className={`px-5 py-3.5 ${compact ? 'hidden' : ''}`}>
           <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">
             {row.contrat_ref}
           </span>
@@ -1342,7 +1342,7 @@ function DesktopRow({
       )}
       {/* Période */}
       {isVisible('periode') && (
-        <td className={`px-5 py-3.5 ${compact ? 'hidden 2xl:table-cell' : ''}`}>
+        <td className={`px-5 py-3.5 ${compact ? 'hidden' : ''}`}>
           <p className="text-xs text-slate-600">
             {formatDate(row.date_debut)}
             {row.date_fin && <> → {formatDate(row.date_fin)}</>}
@@ -1369,36 +1369,26 @@ function DesktopRow({
 
 function MobileCard({ row, onSelect }: { row: OccupantBailRow; onSelect: () => void }) {
   return (
-    <button type="button" onClick={onSelect} className="block w-full px-4 py-4 text-left transition active:bg-emerald-50/70">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="font-bold text-slate-900 truncate">{fullName(row)}</p>
-          {row.telephone && (
-            <a href={`tel:${row.telephone}`} className="text-sm text-emerald-700 font-medium">
-              {formatSenegalPhone(row.telephone)}
-            </a>
-          )}
+    <button type="button" onClick={onSelect} className="block w-full px-4 py-4 text-left transition hover:bg-slate-50/50 active:bg-emerald-50/70">
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="truncate font-bold text-slate-900">{fullName(row)}</p>
+            {row.telephone && (
+              <p className="mt-0.5 text-sm font-medium text-emerald-700">{formatSenegalPhone(row.telephone)}</p>
+            )}
+          </div>
+          <StatutBadge statut={row.statut} />
         </div>
-        <StatutBadge statut={row.statut} />
+        
+        <div className="flex items-end justify-between gap-4">
+          <div className="flex items-center gap-1.5 text-sm text-slate-600">
+            <Building2 className="h-4 w-4 shrink-0 text-slate-400" />
+            <span className="truncate">{row.immeuble_nom ?? '—'} <ChevronRight className="inline h-3 w-3 text-slate-300" /> <span className="font-semibold text-slate-800">{row.unite_nom}</span></span>
+          </div>
+          <span className="whitespace-nowrap font-bold text-slate-900">{formatCurrency(row.loyer_mensuel)}</span>
+        </div>
       </div>
-      <div className="flex items-center gap-1.5 text-sm text-slate-600">
-        <Building2 className="w-4 h-4 text-slate-400 flex-shrink-0" />
-        <span>{row.immeuble_nom ?? '—'}</span>
-        <ChevronRight className="w-3 h-3 text-slate-300" />
-        <span className="font-medium">{row.unite_nom}</span>
-      </div>
-      <p className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-        <Home className="h-3.5 w-3.5 text-slate-400" />
-        {ownerName(row)}
-      </p>
-      <div className="flex items-center justify-between text-xs text-slate-500">
-        <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">{row.contrat_ref}</span>
-        <span className="font-bold text-slate-800">{formatCurrency(row.loyer_mensuel)}<span className="font-normal text-slate-400">/mois</span></span>
-      </div>
-      <p className="text-xs text-slate-500">
-        {formatDate(row.date_debut)}
-        {row.date_fin ? ` → ${formatDate(row.date_fin)}` : ' → ouvert'}
-      </p>
     </button>
   );
 }

@@ -18,7 +18,7 @@ export interface ContratListItem {
   commission: number | null;
   date_debut: string;
   date_fin: string | null;
-  statut: 'actif' | 'resilie' | 'expire' | 'en_attente';
+  statut: 'actif' | 'resilie' | 'expire' | 'archive' | 'en_attente';
   destination: 'Habitation' | 'Commercial' | string;
   notes: string | null;
   actif: boolean;
@@ -147,9 +147,7 @@ export const contratsRepository = {
     const { error } = await supabase
       .from('contrats')
       .update({
-        statut: 'resilie',
-        actif: false,
-        deleted_at: new Date().toISOString(),
+        statut: 'archive',
       })
       .eq('id', id);
     return { error };

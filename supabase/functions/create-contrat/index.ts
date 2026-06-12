@@ -153,6 +153,13 @@ serve(async (req: Request) => {
     }
 
     const input: CreateContratInput = parsed.data;
+    if (input.statut !== "actif") {
+      return err(
+        "La creation directe d'un bail doit demarrer avec le statut actif.",
+        422,
+        "CONTRAT_CREATE_STATUS_INVALID",
+      );
+    }
 
     // ── 4. Vérification propriété locataire + unité ──────────────────────────
     const [{ data: locataire, error: locErr }, { data: unite, error: uniteErr }] =
@@ -235,6 +242,54 @@ serve(async (req: Request) => {
     const warnings: string[] = [];
     if (uniteUpdateErr) {
       warnings.push(`unite_statut_non_mis_a_jour: ${uniteUpdateErr.message}`);
+      await supabaseAdmin
+        .from("contrats")
+        .delete()
+        .eq("id", contrat.id)
+        .eq("agency_id", agencyId);
+      return err(
+        "Le bail n'a pas ete cree car l'unite n'a pas pu etre marquee comme occupee.",
+        409,
+        "UNITE_OCCUPATION_FAILED",
+        uniteUpdateErr.message,
+      );
+    }
+
+    const { error: eventErr } = await supabaseAdmin.from("event_log").insert({
+      agency_id: agencyId,
+      event_type: "contrat.created",
+      entity_type: "contrats",
+      entity_id: contrat.id,
+      payload: {
+        locataire_id: input.locataire_id,
+        unite_id: input.unite_id,
+        statut: input.statut,
+        date_debut: input.date_debut,
+        date_fin: contrat.date_fin,
+        loyer_mensuel: input.loyer_mensuel,
+        destination: input.destination ?? null,
+        lifecycle: { action: "occupation_unite" },
+      },
+      created_by: user.id,
+    });
+
+    if (eventErr) {
+      await supabaseAdmin
+        .from("unites")
+        .update({ statut: "libre" })
+        .eq("id", input.unite_id)
+        .eq("agency_id", agencyId);
+      await supabaseAdmin
+        .from("contrats")
+        .delete()
+        .eq("id", contrat.id)
+        .eq("agency_id", agencyId);
+      return err(
+        "Le bail n'a pas ete cree car l'historique n'a pas pu etre enregistre.",
+        500,
+        "CONTRAT_EVENT_LOG_FAILED",
+        eventErr.message,
+      );
     }
 
     // ── 7. Pilot tracking : first_contract_at ────────────────────────────────

@@ -22,7 +22,7 @@ const CORS = {
   "Content-Type": "application/json",
 };
 
-const ContratStatuts = ["actif", "expire", "resilie"] as const;
+const ContratStatuts = ["actif", "expire", "resilie", "archive"] as const;
 
 const UpdateContratSchema = z.object({
   id: z.string().uuid({ message: "id doit être un UUID valide" }),
@@ -136,7 +136,7 @@ serve(async (req: Request) => {
     // ── 4. Récupération contrat (propriété + unite_id) ────────────────────────
     const { data: existing, error: fetchErr } = await supabaseAdmin
       .from("contrats")
-      .select("id, statut, unite_id, agency_id")
+      .select("id, statut, unite_id, agency_id, date_fin, commission, caution")
       .eq("id", input.id)
       .eq("agency_id", agencyId)
       .single();
@@ -148,8 +148,9 @@ serve(async (req: Request) => {
     // ── 4b. State machine — validation transition ─────────────────────────────
     const CONTRAT_TRANSITIONS: Record<string, string[]> = {
       actif:   ["expire", "resilie"],
-      expire:  ["actif"],
-      resilie: [],
+      expire:  ["actif", "archive"],
+      resilie: ["archive"],
+      archive: [],
     };
 
     if (input.statut && input.statut !== existing.statut) {
@@ -160,6 +161,24 @@ serve(async (req: Request) => {
           422,
           "INVALID_TRANSITION",
         );
+      }
+    }
+
+    if (input.statut === "actif" && existing.statut !== "actif") {
+      const { data: activeConflict, error: activeConflictErr } = await supabaseAdmin
+        .from("contrats")
+        .select("id")
+        .eq("agency_id", agencyId)
+        .eq("unite_id", existing.unite_id)
+        .eq("statut", "actif")
+        .neq("id", input.id)
+        .maybeSingle();
+
+      if (activeConflictErr) {
+        return err("Verification de disponibilite de l'unite impossible.", 500, "UNIT_AVAILABILITY_CHECK_FAILED");
+      }
+      if (activeConflict) {
+        return err("Un autre bail actif existe deja pour cette unite.", 409, "CONTRAT_ALREADY_EXISTS");
       }
     }
 
@@ -183,10 +202,25 @@ serve(async (req: Request) => {
       return err(updateErr.message, 422, updateErr.code ?? "DB_ERROR");
     }
 
+    const rollbackContrat = async () => {
+      await supabaseAdmin
+        .from("contrats")
+        .update({
+          statut: existing.statut,
+          date_fin: existing.date_fin,
+          commission: existing.commission,
+          caution: existing.caution,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", input.id)
+        .eq("agency_id", agencyId);
+    };
+
     // ── 7. Libération unité si résiliation / expiration ──────────────────────
     const uniteFinalStatuts = ["resilie", "expire"] as const;
     const newStatut = input.statut;
     const wasNotTerminated = existing.statut === "actif";
+    let unitStatusChangedTo: "libre" | "loue" | null = null;
 
     if (newStatut && uniteFinalStatuts.includes(newStatut as typeof uniteFinalStatuts[number]) && wasNotTerminated) {
       const { error: uniteErr } = await supabaseAdmin
@@ -195,33 +229,83 @@ serve(async (req: Request) => {
         .eq("id", existing.unite_id)
         .eq("agency_id", agencyId);
       if (uniteErr) {
-        console.warn("[update-contrat] unite release failed", uniteErr.message);
+        await rollbackContrat();
+        return err(
+          "Le bail n'a pas ete modifie car l'unite n'a pas pu etre liberee.",
+          409,
+          "UNITE_RELEASE_FAILED",
+        );
       }
+      unitStatusChangedTo = "libre";
+    }
+
+    if (newStatut === "actif" && existing.statut !== "actif") {
+      const { error: occupyErr } = await supabaseAdmin
+        .from("unites")
+        .update({ statut: "loue" })
+        .eq("id", existing.unite_id)
+        .eq("agency_id", agencyId);
+      if (occupyErr) {
+        await rollbackContrat();
+        return err(
+          "Le bail n'a pas ete reactive car l'unite n'a pas pu etre occupee.",
+          409,
+          "UNITE_OCCUPATION_FAILED",
+        );
+      }
+      unitStatusChangedTo = "loue";
     }
 
     // ── 8. Log event ─────────────────────────────────────────────────────────
+    const lifecycleAction = input.statut === "resilie"
+      ? "resiliation"
+      : input.statut === "expire"
+        ? "expiration"
+        : input.statut === "archive"
+          ? "archivage"
+          : input.statut === "actif" && existing.statut === "expire"
+            ? "renouvellement_prepare"
+            : null;
+
+    const eventType = lifecycleAction === "resiliation"
+      ? "contrat.resiliated"
+      : lifecycleAction === "archivage"
+        ? "contrat.archived"
+        : lifecycleAction === "renouvellement_prepare"
+          ? "contrat.renewal_prepared"
+          : "contrat.updated";
+
     const { error: eventErr } = await supabaseAdmin.from("event_log").insert({
       agency_id: agencyId,
-      event_type: "contrat.updated",
+      event_type: eventType,
       entity_type: "contrats",
       entity_id: input.id,
       payload: {
         patch,
         previous_statut: existing.statut,
         updated_by: user.id,
-        lifecycle: input.statut === "resilie"
+        lifecycle: lifecycleAction
           ? {
-              action: "resiliation",
+              action: lifecycleAction,
               date: input.date_fin,
               motif: input.resiliation_motif ?? null,
               observations: input.resiliation_observations ?? null,
+              unit_status_changed_to: unitStatusChangedTo,
             }
           : null,
       },
       created_by: user.id,
     });
     if (eventErr) {
-      console.warn("[update-contrat] event_log insert failed", eventErr.message);
+      await rollbackContrat();
+      if (unitStatusChangedTo) {
+        await supabaseAdmin
+          .from("unites")
+          .update({ statut: unitStatusChangedTo === "libre" ? "loue" : "libre" })
+          .eq("id", existing.unite_id)
+          .eq("agency_id", agencyId);
+      }
+      return err("Le bail n'a pas ete modifie car l'historique n'a pas pu etre enregistre.", 500, "CONTRAT_EVENT_LOG_FAILED");
     }
 
     return json({ data: updated }, 200);

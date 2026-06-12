@@ -21,7 +21,7 @@
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type PaiementStatut = 'paye' | 'partiel' | 'impaye' | 'annule';
-export type ContratStatut  = 'actif' | 'expire' | 'resilie';
+export type ContratStatut  = 'actif' | 'expire' | 'resilie' | 'archive';
 
 // ─── Tables de transitions ────────────────────────────────────────────────────
 
@@ -34,8 +34,9 @@ const PAIEMENT_TRANSITIONS: Record<PaiementStatut, PaiementStatut[]> = {
 
 const CONTRAT_TRANSITIONS: Record<ContratStatut, ContratStatut[]> = {
   actif:   ['expire', 'resilie'],
-  expire:  ['actif'],                     // renouvellement possible
-  resilie: [],                            // état terminal — aucune sortie
+  expire:  ['actif', 'archive'],
+  resilie: ['archive'],
+  archive: [],
 };
 
 // ─── Validators ───────────────────────────────────────────────────────────────

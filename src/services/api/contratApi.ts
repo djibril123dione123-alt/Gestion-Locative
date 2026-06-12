@@ -1,5 +1,7 @@
 import { supabase } from '../../lib/supabase';
 
+export type ContratStatut = 'actif' | 'expire' | 'resilie' | 'archive';
+
 export interface CreateContratInput {
   locataire_id: string;
   unite_id: string;
@@ -8,13 +10,13 @@ export interface CreateContratInput {
   loyer_mensuel: number;
   commission?: number | null;
   caution?: number | null;
-  statut: 'actif' | 'expire' | 'resilie';
+  statut: Exclude<ContratStatut, 'archive'>;
   destination?: string | null;
 }
 
 export interface UpdateContratInput {
   id: string;
-  statut?: 'actif' | 'expire' | 'resilie';
+  statut?: ContratStatut;
   date_fin?: string | null;
   commission?: number | null;
   caution?: number | null;
@@ -103,21 +105,5 @@ export async function updateContratViaEdge(input: UpdateContratInput): Promise<C
 }
 
 export async function deleteContrat(input: DeleteContratInput): Promise<void> {
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) {
-    throw new ContratApiError('Session invalide. Veuillez vous reconnecter.', 'AUTH_SESSION_ERROR');
-  }
-
-  if (!sessionData.session) {
-    throw new ContratApiError('Vous devez être connecté pour supprimer un contrat.', 'NO_SESSION');
-  }
-
-  const { error } = await supabase
-    .from('contrats')
-    .delete()
-    .eq('id', input.id);
-
-  if (error) {
-    throw new ContratApiError(error.message ?? 'Suppression du contrat impossible.', 'DELETE_ERROR');
-  }
+  await updateContratViaEdge({ id: input.id, statut: 'archive' });
 }

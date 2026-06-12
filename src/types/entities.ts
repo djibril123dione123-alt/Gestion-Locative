@@ -79,7 +79,7 @@ export interface Contrat {
   loyer_mensuel: number;
   caution: number | null;
   commission: number | null;
-  statut: 'actif' | 'expire' | 'resilie';
+  statut: 'actif' | 'expire' | 'resilie' | 'archive';
   notes: string | null;
   destination: 'Habitation' | 'Commercial' | 'Mixte';
   created_at: string;

@@ -70,7 +70,7 @@ interface Contrat {
   loyer_mensuel: number;
   commission?: number;
   caution?: number;
-  statut: 'actif' | 'expire' | 'resilie';
+  statut: 'actif' | 'expire' | 'resilie' | 'archive';
   destination?: string;
   created_at?: string;
   locataires?: Locataire;
@@ -85,12 +85,19 @@ interface FormData {
   loyer_mensuel: string;
   caution: string;
   commission: string;
-  statut: 'actif' | 'expire' | 'resilie';
+  statut: 'actif' | 'expire' | 'resilie' | 'archive';
   destination: 'Habitation' | 'Commercial' | '';
 }
 
 type ContratStatut = FormData['statut'];
 type ContratDestination = FormData['destination'];
+
+const CONTRAT_STATUS_LABELS: Record<ContratStatut, string> = {
+  actif: 'Actif',
+  expire: 'Expiré',
+  resilie: 'Résilié',
+  archive: 'Archivé',
+};
 
 // =========================
 //  VALEURS INITIALES
@@ -397,7 +404,7 @@ export function Contrats() {
           loyer_mensuel: parseFloat(formData.loyer_mensuel),
           commission: isIndividualOwner ? 0 : formData.commission ? parseFloat(formData.commission) : null,
           caution: formData.caution ? parseFloat(formData.caution) : null,
-          statut: formData.statut as 'actif' | 'expire' | 'resilie',
+          statut: formData.statut === 'archive' ? 'actif' : formData.statut,
           destination: formData.destination || null,
         });
 
@@ -441,7 +448,7 @@ export function Contrats() {
         // Mise a jour via Edge Function (liberation unite si resiliation + event_log cote serveur)
         await updateContratViaEdge({
           id: editing.id,
-          statut: formData.statut as 'actif' | 'expire' | 'resilie',
+          statut: formData.statut,
           date_fin: formData.date_fin || null,
           commission: isIndividualOwner ? 0 : formData.commission ? parseFloat(formData.commission) : null,
           caution: formData.caution ? parseFloat(formData.caution) : null,
@@ -663,10 +670,12 @@ export function Contrats() {
                 ? 'bg-green-100 text-green-700'
                 : c.statut === 'resilie'
                 ? 'bg-red-100 text-red-700'
+                : c.statut === 'archive'
+                ? 'bg-slate-200 text-slate-600'
                 : 'bg-gray-100 text-gray-700'
             }`}
           >
-            {c.statut.charAt(0).toUpperCase() + c.statut.slice(1)}
+            {CONTRAT_STATUS_LABELS[c.statut]}
           </span>
         ),
       },
@@ -1160,6 +1169,7 @@ export function Contrats() {
               <option value="actif">Actif</option>
               <option value="expire">Expiré</option>
               <option value="resilie">Résilié</option>
+              <option value="archive">Archivé</option>
             </select>
           </div>
 

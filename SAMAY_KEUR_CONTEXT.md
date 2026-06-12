@@ -170,6 +170,19 @@ Un seul agent modifie le dépôt à la fois.
 
 ---
 
+## Project Skills
+
+Toute tâche importante doit commencer par choisir et charger le skill adapté dans `.agents/skills/` :
+
+* `samay-cto` : coordination stratégique, choix d'architecture et de roadmap.
+* `samay-code-review` : vérification de la qualité, lints, types et non-régression.
+* `samay-frontend-ux` : conformité de la charte graphique premium, drawers et responsivité.
+* `samay-supabase-security` : RLS, sécurité des requêtes, structures de données et migrations SQL.
+* `samay-product-architect` : arbitrage fonctionnel, priorisation et alignement avec la vision produit.
+* `samay-documentation` : maintien des guides, roadmaps, schémas de données et logs.
+
+---
+
 ## Interdictions
 
 * désactiver RLS

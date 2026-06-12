@@ -1,5 +1,12 @@
 # Conventions de code — Samay Këur
 
+## AI Agent Skills
+
+Toute tâche importante doit commencer par le choix de la skill adaptée. Les agents IA doivent lire les instructions et règles spécifiques définies dans les fichiers du dossier :
+`.agents/skills/`
+
+Consultez le skill correspondant à votre domaine d'intervention (CTO, Code Review, UX/Frontend, Security/Supabase, Product Architecture, ou Documentation) avant d'écrire du code ou de proposer des changements.
+
 ## Règles générales
 
 - **Jamais de `any`** dans les modules financiers (`paiementService`, `commissionService`, `paiementApi`).

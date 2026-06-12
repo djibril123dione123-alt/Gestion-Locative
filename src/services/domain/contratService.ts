@@ -8,7 +8,9 @@
  *   - Fournir les règles de transition de statut
  */
 
-export type ContratStatut = 'actif' | 'expire' | 'resilie' | 'archive';
+import { getAllowedContratTransitions } from './stateMachine';
+export type { ContratStatut } from './stateMachine';
+import type { ContratStatut } from './stateMachine';
 
 export interface ContratForValidation {
   date_debut: string;
@@ -59,13 +61,7 @@ export function validateContrat(c: ContratForValidation): void {
  *   expire → resilie
  */
 export function isStatutTransitionValid(from: ContratStatut, to: ContratStatut): boolean {
-  const allowed: Record<ContratStatut, ContratStatut[]> = {
-    actif: ['expire', 'resilie'],
-    expire: ['actif', 'archive'],
-    resilie: ['archive'],
-    archive: [],
-  };
-  return allowed[from]?.includes(to) ?? false;
+  return getAllowedContratTransitions(from).includes(to);
 }
 
 /**

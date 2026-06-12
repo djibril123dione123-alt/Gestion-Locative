@@ -1,10 +1,10 @@
-/**
+﻿/**
  * contratsRepository — accès Supabase pour la table contrats.
  *
  * Responsabilité unique : exécuter les requêtes DB et retourner les données brutes.
  * Aucune logique métier ici — voir contratService pour les validations.
  *
- * Pattern : UI → Service domain → Repository → Supabase
+ * Pattern : UI -> Service domain -> Repository -> Supabase
  */
 
 import { supabase } from '../lib/supabase';
@@ -136,19 +136,6 @@ export const contratsRepository = {
     const { error } = await supabase
       .from('contrats')
       .update(payload)
-      .eq('id', id);
-    return { error };
-  },
-
-  /**
-   * Résiliation logique : statut → 'resilie', actif → false.
-   */
-  async softDelete(id: string) {
-    const { error } = await supabase
-      .from('contrats')
-      .update({
-        statut: 'archive',
-      })
       .eq('id', id);
     return { error };
   },

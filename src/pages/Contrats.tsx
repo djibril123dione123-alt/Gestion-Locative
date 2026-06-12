@@ -262,11 +262,16 @@ export function Contrats() {
   // =========================
   //  FILTRAGE DES CONTRATS
   // =========================
+  const mainContrats = useMemo(
+    () => contrats.filter((c) => c.statut !== 'archive'),
+    [contrats]
+  );
+
   const filteredContrats = useMemo(() => {
-    if (!searchTerm.trim()) return contrats;
+    if (!searchTerm.trim()) return mainContrats;
 
     const term = searchTerm.toLowerCase();
-    return contrats.filter((c) => {
+    return mainContrats.filter((c) => {
       const locataire = c.locataires
         ? `${c.locataires.prenom} ${c.locataires.nom}`.toLowerCase()
         : '';
@@ -283,13 +288,13 @@ export function Contrats() {
         destination.includes(term)
       );
     });
-  }, [searchTerm, contrats]);
+  }, [searchTerm, mainContrats]);
 
   // =========================
   //  STATISTIQUES
   // =========================
   const stats = useMemo(() => {
-    const actifs = contrats.filter((c) => c.statut === 'actif');
+    const actifs = mainContrats.filter((c) => c.statut === 'actif');
     const revenuTotal = actifs.reduce((sum, c) => {
       if (isIndividualOwner) return sum + c.loyer_mensuel;
       const partAgence = (c.loyer_mensuel * (c.commission || 0)) / 100;
@@ -297,13 +302,13 @@ export function Contrats() {
     }, 0);
 
     return {
-      total: contrats.length,
+      total: mainContrats.length,
       actifs: actifs.length,
-      expires: contrats.filter((c) => c.statut === 'expire').length,
-      resilies: contrats.filter((c) => c.statut === 'resilie').length,
+      expires: mainContrats.filter((c) => c.statut === 'expire').length,
+      resilies: mainContrats.filter((c) => c.statut === 'resilie').length,
       revenuTotal,
     };
-  }, [contrats, isIndividualOwner]);
+  }, [mainContrats, isIndividualOwner]);
 
   // =========================
   //  GESTION CHANGEMENT D'UNITÉ

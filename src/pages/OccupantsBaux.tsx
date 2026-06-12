@@ -387,7 +387,7 @@ export function OccupantsBaux() {
 
   // ─── Skeleton ─────────────────────────────────────────────────────────────
 
-  if (loading) return <PageSkeleton title="Occupants & Baux" variant="table" />;
+  if (loading) return <PageSkeleton title="Locations" variant="table" />;
 
   // ─── Rendu ────────────────────────────────────────────────────────────────
 
@@ -405,7 +405,7 @@ export function OccupantsBaux() {
         <div>
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Gestion locative</p>
           <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">
-            Occupants & Baux
+            Locations
           </h1>
           <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
             Vue unifiée occupant → bail → unité ·{' '}

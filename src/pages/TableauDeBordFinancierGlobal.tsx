@@ -16,6 +16,8 @@ import {
     saveGeneratedPdf,
 } from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { AnimatedCounter } from '../components/ui/AnimatedCounter';
+import { Sparkline } from '../components/ui/Sparkline';
 import type { AgencySettings } from '../types/agency';
 
 // -------------------------------------------------------------------------
@@ -654,10 +656,23 @@ export function TableauDeBordFinancierGlobal() {
     // -------------------------------------------------------------------------
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-10">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800">Rapports financiers</h1>
+        <div className="relative min-h-full">
+            {/* Animated Mesh Gradient Background */}
+            <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+                <div className="absolute -left-[10%] -top-[20%] h-[70vh] w-[50vw] rounded-full bg-emerald-400/10 blur-[120px] mix-blend-multiply" />
+                <div className="absolute -right-[10%] top-[10%] h-[60vh] w-[40vw] rounded-full bg-amber-400/10 blur-[100px] mix-blend-multiply" />
+            </div>
 
-            <div className={`grid grid-cols-1 gap-2 rounded-2xl border border-emerald-950/10 bg-white/80 p-2 shadow-sm ${accountProfile.isIndividualOwner ? '' : 'sm:grid-cols-2'}`}>
+            <div className="relative z-10 space-y-6 p-4 sm:p-6 lg:space-y-10 lg:p-8">
+                <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Vue propriétaire</p>
+                    <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">Rapports financiers</h1>
+                    <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
+                        Suivez vos revenus locatifs, vos impayés et la performance globale de votre portefeuille.
+                    </p>
+                </div>
+
+            <div className={`grid grid-cols-1 gap-1.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] sm:gap-2 ${accountProfile.isIndividualOwner ? '' : 'sm:grid-cols-2'}`}>
                 <button
                     onClick={() => {
                         if (accountProfile.isIndividualOwner) {
@@ -666,10 +681,10 @@ export function TableauDeBordFinancierGlobal() {
                             window.location.hash = '#/bailleurs';
                         }
                     }}
-                    className={`rounded-xl px-4 py-3 text-left text-sm font-bold transition ${currentPage === 'bailleurs' ? 'bg-brand-950 text-white shadow-lg shadow-emerald-950/15' : 'text-slate-600 hover:bg-emerald-50 hover:text-brand-900'}`}
+                    className={`flex flex-col items-start rounded-lg px-4 py-3 text-left transition ${currentPage === 'bailleurs' ? 'bg-emerald-900 text-white shadow-sm' : 'bg-transparent text-slate-600 hover:bg-white hover:text-emerald-900 hover:shadow-sm'}`}
                 >
-                    {accountProfile.isIndividualOwner ? 'Mes revenus' : 'Fiches bailleurs'}
-                    <span className="mt-1 block text-xs font-medium opacity-75">
+                    <span className="text-sm font-bold">{accountProfile.isIndividualOwner ? 'Mes revenus' : 'Fiches bailleurs'}</span>
+                    <span className="mt-0.5 block text-[11px] font-medium opacity-80">
                         {accountProfile.isIndividualOwner
                             ? 'Synthèse mensuelle de vos loyers, impayés et revenus nets.'
                             : 'Les rapports par proprietaire se generent depuis la page Bailleurs.'}
@@ -678,24 +693,26 @@ export function TableauDeBordFinancierGlobal() {
                 {!accountProfile.isIndividualOwner && (
                 <button
                     onClick={() => setCurrentPage('operationnel')}
-                    className={`rounded-xl px-4 py-3 text-left text-sm font-bold transition ${currentPage === 'operationnel' ? 'bg-brand-950 text-white shadow-lg shadow-emerald-950/15' : 'text-slate-600 hover:bg-emerald-50 hover:text-brand-900'}`}
+                    className={`flex flex-col items-start rounded-lg px-4 py-3 text-left transition ${currentPage === 'operationnel' ? 'bg-emerald-900 text-white shadow-sm' : 'bg-transparent text-slate-600 hover:bg-white hover:text-emerald-900 hover:shadow-sm'}`}
                 >
-                    Vue financière opérationnelle
-                    <span className="mt-1 block text-xs font-medium opacity-75">Encaissements, dépenses, solde et mouvements du mois.</span>
+                    <span className="text-sm font-bold">Vue financière opérationnelle</span>
+                    <span className="mt-0.5 block text-[11px] font-medium opacity-80">Encaissements, dépenses, solde et mouvements du mois.</span>
                 </button>
                 )}
             </div>
             
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                <Calendar className="w-4 sm:w-5 h-4 sm:h-5 text-gray-500 flex-shrink-0 mt-0.5 sm:mt-0" />
-                <label htmlFor="month-selector" className="text-sm sm:text-base text-gray-700 font-medium">Période:</label>
-                <input
-                    id="month-selector"
-                    type="month"
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
-                    className="px-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-600 text-sm w-full sm:w-auto"
-                />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white px-3 py-2 shadow-sm">
+                    <Calendar className="w-4 h-4 text-emerald-700 flex-shrink-0" />
+                    <label htmlFor="month-selector" className="text-xs font-bold uppercase tracking-wider text-slate-500">Période</label>
+                    <input
+                        id="month-selector"
+                        type="month"
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(e.target.value)}
+                        className="border-0 bg-transparent py-0 pl-2 pr-0 text-sm font-bold text-slate-900 focus:ring-0 w-auto outline-none"
+                    />
+                </div>
             </div>
             
             {/* VUE 1: BILAN ENTREPRISE (Mensuel) */}
@@ -705,41 +722,74 @@ export function TableauDeBordFinancierGlobal() {
                         <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-700">Bilan de l'Entreprise (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})</h2>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-                        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Brut encaisse</p>
-                            <p className="text-lg sm:text-2xl font-bold text-slate-900 mt-1">{formatCurrency(bilanEntreprise.totalLoyers)}</p>
-                        </div>
-
-                        {/* Carte 2: Commission agence */}
-                        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Commissions agence</p>
-                            <p className="text-lg sm:text-2xl font-bold text-blue-600 mt-1">{formatCurrency(bilanEntreprise.commission)}</p>
-                        </div>
-
-                        {/* Carte 3: Net bailleurs */}
-                        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Net bailleurs</p>
-                            <p className="text-lg sm:text-2xl font-bold text-emerald-700 mt-1">{formatCurrency(bilanEntreprise.netBailleurs)}</p>
-                        </div>
-
-                        {/* Carte 4: Solde Net (Dynamique) */}
-                        <div className={`${bilanEntreprise.soldeNet >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-orange-50 border-orange-200'} p-4 sm:p-6 rounded-2xl border shadow-md`}>
-                            <div className={`${bilanEntreprise.soldeNet >= 0 ? 'bg-emerald-600' : 'bg-orange-600'} text-white rounded-lg p-2 flex items-center justify-center w-8 sm:w-10 h-8 sm:h-10`}>
-                                {bilanEntreprise.soldeNet >= 0 ? <TrendingUp className="w-5 sm:w-6 h-5 sm:h-6" /> : <TrendingDown className="w-5 sm:w-6 h-5 sm:h-6" />}
+                    <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {/* Carte 4: Solde Net (Dynamique) - BENTO MAIN CARD */}
+                        <article className={`col-span-1 md:col-span-2 xl:col-span-2 rounded-3xl border p-5 sm:p-6 shadow-[0_14px_40px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${bilanEntreprise.soldeNet >= 0 ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 via-emerald-50/50 to-white' : 'border-red-200 bg-gradient-to-br from-red-50 via-red-50/50 to-white'}`}>
+                            <div className="flex h-full flex-col justify-between">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <p className={`text-[0.7rem] font-bold uppercase tracking-[0.15em] ${bilanEntreprise.soldeNet >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>Marge Opérationnelle</p>
+                                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${bilanEntreprise.soldeNet >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>Mensuel</span>
+                                        </div>
+                                        <AnimatedCounter 
+                                            value={bilanEntreprise.soldeNet} 
+                                            format={formatCurrency} 
+                                            className={`mt-2 block text-4xl sm:text-5xl font-black tracking-tighter ${bilanEntreprise.soldeNet >= 0 ? 'text-emerald-900' : 'text-red-900'}`} 
+                                        />
+                                    </div>
+                                    <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl ring-1 ${bilanEntreprise.soldeNet >= 0 ? 'bg-emerald-600 text-white ring-emerald-600/30 shadow-[0_8px_16px_rgba(5,150,105,0.3)]' : 'bg-red-600 text-white ring-red-600/30 shadow-[0_8px_16px_rgba(220,38,38,0.3)]'}`}>
+                                        {bilanEntreprise.soldeNet >= 0 ? <TrendingUp className="h-6 w-6" /> : <TrendingDown className="h-6 w-6" />}
+                                    </div>
+                                </div>
+                                <div className="mt-6 flex h-12 items-end">
+                                    <div className="w-full h-full opacity-60">
+                                        <Sparkline data={monthlyData.slice(-6).map(d => (d.commission || 0) - (d.depenses || 0))} color={bilanEntreprise.soldeNet >= 0 ? '#10b981' : '#ef4444'} width="100%" height={48} />
+                                    </div>
+                                </div>
                             </div>
-                            <p className={`${bilanEntreprise.soldeNet >= 0 ? 'text-emerald-700' : 'text-orange-700'} text-xs sm:text-sm font-medium mt-3`}>Marge operationnelle</p>
-                            <p className={`${bilanEntreprise.soldeNet >= 0 ? 'text-emerald-900' : 'text-orange-900'} text-2xl sm:text-3xl font-extrabold mt-1`}>{formatCurrency(bilanEntreprise.soldeNet)}</p>
+                        </article>
+
+                        {/* Carte 1: Brut encaissé */}
+                        <article className="col-span-1 rounded-3xl border border-slate-200/60 bg-gradient-to-br from-slate-50 to-white p-5 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70">
+                            <p className="text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">Brut encaissé</p>
+                            <AnimatedCounter value={bilanEntreprise.totalLoyers} format={formatCurrency} className="mt-1.5 block text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900" />
+                            <div className="mt-4 w-full h-8 opacity-40">
+                                <Sparkline data={monthlyData.slice(-6).map(d => (d.commission || 0) * 10)} color="#94a3b8" width="100%" height={32} />
+                            </div>
+                        </article>
+
+                        <div className="col-span-1 grid grid-rows-2 gap-4">
+                            {/* Carte 2: Commission agence */}
+                            <article className="rounded-3xl border border-sky-950/10 bg-gradient-to-br from-sky-50/80 to-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70 flex flex-col justify-center">
+                                <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-sky-600">Commissions agence</p>
+                                <AnimatedCounter value={bilanEntreprise.commission} format={formatCurrency} className="mt-1 block text-xl font-extrabold tracking-tight text-sky-900" />
+                            </article>
+
+                            {/* Carte 3: Net bailleurs */}
+                            <article className="rounded-3xl border border-emerald-950/10 bg-gradient-to-br from-emerald-50/80 to-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70 flex flex-col justify-center">
+                                <p className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-emerald-600">Net bailleurs</p>
+                                <AnimatedCounter value={bilanEntreprise.netBailleurs} format={formatCurrency} className="mt-1 block text-xl font-extrabold tracking-tight text-emerald-900" />
+                            </article>
                         </div>
                     </div>
                     
                     {/* Résumé du mois */}
-                    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-100">
-                        <h3 className="text-base lg:text-xl font-semibold mb-4 text-gray-700">Résumé du mois</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                            <p className="text-xs sm:text-sm text-gray-600">Depenses <span className="block font-bold text-base sm:text-lg text-red-500 mt-1">{formatCurrency(bilanEntreprise.totalDepenses)}</span></p>
-                            <p className="text-xs sm:text-sm text-gray-600">Impayés <span className="block font-bold text-base sm:text-lg text-red-500 mt-1">{formatCurrency(bilanEntreprise.loyersImpayes)}</span></p>
-                            <p className="text-xs sm:text-sm text-gray-600">Autres revenus <span className="block font-bold text-base sm:text-lg text-green-500 mt-1">{formatCurrency(bilanEntreprise.revenus_alt)}</span></p>
+                    <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_18px_48px_rgba(15,23,42,0.06)] ring-1 ring-white/80 p-5 sm:p-6">
+                        <h3 className="text-base font-bold text-slate-800 mb-4">Résumé du mois</h3>
+                        <div className="grid grid-cols-1 divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0 text-center">
+                            <div className="py-3 sm:py-0 sm:px-4">
+                                <p className="text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">Dépenses</p>
+                                <p className="mt-1.5 text-[1.1rem] font-extrabold text-red-600">{formatCurrency(bilanEntreprise.totalDepenses)}</p>
+                            </div>
+                            <div className="py-3 sm:py-0 sm:px-4">
+                                <p className="text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">Impayés</p>
+                                <p className="mt-1.5 text-[1.1rem] font-extrabold text-orange-600">{formatCurrency(bilanEntreprise.loyersImpayes)}</p>
+                            </div>
+                            <div className="py-3 sm:py-0 sm:px-4">
+                                <p className="text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">Autres revenus</p>
+                                <p className="mt-1.5 text-[1.1rem] font-extrabold text-emerald-600">{formatCurrency(bilanEntreprise.revenus_alt)}</p>
+                            </div>
                         </div>
                     </div>
 
@@ -770,24 +820,24 @@ export function TableauDeBordFinancierGlobal() {
 
                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
                         {/* Total Revenus (Commission annuelle) */}
-                        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Total Revenus</p>
-                            <p className="text-lg sm:text-2xl font-bold text-blue-600 mt-1">{formatCurrency(statsAnnuel.totalRevenus)}</p>
-                        </div>
+                        <article className="rounded-2xl border border-blue-950/10 bg-gradient-to-br from-blue-50 to-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70">
+                            <p className="truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] text-blue-600">Total Revenus</p>
+                            <p className="mt-1.5 truncate text-[1.4rem] font-extrabold tracking-tight text-blue-900">{formatCurrency(statsAnnuel.totalRevenus)}</p>
+                        </article>
 
                         {/* Total Dépenses (Annuel) */}
-                         <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Total Dépenses</p>
-                            <p className="text-lg sm:text-2xl font-bold text-red-600 mt-1">{formatCurrency(statsAnnuel.totalDepenses)}</p>
-                        </div>
+                         <article className="rounded-2xl border border-red-950/10 bg-gradient-to-br from-red-50 to-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70">
+                            <p className="truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] text-red-600">Total Dépenses</p>
+                            <p className="mt-1.5 truncate text-[1.4rem] font-extrabold tracking-tight text-red-900">{formatCurrency(statsAnnuel.totalDepenses)}</p>
+                        </article>
 
                         {/* Solde Net (Annuel) */}
-                        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-md">
-                            <p className="text-xs sm:text-sm font-medium text-gray-500">Solde Net</p>
-                             <p className={`text-lg sm:text-2xl font-bold mt-1 ${statsAnnuel.soldeNet >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        <article className={`rounded-2xl border p-4 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70 ${statsAnnuel.soldeNet >= 0 ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-white' : 'border-orange-200 bg-gradient-to-br from-orange-50 to-white'}`}>
+                            <p className={`truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] ${statsAnnuel.soldeNet >= 0 ? 'text-emerald-700' : 'text-orange-700'}`}>Solde Net</p>
+                             <p className={`mt-1.5 truncate text-[1.4rem] font-extrabold tracking-tight ${statsAnnuel.soldeNet >= 0 ? 'text-emerald-900' : 'text-orange-900'}`}>
                                 {formatCurrency(statsAnnuel.soldeNet)}
                             </p>
-                        </div>
+                        </article>
                     </div>
 
                     {/* Évolution mensuelle (Bar Chart) */}
@@ -807,25 +857,25 @@ export function TableauDeBordFinancierGlobal() {
                     </div>
 
                     {/* Détails mensuels (Tableau) */}
-                    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md border border-gray-100">
-                        <h3 className="text-base lg:text-xl font-semibold mb-4 text-gray-700">Détails mensuels</h3>
-                        <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200 text-sm">
-                            <thead className="bg-gray-50">
+                    <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_18px_48px_rgba(15,23,42,0.06)] ring-1 ring-white/80 p-5 sm:p-6">
+                        <h3 className="text-base font-bold text-slate-800 mb-4">Détails mensuels</h3>
+                        <div className="overflow-x-auto scrollbar-none rounded-2xl border border-slate-100 bg-white">
+                        <table className="min-w-full divide-y divide-slate-100 text-sm">
+                            <thead className="bg-[#f8f3e8]/70">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mois</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenus</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dépenses</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Solde</th>
+                                    <th className="px-4 py-3.5 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">Mois</th>
+                                    <th className="px-4 py-3.5 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">Revenus</th>
+                                    <th className="px-4 py-3.5 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">Dépenses</th>
+                                    <th className="px-4 py-3.5 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">Solde</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="divide-y divide-slate-50 bg-transparent">
                                 {monthlyData.map((item) => (
-                                    <tr key={item.month}>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.month}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(item.revenus || 0)}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(item.depenses)}</td>
-                                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${item.solde >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(item.solde)}</td>
+                                    <tr key={item.month} className="transition-colors hover:bg-slate-50/50">
+                                        <td className="px-4 py-3.5 whitespace-nowrap text-sm font-semibold text-slate-900">{item.month}</td>
+                                        <td className="px-4 py-3.5 whitespace-nowrap text-sm text-slate-600">{formatCurrency(item.revenus || 0)}</td>
+                                        <td className="px-4 py-3.5 whitespace-nowrap text-sm text-slate-600">{formatCurrency(item.depenses)}</td>
+                                        <td className={`px-4 py-3.5 whitespace-nowrap text-sm font-bold ${item.solde >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{formatCurrency(item.solde)}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -843,51 +893,64 @@ export function TableauDeBordFinancierGlobal() {
                         {accountProfile.isIndividualOwner ? 'Mes revenus mensuels' : 'Bilans Mensuels Bailleurs'} (Mois de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })})
                      </h2>
 
-                    {bilansBailleurs.map((bilan: BilanBailleur) => (
-                        <div key={bilan.bailleur_id} className="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-100 space-y-4">
+                    {bilansBailleurs.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-[#fffdf7]/50 p-12 text-center">
+                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                                <Calendar className="h-8 w-8" />
+                            </div>
+                            <h3 className="mt-4 text-sm font-bold text-slate-900">Aucun revenu pour ce mois</h3>
+                            <p className="mt-2 max-w-sm text-sm text-slate-500">
+                                Il n'y a pas eu de paiements encaissés pour la période de {new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}.
+                            </p>
+                        </div>
+                    ) : (
+                        bilansBailleurs.map((bilan: BilanBailleur) => (
+                            <div key={bilan.bailleur_id} className="overflow-hidden rounded-3xl border border-emerald-950/10 bg-[#fffdf7] p-5 sm:p-7 shadow-[0_18px_48px_rgba(15,23,42,0.06)] ring-1 ring-white/80 space-y-6">
 
                             {/* Entête Bailleur */}
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b pb-3 gap-3">
-                                <h3 className="text-base sm:text-lg lg:text-xl font-bold text-gray-800">
-                                    {bilan.bailleur_prenom} {bilan.bailleur_nom}
-                                </h3>
-                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                                    <p className="text-xs sm:text-sm text-gray-600">{bilan.immeubles.length} immeuble(s)</p>
-                                    <button
-                                        onClick={() => void exportBilanBailleurPDF(bilan)}
-                                        className="flex items-center gap-2 px-3 py-2 bg-red-600 text-white text-xs sm:text-sm rounded-lg hover:bg-red-700 transition whitespace-nowrap"
-                                    >
-                                        <Download className="w-3 sm:w-4 h-3 sm:h-4" /> Bilan PDF
-                                    </button>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-slate-100 pb-4 gap-4">
+                                <div>
+                                    <h3 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
+                                        {bilan.bailleur_prenom} {bilan.bailleur_nom}
+                                    </h3>
+                                    <p className="mt-1 text-sm font-medium text-slate-500">{bilan.immeubles.length} immeuble(s) rattaché(s)</p>
                                 </div>
+                                <button
+                                    onClick={() => void exportBilanBailleurPDF(bilan)}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold tracking-wide text-white transition hover:bg-slate-800 hover:shadow-lg hover:shadow-slate-900/20 active:scale-95"
+                                >
+                                    <Download className="w-4 h-4" /> 
+                                    <span className="hidden sm:inline">Télécharger le bilan</span>
+                                    <span className="sm:hidden">PDF</span>
+                                </button>
                             </div>
 
                             {/* Tableau de Ventilation par Immeuble */}
-                            <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                <thead className="bg-gray-50">
+                            <div className="overflow-x-auto scrollbar-none rounded-2xl border border-slate-100 bg-white">
+                            <table className="min-w-full divide-y divide-slate-100 text-sm">
+                                <thead className="bg-[#f8f3e8]/70">
                                     <tr>
-                                        <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Immeuble</th>
-                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Loyers</th>
-                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Impayés</th>
+                                        <th className="px-4 py-3.5 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">Immeuble</th>
+                                        <th className="px-4 py-3.5 text-right text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">Loyers</th>
+                                        <th className="px-4 py-3.5 text-right text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">Impayés</th>
                                         {!accountProfile.isIndividualOwner && (
-                                            <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Frais</th>
+                                            <th className="px-4 py-3.5 text-right text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">Frais</th>
                                         )}
-                                        <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            {accountProfile.isIndividualOwner ? 'Revenus nets' : 'Net'}
+                                        <th className="px-4 py-3.5 text-right text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">
+                                            {accountProfile.isIndividualOwner ? 'Nets' : 'Net'}
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
+                                <tbody className="divide-y divide-slate-50 bg-transparent">
                                     {bilan.immeubles.map((immeuble, index) => (
-                                        <tr key={index}>
-                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900">{immeuble.immeuble_nom}</td>
-                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 text-right">{formatCurrency(immeuble.loyers_percus)}</td>
-                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 text-right">{formatCurrency(immeuble.loyers_impayes)}</td>
+                                        <tr key={index} className="transition-colors hover:bg-slate-50/50">
+                                            <td className="px-4 py-3.5 whitespace-nowrap text-sm font-semibold text-slate-900">{immeuble.immeuble_nom}</td>
+                                            <td className="px-4 py-3.5 whitespace-nowrap text-sm text-slate-600 text-right">{formatCurrency(immeuble.loyers_percus)}</td>
+                                            <td className="px-4 py-3.5 whitespace-nowrap text-sm text-slate-600 text-right">{formatCurrency(immeuble.loyers_impayes)}</td>
                                             {!accountProfile.isIndividualOwner && (
-                                                <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 text-right">{formatCurrency(immeuble.frais_gestion)}</td>
+                                                <td className="px-4 py-3.5 whitespace-nowrap text-sm text-slate-600 text-right">{formatCurrency(immeuble.frais_gestion)}</td>
                                             )}
-                                            <td className="px-4 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm font-semibold text-right">{formatCurrency(immeuble.resultat_net)}</td>
+                                            <td className="px-4 py-3.5 whitespace-nowrap text-sm font-bold text-slate-900 text-right">{formatCurrency(immeuble.resultat_net)}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -895,33 +958,37 @@ export function TableauDeBordFinancierGlobal() {
                             </div>
                             
                             {/* Totaux du Bilan */}
-                            <div className="pt-4 border-t border-dashed">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm">
-                                    <p className="text-gray-600">Total loyers perçus:</p>
-                                    <p className="font-semibold text-right text-green-600">{formatCurrency(bilan.total_loyers_percus)}</p>
-
-                                    <p className="text-gray-600">Total impayés:</p>
-                                    <p className="font-semibold text-right text-red-600">{formatCurrency(bilan.total_impayes)}</p>
-
+                            <div className="pt-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                    <div className="flex justify-between sm:justify-start gap-4">
+                                        <span className="text-slate-500 font-medium">Loyers perçus</span>
+                                        <span className="font-bold text-emerald-600">{formatCurrency(bilan.total_loyers_percus)}</span>
+                                    </div>
+                                    <div className="flex justify-between sm:justify-start gap-4">
+                                        <span className="text-slate-500 font-medium">Impayés</span>
+                                        <span className="font-bold text-orange-600">{formatCurrency(bilan.total_impayes)}</span>
+                                    </div>
                                     {!accountProfile.isIndividualOwner && (
-                                        <>
-                                            <p className="text-gray-600">Total frais gestion:</p>
-                                            <p className="font-semibold text-right text-blue-600">{formatCurrency(bilan.total_frais)}</p>
-                                        </>
+                                        <div className="flex justify-between sm:justify-start gap-4">
+                                            <span className="text-slate-500 font-medium">Frais gestion</span>
+                                            <span className="font-bold text-sky-600">{formatCurrency(bilan.total_frais)}</span>
+                                        </div>
                                     )}
                                 </div>
-                                <div className="mt-4 pt-2 border-t border-gray-300 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                    <p className="text-base sm:text-lg font-bold text-gray-800">
-                                        {accountProfile.isIndividualOwner ? 'Revenus nets:' : 'Montant à verser:'}
+                                <div className="mt-5 rounded-2xl bg-[#f8f3e8]/50 p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 border border-emerald-950/5">
+                                    <p className="text-sm font-bold uppercase tracking-wider text-slate-500">
+                                        {accountProfile.isIndividualOwner ? 'Revenus nets générés' : 'Montant à verser au propriétaire'}
                                     </p>
-                                    <p className="text-xl sm:text-2xl font-extrabold text-blue-800">{formatCurrency(bilan.total_net)}</p>
+                                    <p className="text-2xl font-black tracking-tight text-emerald-900">{formatCurrency(bilan.total_net)}</p>
                                 </div>
                             </div>
                         </div>
-                    ))}
+                    )))}
                 </div>
             )}
 
         </div>
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.05),transparent_70%)]" />
+    </div>
     );
 }

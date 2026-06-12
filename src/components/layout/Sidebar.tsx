@@ -86,9 +86,7 @@ const NAV: Array<MenuLeaf | MenuGroup> = [
     items: [
       { id: 'bailleurs', label: 'Bailleurs', icon: UserCircle, roles: ['admin'] },
       { id: 'patrimoine', label: 'Biens', icon: Building2, roles: ['admin'] },
-      { id: 'locataires', label: 'Locataires', icon: Users, roles: ['admin', 'agent', 'comptable'] },
-      { id: 'contrats', label: 'Contrats & baux', icon: FileText, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
-      { id: 'occupants-baux', label: 'Occupants & Baux', icon: Users, roles: ['admin', 'agent', 'comptable'] },
+      { id: 'occupants-baux', label: 'Locations', icon: Users, roles: ['admin', 'agent', 'comptable'] },
     ],
   },
   {

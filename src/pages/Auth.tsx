@@ -180,7 +180,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                       <Sparkles className="h-3.5 w-3.5" />
                       Espace privé
                     </div>
-                    <h2 className="mt-4 text-2xl font-black tracking-tight text-brand-950">
+                    <h2 className="mt-4 font-serif text-3xl font-black tracking-tight text-brand-950">
                       {mode === 'login' ? 'Connexion' : 'Créer votre espace'}
                     </h2>
                     <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">

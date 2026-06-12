@@ -9,6 +9,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import type { ContratPDFData } from '../types';
 
 export type ContratStatut = 'actif' | 'resilie' | 'expire' | 'archive' | 'en_attente';
 
@@ -44,6 +45,36 @@ export interface OccupantBailDetails {
   events: OccupantBailEvent[];
 }
 
+export interface OccupantBailPersonOption {
+  id: string;
+  nom: string;
+  prenom: string;
+  telephone: string | null;
+  email: string | null;
+}
+
+export interface OccupantBailAvailableUnit {
+  id: string;
+  nom: string;
+  loyer_base: number;
+  numero: string | null;
+  etage: string | null;
+  immeuble_nom: string | null;
+  immeuble_id: string | null;
+  bailleur_commission: number | null;
+}
+
+export interface OccupantBailPersonInput {
+  nom: string;
+  prenom: string;
+  telephone: string;
+  email: string | null;
+  adresse_personnelle: string | null;
+  piece_identite: string | null;
+}
+
+export type OccupantBailContractPdfData = ContratPDFData;
+
 export interface OccupantBailRow {
   /** Identifiant du contrat (bail) */
   contrat_id: string;
@@ -63,6 +94,8 @@ export interface OccupantBailRow {
   date_debut: string;
   date_fin: string | null;
   loyer_mensuel: number;
+  caution: number | null;
+  commission: number | null;
   statut: ContratStatut;
   destination: string;
   created_at: string;
@@ -96,6 +129,8 @@ const OCCUPANTS_BAUX_SELECT = `
   date_debut,
   date_fin,
   loyer_mensuel,
+  caution,
+  commission,
   statut,
   destination,
   created_at,
@@ -118,6 +153,8 @@ type RawRow = {
   date_debut: string;
   date_fin: string | null;
   loyer_mensuel: number;
+  caution: number | null;
+  commission: number | null;
   statut: string;
   destination: string;
   created_at: string;
@@ -177,6 +214,27 @@ type RawEvent = {
   payload: Record<string, unknown> | null;
 };
 
+type RawPersonOption = {
+  id: string;
+  nom: string;
+  prenom: string;
+  telephone: string | null;
+  email: string | null;
+};
+
+type RawAvailableUnit = {
+  id: string;
+  nom: string;
+  loyer_base: number;
+  numero: string | null;
+  etage: string | null;
+  immeubles: {
+    id: string;
+    nom: string;
+    bailleurs: { commission: number | null } | null;
+  } | null;
+};
+
 function mapRow(row: RawRow): OccupantBailRow {
   return {
     contrat_id: row.id,
@@ -191,6 +249,8 @@ function mapRow(row: RawRow): OccupantBailRow {
     date_debut: row.date_debut,
     date_fin: row.date_fin,
     loyer_mensuel: row.loyer_mensuel,
+    caution: row.caution,
+    commission: row.commission,
     statut: row.statut as ContratStatut,
     destination: row.destination,
     created_at: row.created_at,
@@ -231,6 +291,21 @@ export const occupantsBauxRepository = {
 
     const rows = (data as unknown as RawRow[]).map(mapRow);
     return { data: rows, error: null };
+  },
+
+  async getByContractId(input: {
+    agencyId: string;
+    contratId: string;
+  }): Promise<{ data: OccupantBailRow | null; error: unknown }> {
+    const { data, error } = await supabase
+      .from('contrats')
+      .select(OCCUPANTS_BAUX_SELECT)
+      .eq('agency_id', input.agencyId)
+      .eq('id', input.contratId)
+      .single();
+
+    if (error) return { data: null, error };
+    return { data: mapRow(data as unknown as RawRow), error: null };
   },
 
   async details(input: {
@@ -330,5 +405,116 @@ export const occupantsBauxRepository = {
     }));
 
     return { data: { payments, documents, events }, error: null };
+  },
+
+  async listOccupants(agencyId: string): Promise<{ data: OccupantBailPersonOption[]; error: unknown }> {
+    const { data, error } = await supabase
+      .from('locataires')
+      .select('id, nom, prenom, telephone, email')
+      .eq('agency_id', agencyId)
+      .eq('actif', true)
+      .order('prenom', { ascending: true })
+      .order('nom', { ascending: true });
+
+    if (error) return { data: [], error };
+    return { data: (data ?? []) as unknown as RawPersonOption[], error: null };
+  },
+
+  async listAvailableUnits(agencyId: string): Promise<{ data: OccupantBailAvailableUnit[]; error: unknown }> {
+    const { data, error } = await supabase
+      .from('unites')
+      .select(`
+        id,
+        nom,
+        numero,
+        etage,
+        loyer_base,
+        immeubles(
+          id,
+          nom,
+          bailleurs(commission)
+        )
+      `)
+      .eq('agency_id', agencyId)
+      .eq('actif', true)
+      .eq('statut', 'libre')
+      .order('nom', { ascending: true });
+
+    if (error) return { data: [], error };
+
+    const units = ((data ?? []) as unknown as RawAvailableUnit[]).map((unit) => ({
+      id: unit.id,
+      nom: unit.nom,
+      loyer_base: unit.loyer_base,
+      numero: unit.numero ?? null,
+      etage: unit.etage ?? null,
+      immeuble_nom: unit.immeubles?.nom ?? null,
+      immeuble_id: unit.immeubles?.id ?? null,
+      bailleur_commission: unit.immeubles?.bailleurs?.commission ?? null,
+    }));
+
+    return { data: units, error: null };
+  },
+
+  async createOccupant(input: {
+    agencyId: string;
+    userId?: string | null;
+    data: OccupantBailPersonInput;
+  }): Promise<{ data: { id: string } | null; error: unknown }> {
+    const { data, error } = await supabase
+      .from('locataires')
+      .insert([{
+        ...input.data,
+        agency_id: input.agencyId,
+        created_by: input.userId ?? null,
+      }])
+      .select('id')
+      .single();
+
+    if (error) return { data: null, error };
+    return { data: data as { id: string }, error: null };
+  },
+
+  async updateOccupant(input: {
+    agencyId: string;
+    occupantId: string;
+    data: OccupantBailPersonInput;
+  }): Promise<{ error: unknown }> {
+    const { error } = await supabase
+      .from('locataires')
+      .update(input.data)
+      .eq('id', input.occupantId)
+      .eq('agency_id', input.agencyId)
+      .select('id')
+      .single();
+
+    return { error };
+  },
+
+  async contractPdfData(input: {
+    agencyId: string;
+    contratId: string;
+  }): Promise<{ data: OccupantBailContractPdfData | null; error: unknown }> {
+    const { data, error } = await supabase
+      .from('contrats')
+      .select(`
+        *,
+        locataires(nom, prenom, telephone, email, adresse_personnelle, piece_identite),
+        unites(
+          nom,
+          loyer_base,
+          immeubles(
+            nom,
+            adresse,
+            bailleurs(nom, prenom, telephone, adresse)
+          )
+        )
+      `)
+      .eq('id', input.contratId)
+      .eq('agency_id', input.agencyId)
+      .single();
+
+    if (error) return { data: null, error };
+    return { data: data as OccupantBailContractPdfData, error: null };
   },
 };

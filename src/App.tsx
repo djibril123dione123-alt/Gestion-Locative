@@ -80,7 +80,7 @@ const PAGE_LABELS: Record<string, string> = {
     unites: 'Unités',
     locataires: 'Locataires',
     contrats: 'Contrats',
-    'occupants-baux': 'Occupants & Baux',
+    'occupants-baux': 'Locations',
     paiements: 'Encaissements',
     'loyers-impayes': 'Impayés',
     depenses: 'Dépenses',

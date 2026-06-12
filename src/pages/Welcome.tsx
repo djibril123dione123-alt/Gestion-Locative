@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Building2,
   User,
@@ -259,7 +259,7 @@ export default function Welcome() {
               <div className="mb-3 inline-flex rounded-full border border-amber-300/30 bg-amber-50 px-3 py-1 text-[11px] font-black uppercase text-amber-800">
                 Validation manuelle
               </div>
-              <h1 className="mb-3 text-3xl font-black text-brand-950 [@media(max-height:800px)]:text-2xl">Demande en cours d'examen</h1>
+              <h1 className="mb-3 font-serif text-3xl font-black text-brand-950 [@media(max-height:800px)]:text-2xl">Demande en cours d'examen</h1>
               <p className="mx-auto mb-5 max-w-md text-sm font-semibold leading-7 text-slate-600 sm:text-base">
                 Votre demande de création d'{requestKindLabel}{' '}
                 <span className="font-black text-brand-950">« {existingRequest.agency_name} »</span>{' '}
@@ -317,7 +317,7 @@ export default function Welcome() {
               <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-red-200 bg-red-50 text-red-700 shadow-[0_18px_48px_rgba(153,27,27,0.14)]">
                 <XCircle className="h-8 w-8" />
               </div>
-              <h1 className="mb-3 text-3xl font-black text-brand-950">Demande non approuvée</h1>
+              <h1 className="mb-3 font-serif text-3xl font-black text-brand-950">Demande non approuvée</h1>
               <p className="mx-auto mb-4 max-w-md text-sm font-semibold leading-7 text-slate-600 sm:text-base">
               Votre demande pour votre {requestKindLabel}{' '}
                 <span className="font-black text-brand-950">« {existingRequest.agency_name} »</span>{' '}
@@ -365,7 +365,7 @@ export default function Welcome() {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-800 shadow-[0_18px_48px_rgba(6,95,70,0.16)]">
               <CheckCircle2 className="h-8 w-8" />
             </div>
-            <h1 className="mb-3 text-3xl font-black text-brand-950">Demande approuvée !</h1>
+            <h1 className="mb-3 font-serif text-3xl font-black text-brand-950">Demande approuvée !</h1>
             <p className="mb-6 text-sm font-semibold leading-7 text-slate-600 sm:text-base">
             {requestCreatedLabel} a été créé{existingRequest?.is_bailleur_account ? '' : 'e'}. Cliquez ci-dessous pour accéder à votre espace.
           </p>
@@ -469,7 +469,7 @@ export default function Welcome() {
                     Agence / cabinet
                   </span>
                 </div>
-                <h2 className="mb-3 text-2xl font-black text-brand-950 md:text-3xl [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:text-xl md:[@media(max-height:800px)]:text-2xl">Je gère pour des clients</h2>
+                <h2 className="mb-3 font-serif text-2xl font-black text-brand-950 md:text-3xl [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:text-xl md:[@media(max-height:800px)]:text-2xl">Je gère pour des clients</h2>
                 <p className="mb-6 text-sm font-semibold leading-7 text-slate-600 md:text-base [@media(max-height:800px)]:mb-3 [@media(max-height:800px)]:text-sm [@media(max-height:800px)]:leading-6">Un espace structuré pour gérer des propriétaires, des mandats, des encaissements et des rapports professionnels.</p>
                 <ul className="mb-6 grid gap-3 text-sm [@media(max-height:800px)]:mb-4 [@media(max-height:800px)]:gap-2"><li className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><Users className="h-4 w-4 text-brand-800" />Gestion multi-bailleurs</li><li className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><ShieldCheck className="h-4 w-4 text-brand-800" />Équipe collaborative</li><li className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><Sparkles className="h-4 w-4 text-brand-800" />Rapports personnalisés</li></ul>
                 <div className="flex min-h-12 items-center justify-between rounded-xl bg-brand-950 px-4 py-3 text-sm font-black text-white shadow-[0_18px_40px_rgba(6,17,13,0.22)] transition group-hover:bg-brand-800 [@media(max-height:800px)]:min-h-10 [@media(max-height:800px)]:px-3 [@media(max-height:800px)]:py-2.5">Créer un espace agence<ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1 [@media(max-height:800px)]:h-4 [@media(max-height:800px)]:w-4" /></div>
@@ -488,7 +488,7 @@ export default function Welcome() {
                     Patrimoine privé
                   </span>
                 </div>
-                <h2 className="mb-3 text-2xl font-black text-brand-950 md:text-3xl [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:text-xl md:[@media(max-height:800px)]:text-2xl">Je gère mes propres biens</h2>
+                <h2 className="mb-3 font-serif text-2xl font-black text-brand-950 md:text-3xl [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:text-xl md:[@media(max-height:800px)]:text-2xl">Je gère mes propres biens</h2>
                 <p className="mb-6 text-sm font-semibold leading-7 text-slate-600 md:text-base [@media(max-height:800px)]:mb-3 [@media(max-height:800px)]:text-sm [@media(max-height:800px)]:leading-6">
                   Un espace propriétaire plus simple pour suivre vos locataires, vos loyers,
                   vos impayés et vos documents.
@@ -524,7 +524,7 @@ export default function Welcome() {
                 </button>
                 <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-3 py-1 text-[11px] font-black uppercase text-emerald-100">Étape 1 sur 3</span>
               </div>
-              <h2 className="mb-2 text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">
+              <h2 className="mb-2 font-serif text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">
                 {accountType === 'agency' ? 'Nom de votre structure' : 'Votre nom complet'}
               </h2>
               <p className="text-sm font-semibold leading-6 text-slate-200 sm:text-base">
@@ -568,7 +568,7 @@ export default function Welcome() {
                 </button>
                 <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-3 py-1 text-[11px] font-black uppercase text-emerald-100">Étape 2 sur 3</span>
               </div>
-              <h2 className="mb-2 text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">Numéro de téléphone</h2>
+              <h2 className="mb-2 font-serif text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">Numéro de téléphone</h2>
               <p className="text-sm font-semibold leading-6 text-slate-200 sm:text-base">À quel numéro notre équipe peut-elle vous joindre ?</p>
             </div>
             <div className="space-y-5">
@@ -606,7 +606,7 @@ export default function Welcome() {
                 </button>
                 <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-3 py-1 text-[11px] font-black uppercase text-emerald-100">Étape 3 sur 3</span>
               </div>
-              <h2 className="mb-2 text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">
+              <h2 className="mb-2 font-serif text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">
                 {accountType === 'agency' ? 'Détails de votre structure' : 'Adresse'}
               </h2>
               <p className="text-sm font-semibold leading-6 text-slate-200 sm:text-base">

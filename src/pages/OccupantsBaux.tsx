@@ -30,6 +30,9 @@ import {
   Mail,
   MapPin,
   Pencil,
+  Plus,
+  SlidersHorizontal,
+  UserPlus,
   X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -40,33 +43,72 @@ import { ToastContainer } from '../components/ui/Toast';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { Modal } from '../components/ui/Modal';
+import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 import {
   occupantsBauxRepository,
   type OccupantBailDetails,
   type ContratStatut,
   type OccupantBailRow,
+  type OccupantBailAvailableUnit,
+  type OccupantBailPersonInput,
+  type OccupantBailPersonOption,
 } from '../repositories/occupantsBauxRepository';
 import { readWithCache, invalidateOperationalCaches, notifyDataChanged } from '../services/offlineReadCache';
-import { formatCurrency, formatDate, formatSenegalPhone } from '../lib/formatters';
-import { renewContratViaEdge, updateContratViaEdge } from '../services/api/contratApi';
+import { formatCurrency, formatDate, formatSenegalPhone, normalizeSenegalPhone } from '../lib/formatters';
+import { createContratViaEdge, renewContratViaEdge, updateContratViaEdge } from '../services/api/contratApi';
+import { generateContratPDF } from '../lib/pdf';
 
 // ─── Types locaux ────────────────────────────────────────────────────────────
 
 type FilterTab = 'tous' | ContratStatut;
 type DrawerTab = 'resume' | 'paiements' | 'documents' | 'historique';
+type OccupantModalMode = 'create' | 'edit';
+type OccupationModalMode = 'create' | 'edit-bail';
+type OccupantChoiceMode = 'existing' | 'new';
+type LocationWizardStep = 'occupant' | 'unite' | 'conditions' | 'resume';
+type PeriodFilter = 'all' | 'starts_this_month' | 'ending_soon' | 'open_ended';
+
+const OCCUPANTS_BAUX_COLUMN_KEYS = ['occupant', 'telephone', 'bien', 'proprietaire', 'reference', 'loyer', 'periode', 'statut'] as const;
+type OccupantsBauxColumnKey = typeof OCCUPANTS_BAUX_COLUMN_KEYS[number];
 
 interface TabDef {
   id: FilterTab;
   label: string;
-  color: string;
+  icon: LucideIcon;
+  tone: 'emerald' | 'blue' | 'amber' | 'red';
+}
+
+interface OccupantFormState {
+  prenom: string;
+  nom: string;
+  telephone: string;
+  email: string;
+  adresse_personnelle: string;
+  piece_identite: string;
+}
+
+interface OccupationFormState {
+  occupantMode: OccupantChoiceMode;
+  occupantSearch: string;
+  unitSearch: string;
+  locataire_id: string;
+  unite_id: string;
+  date_debut: string;
+  date_fin: string;
+  loyer_mensuel: string;
+  caution: string;
+  commission: string;
+  destination: string;
+  newOccupant: OccupantFormState;
 }
 
 const TABS: TabDef[] = [
-  { id: 'tous', label: 'Tous', color: 'text-slate-700 bg-slate-100' },
-  { id: 'actif', label: 'Actifs', color: 'text-emerald-700 bg-emerald-50' },
-  { id: 'expire', label: 'Expirés', color: 'text-amber-700 bg-amber-50' },
-  { id: 'resilie', label: 'Résiliés', color: 'text-red-700 bg-red-50' },
+  { id: 'tous', label: 'Tous', icon: ClipboardList, tone: 'blue' },
+  { id: 'actif', label: 'Actifs', icon: Activity, tone: 'emerald' },
+  { id: 'expire', label: 'Expirés', icon: Clock3, tone: 'amber' },
+  { id: 'resilie', label: 'Résiliés', icon: Ban, tone: 'red' },
 ];
 
 const STATUT_BADGE: Record<ContratStatut, { label: string; cls: string }> = {
@@ -87,6 +129,20 @@ const DRAWER_TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: 'historique', label: 'Historique' },
 ];
 
+const LOCATION_WIZARD_STEPS: Array<{ id: LocationWizardStep; label: string; icon: LucideIcon }> = [
+  { id: 'occupant', label: 'Occupant', icon: Users },
+  { id: 'unite', label: 'Unité', icon: Building2 },
+  { id: 'conditions', label: 'Conditions', icon: ClipboardList },
+  { id: 'resume', label: 'Résumé', icon: FileCheck2 },
+];
+
+const PERIOD_FILTERS: Array<{ id: PeriodFilter; label: string }> = [
+  { id: 'all', label: 'Toute période' },
+  { id: 'starts_this_month', label: 'Débute ce mois' },
+  { id: 'ending_soon', label: 'Fin proche' },
+  { id: 'open_ended', label: 'Sans date fin' },
+];
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function fullName(row: OccupantBailRow): string {
@@ -96,10 +152,6 @@ function fullName(row: OccupantBailRow): string {
 function ownerName(row: OccupantBailRow): string {
   const name = `${row.bailleur_prenom ?? ''} ${row.bailleur_nom ?? ''}`.trim();
   return name || 'Propriétaire non renseigné';
-}
-
-function navigateHash(path: string) {
-  window.location.hash = path.startsWith('#') ? path : `#${path}`;
 }
 
 function todayIso(): string {
@@ -122,13 +174,124 @@ function daysUntil(dateIso: string | null): number | null {
 function canRenew(row: OccupantBailRow): boolean {
   if (row.statut === 'expire') return true;
   const remaining = daysUntil(row.date_fin);
-  return row.statut === 'actif' && remaining !== null && remaining <= 45;
+  return row.statut === 'actif' && remaining !== null && remaining <= 90;
+}
+
+function emptyOccupantForm(): OccupantFormState {
+  return {
+    prenom: '',
+    nom: '',
+    telephone: '',
+    email: '',
+    adresse_personnelle: '',
+    piece_identite: '',
+  };
+}
+
+function emptyOccupationForm(): OccupationFormState {
+  return {
+    occupantMode: 'existing',
+    occupantSearch: '',
+    unitSearch: '',
+    locataire_id: '',
+    unite_id: '',
+    date_debut: todayIso(),
+    date_fin: addDaysIso(todayIso(), 730),
+    loyer_mensuel: '',
+    caution: '',
+    commission: '',
+    destination: 'Habitation',
+    newOccupant: emptyOccupantForm(),
+  };
+}
+
+function occupantFormFromRow(row: OccupantBailRow): OccupantFormState {
+  return {
+    prenom: row.prenom ?? '',
+    nom: row.nom ?? '',
+    telephone: row.telephone ? formatSenegalPhone(row.telephone, '') : '',
+    email: row.email ?? '',
+    adresse_personnelle: row.adresse_personnelle ?? '',
+    piece_identite: row.piece_identite ?? '',
+  };
+}
+
+function personInputFromForm(form: OccupantFormState): { data: OccupantBailPersonInput | null; error: string | null } {
+  const prenom = form.prenom.trim();
+  const nom = form.nom.trim();
+  const email = form.email.trim();
+  const normalizedPhone = normalizeSenegalPhone(form.telephone);
+
+  if (!prenom) return { data: null, error: "Le prénom de l'occupant est obligatoire." };
+  if (!nom) return { data: null, error: "Le nom de l'occupant est obligatoire." };
+  if (!normalizedPhone) return { data: null, error: 'Le téléphone doit être un numéro sénégalais valide.' };
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { data: null, error: "L'email de l'occupant n'est pas valide." };
+  }
+
+  return {
+    data: {
+      prenom,
+      nom,
+      telephone: normalizedPhone,
+      email: email || null,
+      adresse_personnelle: form.adresse_personnelle.trim() || null,
+      piece_identite: form.piece_identite.trim() || null,
+    },
+    error: null,
+  };
+}
+
+function parsePositiveAmount(value: string, label: string, required = true): { value: number | null; error: string | null } {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return required ? { value: null, error: `${label} est obligatoire.` } : { value: null, error: null };
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0 || (required && parsed === 0)) {
+    return { value: null, error: `${label} doit être un montant positif.` };
+  }
+  return { value: parsed, error: null };
+}
+
+function parseCommission(value: string, isIndividualOwner: boolean): { value: number | null; error: string | null } {
+  if (isIndividualOwner) return { value: 0, error: null };
+  const parsed = parsePositiveAmount(value, 'La commission agence', false);
+  if (parsed.error || parsed.value === null) return parsed;
+  if (parsed.value > 100) {
+    return { value: null, error: 'La commission agence doit être comprise entre 0 et 100%.' };
+  }
+  return parsed;
+}
+
+function getOccupantsBauxColumnLabel(key: OccupantsBauxColumnKey): string {
+  const labels: Record<OccupantsBauxColumnKey, string> = {
+    occupant: 'Occupant',
+    telephone: 'Téléphone',
+    bien: 'Bien / Unité',
+    proprietaire: 'Propriétaire',
+    reference: 'Référence',
+    loyer: 'Loyer',
+    periode: 'Période',
+    statut: 'Statut',
+  };
+  return labels[key];
+}
+
+function getStatusKpiTone(tone: TabDef['tone']): string {
+  return {
+    emerald: 'bg-emerald-50 text-emerald-800',
+    blue: 'bg-sky-50 text-sky-700',
+    amber: 'bg-amber-50 text-amber-800',
+    red: 'bg-red-50 text-red-700',
+  }[tone];
 }
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export function OccupantsBaux() {
-  const { profile } = useAuth();
+  const { profile, accountProfile } = useAuth();
+  const isIndividualOwner = accountProfile.isIndividualOwner;
   const { success: notifySuccess, error: notifyError, toasts, removeToast } = useToast();
 
   const [rows, setRows] = useState<OccupantBailRow[]>([]);
@@ -148,6 +311,22 @@ export function OccupantsBaux() {
   const [resiliationForm, setResiliationForm] = useState({ date: todayIso(), motif: '', observations: '' });
   const [renewForm, setRenewForm] = useState({ nouvelle_date_fin: '', nouveau_loyer: '', remarques: '' });
   const [submittingLifecycle, setSubmittingLifecycle] = useState(false);
+  const [occupantModalMode, setOccupantModalMode] = useState<OccupantModalMode | null>(null);
+  const [occupationModalMode, setOccupationModalMode] = useState<OccupationModalMode | null>(null);
+  const [locationWizardStep, setLocationWizardStep] = useState<LocationWizardStep>('occupant');
+  const [occupantForm, setOccupantForm] = useState<OccupantFormState>(() => emptyOccupantForm());
+  const [occupationForm, setOccupationForm] = useState<OccupationFormState>(() => emptyOccupationForm());
+  const [occupantOptions, setOccupantOptions] = useState<OccupantBailPersonOption[]>([]);
+  const [availableUnits, setAvailableUnits] = useState<OccupantBailAvailableUnit[]>([]);
+  const [workflowLoading, setWorkflowLoading] = useState(false);
+  const [workflowSubmitting, setWorkflowSubmitting] = useState(false);
+  const [pdfGeneratingId, setPdfGeneratingId] = useState<string | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState('all');
+  const [propertyFilter, setPropertyFilter] = useState('all');
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const occupantColumns = useColumnVisibility('occupants-baux', [...OCCUPANTS_BAUX_COLUMN_KEYS], {
+    telephone: false,
+  });
 
   // ── Chargement ────────────────────────────────────────────────────────────
 
@@ -203,6 +382,298 @@ export function OccupantsBaux() {
     notifyDataChanged(['locataires', 'contrats']);
     await loadData(true);
   }, [loadData, profile?.agency_id, profile?.id]);
+
+  const refreshOccupantsBaux = useCallback(async () => {
+    if (!profile?.agency_id || !profile?.id) return;
+    await invalidateOperationalCaches(
+      { agencyId: profile.agency_id, userId: profile.id },
+      ['dashboard', 'locataires', 'contrats', 'patrimoine']
+    );
+    notifyDataChanged(['locataires', 'contrats', 'dashboard', 'patrimoine']);
+    await loadData(true);
+  }, [loadData, profile?.agency_id, profile?.id]);
+
+  const loadWorkflowOptions = useCallback(async () => {
+    if (!profile?.agency_id) return;
+    setWorkflowLoading(true);
+    try {
+      const [occupantsRes, unitsRes] = await Promise.all([
+        occupantsBauxRepository.listOccupants(profile.agency_id),
+        occupantsBauxRepository.listAvailableUnits(profile.agency_id),
+      ]);
+      if (occupantsRes.error) throw occupantsRes.error;
+      if (unitsRes.error) throw unitsRes.error;
+      setOccupantOptions(occupantsRes.data);
+      setAvailableUnits(unitsRes.data);
+    } catch (err) {
+      console.error('[OccupantsBaux] workflow options failed', err);
+      notifyError('Impossible de charger les occupants et unités disponibles.');
+    } finally {
+      setWorkflowLoading(false);
+    }
+  }, [notifyError, profile?.agency_id]);
+
+  const openCreateOccupation = useCallback(() => {
+    setOccupationForm(emptyOccupationForm());
+    setLocationWizardStep('occupant');
+    setOccupationModalMode('create');
+    void loadWorkflowOptions();
+  }, [loadWorkflowOptions]);
+
+  const openEditOccupant = useCallback((row: OccupantBailRow) => {
+    setOccupantForm(occupantFormFromRow(row));
+    setOccupantModalMode('edit');
+  }, []);
+
+  const openEditBail = useCallback((row: OccupantBailRow) => {
+    setOccupationForm({
+      occupantMode: 'existing',
+      occupantSearch: '',
+      unitSearch: '',
+      locataire_id: row.locataire_id,
+      unite_id: row.unite_id,
+      date_debut: row.date_debut,
+      date_fin: row.date_fin ?? '',
+      loyer_mensuel: String(row.loyer_mensuel),
+      caution: row.caution != null ? String(row.caution) : '',
+      commission: row.commission != null ? String(row.commission) : '',
+      destination: row.destination || 'Habitation',
+      newOccupant: emptyOccupantForm(),
+    });
+    setOccupationModalMode('edit-bail');
+  }, []);
+
+  const closeOccupantModal = useCallback(() => {
+    if (workflowSubmitting) return;
+    setOccupantModalMode(null);
+  }, [workflowSubmitting]);
+
+  const closeOccupationModal = useCallback(() => {
+    if (workflowSubmitting) return;
+    setOccupationModalMode(null);
+  }, [workflowSubmitting]);
+
+  const submitOccupant = useCallback(async () => {
+    if (!profile?.agency_id) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      notifyError("Connexion indisponible : l'occupant doit être enregistré par le serveur.");
+      return;
+    }
+
+    const parsed = personInputFromForm(occupantForm);
+    if (parsed.error || !parsed.data) {
+      notifyError(parsed.error ?? 'Formulaire occupant invalide.');
+      return;
+    }
+
+    setWorkflowSubmitting(true);
+    try {
+      if (occupantModalMode === 'edit' && selectedRow) {
+        const { error } = await occupantsBauxRepository.updateOccupant({
+          agencyId: profile.agency_id,
+          occupantId: selectedRow.locataire_id,
+          data: parsed.data,
+        });
+        if (error) throw error;
+        notifySuccess('Occupant mis à jour.');
+        setOccupantModalMode(null);
+        await refreshOccupantsBaux();
+      } else {
+        const { data, error } = await occupantsBauxRepository.createOccupant({
+          agencyId: profile.agency_id,
+          userId: profile.id,
+          data: parsed.data,
+        });
+        if (error) throw error;
+        notifySuccess('Occupant créé. Vous pouvez maintenant créer son bail.');
+        setOccupantModalMode(null);
+        setOccupationForm({
+          ...emptyOccupationForm(),
+          locataire_id: data?.id ?? '',
+          occupantMode: 'existing',
+        });
+        setLocationWizardStep('unite');
+        setOccupationModalMode('create');
+        await loadWorkflowOptions();
+      }
+    } catch (err) {
+      console.error('[OccupantsBaux] save occupant failed', err);
+      notifyError("Impossible d'enregistrer l'occupant.");
+    } finally {
+      setWorkflowSubmitting(false);
+    }
+  }, [loadWorkflowOptions, notifyError, notifySuccess, occupantForm, occupantModalMode, profile?.agency_id, profile?.id, refreshOccupantsBaux, selectedRow]);
+
+  const submitOccupation = useCallback(async () => {
+    if (!profile?.agency_id) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      notifyError('Connexion indisponible : le bail doit être confirmé par le serveur.');
+      return;
+    }
+
+    if (occupationModalMode === 'create' && locationWizardStep !== 'resume') {
+      if (locationWizardStep === 'occupant') {
+        if (occupationForm.occupantMode === 'existing' && !occupationForm.locataire_id) {
+          notifyError('Sélectionnez un occupant ou créez-en un nouveau.');
+          return;
+        }
+        if (occupationForm.occupantMode === 'new') {
+          const parsed = personInputFromForm(occupationForm.newOccupant);
+          if (parsed.error) {
+            notifyError(parsed.error);
+            return;
+          }
+        }
+      }
+      if (locationWizardStep === 'unite' && !occupationForm.unite_id) {
+        notifyError('Sélectionnez une unité disponible.');
+        return;
+      }
+      if (locationWizardStep === 'conditions') {
+        const rent = Number(occupationForm.loyer_mensuel);
+        if (!occupationForm.date_debut || !occupationForm.date_fin || !Number.isFinite(rent) || rent <= 0) {
+          notifyError('Renseignez les dates et le loyer mensuel avant le résumé.');
+          return;
+        }
+      }
+      const currentIndex = LOCATION_WIZARD_STEPS.findIndex((step) => step.id === locationWizardStep);
+      const nextStep = LOCATION_WIZARD_STEPS[Math.min(currentIndex + 1, LOCATION_WIZARD_STEPS.length - 1)];
+      setLocationWizardStep(nextStep.id);
+      return;
+    }
+
+    setWorkflowSubmitting(true);
+    try {
+      let openContratId: string | null = null;
+      if (occupationModalMode === 'edit-bail') {
+        if (!selectedRow) throw new Error('Aucun bail sélectionné.');
+        if (!occupationForm.date_fin) {
+          notifyError('La date de fin est obligatoire pour modifier le bail.');
+          return;
+        }
+        const caution = parsePositiveAmount(occupationForm.caution, 'La caution', false);
+        if (caution.error) {
+          notifyError(caution.error);
+          return;
+        }
+        const commission = parseCommission(occupationForm.commission, isIndividualOwner);
+        if (commission.error) {
+          notifyError(commission.error);
+          return;
+        }
+        await updateContratViaEdge({
+          id: selectedRow.contrat_id,
+          date_fin: occupationForm.date_fin,
+          caution: caution.value,
+          commission: commission.value,
+        });
+        notifySuccess('Bail mis à jour.');
+      } else {
+        let locataireId = occupationForm.locataire_id;
+        let createdOccupantId: string | null = null;
+        if (occupationForm.occupantMode === 'new') {
+          const parsed = personInputFromForm(occupationForm.newOccupant);
+          if (parsed.error || !parsed.data) {
+            notifyError(parsed.error ?? 'Formulaire du nouvel occupant invalide.');
+            return;
+          }
+          const { data, error } = await occupantsBauxRepository.createOccupant({
+            agencyId: profile.agency_id,
+            userId: profile.id,
+            data: parsed.data,
+          });
+          if (error || !data?.id) throw error ?? new Error('Occupant non créé.');
+          locataireId = data.id;
+          createdOccupantId = data.id;
+        }
+        if (!locataireId) {
+          notifyError('Sélectionnez ou créez un occupant.');
+          return;
+        }
+        if (!occupationForm.unite_id) {
+          notifyError('Sélectionnez une unité disponible.');
+          return;
+        }
+        const rent = Number(occupationForm.loyer_mensuel);
+        if (!Number.isFinite(rent) || rent <= 0) {
+          notifyError('Le loyer mensuel doit être un montant positif.');
+          return;
+        }
+        const caution = parsePositiveAmount(occupationForm.caution, 'La caution', false);
+        if (caution.error) {
+          notifyError(caution.error);
+          return;
+        }
+        const commission = parseCommission(occupationForm.commission, isIndividualOwner);
+        if (commission.error) {
+          notifyError(commission.error);
+          return;
+        }
+        let createdContratId: string | null = null;
+        try {
+          const created = await createContratViaEdge({
+            locataire_id: locataireId,
+            unite_id: occupationForm.unite_id,
+            date_debut: occupationForm.date_debut,
+            date_fin: occupationForm.date_fin || null,
+            loyer_mensuel: rent,
+            caution: caution.value,
+            commission: commission.value,
+            statut: 'actif',
+            destination: occupationForm.destination || null,
+          });
+          createdContratId = created.id;
+        } catch (err) {
+          if (createdOccupantId) {
+            notifyError("Occupant créé, mais le bail n'a pas été confirmé. Ouvrez Nouvelle Location et sélectionnez cet occupant pour reprendre.");
+            await loadWorkflowOptions();
+            return;
+          }
+          throw err;
+        }
+        notifySuccess('Nouvelle occupation créée.');
+        openContratId = createdContratId;
+      }
+
+      setOccupationModalMode(null);
+      await refreshOccupantsBaux();
+      if (openContratId) {
+        const { data: createdRow, error } = await occupantsBauxRepository.getByContractId({
+          agencyId: profile.agency_id,
+          contratId: openContratId,
+        });
+        if (!error && createdRow) {
+          setSelectedRow(createdRow);
+          setActiveDrawerTab('resume');
+        }
+      }
+    } catch (err) {
+      console.error('[OccupantsBaux] save occupation failed', err);
+      notifyError(err instanceof Error ? err.message : "Impossible d'enregistrer cette occupation.");
+    } finally {
+      setWorkflowSubmitting(false);
+    }
+  }, [isIndividualOwner, loadWorkflowOptions, locationWizardStep, notifyError, notifySuccess, occupationForm, occupationModalMode, profile?.agency_id, profile?.id, refreshOccupantsBaux, selectedRow]);
+
+  const generateContractPdf = useCallback(async (row: OccupantBailRow) => {
+    if (!profile?.agency_id) return;
+    setPdfGeneratingId(row.contrat_id);
+    try {
+      const { data, error } = await occupantsBauxRepository.contractPdfData({
+        agencyId: profile.agency_id,
+        contratId: row.contrat_id,
+      });
+      if (error) throw error;
+      if (!data) throw new Error('Contrat introuvable.');
+      await generateContratPDF(data);
+      notifySuccess('PDF contrat généré.');
+    } catch (err) {
+      console.error('[OccupantsBaux] contract PDF failed', err);
+      notifyError(err instanceof Error ? err.message : 'Impossible de générer le PDF contrat.');
+    } finally {
+      setPdfGeneratingId(null);
+    }
+  }, [notifyError, notifySuccess, profile?.agency_id]);
 
   const openResiliation = useCallback((row: OccupantBailRow) => {
     setResiliationForm({ date: todayIso(), motif: '', observations: '' });
@@ -342,29 +813,59 @@ export function OccupantsBaux() {
 
   // ── Filtrage / recherche ──────────────────────────────────────────────────
 
+  const ownerOptions = useMemo(() => {
+    const owners = new Map<string, string>();
+    rows.forEach((row) => {
+      if (row.bailleur_id) owners.set(row.bailleur_id, ownerName(row));
+    });
+    return Array.from(owners.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [rows]);
+
+  const propertyOptions = useMemo(() => {
+    const properties = new Map<string, string>();
+    rows.forEach((row) => {
+      if (row.immeuble_id) properties.set(row.immeuble_id, row.immeuble_nom ?? 'Bien sans nom');
+    });
+    return Array.from(properties.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [rows]);
+
   const filtered = useMemo(() => {
     const term = searchTerm.toLowerCase().trim();
+    const currentMonth = todayIso().slice(0, 7);
     return rows.filter((r) => {
       const matchTab = activeTab === 'tous' || r.statut === activeTab;
       if (!matchTab) return false;
+      if (ownerFilter !== 'all' && r.bailleur_id !== ownerFilter) return false;
+      if (propertyFilter !== 'all' && r.immeuble_id !== propertyFilter) return false;
+      if (periodFilter === 'starts_this_month' && !String(r.date_debut ?? '').startsWith(currentMonth)) return false;
+      if (periodFilter === 'ending_soon') {
+        const remaining = daysUntil(r.date_fin);
+        if (remaining === null || remaining < 0 || remaining > 45) return false;
+      }
+      if (periodFilter === 'open_ended' && r.date_fin) return false;
       if (!term) return true;
       const haystack = [
         fullName(r),
         r.telephone ?? '',
+        r.email ?? '',
+        r.piece_identite ?? '',
         r.unite_nom,
         r.immeuble_nom ?? '',
+        ownerName(r),
         r.contrat_ref,
         r.destination,
+        r.date_debut,
+        r.date_fin ?? '',
       ]
         .join(' ')
         .toLowerCase();
       return haystack.includes(term);
     });
-  }, [rows, activeTab, searchTerm]);
+  }, [rows, activeTab, ownerFilter, propertyFilter, periodFilter, searchTerm]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, activeTab]);
+  }, [searchTerm, activeTab, ownerFilter, propertyFilter, periodFilter]);
 
   useEffect(() => {
     if (selectedRow && !rows.some((row) => row.contrat_id === selectedRow.contrat_id)) {
@@ -385,6 +886,19 @@ export function OccupantsBaux() {
     return map;
   }, [rows]);
 
+  const activeFilterCount = (ownerFilter !== 'all' ? 1 : 0)
+    + (propertyFilter !== 'all' ? 1 : 0)
+    + (periodFilter !== 'all' ? 1 : 0)
+    + (activeTab !== 'tous' ? 1 : 0);
+
+  const resetFilters = useCallback(() => {
+    setSearchTerm('');
+    setActiveTab('tous');
+    setOwnerFilter('all');
+    setPropertyFilter('all');
+    setPeriodFilter('all');
+  }, []);
+
   // ─── Skeleton ─────────────────────────────────────────────────────────────
 
   if (loading) return <PageSkeleton title="Locations" variant="table" />;
@@ -392,7 +906,7 @@ export function OccupantsBaux() {
   // ─── Rendu ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* Notice hors-ligne */}
       <OfflineDataNotice
         cachedAt={cacheTimestamp}
@@ -400,195 +914,286 @@ export function OccupantsBaux() {
         message="Les données affichées viennent du dernier chargement réussi."
       />
 
-      {/* En-tête */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Gestion locative</p>
-          <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">
-            Locations
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
-            Vue unifiée occupant → bail → unité ·{' '}
-            <span className="font-semibold text-emerald-700">{rows.length}</span> bail
-            {rows.length !== 1 ? 'x' : ''} actif{rows.length !== 1 ? 's' : ''}
-          </p>
-        </div>
+      <div className={`grid items-start gap-5 ${selectedRow ? 'xl:grid-cols-[minmax(0,1fr)_35rem]' : 'grid-cols-1'}`}>
+        <section className="min-w-0 space-y-6">
+          {/* En-tête */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Domaine locatif</p>
+              <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">
+                Occupants & Baux
+              </h1>
+              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
+                Vue unifiée occupant → bail → unité ·{' '}
+                <span className="font-semibold text-emerald-700">{rows.length}</span> bail
+                {rows.length !== 1 ? 'x' : ''} suivi{rows.length !== 1 ? 's' : ''}
+              </p>
+            </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            type="button"
-            onClick={() => void handleRefresh()}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-slate-600 bg-white hover:bg-slate-50 text-sm font-semibold transition shadow-sm"
-            title="Actualiser"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span className="hidden sm:inline">Actualiser</span>
-          </button>
-        </div>
-      </div>
-
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={`group flex flex-col items-start gap-1 rounded-2xl border px-4 py-3 text-left transition-all duration-200 shadow-sm
-              ${activeTab === tab.id
-                ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-300/40 shadow-emerald-100'
-                : 'border-slate-200 bg-white hover:border-emerald-200 hover:bg-emerald-50/50'
-              }`}
-          >
-            <span className={`text-2xl font-black ${activeTab === tab.id ? 'text-emerald-700' : 'text-slate-800'}`}>
-              {counts[tab.id] ?? 0}
-            </span>
-            <span className={`text-xs font-bold uppercase tracking-wide ${activeTab === tab.id ? 'text-emerald-600' : 'text-slate-500'}`}>
-              {tab.label}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* Tableau principal */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Barre de recherche */}
-        <div className="px-4 sm:px-6 py-4 border-b border-slate-100">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Rechercher occupant, bien, référence…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition"
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void handleRefresh()}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+                title="Actualiser"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span className="hidden sm:inline">Actualiser</span>
+              </button>
+              <button
+                type="button"
+                onClick={openCreateOccupation}
+                className="inline-flex items-center gap-2 rounded-xl bg-action-500 px-4 py-2 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:bg-action-600"
+              >
+                <Plus className="h-4 w-4" />
+                Nouvelle location
+              </button>
+            </div>
           </div>
-          {searchTerm && (
-            <p className="mt-2 text-xs text-slate-500">
-              {filtered.length} résultat{filtered.length !== 1 ? 's' : ''}
-            </p>
-          )}
-        </div>
 
-        {/* Table desktop / Cards mobile */}
-        {paginated.length === 0 ? (
-          <EmptyState
-            hasSearch={!!searchTerm || activeTab !== 'tous'}
-            onReset={() => { setSearchTerm(''); setActiveTab('tous'); }}
-          />
-        ) : (
-          <>
-            {/* Desktop table */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 bg-[#f8f3e8]/75 backdrop-blur-md shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
-                  <tr className="bg-[#f8f3e8]/70 border-b border-slate-100">
-                    <th className="text-left px-5 py-3 text-xs font-bold text-slate-400 uppercase tracking-wide">
-                      <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> Occupant</span>
-                    </th>
-                    <th className="text-left px-5 py-3 text-xs font-bold text-slate-400 uppercase tracking-wide">
-                      <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Téléphone</span>
-                    </th>
-                    <th className="text-left px-5 py-3 text-xs font-bold text-slate-400 uppercase tracking-wide">
-                      <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> Bien / Unité</span>
-                    </th>
-                    <th className="text-left px-5 py-3 text-xs font-bold text-slate-400 uppercase tracking-wide">
-                      <span className="flex items-center gap-1.5"><Home className="w-3.5 h-3.5" /> Propriétaire</span>
-                    </th>
-                    <th className="text-left px-5 py-3 text-xs font-bold text-slate-400 uppercase tracking-wide">
-                      <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> Référence</span>
-                    </th>
-                    <th className="text-right px-5 py-3 text-xs font-bold text-slate-400 uppercase tracking-wide">
-                      <div className="flex items-center justify-end gap-1.5"><Wallet className="w-3.5 h-3.5" /> Loyer</div>
-                    </th>
-                    <th className="text-left px-5 py-3 text-xs font-bold text-slate-400 uppercase tracking-wide">
-                      <span className="flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" /> Période</span>
-                    </th>
-                    <th className="text-center px-5 py-3 text-xs font-bold text-slate-400 uppercase tracking-wide">
-                      <div className="flex items-center justify-center gap-1.5"><Activity className="w-3.5 h-3.5" /> Statut</div>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
+          {/* KPI cards */}
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`group flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition-all duration-200 ${
+                    activeTab === tab.id
+                      ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-300/40 shadow-emerald-100'
+                      : 'border-slate-200 bg-white hover:border-emerald-200 hover:bg-emerald-50/50'
+                  }`}
+                >
+                  <span>
+                    <span className={`block text-2xl font-black ${activeTab === tab.id ? 'text-emerald-700' : 'text-slate-800'}`}>
+                      {counts[tab.id] ?? 0}
+                    </span>
+                    <span className={`mt-1 block text-xs font-bold uppercase tracking-wide ${activeTab === tab.id ? 'text-emerald-600' : 'text-slate-500'}`}>
+                      {tab.label}
+                    </span>
+                  </span>
+                  <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${getStatusKpiTone(tab.tone)}`}>
+                    <Icon className="h-5 w-5" />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Tableau principal */}
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            {/* Toolbar */}
+            <div className="border-b border-slate-100 px-4 py-4 sm:px-6">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                <div className="relative min-w-0">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Rechercher occupant, téléphone, bien, référence..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm font-medium transition focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={ownerFilter}
+                    onChange={(event) => setOwnerFilter(event.target.value)}
+                    className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                  >
+                    <option value="all">Tous les propriétaires</option>
+                    {ownerOptions.map(([id, label]) => (
+                      <option key={id} value={id}>{label}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={propertyFilter}
+                    onChange={(event) => setPropertyFilter(event.target.value)}
+                    className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                  >
+                    <option value="all">Tous les biens</option>
+                    {propertyOptions.map(([id, label]) => (
+                      <option key={id} value={id}>{label}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={periodFilter}
+                    onChange={(event) => setPeriodFilter(event.target.value as PeriodFilter)}
+                    className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-600 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                  >
+                    {PERIOD_FILTERS.map((filter) => (
+                      <option key={filter.id} value={filter.id}>{filter.label}</option>
+                    ))}
+                  </select>
+                  <ColumnPicker
+                    columns={OCCUPANTS_BAUX_COLUMN_KEYS.map((key) => ({
+                      key,
+                      label: getOccupantsBauxColumnLabel(key),
+                    }))}
+                    visibility={occupantColumns.visibility}
+                    onToggle={(key) => occupantColumns.toggle(key as OccupantsBauxColumnKey)}
+                    onSetAll={occupantColumns.setAll}
+                  />
+                  {activeFilterCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-600 transition hover:bg-white"
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Réinitialiser
+                    </button>
+                  )}
+                </div>
+              </div>
+              {(searchTerm || activeFilterCount > 0) && (
+                <p className="mt-2 text-xs font-medium text-slate-500">
+                  {filtered.length} résultat{filtered.length !== 1 ? 's' : ''} affiché{filtered.length !== 1 ? 's' : ''}
+                </p>
+              )}
+            </div>
+
+            {/* Table desktop / Cards mobile */}
+            {paginated.length === 0 ? (
+              <EmptyState
+                hasSearch={!!searchTerm || activeFilterCount > 0}
+                onReset={resetFilters}
+              />
+            ) : (
+              <>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 z-10 bg-[#f8f3e8]/75 shadow-[0_1px_2px_rgba(0,0,0,0.05)] backdrop-blur-md">
+                      <tr className="border-b border-slate-100 bg-[#f8f3e8]/70">
+                        {occupantColumns.isVisible('occupant') && (
+                          <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400">
+                            <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Occupant</span>
+                          </th>
+                        )}
+                        {occupantColumns.isVisible('telephone') && (
+                          <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400">
+                            <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Téléphone</span>
+                          </th>
+                        )}
+                        {occupantColumns.isVisible('bien') && (
+                          <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400">
+                            <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> Bien / Unité</span>
+                          </th>
+                        )}
+                        {occupantColumns.isVisible('proprietaire') && (
+                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden 2xl:table-cell' : ''}`}>
+                            <span className="flex items-center gap-1.5"><Home className="h-3.5 w-3.5" /> Propriétaire</span>
+                          </th>
+                        )}
+                        {occupantColumns.isVisible('reference') && (
+                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden 2xl:table-cell' : ''}`}>
+                            <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Référence</span>
+                          </th>
+                        )}
+                        {occupantColumns.isVisible('loyer') && (
+                          <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-400">
+                            <span className="flex items-center justify-end gap-1.5"><Wallet className="h-3.5 w-3.5" /> Loyer</span>
+                          </th>
+                        )}
+                        {occupantColumns.isVisible('periode') && (
+                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden 2xl:table-cell' : ''}`}>
+                            <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Période</span>
+                          </th>
+                        )}
+                        {occupantColumns.isVisible('statut') && (
+                          <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wide text-slate-400">
+                            <span className="flex items-center justify-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Statut</span>
+                          </th>
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {paginated.map((row) => (
+                        <DesktopRow
+                          key={row.contrat_id}
+                          row={row}
+                          selected={selectedRow?.contrat_id === row.contrat_id}
+                          compact={Boolean(selectedRow)}
+                          isVisible={occupantColumns.isVisible}
+                          onSelect={() => {
+                            setSelectedRow(row);
+                            setActiveDrawerTab('resume');
+                          }}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="divide-y divide-slate-100 md:hidden">
                   {paginated.map((row) => (
-                    <DesktopRow
+                    <MobileCard
                       key={row.contrat_id}
                       row={row}
-                      selected={selectedRow?.contrat_id === row.contrat_id}
                       onSelect={() => {
                         setSelectedRow(row);
                         setActiveDrawerTab('resume');
                       }}
                     />
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              </>
+            )}
 
-            {/* Mobile cards */}
-            <div className="md:hidden divide-y divide-slate-100">
-              {paginated.map((row) => (
-                <MobileCard
-                  key={row.contrat_id}
-                  row={row}
-                  onSelect={() => {
-                    setSelectedRow(row);
-                    setActiveDrawerTab('resume');
-                  }}
-                />
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-5 py-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-slate-500">
-              Page {page} / {totalPages} · {filtered.length} résultat{filtered.length !== 1 ? 's' : ''}
-            </p>
-            <div className="flex items-center gap-1">
-              <PaginationButton onClick={() => setPage(1)} disabled={page === 1} label="«" />
-              <PaginationButton onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} label="‹" />
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                const start = Math.max(1, Math.min(page - 2, totalPages - 4));
-                const p = start + i;
-                if (p > totalPages) return null;
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={`w-8 h-8 text-xs rounded-lg border font-semibold transition ${
-                      p === page
-                        ? 'bg-emerald-700 border-emerald-700 text-white'
-                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                );
-              })}
-              <PaginationButton onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} label="›" />
-              <PaginationButton onClick={() => setPage(totalPages)} disabled={page === totalPages} label="»" />
-            </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row">
+                <p className="text-xs text-slate-500">
+                  Page {page} / {totalPages} · {filtered.length} résultat{filtered.length !== 1 ? 's' : ''}
+                </p>
+                <div className="flex items-center gap-1">
+                  <PaginationButton onClick={() => setPage(1)} disabled={page === 1} label="«" />
+                  <PaginationButton onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} label="‹" />
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    const start = Math.max(1, Math.min(page - 2, totalPages - 4));
+                    const p = start + i;
+                    if (p > totalPages) return null;
+                    return (
+                      <button
+                        key={p}
+                        onClick={() => setPage(p)}
+                        className={`h-8 w-8 rounded-lg border text-xs font-semibold transition ${
+                          p === page
+                            ? 'border-emerald-700 bg-emerald-700 text-white'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    );
+                  })}
+                  <PaginationButton onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} label="›" />
+                  <PaginationButton onClick={() => setPage(totalPages)} disabled={page === totalPages} label="»" />
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </section>
 
-      <OccupantBailDrawer
-        row={selectedRow}
-        details={details}
-        detailsLoading={detailsLoading}
-        detailsError={detailsError}
-        activeTab={activeDrawerTab}
-        onTabChange={setActiveDrawerTab}
-        onClose={() => setSelectedRow(null)}
-        onResiliate={openResiliation}
-        onArchive={setArchiveTarget}
-        onRenew={openRenewal}
-      />
+        <OccupantBailDrawer
+          row={selectedRow}
+          details={details}
+          detailsLoading={detailsLoading}
+          detailsError={detailsError}
+          activeTab={activeDrawerTab}
+          onTabChange={setActiveDrawerTab}
+          onClose={() => setSelectedRow(null)}
+          onEditOccupant={openEditOccupant}
+          onEditBail={openEditBail}
+          onGeneratePdf={(row) => void generateContractPdf(row)}
+          pdfGenerating={pdfGeneratingId === selectedRow?.contrat_id}
+          onResiliate={openResiliation}
+          onArchive={setArchiveTarget}
+          onRenew={openRenewal}
+        />
+      </div>
 
       <LifecycleModals
         resiliationTarget={resiliationTarget}
@@ -605,6 +1210,30 @@ export function OccupantsBaux() {
         onSubmitResiliation={submitResiliation}
         onSubmitArchive={submitArchive}
         onSubmitRenewal={submitRenewal}
+      />
+
+      <OccupantFormModal
+        mode={occupantModalMode}
+        form={occupantForm}
+        submitting={workflowSubmitting}
+        onChange={setOccupantForm}
+        onClose={closeOccupantModal}
+        onSubmit={submitOccupant}
+      />
+
+      <OccupationFormModal
+        mode={occupationModalMode}
+        form={occupationForm}
+        wizardStep={locationWizardStep}
+        occupantOptions={occupantOptions}
+        availableUnits={availableUnits}
+        workflowLoading={workflowLoading}
+        submitting={workflowSubmitting}
+        isIndividualOwner={isIndividualOwner}
+        onStepChange={setLocationWizardStep}
+        onChange={setOccupationForm}
+        onClose={closeOccupationModal}
+        onSubmit={submitOccupation}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
@@ -626,10 +1255,14 @@ function StatutBadge({ statut }: { statut: ContratStatut }) {
 function DesktopRow({
   row,
   selected,
+  compact,
+  isVisible,
   onSelect,
 }: {
   row: OccupantBailRow;
   selected: boolean;
+  compact: boolean;
+  isVisible: (key: OccupantsBauxColumnKey) => boolean;
   onSelect: () => void;
 }) {
   return (
@@ -638,58 +1271,81 @@ function DesktopRow({
       className={`group cursor-pointer transition-colors ${selected ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200' : 'hover:bg-slate-50/70'}`}
     >
       {/* Occupant */}
-      <td className="px-5 py-3.5">
-        <p className="font-semibold text-slate-900">{fullName(row)}</p>
-        {row.email && <p className="text-xs text-slate-400 mt-0.5 truncate max-w-[160px]">{row.email}</p>}
-      </td>
+      {isVisible('occupant') && (
+        <td className="px-5 py-3.5">
+          <p className="font-semibold text-slate-900">{fullName(row)}</p>
+          {row.email && <p className="mt-0.5 max-w-[160px] truncate text-xs text-slate-400">{row.email}</p>}
+        </td>
+      )}
       {/* Téléphone */}
-      <td className="px-5 py-3.5">
-        {row.telephone ? (
-          <a
-            href={`tel:${row.telephone}`}
-            className="text-emerald-700 font-medium hover:underline"
-          >
-            {formatSenegalPhone(row.telephone)}
-          </a>
-        ) : (
-          <span className="text-slate-400">—</span>
-        )}
-      </td>
+      {isVisible('telephone') && (
+        <td className="px-5 py-3.5">
+          {row.telephone ? (
+            <a
+              href={`tel:${row.telephone}`}
+              className="font-medium text-emerald-700 hover:underline"
+            >
+              {formatSenegalPhone(row.telephone)}
+            </a>
+          ) : (
+            <span className="text-slate-400">—</span>
+          )}
+        </td>
+      )}
       {/* Bien / Unité */}
-      <td className="px-5 py-3.5">
-        <p className="font-medium text-slate-800">{row.immeuble_nom ?? '—'}</p>
-        <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-          <ChevronRight className="w-3 h-3 text-slate-300" />
-          {row.unite_nom}
-        </p>
-      </td>
+      {isVisible('bien') && (
+        <td className="px-5 py-3.5">
+          <p className="font-medium text-slate-800">{row.immeuble_nom ?? '—'}</p>
+          <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+            <ChevronRight className="h-3 w-3 text-slate-300" />
+            {row.unite_nom}
+          </p>
+        </td>
+      )}
       {/* Propriétaire */}
-      <td className="px-5 py-3.5">
-        <p className="max-w-[150px] truncate text-sm font-medium text-slate-700">{ownerName(row)}</p>
-      </td>
+      {isVisible('proprietaire') && (
+        <td className={`px-5 py-3.5 ${compact ? 'hidden 2xl:table-cell' : ''}`}>
+          <p className="max-w-[150px] truncate text-sm font-medium text-slate-700">{ownerName(row)}</p>
+        </td>
+      )}
       {/* Référence */}
-      <td className="px-5 py-3.5">
-        <span className="font-mono text-xs bg-slate-100 text-slate-600 rounded px-1.5 py-0.5">
-          {row.contrat_ref}
-        </span>
-      </td>
+      {isVisible('reference') && (
+        <td className={`px-5 py-3.5 ${compact ? 'hidden 2xl:table-cell' : ''}`}>
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">
+            {row.contrat_ref}
+          </span>
+        </td>
+      )}
       {/* Loyer */}
-      <td className="px-5 py-3.5 text-right">
-        <span className="font-bold text-slate-900">{formatCurrency(row.loyer_mensuel)}</span>
-        <span className="text-xs text-slate-400 ml-1">/mois</span>
-      </td>
+      {isVisible('loyer') && (
+        <td className="px-5 py-3.5 text-right">
+          <span className="font-bold text-slate-900">{formatCurrency(row.loyer_mensuel)}</span>
+          <span className="ml-1 text-xs text-slate-400">/mois</span>
+        </td>
+      )}
       {/* Période */}
-      <td className="px-5 py-3.5">
-        <p className="text-xs text-slate-600">
-          {formatDate(row.date_debut)}
-          {row.date_fin && <> → {formatDate(row.date_fin)}</>}
-          {!row.date_fin && <span className="text-slate-400"> → ouvert</span>}
-        </p>
-      </td>
+      {isVisible('periode') && (
+        <td className={`px-5 py-3.5 ${compact ? 'hidden 2xl:table-cell' : ''}`}>
+          <p className="text-xs text-slate-600">
+            {formatDate(row.date_debut)}
+            {row.date_fin && <> → {formatDate(row.date_fin)}</>}
+            {!row.date_fin && <span className="text-slate-400"> → ouvert</span>}
+          </p>
+        </td>
+      )}
       {/* Statut */}
-      <td className="px-5 py-3.5 text-center">
-        <StatutBadge statut={row.statut} />
-      </td>
+      {isVisible('statut') && (
+        <td className="px-5 py-3.5 text-center">
+          <div className="flex flex-col items-center justify-center gap-1.5">
+            <StatutBadge statut={row.statut} />
+            {row.statut === 'actif' && canRenew(row) && (
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-inset ring-amber-200">
+                Fin proche
+              </span>
+            )}
+          </div>
+        </td>
+      )}
     </tr>
   );
 }
@@ -738,6 +1394,10 @@ function OccupantBailDrawer({
   activeTab,
   onTabChange,
   onClose,
+  onEditOccupant,
+  onEditBail,
+  onGeneratePdf,
+  pdfGenerating,
   onResiliate,
   onArchive,
   onRenew,
@@ -749,6 +1409,10 @@ function OccupantBailDrawer({
   activeTab: DrawerTab;
   onTabChange: (tab: DrawerTab) => void;
   onClose: () => void;
+  onEditOccupant: (row: OccupantBailRow) => void;
+  onEditBail: (row: OccupantBailRow) => void;
+  onGeneratePdf: (row: OccupantBailRow) => void;
+  pdfGenerating: boolean;
   onResiliate: (row: OccupantBailRow) => void;
   onArchive: (row: OccupantBailRow) => void;
   onRenew: (row: OccupantBailRow) => void;
@@ -759,7 +1423,7 @@ function OccupantBailDrawer({
   const canArchive = row.statut === 'resilie' || row.statut === 'expire';
 
   return (
-    <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] md:left-auto md:w-[27rem] md:border-l md:border-emerald-950/10 md:shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
+    <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:sticky xl:top-4 xl:inset-auto xl:z-auto xl:h-[calc(100vh-2rem)] xl:w-full xl:rounded-3xl xl:border xl:border-emerald-950/10">
       <div className="flex h-full flex-col overflow-y-auto bg-[linear-gradient(180deg,#fff4d9,#fffdf8_11rem)]">
         <div className="border-b border-emerald-950/10 p-4">
           <div className="mb-3 flex items-start justify-between gap-3">
@@ -801,8 +1465,9 @@ function OccupantBailDrawer({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <DrawerAction icon={Pencil} label="Modifier" onClick={() => navigateHash('/contrats')} />
-            <DrawerAction icon={Download} label="PDF contrat" onClick={() => navigateHash('/contrats')} />
+            <DrawerAction icon={UserPlus} label="Occupant" onClick={() => onEditOccupant(row)} />
+            <DrawerAction icon={Pencil} label="Bail" onClick={() => onEditBail(row)} />
+            <DrawerAction icon={Download} label={pdfGenerating ? 'Génération...' : 'PDF contrat'} onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} />
             {canRenew(row) && <DrawerAction icon={RefreshCw} label="Renouveler" onClick={() => onRenew(row)} />}
             {activeStatus && <DrawerAction icon={Ban} label="Résilier" onClick={() => onResiliate(row)} tone="danger" />}
             {canArchive && <DrawerAction icon={Archive} label="Archiver" onClick={() => onArchive(row)} tone="danger" />}
@@ -831,7 +1496,16 @@ function OccupantBailDrawer({
         <div className="space-y-3.5 p-3.5 sm:p-4">
           {activeTab === 'resume' && <DrawerResume row={row} />}
           {activeTab === 'paiements' && <DrawerPayments details={details} loading={detailsLoading} error={detailsError} />}
-          {activeTab === 'documents' && <DrawerDocuments row={row} details={details} loading={detailsLoading} error={detailsError} />}
+          {activeTab === 'documents' && (
+            <DrawerDocuments
+              row={row}
+              details={details}
+              loading={detailsLoading}
+              error={detailsError}
+              onGeneratePdf={onGeneratePdf}
+              pdfGenerating={pdfGenerating}
+            />
+          )}
           {activeTab === 'historique' && <DrawerHistory details={details} loading={detailsLoading} error={detailsError} />}
         </div>
       </div>
@@ -861,6 +1535,8 @@ function DrawerResume({ row }: { row: OccupantBailRow }) {
         <InfoLine icon={ClipboardList} label="Destination" value={row.destination || 'Non renseignée'} />
         <InfoLine icon={CalendarDays} label="Période" value={`${formatDate(row.date_debut)} → ${row.date_fin ? formatDate(row.date_fin) : 'ouvert'}`} />
         <InfoLine icon={Wallet} label="Loyer" value={formatCurrency(row.loyer_mensuel)} />
+        {row.caution !== null && <InfoLine icon={Wallet} label="Caution" value={formatCurrency(row.caution)} />}
+        {row.commission !== null && <InfoLine icon={Wallet} label="Commission agence" value={`${row.commission}%`} />}
       </InfoBlock>
 
       <InfoBlock title="Occupation">
@@ -935,11 +1611,15 @@ function DrawerDocuments({
   details,
   loading,
   error,
+  onGeneratePdf,
+  pdfGenerating,
 }: {
   row: OccupantBailRow;
   details: OccupantBailDetails | null;
   loading: boolean;
   error: string | null;
+  onGeneratePdf: (row: OccupantBailRow) => void;
+  pdfGenerating: boolean;
 }) {
   const documents = details?.documents ?? [];
 
@@ -952,16 +1632,17 @@ function DrawerDocuments({
           </div>
           <div className="min-w-0">
             <p className="font-bold text-slate-900">Contrat de location</p>
-            <p className="text-xs font-medium text-slate-500">{row.contrat_ref} · PDF générable depuis la page Contrats</p>
+            <p className="text-xs font-medium text-slate-500">{row.contrat_ref} · Génération directe depuis Occupants & Baux</p>
           </div>
         </div>
         <button
           type="button"
-          onClick={() => navigateHash('/contrats')}
+          onClick={() => onGeneratePdf(row)}
+          disabled={pdfGenerating}
           className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"
         >
           <Download className="h-4 w-4" />
-          Ouvrir dans Contrats
+          {pdfGenerating ? 'Génération...' : 'Générer le contrat PDF'}
         </button>
       </div>
       {loading && <DrawerEmpty icon={FileText} title="Documents liés" description="Chargement des documents rattachés à ce bail..." />}
@@ -970,7 +1651,7 @@ function DrawerDocuments({
         <DrawerEmpty
           icon={FileText}
           title="Aucun document rattaché"
-          description="Le contrat reste accessible depuis Contrats. Les documents GED et pièces disponibles apparaîtront ici."
+          description="Le contrat PDF et les documents GED disponibles apparaîtront ici."
         />
       )}
       {!loading && !error && documents.map((document) => (
@@ -1297,22 +1978,25 @@ function DrawerAction({
   icon: Icon,
   label,
   onClick,
+  disabled = false,
   tone = 'default',
 }: {
   icon: LucideIcon;
   label: string;
   onClick: () => void;
+  disabled?: boolean;
   tone?: 'default' | 'danger';
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm transition ${
         tone === 'danger'
           ? 'border-red-100 bg-white text-red-600 hover:border-red-200 hover:bg-red-50'
           : 'border-emerald-950/10 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900'
-      }`}
+      } disabled:cursor-not-allowed disabled:opacity-60`}
     >
       <Icon className="h-4 w-4" />
       {label}
@@ -1367,6 +2051,364 @@ function DrawerEmpty({
       <p className="mt-3 font-black text-slate-900">{title}</p>
       <p className="mt-1 text-sm font-medium leading-6 text-slate-500">{description}</p>
     </div>
+  );
+}
+
+function OccupantFormModal({
+  mode,
+  form,
+  submitting,
+  onChange,
+  onClose,
+  onSubmit,
+}: {
+  mode: OccupantModalMode | null;
+  form: OccupantFormState;
+  submitting: boolean;
+  onChange: (form: OccupantFormState) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  if (!mode) return null;
+
+  return (
+    <Modal isOpen={Boolean(mode)} onClose={onClose} title={mode === 'edit' ? "Modifier l'occupant" : 'Nouvel occupant'}>
+      <div className="space-y-4">
+        <LifecycleIntro
+          icon={UserPlus}
+          title={mode === 'edit' ? "Identité de l'occupant" : 'Créer un occupant'}
+          description="Ces informations alimentent le bail, les documents et les futures fiches Occupants & Baux."
+        />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TextField label="Prénom" value={form.prenom} onChange={(value) => onChange({ ...form, prenom: value })} />
+          <TextField label="Nom" value={form.nom} onChange={(value) => onChange({ ...form, nom: value })} />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TextField label="Téléphone" value={form.telephone} onChange={(value) => onChange({ ...form, telephone: value })} placeholder="77 123 45 67" />
+          <TextField label="Email" value={form.email} onChange={(value) => onChange({ ...form, email: value })} placeholder="occupant@email.com" />
+        </div>
+        <TextField label="Adresse" value={form.adresse_personnelle} onChange={(value) => onChange({ ...form, adresse_personnelle: value })} placeholder="Adresse personnelle" />
+        <TextField label="Pièce d'identité" value={form.piece_identite} onChange={(value) => onChange({ ...form, piece_identite: value })} placeholder="CNI, passeport..." />
+        <ModalActions
+          submitting={submitting}
+          submitLabel={mode === 'edit' ? 'Enregistrer' : 'Créer occupant'}
+          onCancel={onClose}
+          onSubmit={onSubmit}
+        />
+      </div>
+    </Modal>
+  );
+}
+
+function OccupationFormModal({
+  mode,
+  form,
+  wizardStep,
+  occupantOptions,
+  availableUnits,
+  workflowLoading,
+  submitting,
+  isIndividualOwner,
+  onStepChange,
+  onChange,
+  onClose,
+  onSubmit,
+}: {
+  mode: OccupationModalMode | null;
+  form: OccupationFormState;
+  wizardStep: LocationWizardStep;
+  occupantOptions: OccupantBailPersonOption[];
+  availableUnits: OccupantBailAvailableUnit[];
+  workflowLoading: boolean;
+  submitting: boolean;
+  isIndividualOwner: boolean;
+  onStepChange: (step: LocationWizardStep) => void;
+  onChange: (form: OccupationFormState) => void;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  const update = (patch: Partial<OccupationFormState>) => onChange({ ...form, ...patch });
+  const selectedOccupant = occupantOptions.find((occupant) => occupant.id === form.locataire_id) ?? null;
+  const selectedUnit = availableUnits.find((unit) => unit.id === form.unite_id) ?? null;
+  const occupantTerm = form.occupantSearch.trim().toLowerCase();
+  const unitTerm = form.unitSearch.trim().toLowerCase();
+  const filteredOccupants = occupantOptions.filter((occupant) => {
+    if (!occupantTerm) return true;
+    return [
+      occupant.prenom,
+      occupant.nom,
+      occupant.telephone ?? '',
+      occupant.email ?? '',
+    ].join(' ').toLowerCase().includes(occupantTerm);
+  }).slice(0, 10);
+  const filteredUnits = availableUnits.filter((unit) => {
+    if (!unitTerm) return true;
+    return [
+      unit.nom,
+      unit.numero ?? '',
+      unit.etage ?? '',
+      unit.immeuble_nom ?? '',
+    ].join(' ').toLowerCase().includes(unitTerm);
+  }).slice(0, 12);
+
+  if (!mode) return null;
+
+  if (mode === 'edit-bail') {
+    return (
+      <Modal isOpen onClose={onClose} title="Modifier le bail">
+        <div className="space-y-4">
+          <LifecycleIntro
+            icon={Pencil}
+            title="Données du bail"
+            description="Modification contrôlée via le workflow bail existant. Les données financières sensibles restent protégées."
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField label="Date de début" value={form.date_debut} onChange={(value) => update({ date_debut: value })} type="date" disabled />
+            <TextField label="Date de fin" value={form.date_fin} onChange={(value) => update({ date_fin: value })} type="date" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField label="Loyer mensuel" value={form.loyer_mensuel} onChange={(value) => update({ loyer_mensuel: value })} type="number" disabled />
+            <TextField label="Caution" value={form.caution} onChange={(value) => update({ caution: value })} type="number" />
+          </div>
+          {!isIndividualOwner && (
+            <TextField label="Commission agence (%)" value={form.commission} onChange={(value) => update({ commission: value })} type="number" />
+          )}
+          <ModalActions submitting={submitting} submitLabel="Enregistrer le bail" onCancel={onClose} onSubmit={onSubmit} />
+        </div>
+      </Modal>
+    );
+  }
+
+  const currentStepIndex = LOCATION_WIZARD_STEPS.findIndex((step) => step.id === wizardStep);
+  const canGoBack = currentStepIndex > 0;
+  const goBack = () => {
+    if (!canGoBack) return;
+    onStepChange(LOCATION_WIZARD_STEPS[currentStepIndex - 1].id);
+  };
+  const chooseUnit = (unit: OccupantBailAvailableUnit) => {
+    update({
+      unite_id: unit.id,
+      loyer_mensuel: form.loyer_mensuel || String(unit.loyer_base ?? 0),
+      caution: form.caution || String(unit.loyer_base ?? 0),
+      commission: isIndividualOwner ? '0' : (form.commission || String(unit.bailleur_commission ?? 0)),
+    });
+  };
+
+  return (
+    <Modal isOpen onClose={onClose} title="Nouvelle location">
+      <div className="space-y-5">
+        <div className="grid grid-cols-4 gap-2">
+          {LOCATION_WIZARD_STEPS.map((step, index) => {
+            const Icon = step.icon;
+            const active = step.id === wizardStep;
+            const done = index < currentStepIndex;
+            return (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => index <= currentStepIndex && onStepChange(step.id)}
+                className={`rounded-2xl border px-2 py-2 text-center transition ${
+                  active
+                    ? 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm'
+                    : done
+                      ? 'border-emerald-100 bg-white text-emerald-700'
+                      : 'border-slate-100 bg-slate-50 text-slate-400'
+                }`}
+              >
+                <Icon className="mx-auto h-4 w-4" />
+                <span className="mt-1 block truncate text-[0.68rem] font-black uppercase tracking-[0.06em]">{step.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {wizardStep === 'occupant' && (
+          <div className="space-y-4">
+            <LifecycleIntro
+              icon={Users}
+              title="Choisir l'occupant"
+              description="Sélectionnez un occupant existant ou créez-le sans quitter le module."
+            />
+            <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-1">
+              <button
+                type="button"
+                onClick={() => update({ occupantMode: 'existing' })}
+                className={`rounded-xl px-3 py-2 text-sm font-bold transition ${form.occupantMode === 'existing' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500'}`}
+              >
+                Existant
+              </button>
+              <button
+                type="button"
+                onClick={() => update({ occupantMode: 'new', locataire_id: '' })}
+                className={`rounded-xl px-3 py-2 text-sm font-bold transition ${form.occupantMode === 'new' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500'}`}
+              >
+                Nouveau
+              </button>
+            </div>
+            {form.occupantMode === 'existing' ? (
+              <>
+                <TextField label="Recherche occupant" value={form.occupantSearch} onChange={(value) => update({ occupantSearch: value })} placeholder="Nom, téléphone, email..." />
+                <div className="grid max-h-80 gap-2 overflow-y-auto pr-1">
+                  {workflowLoading && <DrawerEmpty icon={Users} title="Chargement" description="Chargement des occupants..." />}
+                  {!workflowLoading && filteredOccupants.map((occupant) => {
+                    const selected = occupant.id === form.locataire_id;
+                    return (
+                      <button
+                        key={occupant.id}
+                        type="button"
+                        onClick={() => update({ locataire_id: occupant.id })}
+                        className={`rounded-2xl border p-3 text-left transition ${selected ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 bg-white hover:border-emerald-200'}`}
+                      >
+                        <p className="font-black text-slate-900">{occupant.prenom} {occupant.nom}</p>
+                        <p className="mt-1 text-xs font-medium text-slate-500">{occupant.telephone ? formatSenegalPhone(occupant.telephone) : 'Téléphone non renseigné'} · {occupant.email ?? 'Email non renseigné'}</p>
+                      </button>
+                    );
+                  })}
+                  {!workflowLoading && filteredOccupants.length === 0 && (
+                    <DrawerEmpty icon={Users} title="Aucun occupant" description="Créez un nouvel occupant pour continuer." />
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="grid gap-3">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <TextField label="Prénom" value={form.newOccupant.prenom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, prenom: value } })} />
+                  <TextField label="Nom" value={form.newOccupant.nom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, nom: value } })} />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <TextField label="Téléphone" value={form.newOccupant.telephone} onChange={(value) => update({ newOccupant: { ...form.newOccupant, telephone: value } })} placeholder="77 123 45 67" />
+                  <TextField label="Email" value={form.newOccupant.email} onChange={(value) => update({ newOccupant: { ...form.newOccupant, email: value } })} />
+                </div>
+                <TextField label="Adresse" value={form.newOccupant.adresse_personnelle} onChange={(value) => update({ newOccupant: { ...form.newOccupant, adresse_personnelle: value } })} />
+                <TextField label="Pièce d'identité" value={form.newOccupant.piece_identite} onChange={(value) => update({ newOccupant: { ...form.newOccupant, piece_identite: value } })} />
+              </div>
+            )}
+          </div>
+        )}
+
+        {wizardStep === 'unite' && (
+          <div className="space-y-4">
+            <LifecycleIntro
+              icon={Building2}
+              title="Sélectionner l'unité libre"
+              description="La création du bail occupera l'unité via le workflow sécurisé existant."
+            />
+            <TextField label="Recherche unité" value={form.unitSearch} onChange={(value) => update({ unitSearch: value })} placeholder="Bien, unité, numéro..." />
+            <div className="grid max-h-96 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+              {workflowLoading && <DrawerEmpty icon={Building2} title="Chargement" description="Chargement des unités libres..." />}
+              {!workflowLoading && filteredUnits.map((unit) => {
+                const selected = unit.id === form.unite_id;
+                return (
+                  <button
+                    key={unit.id}
+                    type="button"
+                    onClick={() => chooseUnit(unit)}
+                    className={`rounded-2xl border p-3 text-left transition ${selected ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 bg-white hover:border-emerald-200'}`}
+                  >
+                    <p className="font-black text-slate-900">{unit.nom}</p>
+                    <p className="mt-1 text-xs font-medium text-slate-500">{unit.immeuble_nom ?? 'Bien non renseigné'} · {unit.numero ?? 'Sans numéro'}</p>
+                    <p className="mt-2 text-sm font-black text-emerald-800">{formatCurrency(unit.loyer_base)}/mois</p>
+                  </button>
+                );
+              })}
+              {!workflowLoading && filteredUnits.length === 0 && (
+                <DrawerEmpty icon={Building2} title="Aucune unité libre" description="Aucune unité disponible ne correspond à cette recherche." />
+              )}
+            </div>
+          </div>
+        )}
+
+        {wizardStep === 'conditions' && (
+          <div className="space-y-4">
+            <LifecycleIntro
+              icon={FileText}
+              title="Conditions du bail"
+              description={isIndividualOwner ? 'Mode bailleur individuel : aucune commission agence n’est demandée.' : 'Renseignez les conditions principales sans toucher aux paiements.'}
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField label="Date de début" value={form.date_debut} onChange={(value) => update({ date_debut: value })} type="date" />
+              <TextField label="Date de fin" value={form.date_fin} onChange={(value) => update({ date_fin: value })} type="date" />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TextField label="Loyer mensuel" value={form.loyer_mensuel} onChange={(value) => update({ loyer_mensuel: value })} type="number" />
+              <TextField label="Caution" value={form.caution} onChange={(value) => update({ caution: value })} type="number" />
+            </div>
+            {!isIndividualOwner && (
+              <TextField label="Commission agence (%)" value={form.commission} onChange={(value) => update({ commission: value })} type="number" />
+            )}
+            <TextField label="Destination" value={form.destination} onChange={(value) => update({ destination: value })} placeholder="Habitation, commerce..." />
+          </div>
+        )}
+
+        {wizardStep === 'resume' && (
+          <div className="space-y-4">
+            <LifecycleIntro
+              icon={FileCheck2}
+              title="Résumé avant création"
+              description="Le bail sera créé par l'Edge Function contrat. Aucun paiement n'est enregistré ici."
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MiniMetric label="Occupant" value={form.occupantMode === 'new' ? `${form.newOccupant.prenom} ${form.newOccupant.nom}` : selectedOccupant ? `${selectedOccupant.prenom} ${selectedOccupant.nom}` : 'Non sélectionné'} />
+              <MiniMetric label="Unité" value={selectedUnit ? `${selectedUnit.immeuble_nom ?? 'Bien'} · ${selectedUnit.nom}` : 'Non sélectionnée'} />
+              <MiniMetric label="Loyer" value={form.loyer_mensuel ? formatCurrency(Number(form.loyer_mensuel)) : 'Non renseigné'} />
+              <MiniMetric label="Période" value={`${form.date_debut || '—'} → ${form.date_fin || '—'}`} />
+              <MiniMetric label="Caution" value={form.caution ? formatCurrency(Number(form.caution)) : '0 F CFA'} />
+              {!isIndividualOwner && <MiniMetric label="Commission" value={`${form.commission || 0}%`} />}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={wizardStep === 'occupant' ? onClose : goBack}
+            disabled={submitting}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+          >
+            {wizardStep === 'occupant' ? 'Annuler' : 'Retour'}
+          </button>
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={submitting || workflowLoading}
+            className="rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? 'Traitement...' : wizardStep === 'resume' ? 'Créer la location' : 'Continuer'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function TextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+  disabled = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: 'text' | 'email' | 'tel' | 'number' | 'date';
+  disabled?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        inputMode={type === 'number' ? 'numeric' : undefined}
+        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:bg-slate-50 disabled:text-slate-500"
+      />
+    </label>
   );
 }
 

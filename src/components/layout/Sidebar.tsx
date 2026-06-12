@@ -9,7 +9,6 @@ import {
   ChevronsRight,
   ClipboardList,
   CreditCard,
-  FileText,
   FolderOpen,
   HardHat,
   HelpCircle,
@@ -307,9 +306,8 @@ export function Sidebar({
                     <button
                       onClick={() => handleNavigate(entry.id)}
                       title={entry.label}
-                      className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${
-                        active ? 'bg-white/[0.09] text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.16)] ring-1 ring-emerald-300/10' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
-                      } ${showExpandedContent ? '' : 'justify-center px-0'}`}
+                      className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${active ? 'bg-white/[0.09] text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.16)] ring-1 ring-emerald-300/10' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
+                        } ${showExpandedContent ? '' : 'justify-center px-0'}`}
                     >
                       {active && <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r bg-emerald-300" />}
                       <Icon className={`h-5 w-5 flex-shrink-0 ${active ? 'text-emerald-300' : 'text-slate-500 group-hover:text-emerald-200'}`} />
@@ -329,9 +327,8 @@ export function Sidebar({
                   <button
                     onClick={() => toggleGroup(entry.id)}
                     title={entry.label}
-                    className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${
-                      active ? 'bg-white/[0.09] text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.16)] ring-1 ring-emerald-300/10' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
-                    } ${showExpandedContent ? '' : 'justify-center px-0'}`}
+                    className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${active ? 'bg-white/[0.09] text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.16)] ring-1 ring-emerald-300/10' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
+                      } ${showExpandedContent ? '' : 'justify-center px-0'}`}
                   >
                     {active && <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r bg-emerald-300" />}
                     <Icon className={`h-5 w-5 flex-shrink-0 ${active ? 'text-emerald-300' : 'text-slate-500 group-hover:text-emerald-200'}`} />
@@ -353,9 +350,8 @@ export function Sidebar({
                           <li key={leaf.id}>
                             <button
                               onClick={() => handleNavigate(leaf.id)}
-                              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-all duration-200 ${
-                                leafActive ? 'bg-emerald-300/14 text-emerald-50 ring-1 ring-emerald-300/10' : 'text-slate-500 hover:bg-white/[0.055] hover:text-slate-200'
-                              }`}
+                              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-all duration-200 ${leafActive ? 'bg-emerald-300/14 text-emerald-50 ring-1 ring-emerald-300/10' : 'text-slate-500 hover:bg-white/[0.055] hover:text-slate-200'
+                                }`}
                             >
                               <LeafIcon className={`h-4 w-4 flex-shrink-0 ${leafActive ? 'text-emerald-300' : 'text-slate-600'}`} />
                               <span className="text-sm font-semibold">{leaf.label}</span>

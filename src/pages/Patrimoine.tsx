@@ -925,11 +925,10 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`h-9 whitespace-nowrap rounded-lg px-3.5 text-sm font-semibold transition ${
-                    activeTab === tab.id
+                  className={`h-9 whitespace-nowrap rounded-lg px-3.5 text-sm font-semibold transition ${activeTab === tab.id
                       ? 'bg-brand-950 text-white shadow-sm'
                       : 'text-slate-600 hover:bg-emerald-50 hover:text-brand-900'
-                  }`}
+                    }`}
                 >
                   {tab.label}
                 </button>
@@ -1037,33 +1036,33 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
             <aside className="fixed inset-0 z-50 flex min-w-0 flex-col overflow-hidden bg-[#fffdf8] p-0 xl:static xl:z-auto xl:flex xl:bg-transparent">
               <div className="absolute inset-0 bg-slate-900/30 xl:hidden" onClick={() => setDrawer(null)} aria-hidden="true" />
               <div className="relative flex-1 overflow-y-auto">
-              {selectedProperty && selectedPropertySummary && (
-                <PropertyDrawer
-                  property={selectedProperty}
-                  summary={selectedPropertySummary}
-                  owner={selectedProperty.bailleur_id ? ownerById.get(selectedProperty.bailleur_id) ?? selectedProperty.bailleurs : selectedProperty.bailleurs}
-                  isIndividualOwner={isIndividualOwner}
-                  onClose={() => setDrawer(null)}
-                  onEdit={() => void openPropertyModal(selectedProperty)}
-                  onAddUnit={() => {
-                    setActiveTab('unites');
-                    openUnitModal(null, selectedProperty.id);
-                  }}
-                  onArchive={() => setDangerTarget({ type: 'bien', id: selectedProperty.id, name: selectedProperty.nom })}
-                  onNavigate={navigate}
-                />
-              )}
-              {selectedUnit && selectedUnitSummary && (
-                <UnitDrawer
-                  unit={selectedUnit}
-                  summary={selectedUnitSummary}
-                  property={selectedUnit.immeuble_id ? propertyById.get(selectedUnit.immeuble_id) ?? null : null}
-                  onClose={() => setDrawer(null)}
-                  onEdit={() => openUnitModal(selectedUnit)}
-                  onArchive={() => setDangerTarget({ type: 'unite', id: selectedUnit.id, name: selectedUnit.nom })}
-                  onNavigate={navigate}
-                />
-              )}
+                {selectedProperty && selectedPropertySummary && (
+                  <PropertyDrawer
+                    property={selectedProperty}
+                    summary={selectedPropertySummary}
+                    owner={selectedProperty.bailleur_id ? ownerById.get(selectedProperty.bailleur_id) ?? selectedProperty.bailleurs : selectedProperty.bailleurs}
+                    isIndividualOwner={isIndividualOwner}
+                    onClose={() => setDrawer(null)}
+                    onEdit={() => void openPropertyModal(selectedProperty)}
+                    onAddUnit={() => {
+                      setActiveTab('unites');
+                      openUnitModal(null, selectedProperty.id);
+                    }}
+                    onArchive={() => setDangerTarget({ type: 'bien', id: selectedProperty.id, name: selectedProperty.nom })}
+                    onNavigate={navigate}
+                  />
+                )}
+                {selectedUnit && selectedUnitSummary && (
+                  <UnitDrawer
+                    unit={selectedUnit}
+                    summary={selectedUnitSummary}
+                    property={selectedUnit.immeuble_id ? propertyById.get(selectedUnit.immeuble_id) ?? null : null}
+                    onClose={() => setDrawer(null)}
+                    onEdit={() => openUnitModal(selectedUnit)}
+                    onArchive={() => setDangerTarget({ type: 'unite', id: selectedUnit.id, name: selectedUnit.nom })}
+                    onNavigate={navigate}
+                  />
+                )}
               </div>
             </aside>
           )}
@@ -1622,8 +1621,8 @@ function UnitDrawer({
 
         <div className="grid grid-cols-2 gap-2">
           <DrawerAction icon={Pencil} label="Modifier" onClick={onEdit} />
-          <DrawerAction icon={Users} label={summary.contract ? 'Voir locataire' : 'Associer locataire'} onClick={() => onNavigate('/locataires')} />
-          <DrawerAction icon={KeyRound} label={summary.contract ? 'Voir bail' : 'Créer bail'} onClick={() => onNavigate('/contrats')} />
+          <DrawerAction icon={Users} label={summary.contract ? 'Voir occupation' : 'Nouvelle occupation'} onClick={() => onNavigate('/occupants-baux')} />
+          <DrawerAction icon={KeyRound} label={summary.contract ? 'Voir bail' : 'Créer bail'} onClick={() => onNavigate('/occupants-baux')} />
           <DrawerAction icon={Wallet} label="Paiement" onClick={() => onNavigate('/paiements')} />
         </div>
 

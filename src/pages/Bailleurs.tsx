@@ -712,7 +712,7 @@ export function Bailleurs() {
    */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validation basique
     if (!formData.prenom.trim() || !formData.nom.trim() || !formData.telephone.trim()) {
       setError('Les champs Prénom, Nom et Téléphone sont obligatoires.');
@@ -1759,86 +1759,85 @@ export function Bailleurs() {
         </section>
 
         {detailPanelOpen && (
-        <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] transition-all duration-300 xl:sticky xl:top-4 xl:z-auto xl:flex xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)]">
-          <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={() => setDetailOpen(false)} aria-hidden="true" />
-          <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
-          {!selectedBailleur ? (
-            <div className="flex min-h-full items-center justify-center p-6">
-              <EmptyDrawerState title="Sélectionnez un bailleur" description="Consultez ses biens, paiements, documents et rapports sans quitter le portefeuille." />
-            </div>
-          ) : (
-            <div className="min-h-full bg-[linear-gradient(180deg,#fff5dc,#fffdf8_10.5rem)]">
-              <div className="border-b border-emerald-950/10 p-3.5 sm:p-4">
-                <div className="mb-3 flex items-start justify-between gap-3">
-                  <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#9a5b17]">Fiche propriétaire</p>
-                  <button type="button" onClick={() => setDetailOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900" aria-label="Fermer la fiche">
-                    <X className="h-5 w-5" />
-                  </button>
+          <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] transition-all duration-300 xl:sticky xl:top-4 xl:z-auto xl:flex xl:max-h-[calc(100vh-2rem)] xl:translate-x-0 xl:rounded-2xl xl:border xl:border-emerald-950/10 xl:shadow-[0_24px_70px_rgba(15,23,42,0.09)]">
+            <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={() => setDetailOpen(false)} aria-hidden="true" />
+            <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
+              {!selectedBailleur ? (
+                <div className="flex min-h-full items-center justify-center p-6">
+                  <EmptyDrawerState title="Sélectionnez un bailleur" description="Consultez ses biens, paiements, documents et rapports sans quitter le portefeuille." />
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <div className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl font-black shadow-lg shadow-emerald-900/15 ring-1 ${getAvatarTone(selectedBailleur, true)}`}>
-                    {getInitials(selectedBailleur)}
-                    <span className="absolute -right-1 bottom-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-400" />
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-1.5 text-sm text-slate-600">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="min-w-0 flex-1 truncate text-lg font-black text-brand-950 sm:text-xl">{formatPersonName(selectedBailleur, '')}</h2>
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
-                        {getStatusLabel(selectedBailleur)}
-                      </span>
+              ) : (
+                <div className="min-h-full bg-[linear-gradient(180deg,#fff5dc,#fffdf8_10.5rem)]">
+                  <div className="border-b border-emerald-950/10 p-3.5 sm:p-4">
+                    <div className="mb-3 flex items-start justify-between gap-3">
+                      <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#9a5b17]">Fiche propriétaire</p>
+                      <button type="button" onClick={() => setDetailOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900" aria-label="Fermer la fiche">
+                        <X className="h-5 w-5" />
+                      </button>
                     </div>
-                    <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-slate-400" />{formatSenegalPhone(selectedBailleur.telephone)}</p>
-                    <p className="flex items-center gap-2 truncate"><Mail className="h-4 w-4 text-slate-400" />{selectedBailleur.email || 'Email non renseigné'}</p>
-                    <p className="flex items-center gap-2 truncate"><MapPin className="h-4 w-4 text-slate-400" />{selectedBailleur.adresse || 'Adresse non renseignée'}</p>
+
+                    <div className="flex items-start gap-3">
+                      <div className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl font-black shadow-lg shadow-emerald-900/15 ring-1 ${getAvatarTone(selectedBailleur, true)}`}>
+                        {getInitials(selectedBailleur)}
+                        <span className="absolute -right-1 bottom-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-400" />
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-1.5 text-sm text-slate-600">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="min-w-0 flex-1 truncate text-lg font-black text-brand-950 sm:text-xl">{formatPersonName(selectedBailleur, '')}</h2>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                            {getStatusLabel(selectedBailleur)}
+                          </span>
+                        </div>
+                        <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-slate-400" />{formatSenegalPhone(selectedBailleur.telephone)}</p>
+                        <p className="flex items-center gap-2 truncate"><Mail className="h-4 w-4 text-slate-400" />{selectedBailleur.email || 'Email non renseigné'}</p>
+                        <p className="flex items-center gap-2 truncate"><MapPin className="h-4 w-4 text-slate-400" />{selectedBailleur.adresse || 'Adresse non renseignée'}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"><FileText className="h-4 w-4" />Modifier</button>
+                      <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"><FileText className="h-4 w-4" />Mandat PDF</button>
+                      <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-600 bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"><BarChart3 className="h-4 w-4" />Rapport PDF</button>
+                      <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 bg-white px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
+                    </div>
                   </div>
-                </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"><FileText className="h-4 w-4" />Modifier</button>
-                  <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"><FileText className="h-4 w-4" />Mandat PDF</button>
-                  <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-600 bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"><BarChart3 className="h-4 w-4" />Rapport PDF</button>
-                  <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 bg-white px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
-                </div>
-              </div>
+                  <div className="space-y-2 p-3">
+                    <div className="grid grid-cols-1 gap-2 min-[430px]:grid-cols-3">
+                      <DrawerMetric label="Loyers" value={formatCurrency(selectedSummary.loyers)} tone="emerald" />
+                      <DrawerMetric label="Reliquats" value={formatCurrency(selectedSummary.reliquats)} tone="red" />
+                      <DrawerMetric label="Net" value={formatCurrency(selectedSummary.net)} tone="emerald" />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <DrawerMetric label="Biens" value={String(selectedSummary.immeubles.length)} tone="blue" />
+                      <DrawerMetric label="Unités" value={String(selectedSummary.unites.length)} tone="gold" />
+                      <DrawerMetric label="Contrats" value={String(selectedSummary.activeContracts)} tone="slate" />
+                    </div>
+                  </div>
 
-              <div className="space-y-2 p-3">
-                <div className="grid grid-cols-1 gap-2 min-[430px]:grid-cols-3">
-                  <DrawerMetric label="Loyers" value={formatCurrency(selectedSummary.loyers)} tone="emerald" />
-                  <DrawerMetric label="Reliquats" value={formatCurrency(selectedSummary.reliquats)} tone="red" />
-                  <DrawerMetric label="Net" value={formatCurrency(selectedSummary.net)} tone="emerald" />
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <DrawerMetric label="Biens" value={String(selectedSummary.immeubles.length)} tone="blue" />
-                  <DrawerMetric label="Unités" value={String(selectedSummary.unites.length)} tone="gold" />
-                  <DrawerMetric label="Contrats" value={String(selectedSummary.activeContracts)} tone="slate" />
-                </div>
-              </div>
+                  <div className="border-y border-emerald-950/10 bg-[#fffdf8]/85 px-2.5 py-2">
+                    <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-50/80 p-1 scrollbar-none">
+                      {[...DRAWER_PRIMARY_TABS, ...DRAWER_MORE_TABS].map((tab) => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setActiveDrawerTab(tab.id)}
+                          className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${activeDrawerTab === tab.id
+                              ? 'bg-emerald-900 text-white shadow-sm'
+                              : 'text-slate-500 hover:bg-white hover:text-emerald-900'
+                            }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
-              <div className="border-y border-emerald-950/10 bg-[#fffdf8]/85 px-2.5 py-2">
-                <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-50/80 p-1 scrollbar-none">
-                  {[...DRAWER_PRIMARY_TABS, ...DRAWER_MORE_TABS].map((tab) => (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      onClick={() => setActiveDrawerTab(tab.id)}
-                      className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                        activeDrawerTab === tab.id
-                          ? 'bg-emerald-900 text-white shadow-sm'
-                          : 'text-slate-500 hover:bg-white hover:text-emerald-900'
-                      }`}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
+                  <div className="p-3.5">{renderDrawerTab()}</div>
                 </div>
-              </div>
-
-              <div className="p-3.5">{renderDrawerTab()}</div>
+              )}
             </div>
-          )}
-          </div>
-        </aside>
+          </aside>
         )}
       </div>
 
@@ -1900,7 +1899,7 @@ export function Bailleurs() {
                   placeholder="+221 77 123 45 67"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Email

@@ -49,6 +49,9 @@ import { formatPersonName } from '../lib/people';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { MiniMetric } from '../components/ui/MetricCard';
+import { MoneyText } from '../components/ui/MoneyText';
+import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
+import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
@@ -102,6 +105,14 @@ interface LifecycleFormData {
   observations: string;
   acknowledge_impacts: boolean;
 }
+
+type BailleurWizardStep = 'identity' | 'admin' | 'summary';
+
+const BAILLEUR_WIZARD_STEPS: ProductWizardStep<BailleurWizardStep>[] = [
+  { id: 'identity', label: 'Identité', icon: CircleUser },
+  { id: 'admin', label: 'Gestion', icon: Wallet },
+  { id: 'summary', label: 'Validation', icon: ShieldAlert },
+];
 
 interface DetailImmeuble {
   id: string;
@@ -311,21 +322,21 @@ function KpiTile({
   helper: string;
   tone: 'emerald' | 'amber' | 'red' | 'blue';
 }) {  const tones = {
-    emerald: { gradient: 'from-white to-emerald-50/65', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100' },
-    blue: { gradient: 'from-white to-sky-50/65', text: 'text-sky-800', icon: 'bg-sky-50 text-sky-800 ring-sky-100' },
-    amber: { gradient: 'from-white to-amber-50/65', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100' },
-    red: { gradient: 'from-white to-red-50/65', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100' },
+    emerald: { gradient: 'from-white to-emerald-50/70', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100' },
+    blue: { gradient: 'from-white to-stone-50/75', text: 'text-slate-800', icon: 'bg-stone-50 text-slate-700 ring-stone-100' },
+    amber: { gradient: 'from-white to-amber-50/70', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100' },
+    red: { gradient: 'from-white to-rose-50/70', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100' },
   }[tone];
   return (
-    <article className={`group min-w-0 rounded-2xl border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-3 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] transition-all duration-200`}>
+    <article className={`group min-w-0 rounded-[1.05rem] border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-2.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)]`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className={`truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] ${tones.text}`}>{label}</p>
-          <p className="mt-1.5 truncate text-[1.1rem] font-extrabold tracking-tight text-slate-950 sm:text-[1.18rem]" title={value}>{value}</p>
+          <p className="mt-1.5 overflow-hidden text-ellipsis whitespace-nowrap text-[1.05rem] font-extrabold tracking-tight text-slate-950 sm:text-[1.12rem]" title={value}>{value}</p>
           {helper && <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">{helper}</p>}
         </div>
-        <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ring-1 transition-colors ${tones.icon} group-hover:scale-105`}>
-          <Icon className="h-4 w-4" />
+        <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ring-1 transition-colors ${tones.icon} group-hover:scale-105`}>
+          <Icon className="h-3.5 w-3.5" />
         </div>
       </div>
     </article>
@@ -461,6 +472,7 @@ export function Bailleurs() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBailleur, setEditingBailleur] = useState<Bailleur | null>(null);
+  const [bailleurWizardStep, setBailleurWizardStep] = useState<BailleurWizardStep>('identity');
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -792,6 +804,7 @@ export function Bailleurs() {
       debut_contrat: bailleur.debut_contrat || '',
     });
     setError(null);
+    setBailleurWizardStep('identity');
     setIsModalOpen(true);
   }, []);
 
@@ -1246,6 +1259,7 @@ export function Bailleurs() {
     setIsModalOpen(false);
     setEditingBailleur(null);
     setError(null);
+    setBailleurWizardStep('identity');
     setFormData({
       nom: '',
       prenom: '',
@@ -1547,7 +1561,7 @@ export function Bailleurs() {
       )}
 
       <div className="flex min-h-full">
-        <div className={`flex-1 min-w-0 transition-all duration-300 ${detailPanelOpen ? 'hidden xl:block xl:pr-[34rem]' : ''}`}>
+        <div className={`flex-1 min-w-0 transition-all duration-300 ${detailPanelOpen ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
           <section className="min-w-0 space-y-6">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -1568,7 +1582,7 @@ export function Bailleurs() {
                 Exporter CSV
               </button>
               <button
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => { setBailleurWizardStep('identity'); setIsModalOpen(true); }}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#b96b16] to-[#8a4f12] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-900/15 transition hover:-translate-y-0.5 hover:shadow-amber-900/25"
               >
                 <Plus className="h-5 w-5" />
@@ -1652,7 +1666,7 @@ export function Bailleurs() {
                 title={searchTerm || activeFilter !== 'all' ? 'Aucun bailleur trouvé' : 'Aucun bailleur enregistré'}
                 description={searchTerm || activeFilter !== 'all' ? 'Essayez une autre recherche ou retirez les filtres actifs.' : 'Ajoutez votre premier bailleur pour structurer votre portefeuille locatif.'}
                 actionLabel={!searchTerm && activeFilter === 'all' ? 'Créer mon premier bailleur' : (activeFilter !== 'all' ? 'Réinitialiser les filtres' : undefined)}
-                onAction={!searchTerm && activeFilter === 'all' ? () => setIsModalOpen(true) : (activeFilter !== 'all' ? () => setActiveFilter('all') : undefined)}
+                onAction={!searchTerm && activeFilter === 'all' ? () => { setBailleurWizardStep('identity'); setIsModalOpen(true); } : (activeFilter !== 'all' ? () => setActiveFilter('all') : undefined)}
               />
             </div>
           ) : (
@@ -1712,26 +1726,21 @@ export function Bailleurs() {
                 {filteredBailleurs.map((bailleur) => {
                   const summary = summariesByBailleur[bailleur.id] ?? emptySummary();
                   return (
-                    <button
+                    <PremiumMobileCard
                       key={bailleur.id}
-                      type="button"
                       onClick={() => { setSelectedBailleurId(bailleur.id); setDetailOpen(true); }}
-                      className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3.5 text-left shadow-sm transition active:scale-[0.99]"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl text-sm font-black shadow-inner ring-1 ${getAvatarTone(bailleur)}`}>{getInitials(bailleur)}</div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-black text-slate-950">{formatPersonName(bailleur, '')}</p>
-                          <p className="mt-1 text-sm font-semibold text-slate-500">{formatSenegalPhone(bailleur.telephone)}</p>
-                        </div>
-                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-black uppercase text-emerald-800">{getStatusLabel(bailleur)}</span>
-                      </div>
-                      <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                        <div className="rounded-xl bg-slate-50 px-2 py-2"><p className="text-xs text-slate-500">Biens</p><p className="font-black">{summary.immeubles.length}</p></div>
-                        <div className="rounded-xl bg-slate-50 px-2 py-2"><p className="text-xs text-slate-500">Reliquat</p><p className="font-black text-red-600">{formatCurrency(summary.reliquats)}</p></div>
-                        <div className="rounded-xl bg-slate-50 px-2 py-2"><p className="text-xs text-slate-500">Net</p><p className="font-black text-emerald-800">{formatCurrency(summary.net)}</p></div>
-                      </div>
-                    </button>
+                      title={formatPersonName(bailleur, '')}
+                      subtitle={formatSenegalPhone(bailleur.telephone)}
+                      initials={getInitials(bailleur)}
+                      status={getStatusLabel(bailleur)}
+                      statusTone={bailleur.actif ? 'emerald' : 'slate'}
+                      amount={summary.net}
+                      amountLabel="Net"
+                      meta={[
+                        { label: 'Biens', value: summary.immeubles.length },
+                        { label: 'Reliquat', value: <MoneyText value={summary.reliquats} compact />, tone: summary.reliquats > 0 ? 'red' : 'slate' },
+                      ]}
+                    />
                   );
                 })}
               </div>
@@ -1742,7 +1751,7 @@ export function Bailleurs() {
         </div>
 
       {detailPanelOpen && (
-        <aside className="fixed inset-y-0 right-0 z-50 flex w-full flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:w-[34rem] xl:border-l xl:border-emerald-950/10">
+        <aside className="fixed inset-y-0 right-0 z-50 flex w-full flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:w-[31.5rem] xl:border-l xl:border-emerald-950/10">
           <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={() => setDetailOpen(false)} aria-hidden="true" />
             <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
               {!selectedBailleur ? (
@@ -1850,7 +1859,24 @@ export function Bailleurs() {
         <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
           {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
 
-          <div className="space-y-4">
+          <ProductWizard
+            steps={BAILLEUR_WIZARD_STEPS}
+            activeStep={bailleurWizardStep}
+            onStepClick={(step) => setBailleurWizardStep(step)}
+            footer={
+              <WizardFooter
+                submitting={isSubmitting}
+                currentStep={bailleurWizardStep}
+                firstStep="identity"
+                finalStep="summary"
+                onCancel={closeModal}
+                onPrevious={() => setBailleurWizardStep(bailleurWizardStep === 'summary' ? 'admin' : 'identity')}
+                onNext={() => setBailleurWizardStep(bailleurWizardStep === 'identity' ? 'admin' : 'summary')}
+                submitLabel={editingBailleur ? 'Mettre à jour' : 'Créer le bailleur'}
+              />
+            }
+          >
+          <div className={bailleurWizardStep === 'identity' ? 'space-y-4' : 'hidden'}>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">
               Informations principales
             </h3>
@@ -1865,7 +1891,7 @@ export function Bailleurs() {
             </div>
           </div>
 
-          <div className="space-y-4 border-t border-slate-200 pt-4">
+          <div className={bailleurWizardStep === 'admin' ? 'space-y-4' : 'hidden'}>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">
               Informations complémentaires
             </h3>
@@ -1890,7 +1916,19 @@ export function Bailleurs() {
             </div>
           </div>
 
-          <ModalActions submitting={isSubmitting} submitLabel={editingBailleur ? 'Mettre à jour' : 'Créer'} onCancel={closeModal} />
+          {bailleurWizardStep === 'summary' && (
+            <div className="space-y-4">
+              <WizardIntro title="Validation finale" description="Vérifiez la fiche propriétaire avant enregistrement." />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <MiniMetric label="Bailleur" value={`${formData.prenom || '-'} ${formData.nom || ''}`.trim()} tone="emerald" />
+                <MiniMetric label="Téléphone" value={formData.telephone || 'Non renseigné'} />
+                <MiniMetric label="Commission" value={`${formData.commission || 0}%`} tone="amber" />
+                <MiniMetric label="Début mandat" value={formData.debut_contrat || 'Non renseigné'} />
+                <MiniMetric label="Adresse" value={formData.adresse || 'Non renseignée'} className="sm:col-span-2" />
+              </div>
+            </div>
+          )}
+          </ProductWizard>
         </form>
       </Modal>
 
@@ -2089,43 +2127,55 @@ function TextField({
   );
 }
 
-function ModalActions({
-  submitting,
-  submitLabel,
-  onCancel,
-  onSubmit,
-}: {
-  submitting: boolean;
-  submitLabel: string;
-  onCancel: () => void;
-  onSubmit?: () => void;
-}) {
+function WizardIntro({ title, description }: { title: string; description: string }) {
   return (
-    <div className="mt-8 flex flex-col-reverse justify-end gap-3 sm:flex-row">
-      <button
-        type="button"
-        onClick={onCancel}
-        disabled={submitting}
-        className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-      >
-        Annuler
-      </button>
-      <button
-        type={onSubmit ? 'button' : 'submit'}
-        onClick={onSubmit}
-        disabled={submitting}
-        className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-700 disabled:opacity-50"
-      >
-        {submitting ? (
-          <>
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            Traitement...
-          </>
-        ) : (
-          submitLabel
-        )}
-      </button>
+    <div className="rounded-2xl border border-emerald-950/10 bg-gradient-to-br from-[#fffaf1] to-white p-4 shadow-sm">
+      <p className="text-sm font-black text-slate-950">{title}</p>
+      <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">{description}</p>
     </div>
   );
 }
 
+function WizardFooter<T extends string>({
+  submitting,
+  currentStep,
+  firstStep,
+  finalStep,
+  onCancel,
+  onPrevious,
+  onNext,
+  submitLabel,
+}: {
+  submitting: boolean;
+  currentStep: T;
+  firstStep: T;
+  finalStep: T;
+  onCancel: () => void;
+  onPrevious: () => void;
+  onNext: () => void;
+  submitLabel: string;
+}) {
+  const isFirst = currentStep === firstStep;
+  const isFinal = currentStep === finalStep;
+
+  return (
+    <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
+      <button
+        type="button"
+        onClick={isFirst ? onCancel : onPrevious}
+        disabled={submitting}
+        className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+      >
+        {isFirst ? 'Annuler' : 'Retour'}
+      </button>
+      <button
+        type={isFinal ? 'submit' : 'button'}
+        onClick={isFinal ? undefined : onNext}
+        disabled={submitting}
+        className="flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-800 disabled:opacity-50"
+      >
+        {submitting ? 'Traitement...' : isFinal ? submitLabel : 'Continuer'}
+      </button>
+    </div>
+  );
+}

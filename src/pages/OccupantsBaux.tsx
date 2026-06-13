@@ -45,6 +45,8 @@ import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { Modal } from '../components/ui/Modal';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { SmartCombobox, type SmartComboboxOption } from '../components/ui/SmartCombobox';
+import { MoneyText } from '../components/ui/MoneyText';
+import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 import {
@@ -294,7 +296,7 @@ function getOccupantsBauxColumnLabel(key: OccupantsBauxColumnKey): string {
 function getStatusKpiTone(tone: TabDef['tone']): string {
   return {
     emerald: 'bg-emerald-50 text-emerald-800',
-    blue: 'bg-sky-50 text-sky-700',
+    blue: 'bg-stone-50 text-slate-700',
     amber: 'bg-amber-50 text-amber-800',
     red: 'bg-red-50 text-red-700',
   }[tone];
@@ -948,7 +950,7 @@ export function OccupantsBaux() {
         message="Les données affichées viennent du dernier chargement réussi."
       />
 
-      <div className={`grid items-start gap-5 ${selectedRow ? 'xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
+      <div className={`grid items-start gap-5 ${selectedRow ? 'xl:grid-cols-[minmax(0,1fr)_31.5rem]' : 'grid-cols-1'}`}>
         <section className="min-w-0 space-y-6">
           {/* En-tête */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -986,7 +988,7 @@ export function OccupantsBaux() {
           </div>
 
           {/* KPI cards */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               return (
@@ -994,14 +996,14 @@ export function OccupantsBaux() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`group flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition-all duration-200 ${
+                  className={`group flex items-center justify-between gap-3 rounded-[1.05rem] border px-3 py-2.5 text-left shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 ${
                     activeTab === tab.id
-                      ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-300/40 shadow-emerald-100'
-                      : 'border-slate-200 bg-white hover:border-emerald-200 hover:bg-emerald-50/50'
+                      ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-300/35 shadow-emerald-100'
+                      : 'border-emerald-950/10 bg-gradient-to-br from-white to-stone-50/70 hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/50'
                   }`}
                 >
                   <span>
-                    <span className={`block text-2xl font-black ${activeTab === tab.id ? 'text-emerald-700' : 'text-slate-800'}`}>
+                    <span className={`block text-xl font-black ${activeTab === tab.id ? 'text-emerald-700' : 'text-slate-900'}`}>
                       {counts[tab.id] ?? 0}
                     </span>
                     <span className={`mt-1 block text-xs font-bold uppercase tracking-wide ${activeTab === tab.id ? 'text-emerald-600' : 'text-slate-500'}`}>
@@ -1158,7 +1160,7 @@ export function OccupantsBaux() {
 
                 <div className="divide-y divide-slate-100 md:hidden">
                   {paginated.map((row) => (
-                    <MobileCard
+                    <LocationMobileCard
                       key={row.contrat_id}
                       row={row}
                       onSelect={() => {
@@ -1348,7 +1350,7 @@ function DesktopRow({
       {/* Loyer */}
       {isVisible('loyer') && (
         <td className="px-5 py-3.5 text-right">
-          <span className="font-bold text-slate-900">{formatCurrency(row.loyer_mensuel)}</span>
+          <MoneyText value={row.loyer_mensuel} className="font-bold text-slate-900" />
           <span className="ml-1 text-xs text-slate-400">/mois</span>
         </td>
       )}
@@ -1379,29 +1381,24 @@ function DesktopRow({
   );
 }
 
-function MobileCard({ row, onSelect }: { row: OccupantBailRow; onSelect: () => void }) {
+function LocationMobileCard({ row, onSelect }: { row: OccupantBailRow; onSelect: () => void }) {
   return (
-    <button type="button" onClick={onSelect} className="block w-full px-4 py-4 text-left transition hover:bg-slate-50/50 active:bg-emerald-50/70">
-      <div className="space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="truncate font-bold text-slate-900">{fullName(row)}</p>
-            {row.telephone && (
-              <p className="mt-0.5 text-sm font-medium text-emerald-700">{formatSenegalPhone(row.telephone)}</p>
-            )}
-          </div>
-          <StatutBadge statut={row.statut} />
-        </div>
-        
-        <div className="flex items-end justify-between gap-4">
-          <div className="flex items-center gap-1.5 text-sm text-slate-600">
-            <Building2 className="h-4 w-4 shrink-0 text-slate-400" />
-            <span className="truncate">{row.immeuble_nom ?? '—'} <ChevronRight className="inline h-3 w-3 text-slate-300" /> <span className="font-semibold text-slate-800">{row.unite_nom}</span></span>
-          </div>
-          <span className="whitespace-nowrap font-bold text-slate-900">{formatCurrency(row.loyer_mensuel)}</span>
-        </div>
-      </div>
-    </button>
+    <div className="px-3 py-2">
+      <PremiumMobileCard
+        title={fullName(row)}
+        subtitle={`${row.telephone ? formatSenegalPhone(row.telephone) : 'Téléphone non renseigné'} · ${row.immeuble_nom ?? 'Bien non renseigné'} / ${row.unite_nom}`}
+        initials={`${row.prenom?.[0] ?? ''}${row.nom?.[0] ?? ''}`.toUpperCase() || 'OB'}
+        status={STATUT_BADGE[row.statut]?.label ?? row.statut}
+        statusTone={row.statut === 'actif' ? 'emerald' : row.statut === 'expire' ? 'amber' : row.statut === 'resilie' ? 'red' : 'slate'}
+        amount={row.loyer_mensuel}
+        amountLabel="Loyer"
+        meta={[
+          { label: 'Bien', value: row.immeuble_nom ?? '-' },
+          { label: 'Unité', value: row.unite_nom ?? '-' },
+        ]}
+        onClick={onSelect}
+      />
+    </div>
   );
 }
 
@@ -1559,7 +1556,7 @@ function OccupantBailDrawer({
         </div>
 
         <div className="space-y-3.5 p-3.5 sm:p-4">
-          {activeTab === 'resume' && <DrawerResume row={row} />}
+          {activeTab === 'resume' && <DrawerResume row={row} details={details} />}
           {activeTab === 'paiements' && <DrawerPayments details={details} loading={detailsLoading} error={detailsError} />}
           {activeTab === 'documents' && (
             <DrawerDocuments
@@ -1578,15 +1575,26 @@ function OccupantBailDrawer({
   );
 }
 
-function DrawerResume({ row }: { row: OccupantBailRow }) {
+function DrawerResume({ row, details }: { row: OccupantBailRow; details: OccupantBailDetails | null }) {
+  const reliquatContrat = details?.payments.reduce((sum, payment) => sum + Math.max(0, Number(payment.reliquat ?? 0)), 0) ?? 0;
+  const latestPayment = details?.payments[0] ?? null;
+  const nextExpectedLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date());
   return (
     <>
       <div className="grid grid-cols-2 gap-2">
-        <MiniMetric label="Loyer mensuel" value={formatCurrency(row.loyer_mensuel)} />
+        <MiniMetric label="Loyer mensuel" value={<MoneyText value={row.loyer_mensuel} />} />
         <MiniMetric label="Statut" value={STATUT_BADGE[row.statut]?.label ?? row.statut} />
         <MiniMetric label="Début" value={formatDate(row.date_debut)} />
         <MiniMetric label="Fin" value={row.date_fin ? formatDate(row.date_fin) : 'Ouvert'} />
+        <MiniMetric label="Prochain paiement" value={nextExpectedLabel} tone="amber" />
+        <MiniMetric label="Reliquat contrat" value={<MoneyText value={reliquatContrat} />} tone={reliquatContrat > 0 ? 'red' : 'emerald'} />
       </div>
+
+      <InfoBlock title="Synthèse opérationnelle">
+        <InfoLine icon={Users} label="Propriétaire" value={ownerName(row)} />
+        <InfoLine icon={Wallet} label="Commission agence" value={row.commission !== null ? `${row.commission}%` : 'Non renseignée'} />
+        <InfoLine icon={Clock3} label="Dernier paiement" value={latestPayment ? `${formatDate(latestPayment.date_paiement)} · ${formatCurrency(latestPayment.montant_total)}` : 'Aucun paiement récent'} />
+      </InfoBlock>
 
       <InfoBlock title="Occupant">
         <InfoLine icon={Users} label="Nom" value={fullName(row)} />
@@ -2042,11 +2050,18 @@ function ModalActions({
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: string | number }) {
+function MiniMetric({ label, value, tone = 'slate' }: { label: string; value: ReactNode; tone?: 'emerald' | 'amber' | 'red' | 'slate' }) {
+  const toneClass = {
+    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-900',
+    amber: 'border-amber-200 bg-amber-50 text-amber-900',
+    red: 'border-red-200 bg-red-50 text-red-800',
+    slate: 'border-emerald-950/10 bg-white text-slate-950',
+  }[tone];
+
   return (
-    <div className="rounded-2xl border border-emerald-950/10 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
+    <div className={`rounded-2xl border p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)] ${toneClass}`}>
       <p className="text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p>
-      <p className="mt-1 break-words text-sm font-black text-slate-950">{value}</p>
+      <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-black text-current">{value}</p>
     </div>
   );
 }

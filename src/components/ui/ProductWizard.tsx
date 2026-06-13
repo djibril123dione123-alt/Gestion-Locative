@@ -1,0 +1,69 @@
+import { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
+
+export interface ProductWizardStep<T extends string> {
+  id: T;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface ProductWizardProps<T extends string> {
+  steps: Array<ProductWizardStep<T>>;
+  activeStep: T;
+  children: ReactNode;
+  footer: ReactNode;
+  onStepClick?: (step: T, index: number) => void;
+}
+
+export function ProductWizard<T extends string>({
+  steps,
+  activeStep,
+  children,
+  footer,
+  onStepClick,
+}: ProductWizardProps<T>) {
+  const currentIndex = Math.max(0, steps.findIndex((step) => step.id === activeStep));
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-emerald-950/10 bg-[#fffaf1]/80 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+        <div className="grid gap-2 sm:grid-cols-3">
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            const active = step.id === activeStep;
+            const done = index < currentIndex;
+            const clickable = onStepClick && index <= currentIndex;
+
+            return (
+              <button
+                key={step.id}
+                type="button"
+                disabled={!clickable}
+                onClick={() => clickable && onStepClick?.(step.id, index)}
+                className={`flex min-h-12 items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${
+                  active
+                    ? 'border-emerald-300 bg-white text-brand-950 shadow-sm ring-1 ring-emerald-100'
+                    : done
+                      ? 'border-emerald-100 bg-emerald-50 text-emerald-800'
+                      : 'border-transparent bg-white/55 text-slate-500'
+                } ${clickable ? 'hover:border-emerald-200 hover:bg-white' : 'cursor-default'}`}
+              >
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${active ? 'bg-brand-900 text-white' : done ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-400'}`}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[0.64rem] font-black uppercase tracking-[0.1em] opacity-65">Étape {index + 1}</span>
+                  <span className="block truncate text-sm font-black">{step.label}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="min-h-[18rem]">{children}</div>
+      <div className="sticky bottom-0 z-10 -mx-4 border-t border-emerald-950/10 bg-[#fffdf8]/95 px-4 py-3 shadow-[0_-14px_30px_rgba(15,23,42,0.06)] backdrop-blur sm:-mx-5 sm:px-5">
+        {footer}
+      </div>
+    </div>
+  );
+}

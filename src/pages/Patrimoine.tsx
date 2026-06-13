@@ -37,6 +37,9 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { MetricCard, MiniMetric } from '../components/ui/MetricCard';
+import { MoneyText } from '../components/ui/MoneyText';
+import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
+import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { useAuth } from '../contexts/AuthContext';
 import { usePlanLimits } from '../hooks/usePlanLimits';
@@ -55,6 +58,20 @@ type UnitFilter = 'all' | 'libre' | 'loue' | 'maintenance' | 'late' | 'without_c
 type DangerTarget = { type: 'bien'; id: string; name: string } | { type: 'unite'; id: string; name: string } | null;
 type PropertyColumnKey = 'bien' | 'type' | 'adresse' | 'bailleur' | 'unites' | 'occupation' | 'loyer' | 'reliquats' | 'statut';
 type UnitColumnKey = 'unite' | 'type' | 'bien' | 'locataire' | 'loyer' | 'statut' | 'reliquat' | 'bail';
+type PropertyWizardStep = 'main' | 'address' | 'summary';
+type UnitWizardStep = 'main' | 'rent' | 'summary';
+
+const PROPERTY_WIZARD_STEPS: ProductWizardStep<PropertyWizardStep>[] = [
+  { id: 'main', label: 'Bien', icon: Building2 },
+  { id: 'address', label: 'Adresse', icon: MapPin },
+  { id: 'summary', label: 'Validation', icon: ClipboardList },
+];
+
+const UNIT_WIZARD_STEPS: ProductWizardStep<UnitWizardStep>[] = [
+  { id: 'main', label: 'Unité', icon: DoorOpen },
+  { id: 'rent', label: 'Loyer', icon: Wallet },
+  { id: 'summary', label: 'Validation', icon: ClipboardList },
+];
 
 interface PatrimoineProps {
   initialTab?: PatrimoineTab;
@@ -239,23 +256,6 @@ function amount(value: unknown) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function formatCompactCurrency(value: number) {
-  const numeric = amount(value);
-  if (Math.abs(numeric) >= 1_000_000) {
-    return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(numeric / 1_000_000)} M F CFA`;
-  }
-  return formatCurrency(numeric);
-}
-
-function CurrencyValue({ value, compact = false }: { value: number; compact?: boolean }) {
-  const fullValue = formatCurrency(value);
-  return (
-    <span className="whitespace-nowrap tabular-nums" title={fullValue}>
-      {compact ? formatCompactCurrency(value) : fullValue}
-    </span>
-  );
-}
-
 function ownerName(owner?: BailleurRow | PropertyRow['bailleurs'] | null) {
   return formatPersonName(owner, 'Bailleur');
 }
@@ -367,6 +367,8 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   const [unitModalOpen, setUnitModalOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<PropertyRow | null>(null);
   const [editingUnit, setEditingUnit] = useState<UnitRow | null>(null);
+  const [propertyWizardStep, setPropertyWizardStep] = useState<PropertyWizardStep>('main');
+  const [unitWizardStep, setUnitWizardStep] = useState<UnitWizardStep>('main');
   const [propertyForm, setPropertyForm] = useState<PropertyFormState>(createPropertyForm);
   const [unitForm, setUnitForm] = useState<UnitFormState>(() => createUnitForm());
   const [dangerTarget, setDangerTarget] = useState<DangerTarget>(null);
@@ -665,6 +667,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
 
   const openPropertyModal = useCallback(
     async (property?: PropertyRow | null) => {
+      setPropertyWizardStep('main');
       if (property) {
         setEditingProperty(property);
         setPropertyForm({
@@ -697,6 +700,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
 
   const openUnitModal = useCallback(
     (unit?: UnitRow | null, propertyId = '') => {
+      setUnitWizardStep('main');
       if (unit) {
         setEditingUnit(unit);
         setUnitForm({
@@ -738,12 +742,14 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   const closePropertyModal = () => {
     setPropertyModalOpen(false);
     setEditingProperty(null);
+    setPropertyWizardStep('main');
     setPropertyForm(createPropertyForm());
   };
 
   const closeUnitModal = () => {
     setUnitModalOpen(false);
     setEditingUnit(null);
+    setUnitWizardStep('main');
     setUnitForm(createUnitForm());
   };
 
@@ -913,7 +919,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           message="Le patrimoine affiche le dernier état connu. La création et les modifications restent bloquées hors ligne pour protéger les rattachements."
         />
 
-        <div className={`grid items-start gap-5 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
+        <div className={`grid items-start gap-5 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_31.5rem]' : 'grid-cols-1'}`}>
           <div className="min-w-0 space-y-4">
             <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -944,13 +950,13 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           </div>
         </header>
 
-        <section className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-6">
+        <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6">
           <MetricCard label={isIndividualOwner ? 'Biens' : 'Biens'} value={pageStats.properties} icon={Building2} tone="emerald" />
           <MetricCard label="Unités" value={pageStats.units} icon={DoorOpen} tone="blue" />
           <MetricCard label="Occupées" value={pageStats.occupied} icon={Home} tone="emerald" />
           <MetricCard label="Occupation" value={`${pageStats.occupancyRate}%`} icon={Percent} tone="amber" />
-          <MetricCard label="Loyers attendus" value={<CurrencyValue value={pageStats.expectedRent} compact />} icon={Wallet} tone="green" wide />
-          <MetricCard label="Reliquats" value={<CurrencyValue value={pageStats.reliquats} compact />} icon={AlertCircle} tone="red" wide />
+          <MetricCard label="Loyers attendus" value={<MoneyText value={pageStats.expectedRent} compact />} icon={Wallet} tone="green" />
+          <MetricCard label="Reliquats" value={<MoneyText value={pageStats.reliquats} compact />} icon={AlertCircle} tone="red" />
         </section>
 
         <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/95 p-3 shadow-[0_14px_40px_rgba(15,23,42,0.055)] ring-1 ring-white/80">
@@ -1104,6 +1110,8 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
         form={propertyForm}
         owners={data.bailleurs}
         saving={saving}
+        wizardStep={propertyWizardStep}
+        onStepChange={setPropertyWizardStep}
         onClose={closePropertyModal}
         onSubmit={handlePropertySubmit}
         onChange={setPropertyForm}
@@ -1115,6 +1123,8 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
         form={unitForm}
         properties={data.properties}
         saving={saving}
+        wizardStep={unitWizardStep}
+        onStepChange={setUnitWizardStep}
         onClose={closeUnitModal}
         onSubmit={handleUnitSubmit}
         onChange={setUnitForm}
@@ -1306,7 +1316,7 @@ function PropertiesTable({
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
                     <MiniMetric label="Unités" value={summary?.units.length ?? 0} />
                     <MiniMetric label="Occupation" value={`${summary?.occupancyRate ?? 0}%`} />
-                    <MiniMetric label="Loyer" value={formatCurrency(summary?.expectedRent ?? 0)} />
+                    <MiniMetric label="Loyer" value={<MoneyText value={summary?.expectedRent ?? 0} compact />} />
                   </div>
                 </div>
               </div>
@@ -1429,8 +1439,8 @@ function UnitsTable({
                   </div>
                   <p className="mt-1 text-xs font-medium text-slate-500">{property?.nom ?? unit.immeubles?.nom ?? 'Bien parent à choisir'}</p>
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                    <MiniMetric label="Loyer" value={formatCurrency(unit.loyer_base ?? 0)} />
-                    <MiniMetric label="Reliquat" value={formatCurrency(summary?.reliquat ?? 0)} />
+                    <MiniMetric label="Loyer" value={<MoneyText value={unit.loyer_base ?? 0} compact />} />
+                    <MiniMetric label="Reliquat" value={<MoneyText value={summary?.reliquat ?? 0} compact />} />
                     <MiniMetric label="Bail" value={summary?.contract ? 'Oui' : 'Non'} />
                   </div>
                 </div>
@@ -1779,6 +1789,8 @@ function PropertyModal({
   form,
   owners,
   saving,
+  wizardStep,
+  onStepChange,
   onClose,
   onSubmit,
   onChange,
@@ -1789,6 +1801,8 @@ function PropertyModal({
   form: PropertyFormState;
   owners: BailleurRow[];
   saving: boolean;
+  wizardStep: PropertyWizardStep;
+  onStepChange: (step: PropertyWizardStep) => void;
   onClose: () => void;
   onSubmit: (event: React.FormEvent) => void;
   onChange: React.Dispatch<React.SetStateAction<PropertyFormState>>;
@@ -1796,7 +1810,24 @@ function PropertyModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editingProperty ? 'Modifier le bien' : isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'} description="Renseignez les informations essentielles du bien pour commencer le suivi de votre patrimoine locatif.">
       <form onSubmit={onSubmit} className="space-y-3.5">
-        <div className="space-y-4">
+        <ProductWizard
+          steps={PROPERTY_WIZARD_STEPS}
+          activeStep={wizardStep}
+          onStepClick={(step) => onStepChange(step)}
+          footer={
+            <WizardFooter
+              saving={saving}
+              currentStep={wizardStep}
+              firstStep="main"
+              finalStep="summary"
+              onCancel={onClose}
+              onPrevious={() => onStepChange(wizardStep === 'summary' ? 'address' : 'main')}
+              onNext={() => onStepChange(wizardStep === 'main' ? 'address' : 'summary')}
+              submitLabel={editingProperty ? 'Mettre à jour' : 'Créer le bien'}
+            />
+          }
+        >
+        <div className={wizardStep === 'main' ? 'space-y-4' : 'hidden'}>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Informations principales</h3>
           <Field label="Nom du bien *">
             <input required value={form.nom} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Residence Keur Amitie" />
@@ -1836,7 +1867,7 @@ function PropertyModal({
             Votre profil propriétaire sera rattaché automatiquement à ce bien.
           </div>
         )}
-        <div className="space-y-4 border-t border-slate-200 pt-4">
+        <div className={wizardStep === 'address' ? 'space-y-4' : 'hidden'}>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Adresse et description</h3>
           <Field label="Adresse *">
             <input required value={form.adresse} onChange={(event) => onChange((current) => ({ ...current, adresse: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Rue, avenue, adresse principale" />
@@ -1853,7 +1884,24 @@ function PropertyModal({
             <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Description du bien..." />
           </Field>
         </div>
-        <ModalActions onClose={onClose} saving={saving} submitLabel={editingProperty ? 'Mettre à jour' : 'Créer le bien'} />
+        {wizardStep === 'summary' && (
+          <div className="space-y-4">
+            <WizardIntro title="Validation finale" description="Vérifiez le rattachement propriétaire et l’adresse avant enregistrement." />
+            <PremiumMobileCard
+              title={form.nom || 'Bien sans nom'}
+              subtitle={[form.adresse, form.quartier, form.ville].filter(Boolean).join(', ') || 'Adresse non renseignée'}
+              icon={Building2}
+              status={isIndividualOwner ? 'Profil propriétaire' : 'Bailleur rattaché'}
+              amount={0}
+              amountLabel="Loyer à venir"
+              meta={[
+                { label: 'Ville', value: form.ville || '-' },
+                { label: 'Type', value: inferTypeFromName(form.nom, PROPERTY_TYPES) || 'Autre' },
+              ]}
+            />
+          </div>
+        )}
+        </ProductWizard>
       </form>
     </Modal>
   );
@@ -1865,6 +1913,8 @@ function UnitModal({
   form,
   properties,
   saving,
+  wizardStep,
+  onStepChange,
   onClose,
   onSubmit,
   onChange,
@@ -1874,6 +1924,8 @@ function UnitModal({
   form: UnitFormState;
   properties: PropertyRow[];
   saving: boolean;
+  wizardStep: UnitWizardStep;
+  onStepChange: (step: UnitWizardStep) => void;
   onClose: () => void;
   onSubmit: (event: React.FormEvent) => void;
   onChange: React.Dispatch<React.SetStateAction<UnitFormState>>;
@@ -1881,7 +1933,24 @@ function UnitModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editingUnit ? "Modifier l'unité" : 'Nouvelle unité locative'} description="Définissez les détails de cet espace pour pouvoir y associer un contrat de location.">
       <form onSubmit={onSubmit} className="space-y-3.5">
-        <div className="space-y-4">
+        <ProductWizard
+          steps={UNIT_WIZARD_STEPS}
+          activeStep={wizardStep}
+          onStepClick={(step) => onStepChange(step)}
+          footer={
+            <WizardFooter
+              saving={saving}
+              currentStep={wizardStep}
+              firstStep="main"
+              finalStep="summary"
+              onCancel={onClose}
+              onPrevious={() => onStepChange(wizardStep === 'summary' ? 'rent' : 'main')}
+              onNext={() => onStepChange(wizardStep === 'main' ? 'rent' : 'summary')}
+              submitLabel={editingUnit ? 'Mettre à jour' : "Créer l'unité"}
+            />
+          }
+        >
+        <div className={wizardStep === 'main' ? 'space-y-4' : 'hidden'}>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Caractéristiques de l'unité</h3>
           <Field label="Bien parent *">
             <SmartCombobox
@@ -1902,15 +1971,23 @@ function UnitModal({
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Type / nom de l'unité *">
-              <select required value={form.nom} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
-                <option value="">Sélectionner</option>
-              {UNIT_TYPES.map((type) => <option key={type}>{type}</option>)}
-            </select>
+              <SmartCombobox
+                value={form.nom}
+                options={[
+                  { value: '', label: 'Sélectionner' },
+                  ...UNIT_TYPES.map((type) => ({ value: type, label: type })),
+                ]}
+                onChange={(next) => onChange((current) => ({ ...current, nom: next }))}
+                placeholder="Type ou nom"
+                searchPlaceholder="Appartement, studio, boutique..."
+              />
           </Field>
           <Field label="Numéro / code">
             <input value={form.numero} onChange={(event) => onChange((current) => ({ ...current, numero: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="A1, Boutique 3..." />
           </Field>
         </div>
+        </div>
+        <div className={wizardStep === 'rent' ? 'space-y-4' : 'hidden'}>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Étage">
             <input value={form.etage} onChange={(event) => onChange((current) => ({ ...current, etage: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="RDC, 1er..." />
@@ -1920,15 +1997,36 @@ function UnitModal({
           </Field>
         </div>
         <Field label="Statut">
-          <select value={form.statut} onChange={(event) => onChange((current) => ({ ...current, statut: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
-            {UNIT_STATUSES.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
-          </select>
+          <SmartCombobox
+            value={form.statut}
+            options={UNIT_STATUSES.map((status) => ({ value: status.value, label: status.label }))}
+            onChange={(next) => onChange((current) => ({ ...current, statut: next }))}
+            placeholder="Statut de l'unité"
+            searchPlaceholder="Libre, louée, maintenance..."
+          />
         </Field>
         <Field label="Description optionnelle">
           <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Détails de l'unité..." />
         </Field>
         </div>
-        <ModalActions onClose={onClose} saving={saving} submitLabel={editingUnit ? 'Mettre à jour' : "Créer l'unité"} />
+        {wizardStep === 'summary' && (
+          <div className="space-y-4">
+            <WizardIntro title="Validation finale" description="Vérifiez l’unité avant de l’ouvrir à une future location." />
+            <PremiumMobileCard
+              title={form.nom || 'Unité sans nom'}
+              subtitle={properties.find((property) => property.id === form.immeuble_id)?.nom ?? 'Bien parent non sélectionné'}
+              icon={DoorOpen}
+              status={UNIT_STATUSES.find((status) => status.value === form.statut)?.label ?? form.statut}
+              amount={Number(form.loyer_base || 0)}
+              amountLabel="Loyer mensuel"
+              meta={[
+                { label: 'Code', value: form.numero || '-' },
+                { label: 'Étage', value: form.etage || '-' },
+              ]}
+            />
+          </div>
+        )}
+        </ProductWizard>
       </form>
     </Modal>
   );
@@ -1948,21 +2046,44 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function ModalActions({ onClose, saving, submitLabel }: { onClose: () => void; saving: boolean; submitLabel: string }) {
+function WizardIntro({ title, description }: { title: string; description: string }) {
   return (
-    <div className="mt-8 flex flex-col-reverse justify-end gap-3 sm:flex-row">
-      <button type="button" onClick={onClose} disabled={saving} className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
-        Annuler
+    <div className="rounded-2xl border border-emerald-950/10 bg-gradient-to-br from-[#fffaf1] to-white p-4 shadow-sm">
+      <p className="text-sm font-black text-slate-950">{title}</p>
+      <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">{description}</p>
+    </div>
+  );
+}
+
+function WizardFooter<T extends string>({
+  saving,
+  currentStep,
+  firstStep,
+  finalStep,
+  onCancel,
+  onPrevious,
+  onNext,
+  submitLabel,
+}: {
+  saving: boolean;
+  currentStep: T;
+  firstStep: T;
+  finalStep: T;
+  onCancel: () => void;
+  onPrevious: () => void;
+  onNext: () => void;
+  submitLabel: string;
+}) {
+  const isFirst = currentStep === firstStep;
+  const isFinal = currentStep === finalStep;
+
+  return (
+    <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
+      <button type="button" onClick={isFirst ? onCancel : onPrevious} disabled={saving} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
+        {isFirst ? 'Annuler' : 'Retour'}
       </button>
-      <button type="submit" disabled={saving} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-700 disabled:opacity-50">
-        {saving ? (
-          <>
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            Enregistrement...
-          </>
-        ) : (
-          submitLabel
-        )}
+      <button type={isFinal ? 'submit' : 'button'} onClick={isFinal ? undefined : onNext} disabled={saving} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-800 disabled:opacity-50">
+        {saving ? 'Enregistrement...' : isFinal ? submitLabel : 'Continuer'}
       </button>
     </div>
   );

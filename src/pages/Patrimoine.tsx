@@ -25,6 +25,8 @@ import {
   Warehouse,
   X,
   type LucideIcon,
+  Activity,
+  CircleUser,
 } from 'lucide-react';
 
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -1247,16 +1249,16 @@ function PropertiesTable({
         <table className={`${compact ? 'w-full table-fixed' : 'min-w-[920px]'} divide-y divide-slate-100`}>
           <thead className="bg-[#f8f3e8]/70 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">
             <tr>
-              {showColumn('bien') && <th className={`${compact ? 'w-[32%] px-3' : 'px-4'} py-3`}>Bien</th>}
+              {showColumn('bien') && <th className={`${compact ? 'w-[32%] px-3' : 'px-4'} py-3`}><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> Bien</span></th>}
               {showColumn('type') && <th className="px-4 py-3">Type</th>}
               {showColumn('adresse') && <th className="px-4 py-3">Adresse</th>}
-              {!isIndividualOwner && showColumn('bailleur') && <th className={`${compact ? 'w-[19%] px-3' : 'px-4'} py-3`}>Bailleur</th>}
-              {showColumn('unites') && <th className={`${compact ? 'w-[10%] px-2' : 'px-4'} py-3 text-center`}>Unités</th>}
-              {showColumn('occupation') && <th className={`${compact ? 'w-[18%] px-3' : 'px-4'} py-3`}>Occupation</th>}
+              {!isIndividualOwner && showColumn('bailleur') && <th className={`${compact ? 'w-[19%] px-3' : 'px-4'} py-3`}><span className="flex items-center gap-1.5"><CircleUser className="h-3.5 w-3.5" /> Bailleur</span></th>}
+              {showColumn('unites') && <th className={`${compact ? 'w-[10%] px-2' : 'px-4'} py-3 text-center`}><span className="flex items-center gap-1.5"><DoorOpen className="h-3.5 w-3.5" /> Unités</span></th>}
+              {showColumn('occupation') && <th className={`${compact ? 'w-[18%] px-3' : 'px-4'} py-3`}><span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Occupation</span></th>}
               {showColumn('loyer') && <th className="px-4 py-3 text-right">Loyer attendu</th>}
-              {showColumn('reliquats') && <th className={`${compact ? 'w-[15%] px-3' : 'px-4'} py-3 text-right`}>Reliquats</th>}
+              {showColumn('reliquats') && <th className={`${compact ? 'w-[15%] px-3' : 'px-4'} py-3 text-right`}><span className="flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5" /> Reliquats</span></th>}
               {showColumn('statut') && <th className="px-4 py-3">Statut</th>}
-              <th className={`${compact ? 'w-12 px-2' : 'px-4'} py-3 text-right`}>Actions</th>
+              <th className={`${compact ? 'w-12 px-2' : 'px-4'} py-3 text-right`}><span className="flex items-center gap-1.5"><MoreHorizontal className="h-3.5 w-3.5" /> Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1385,7 +1387,7 @@ function UnitsTable({
               {showColumn('statut') && <th className={`${compact ? 'w-[14%] px-3' : 'px-4'} py-3`}>Statut</th>}
               {showColumn('reliquat') && <th className={`${compact ? 'w-[14%] px-3' : 'px-4'} py-3 text-right`}>Reliquat</th>}
               {showColumn('bail') && <th className="px-4 py-3">Bail actif</th>}
-              <th className={`${compact ? 'w-12 px-2' : 'px-4'} py-3 text-right`}>Actions</th>
+              <th className={`${compact ? 'w-12 px-2' : 'px-4'} py-3 text-right`}><span className="flex items-center gap-1.5"><MoreHorizontal className="h-3.5 w-3.5" /> Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1787,7 +1789,7 @@ function PropertyModal({
   onChange: React.Dispatch<React.SetStateAction<PropertyFormState>>;
 }) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingProperty ? 'Modifier le bien' : isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'}>
+    <Modal isOpen={isOpen} onClose={onClose} title={editingProperty ? 'Modifier le bien' : isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'} description="Renseignez les informations essentielles du bien pour commencer le suivi de votre patrimoine locatif.">
       <form onSubmit={onSubmit} className="space-y-3.5">
         <div className="space-y-4">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Informations principales</h3>
@@ -1872,7 +1874,7 @@ function UnitModal({
   onChange: React.Dispatch<React.SetStateAction<UnitFormState>>;
 }) {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingUnit ? "Modifier l'unité" : 'Nouvelle unité locative'}>
+    <Modal isOpen={isOpen} onClose={onClose} title={editingUnit ? "Modifier l'unité" : 'Nouvelle unité locative'} description="Définissez les détails de cet espace pour pouvoir y associer un contrat de location.">
       <form onSubmit={onSubmit} className="space-y-3.5">
         <div className="space-y-4">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Caractéristiques de l'unité</h3>

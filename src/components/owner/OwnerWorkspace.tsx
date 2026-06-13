@@ -1232,7 +1232,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <MiniStat label="Biens" value={data.properties.length} tone="blue" />
                 <MiniStat label="Unités" value={summary.totalUnits} tone="orange" />
-                <MiniStat label="Locations actives" value={summary.activeContracts} tone="blue" />
+                <MiniStat label="Locations en cours" value={summary.activeContracts} tone="blue" />
                 <MiniStat label="Reliquats" value={formatCurrency(summary.reliquats)} tone="amber" />
               </div>
             </section>

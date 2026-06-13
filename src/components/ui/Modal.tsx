@@ -6,10 +6,11 @@ interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  description?: string;
   children: React.ReactNode;
 }
 
-export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, description, children }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -42,6 +43,9 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
                 Samay Këur
               </p>
               <h2 className="mt-1 truncate pr-4 text-base font-black text-slate-950 sm:text-xl">{title}</h2>
+              {description && (
+                <p className="mt-1 text-xs text-slate-500 max-w-sm leading-tight">{description}</p>
+              )}
             </div>
           </div>
           <button

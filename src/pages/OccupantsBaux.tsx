@@ -1016,7 +1016,7 @@ export function OccupantsBaux() {
                     placeholder="Rechercher occupant, téléphone, bien, référence..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-4 text-sm font-medium transition focus:border-transparent focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                    className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1082,7 +1082,7 @@ export function OccupantsBaux() {
               <>
                 <div className="hidden overflow-x-auto md:block">
                   <table className="w-full text-sm">
-                    <thead className="sticky top-0 z-10 bg-[#f8f3e8]/75 shadow-[0_1px_2px_rgba(0,0,0,0.05)] backdrop-blur-md">
+                    <thead className="sticky top-0 z-10 bg-[#f8f3e8]/70 shadow-[0_1px_2px_rgba(0,0,0,0.05)] backdrop-blur-md text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">
                       <tr className="border-b border-slate-100 bg-[#f8f3e8]/70">
                         {occupantColumns.isVisible('occupant') && (
                           <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400">
@@ -1285,7 +1285,7 @@ function DesktopRow({
   return (
     <tr
       onClick={onSelect}
-      className={`group cursor-pointer transition-colors ${selected ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200' : 'hover:bg-slate-50/70'}`}
+      className={`group cursor-pointer border-b border-slate-100 transition-colors ${selected ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200' : 'hover:bg-emerald-50/45'}`}
     >
       {/* Occupant */}
       {isVisible('occupant') && (

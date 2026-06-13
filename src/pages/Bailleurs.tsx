@@ -27,6 +27,9 @@ import {
   FolderOpen,
   CreditCard,
   MoreHorizontal,
+  CircleUser,
+  DoorOpen,
+  Percent,
 } from 'lucide-react';
 import {
   addFooter,
@@ -306,26 +309,25 @@ function KpiTile({
   value: string;
   helper: string;
   tone: 'emerald' | 'gold' | 'red' | 'blue';
-}) {
-  const toneClass = {
-    emerald: 'bg-emerald-50 text-emerald-800',
-    gold: 'bg-amber-50 text-amber-800',
-    red: 'bg-red-50 text-red-700',
-    blue: 'bg-sky-50 text-sky-700',
+}) {  const tones = {
+    emerald: { gradient: 'from-white to-emerald-50/65', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100' },
+    blue: { gradient: 'from-white to-sky-50/65', text: 'text-sky-800', icon: 'bg-sky-50 text-sky-800 ring-sky-100' },
+    gold: { gradient: 'from-white to-amber-50/65', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100' },
+    red: { gradient: 'from-white to-red-50/65', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100' },
   }[tone];
   return (
-    <div className="group rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/95 p-3 shadow-[0_14px_32px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.07)] sm:p-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
-          <p className="mt-1 text-base font-extrabold text-slate-950 tabular-nums sm:mt-1.5 sm:text-lg">{value}</p>
-          <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">{helper}</p>
+    <article className={`group min-w-0 rounded-2xl border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-3 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] transition-all duration-200`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className={`truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] ${tones.text}`}>{label}</p>
+          <p className="mt-1.5 truncate text-[1.1rem] font-extrabold tracking-tight text-slate-950 sm:text-[1.18rem]" title={value}>{value}</p>
+          {helper && <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">{helper}</p>}
         </div>
-        <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${toneClass} ring-1 ring-white/80 transition group-hover:scale-105 sm:h-10 sm:w-10`}>
+        <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ring-1 transition-colors ${tones.icon} group-hover:scale-105`}>
           <Icon className="h-4 w-4" />
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -1558,34 +1560,6 @@ export function Bailleurs() {
 
   return (
     <div className="sk-page-shell max-w-none animate-fadeIn bg-[radial-gradient(circle_at_top_left,rgba(255,247,230,0.95),transparent_28rem),linear-gradient(180deg,#fffaf1,#f8f4ea_48%,#f7faf8)]">
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Portefeuille propriétaire</p>
-          <h1 className="mt-1.5 font-serif text-3xl font-black tracking-tight text-brand-950 lg:text-4xl">Bailleurs</h1>
-          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
-            Gérez vos propriétaires, leurs revenus locatifs et tous les documents associés.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <button
-            type="button"
-            onClick={handleExportCsv}
-            disabled={filteredBailleurs.length === 0}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3.5 py-2.5 text-sm font-bold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Download className="h-4 w-4" />
-            Exporter CSV
-          </button>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#b96b16] to-[#8a4f12] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-900/15 transition hover:-translate-y-0.5 hover:shadow-amber-900/25"
-          >
-            <Plus className="h-5 w-5" />
-            Nouveau bailleur
-          </button>
-        </div>
-      </div>
-
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
       {cacheTimestamp && (
         <OfflineDataNotice
@@ -1595,8 +1569,36 @@ export function Bailleurs() {
         />
       )}
 
-      <div className={`grid items-start gap-5 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_34rem]' : 'grid-cols-1'}`}>
+      <div className={`relative min-h-full transition-all duration-300 ${detailPanelOpen ? 'xl:mr-[34rem]' : ''}`}>
         <section className="min-w-0 space-y-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Portefeuille propriétaire</p>
+              <h1 className="mt-1.5 font-serif text-3xl font-black tracking-tight text-brand-950 lg:text-4xl">Bailleurs</h1>
+              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
+                Gérez vos propriétaires, leurs revenus locatifs et tous les documents associés.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                disabled={filteredBailleurs.length === 0}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3.5 py-2.5 text-sm font-bold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" />
+                Exporter CSV
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#b96b16] to-[#8a4f12] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-900/15 transition hover:-translate-y-0.5 hover:shadow-amber-900/25"
+              >
+                <Plus className="h-5 w-5" />
+                Nouveau bailleur
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
             <KpiTile icon={Users} label="Bailleurs actifs" value={globalKpis.activeBailleurs.toString()} helper={`${bailleurs.length} propriétaire${bailleurs.length > 1 ? 's' : ''} dans la base`} tone="emerald" />
             <KpiTile icon={AlertCircle} label="Reliquats totaux" value={formatCurrency(globalKpis.reliquats)} helper="À suivre sur les paiements partiels" tone="red" />
@@ -1614,7 +1616,7 @@ export function Bailleurs() {
                   placeholder="Rechercher par nom, téléphone, email..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="sk-input pl-10 pr-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]"
+                  className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                 />
               </div>
               <div className="flex gap-2">
@@ -1679,16 +1681,16 @@ export function Bailleurs() {
             <>
               <div className={`hidden lg:block ${detailPanelOpen ? 'overflow-hidden' : 'overflow-x-auto'}`}>
                 <table className={`w-full border-collapse ${detailPanelOpen ? 'min-w-[620px] table-fixed' : 'min-w-[840px]'}`}>
-                  <thead className="bg-[#f8f3e8]/80">
+                  <thead className="bg-[#f8f3e8]/70 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">
                     <tr>
-                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[34%] px-3' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Bailleur</th>}
-                      {showBailleurColumn('telephone') && <th className="px-3.5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Téléphone</th>}
-                      {showBailleurColumn('commission') && <th className="px-3.5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400">Commission</th>}
-                      {showBailleurColumn('biens') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Biens</th>}
-                      {showBailleurColumn('unites') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Unités</th>}
-                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Reliquats</th>}
-                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Net</th>}
-                      {showBailleurColumn('actions') && <th className={`${detailPanelOpen ? 'w-12 px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}>Actions</th>}
+                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[34%] px-3' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><CircleUser className="h-3.5 w-3.5" /> Bailleur</span></th>}
+                      {showBailleurColumn('telephone') && <th className="px-3.5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400"><span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Téléphone</span></th>}
+                      {showBailleurColumn('commission') && <th className="px-3.5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400"><span className="flex items-center gap-1.5"><Percent className="h-3.5 w-3.5" /> Commission</span></th>}
+                      {showBailleurColumn('biens') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> Biens</span></th>}
+                      {showBailleurColumn('unites') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><DoorOpen className="h-3.5 w-3.5" /> Unités</span></th>}
+                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5" /> Reliquats</span></th>}
+                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Net</span></th>}
+                      {showBailleurColumn('actions') && <th className={`${detailPanelOpen ? 'w-12 px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><MoreHorizontal className="h-3.5 w-3.5" /> Actions</span></th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -1759,10 +1761,11 @@ export function Bailleurs() {
           )}
           </section>
         </section>
+      </div>
 
-        {detailPanelOpen && (
-          <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:sticky xl:top-4 xl:inset-auto xl:z-auto xl:h-[calc(100vh-2rem)] xl:w-full xl:rounded-3xl xl:border xl:border-emerald-950/10">
-            <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={() => setDetailOpen(false)} aria-hidden="true" />
+      {detailPanelOpen && (
+        <aside className="fixed inset-y-0 right-0 z-50 flex w-full flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:w-[34rem] xl:border-l xl:border-emerald-950/10">
+          <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={() => setDetailOpen(false)} aria-hidden="true" />
             <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
               {!selectedBailleur ? (
                 <div className="flex min-h-full items-center justify-center p-6">
@@ -1841,13 +1844,13 @@ export function Bailleurs() {
             </div>
           </aside>
         )}
-      </div>
 
       {/* Modal de création/édition */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeModal}
         title={editingBailleur ? 'Modifier le bailleur' : 'Nouveau bailleur'}
+        description="Créez la fiche propriétaire pour lui rattacher des biens, des contrats, et automatiser ses redditions."
       >
         <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
           {error && <ErrorAlert message={error} onClose={() => setError(null)} />}

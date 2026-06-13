@@ -52,6 +52,7 @@ import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
+import { PremiumButton } from '../components/ui/PremiumButton';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
@@ -1542,13 +1543,13 @@ export function Bailleurs() {
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <button
+              <PremiumButton
+                variant="create"
                 onClick={() => { setBailleurWizardStep('identity'); setIsModalOpen(true); }}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#b96b16] to-[#8a4f12] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-900/15 transition hover:-translate-y-0.5 hover:shadow-amber-900/25"
+                icon={<Plus className="h-5 w-5" />}
               >
-                <Plus className="h-5 w-5" />
                 Nouveau bailleur
-              </button>
+              </PremiumButton>
             </div>
           </div>
 

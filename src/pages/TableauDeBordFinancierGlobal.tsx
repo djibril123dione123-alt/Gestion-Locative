@@ -172,7 +172,6 @@ export function TableauDeBordFinancierGlobal() {
             const [
                 paiementsMensuelsRes,
                 depensesMensuelsRes,
-                revenusAutresMensuelsRes,
 
                 // Pour Rapports Annuels et Comptabilité:
                 paiementsAnnuelsRes, // Utilisation pour 'part_agence' annuelle [23]
@@ -186,7 +185,6 @@ export function TableauDeBordFinancierGlobal() {
                 // 1. Données Mensuelles
                 supabase.from('paiements').select('*, contrats(loyer_mensuel, locataires(nom, prenom), unites(id, nom, immeuble_id))').eq('agency_id', profile.agency_id).gte('mois_concerne', monthStart).lt('mois_concerne', monthEndStr),
                 supabase.from('depenses').select('*').eq('agency_id', profile.agency_id).gte('date_depense', monthStart).lt('date_depense', monthEndStr),
-                supabase.from('revenus').select('*').eq('agency_id', profile.agency_id).gte('date_revenu', monthStart).lt('date_revenu', monthEndStr),
 
                 // 2. Données Annuelles (pour Tendance / Comptabilité)
                 supabase.from('paiements').select('part_agence, mois_concerne, statut').eq('agency_id', profile.agency_id).gte('mois_concerne', yearStartDate),
@@ -201,7 +199,9 @@ export function TableauDeBordFinancierGlobal() {
             // Extraction des données
             const paiementsMensuels = (paiementsMensuelsRes.data || []) as PaiementMensuelRow[];
             const depensesMensuels = depensesMensuelsRes.data || [];
-            const revenus_autresMensuels = revenusAutresMensuelsRes.data || [];
+            // La table historique `revenus` n'est pas encore garantie par agency_id.
+            // On evite une lecture globale non tenant-safe et on garde les autres revenus a 0.
+            const revenus_autresMensuels: Array<{ montant?: number | string | null }> = [];
 
             const paiementsAnnuels = paiementsAnnuelsRes.data || [];
             const depensesAnnuelles = depensesAnnuelsRes.data || [];

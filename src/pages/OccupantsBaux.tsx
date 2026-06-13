@@ -49,6 +49,7 @@ import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
+import { PremiumButton } from '../components/ui/PremiumButton';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 import {
@@ -524,41 +525,15 @@ export function OccupantsBaux() {
 
   const submitOccupation = useCallback(async () => {
     if (!profile?.agency_id) return;
+    if (occupationModalMode === 'create' && locationWizardStep !== 'resume') {
+      notifyError('Validez le résumé avant de créer la location.');
+      return;
+    }
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       notifyError('Connexion indisponible : le bail doit être confirmé par le serveur.');
       return;
     }
 
-    if (occupationModalMode === 'create' && locationWizardStep !== 'resume') {
-      if (locationWizardStep === 'occupant') {
-        if (occupationForm.occupantMode === 'existing' && !occupationForm.locataire_id) {
-          notifyError('Sélectionnez un locataire ou créez-en un nouveau.');
-          return;
-        }
-        if (occupationForm.occupantMode === 'new') {
-          const parsed = personInputFromForm(occupationForm.newOccupant);
-          if (parsed.error) {
-            notifyError(parsed.error);
-            return;
-          }
-        }
-      }
-      if (locationWizardStep === 'unite' && !occupationForm.unite_id) {
-        notifyError('Sélectionnez une unité disponible.');
-        return;
-      }
-      if (locationWizardStep === 'conditions') {
-        const rent = Number(occupationForm.loyer_mensuel);
-        if (!occupationForm.date_debut || !occupationForm.date_fin || !Number.isFinite(rent) || rent <= 0) {
-          notifyError('Renseignez les dates et le loyer mensuel avant le résumé.');
-          return;
-        }
-      }
-      const currentIndex = LOCATION_WIZARD_STEPS.findIndex((step) => step.id === locationWizardStep);
-      const nextStep = LOCATION_WIZARD_STEPS[Math.min(currentIndex + 1, LOCATION_WIZARD_STEPS.length - 1)];
-      setLocationWizardStep(nextStep.id);
-      return;
-    }
 
     setWorkflowSubmitting(true);
     try {
@@ -970,23 +945,23 @@ export function OccupantsBaux() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <button
+              <PremiumButton
+                variant="secondary"
                 type="button"
                 onClick={() => void handleRefresh()}
-                className="inline-flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-[#fff8e8]"
+                icon={<RefreshCw className="h-4 w-4" />}
                 title="Actualiser"
               >
-                <RefreshCw className="h-4 w-4" />
                 <span className="hidden sm:inline">Actualiser</span>
-              </button>
-              <button
+              </PremiumButton>
+              <PremiumButton
+                variant="create"
                 type="button"
                 onClick={openCreateOccupation}
-                className="inline-flex items-center gap-2 rounded-xl bg-action-500 px-4 py-2 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:bg-action-600"
+                icon={<Plus className="h-4 w-4" />}
               >
-                <Plus className="h-4 w-4" />
                 Nouvelle location
-              </button>
+              </PremiumButton>
             </div>
           </div>
 
@@ -1308,6 +1283,7 @@ export function OccupantsBaux() {
         onChange={setOccupationForm}
         onClose={closeOccupationModal}
         onSubmit={submitOccupation}
+        onValidationError={notifyError}
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
@@ -2209,6 +2185,7 @@ function OccupationFormModal({
   onChange,
   onClose,
   onSubmit,
+  onValidationError,
 }: {
   mode: OccupationModalMode | null;
   form: OccupationFormState;
@@ -2222,6 +2199,7 @@ function OccupationFormModal({
   onChange: (form: OccupationFormState) => void;
   onClose: () => void;
   onSubmit: () => void;
+  onValidationError: (message: string) => void;
 }) {
   const update = (patch: Partial<OccupationFormState>) => onChange({ ...form, ...patch });
   const selectedOccupant = occupantOptions.find((occupant) => occupant.id === form.locataire_id) ?? null;
@@ -2302,6 +2280,37 @@ function OccupationFormModal({
     if (!canGoBack) return;
     onStepChange(LOCATION_WIZARD_STEPS[currentStepIndex - 1].id);
   };
+  const goNext = () => {
+    if (wizardStep === 'occupant') {
+      if (form.occupantMode === 'existing' && !form.locataire_id) {
+        onValidationError('Sélectionnez un locataire ou créez-en un nouveau.');
+        return;
+      }
+      if (form.occupantMode === 'new') {
+        const parsed = personInputFromForm(form.newOccupant);
+        if (parsed.error) {
+          onValidationError(parsed.error);
+          return;
+        }
+      }
+    }
+
+    if (wizardStep === 'unite' && !form.unite_id) {
+      onValidationError('Sélectionnez une unité disponible.');
+      return;
+    }
+
+    if (wizardStep === 'conditions') {
+      const rent = Number(form.loyer_mensuel);
+      if (!form.date_debut || !form.date_fin || !Number.isFinite(rent) || rent <= 0) {
+        onValidationError('Renseignez les dates et le loyer mensuel avant le résumé.');
+        return;
+      }
+    }
+
+    const nextStep = LOCATION_WIZARD_STEPS[Math.min(currentStepIndex + 1, LOCATION_WIZARD_STEPS.length - 1)];
+    onStepChange(nextStep.id);
+  };
   const chooseUnit = (unit: OccupantBailAvailableUnit) => {
     update({
       unite_id: unit.id,
@@ -2331,7 +2340,7 @@ function OccupationFormModal({
             </button>
             <button
               type="button"
-              onClick={onSubmit}
+              onClick={wizardStep === 'resume' ? onSubmit : goNext}
               disabled={submitting || workflowLoading}
               className={`rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${
                 wizardStep === 'resume'

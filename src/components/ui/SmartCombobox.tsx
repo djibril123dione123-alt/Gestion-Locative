@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Search } from 'lucide-react';
 
 export interface SmartComboboxOption {
@@ -34,21 +34,21 @@ export function SmartCombobox({
 }: SmartComboboxProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listboxRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState<number>(-1);
 
-  const selectedOption = useMemo(() => options.find((o) => o.value === value), [options, value]);
+  const selectedOption = useMemo(() => options.find((option) => option.value === value), [options, value]);
 
-  // Sync input value with selected option when not open
   useEffect(() => {
     if (!open) {
       setQuery(selectedOption ? selectedOption.label : '');
-    } else {
-      setQuery('');
-      setActiveIndex(options.length > 0 ? 0 : -1);
+      return;
     }
+
+    setQuery('');
+    setActiveIndex(options.length > 0 ? 0 : -1);
   }, [open, options.length, selectedOption]);
 
   const filteredOptions = useMemo(() => {
@@ -90,68 +90,67 @@ export function SmartCombobox({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  useEffect(() => {
+    if (open && activeIndex >= 0 && listboxRef.current) {
+      const activeElement = listboxRef.current.children[activeIndex] as HTMLElement | undefined;
+      activeElement?.scrollIntoView({ block: 'nearest' });
+    }
+  }, [activeIndex, open]);
+
+  const selectOption = (option: SmartComboboxOption) => {
+    onChange(option.value);
+    setOpen(false);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent) => {
     if (disabled) return;
 
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
       if (!open) {
         setOpen(true);
         return;
       }
-      setActiveIndex((prev) => (prev < filteredOptions.length - 1 ? prev + 1 : prev));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
-    } else if (e.key === 'Home') {
-      if (!open) return;
-      e.preventDefault();
+      setActiveIndex((previous) => (previous < filteredOptions.length - 1 ? previous + 1 : previous));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveIndex((previous) => (previous > 0 ? previous - 1 : previous));
+    } else if (event.key === 'Home' && open) {
+      event.preventDefault();
       setActiveIndex(0);
-    } else if (e.key === 'End') {
-      if (!open) return;
-      e.preventDefault();
+    } else if (event.key === 'End' && open) {
+      event.preventDefault();
       setActiveIndex(Math.max(0, filteredOptions.length - 1));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
       if (open && activeIndex >= 0 && activeIndex < filteredOptions.length) {
-        onChange(filteredOptions[activeIndex].value);
-        setOpen(false);
+        selectOption(filteredOptions[activeIndex]);
       }
-    } else if (e.key === 'Escape') {
-      setOpen(false);
-    } else if (e.key === 'Tab') {
+    } else if (event.key === 'Escape' || event.key === 'Tab') {
       setOpen(false);
     }
   };
 
-  // Auto scroll to active item
-  useEffect(() => {
-    if (open && activeIndex >= 0 && listboxRef.current) {
-      const activeElement = listboxRef.current.children[activeIndex] as HTMLElement;
-      if (activeElement) {
-        activeElement.scrollIntoView({ block: 'nearest' });
-      }
-    }
-  }, [activeIndex, open]);
-
   return (
     <div ref={wrapperRef} className={`relative min-w-0 ${className}`}>
       <div className="relative flex items-center">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
           ref={inputRef}
           type="text"
           disabled={disabled}
           value={open ? query : (selectedOption ? selectedOption.label : query)}
-          onChange={(e) => {
-            setQuery(e.target.value);
+          onChange={(event) => {
+            setQuery(event.target.value);
             if (!open) setOpen(true);
             setActiveIndex(0);
+          }}
+          onClick={() => {
+            if (!disabled) setOpen(true);
           }}
           onFocus={() => {
             if (!disabled) {
               setOpen(true);
-              // select all text so user can just type to replace
               setTimeout(() => inputRef.current?.select(), 10);
             }
           }}
@@ -160,18 +159,18 @@ export function SmartCombobox({
           role="combobox"
           aria-expanded={open}
           aria-autocomplete="list"
-          className="h-11 w-full min-w-0 rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-10 text-sm font-semibold text-slate-700 shadow-sm outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-brand-700 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200"
+          className="h-12 w-full min-w-0 rounded-2xl border border-emerald-950/10 bg-white/95 pl-10 pr-11 text-sm font-semibold text-slate-700 shadow-sm outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-brand-700 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200"
         />
         <button
           type="button"
           tabIndex={-1}
           disabled={disabled}
           onClick={() => {
-            setOpen(!open);
+            setOpen((current) => !current);
             if (!open) inputRef.current?.focus();
           }}
           aria-label={open ? 'Fermer la liste' : 'Ouvrir la liste'}
-          className="absolute right-0 top-0 flex h-11 w-10 items-center justify-center text-slate-400 transition hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="absolute right-0 top-0 flex h-12 w-11 items-center justify-center text-slate-400 transition hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         </button>
@@ -198,10 +197,8 @@ export function SmartCombobox({
                     type="button"
                     role="option"
                     aria-selected={isSelected}
-                    onClick={() => {
-                      onChange(option.value);
-                      setOpen(false);
-                    }}
+                    onClick={() => selectOption(option)}
+                    onMouseEnter={() => setActiveIndex(index)}
                     className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition ${
                       isActive ? 'bg-emerald-100/50' : ''
                     } ${
@@ -209,7 +206,6 @@ export function SmartCombobox({
                         ? 'bg-emerald-50 text-brand-900'
                         : 'text-slate-700 hover:bg-slate-50'
                     }`}
-                    onMouseEnter={() => setActiveIndex(index)}
                   >
                     {option.initials ? (
                       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ring-1 ${

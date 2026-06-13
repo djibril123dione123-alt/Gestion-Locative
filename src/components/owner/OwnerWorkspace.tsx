@@ -54,6 +54,7 @@ import { PageSkeleton } from '../ui/Skeleton';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { ToastContainer } from '../ui/Toast';
+import { MoneyText } from '../ui/MoneyText';
 
 type OwnerNavigate = (page: string) => void;
 
@@ -606,7 +607,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
     }));
     const contractActivities = data.contracts.slice(0, 2).map((contract) => ({
       id: `contract-${contract.id}`,
-      title: 'Contrat actif',
+      title: 'Location active',
       text: `${contract.unites?.nom ?? 'Unité'} · ${formatPersonName(contract.locataires, 'Locataire')}`,
       date: contract.date_debut,
       icon: ReceiptText,
@@ -825,7 +826,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       autoTable(doc, {
         startY: y,
         head: [['Bien', 'Unité', 'Locataire', 'Loyer', 'Encaissé', 'Reliquat', 'Statut']],
-        body: rows.length > 0 ? rows : [['-', '-', 'Aucun location en cours', formatCurrency(0), formatCurrency(0), formatCurrency(0), '-']],
+        body: rows.length > 0 ? rows : [['-', '-', 'Aucune location en cours', formatCurrency(0), formatCurrency(0), formatCurrency(0), '-']],
         ...getAutoTableTheme(settings),
         columnStyles: {
           3: { halign: 'right' },
@@ -978,9 +979,9 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         </section>
 
         <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <OwnerKpi title="Loyers encaissés" value={formatCurrency(summary.collected)} subtitle="Ce mois-ci" icon={Wallet} tone="emerald" />
-          <OwnerKpi title="Reliquats à recouvrer" value={formatCurrency(summary.reliquats)} subtitle={`${summary.lateContracts} contrat${summary.lateContracts > 1 ? 's' : ''} en retard`} icon={CalendarClock} tone="red" />
-          <OwnerKpi title="Net propriétaire" value={formatCurrency(summary.netOwner)} subtitle={`${formatCurrency(summary.expenses)} de charges`} icon={TrendingUp} tone="green" />
+          <OwnerKpi title="Loyers encaissés" value={<MoneyText value={summary.collected} compact />} subtitle="Ce mois-ci" icon={Wallet} tone="emerald" />
+          <OwnerKpi title="Reliquats à recouvrer" value={<MoneyText value={summary.reliquats} compact />} subtitle={`${summary.lateContracts} location${summary.lateContracts > 1 ? 's' : ''} en retard`} icon={CalendarClock} tone="red" />
+          <OwnerKpi title="Net propriétaire" value={<MoneyText value={summary.netOwner} compact />} subtitle={<><MoneyText value={summary.expenses} compact /> de charges</>} icon={TrendingUp} tone="green" />
           <OwnerKpi title="Taux d'occupation" value={`${summary.occupationRate}%`} subtitle={`${summary.occupiedUnits} unité${summary.occupiedUnits > 1 ? 's' : ''} sur ${summary.totalUnits} occupée${summary.totalUnits > 1 ? 's' : ''}`} icon={Building2} tone="amber" />
         </section>
 
@@ -1028,7 +1029,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                             <span className="rounded-full bg-emerald-50 px-2 py-1 text-[0.68rem] font-bold text-emerald-800">{units.length} unité{units.length > 1 ? 's' : ''}</span>
                             <span className="rounded-full bg-amber-50 px-2 py-1 text-[0.68rem] font-bold text-amber-800">{occupation}%</span>
                           </div>
-                          <p className="mt-3 text-xs font-bold text-slate-800">{formatCurrency(expectedRent)} / mois</p>
+                          <p className="mt-3 text-xs font-bold text-slate-800"><MoneyText value={expectedRent} suffix="/ mois" /></p>
                         </div>
                       </button>
                     );
@@ -1076,10 +1077,10 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               </div>
 
               <div className="mt-3 grid grid-cols-2 gap-2.5 xl:grid-cols-4">
-                <MiniStat label="Encaissé" value={formatCurrency(reportSummary.collected)} tone="blue" />
-                <MiniStat label="Reliquats" value={formatCurrency(reportSummary.reliquats)} tone="amber" />
-                <MiniStat label="Charges" value={formatCurrency(reportSummary.expenses)} tone="orange" />
-                <MiniStat label="Net propriétaire" value={formatCurrency(reportSummary.netOwner)} tone="blue" />
+                <MiniStat label="Encaissé" value={<MoneyText value={reportSummary.collected} compact />} tone="blue" />
+                <MiniStat label="Reliquats" value={<MoneyText value={reportSummary.reliquats} compact />} tone="amber" />
+                <MiniStat label="Charges" value={<MoneyText value={reportSummary.expenses} compact />} tone="orange" />
+                <MiniStat label="Net propriétaire" value={<MoneyText value={reportSummary.netOwner} compact />} tone="blue" />
               </div>
 
               <div className="mt-3 grid gap-2.5 lg:grid-cols-[1.2fr_0.8fr]">
@@ -1097,7 +1098,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                     <div className="h-full rounded-full bg-gradient-to-r from-brand-800 to-amber-400" style={{ width: `${Math.min(100, reportSummary.recoveryRate)}%` }} />
                   </div>
                   <p className="mt-3 text-xs font-semibold text-slate-500">
-                    Loyer attendu : <span className="font-bold text-slate-800">{formatCurrency(reportSummary.expectedRent)}</span>
+                    Loyer attendu : <span className="font-bold text-slate-800"><MoneyText value={reportSummary.expectedRent} /></span>
                   </p>
                 </div>
                 <div className="rounded-2xl border border-emerald-950/10 bg-white p-3.5">
@@ -1160,7 +1161,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                     tone="emerald"
                     title={payment.contrats?.unites?.immeubles?.nom ?? payment.contrats?.unites?.nom ?? 'Loyer'}
                     subtitle={`${formatPersonName(payment.contrats?.locataires, 'Locataire')} · ${formatDate(payment.date_paiement)}`}
-                    value={formatCurrency(parseAmount(payment.montant_total))}
+                    value={<MoneyText value={parseAmount(payment.montant_total)} />}
                   />
                 ))}
               </OwnerListCard>
@@ -1234,7 +1235,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                 <MiniStat label="Biens" value={data.properties.length} tone="blue" />
                 <MiniStat label="Unités" value={summary.totalUnits} tone="orange" />
                 <MiniStat label="Locations en cours" value={summary.activeContracts} tone="blue" />
-                <MiniStat label="Reliquats" value={formatCurrency(summary.reliquats)} tone="amber" />
+                <MiniStat label="Reliquats" value={<MoneyText value={summary.reliquats} compact />} tone="amber" />
               </div>
             </section>
 
@@ -1396,8 +1397,8 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
 
 interface OwnerKpiProps {
   title: string;
-  value: string;
-  subtitle: string;
+  value: ReactNode;
+  subtitle: ReactNode;
   icon: LucideIcon;
   tone: 'emerald' | 'red' | 'green' | 'amber';
 }
@@ -1416,7 +1417,7 @@ function OwnerKpi({ title, value, subtitle, icon: Icon, tone }: OwnerKpiProps) {
       <div className="flex items-start justify-between gap-2.5">
         <div className="min-w-0">
           <p className={`truncate text-[0.66rem] font-bold uppercase tracking-[0.14em] ${colors.title}`}>{title}</p>
-          <p className="mt-1.5 truncate text-lg font-black tracking-tight text-slate-950 sm:text-xl">{value}</p>
+          <p className="mt-1.5 whitespace-nowrap text-lg font-black tracking-tight text-slate-950 sm:text-xl">{value}</p>
           <p className="mt-1 truncate text-xs font-medium text-slate-500">{subtitle}</p>
         </div>
         <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${colors.icon}`}>
@@ -1486,7 +1487,7 @@ function CompactRow({
   badgeClassName?: string;
   title: string;
   subtitle: string;
-  value?: string;
+  value?: ReactNode;
 }) {
   const tones = {
     emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
@@ -1507,7 +1508,7 @@ function CompactRow({
   );
 }
 
-function MiniStat({ label, value, tone }: { label: string; value: string | number; tone: 'blue' | 'orange' | 'amber' }) {
+function MiniStat({ label, value, tone }: { label: string; value: ReactNode; tone: 'blue' | 'orange' | 'amber' }) {
   const tones = {
     blue: 'from-sky-50 to-blue-50 border-sky-100 text-blue-900',
     orange: 'from-orange-50 to-red-50 border-orange-100 text-orange-900',
@@ -1516,7 +1517,7 @@ function MiniStat({ label, value, tone }: { label: string; value: string | numbe
   return (
     <div className={`rounded-2xl border bg-gradient-to-br p-2.5 ${tones[tone]}`}>
       <p className="truncate text-[0.66rem] font-semibold uppercase tracking-[0.12em] opacity-80">{label}</p>
-      <p className="mt-2 truncate text-base font-bold">{value}</p>
+      <p className="mt-2 whitespace-nowrap text-base font-bold">{value}</p>
     </div>
   );
 }

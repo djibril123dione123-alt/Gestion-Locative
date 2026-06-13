@@ -47,6 +47,8 @@ import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { SmartCombobox, type SmartComboboxOption } from '../components/ui/SmartCombobox';
 import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
+import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
+import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 import {
@@ -132,11 +134,11 @@ const DRAWER_TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: 'historique', label: 'Historique' },
 ];
 
-const LOCATION_WIZARD_STEPS: Array<{ id: LocationWizardStep; label: string; icon: LucideIcon }> = [
-  { id: 'occupant', label: 'Occupant', icon: Users },
+const LOCATION_WIZARD_STEPS: ProductWizardStep<LocationWizardStep>[] = [
+  { id: 'occupant', label: 'Locataire', icon: Users },
   { id: 'unite', label: 'Unité', icon: Building2 },
   { id: 'conditions', label: 'Conditions', icon: ClipboardList },
-  { id: 'resume', label: 'Résumé', icon: FileCheck2 },
+  { id: 'resume', label: 'Validation', icon: FileCheck2 },
 ];
 
 const PERIOD_FILTERS: Array<{ id: PeriodFilter; label: string }> = [
@@ -237,11 +239,11 @@ function personInputFromForm(form: OccupantFormState): { data: OccupantBailPerso
   const email = form.email.trim();
   const normalizedPhone = normalizeSenegalPhone(form.telephone);
 
-  if (!prenom) return { data: null, error: "Le prénom de l'occupant est obligatoire." };
-  if (!nom) return { data: null, error: "Le nom de l'occupant est obligatoire." };
+  if (!prenom) return { data: null, error: "Le prénom du locataire est obligatoire." };
+  if (!nom) return { data: null, error: "Le nom du locataire est obligatoire." };
   if (!normalizedPhone) return { data: null, error: 'Le téléphone doit être un numéro sénégalais valide.' };
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { data: null, error: "L'email de l'occupant n'est pas valide." };
+    return { data: null, error: "L'email du locataire n'est pas valide." };
   }
 
   return {
@@ -281,7 +283,7 @@ function parseCommission(value: string, isIndividualOwner: boolean): { value: nu
 
 function getOccupantsBauxColumnLabel(key: OccupantsBauxColumnKey): string {
   const labels: Record<OccupantsBauxColumnKey, string> = {
-    occupant: 'Occupant',
+    occupant: 'Locataire',
     telephone: 'Téléphone',
     bien: 'Bien / Unité',
     proprietaire: 'Propriétaire',
@@ -339,6 +341,7 @@ export function OccupantsBaux() {
   const [ownerFilter, setOwnerFilter] = useState('all');
   const [propertyFilter, setPropertyFilter] = useState('all');
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('all');
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const occupantColumns = useColumnVisibility('occupants-baux', [...OCCUPANTS_BAUX_COLUMN_KEYS], {
     telephone: false,
   });
@@ -422,7 +425,7 @@ export function OccupantsBaux() {
       setAvailableUnits(unitsRes.data);
     } catch (err) {
       console.error('[OccupantsBaux] workflow options failed', err);
-      notifyError('Impossible de charger les occupants et unités disponibles.');
+      notifyError('Impossible de charger les locataires et unités disponibles.');
     } finally {
       setWorkflowLoading(false);
     }
@@ -471,13 +474,13 @@ export function OccupantsBaux() {
   const submitOccupant = useCallback(async () => {
     if (!profile?.agency_id) return;
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      notifyError("Connexion indisponible : l'occupant doit être enregistré par le serveur.");
+      notifyError("Connexion indisponible : le locataire doit être enregistré par le serveur.");
       return;
     }
 
     const parsed = personInputFromForm(occupantForm);
     if (parsed.error || !parsed.data) {
-      notifyError(parsed.error ?? 'Formulaire occupant invalide.');
+      notifyError(parsed.error ?? 'Formulaire locataire invalide.');
       return;
     }
 
@@ -490,7 +493,7 @@ export function OccupantsBaux() {
           data: parsed.data,
         });
         if (error) throw error;
-        notifySuccess('Occupant mis à jour.');
+        notifySuccess('Locataire mis à jour.');
         setOccupantModalMode(null);
         await refreshOccupantsBaux();
       } else {
@@ -500,7 +503,7 @@ export function OccupantsBaux() {
           data: parsed.data,
         });
         if (error) throw error;
-        notifySuccess('Occupant créé. Vous pouvez maintenant créer son bail.');
+        notifySuccess('Locataire créé. Vous pouvez maintenant créer sa location.');
         setOccupantModalMode(null);
         setOccupationForm({
           ...emptyOccupationForm(),
@@ -513,7 +516,7 @@ export function OccupantsBaux() {
       }
     } catch (err) {
       console.error('[OccupantsBaux] save occupant failed', err);
-      notifyError("Impossible d'enregistrer l'occupant.");
+      notifyError("Impossible d'enregistrer le locataire.");
     } finally {
       setWorkflowSubmitting(false);
     }
@@ -529,7 +532,7 @@ export function OccupantsBaux() {
     if (occupationModalMode === 'create' && locationWizardStep !== 'resume') {
       if (locationWizardStep === 'occupant') {
         if (occupationForm.occupantMode === 'existing' && !occupationForm.locataire_id) {
-          notifyError('Sélectionnez un occupant ou créez-en un nouveau.');
+          notifyError('Sélectionnez un locataire ou créez-en un nouveau.');
           return;
         }
         if (occupationForm.occupantMode === 'new') {
@@ -589,7 +592,7 @@ export function OccupantsBaux() {
         if (occupationForm.occupantMode === 'new') {
           const parsed = personInputFromForm(occupationForm.newOccupant);
           if (parsed.error || !parsed.data) {
-            notifyError(parsed.error ?? 'Formulaire du nouvel occupant invalide.');
+            notifyError(parsed.error ?? 'Formulaire du nouveau locataire invalide.');
             return;
           }
           const { data, error } = await occupantsBauxRepository.createOccupant({
@@ -597,12 +600,12 @@ export function OccupantsBaux() {
             userId: profile.id,
             data: parsed.data,
           });
-          if (error || !data?.id) throw error ?? new Error('Occupant non créé.');
+          if (error || !data?.id) throw error ?? new Error('Locataire non créé.');
           locataireId = data.id;
           createdOccupantId = data.id;
         }
         if (!locataireId) {
-          notifyError('Sélectionnez ou créez un occupant.');
+          notifyError('Sélectionnez ou créez un locataire.');
           return;
         }
         if (!occupationForm.unite_id) {
@@ -640,7 +643,7 @@ export function OccupantsBaux() {
           createdContratId = created.id;
         } catch (err) {
           if (createdOccupantId) {
-            notifyError("Occupant créé, mais le bail n'a pas été confirmé. Ouvrez Nouvelle Location et sélectionnez cet occupant pour reprendre.");
+            notifyError("Locataire créé, mais la location n'a pas été confirmée. Ouvrez Nouvelle Location et sélectionnez ce locataire pour reprendre.");
             await loadWorkflowOptions();
             return;
           }
@@ -1027,20 +1030,29 @@ export function OccupantsBaux() {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Rechercher occupant, téléphone, bien, référence..."
+                    placeholder="Rechercher locataire, téléphone, bien, référence..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMobileFiltersOpen(true)}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-white lg:hidden"
+                  >
+                    <SlidersHorizontal className="h-4 w-4" />
+                    Filtres
+                    {activeFilterCount > 0 && <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">{activeFilterCount}</span>}
+                  </button>
                   <SmartCombobox
                     value={ownerFilter}
                     options={ownerSelectOptions}
                     onChange={setOwnerFilter}
                     placeholder="Tous les propriétaires"
                     searchPlaceholder="Rechercher un propriétaire..."
-                    className="w-full sm:w-56"
+                    className="hidden lg:block lg:w-56"
                   />
                   <SmartCombobox
                     value={propertyFilter}
@@ -1048,7 +1060,7 @@ export function OccupantsBaux() {
                     onChange={setPropertyFilter}
                     placeholder="Tous les biens"
                     searchPlaceholder="Rechercher un bien..."
-                    className="w-full sm:w-52"
+                    className="hidden lg:block lg:w-52"
                   />
                   <SmartCombobox
                     value={periodFilter}
@@ -1056,7 +1068,7 @@ export function OccupantsBaux() {
                     onChange={(next) => setPeriodFilter(next as PeriodFilter)}
                     placeholder="Période"
                     searchPlaceholder="Rechercher une période..."
-                    className="w-full sm:w-48"
+                    className="hidden lg:block lg:w-48"
                   />
                   <ColumnPicker
                     columns={OCCUPANTS_BAUX_COLUMN_KEYS.map((key) => ({
@@ -1084,6 +1096,36 @@ export function OccupantsBaux() {
                   {filtered.length} résultat{filtered.length !== 1 ? 's' : ''} affiché{filtered.length !== 1 ? 's' : ''}
                 </p>
               )}
+              <MobileFilterSheet
+                isOpen={mobileFiltersOpen}
+                title="Filtres locations"
+                onClose={() => setMobileFiltersOpen(false)}
+                onReset={resetFilters}
+              >
+                <div className="grid gap-3">
+                  <SmartCombobox
+                    value={ownerFilter}
+                    options={ownerSelectOptions}
+                    onChange={setOwnerFilter}
+                    placeholder="Tous les propriétaires"
+                    searchPlaceholder="Rechercher un propriétaire..."
+                  />
+                  <SmartCombobox
+                    value={propertyFilter}
+                    options={propertySelectOptions}
+                    onChange={setPropertyFilter}
+                    placeholder="Tous les biens"
+                    searchPlaceholder="Rechercher un bien..."
+                  />
+                  <SmartCombobox
+                    value={periodFilter}
+                    options={periodSelectOptions}
+                    onChange={(next) => setPeriodFilter(next as PeriodFilter)}
+                    placeholder="Période"
+                    searchPlaceholder="Rechercher une période..."
+                  />
+                </div>
+              </MobileFilterSheet>
             </div>
 
             {/* Table desktop / Cards mobile */}
@@ -1100,7 +1142,7 @@ export function OccupantsBaux() {
                       <tr className="border-b border-slate-100 bg-[#f8f3e8]/70">
                         {occupantColumns.isVisible('occupant') && (
                           <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400">
-                            <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Occupant</span>
+                            <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Locataire</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('telephone') && (
@@ -1213,6 +1255,7 @@ export function OccupantsBaux() {
           details={details}
           detailsLoading={detailsLoading}
           detailsError={detailsError}
+          isIndividualOwner={isIndividualOwner}
           activeTab={activeDrawerTab}
           onTabChange={setActiveDrawerTab}
           onClose={() => setSelectedRow(null)}
@@ -1386,16 +1429,14 @@ function LocationMobileCard({ row, onSelect }: { row: OccupantBailRow; onSelect:
     <div className="px-3 py-2">
       <PremiumMobileCard
         title={fullName(row)}
-        subtitle={`${row.telephone ? formatSenegalPhone(row.telephone) : 'Téléphone non renseigné'} · ${row.immeuble_nom ?? 'Bien non renseigné'} / ${row.unite_nom}`}
+        subtitle={`${row.telephone ? formatSenegalPhone(row.telephone) : 'Téléphone non renseigné'} · ${row.immeuble_nom ?? 'Bien non renseigné'} · ${row.unite_nom}`}
         initials={`${row.prenom?.[0] ?? ''}${row.nom?.[0] ?? ''}`.toUpperCase() || 'OB'}
         status={STATUT_BADGE[row.statut]?.label ?? row.statut}
         statusTone={row.statut === 'actif' ? 'emerald' : row.statut === 'expire' ? 'amber' : row.statut === 'resilie' ? 'red' : 'slate'}
         amount={row.loyer_mensuel}
         amountLabel="Loyer"
-        meta={[
-          { label: 'Bien', value: row.immeuble_nom ?? '-' },
-          { label: 'Unité', value: row.unite_nom ?? '-' },
-        ]}
+        amountSuffix="/ mois"
+        amountCompact={Number(row.loyer_mensuel ?? 0) >= 1_000_000}
         onClick={onSelect}
       />
     </div>
@@ -1407,6 +1448,7 @@ function OccupantBailDrawer({
   details,
   detailsLoading,
   detailsError,
+  isIndividualOwner,
   activeTab,
   onTabChange,
   onClose,
@@ -1422,6 +1464,7 @@ function OccupantBailDrawer({
   details: OccupantBailDetails | null;
   detailsLoading: boolean;
   detailsError: string | null;
+  isIndividualOwner: boolean;
   activeTab: DrawerTab;
   onTabChange: (tab: DrawerTab) => void;
   onClose: () => void;
@@ -1556,7 +1599,7 @@ function OccupantBailDrawer({
         </div>
 
         <div className="space-y-3.5 p-3.5 sm:p-4">
-          {activeTab === 'resume' && <DrawerResume row={row} details={details} />}
+          {activeTab === 'resume' && <DrawerResume row={row} details={details} isIndividualOwner={isIndividualOwner} />}
           {activeTab === 'paiements' && <DrawerPayments details={details} loading={detailsLoading} error={detailsError} />}
           {activeTab === 'documents' && (
             <DrawerDocuments
@@ -1575,7 +1618,7 @@ function OccupantBailDrawer({
   );
 }
 
-function DrawerResume({ row, details }: { row: OccupantBailRow; details: OccupantBailDetails | null }) {
+function DrawerResume({ row, details, isIndividualOwner }: { row: OccupantBailRow; details: OccupantBailDetails | null; isIndividualOwner: boolean }) {
   const reliquatContrat = details?.payments.reduce((sum, payment) => sum + Math.max(0, Number(payment.reliquat ?? 0)), 0) ?? 0;
   const latestPayment = details?.payments[0] ?? null;
   const nextExpectedLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date());
@@ -1592,11 +1635,11 @@ function DrawerResume({ row, details }: { row: OccupantBailRow; details: Occupan
 
       <InfoBlock title="Synthèse opérationnelle">
         <InfoLine icon={Users} label="Propriétaire" value={ownerName(row)} />
-        <InfoLine icon={Wallet} label="Commission agence" value={row.commission !== null ? `${row.commission}%` : 'Non renseignée'} />
-        <InfoLine icon={Clock3} label="Dernier paiement" value={latestPayment ? `${formatDate(latestPayment.date_paiement)} · ${formatCurrency(latestPayment.montant_total)}` : 'Aucun paiement récent'} />
+        {!isIndividualOwner && <InfoLine icon={Wallet} label="Commission agence" value={row.commission !== null ? `${row.commission}%` : 'Non renseignée'} />}
+        <InfoLine icon={Clock3} label="Dernier paiement" value={latestPayment ? <>{formatDate(latestPayment.date_paiement)} · <MoneyText value={latestPayment.montant_total} /></> : 'Aucun paiement récent'} />
       </InfoBlock>
 
-      <InfoBlock title="Occupant">
+      <InfoBlock title="Locataire">
         <InfoLine icon={Users} label="Nom" value={fullName(row)} />
         <InfoLine icon={Phone} label="Téléphone" value={row.telephone ? formatSenegalPhone(row.telephone) : 'Non renseigné'} />
         <InfoLine icon={Mail} label="Email" value={row.email || 'Non renseigné'} />
@@ -1607,9 +1650,9 @@ function DrawerResume({ row, details }: { row: OccupantBailRow; details: Occupan
         <InfoLine icon={FileText} label="Référence" value={row.contrat_ref} />
         <InfoLine icon={ClipboardList} label="Destination" value={row.destination || 'Non renseignée'} />
         <InfoLine icon={CalendarDays} label="Période" value={`${formatDate(row.date_debut)} → ${row.date_fin ? formatDate(row.date_fin) : 'ouvert'}`} />
-        <InfoLine icon={Wallet} label="Loyer" value={formatCurrency(row.loyer_mensuel)} />
-        {row.caution !== null && <InfoLine icon={Wallet} label="Caution" value={formatCurrency(row.caution)} />}
-        {row.commission !== null && <InfoLine icon={Wallet} label="Commission agence" value={`${row.commission}%`} />}
+        <InfoLine icon={Wallet} label="Loyer" value={<MoneyText value={row.loyer_mensuel} />} />
+        {row.caution !== null && <InfoLine icon={Wallet} label="Caution" value={<MoneyText value={row.caution} />} />}
+        {!isIndividualOwner && row.commission !== null && <InfoLine icon={Wallet} label="Commission agence" value={`${row.commission}%`} />}
       </InfoBlock>
 
       <InfoBlock title="Occupation">
@@ -1658,7 +1701,7 @@ function DrawerPayments({
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="font-bold text-slate-900">{formatCurrency(payment.montant_total)}</p>
+              <p className="font-bold text-slate-900"><MoneyText value={payment.montant_total} /></p>
               <p className="mt-0.5 text-xs font-medium text-slate-500">
                 {payment.mois_concerne} · {formatDate(payment.date_paiement)}
               </p>
@@ -1670,7 +1713,7 @@ function DrawerPayments({
           </div>
           {payment.reliquat !== null && payment.reliquat > 0 && (
             <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
-              Reliquat restant : {formatCurrency(payment.reliquat)}
+              Reliquat restant : <MoneyText value={payment.reliquat} />
             </p>
           )}
         </div>
@@ -2061,7 +2104,7 @@ function MiniMetric({ label, value, tone = 'slate' }: { label: string; value: Re
   return (
     <div className={`rounded-2xl border p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)] ${toneClass}`}>
       <p className="text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p>
-      <p className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-black text-current">{value}</p>
+      <p className="mt-1 whitespace-nowrap text-sm font-black text-current">{value}</p>
     </div>
   );
 }
@@ -2125,11 +2168,11 @@ function OccupantFormModal({
   if (!mode) return null;
 
   return (
-    <Modal isOpen={Boolean(mode)} onClose={onClose} title={mode === 'edit' ? "Modifier l'occupant" : 'Nouvel occupant'}>
+    <Modal isOpen={Boolean(mode)} onClose={onClose} title={mode === 'edit' ? "Modifier le locataire" : 'Nouveau locataire'}>
       <div className="space-y-4">
         <LifecycleIntro
           icon={UserPlus}
-          title={mode === 'edit' ? "Identité de l'occupant" : 'Créer un occupant'}
+          title={mode === 'edit' ? "Identité du locataire" : 'Créer un locataire'}
           description="Ces informations alimentent le bail, les documents et les futures fiches Locations."
         />
         <div className="grid gap-3 sm:grid-cols-2">
@@ -2138,13 +2181,13 @@ function OccupantFormModal({
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField label="Téléphone" value={form.telephone} onChange={(value) => onChange({ ...form, telephone: value })} placeholder="77 123 45 67" />
-          <TextField label="Email" value={form.email} onChange={(value) => onChange({ ...form, email: value })} placeholder="occupant@email.com" />
+          <TextField label="Email" value={form.email} onChange={(value) => onChange({ ...form, email: value })} placeholder="locataire@email.com" />
         </div>
         <TextField label="Adresse" value={form.adresse_personnelle} onChange={(value) => onChange({ ...form, adresse_personnelle: value })} placeholder="Adresse personnelle" />
         <TextField label="Pièce d'identité" value={form.piece_identite} onChange={(value) => onChange({ ...form, piece_identite: value })} placeholder="CNI, passeport..." />
         <ModalActions
           submitting={submitting}
-          submitLabel={mode === 'edit' ? 'Enregistrer' : 'Créer occupant'}
+          submitLabel={mode === 'edit' ? 'Enregistrer' : 'Créer le locataire'}
           onCancel={onClose}
           onSubmit={onSubmit}
         />
@@ -2270,38 +2313,44 @@ function OccupationFormModal({
 
   return (
     <Modal isOpen onClose={onClose} title="Nouvelle location">
-      <div className="space-y-5">
-        <div className="grid grid-cols-4 gap-2">
-          {LOCATION_WIZARD_STEPS.map((step, index) => {
-            const Icon = step.icon;
-            const active = step.id === wizardStep;
-            const done = index < currentStepIndex;
-            return (
-              <button
-                key={step.id}
-                type="button"
-                onClick={() => index <= currentStepIndex && onStepChange(step.id)}
-                className={`rounded-2xl border px-2 py-2 text-center transition ${
-                  active
-                    ? 'border-emerald-300 bg-emerald-50 text-emerald-800 shadow-sm'
-                    : done
-                      ? 'border-emerald-100 bg-white text-emerald-700'
-                      : 'border-slate-100 bg-slate-50 text-slate-400'
-                }`}
-              >
-                <Icon className="mx-auto h-4 w-4" />
-                <span className="mt-1 block truncate text-[0.68rem] font-black uppercase tracking-[0.06em]">{step.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
+      <ProductWizard
+        steps={LOCATION_WIZARD_STEPS}
+        activeStep={wizardStep}
+        onStepClick={(step, index) => {
+          if (index <= currentStepIndex) onStepChange(step);
+        }}
+        footer={
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={wizardStep === 'occupant' ? onClose : goBack}
+              disabled={submitting}
+              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
+            >
+              {wizardStep === 'occupant' ? 'Annuler' : 'Retour'}
+            </button>
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={submitting || workflowLoading}
+              className={`rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                wizardStep === 'resume'
+                  ? 'bg-gradient-to-br from-brand-950 to-emerald-900 shadow-emerald-950/20 hover:-translate-y-0.5 hover:shadow-emerald-950/25'
+                  : 'bg-emerald-800 hover:bg-emerald-900'
+              }`}
+            >
+              {submitting ? 'Traitement...' : wizardStep === 'resume' ? 'Créer la location' : 'Continuer'}
+            </button>
+          </div>
+        }
+      >
+      <div className="space-y-4">
         {wizardStep === 'occupant' && (
           <div className="space-y-4">
             <LifecycleIntro
               icon={Users}
-              title="Choisir l'occupant"
-              description="Sélectionnez un occupant existant ou créez-le sans quitter le module."
+              title="Choisir le locataire"
+              description="Sélectionnez un locataire existant ou créez-le sans quitter le module."
             />
             <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-1">
               <button
@@ -2322,14 +2371,14 @@ function OccupationFormModal({
             {form.occupantMode === 'existing' ? (
               <div className="space-y-3">
                 <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Occupant</span>
+                  <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Locataire</span>
                   <SmartCombobox
                     value={form.locataire_id}
                     options={occupantComboboxOptions}
                     onChange={(value) => update({ locataire_id: value, occupantSearch: '' })}
-                    placeholder={workflowLoading ? 'Chargement des occupants...' : 'Rechercher ou choisir un occupant'}
+                    placeholder={workflowLoading ? 'Chargement des locataires...' : 'Rechercher ou choisir un locataire'}
                     searchPlaceholder="Nom, téléphone ou email"
-                    emptyLabel="Aucun occupant trouvé"
+                    emptyLabel="Aucun locataire trouvé"
                     disabled={workflowLoading}
                     className="mt-1"
                   />
@@ -2343,7 +2392,7 @@ function OccupationFormModal({
                   </div>
                 ) : (
                   <p className="rounded-2xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-3 text-xs font-semibold leading-5 text-slate-500">
-                    Choisissez un occupant existant ou basculez sur “Nouveau” pour créer une fiche locataire.
+                    Choisissez un locataire existant ou basculez sur “Nouveau” pour créer une fiche locataire.
                   </p>
                 )}
               </div>
@@ -2393,7 +2442,7 @@ function OccupationFormModal({
                 <MiniMetric label="Bien" value={selectedUnit.immeuble_nom ?? 'Bien non renseigné'} />
                 <MiniMetric label="Unité" value={selectedUnit.nom} />
                 <MiniMetric label="Propriétaire" value={`${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || 'Non renseigné'} />
-                <MiniMetric label="Loyer conseillé" value={formatCurrency(selectedUnit.loyer_base ?? 0)} />
+              <MiniMetric label="Loyer conseillé" value={<MoneyText value={selectedUnit.loyer_base ?? 0} />} />
                 <MiniMetric label="Statut" value="Libre" />
               </div>
             ) : (
@@ -2434,8 +2483,8 @@ function OccupationFormModal({
               />
             </label>
             <div className="grid gap-2 rounded-2xl border border-emerald-950/10 bg-white p-3 text-xs font-semibold text-slate-500 sm:grid-cols-3">
-              <span>Loyer : <strong className="text-slate-900">{form.loyer_mensuel ? formatCurrency(Number(form.loyer_mensuel)) : 'Non renseigné'}</strong></span>
-              <span>Caution : <strong className="text-slate-900">{form.caution ? formatCurrency(Number(form.caution)) : '0 F CFA'}</strong></span>
+              <span>Loyer : <strong className="text-slate-900">{form.loyer_mensuel ? <MoneyText value={Number(form.loyer_mensuel)} /> : 'Non renseigné'}</strong></span>
+              <span>Caution : <strong className="text-slate-900">{form.caution ? <MoneyText value={Number(form.caution)} /> : '0 F CFA'}</strong></span>
               <span>Commission : <strong className="text-slate-900">{isIndividualOwner ? '0%' : `${form.commission || 0}%`}</strong></span>
             </div>
           </div>
@@ -2445,16 +2494,16 @@ function OccupationFormModal({
           <div className="space-y-4">
             <LifecycleIntro
               icon={FileCheck2}
-              title="Résumé avant création"
-              description="Vérifiez les informations essentielles avant de créer la location."
+              title="Validation finale"
+              description="Vérifiez les informations avant création. Cette action enregistrera définitivement la location dans le portefeuille locatif."
             />
             <div className="grid gap-3 sm:grid-cols-2">
-              <MiniMetric label="Occupant" value={form.occupantMode === 'new' ? `${form.newOccupant.prenom} ${form.newOccupant.nom}` : selectedOccupant ? `${selectedOccupant.prenom} ${selectedOccupant.nom}` : 'Non sélectionné'} />
+              <MiniMetric label="Locataire" value={form.occupantMode === 'new' ? `${form.newOccupant.prenom} ${form.newOccupant.nom}` : selectedOccupant ? `${selectedOccupant.prenom} ${selectedOccupant.nom}` : 'Non sélectionné'} />
               <MiniMetric label="Propriétaire" value={selectedUnit ? `${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || 'Non renseigné' : 'Non sélectionné'} />
-              <MiniMetric label="Unité" value={selectedUnit ? `${selectedUnit.immeuble_nom ?? 'Bien'} · ${selectedUnit.nom}` : 'Non sélectionnée'} />
-              <MiniMetric label="Loyer" value={form.loyer_mensuel ? formatCurrency(Number(form.loyer_mensuel)) : 'Non renseigné'} />
+              <MiniMetric label="Bien / unité" value={selectedUnit ? `${selectedUnit.immeuble_nom ?? 'Bien'} · ${selectedUnit.nom}` : 'Non sélectionnée'} />
+              <MiniMetric label="Loyer" value={form.loyer_mensuel ? <MoneyText value={Number(form.loyer_mensuel)} /> : 'Non renseigné'} />
               <MiniMetric label="Période" value={`${form.date_debut || '—'} → ${form.date_fin || '—'}`} />
-              <MiniMetric label="Caution" value={form.caution ? formatCurrency(Number(form.caution)) : '0 F CFA'} />
+              <MiniMetric label="Caution" value={form.caution ? <MoneyText value={Number(form.caution)} /> : '0 F CFA'} />
               {!isIndividualOwner && <MiniMetric label="Commission agence" value={`${form.commission || 0}%`} />}
               <MiniMetric label="Destination" value={form.destination || 'Habitation'} />
             </div>
@@ -2467,25 +2516,8 @@ function OccupationFormModal({
           </div>
         )}
 
-        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={wizardStep === 'occupant' ? onClose : goBack}
-            disabled={submitting}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
-          >
-            {wizardStep === 'occupant' ? 'Annuler' : 'Retour'}
-          </button>
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={submitting || workflowLoading}
-            className="rounded-xl bg-emerald-800 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {submitting ? 'Traitement...' : wizardStep === 'resume' ? 'Créer la location' : 'Continuer'}
-          </button>
-        </div>
       </div>
+      </ProductWizard>
     </Modal>
   );
 }

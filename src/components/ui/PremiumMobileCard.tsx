@@ -15,6 +15,8 @@ interface PremiumMobileCardProps {
   statusTone?: Tone;
   amount?: number | string | null;
   amountLabel?: string;
+  amountCompact?: boolean;
+  amountSuffix?: string;
   meta?: Array<{ label: string; value: ReactNode; tone?: Tone }>;
   selected?: boolean;
   onClick?: () => void;
@@ -39,6 +41,8 @@ export function PremiumMobileCard({
   statusTone = 'emerald',
   amount,
   amountLabel,
+  amountCompact = false,
+  amountSuffix,
   meta = [],
   selected = false,
   onClick,
@@ -48,14 +52,15 @@ export function PremiumMobileCard({
 
   return (
     <Comp
+      data-premium-mobile-card="true"
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`block w-full rounded-[1.15rem] border bg-[#fffdf8] p-3.5 text-left shadow-[0_12px_30px_rgba(15,23,42,0.055)] ring-1 ring-white/80 transition active:scale-[0.99] ${
+      className={`block w-full rounded-[1.15rem] border bg-[#fffdf8] p-3 text-left shadow-[0_12px_30px_rgba(15,23,42,0.055)] ring-1 ring-white/80 transition active:scale-[0.99] ${
         selected ? 'border-emerald-300 bg-emerald-50/55' : 'border-emerald-950/10 hover:border-emerald-200 hover:bg-emerald-50/35'
       } ${className}`}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1rem] bg-gradient-to-br from-emerald-50 to-white text-sm font-black text-brand-900 shadow-sm ring-1 ring-emerald-950/10">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.95rem] bg-gradient-to-br from-emerald-50 to-white text-sm font-black text-brand-900 shadow-sm ring-1 ring-emerald-950/10">
           {Icon ? <Icon className="h-5 w-5" /> : initials}
         </div>
         <div className="min-w-0 flex-1">
@@ -77,7 +82,7 @@ export function PremiumMobileCard({
               {amount !== undefined ? (
                 <div className="min-w-0">
                   {amountLabel && <p className="text-[0.65rem] font-bold uppercase tracking-[0.09em] text-slate-400">{amountLabel}</p>}
-                  <MoneyText value={amount} className="text-sm font-black text-slate-950" />
+                  <MoneyText value={amount} compact={amountCompact} suffix={amountSuffix} className="text-sm font-black text-slate-950" />
                 </div>
               ) : <span />}
               {meta.length > 0 && (

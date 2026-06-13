@@ -18,6 +18,7 @@ import {
   Percent,
   Plus,
   Search,
+  SlidersHorizontal,
   Store,
   Trash2,
   Users,
@@ -40,12 +41,13 @@ import { MetricCard, MiniMetric } from '../components/ui/MetricCard';
 import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
+import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { useAuth } from '../contexts/AuthContext';
 import { usePlanLimits } from '../hooks/usePlanLimits';
 import { useToast } from '../hooks/useToast';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
-import { formatCurrency, formatDate } from '../lib/formatters';
+import { formatDate } from '../lib/formatters';
 import { formatPersonName } from '../lib/people';
 import { supabase } from '../lib/supabase';
 import { getOrCreateIndividualOwnerBailleur } from '../services/individualOwner';
@@ -362,6 +364,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   const [propertyFilter, setPropertyFilter] = useState<PropertyFilter>('all');
   const [unitFilter, setUnitFilter] = useState<UnitFilter>('all');
   const [ownerFilter, setOwnerFilter] = useState('all');
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [drawer, setDrawer] = useState<DrawerState>(null);
   const [propertyModalOpen, setPropertyModalOpen] = useState(false);
   const [unitModalOpen, setUnitModalOpen] = useState(false);
@@ -955,7 +958,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           <MetricCard label="Unités" value={pageStats.units} icon={DoorOpen} tone="blue" />
           <MetricCard label="Occupées" value={pageStats.occupied} icon={Home} tone="emerald" />
           <MetricCard label="Occupation" value={`${pageStats.occupancyRate}%`} icon={Percent} tone="amber" />
-          <MetricCard label="Loyers attendus" value={<MoneyText value={pageStats.expectedRent} compact />} icon={Wallet} tone="green" />
+          <MetricCard label="Loyers" value={<MoneyText value={pageStats.expectedRent} compact />} icon={Wallet} tone="green" />
           <MetricCard label="Reliquats" value={<MoneyText value={pageStats.reliquats} compact />} icon={AlertCircle} tone="red" />
         </section>
 
@@ -989,6 +992,14 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                   className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen(true)}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Filtres
+              </button>
               {activeTab === 'biens' ? (
                 <>
                   {!isIndividualOwner && (
@@ -998,7 +1009,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                       onChange={setOwnerFilter}
                       placeholder="Tous les bailleurs"
                       searchPlaceholder="Rechercher un bailleur..."
-                      className="w-full sm:w-56"
+                      className="hidden lg:block lg:w-56"
                     />
                   )}
                   <SmartCombobox
@@ -1007,7 +1018,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     onChange={(next) => setPropertyFilter(next as PropertyFilter)}
                     placeholder="Tous les biens"
                     searchPlaceholder="Rechercher un filtre..."
-                    className="w-full sm:w-52"
+                    className="hidden lg:block lg:w-52"
                   />
                   <ColumnPicker
                     columns={PROPERTY_COLUMN_KEYS.filter((key) => !isIndividualOwner || key !== 'bailleur').map((key) => ({ key, label: getPropertyColumnLabel(key), required: key === 'bien' }))}
@@ -1024,7 +1035,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     onChange={(next) => setUnitFilter(next as UnitFilter)}
                     placeholder="Toutes les unités"
                     searchPlaceholder="Rechercher un filtre..."
-                    className="w-full sm:w-56"
+                    className="hidden lg:block lg:w-56"
                   />
                   <ColumnPicker
                     columns={UNIT_COLUMN_KEYS.map((key) => ({ key, label: getUnitColumnLabel(key), required: key === 'unite' }))}
@@ -1036,6 +1047,45 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
               )}
             </div>
           </div>
+          <MobileFilterSheet
+            isOpen={mobileFiltersOpen}
+            title={activeTab === 'biens' ? 'Filtres biens' : 'Filtres unités'}
+            onClose={() => setMobileFiltersOpen(false)}
+            onReset={() => {
+              setOwnerFilter('all');
+              setPropertyFilter('all');
+              setUnitFilter('all');
+            }}
+          >
+            {activeTab === 'biens' ? (
+              <div className="grid gap-3">
+                {!isIndividualOwner && (
+                  <SmartCombobox
+                    value={ownerFilter}
+                    options={ownerFilterOptions}
+                    onChange={setOwnerFilter}
+                    placeholder="Tous les bailleurs"
+                    searchPlaceholder="Rechercher un bailleur..."
+                  />
+                )}
+                <SmartCombobox
+                  value={propertyFilter}
+                  options={propertyFilterOptions}
+                  onChange={(next) => setPropertyFilter(next as PropertyFilter)}
+                  placeholder="Tous les biens"
+                  searchPlaceholder="Rechercher un filtre..."
+                />
+              </div>
+            ) : (
+              <SmartCombobox
+                value={unitFilter}
+                options={unitFilterOptions}
+                onChange={(next) => setUnitFilter(next as UnitFilter)}
+                placeholder="Toutes les unités"
+                searchPlaceholder="Rechercher un filtre..."
+              />
+            )}
+          </MobileFilterSheet>
         </section>
 
         <main className="min-w-0">
@@ -1284,8 +1334,8 @@ function PropertiesTable({
                       </div>
                     </td>
                   )}
-                  {showColumn('loyer') && <td className="whitespace-nowrap px-4 py-2.5 text-right text-sm font-semibold tabular-nums text-slate-900">{formatCurrency(summary?.expectedRent ?? 0)}</td>}
-                  {showColumn('reliquats') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-red-600`}>{formatCurrency(summary?.reliquats ?? 0)}</td>}
+                  {showColumn('loyer') && <td className="whitespace-nowrap px-4 py-2.5 text-right text-sm font-semibold tabular-nums text-slate-900"><MoneyText value={summary?.expectedRent ?? 0} /></td>}
+                  {showColumn('reliquats') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-red-600`}><MoneyText value={summary?.reliquats ?? 0} /></td>}
                   {showColumn('statut') && <td className="px-4 py-2.5"><StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unité'} /></td>}
                   <td className={`${compact ? 'px-2' : 'px-4'} py-2.5 text-right`}>
                     <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(property); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
@@ -1303,24 +1353,24 @@ function PropertiesTable({
         {properties.map((property) => {
           const summary = summaries.get(property.id);
           const visual = getPropertyVisual(property);
-          const Icon = visual.icon;
+          const locationLabel = [property.quartier, property.ville].filter(Boolean).join(' - ') || property.adresse || 'Localisation à compléter';
           return (
-            <button key={property.id} type="button" onClick={() => onSelect(property)} className="rounded-2xl border border-emerald-950/10 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]">
-              <div className="flex items-start gap-3">
-                <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${visual.bg} ${visual.color}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-slate-950">{property.nom}</p>
-                  <p className="mt-1 text-xs font-medium text-slate-500">{property.adresse || property.quartier || property.ville || 'Adresse a completer'}</p>
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                    <MiniMetric label="Unités" value={summary?.units.length ?? 0} />
-                    <MiniMetric label="Occupation" value={`${summary?.occupancyRate ?? 0}%`} />
-                    <MiniMetric label="Loyer" value={<MoneyText value={summary?.expectedRent ?? 0} compact />} />
-                  </div>
-                </div>
-              </div>
-            </button>
+            <PremiumMobileCard
+              key={property.id}
+              onClick={() => onSelect(property)}
+              title={property.nom}
+              subtitle={`${locationLabel} · ${summary?.units.length ?? 0} unité${(summary?.units.length ?? 0) > 1 ? 's' : ''} · ${summary?.occupancyRate ?? 0}% occupé`}
+              icon={visual.icon}
+              status={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'À compléter'}
+              statusTone={(summary?.units.length ?? 0) > 0 ? 'emerald' : 'slate'}
+              amount={summary?.expectedRent ?? 0}
+              amountLabel="Loyer"
+              amountSuffix="/ mois"
+              amountCompact={Number(summary?.expectedRent ?? 0) >= 1_000_000}
+              meta={[
+                { label: 'Reliquat', value: <MoneyText value={summary?.reliquats ?? 0} compact />, tone: (summary?.reliquats ?? 0) > 0 ? 'red' : 'slate' },
+              ]}
+            />
           );
         })}
       </div>
@@ -1403,9 +1453,9 @@ function UnitsTable({
                   {showColumn('type') && <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{inferUnitType(unit)}</td>}
                   {showColumn('bien') && <td className={`${compact ? 'px-3' : 'px-4'} py-2.5 text-sm font-medium text-slate-700`}><p className="truncate">{property?.nom ?? unit.immeubles?.nom ?? '-'}</p></td>}
                   {showColumn('locataire') && <td className={`${compact ? 'px-3' : 'px-4'} py-2.5 text-sm font-medium text-slate-600`}><p className="truncate">{summary?.tenantLabel ?? 'Aucun locataire'}</p></td>}
-                  {showColumn('loyer') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-slate-900`}>{formatCurrency(unit.loyer_base ?? 0)}</td>}
+                  {showColumn('loyer') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-slate-900`}><MoneyText value={unit.loyer_base ?? 0} /></td>}
                   {showColumn('statut') && <td className={`${compact ? 'px-3' : 'px-4'} py-2.5`}><StatusBadge label={status} /></td>}
-                  {showColumn('reliquat') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-red-600`}>{formatCurrency(summary?.reliquat ?? 0)}</td>}
+                  {showColumn('reliquat') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-red-600`}><MoneyText value={summary?.reliquat ?? 0} /></td>}
                   {showColumn('bail') && <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{summary?.contract ? 'Oui' : 'Non'}</td>}
                   <td className={`${compact ? 'px-2' : 'px-4'} py-2.5 text-right`}>
                     <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(unit); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
@@ -1425,27 +1475,23 @@ function UnitsTable({
           const property = unit.immeuble_id ? propertyById.get(unit.immeuble_id) : null;
           const status = getUnitStatusLabel(unit, summary);
           const visual = getUnitVisual(unit);
-          const Icon = visual.icon;
           return (
-            <button key={unit.id} type="button" onClick={() => onSelect(unit)} className="rounded-2xl border border-emerald-950/10 bg-white p-3 text-left shadow-sm transition active:scale-[0.99]">
-              <div className="flex items-start gap-3">
-                <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${visual.bg} ${visual.color}`}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-bold text-slate-950">{unit.nom}</p>
-                    <StatusBadge label={status} />
-                  </div>
-                  <p className="mt-1 text-xs font-medium text-slate-500">{property?.nom ?? unit.immeubles?.nom ?? 'Bien parent à choisir'}</p>
-                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                    <MiniMetric label="Loyer" value={<MoneyText value={unit.loyer_base ?? 0} compact />} />
-                    <MiniMetric label="Reliquat" value={<MoneyText value={summary?.reliquat ?? 0} compact />} />
-                    <MiniMetric label="Bail" value={summary?.contract ? 'Oui' : 'Non'} />
-                  </div>
-                </div>
-              </div>
-            </button>
+            <PremiumMobileCard
+              key={unit.id}
+              onClick={() => onSelect(unit)}
+              title={unit.numero ? `${unit.nom} · ${unit.numero}` : unit.nom}
+              subtitle={`${property?.nom ?? unit.immeubles?.nom ?? 'Bien parent à choisir'} · ${summary?.tenantLabel ?? 'Libre'}`}
+              icon={visual.icon}
+              status={status}
+              statusTone={summary?.contract ? 'emerald' : 'slate'}
+              amount={unit.loyer_base ?? 0}
+              amountLabel="Loyer"
+              amountSuffix="/ mois"
+              amountCompact={Number(unit.loyer_base ?? 0) >= 1_000_000}
+              meta={[
+                { label: 'Reliquat', value: <MoneyText value={summary?.reliquat ?? 0} compact />, tone: (summary?.reliquat ?? 0) > 0 ? 'red' : 'slate' },
+              ]}
+            />
           );
         })}
       </div>
@@ -1521,8 +1567,8 @@ function PropertyDrawer({
           <MiniMetric label="Occupées" value={summary.occupiedUnits} />
           <MiniMetric label="Libres" value={summary.freeUnits} />
           <MiniMetric label="Occupation" value={`${summary.occupancyRate}%`} />
-          <MiniMetric label="Loyers attendus" value={formatCurrency(summary.expectedRent)} />
-          <MiniMetric label="Reliquats" value={formatCurrency(summary.reliquats)} />
+          <MiniMetric label="Loyers" value={<MoneyText value={summary.expectedRent} />} />
+          <MiniMetric label="Reliquats" value={<MoneyText value={summary.reliquats} />} />
         </div>
 
         <InfoBlock title="Informations">
@@ -1571,7 +1617,7 @@ function PropertyDrawer({
                 <CompactList rows={summary.units.slice(0, 6).map((unit) => ({
                   icon: DoorOpen,
                   title: unit.nom,
-                  subtitle: `${formatCurrency(unit.loyer_base ?? 0)} - ${getUnitStatusLabel(unit)}`,
+                  subtitle: <><MoneyText value={unit.loyer_base ?? 0} /> - {getUnitStatusLabel(unit)}</>,
                 }))} />
               ),
             },
@@ -1583,7 +1629,7 @@ function PropertyDrawer({
                 <CompactList rows={summary.contracts.slice(0, 6).map((contract) => ({
                   icon: ClipboardList,
                   title: formatPersonName(contract.locataires, 'Locataire'),
-                  subtitle: `${formatCurrency(contract.loyer_mensuel ?? 0)} - ${contract.statut ?? 'Bail'}`,
+                  subtitle: <><MoneyText value={contract.loyer_mensuel ?? 0} /> - {contract.statut ?? 'Bail'}</>,
                 }))} />
               ),
             },
@@ -1635,9 +1681,9 @@ function UnitDrawer({
       <DrawerHeader icon={visual.icon} iconClass={`${visual.bg} ${visual.color}`} title={unit.nom} subtitle={`${inferUnitType(unit)} - ${property?.nom ?? unit.immeubles?.nom ?? 'Bien parent à choisir'}`} onClose={onClose} />
       <div className="space-y-3.5 p-3.5 sm:p-4">
         <div className="grid grid-cols-2 gap-2">
-          <MiniMetric label="Loyer mensuel" value={formatCurrency(unit.loyer_base ?? 0)} />
+          <MiniMetric label="Loyer mensuel" value={<MoneyText value={unit.loyer_base ?? 0} />} />
           <MiniMetric label="Statut" value={status} />
-          <MiniMetric label="Reliquat" value={formatCurrency(summary.reliquat)} />
+          <MiniMetric label="Reliquat" value={<MoneyText value={summary.reliquat} />} />
           <MiniMetric label="Location en cours" value={summary.contract ? 'Oui' : 'Non'} />
         </div>
 
@@ -1686,7 +1732,7 @@ function UnitDrawer({
               ) : (
                 <CompactList rows={summary.payments.slice(0, 6).map((payment) => ({
                   icon: Wallet,
-                  title: formatCurrency(payment.montant_total ?? 0),
+                  title: <MoneyText value={payment.montant_total ?? 0} />,
                   subtitle: `${payment.mois_concerne ?? 'Mois'} - ${formatDate(payment.date_paiement)}`,
                 }))} />
               ),
@@ -1757,7 +1803,7 @@ function DrawerTabs({ tabs }: { tabs: Array<{ label: string; content: ReactNode 
   );
 }
 
-function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: string; subtitle: string }> }) {
+function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: ReactNode; subtitle: ReactNode }> }) {
   return (
     <div className="space-y-2">
       {rows.map((row, index) => {
@@ -1886,7 +1932,7 @@ function PropertyModal({
         </div>
         {wizardStep === 'summary' && (
           <div className="space-y-4">
-            <WizardIntro title="Validation finale" description="Vérifiez le rattachement propriétaire et l’adresse avant enregistrement." />
+            <WizardIntro title="Validation finale" description="Vérifiez les informations avant création. Cette action enregistrera définitivement la fiche dans le portefeuille locatif." />
             <PremiumMobileCard
               title={form.nom || 'Bien sans nom'}
               subtitle={[form.adresse, form.quartier, form.ville].filter(Boolean).join(', ') || 'Adresse non renseignée'}
@@ -1897,8 +1943,14 @@ function PropertyModal({
               meta={[
                 { label: 'Ville', value: form.ville || '-' },
                 { label: 'Type', value: inferTypeFromName(form.nom, PROPERTY_TYPES) || 'Autre' },
+                { label: 'Bailleur', value: isIndividualOwner ? 'Moi' : ownerName(owners.find((owner) => owner.id === form.bailleur_id) ?? null) },
               ]}
             />
+            {form.description.trim() && (
+              <div className="rounded-2xl border border-emerald-950/10 bg-white p-3 text-sm font-semibold leading-6 text-slate-600">
+                {form.description.trim()}
+              </div>
+            )}
           </div>
         )}
         </ProductWizard>
@@ -1970,15 +2022,15 @@ function UnitModal({
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Type / nom de l'unité *">
+            <Field label="Type d'unité *">
               <SmartCombobox
                 value={form.nom}
                 options={[
-                  { value: '', label: 'Sélectionner' },
+                  { value: '', label: 'Sélectionner un type' },
                   ...UNIT_TYPES.map((type) => ({ value: type, label: type })),
                 ]}
                 onChange={(next) => onChange((current) => ({ ...current, nom: next }))}
-                placeholder="Type ou nom"
+                placeholder="Sélectionner un type"
                 searchPlaceholder="Appartement, studio, boutique..."
               />
           </Field>
@@ -2011,19 +2063,26 @@ function UnitModal({
         </div>
         {wizardStep === 'summary' && (
           <div className="space-y-4">
-            <WizardIntro title="Validation finale" description="Vérifiez l’unité avant de l’ouvrir à une future location." />
+            <WizardIntro title="Validation finale" description="Vérifiez les informations avant création. Cette action enregistrera définitivement l'unité dans le portefeuille locatif." />
             <PremiumMobileCard
-              title={form.nom || 'Unité sans nom'}
+              title={form.numero ? `${form.nom || 'Unité'} · ${form.numero}` : form.nom || 'Unité sans nom'}
               subtitle={properties.find((property) => property.id === form.immeuble_id)?.nom ?? 'Bien parent non sélectionné'}
               icon={DoorOpen}
               status={UNIT_STATUSES.find((status) => status.value === form.statut)?.label ?? form.statut}
               amount={Number(form.loyer_base || 0)}
               amountLabel="Loyer mensuel"
+              amountSuffix="/ mois"
               meta={[
                 { label: 'Code', value: form.numero || '-' },
                 { label: 'Étage', value: form.etage || '-' },
+                { label: 'Statut', value: UNIT_STATUSES.find((status) => status.value === form.statut)?.label ?? form.statut },
               ]}
             />
+            {form.description.trim() && (
+              <div className="rounded-2xl border border-emerald-950/10 bg-white p-3 text-sm font-semibold leading-6 text-slate-600">
+                {form.description.trim()}
+              </div>
+            )}
           </div>
         )}
         </ProductWizard>
@@ -2082,7 +2141,7 @@ function WizardFooter<T extends string>({
       <button type="button" onClick={isFirst ? onCancel : onPrevious} disabled={saving} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
         {isFirst ? 'Annuler' : 'Retour'}
       </button>
-      <button type={isFinal ? 'submit' : 'button'} onClick={isFinal ? undefined : onNext} disabled={saving} className="flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-800 disabled:opacity-50">
+      <button type={isFinal ? 'submit' : 'button'} onClick={isFinal ? undefined : onNext} disabled={saving} className={`flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-lg transition disabled:opacity-50 ${isFinal ? 'bg-gradient-to-br from-brand-950 to-emerald-900 shadow-emerald-950/20 hover:-translate-y-0.5 hover:shadow-emerald-950/25' : 'bg-emerald-700 shadow-emerald-900/10 hover:bg-emerald-800'}`}>
         {saving ? 'Enregistrement...' : isFinal ? submitLabel : 'Continuer'}
       </button>
     </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, type ReactNode } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
@@ -52,6 +52,7 @@ import { MiniMetric } from '../components/ui/MetricCard';
 import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
+import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
@@ -233,7 +234,7 @@ const DRAWER_PRIMARY_TABS: Array<{ id: DrawerTab; label: string }> = [
 
 const DRAWER_MORE_TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: 'documents', label: 'Documents' },
-  { id: 'contrats', label: 'Contrats' },
+  { id: 'contrats', label: 'Locations liées' },
   { id: 'depenses', label: 'Dépenses' },
 ];
 
@@ -289,7 +290,7 @@ function EmptyDrawerState({
 function CompactList({
   rows,
 }: {
-  rows: Array<{ id: string; title: string; subtitle: string; value?: string; badge?: string }>;
+  rows: Array<{ id: string; title: string; subtitle: ReactNode; value?: ReactNode; badge?: string }>;
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8] shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
@@ -318,7 +319,7 @@ function KpiTile({
 }: {
   icon: React.ElementType;
   label: string;
-  value: string;
+  value: ReactNode;
   helper: string;
   tone: 'emerald' | 'amber' | 'red' | 'blue';
 }) {  const tones = {
@@ -332,7 +333,7 @@ function KpiTile({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className={`truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] ${tones.text}`}>{label}</p>
-          <p className="mt-1.5 overflow-hidden text-ellipsis whitespace-nowrap text-[1.05rem] font-extrabold tracking-tight text-slate-950 sm:text-[1.12rem]" title={value}>{value}</p>
+          <p className="mt-1.5 whitespace-nowrap text-[1.02rem] font-extrabold tracking-tight text-slate-950 sm:text-[1.1rem]">{value}</p>
           {helper && <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">{helper}</p>}
         </div>
         <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ring-1 transition-colors ${tones.icon} group-hover:scale-105`}>
@@ -362,6 +363,15 @@ const formatMonthLabel = (month: string) => {
 const getInitials = (bailleur?: Pick<Bailleur, 'prenom' | 'nom'> | null) => {
   const letters = [bailleur?.prenom?.[0], bailleur?.nom?.[0]].filter(Boolean).join('');
   return letters.toUpperCase() || 'SK';
+};
+
+const titleCaseName = (value: string) => value
+  .toLocaleLowerCase('fr-FR')
+  .replace(/(^|[\s'-])(\p{L})/gu, (_, separator: string, letter: string) => `${separator}${letter.toLocaleUpperCase('fr-FR')}`);
+
+const displayBailleurName = (bailleur?: Pick<Bailleur, 'prenom' | 'nom'> | null) => {
+  if (!bailleur) return 'Bailleur';
+  return titleCaseName(formatPersonName(bailleur, 'Bailleur'));
 };
 
 const AVATAR_TONES = [
@@ -1354,7 +1364,7 @@ export function Bailleurs() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Résumé paiements</p>
-                <p className="mt-1 text-xl font-extrabold tabular-nums text-slate-950">{formatCurrency(selectedSummary.loyers)}</p>
+                <p className="mt-1 text-xl font-extrabold tabular-nums text-slate-950"><MoneyText value={selectedSummary.loyers} /></p>
               </div>
               <div
                 className="flex h-16 w-16 items-center justify-center rounded-full text-center text-[11px] font-black text-brand-950 shadow-inner"
@@ -1365,9 +1375,9 @@ export function Bailleurs() {
               </div>
             </div>
             <div className="mt-4 space-y-2.5 text-sm">
-              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Commissions</span><strong className="font-bold">{formatCurrency(selectedSummary.commissions)}</strong></div>
-              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Net à reverser</span><strong className="font-bold text-emerald-800">{formatCurrency(selectedSummary.net)}</strong></div>
-              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Reliquats</span><strong className={`font-bold ${selectedSummary.reliquats > 0 ? 'text-red-600' : 'text-slate-900'}`}>{formatCurrency(selectedSummary.reliquats)}</strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Commissions</span><strong className="font-bold"><MoneyText value={selectedSummary.commissions} /></strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Net à reverser</span><strong className="font-bold text-emerald-800"><MoneyText value={selectedSummary.net} /></strong></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Reliquats</span><strong className={`font-bold ${selectedSummary.reliquats > 0 ? 'text-red-600' : 'text-slate-900'}`}><MoneyText value={selectedSummary.reliquats} /></strong></div>
             </div>
           </section>
           <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
@@ -1414,7 +1424,7 @@ export function Bailleurs() {
                   <p className="mt-0.5 text-xs text-slate-500">{[immeuble.adresse, immeuble.quartier, immeuble.ville].filter(Boolean).join(', ') || 'Adresse non renseignée'}</p>
                 </div>
                 <div className="text-sm text-slate-600">{units.length} unité{units.length > 1 ? 's' : ''} · {rate}% occupé</div>
-                <div className="text-right text-sm font-bold text-slate-950">{formatCurrency(potential)}</div>
+                <div className="text-right text-sm font-bold text-slate-950"><MoneyText value={potential} /></div>
               </div>
             );
           })}
@@ -1430,7 +1440,7 @@ export function Bailleurs() {
           id: contrat.id,
           title: contrat.locataires ? formatPersonName(contrat.locataires, '') : 'Locataire non renseigné',
           subtitle: `Début ${formatDate(contrat.date_debut)} · Fin ${formatDate(contrat.date_fin)}`,
-          value: formatCurrency(contrat.loyer_mensuel),
+          value: <MoneyText value={contrat.loyer_mensuel} />,
           badge: contrat.statut ?? '—',
         }))} />
       );
@@ -1443,8 +1453,8 @@ export function Bailleurs() {
         <CompactList rows={recentPaiements.map((paiement) => ({
           id: paiement.id,
           title: paiement.mois_concerne ?? 'Mois non renseigné',
-          subtitle: `${formatDate(paiement.date_paiement)} · reliquat ${formatCurrency(paiement.reliquat)}`,
-          value: formatCurrency(paiement.montant_total),
+          subtitle: <>{formatDate(paiement.date_paiement)} · reliquat <MoneyText value={paiement.reliquat} /></>,
+          value: <MoneyText value={paiement.montant_total} />,
           badge: paiement.statut ?? '—',
         }))} />
       );
@@ -1458,7 +1468,7 @@ export function Bailleurs() {
           id: depense.id,
           title: depense.categorie ?? 'Dépense',
           subtitle: `${formatDate(depense.date_depense)} · ${depense.description ?? 'Sans description'}`,
-          value: formatCurrency(depense.montant),
+          value: <MoneyText value={depense.montant} />,
         }))} />
       );
     }
@@ -1492,11 +1502,11 @@ export function Bailleurs() {
                 Bilan préparé pour <strong className="font-black">{formatMonthLabel(reportMonth)}</strong> · {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {reportPaiements.length} paiement{reportPaiements.length > 1 ? 's' : ''}
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                <MiniMetric label="Loyers" value={formatCurrency(reportLoyers)} tone="emerald" />
-                <MiniMetric label="Reliquats" value={formatCurrency(reportReliquats)} tone="red" />
-                <MiniMetric label="Commissions" value={formatCurrency(reportCommissions)} tone="amber" />
-                <MiniMetric label="Dépenses" value={formatCurrency(reportExpenses)} tone="blue" />
-                <MiniMetric label="Net" value={formatCurrency(reportNet)} tone="slate" />
+                <MiniMetric label="Loyers" value={<MoneyText value={reportLoyers} />} tone="emerald" />
+                <MiniMetric label="Reliquats" value={<MoneyText value={reportReliquats} />} tone="red" />
+                <MiniMetric label="Commissions" value={<MoneyText value={reportCommissions} />} tone="amber" />
+                <MiniMetric label="Dépenses" value={<MoneyText value={reportExpenses} />} tone="blue" />
+                <MiniMetric label="Net" value={<MoneyText value={reportNet} />} tone="slate" />
                 <MiniMetric label="Documents" value={String(reportDocuments.length)} tone="slate" />
               </div>
               <button
@@ -1593,9 +1603,9 @@ export function Bailleurs() {
 
           <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
             <KpiTile icon={Users} label="Bailleurs actifs" value={globalKpis.activeBailleurs.toString()} helper={`${bailleurs.length} propriétaire${bailleurs.length > 1 ? 's' : ''} dans la base`} tone="emerald" />
-            <KpiTile icon={AlertCircle} label="Reliquats totaux" value={formatCurrency(globalKpis.reliquats)} helper="À suivre sur les paiements partiels" tone="red" />
-            <KpiTile icon={Wallet} label="Net à reverser" value={formatCurrency(globalKpis.net)} helper="Somme des parts bailleurs" tone="emerald" />
-            <KpiTile icon={ReceiptText} label="Commissions" value={formatCurrency(globalKpis.commissions)} helper={`${globalKpis.immeubles} biens à ${globalKpis.unites} unités`} tone="amber" />
+            <KpiTile icon={AlertCircle} label="Reliquats" value={<MoneyText value={globalKpis.reliquats} compact />} helper="À suivre sur les paiements partiels" tone="red" />
+            <KpiTile icon={Wallet} label="Net" value={<MoneyText value={globalKpis.net} compact />} helper="Somme des parts bailleurs" tone="emerald" />
+            <KpiTile icon={ReceiptText} label="Commissions" value={<MoneyText value={globalKpis.commissions} compact />} helper={`${globalKpis.immeubles} biens à ${globalKpis.unites} unités`} tone="amber" />
           </div>
 
           <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
@@ -1615,7 +1625,18 @@ export function Bailleurs() {
                 <button
                   type="button"
                   onClick={() => setShowFilters((value) => !value)}
-                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-bold shadow-sm transition ${showFilters || activeFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+                  className={`hidden items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-bold shadow-sm transition lg:inline-flex ${showFilters || activeFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filtres
+                  {activeFilterCount > 0 && (
+                    <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">{activeFilterCount}</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(true)}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-bold shadow-sm transition lg:hidden ${activeFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
                   Filtres
@@ -1642,8 +1663,8 @@ export function Bailleurs() {
               )}
             </div>
             {showFilters && (
-              <div className="mt-3 rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/90 p-2.5 shadow-sm">
-                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="mt-3 hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/90 p-2.5 shadow-sm lg:block">
+                <div className="grid gap-2 lg:grid-cols-4">
                   {filterOptions.map((option) => (
                     <button
                       key={option.id}
@@ -1658,6 +1679,26 @@ export function Bailleurs() {
                 </div>
               </div>
             )}
+            <MobileFilterSheet
+              isOpen={showFilters}
+              title="Filtres bailleurs"
+              onClose={() => setShowFilters(false)}
+              onReset={() => setActiveFilter('all')}
+            >
+              <div className="grid gap-2">
+                {filterOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setActiveFilter(option.id)}
+                    className={`rounded-xl border px-3 py-2 text-left transition ${activeFilter === option.id ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-100 bg-[#fffdf8] text-slate-600 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+                  >
+                    <span className="block text-xs font-bold">{option.label}</span>
+                    <span className="mt-0.5 block text-[11px] text-slate-500">{option.helper}</span>
+                  </button>
+                ))}
+              </div>
+            </MobileFilterSheet>
           </div>
 
           {filteredBailleurs.length === 0 ? (
@@ -1699,7 +1740,7 @@ export function Bailleurs() {
                             <div className="flex items-center gap-3">
                               <div className={`flex ${detailPanelOpen ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-xl text-xs font-black shadow-inner ring-1 ${getAvatarTone(bailleur, selected)}`}>{getInitials(bailleur)}</div>
                               <div className="min-w-0">
-                                <p className="truncate font-semibold text-slate-950">{formatPersonName(bailleur, '')}</p>
+                                <p className="truncate font-semibold text-slate-950">{displayBailleurName(bailleur)}</p>
                                 <p className="text-xs text-slate-500">{getStatusLabel(bailleur)}</p>
                               </div>
                             </div>
@@ -1708,8 +1749,8 @@ export function Bailleurs() {
                           {showBailleurColumn('commission') && <td className="whitespace-nowrap px-3.5 py-2.5 text-sm font-semibold text-slate-700">{formatCommission(bailleur.commission)}</td>}
                           {showBailleurColumn('biens') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-sm font-semibold text-slate-700`}>{summary.immeubles.length}</td>}
                           {showBailleurColumn('unites') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-sm font-semibold text-slate-700`}>{summary.unites.length}</td>}
-                          {showBailleurColumn('reliquats') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} whitespace-nowrap py-2.5 text-right text-sm font-bold tabular-nums text-red-600`}>{formatCurrency(summary.reliquats)}</td>}
-                          {showBailleurColumn('net') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} whitespace-nowrap py-2.5 text-right text-sm font-bold tabular-nums text-emerald-800`}>{formatCurrency(summary.net)}</td>}
+                          {showBailleurColumn('reliquats') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} whitespace-nowrap py-2.5 text-right text-sm font-bold tabular-nums text-red-600`}><MoneyText value={summary.reliquats} /></td>}
+                          {showBailleurColumn('net') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} whitespace-nowrap py-2.5 text-right text-sm font-bold tabular-nums text-emerald-800`}><MoneyText value={summary.net} /></td>}
                           {showBailleurColumn('actions') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-right`}>
                             <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedBailleurId(bailleur.id); setDetailOpen(true); }} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-950">
                               <MoreHorizontal className="h-4 w-4" />
@@ -1729,7 +1770,7 @@ export function Bailleurs() {
                     <PremiumMobileCard
                       key={bailleur.id}
                       onClick={() => { setSelectedBailleurId(bailleur.id); setDetailOpen(true); }}
-                      title={formatPersonName(bailleur, '')}
+                      title={displayBailleurName(bailleur)}
                       subtitle={formatSenegalPhone(bailleur.telephone)}
                       initials={getInitials(bailleur)}
                       status={getStatusLabel(bailleur)}
@@ -1775,7 +1816,7 @@ export function Bailleurs() {
                       </div>
                       <div className="min-w-0 flex-1 space-y-1.5 text-sm text-slate-600">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="min-w-0 flex-1 truncate text-lg font-black text-brand-950 sm:text-xl">{formatPersonName(selectedBailleur, '')}</h2>
+                          <h2 className="min-w-0 flex-1 truncate text-lg font-black text-brand-950 sm:text-xl">{displayBailleurName(selectedBailleur)}</h2>
                           <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
                             {getStatusLabel(selectedBailleur)}
                           </span>
@@ -1812,14 +1853,14 @@ export function Bailleurs() {
 
                   <div className="space-y-2 p-3">
                     <div className="grid grid-cols-1 gap-2 min-[430px]:grid-cols-3">
-                      <MiniMetric label="Loyers" value={formatCurrency(selectedSummary.loyers)} tone="emerald" />
-                      <MiniMetric label="Reliquats" value={formatCurrency(selectedSummary.reliquats)} tone="red" />
-                      <MiniMetric label="Net" value={formatCurrency(selectedSummary.net)} tone="emerald" />
+                      <MiniMetric label="Loyers" value={<MoneyText value={selectedSummary.loyers} />} tone="emerald" />
+                      <MiniMetric label="Reliquats" value={<MoneyText value={selectedSummary.reliquats} />} tone="red" />
+                      <MiniMetric label="Net" value={<MoneyText value={selectedSummary.net} />} tone="emerald" />
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <MiniMetric label="Biens" value={String(selectedSummary.immeubles.length)} tone="blue" />
                       <MiniMetric label="Unités" value={String(selectedSummary.unites.length)} tone="amber" />
-                      <MiniMetric label="Contrats" value={String(selectedSummary.activeContracts)} tone="slate" />
+                      <MiniMetric label="Locations" value={String(selectedSummary.activeContracts)} tone="slate" />
                     </div>
                   </div>
 
@@ -1918,13 +1959,16 @@ export function Bailleurs() {
 
           {bailleurWizardStep === 'summary' && (
             <div className="space-y-4">
-              <WizardIntro title="Validation finale" description="Vérifiez la fiche propriétaire avant enregistrement." />
+              <WizardIntro title="Validation finale" description="Vérifiez les informations avant création. Cette action enregistrera définitivement la fiche dans le portefeuille locatif." />
               <div className="grid gap-3 sm:grid-cols-2">
-                <MiniMetric label="Bailleur" value={`${formData.prenom || '-'} ${formData.nom || ''}`.trim()} tone="emerald" />
+                <MiniMetric label="Nom complet" value={titleCaseName(`${formData.prenom || '-'} ${formData.nom || ''}`.trim())} tone="emerald" />
                 <MiniMetric label="Téléphone" value={formData.telephone || 'Non renseigné'} />
+                <MiniMetric label="Email" value={formData.email || 'Non renseigné'} />
                 <MiniMetric label="Commission" value={`${formData.commission || 0}%`} tone="amber" />
                 <MiniMetric label="Début mandat" value={formData.debut_contrat || 'Non renseigné'} />
+                <MiniMetric label="Pièce d'identité" value={formData.piece_identite || 'Non renseignée'} />
                 <MiniMetric label="Adresse" value={formData.adresse || 'Non renseignée'} className="sm:col-span-2" />
+                {formData.notes.trim() && <MiniMetric label="Notes" value={formData.notes.trim()} className="sm:col-span-2" />}
               </div>
             </div>
           )}
@@ -2172,7 +2216,11 @@ function WizardFooter<T extends string>({
         type={isFinal ? 'submit' : 'button'}
         onClick={isFinal ? undefined : onNext}
         disabled={submitting}
-        className="flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-800 disabled:opacity-50"
+        className={`flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-lg transition disabled:opacity-50 ${
+          isFinal
+            ? 'bg-gradient-to-br from-brand-950 to-emerald-900 shadow-emerald-950/20 hover:-translate-y-0.5 hover:shadow-emerald-950/25'
+            : 'bg-emerald-700 shadow-emerald-900/10 hover:bg-emerald-800'
+        }`}
       >
         {submitting ? 'Traitement...' : isFinal ? submitLabel : 'Continuer'}
       </button>

@@ -32,7 +32,7 @@ export function MetricCard({ label, value, icon: Icon, tone, wide = false, class
           <Icon className="h-3.5 w-3.5" />
         </div>
       </div>
-      <p className={`mt-1.5 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-lg font-black tracking-tight ${tones.text}`}>
+      <p className={`mt-1.5 max-w-full whitespace-nowrap text-base font-black tracking-tight sm:text-lg ${tones.text}`}>
         {value}
       </p>
     </article>
@@ -58,7 +58,7 @@ export function MiniMetric({ label, value, tone = 'slate', className = '' }: Min
   return (
     <div className={`rounded-xl border px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] ${toneClass} ${className}`}>
       <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-current opacity-60 line-clamp-1">{label}</p>
-      <p className="mt-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-black tracking-tight text-current">{value}</p>
+      <p className="mt-0.5 whitespace-nowrap text-sm font-black tracking-tight text-current">{value}</p>
     </div>
   );
 }

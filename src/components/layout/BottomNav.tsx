@@ -1,5 +1,5 @@
 import { CreditCard, FileText, FolderOpen, LayoutDashboard, MoreHorizontal } from 'lucide-react';
-import { canAccessAccountPage, getAccountPageLabel, type AccountProfile } from '../../lib/accountProfile';
+import { canAccessAccountPage, type AccountProfile } from '../../lib/accountProfile';
 import { canAccessPage, type UserPermissionMap } from '../../lib/rbac';
 import type { UserRole } from '../../lib/supabase';
 import type { AgencySettings } from '../../types/agency';
@@ -21,15 +21,15 @@ interface BottomNavProps {
 
 const AGENCY_BOTTOM_ITEMS = [
   { id: 'dashboard', label: 'Accueil', icon: LayoutDashboard },
-  { id: 'paiements', label: 'Encaisser', icon: CreditCard },
+  { id: 'paiements', label: 'Loyers', icon: CreditCard },
   { id: 'occupants-baux', label: 'Locations', icon: FileText },
   { id: 'documents', label: 'Docs', icon: FolderOpen },
 ];
 
 const INDIVIDUAL_OWNER_BOTTOM_ITEMS = [
   { id: 'dashboard', label: 'Accueil', icon: LayoutDashboard },
-  { id: 'paiements', label: 'Mes loyers', icon: CreditCard },
-  { id: 'patrimoine', label: 'Mes biens', icon: FolderOpen },
+  { id: 'paiements', label: 'Loyers', icon: CreditCard },
+  { id: 'patrimoine', label: 'Biens', icon: FolderOpen },
   { id: 'documents', label: 'Docs', icon: FileText },
 ];
 
@@ -45,10 +45,9 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent',
       className="sk-bottom-nav fixed bottom-0 left-0 right-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.35rem)] lg:hidden"
       aria-label="Navigation mobile principale"
     >
-      <div className="sk-bottom-nav-inner mx-auto flex max-w-md items-center gap-1 rounded-3xl border border-white/65 bg-white/[0.76] px-1.5 py-1.5 shadow-premium-lg ring-1 ring-emerald-950/5 backdrop-blur-2xl">
+      <div className="sk-bottom-nav-inner mx-auto flex max-w-[22rem] items-center gap-1 rounded-[2rem] border border-white/65 bg-[#fffdf8]/75 px-1.5 py-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-emerald-950/5 backdrop-blur-2xl backdrop-saturate-150">
         {items.filter(({ id }) => canAccess(id)).map(({ id, label, icon: Icon }) => {
           const active = isActive(id);
-          const itemLabel = accountProfile ? getAccountPageLabel(id, accountProfile) ?? label : label;
           return (
             <button
               key={id}
@@ -62,7 +61,7 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent',
               aria-current={active ? 'page' : undefined}
             >
               <Icon className={`h-[1.15rem] w-[1.15rem] transition-transform duration-300 ${active ? 'scale-105 text-orange-200 group-active:scale-95' : 'group-hover:-translate-y-0.5'}`} />
-              <span className="max-w-full text-center text-[0.66rem] font-black leading-tight">{itemLabel}</span>
+              <span className="text-center text-[0.66rem] font-black leading-tight">{label}</span>
               {active && <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-action-500 ring-4 ring-action-500/15" />}
             </button>
           );

@@ -1474,7 +1474,7 @@ export function Bailleurs() {
                 type="button"
                 onClick={() => void handleGenerateBailleurReport(selectedBailleur)}
                 disabled={generatingReport}
-                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-emerald-700 to-emerald-900 px-3.5 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-3.5 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <BarChart3 className="h-4 w-4" />
                 {generatingReport ? 'Génération...' : 'Générer bilan PDF'}
@@ -1786,7 +1786,7 @@ export function Bailleurs() {
                       <div>
                         <p className="mb-2 text-[0.66rem] font-black uppercase tracking-[0.12em] text-[#9a5b17]">Actions principales</p>
                         <div className="grid grid-cols-2 gap-2">
-                          <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-emerald-700 bg-emerald-700 px-3 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:bg-emerald-800 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"><BarChart3 className="h-4 w-4" />Rapport PDF</button>
+                          <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-3 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"><BarChart3 className="h-4 w-4" />Rapport PDF</button>
                           <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-3 py-2.5 text-sm font-black text-amber-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-100"><FileText className="h-4 w-4" />Mandat PDF</button>
                         </div>
                       </div>

@@ -946,7 +946,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
             <button
               type="button"
               onClick={() => void openPropertyModal()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-brand-900 to-brand-950 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:shadow-emerald-950/25"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-emerald-950/25"
             >
               <Plus className="h-4 w-4" />
               {isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'}

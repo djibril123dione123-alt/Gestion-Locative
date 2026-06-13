@@ -1503,13 +1503,13 @@ function OccupantBailDrawer({
             <div>
               <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Documents principaux</p>
               <div className="flex flex-col gap-2">
-                <button type="button" onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} className="flex items-center gap-3 rounded-2xl border border-emerald-900/20 bg-gradient-to-br from-white to-emerald-50/70 p-3.5 text-left text-sm font-black text-brand-950 shadow-[0_12px_30px_rgba(6,78,59,0.08)] transition hover:-translate-y-0.5 hover:border-brand-700 hover:shadow-[0_18px_40px_rgba(6,78,59,0.12)] disabled:translate-y-0 disabled:opacity-60">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-800 text-white shadow-sm">
+                <button type="button" onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} className="flex items-center gap-3 rounded-2xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] p-3.5 text-left text-sm font-black text-white shadow-[0_14px_34px_rgba(4,24,18,0.18)] transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:translate-y-0 disabled:opacity-60">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/12 text-white shadow-sm ring-1 ring-white/15">
                     <Download className="h-5 w-5" />
                   </span>
                   <span>
                     <span className="block">{pdfGenerating ? 'Génération en cours...' : 'Contrat PDF'}</span>
-                    <span className="mt-0.5 block text-xs font-semibold text-slate-500">{row.contrat_ref}</span>
+                    <span className="mt-0.5 block text-xs font-semibold text-emerald-50/70">{row.contrat_ref}</span>
                   </span>
                 </button>
               </div>
@@ -1731,7 +1731,7 @@ function DrawerDocuments({
           type="button"
           onClick={() => onGeneratePdf(row)}
           disabled={pdfGenerating}
-          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F]"
         >
           <Download className="h-4 w-4" />
           {pdfGenerating ? 'Génération...' : 'Générer le contrat PDF'}

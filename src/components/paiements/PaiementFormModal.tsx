@@ -2,6 +2,7 @@ import React from 'react';
 import { AlertTriangle, Building2, CreditCard, Home, Info, UserRound, Wallet, WifiOff } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { SmartCombobox, type SmartComboboxOption } from '../ui/SmartCombobox';
 import { TooltipHint } from '../onboarding/TooltipHint';
 import { isCommissionMissing } from '../../services/domain/commissionService';
 import type { ContratRow, PaiementFormData, PaiementRow } from './paiementTypes';
@@ -77,7 +78,54 @@ export function PaiementFormModal({
   const immeubleLabel = selectedContrat?.unites?.immeubles?.nom ?? '';
   const bailleur = selectedContrat?.unites?.immeubles?.bailleurs;
   const bailleurLabel = bailleur ? formatPersonName(bailleur, '') : '';
-  const canSubmit = isOnline && !isSaving && (!selectedContrat || Boolean(formData.mois_display && monthOptions.length > 0 && tropPercuPreview <= 0));
+  const canSubmit = isOnline && !isSaving && Boolean(selectedContrat && formData.mois_display && monthOptions.length > 0 && tropPercuPreview <= 0);
+  const contractOptions: SmartComboboxOption[] = contrats.map((contrat) => ({
+    value: contrat.id,
+    label: `${formatPersonName(contrat.locataires)} - ${contrat.unites?.nom ?? 'UnitÃ© non renseignÃ©e'}`,
+    subtitle: [
+      contrat.unites?.immeubles?.nom,
+      contrat.loyer_mensuel ? `${Number(contrat.loyer_mensuel).toLocaleString('fr-FR')} FCFA` : null,
+    ].filter(Boolean).join(' Â· '),
+    keywords: `${formatPersonName(contrat.locataires)} ${contrat.unites?.nom ?? ''} ${contrat.unites?.immeubles?.nom ?? ''}`,
+  }));
+  const paymentMonthOptions: SmartComboboxOption[] = monthOptions.map((option) => ({
+    value: option.value,
+    label: option.label,
+    subtitle: [
+      option.isPartial ? `Reliquat ${option.remainingAmount.toLocaleString('fr-FR')} FCFA` : null,
+      option.isFuture ? 'Paiement en avance' : null,
+      option.isSold ? 'Mois soldÃ©' : null,
+    ].filter(Boolean).join(' Â· '),
+    badge: option.isPartial ? 'Partiel' : option.isFuture ? 'Avance' : option.isSold ? 'SoldÃ©' : undefined,
+    disabled: option.isSold && option.value !== formData.mois_display,
+  }));
+  const paymentModeOptions: SmartComboboxOption[] = [
+    { value: 'especes', label: 'EspÃ¨ces' },
+    { value: 'cheque', label: 'ChÃ¨que' },
+    { value: 'virement', label: 'Virement' },
+    { value: 'mobile_money', label: 'Mobile Money' },
+  ];
+
+  const handleContractChange = (contratId: string) => {
+    const selected = contrats.find((contrat) => contrat.id === contratId);
+    const options = buildPaymentMonthOptions(selected, paiements, {
+      excludePaymentId: editingPaiement?.id,
+      selectedMonth: formData.mois_display,
+    });
+    const preferredMonth = options.find((option) => !option.isSold) ?? options[0];
+    setFormData((prev) => ({
+      ...prev,
+      contrat_id: contratId,
+      mois_display: preferredMonth?.value ?? prev.mois_display,
+      mois_concerne: preferredMonth ? `${preferredMonth.value}-01` : prev.mois_concerne,
+      montant_total: selected
+        ? String(preferredMonth?.remainingAmount && preferredMonth.remainingAmount > 0
+            ? preferredMonth.remainingAmount
+            : selected.loyer_mensuel)
+        : '',
+      statut: 'paye',
+    }));
+  };
 
   return (
     <Modal
@@ -144,38 +192,19 @@ export function PaiementFormModal({
           <label className="mb-1 block text-sm font-medium text-slate-700">
             Contrat <span className="text-red-500">*</span>
           </label>
-          <select
-            required
+          <SmartCombobox
             value={formData.contrat_id}
-            onChange={(event) => {
-              const selected = contrats.find((contrat) => contrat.id === event.target.value);
-              const options = buildPaymentMonthOptions(selected, paiements, {
-                excludePaymentId: editingPaiement?.id,
-                selectedMonth: formData.mois_display,
-              });
-              const preferredMonth = options.find((option) => !option.isSold) ?? options[0];
-              setFormData((prev) => ({
-                ...prev,
-                contrat_id: event.target.value,
-                mois_display: preferredMonth?.value ?? prev.mois_display,
-                mois_concerne: preferredMonth ? `${preferredMonth.value}-01` : prev.mois_concerne,
-                montant_total: selected
-                  ? String(preferredMonth?.remainingAmount && preferredMonth.remainingAmount > 0
-                      ? preferredMonth.remainingAmount
-                      : selected.loyer_mensuel)
-                  : '',
-                statut: 'paye',
-              }));
+            options={contractOptions}
+            onChange={handleContractChange}
+            placeholder="Selectionner un contrat"
+            searchPlaceholder="Locataire, unite ou bien"
+            emptyLabel="Aucun contrat disponible."
+            emptyActionLabel="Aller aux locations"
+            onEmptyAction={() => {
+              window.location.hash = '#/occupants-baux';
+              onClose();
             }}
-            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold text-slate-900 transition focus:border-orange-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-orange-200"
-          >
-            <option value="">Sélectionner un contrat</option>
-            {contrats.map((contrat) => (
-              <option key={contrat.id} value={contrat.id}>
-                {formatPersonName(contrat.locataires)} - {contrat.unites?.nom}
-              </option>
-            ))}
-          </select>
+          />
           {formData.contrat_id && isCommissionMissing(commission) && (
             <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
               <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
@@ -278,21 +307,14 @@ export function PaiementFormModal({
             <label className="mb-1 block text-sm font-medium text-slate-700">
               Mois concerné <span className="text-red-500">*</span>
             </label>
-            <select
-              required
+            <SmartCombobox
               value={formData.mois_display}
-              onChange={(event) => handleMoisChange(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-900 shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
-            >
-              <option value="">Selectionner un mois</option>
-              {monthOptions.map((option) => (
-                <option key={option.value} value={option.value} disabled={option.isSold && option.value !== formData.mois_display}>
-                  {option.label}
-                  {option.isPartial ? ` - reliquat ${option.remainingAmount.toLocaleString('fr-FR')} FCFA` : ''}
-                  {option.isFuture ? ' - avance' : ''}
-                </option>
-              ))}
-            </select>
+              options={paymentMonthOptions}
+              onChange={handleMoisChange}
+              placeholder="Selectionner un mois"
+              searchPlaceholder="Mois, reliquat ou avance"
+              emptyLabel="Aucun mois payable disponible."
+            />
             {selectedContrat && monthOptions.length === 0 && (
               <p className="mt-2 text-xs font-semibold text-emerald-700">
                 Tous les mois couverts par ce contrat sont soldes.
@@ -317,21 +339,18 @@ export function PaiementFormModal({
             <label className="mb-1 block text-sm font-medium text-slate-700">
               Mode <span className="text-red-500">*</span>
             </label>
-            <select
+            <SmartCombobox
               value={formData.mode_paiement}
-              onChange={(event) =>
+              options={paymentModeOptions}
+              onChange={(value) =>
                 setFormData((prev) => ({
                   ...prev,
-                  mode_paiement: event.target.value as PaiementFormData['mode_paiement'],
+                  mode_paiement: value as PaiementFormData['mode_paiement'],
                 }))
               }
-              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-900 shadow-sm transition focus:border-orange-400 focus:outline-none focus:ring-2 focus:ring-orange-200"
-            >
-              <option value="especes">Espèces</option>
-              <option value="cheque">Chèque</option>
-              <option value="virement">Virement</option>
-              <option value="mobile_money">Mobile Money</option>
-            </select>
+              placeholder="Mode de paiement"
+              searchPlaceholder="Especes, cheque, virement..."
+            />
           </div>
 
           <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white px-4 py-3 text-sm text-slate-700">

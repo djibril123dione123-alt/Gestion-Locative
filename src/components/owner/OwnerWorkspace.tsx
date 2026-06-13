@@ -960,10 +960,10 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <PremiumButton
-              variant="secondary"
+              variant="primary"
               onClick={() => void handleGenerateOwnerReport()}
               disabled={generatingReport}
-              icon={generatingReport ? <Loader2 className="h-4 w-4 animate-spin text-brand-800" /> : <FileText className="h-4 w-4 text-brand-800" />}
+              icon={generatingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
             >
               Générer rapport PDF
             </PremiumButton>

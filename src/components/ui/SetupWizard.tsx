@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../hooks/useToast';
 import { ToastContainer } from './Toast';
+import { SmartCombobox } from './SmartCombobox';
 import { reloadUserProfile } from '../../lib/agencyHelper';
 import { createPaiementViaEdge } from '../../services/api/paiementApi';
 import { getOrCreateIndividualOwnerBailleur } from '../../services/individualOwner';
@@ -538,19 +539,21 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Mode de paiement *</label>
-              <select
+              <SmartCombobox
                 value={formData.paiement.mode_paiement}
-                onChange={(e) => setFormData({
+                options={[
+                  { value: 'especes', label: 'Especes' },
+                  { value: 'cheque', label: 'Cheque' },
+                  { value: 'virement', label: 'Virement' },
+                  { value: 'mobile_money', label: 'Mobile Money' },
+                ]}
+                onChange={(value) => setFormData({
                   ...formData,
-                  paiement: { ...formData.paiement, mode_paiement: e.target.value }
+                  paiement: { ...formData.paiement, mode_paiement: value }
                 })}
-                className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-              >
-                <option value="especes">Espèces</option>
-                <option value="cheque">Chèque</option>
-                <option value="virement">Virement</option>
-                <option value="mobile_money">Mobile Money</option>
-              </select>
+                placeholder="Mode de paiement"
+                searchPlaceholder="Especes, cheque, virement..."
+              />
             </div>
             <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
               <p className="text-sm text-orange-800">

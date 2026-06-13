@@ -19,6 +19,7 @@ export interface SmartComboboxOption {
   badge?: string;
   rightLabel?: ReactNode;
   initials?: string;
+  disabled?: boolean;
 }
 
 interface SmartComboboxProps {
@@ -173,6 +174,7 @@ export function SmartCombobox({
   }, [activeIndex, open]);
 
   const selectOption = (option: SmartComboboxOption) => {
+    if (option.disabled) return;
     onChange(option.value);
     setOpen(false);
   };
@@ -255,6 +257,7 @@ export function SmartCombobox({
             filteredOptions.map((option, index) => {
               const isSelected = option.value === value;
               const isActive = index === activeIndex;
+              const isDisabled = option.disabled;
 
               return (
                 <button
@@ -262,14 +265,19 @@ export function SmartCombobox({
                   type="button"
                   role="option"
                   aria-selected={isSelected}
+                  disabled={isDisabled}
                   onClick={() => selectOption(option)}
-                  onMouseEnter={() => setActiveIndex(index)}
+                  onMouseEnter={() => {
+                    if (!isDisabled) setActiveIndex(index);
+                  }}
                   className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition ${
-                    isActive ? 'bg-emerald-100/45' : ''
+                    isActive && !isDisabled ? 'bg-emerald-100/45' : ''
                   } ${
-                    isSelected
-                      ? 'bg-emerald-50 text-brand-900'
-                      : 'text-slate-700 hover:bg-[#fff6df]'
+                    isDisabled
+                      ? 'cursor-not-allowed text-slate-400 opacity-55'
+                      : isSelected
+                        ? 'bg-emerald-50 text-brand-900'
+                        : 'text-slate-700 hover:bg-[#fff6df]'
                   }`}
                 >
                   {option.initials ? (

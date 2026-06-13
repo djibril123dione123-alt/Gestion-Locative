@@ -1,5 +1,5 @@
 /**
- * OccupantsBaux — vue unifiée Occupants & Baux (Phase 2).
+ * OccupantsBaux — vue unifiée Locations (Phase 2).
  *
  * Fusionne la lecture Locataires + Contrats en une ligne par bail actif.
  * Ne remplace pas les pages existantes Locataires et Contrats.
@@ -943,7 +943,7 @@ export function OccupantsBaux() {
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Domaine locatif</p>
               <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">
-                Occupants & Baux
+                Locations
               </h1>
               <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
                 Vue unifiée occupant → bail → unité ·{' '}
@@ -1471,13 +1471,54 @@ function OccupantBailDrawer({
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <DrawerAction icon={UserPlus} label="Occupant" onClick={() => onEditOccupant(row)} />
-            <DrawerAction icon={Pencil} label="Bail" onClick={() => onEditBail(row)} />
-            <DrawerAction icon={Download} label={pdfGenerating ? 'Génération...' : 'PDF contrat'} onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} />
-            {canRenew(row) && <DrawerAction icon={RefreshCw} label="Renouveler" onClick={() => onRenew(row)} />}
-            {activeStatus && <DrawerAction icon={Ban} label="Résilier" onClick={() => onResiliate(row)} tone="danger" />}
-            {canArchive && <DrawerAction icon={Archive} label="Archiver" onClick={() => onArchive(row)} tone="danger" />}
+          <div className="mt-8 space-y-6">
+            <div>
+              <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Documents</p>
+              <div className="flex flex-col gap-2">
+                <button type="button" onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white p-3 text-left text-sm font-bold text-slate-800 shadow-sm transition hover:border-brand-700 hover:text-brand-900 disabled:opacity-50">
+                  <Download className="h-5 w-5 text-brand-700" />
+                  {pdfGenerating ? 'Génération en cours...' : 'Contrat PDF'}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Gestion</p>
+              <div className="flex flex-col gap-2">
+                <button type="button" onClick={() => onEditBail(row)} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                  <Pencil className="h-4 w-4 text-slate-500" />
+                  Modifier la location
+                </button>
+                <button type="button" onClick={() => onEditOccupant(row)} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                  <UserPlus className="h-4 w-4 text-slate-500" />
+                  Fiche locataire
+                </button>
+                {canRenew(row) && (
+                  <button type="button" onClick={() => onRenew(row)} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                    <RefreshCw className="h-4 w-4 text-slate-500" />
+                    Renouveler la location
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-red-400">Danger</p>
+              <div className="flex flex-col gap-2">
+                {activeStatus && (
+                  <button type="button" onClick={() => onResiliate(row)} className="flex items-center gap-3 rounded-xl border border-red-100 bg-red-50 p-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-100">
+                    <Ban className="h-4 w-4" />
+                    Résilier la location
+                  </button>
+                )}
+                {canArchive && (
+                  <button type="button" onClick={() => onArchive(row)} className="flex items-center gap-3 rounded-xl border border-red-100 bg-red-50 p-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-100">
+                    <Archive className="h-4 w-4" />
+                    Archiver
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1639,7 +1680,7 @@ function DrawerDocuments({
           </div>
           <div className="min-w-0">
             <p className="font-bold text-slate-900">Contrat de location</p>
-            <p className="text-xs font-medium text-slate-500">{row.contrat_ref} · Génération directe depuis Occupants & Baux</p>
+            <p className="text-xs font-medium text-slate-500">{row.contrat_ref} · Génération directe depuis Locations</p>
           </div>
         </div>
         <button
@@ -2087,7 +2128,7 @@ function OccupantFormModal({
         <LifecycleIntro
           icon={UserPlus}
           title={mode === 'edit' ? "Identité de l'occupant" : 'Créer un occupant'}
-          description="Ces informations alimentent le bail, les documents et les futures fiches Occupants & Baux."
+          description="Ces informations alimentent le bail, les documents et les futures fiches Locations."
         />
         <div className="grid gap-3 sm:grid-cols-2">
           <TextField label="Prénom" value={form.prenom} onChange={(value) => onChange({ ...form, prenom: value })} />
@@ -2181,7 +2222,7 @@ function OccupationFormModal({
             <TextField label="Caution" value={form.caution} onChange={(value) => update({ caution: value })} type="number" />
           </div>
           {!isIndividualOwner && (
-            <TextField label="Commission agence (%)" value={form.commission} onChange={(value) => update({ commission: value })} type="number" />
+            <TextField label="Commission agence" value={form.commission} onChange={(value) => update({ commission: value })} type="number" />
           )}
           <ModalActions submitting={submitting} submitLabel="Enregistrer le bail" onCancel={onClose} onSubmit={onSubmit} />
         </div>
@@ -2344,7 +2385,7 @@ function OccupationFormModal({
               <TextField label="Caution" value={form.caution} onChange={(value) => update({ caution: value })} type="number" />
             </div>
             {!isIndividualOwner && (
-              <TextField label="Commission agence (%)" value={form.commission} onChange={(value) => update({ commission: value })} type="number" />
+              <TextField label="Commission agence" value={form.commission} onChange={(value) => update({ commission: value })} type="number" />
             )}
             <TextField label="Destination" value={form.destination} onChange={(value) => update({ destination: value })} placeholder="Habitation, commerce..." />
           </div>

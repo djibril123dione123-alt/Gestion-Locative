@@ -1953,7 +1953,7 @@ export function Bailleurs() {
               </div>
               <div className="sk-metric-tile">
                 <ClipboardList className="h-5 w-5 text-brand-700" />
-                <p className="mt-3 text-xs font-bold uppercase text-slate-500">Contrats actifs</p>
+                <p className="mt-3 text-xs font-bold uppercase text-slate-500">Locations en cours</p>
                 <p className="text-2xl font-black text-slate-950">
                   {loadingImpacts ? '...' : lifecycleImpacts?.contrats_actifs ?? 0}
                 </p>
@@ -2016,7 +2016,7 @@ export function Bailleurs() {
                 className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-700 focus:ring-brand-600"
               />
               <span className="text-sm leading-6 text-slate-700">
-                Je confirme avoir vérifié les impacts sur les biens, contrats actifs,
+                Je confirme avoir vérifié les impacts sur les biens, locations en cours,
                 locataires et encaissements futurs.
               </span>
             </label>

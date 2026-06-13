@@ -1521,11 +1521,34 @@ function PropertyDrawer({
           {!isIndividualOwner && <InfoLine icon={Users} label="Bailleur" value={ownerName(owner)} />}
         </InfoBlock>
 
-        <div className="grid grid-cols-2 gap-2">
-          <DrawerAction icon={Pencil} label="Modifier" onClick={onEdit} />
-          <DrawerAction icon={DoorOpen} label="Ajouter une unité" onClick={onAddUnit} />
-          <DrawerAction icon={Wallet} label="Paiements liés" onClick={() => onNavigate('/paiements')} />
-          <DrawerAction icon={FolderOpen} label="Documents" onClick={() => onNavigate('/documents')} />
+        <div className="mt-8 space-y-6">
+          <div>
+            <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Actions principales</p>
+            <div className="flex flex-col gap-2">
+              <button type="button" onClick={onEdit} className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white p-3 text-left text-sm font-bold text-slate-800 shadow-sm transition hover:border-brand-700 hover:text-brand-900">
+                <Pencil className="h-5 w-5 text-brand-700" />
+                Modifier le bien
+              </button>
+              <button type="button" onClick={onAddUnit} className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white p-3 text-left text-sm font-bold text-slate-800 shadow-sm transition hover:border-brand-700 hover:text-brand-900">
+                <Plus className="h-5 w-5 text-brand-700" />
+                Ajouter une unité
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Gestion</p>
+            <div className="flex flex-col gap-2">
+              <button type="button" onClick={() => onNavigate('/paiements')} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                <Wallet className="h-4 w-4 text-slate-500" />
+                Paiements liés
+              </button>
+              <button type="button" onClick={() => onNavigate('/documents')} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                <FolderOpen className="h-4 w-4 text-slate-500" />
+                Documents associés
+              </button>
+            </div>
+          </div>
         </div>
 
         <DrawerTabs
@@ -1614,11 +1637,34 @@ function UnitDrawer({
           <InfoLine icon={Banknote} label="Dernier paiement" value={summary.latestPayment ? formatDate(summary.latestPayment.date_paiement) : 'Aucun paiement'} />
         </InfoBlock>
 
-        <div className="grid grid-cols-2 gap-2">
-          <DrawerAction icon={Pencil} label="Modifier" onClick={onEdit} />
-          <DrawerAction icon={Users} label={summary.contract ? 'Voir occupation' : 'Nouvelle occupation'} onClick={() => onNavigate('/occupants-baux')} />
-          <DrawerAction icon={KeyRound} label={summary.contract ? 'Voir bail' : 'Créer bail'} onClick={() => onNavigate('/occupants-baux')} />
-          <DrawerAction icon={Wallet} label="Paiement" onClick={() => onNavigate('/paiements')} />
+        <div className="mt-8 space-y-6">
+          <div>
+            <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Actions principales</p>
+            <div className="flex flex-col gap-2">
+              <button type="button" onClick={onEdit} className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white p-3 text-left text-sm font-bold text-slate-800 shadow-sm transition hover:border-brand-700 hover:text-brand-900">
+                <Pencil className="h-5 w-5 text-brand-700" />
+                Modifier l'unité
+              </button>
+            </div>
+          </div>
+  
+          <div>
+            <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Gestion</p>
+            <div className="flex flex-col gap-2">
+              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                <Users className="h-4 w-4 text-slate-500" />
+                {summary.contract ? 'Voir occupation' : 'Nouvelle occupation'}
+              </button>
+              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                <KeyRound className="h-4 w-4 text-slate-500" />
+                {summary.contract ? 'Voir bail' : 'Créer bail'}
+              </button>
+              <button type="button" onClick={() => onNavigate('/paiements')} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                <Wallet className="h-4 w-4 text-slate-500" />
+                Paiements
+              </button>
+            </div>
+          </div>
         </div>
 
         <DrawerTabs

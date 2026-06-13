@@ -217,7 +217,7 @@ export function DocumentVerificationResultCard({
             <button
               type="button"
               onClick={onDiscover}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-orange-950/25 transition hover:bg-orange-600"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/20 transition hover:from-[#0A3F30] hover:to-[#06281F]"
             >
               Découvrir Samay Këur
             </button>

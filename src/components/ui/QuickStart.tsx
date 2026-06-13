@@ -132,7 +132,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
 
   if (isCollapsed) {
     return (
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-xl shadow-lg p-4 cursor-pointer hover:shadow-xl transition-all">
+      <div className="cursor-pointer rounded-xl border border-[#0A3F30]/70 bg-gradient-to-r from-[#072F24] to-[#041812] p-4 shadow-lg shadow-emerald-950/20 transition-all hover:-translate-y-0.5 hover:shadow-xl">
         <div onClick={() => setIsCollapsed(false)} className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
@@ -151,7 +151,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
-      <div className="bg-gradient-to-r from-orange-500 to-orange-600 p-6">
+      <div className="bg-gradient-to-r from-[#072F24] to-[#041812] p-6">
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-xl font-bold text-white mb-2">Demarrage rapide</h3>
@@ -194,7 +194,7 @@ export function QuickStart({ onNavigate }: QuickStartProps) {
                 className={`w-full flex items-center gap-4 p-4 rounded-lg transition-all ${
                   step.completed
                     ? 'bg-green-50 border border-green-200'
-                    : 'bg-slate-50 border border-slate-200 hover:bg-orange-50 hover:border-orange-200'
+                    : 'bg-slate-50 border border-slate-200 hover:bg-emerald-50 hover:border-emerald-200'
                 }`}
               >
                 <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${

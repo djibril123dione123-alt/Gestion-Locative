@@ -503,7 +503,7 @@ export function Parametres() {
         <button
           onClick={handleSave}
           disabled={saving || !hasUnsavedChanges}
-          className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-500 px-3.5 py-2 text-sm font-black text-white shadow-lg shadow-orange-500/15 transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none sm:px-5"
+          className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-3.5 py-2 text-sm font-black text-white shadow-lg shadow-emerald-950/18 transition-colors hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-none disabled:bg-slate-300 disabled:shadow-none sm:px-5"
         >
           {saving ? (
             <>

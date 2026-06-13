@@ -422,7 +422,7 @@
   }
 
   .sk-create-cta {
-    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-action-500/80 bg-gradient-to-br from-action-500 via-action-500 to-action-600 px-4 py-2.5 text-sm font-black text-white shadow-[0_18px_42px_rgba(249,115,22,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:border-action-600 hover:from-action-500 hover:to-action-700 hover:shadow-[0_24px_62px_rgba(249,115,22,0.32)] active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 disabled:cursor-not-allowed disabled:opacity-50 sm:px-5 sm:text-base;
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-2.5 text-sm font-black text-white shadow-[0_18px_42px_rgba(4,24,18,0.20)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#0A3F30] hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_24px_62px_rgba(4,24,18,0.28)] active:translate-y-0 active:scale-[0.99] active:from-[#041812] active:to-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-900/20 disabled:cursor-not-allowed disabled:opacity-50 sm:px-5 sm:text-base;
   }
 
   .sk-create-cta-muted {
@@ -462,7 +462,7 @@
 
   .sk-modal-body form h3::before {
     content: '';
-    @apply h-2 w-2 rounded-full bg-action-500 shadow-[0_0_0_4px_rgba(249,115,22,0.12)];
+    @apply h-2 w-2 rounded-full bg-emerald-700 shadow-[0_0_0_4px_rgba(4,120,87,0.12)];
   }
 
   .sk-modal-body form label {
@@ -503,11 +503,11 @@
   }
 
   .sk-modal-body form button[type='submit']:not(.sk-action):not(.sk-create-cta) {
-    @apply min-h-11 rounded-lg bg-gradient-to-br from-action-500 to-action-600 px-5 py-2.5 font-black text-white shadow-[0_18px_42px_rgba(249,115,22,0.22)] transition-all hover:-translate-y-0.5 hover:from-action-500 hover:to-action-700 hover:shadow-[0_24px_62px_rgba(249,115,22,0.3)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20;
+    @apply min-h-11 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-5 py-2.5 font-black text-white shadow-[0_18px_42px_rgba(4,24,18,0.20)] transition-all hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_24px_62px_rgba(4,24,18,0.28)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-900/20;
   }
 
   .sk-modal-body form button[type='submit'].sk-action-primary {
-    @apply border-action-500 bg-action-500 text-white hover:border-action-600 hover:bg-action-600 hover:shadow-[0_18px_42px_rgba(249,115,22,0.24)] focus-visible:ring-action-500/20;
+    @apply border-[#0A3F30] bg-[#072F24] text-white hover:border-[#0A3F30] hover:bg-[#0A3F30] hover:shadow-[0_18px_42px_rgba(4,24,18,0.24)] focus-visible:ring-emerald-900/20;
   }
 
   .sk-brand-mark {

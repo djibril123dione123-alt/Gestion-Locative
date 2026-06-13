@@ -23,9 +23,9 @@ export const premiumButtonClasses = {
   base:
     'inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-55',
   create:
-    'bg-gradient-to-br from-action-500 to-[#b96b16] text-white shadow-lg shadow-orange-500/20 hover:-translate-y-0.5 hover:shadow-orange-600/25',
+    'border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] text-white shadow-lg shadow-emerald-950/18 hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-emerald-950/24 active:from-[#041812] active:to-[#041812]',
   primary:
-    'bg-gradient-to-br from-brand-950 to-emerald-900 text-white shadow-lg shadow-emerald-950/18 hover:-translate-y-0.5 hover:shadow-emerald-950/24',
+    'border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] text-white shadow-lg shadow-emerald-950/18 hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-emerald-950/24 active:from-[#041812] active:to-[#041812]',
   secondary:
     'border border-emerald-950/10 bg-[#fffdf8] text-slate-700 shadow-sm hover:border-emerald-200 hover:bg-emerald-50',
   danger:

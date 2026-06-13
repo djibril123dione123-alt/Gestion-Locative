@@ -27,9 +27,9 @@ const ICON_SIZE: Record<Size, string> = {
 
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary:
-    'text-white shadow-[0_18px_42px_rgba(249,115,22,0.24)] hover:shadow-[0_24px_62px_rgba(249,115,22,0.32)] transform hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] ' +
-    'border border-action-500/80 bg-gradient-to-br from-action-500 via-action-500 to-action-600 hover:from-action-500 hover:to-action-700 ' +
-    'focus-visible:ring-2 focus-visible:ring-action-500 focus-visible:ring-offset-2',
+    'text-white shadow-[0_18px_42px_rgba(4,24,18,0.20)] hover:shadow-[0_24px_62px_rgba(4,24,18,0.28)] transform hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] ' +
+    'border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] hover:from-[#0A3F30] hover:to-[#06281F] ' +
+    'focus-visible:ring-2 focus-visible:ring-emerald-800 focus-visible:ring-offset-2',
   secondary:
     'border border-slate-200 text-slate-800 bg-white hover:bg-emerald-50/70 hover:border-emerald-200 ' +
     'shadow-sm hover:shadow-md ' +

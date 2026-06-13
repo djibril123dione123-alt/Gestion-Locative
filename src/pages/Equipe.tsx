@@ -414,7 +414,7 @@ export function Equipe() {
             type="button"
             onClick={() => setIsInviteOpen(true)}
             data-testid="button-invite-member"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-action-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-orange-500/20 transition hover:-translate-y-0.5 hover:bg-action-600"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F]"
           >
             <UserPlus className="h-5 w-5" />
             Inviter un collaborateur
@@ -593,7 +593,7 @@ export function Equipe() {
                 type="button"
                 onClick={() => copyLink(generatedLink)}
                 data-testid="button-copy-generated"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-action-500 px-4 py-2 text-sm font-black text-white transition hover:bg-action-600"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-4 py-2 text-sm font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F]"
               >
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {copied ? 'Copié' : 'Copier'}
@@ -610,7 +610,7 @@ export function Equipe() {
                 value={formData.email}
                 onChange={(event) => setFormData({ ...formData, email: event.target.value })}
                 data-testid="input-invite-email"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               />
             </div>
             <div>
@@ -619,7 +619,7 @@ export function Equipe() {
                 value={formData.role}
                 onChange={(event) => setFormData({ ...formData, role: event.target.value as RoleOption })}
                 data-testid="select-invite-role"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100"
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               >
                 <option value="agent">Agent</option>
                 <option value="comptable">Comptable</option>
@@ -638,7 +638,7 @@ export function Equipe() {
                 type="submit"
                 disabled={submitting}
                 data-testid="button-submit-invitation"
-                className="rounded-xl bg-action-500 px-4 py-2.5 text-sm font-black text-white transition hover:bg-action-600 disabled:opacity-50"
+                className="rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-4 py-2.5 text-sm font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? 'Création...' : "Envoyer l'invitation"}
               </button>

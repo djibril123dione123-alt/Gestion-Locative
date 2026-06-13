@@ -2362,6 +2362,8 @@ function OccupationFormModal({
                     placeholder={workflowLoading ? 'Chargement des locataires...' : 'Rechercher ou choisir un locataire'}
                     searchPlaceholder="Nom, téléphone ou email"
                     emptyLabel="Aucun locataire trouvé"
+                    emptyActionLabel="CrÃ©er un nouveau locataire"
+                    onEmptyAction={() => update({ occupantMode: 'new', locataire_id: '' })}
                     disabled={workflowLoading}
                     className="mt-1"
                   />
@@ -2416,6 +2418,11 @@ function OccupationFormModal({
                 placeholder={workflowLoading ? 'Chargement des unités libres...' : 'Rechercher bien, unité ou numéro'}
                 searchPlaceholder="Bien, unité, numéro ou étage"
                 emptyLabel="Aucune unité libre trouvée"
+                emptyActionLabel="CrÃ©er une unitÃ©"
+                onEmptyAction={() => {
+                  onClose();
+                  window.location.hash = '#/patrimoine?tab=unites&action=new-unit';
+                }}
                 disabled={workflowLoading}
                 className="mt-1"
               />

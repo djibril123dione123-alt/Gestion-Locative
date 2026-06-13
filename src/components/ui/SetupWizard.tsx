@@ -631,7 +631,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
                 onComplete();
                 onClose();
               }}
-              className="px-8 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all font-bold text-lg flex items-center justify-center mx-auto shadow-lg hover:shadow-xl"
+              className="mx-auto flex items-center justify-center rounded-xl border border-[#0A3F30]/70 bg-gradient-to-r from-[#072F24] to-[#041812] px-8 py-4 text-lg font-bold text-white shadow-lg shadow-emerald-950/20 transition-all hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-xl"
             >
               Voir mon tableau de bord
               <ArrowRight className="w-5 h-5 ml-2" />
@@ -702,7 +702,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
                       currentStep > step.id
                         ? 'bg-green-500 text-white'
                         : currentStep === step.id
-                        ? 'bg-orange-500 text-white'
+                        ? 'bg-[#072F24] text-white'
                         : 'bg-slate-200 text-slate-500'
                     }`}>
                       {currentStep > step.id ? (
@@ -753,7 +753,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
               <button
                 onClick={() => handleStepSubmit(currentStep)}
                 disabled={!isStepValid() || loading}
-                className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-semibold flex items-center justify-center"
+                className="flex flex-1 items-center justify-center rounded-xl border border-[#0A3F30]/70 bg-gradient-to-r from-[#072F24] to-[#041812] px-6 py-3 font-semibold text-white transition-all hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {loading ? (
                   <>

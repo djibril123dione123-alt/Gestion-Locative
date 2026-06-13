@@ -1,4 +1,14 @@
-import React, { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  type CSSProperties,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronDown, Search } from 'lucide-react';
 
 export interface SmartComboboxOption {
@@ -18,9 +28,20 @@ interface SmartComboboxProps {
   placeholder?: string;
   searchPlaceholder?: string;
   emptyLabel?: string;
+  emptyActionLabel?: string;
+  onEmptyAction?: () => void;
   className?: string;
   disabled?: boolean;
 }
+
+type MenuPlacement = {
+  mobile: boolean;
+  left: number;
+  width: number;
+  maxHeight: number;
+  top?: number;
+  bottom?: number;
+};
 
 export function SmartCombobox({
   value,
@@ -29,17 +50,57 @@ export function SmartCombobox({
   placeholder = 'Sélectionner ou rechercher...',
   searchPlaceholder,
   emptyLabel = 'Aucun résultat',
+  emptyActionLabel,
+  onEmptyAction,
   className = '',
   disabled = false,
 }: SmartComboboxProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const [menuPlacement, setMenuPlacement] = useState<MenuPlacement | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const listboxRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = useMemo(() => options.find((option) => option.value === value), [options, value]);
+
+  const updateMenuPlacement = useCallback(() => {
+    if (!wrapperRef.current || typeof window === 'undefined') return;
+
+    const rect = wrapperRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const gap = 8;
+
+    if (viewportWidth < 640) {
+      setMenuPlacement({
+        mobile: true,
+        left: 12,
+        width: Math.max(280, viewportWidth - 24),
+        bottom: 12,
+        maxHeight: Math.min(460, Math.max(260, viewportHeight * 0.72)),
+      });
+      return;
+    }
+
+    const width = Math.min(Math.max(rect.width, 260), viewportWidth - 24);
+    const left = Math.min(Math.max(12, rect.left), viewportWidth - width - 12);
+    const spaceBelow = viewportHeight - rect.bottom - gap;
+    const spaceAbove = rect.top - gap;
+    const shouldOpenAbove = spaceBelow < 240 && spaceAbove > spaceBelow;
+    const availableSpace = shouldOpenAbove ? spaceAbove : spaceBelow;
+    const maxHeight = Math.max(180, Math.min(340, availableSpace - 8));
+
+    setMenuPlacement({
+      mobile: false,
+      left,
+      width,
+      maxHeight,
+      top: shouldOpenAbove ? Math.max(12, rect.top - gap - maxHeight) : rect.bottom + gap,
+    });
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -82,13 +143,27 @@ export function SmartCombobox({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setOpen(false);
+      const target = event.target as Node;
+      if (wrapperRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
       }
+      setOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    updateMenuPlacement();
+    const handlePositionChange = () => updateMenuPlacement();
+    window.addEventListener('resize', handlePositionChange);
+    window.addEventListener('scroll', handlePositionChange, true);
+    return () => {
+      window.removeEventListener('resize', handlePositionChange);
+      window.removeEventListener('scroll', handlePositionChange, true);
+    };
+  }, [filteredOptions.length, open, updateMenuPlacement]);
 
   useEffect(() => {
     if (open && activeIndex >= 0 && listboxRef.current) {
@@ -131,6 +206,119 @@ export function SmartCombobox({
     }
   };
 
+  const menuStyle: CSSProperties | undefined = menuPlacement
+    ? {
+      left: menuPlacement.left,
+      width: menuPlacement.width,
+      maxHeight: menuPlacement.maxHeight,
+      ...(menuPlacement.mobile
+        ? { bottom: menuPlacement.bottom }
+        : { top: menuPlacement.top }),
+    }
+    : undefined;
+
+  const menu = open && menuPlacement && typeof document !== 'undefined'
+    ? createPortal(
+      <div
+        ref={menuRef}
+        style={menuStyle}
+        className={`fixed z-[10000] overflow-hidden border border-emerald-950/10 bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.18)] ring-1 ring-white/80 ${
+          menuPlacement.mobile ? 'rounded-[1.65rem]' : 'rounded-2xl'
+        }`}
+      >
+        <div className="border-b border-emerald-950/10 bg-[#fff6df]/75 px-3 py-2 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+          {searchPlaceholder || 'Choisir dans la liste'}
+        </div>
+        <div
+          ref={listboxRef}
+          className="overflow-y-auto p-1.5"
+          style={{ maxHeight: Math.max(160, menuPlacement.maxHeight - 42) }}
+          role="listbox"
+        >
+          {filteredOptions.length === 0 ? (
+            <div className="px-3 py-4 text-center text-sm font-medium text-slate-500">
+              <p>{emptyLabel}</p>
+              {emptyActionLabel && onEmptyAction && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOpen(false);
+                    onEmptyAction();
+                  }}
+                  className="mt-3 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-800 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50"
+                >
+                  {emptyActionLabel}
+                </button>
+              )}
+            </div>
+          ) : (
+            filteredOptions.map((option, index) => {
+              const isSelected = option.value === value;
+              const isActive = index === activeIndex;
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => selectOption(option)}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition ${
+                    isActive ? 'bg-emerald-100/45' : ''
+                  } ${
+                    isSelected
+                      ? 'bg-emerald-50 text-brand-900'
+                      : 'text-slate-700 hover:bg-[#fff6df]'
+                  }`}
+                >
+                  {option.initials ? (
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ring-1 ${
+                      isSelected
+                        ? 'bg-brand-800 text-white ring-brand-800'
+                        : 'bg-emerald-50 text-brand-800 ring-emerald-100'
+                    }`}>
+                      {option.initials}
+                    </span>
+                  ) : (
+                    <span
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                        isSelected
+                          ? 'border-brand-700 bg-brand-700 text-white'
+                          : 'border-slate-200 text-transparent'
+                      }`}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-bold">{option.label}</span>
+                    {option.subtitle && (
+                      <span className="mt-0.5 block truncate text-xs font-medium text-slate-500">
+                        {option.subtitle}
+                      </span>
+                    )}
+                  </span>
+                  {(option.badge || option.rightLabel) && (
+                    <span className="ml-2 flex shrink-0 flex-col items-end gap-1 text-right">
+                      {option.badge && (
+                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-black uppercase tracking-[0.08em] text-emerald-700 ring-1 ring-emerald-100">
+                          {option.badge}
+                        </span>
+                      )}
+                      {option.rightLabel && <span className="text-xs font-black text-slate-700">{option.rightLabel}</span>}
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>,
+      document.body,
+    )
+    : null;
+
   return (
     <div ref={wrapperRef} className={`relative min-w-0 ${className}`}>
       <div className="relative flex items-center">
@@ -144,6 +332,7 @@ export function SmartCombobox({
             setQuery(event.target.value);
             if (!open) setOpen(true);
             setActiveIndex(0);
+            requestAnimationFrame(updateMenuPlacement);
           }}
           onClick={() => {
             if (!disabled) setOpen(true);
@@ -175,82 +364,7 @@ export function SmartCombobox({
           <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         </button>
       </div>
-
-      {open && (
-        <div className="absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] ring-1 ring-white/80">
-          <div className="border-b border-emerald-950/10 bg-[#fff6df]/65 px-3 py-2 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
-            {searchPlaceholder || 'Choisir dans la liste'}
-          </div>
-          <div ref={listboxRef} className="max-h-72 overflow-y-auto p-1.5" role="listbox">
-            {filteredOptions.length === 0 ? (
-              <div className="px-3 py-4 text-center text-sm font-medium text-slate-500">
-                {emptyLabel}
-              </div>
-            ) : (
-              filteredOptions.map((option, index) => {
-                const isSelected = option.value === value;
-                const isActive = index === activeIndex;
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="option"
-                    aria-selected={isSelected}
-                    onClick={() => selectOption(option)}
-                    onMouseEnter={() => setActiveIndex(index)}
-                    className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition ${
-                      isActive ? 'bg-emerald-100/45' : ''
-                    } ${
-                      isSelected
-                        ? 'bg-emerald-50 text-brand-900'
-                        : 'text-slate-700 hover:bg-[#fff6df]'
-                    }`}
-                  >
-                    {option.initials ? (
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ring-1 ${
-                        isSelected
-                          ? 'bg-brand-800 text-white ring-brand-800'
-                          : 'bg-emerald-50 text-brand-800 ring-emerald-100'
-                      }`}>
-                        {option.initials}
-                      </span>
-                    ) : (
-                      <span
-                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                          isSelected
-                            ? 'border-brand-700 bg-brand-700 text-white'
-                            : 'border-slate-200 text-transparent'
-                        }`}
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </span>
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-bold">{option.label}</span>
-                      {option.subtitle && (
-                        <span className="mt-0.5 block truncate text-xs font-medium text-slate-500">
-                          {option.subtitle}
-                        </span>
-                      )}
-                    </span>
-                    {(option.badge || option.rightLabel) && (
-                      <span className="ml-2 flex shrink-0 flex-col items-end gap-1 text-right">
-                        {option.badge && (
-                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-black uppercase tracking-[0.08em] text-emerald-700 ring-1 ring-emerald-100">
-                            {option.badge}
-                          </span>
-                        )}
-                        {option.rightLabel && <span className="text-xs font-black text-slate-700">{option.rightLabel}</span>}
-                      </span>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
+      {menu}
     </div>
   );
 }

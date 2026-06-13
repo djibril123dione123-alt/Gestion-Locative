@@ -1884,11 +1884,17 @@ function PropertyModal({
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Type">
-              <select value={form.type_bien} onChange={(event) => onChange((current) => ({ ...current, type_bien: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
-                <option value="">Choisir un type</option>
-                {PROPERTY_TYPES.map((type) => <option key={type}>{type}</option>)}
-                <option>Autre</option>
-              </select>
+              <SmartCombobox
+                value={form.type_bien}
+                options={[
+                  { value: '', label: 'Choisir un type' },
+                  ...PROPERTY_TYPES.map((type) => ({ value: type, label: type })),
+                  { value: 'Autre', label: 'Autre' },
+                ]}
+                onChange={(next) => onChange((current) => ({ ...current, type_bien: next }))}
+                placeholder="Choisir un type"
+                searchPlaceholder="Immeuble, villa, boutique..."
+              />
             </Field>
             {!isIndividualOwner && (
             <Field label="Bailleur rattaché *">
@@ -1906,6 +1912,12 @@ function PropertyModal({
                 onChange={(next) => onChange((current) => ({ ...current, bailleur_id: next }))}
                 placeholder="Sélectionner un bailleur"
                 searchPlaceholder="Rechercher un bailleur..."
+                emptyLabel="Aucun bailleur disponible."
+                emptyActionLabel="Aller aux bailleurs"
+                onEmptyAction={() => {
+                  onClose();
+                  window.location.hash = '#/bailleurs';
+                }}
               />
             </Field>
             )}
@@ -2015,6 +2027,12 @@ function UnitModal({
               onChange={(next) => onChange((current) => ({ ...current, immeuble_id: next }))}
               placeholder="Sélectionner un bien"
               searchPlaceholder="Rechercher un bien..."
+              emptyLabel="Aucun bien disponible."
+              emptyActionLabel="CrÃ©er un bien"
+              onEmptyAction={() => {
+                onClose();
+                window.location.hash = '#/patrimoine?action=new';
+              }}
             />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">

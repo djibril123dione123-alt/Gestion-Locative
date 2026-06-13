@@ -234,7 +234,7 @@ export function PaymentModal({ isOpen, onClose, planName, priceXof, onSuccess }:
           <button
             type="button"
             onClick={handlePay}
-            className="sk-create-cta flex w-full items-center justify-center rounded-[1.15rem] px-5 py-3.5 text-base font-black shadow-lg shadow-orange-900/15 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
+            className="sk-create-cta flex w-full items-center justify-center rounded-[1.15rem] px-5 py-3.5 text-base font-black shadow-lg shadow-emerald-950/15 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl"
           >
             Payer {formatCurrency(priceXof)}
           </button>

@@ -150,11 +150,7 @@ export function ProductWizard<T extends string>({
             type="button"
             onClick={isFinal ? submitFinal : goNext}
             disabled={isSubmitting}
-            className={`flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-lg transition disabled:opacity-50 ${
-              isFinal
-                ? 'bg-gradient-to-br from-brand-950 to-emerald-900 shadow-emerald-950/20 hover:-translate-y-0.5 hover:shadow-emerald-950/25'
-                : 'bg-emerald-700 shadow-emerald-900/10 hover:bg-emerald-800'
-            }`}
+            className="flex items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-emerald-950/25 active:translate-y-0 active:from-[#041812] active:to-[#041812] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSubmitting ? 'Traitement...' : isFinal ? finalSubmitLabel : 'Continuer'}
           </button>

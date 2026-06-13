@@ -22,7 +22,7 @@ interface BottomNavProps {
 const AGENCY_BOTTOM_ITEMS = [
   { id: 'dashboard', label: 'Accueil', icon: LayoutDashboard },
   { id: 'paiements', label: 'Encaisser', icon: CreditCard },
-  { id: 'contrats', label: 'Contrats', icon: FileText },
+  { id: 'occupants-baux', label: 'Locations', icon: FileText },
   { id: 'documents', label: 'Docs', icon: FolderOpen },
 ];
 
@@ -42,10 +42,10 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent',
 
   return (
     <nav
-      className="sk-bottom-nav fixed bottom-0 left-0 right-0 z-40 px-3 lg:hidden"
+      className="sk-bottom-nav fixed bottom-0 left-0 right-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.35rem)] lg:hidden"
       aria-label="Navigation mobile principale"
     >
-      <div className="sk-bottom-nav-inner mx-auto flex max-w-sm items-center gap-1 rounded-3xl border border-white/65 bg-white/[0.68] px-1.5 py-1.5 shadow-premium-lg ring-1 ring-emerald-950/5 backdrop-blur-2xl">
+      <div className="sk-bottom-nav-inner mx-auto flex max-w-md items-center gap-1 rounded-3xl border border-white/65 bg-white/[0.76] px-1.5 py-1.5 shadow-premium-lg ring-1 ring-emerald-950/5 backdrop-blur-2xl">
         {items.filter(({ id }) => canAccess(id)).map(({ id, label, icon: Icon }) => {
           const active = isActive(id);
           const itemLabel = accountProfile ? getAccountPageLabel(id, accountProfile) ?? label : label;
@@ -54,15 +54,15 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent',
               key={id}
               type="button"
               onClick={() => onNavigate(id)}
-              className={`sk-pressable group relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 transition-all duration-300 ${
+              className={`sk-pressable group relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 transition-all duration-300 ${
                 active
                   ? 'bg-brand-950 text-white shadow-premium'
                   : 'text-slate-500 hover:bg-white/70 hover:text-brand-900'
               }`}
               aria-current={active ? 'page' : undefined}
             >
-              <Icon className={`h-5 w-5 transition-transform duration-300 ${active ? 'scale-105 text-orange-200 group-active:scale-95' : 'group-hover:-translate-y-0.5'}`} />
-              <span className="max-w-full truncate px-1 text-xs font-black leading-none">{itemLabel}</span>
+              <Icon className={`h-[1.15rem] w-[1.15rem] transition-transform duration-300 ${active ? 'scale-105 text-orange-200 group-active:scale-95' : 'group-hover:-translate-y-0.5'}`} />
+              <span className="max-w-full text-center text-[0.66rem] font-black leading-tight">{itemLabel}</span>
               {active && <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-action-500 ring-4 ring-action-500/15" />}
             </button>
           );
@@ -70,11 +70,11 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent',
         <button
           type="button"
           onClick={onOpenMenu}
-          className="sk-pressable group relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1.5 py-1.5 text-slate-500 transition-all duration-300 hover:bg-white/70 hover:text-brand-900"
+          className="sk-pressable group relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 text-slate-500 transition-all duration-300 hover:bg-white/70 hover:text-brand-900"
           aria-label="Ouvrir plus de navigation"
         >
-          <MoreHorizontal className="h-5 w-5 transition-transform duration-300 group-hover:-translate-y-0.5" />
-          <span className="text-xs font-black leading-none">Plus</span>
+          <MoreHorizontal className="h-[1.15rem] w-[1.15rem] transition-transform duration-300 group-hover:-translate-y-0.5" />
+          <span className="text-[0.66rem] font-black leading-tight">Plus</span>
         </button>
       </div>
     </nav>

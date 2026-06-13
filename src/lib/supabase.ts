@@ -33,7 +33,9 @@ window.fetch = async (...args) => {
         body.message = 'Votre session a expiré. Veuillez vous reconnecter.';
         return new Response(JSON.stringify(body), { status: response.status, headers: response.headers });
       }
-    } catch (e) {}
+    } catch {
+      // La réponse n'est pas JSON : conserver la réponse originale.
+    }
   }
   return response;
 };

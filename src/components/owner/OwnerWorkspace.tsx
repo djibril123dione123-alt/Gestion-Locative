@@ -1088,7 +1088,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                     <div>
                       <p className="text-sm font-bold text-slate-950">Situation de {formatMonthLabel(reportPeriod)}</p>
                       <p className="mt-1 text-xs font-semibold text-slate-500">
-                        {reportSummary.activeContracts} contrat{reportSummary.activeContracts > 1 ? 's' : ''} actif{reportSummary.activeContracts > 1 ? 's' : ''} analysé{reportSummary.activeContracts > 1 ? 's' : ''}
+                        {reportSummary.activeContracts} location{reportSummary.activeContracts > 1 ? 's' : ''} en cours analysée{reportSummary.activeContracts > 1 ? 's' : ''}
                       </p>
                     </div>
                     <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">{reportSummary.recoveryRate}% recouvré</span>
@@ -1128,6 +1128,25 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
 
             <section className="grid gap-3 lg:grid-cols-3">
               <OwnerListCard
+                title="Activité récente"
+                actionLabel="Actualiser"
+                onAction={() => void loadOwnerWorkspace()}
+                emptyTitle="Aucune activité"
+                emptyText="Les mouvements récents apparaîtront ici."
+                featured
+              >
+                {recentActivity.map((activity) => (
+                  <CompactRow
+                    key={activity.id}
+                    icon={activity.icon}
+                    customTone={activity.tone}
+                    title={activity.title}
+                    subtitle={`${activity.text} · ${formatDate(activity.date)}`}
+                  />
+                ))}
+              </OwnerListCard>
+
+              <OwnerListCard
                 title="Paiements récents"
                 actionLabel="Voir tous"
                 onAction={() => onNavigate?.('paiements')}
@@ -1165,24 +1184,6 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                     />
                   );
                 })}
-              </OwnerListCard>
-
-              <OwnerListCard
-                title="Activité récente"
-                actionLabel="Actualiser"
-                onAction={() => void loadOwnerWorkspace()}
-                emptyTitle="Aucune activité"
-                emptyText="Les mouvements récents apparaîtront ici."
-              >
-                {recentActivity.map((activity) => (
-                  <CompactRow
-                    key={activity.id}
-                    icon={activity.icon}
-                    customTone={activity.tone}
-                    title={activity.title}
-                    subtitle={`${activity.text} · ${formatDate(activity.date)}`}
-                  />
-                ))}
               </OwnerListCard>
             </section>
           </div>
@@ -1433,6 +1434,7 @@ function OwnerListCard({
   emptyTitle,
   emptyText,
   children,
+  featured = false,
 }: {
   title: string;
   actionLabel: string;
@@ -1440,10 +1442,15 @@ function OwnerListCard({
   emptyTitle: string;
   emptyText: string;
   children: ReactNode;
+  featured?: boolean;
 }) {
   const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children);
   return (
-    <section className="rounded-[1.4rem] border border-emerald-950/10 bg-[#fffdf8]/95 p-3.5 shadow-[0_16px_44px_rgba(15,23,42,0.05)]">
+    <section className={`rounded-[1.4rem] border p-3.5 shadow-[0_16px_44px_rgba(15,23,42,0.05)] ${
+      featured
+        ? 'border-emerald-200 bg-gradient-to-br from-white via-emerald-50/65 to-[#fffdf8]'
+        : 'border-emerald-950/10 bg-[#fffdf8]/95'
+    }`}>
       <div className="mb-2.5 flex items-center justify-between gap-3">
         <h2 className="text-base font-bold text-slate-950">{title}</h2>
         <button type="button" onClick={onAction} className="text-xs font-semibold text-brand-800 hover:text-brand-950">

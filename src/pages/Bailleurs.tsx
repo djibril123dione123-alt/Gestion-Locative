@@ -332,30 +332,6 @@ function KpiTile({
   );
 }
 
-function DrawerMetric({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: 'emerald' | 'red' | 'blue' | 'gold' | 'slate';
-}) {
-  const toneClass = {
-    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-    red: 'border-red-200 bg-red-50 text-red-800',
-    blue: 'border-sky-200 bg-sky-50 text-sky-800',
-    gold: 'border-amber-200 bg-amber-50 text-amber-900',
-    slate: 'border-slate-200 bg-slate-50 text-slate-900',
-  }[tone];
-  return (
-    <div className={`rounded-xl border px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] ${toneClass}`}>
-      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-current opacity-60">{label}</p>
-      <p className="mt-1 break-words text-sm font-extrabold leading-tight tabular-nums">{value}</p>
-    </div>
-  );
-}
-
 const todayInput = () => new Date().toISOString().split('T')[0];
 const currentMonthInput = () => new Date().toISOString().slice(0, 7);
 
@@ -1801,11 +1777,27 @@ export function Bailleurs() {
                       </div>
                     </div>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"><FileText className="h-4 w-4" />Modifier</button>
-                      <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"><FileText className="h-4 w-4" />Mandat PDF</button>
-                      <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-600 bg-emerald-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"><BarChart3 className="h-4 w-4" />Rapport PDF</button>
-                      <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-100 bg-white px-3 py-2.5 text-sm font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
+                    <div className="mt-5 space-y-4">
+                      <div>
+                        <p className="mb-2 text-[0.66rem] font-black uppercase tracking-[0.12em] text-[#9a5b17]">Actions principales</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-emerald-700 bg-emerald-700 px-3 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:bg-emerald-800 disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"><BarChart3 className="h-4 w-4" />Rapport PDF</button>
+                          <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-3 py-2.5 text-sm font-black text-amber-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-100"><FileText className="h-4 w-4" />Mandat PDF</button>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="mb-2 text-[0.66rem] font-black uppercase tracking-[0.12em] text-slate-400">Gestion</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><FileText className="h-4 w-4" />Modifier</button>
+                          <button type="button" onClick={() => setActiveDrawerTab('paiements')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><Wallet className="h-4 w-4" />Paiements</button>
+                          <button type="button" onClick={() => setActiveDrawerTab('documents')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><FileText className="h-4 w-4" />Documents</button>
+                          <button type="button" onClick={() => setActiveDrawerTab('biens')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><Building2 className="h-4 w-4" />Biens</button>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="mb-2 text-[0.66rem] font-black uppercase tracking-[0.12em] text-red-400">Danger</p>
+                        <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-white px-3 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
+                      </div>
                     </div>
                   </div>
 

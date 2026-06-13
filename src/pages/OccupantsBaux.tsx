@@ -44,7 +44,7 @@ import { PageSkeleton } from '../components/ui/Skeleton';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { Modal } from '../components/ui/Modal';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
-import { SmartCombobox } from '../components/ui/SmartCombobox';
+import { SmartCombobox, type SmartComboboxOption } from '../components/ui/SmartCombobox';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 import {
@@ -144,10 +144,22 @@ const PERIOD_FILTERS: Array<{ id: PeriodFilter; label: string }> = [
   { id: 'open_ended', label: 'Sans date fin' },
 ];
 
+const DESTINATION_OPTIONS: SmartComboboxOption[] = [
+  { value: 'Habitation', label: 'Habitation', subtitle: 'Appartement, maison, studio', badge: 'Résidentiel' },
+  { value: 'Commerce', label: 'Commerce', subtitle: 'Boutique, point de vente', badge: 'Pro' },
+  { value: 'Bureau', label: 'Bureau', subtitle: 'Usage professionnel', badge: 'Pro' },
+  { value: 'Entrepôt', label: 'Entrepôt', subtitle: 'Stockage et activité logistique', badge: 'Pro' },
+  { value: 'Parking', label: 'Parking', subtitle: 'Place de stationnement', badge: 'Simple' },
+];
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function fullName(row: OccupantBailRow): string {
   return `${row.prenom} ${row.nom}`.trim();
+}
+
+function initialsFromName(first?: string | null, last?: string | null): string {
+  return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase() || 'LO';
 }
 
 function ownerName(row: OccupantBailRow): string {
@@ -547,7 +559,7 @@ export function OccupantsBaux() {
     try {
       let openContratId: string | null = null;
       if (occupationModalMode === 'edit-bail') {
-        if (!selectedRow) throw new Error('Aucun bail sélectionné.');
+        if (!selectedRow) throw new Error('Aucune location sélectionnée.');
         if (!occupationForm.date_fin) {
           notifyError('La date de fin est obligatoire pour modifier le bail.');
           return;
@@ -946,9 +958,9 @@ export function OccupantsBaux() {
                 Locations
               </h1>
               <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
-                Vue unifiée occupant → bail → unité ·{' '}
-                <span className="font-semibold text-emerald-700">{rows.length}</span> bail
-                {rows.length !== 1 ? 'x' : ''} suivi{rows.length !== 1 ? 's' : ''}
+                Vue unifiée locataire → bail → unité ·{' '}
+                <span className="font-semibold text-emerald-700">{rows.length}</span> location
+                {rows.length !== 1 ? 's' : ''} suivie{rows.length !== 1 ? 's' : ''}
               </p>
             </div>
 
@@ -1434,8 +1446,8 @@ function OccupantBailDrawer({
       <div className="flex h-full flex-col overflow-y-auto bg-[linear-gradient(180deg,#fff4d9,#fffdf8_11rem)]">
         <div className="border-b border-emerald-950/10 p-4">
           <div className="mb-3 flex items-start justify-between gap-3">
-            <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#9a5b17]">
-              Fiche occupant & bail
+        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#9a5b17]">
+              Fiche location
             </p>
             <button
               type="button"
@@ -1473,11 +1485,16 @@ function OccupantBailDrawer({
 
           <div className="mt-8 space-y-6">
             <div>
-              <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Documents</p>
+              <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Documents principaux</p>
               <div className="flex flex-col gap-2">
-                <button type="button" onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white p-3 text-left text-sm font-bold text-slate-800 shadow-sm transition hover:border-brand-700 hover:text-brand-900 disabled:opacity-50">
-                  <Download className="h-5 w-5 text-brand-700" />
-                  {pdfGenerating ? 'Génération en cours...' : 'Contrat PDF'}
+                <button type="button" onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} className="flex items-center gap-3 rounded-2xl border border-emerald-900/20 bg-gradient-to-br from-white to-emerald-50/70 p-3.5 text-left text-sm font-black text-brand-950 shadow-[0_12px_30px_rgba(6,78,59,0.08)] transition hover:-translate-y-0.5 hover:border-brand-700 hover:shadow-[0_18px_40px_rgba(6,78,59,0.12)] disabled:translate-y-0 disabled:opacity-60">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-800 text-white shadow-sm">
+                    <Download className="h-5 w-5" />
+                  </span>
+                  <span>
+                    <span className="block">{pdfGenerating ? 'Génération en cours...' : 'Contrat PDF'}</span>
+                    <span className="mt-0.5 block text-xs font-semibold text-slate-500">{row.contrat_ref}</span>
+                  </span>
                 </button>
               </div>
             </div>
@@ -1485,16 +1502,16 @@ function OccupantBailDrawer({
             <div>
               <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Gestion</p>
               <div className="flex flex-col gap-2">
-                <button type="button" onClick={() => onEditBail(row)} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                <button type="button" onClick={() => onEditBail(row)} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
                   <Pencil className="h-4 w-4 text-slate-500" />
                   Modifier la location
                 </button>
-                <button type="button" onClick={() => onEditOccupant(row)} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                <button type="button" onClick={() => onEditOccupant(row)} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
                   <UserPlus className="h-4 w-4 text-slate-500" />
                   Fiche locataire
                 </button>
                 {canRenew(row) && (
-                  <button type="button" onClick={() => onRenew(row)} className="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-100">
+                  <button type="button" onClick={() => onRenew(row)} className="flex items-center gap-3 rounded-xl border border-amber-100 bg-amber-50/80 p-3 text-left text-sm font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100">
                     <RefreshCw className="h-4 w-4 text-slate-500" />
                     Renouveler la location
                   </button>
@@ -2025,36 +2042,6 @@ function ModalActions({
   );
 }
 
-function DrawerAction({
-  icon: Icon,
-  label,
-  onClick,
-  disabled = false,
-  tone = 'default',
-}: {
-  icon: LucideIcon;
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  tone?: 'default' | 'danger';
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold shadow-sm transition ${
-        tone === 'danger'
-          ? 'border-red-100 bg-white text-red-600 hover:border-red-200 hover:bg-red-50'
-          : 'border-emerald-950/10 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900'
-      } disabled:cursor-not-allowed disabled:opacity-60`}
-    >
-      <Icon className="h-4 w-4" />
-      {label}
-    </button>
-  );
-}
-
 function MiniMetric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-2xl border border-emerald-950/10 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
@@ -2181,26 +2168,47 @@ function OccupationFormModal({
   const update = (patch: Partial<OccupationFormState>) => onChange({ ...form, ...patch });
   const selectedOccupant = occupantOptions.find((occupant) => occupant.id === form.locataire_id) ?? null;
   const selectedUnit = availableUnits.find((unit) => unit.id === form.unite_id) ?? null;
-  const occupantTerm = form.occupantSearch.trim().toLowerCase();
-  const unitTerm = form.unitSearch.trim().toLowerCase();
-  const filteredOccupants = occupantOptions.filter((occupant) => {
-    if (!occupantTerm) return true;
-    return [
-      occupant.prenom,
-      occupant.nom,
-      occupant.telephone ?? '',
-      occupant.email ?? '',
-    ].join(' ').toLowerCase().includes(occupantTerm);
-  }).slice(0, 10);
-  const filteredUnits = availableUnits.filter((unit) => {
-    if (!unitTerm) return true;
-    return [
-      unit.nom,
-      unit.numero ?? '',
-      unit.etage ?? '',
-      unit.immeuble_nom ?? '',
-    ].join(' ').toLowerCase().includes(unitTerm);
-  }).slice(0, 12);
+  const occupantComboboxOptions = useMemo<SmartComboboxOption[]>(
+    () => occupantOptions.map((occupant) => ({
+      value: occupant.id,
+      label: `${occupant.prenom} ${occupant.nom}`.trim(),
+      subtitle: [
+        occupant.telephone ? formatSenegalPhone(occupant.telephone) : 'Téléphone non renseigné',
+        occupant.email || 'Email non renseigné',
+      ].join(' · '),
+      keywords: [
+        occupant.prenom,
+        occupant.nom,
+        occupant.telephone ?? '',
+        occupant.email ?? '',
+      ].join(' '),
+      initials: initialsFromName(occupant.prenom, occupant.nom),
+    })),
+    [occupantOptions],
+  );
+  const unitComboboxOptions = useMemo<SmartComboboxOption[]>(
+    () => availableUnits.map((unit) => ({
+      value: unit.id,
+      label: unit.nom,
+      subtitle: [
+        unit.immeuble_nom ?? 'Bien non renseigné',
+        unit.numero ? `Unité ${unit.numero}` : 'Sans numéro',
+        unit.etage ? `Étage ${unit.etage}` : null,
+        `${unit.bailleur_prenom ?? ''} ${unit.bailleur_nom ?? ''}`.trim() || null,
+      ].filter(Boolean).join(' · '),
+      keywords: [
+        unit.nom,
+        unit.numero ?? '',
+        unit.etage ?? '',
+        unit.immeuble_nom ?? '',
+        unit.bailleur_prenom ?? '',
+        unit.bailleur_nom ?? '',
+      ].join(' '),
+      badge: 'Libre',
+      rightLabel: formatCurrency(unit.loyer_base ?? 0),
+    })),
+    [availableUnits],
+  );
 
   if (!mode) return null;
 
@@ -2211,7 +2219,7 @@ function OccupationFormModal({
           <LifecycleIntro
             icon={Pencil}
             title="Données du bail"
-            description="Modification contrôlée via le workflow bail existant. Les données financières sensibles restent protégées."
+            description="Ajustez les informations du bail sans modifier les paiements déjà enregistrés."
           />
           <div className="grid gap-3 sm:grid-cols-2">
             <TextField label="Date de début" value={form.date_debut} onChange={(value) => update({ date_debut: value })} type="date" disabled />
@@ -2297,29 +2305,33 @@ function OccupationFormModal({
               </button>
             </div>
             {form.occupantMode === 'existing' ? (
-              <>
-                <TextField label="Recherche occupant" value={form.occupantSearch} onChange={(value) => update({ occupantSearch: value })} placeholder="Nom, téléphone, email..." />
-                <div className="grid max-h-80 gap-2 overflow-y-auto pr-1">
-                  {workflowLoading && <DrawerEmpty icon={Users} title="Chargement" description="Chargement des occupants..." />}
-                  {!workflowLoading && filteredOccupants.map((occupant) => {
-                    const selected = occupant.id === form.locataire_id;
-                    return (
-                      <button
-                        key={occupant.id}
-                        type="button"
-                        onClick={() => update({ locataire_id: occupant.id })}
-                        className={`rounded-2xl border p-3 text-left transition ${selected ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 bg-white hover:border-emerald-200'}`}
-                      >
-                        <p className="font-black text-slate-900">{occupant.prenom} {occupant.nom}</p>
-                        <p className="mt-1 text-xs font-medium text-slate-500">{occupant.telephone ? formatSenegalPhone(occupant.telephone) : 'Téléphone non renseigné'} · {occupant.email ?? 'Email non renseigné'}</p>
-                      </button>
-                    );
-                  })}
-                  {!workflowLoading && filteredOccupants.length === 0 && (
-                    <DrawerEmpty icon={Users} title="Aucun occupant" description="Créez un nouvel occupant pour continuer." />
-                  )}
-                </div>
-              </>
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Occupant</span>
+                  <SmartCombobox
+                    value={form.locataire_id}
+                    options={occupantComboboxOptions}
+                    onChange={(value) => update({ locataire_id: value, occupantSearch: '' })}
+                    placeholder={workflowLoading ? 'Chargement des occupants...' : 'Rechercher ou choisir un occupant'}
+                    searchPlaceholder="Nom, téléphone ou email"
+                    emptyLabel="Aucun occupant trouvé"
+                    disabled={workflowLoading}
+                    className="mt-1"
+                  />
+                </label>
+                {selectedOccupant ? (
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
+                    <p className="text-sm font-black text-emerald-950">{selectedOccupant.prenom} {selectedOccupant.nom}</p>
+                    <p className="mt-1 text-xs font-semibold text-emerald-800/80">
+                      {selectedOccupant.telephone ? formatSenegalPhone(selectedOccupant.telephone) : 'Téléphone non renseigné'} · {selectedOccupant.email ?? 'Email non renseigné'}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="rounded-2xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-3 text-xs font-semibold leading-5 text-slate-500">
+                    Choisissez un occupant existant ou basculez sur “Nouveau” pour créer une fiche locataire.
+                  </p>
+                )}
+              </div>
             ) : (
               <div className="grid gap-3">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -2342,30 +2354,38 @@ function OccupationFormModal({
             <LifecycleIntro
               icon={Building2}
               title="Sélectionner l'unité libre"
-              description="La création du bail occupera l'unité via le workflow sécurisé existant."
+              description="La création de la location occupera automatiquement l'unité sélectionnée."
             />
-            <TextField label="Recherche unité" value={form.unitSearch} onChange={(value) => update({ unitSearch: value })} placeholder="Bien, unité, numéro..." />
-            <div className="grid max-h-96 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-              {workflowLoading && <DrawerEmpty icon={Building2} title="Chargement" description="Chargement des unités libres..." />}
-              {!workflowLoading && filteredUnits.map((unit) => {
-                const selected = unit.id === form.unite_id;
-                return (
-                  <button
-                    key={unit.id}
-                    type="button"
-                    onClick={() => chooseUnit(unit)}
-                    className={`rounded-2xl border p-3 text-left transition ${selected ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 bg-white hover:border-emerald-200'}`}
-                  >
-                    <p className="font-black text-slate-900">{unit.nom}</p>
-                    <p className="mt-1 text-xs font-medium text-slate-500">{unit.immeuble_nom ?? 'Bien non renseigné'} · {unit.numero ?? 'Sans numéro'}</p>
-                    <p className="mt-2 text-sm font-black text-emerald-800">{formatCurrency(unit.loyer_base)}/mois</p>
-                  </button>
-                );
-              })}
-              {!workflowLoading && filteredUnits.length === 0 && (
-                <DrawerEmpty icon={Building2} title="Aucune unité libre" description="Aucune unité disponible ne correspond à cette recherche." />
-              )}
-            </div>
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Unité disponible</span>
+              <SmartCombobox
+                value={form.unite_id}
+                options={unitComboboxOptions}
+                onChange={(value) => {
+                  const nextUnit = availableUnits.find((unit) => unit.id === value);
+                  if (nextUnit) chooseUnit(nextUnit);
+                  else update({ unite_id: value, unitSearch: '' });
+                }}
+                placeholder={workflowLoading ? 'Chargement des unités libres...' : 'Rechercher bien, unité ou numéro'}
+                searchPlaceholder="Bien, unité, numéro ou étage"
+                emptyLabel="Aucune unité libre trouvée"
+                disabled={workflowLoading}
+                className="mt-1"
+              />
+            </label>
+            {selectedUnit ? (
+              <div className="grid gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3 sm:grid-cols-2">
+                <MiniMetric label="Bien" value={selectedUnit.immeuble_nom ?? 'Bien non renseigné'} />
+                <MiniMetric label="Unité" value={selectedUnit.nom} />
+                <MiniMetric label="Propriétaire" value={`${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || 'Non renseigné'} />
+                <MiniMetric label="Loyer conseillé" value={formatCurrency(selectedUnit.loyer_base ?? 0)} />
+                <MiniMetric label="Statut" value="Libre" />
+              </div>
+            ) : (
+              <p className="rounded-2xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-3 text-xs font-semibold leading-5 text-slate-500">
+                Sélectionnez une unité libre pour préremplir le loyer, la caution et la commission agence si elle existe.
+              </p>
+            )}
           </div>
         )}
 
@@ -2387,7 +2407,22 @@ function OccupationFormModal({
             {!isIndividualOwner && (
               <TextField label="Commission agence" value={form.commission} onChange={(value) => update({ commission: value })} type="number" />
             )}
-            <TextField label="Destination" value={form.destination} onChange={(value) => update({ destination: value })} placeholder="Habitation, commerce..." />
+            <label className="block">
+              <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Destination</span>
+              <SmartCombobox
+                value={form.destination}
+                options={DESTINATION_OPTIONS}
+                onChange={(value) => update({ destination: value })}
+                placeholder="Choisir une destination"
+                searchPlaceholder="Habitation, commerce, bureau..."
+                className="mt-1"
+              />
+            </label>
+            <div className="grid gap-2 rounded-2xl border border-emerald-950/10 bg-white p-3 text-xs font-semibold text-slate-500 sm:grid-cols-3">
+              <span>Loyer : <strong className="text-slate-900">{form.loyer_mensuel ? formatCurrency(Number(form.loyer_mensuel)) : 'Non renseigné'}</strong></span>
+              <span>Caution : <strong className="text-slate-900">{form.caution ? formatCurrency(Number(form.caution)) : '0 F CFA'}</strong></span>
+              <span>Commission : <strong className="text-slate-900">{isIndividualOwner ? '0%' : `${form.commission || 0}%`}</strong></span>
+            </div>
           </div>
         )}
 
@@ -2396,15 +2431,23 @@ function OccupationFormModal({
             <LifecycleIntro
               icon={FileCheck2}
               title="Résumé avant création"
-              description="Le bail sera créé par l'Edge Function contrat. Aucun paiement n'est enregistré ici."
+              description="Vérifiez les informations essentielles avant de créer la location."
             />
             <div className="grid gap-3 sm:grid-cols-2">
               <MiniMetric label="Occupant" value={form.occupantMode === 'new' ? `${form.newOccupant.prenom} ${form.newOccupant.nom}` : selectedOccupant ? `${selectedOccupant.prenom} ${selectedOccupant.nom}` : 'Non sélectionné'} />
+              <MiniMetric label="Propriétaire" value={selectedUnit ? `${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || 'Non renseigné' : 'Non sélectionné'} />
               <MiniMetric label="Unité" value={selectedUnit ? `${selectedUnit.immeuble_nom ?? 'Bien'} · ${selectedUnit.nom}` : 'Non sélectionnée'} />
               <MiniMetric label="Loyer" value={form.loyer_mensuel ? formatCurrency(Number(form.loyer_mensuel)) : 'Non renseigné'} />
               <MiniMetric label="Période" value={`${form.date_debut || '—'} → ${form.date_fin || '—'}`} />
               <MiniMetric label="Caution" value={form.caution ? formatCurrency(Number(form.caution)) : '0 F CFA'} />
-              {!isIndividualOwner && <MiniMetric label="Commission" value={`${form.commission || 0}%`} />}
+              {!isIndividualOwner && <MiniMetric label="Commission agence" value={`${form.commission || 0}%`} />}
+              <MiniMetric label="Destination" value={form.destination || 'Habitation'} />
+            </div>
+            <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
+              <p className="text-sm font-black text-emerald-950">Validation finale</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-emerald-900/80">
+                Cette location sera créée et l'unité passera automatiquement au statut occupée. Aucun paiement n'est enregistré à cette étape.
+              </p>
             </div>
           </div>
         )}
@@ -2476,12 +2519,12 @@ function EmptyState({
         <FileText className="w-8 h-8 text-emerald-400" />
       </div>
       <h3 className="text-lg font-bold text-slate-800 mb-1">
-        {hasSearch ? 'Aucun résultat' : 'Aucun bail enregistré'}
+        {hasSearch ? 'Aucun résultat' : 'Aucune location enregistrée'}
       </h3>
       <p className="text-sm text-slate-500 max-w-xs mb-4">
         {hasSearch
-          ? 'Aucun bail ne correspond à vos critères. Essayez de modifier la recherche ou le filtre.'
-          : 'Les baux créés dans la section Contrats apparaîtront ici.'}
+          ? 'Aucune location ne correspond à vos critères. Essayez de modifier la recherche ou les filtres.'
+          : 'Créez votre première location pour suivre le locataire, le bail et l’unité depuis un seul endroit.'}
       </p>
       {hasSearch && (
         <button

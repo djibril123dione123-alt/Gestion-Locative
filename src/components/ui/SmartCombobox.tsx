@@ -6,6 +6,9 @@ export interface SmartComboboxOption {
   label: string;
   subtitle?: string;
   keywords?: string;
+  badge?: string;
+  rightLabel?: string;
+  initials?: string;
 }
 
 interface SmartComboboxProps {
@@ -24,6 +27,7 @@ export function SmartCombobox({
   options,
   onChange,
   placeholder = 'Sélectionner ou rechercher...',
+  searchPlaceholder,
   emptyLabel = 'Aucun résultat',
   className = '',
   disabled = false,
@@ -43,19 +47,38 @@ export function SmartCombobox({
       setQuery(selectedOption ? selectedOption.label : '');
     } else {
       setQuery('');
-      setActiveIndex(-1);
+      setActiveIndex(options.length > 0 ? 0 : -1);
     }
-  }, [open, selectedOption]);
+  }, [open, options.length, selectedOption]);
 
   const filteredOptions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return options;
+    if (!normalizedQuery) return options.slice(0, 80);
 
-    return options.filter((option) => {
-      const haystack = [option.label, option.subtitle, option.keywords].filter(Boolean).join(' ').toLowerCase();
-      return haystack.includes(normalizedQuery);
-    });
+    return options
+      .map((option) => {
+        const label = option.label.toLowerCase();
+        const subtitle = option.subtitle?.toLowerCase() ?? '';
+        const keywords = option.keywords?.toLowerCase() ?? '';
+        const haystack = [label, subtitle, keywords].join(' ');
+        if (!haystack.includes(normalizedQuery)) return null;
+        const startsWithScore = label.startsWith(normalizedQuery)
+          || subtitle.startsWith(normalizedQuery)
+          || keywords.split(' ').some((part) => part.startsWith(normalizedQuery))
+          ? 0
+          : 1;
+        return { option, startsWithScore, indexScore: Math.max(0, haystack.indexOf(normalizedQuery)) };
+      })
+      .filter((entry): entry is { option: SmartComboboxOption; startsWithScore: number; indexScore: number } => entry !== null)
+      .sort((a, b) => a.startsWithScore - b.startsWithScore || a.indexScore - b.indexScore || a.option.label.localeCompare(b.option.label))
+      .slice(0, 80)
+      .map((entry) => entry.option);
   }, [options, query]);
+
+  useEffect(() => {
+    if (!open) return;
+    setActiveIndex(filteredOptions.length > 0 ? 0 : -1);
+  }, [filteredOptions.length, open]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -80,6 +103,14 @@ export function SmartCombobox({
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex((prev) => (prev > 0 ? prev - 1 : prev));
+    } else if (e.key === 'Home') {
+      if (!open) return;
+      e.preventDefault();
+      setActiveIndex(0);
+    } else if (e.key === 'End') {
+      if (!open) return;
+      e.preventDefault();
+      setActiveIndex(Math.max(0, filteredOptions.length - 1));
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (open && activeIndex >= 0 && activeIndex < filteredOptions.length) {
@@ -87,6 +118,8 @@ export function SmartCombobox({
         setOpen(false);
       }
     } else if (e.key === 'Escape') {
+      setOpen(false);
+    } else if (e.key === 'Tab') {
       setOpen(false);
     }
   };
@@ -127,7 +160,7 @@ export function SmartCombobox({
           role="combobox"
           aria-expanded={open}
           aria-autocomplete="list"
-          className="h-10 w-full min-w-0 rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-10 text-sm font-semibold text-slate-700 shadow-sm outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-brand-700 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200"
+          className="h-11 w-full min-w-0 rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-10 text-sm font-semibold text-slate-700 shadow-sm outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-brand-700 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200"
         />
         <button
           type="button"
@@ -137,7 +170,8 @@ export function SmartCombobox({
             setOpen(!open);
             if (!open) inputRef.current?.focus();
           }}
-          className="absolute right-0 top-0 flex h-10 w-10 items-center justify-center text-slate-400 transition hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label={open ? 'Fermer la liste' : 'Ouvrir la liste'}
+          className="absolute right-0 top-0 flex h-11 w-10 items-center justify-center text-slate-400 transition hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         </button>
@@ -145,7 +179,10 @@ export function SmartCombobox({
 
       {open && (
         <div className="absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-emerald-950/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.16)] ring-1 ring-white/80">
-          <div ref={listboxRef} className="max-h-64 overflow-y-auto p-1.5" role="listbox">
+          <div className="border-b border-slate-100 px-3 py-2 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">
+            {searchPlaceholder || 'Choisir dans la liste'}
+          </div>
+          <div ref={listboxRef} className="max-h-72 overflow-y-auto p-1.5" role="listbox">
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-4 text-center text-sm font-medium text-slate-500">
                 {emptyLabel}
@@ -165,7 +202,7 @@ export function SmartCombobox({
                       onChange(option.value);
                       setOpen(false);
                     }}
-                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
+                    className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition ${
                       isActive ? 'bg-emerald-100/50' : ''
                     } ${
                       isSelected
@@ -174,15 +211,25 @@ export function SmartCombobox({
                     }`}
                     onMouseEnter={() => setActiveIndex(index)}
                   >
-                    <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                    {option.initials ? (
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ring-1 ${
                         isSelected
-                          ? 'border-brand-700 bg-brand-700 text-white'
-                          : 'border-slate-200 text-transparent'
-                      }`}
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                    </span>
+                          ? 'bg-brand-800 text-white ring-brand-800'
+                          : 'bg-emerald-50 text-brand-800 ring-emerald-100'
+                      }`}>
+                        {option.initials}
+                      </span>
+                    ) : (
+                      <span
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                          isSelected
+                            ? 'border-brand-700 bg-brand-700 text-white'
+                            : 'border-slate-200 text-transparent'
+                        }`}
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                    )}
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-bold">{option.label}</span>
                       {option.subtitle && (
@@ -191,6 +238,16 @@ export function SmartCombobox({
                         </span>
                       )}
                     </span>
+                    {(option.badge || option.rightLabel) && (
+                      <span className="ml-2 flex shrink-0 flex-col items-end gap-1 text-right">
+                        {option.badge && (
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-black uppercase tracking-[0.08em] text-emerald-700 ring-1 ring-emerald-100">
+                            {option.badge}
+                          </span>
+                        )}
+                        {option.rightLabel && <span className="text-xs font-black text-slate-700">{option.rightLabel}</span>}
+                      </span>
+                    )}
                   </button>
                 );
               })

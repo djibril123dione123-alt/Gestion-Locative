@@ -62,6 +62,8 @@ export interface OccupantBailAvailableUnit {
   immeuble_nom: string | null;
   immeuble_id: string | null;
   bailleur_commission: number | null;
+  bailleur_nom: string | null;
+  bailleur_prenom: string | null;
 }
 
 export interface OccupantBailPersonInput {
@@ -231,7 +233,7 @@ type RawAvailableUnit = {
   immeubles: {
     id: string;
     nom: string;
-    bailleurs: { commission: number | null } | null;
+    bailleurs: { commission: number | null; nom: string | null; prenom: string | null } | null;
   } | null;
 };
 
@@ -432,7 +434,7 @@ export const occupantsBauxRepository = {
         immeubles(
           id,
           nom,
-          bailleurs(commission)
+          bailleurs(commission, nom, prenom)
         )
       `)
       .eq('agency_id', agencyId)
@@ -451,6 +453,8 @@ export const occupantsBauxRepository = {
       immeuble_nom: unit.immeubles?.nom ?? null,
       immeuble_id: unit.immeubles?.id ?? null,
       bailleur_commission: unit.immeubles?.bailleurs?.commission ?? null,
+      bailleur_nom: unit.immeubles?.bailleurs?.nom ?? null,
+      bailleur_prenom: unit.immeubles?.bailleurs?.prenom ?? null,
     }));
 
     return { data: units, error: null };

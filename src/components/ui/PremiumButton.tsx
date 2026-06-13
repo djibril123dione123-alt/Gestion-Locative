@@ -4,6 +4,16 @@ import { premiumButtonClasses } from './premiumTokens';
 type PremiumButtonVariant = keyof typeof premiumButtonClasses & ('create' | 'primary' | 'secondary' | 'danger' | 'ghost');
 type PremiumButtonSize = 'sm' | 'md' | 'lg';
 
+/**
+ * A standardized Button component defining the visual language of the Premium Dashboard.
+ * 
+ * **Guidelines for usage:**
+ * - Use `variant="create"` for the absolute primary action of a page (e.g. "Nouveau bailleur", "Ajouter un bien"). Usually restricted to 1 per page header.
+ * - Use `variant="primary"` for primary submit actions in forms or critical steps.
+ * - Use `variant="secondary"` for standard non-destructive actions, filtering, and cancellations.
+ * - Use `variant="danger"` for destructive actions (e.g., delete, archive).
+ * - Avoid custom padding/margin classes (px-*, py-*). Use `size="sm" | "md" | "lg"` instead.
+ */
 interface PremiumButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: PremiumButtonVariant;
   size?: PremiumButtonSize;

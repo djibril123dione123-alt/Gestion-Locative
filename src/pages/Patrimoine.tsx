@@ -767,8 +767,8 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
     await loadData();
   };
 
-  const handlePropertySubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handlePropertySubmit = async (event?: React.FormEvent) => {
+    if (event) event.preventDefault();
     if (!profile?.agency_id) return;
     if (!navigator.onLine) {
       toast.error('Connexion indisponible : création ou modification impossible hors ligne.');
@@ -827,8 +827,8 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
     }
   };
 
-  const handleUnitSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleUnitSubmit = async (event?: React.FormEvent) => {
+    if (event) event.preventDefault();
     if (!profile?.agency_id) return;
     if (!navigator.onLine) {
       toast.error('Connexion indisponible : création ou modification impossible hors ligne.');
@@ -1850,28 +1850,20 @@ function PropertyModal({
   wizardStep: PropertyWizardStep;
   onStepChange: (step: PropertyWizardStep) => void;
   onClose: () => void;
-  onSubmit: (event: React.FormEvent) => void;
+  onSubmit: (event?: React.FormEvent) => void;
   onChange: React.Dispatch<React.SetStateAction<PropertyFormState>>;
 }) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editingProperty ? 'Modifier le bien' : isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'} description="Renseignez les informations essentielles du bien pour commencer le suivi de votre patrimoine locatif.">
-      <form onSubmit={onSubmit} className="space-y-3.5">
+      <div className="space-y-3.5">
         <ProductWizard
           steps={PROPERTY_WIZARD_STEPS}
           activeStep={wizardStep}
-          onStepClick={(step) => onStepChange(step)}
-          footer={
-            <WizardFooter
-              saving={saving}
-              currentStep={wizardStep}
-              firstStep="main"
-              finalStep="summary"
-              onCancel={onClose}
-              onPrevious={() => onStepChange(wizardStep === 'summary' ? 'address' : 'main')}
-              onNext={() => onStepChange(wizardStep === 'main' ? 'address' : 'summary')}
-              submitLabel={editingProperty ? 'Mettre à jour' : 'Créer le bien'}
-            />
-          }
+          onStepChange={(step) => onStepChange(step)}
+          onCancel={onClose}
+          onFinalSubmit={() => void onSubmit()}
+          finalSubmitLabel={editingProperty ? 'Mettre à jour' : 'Créer le bien'}
+          isSubmitting={saving}
         >
         <div className={wizardStep === 'main' ? 'space-y-4' : 'hidden'}>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Informations principales</h3>
@@ -1954,7 +1946,7 @@ function PropertyModal({
           </div>
         )}
         </ProductWizard>
-      </form>
+      </div>
     </Modal>
   );
 }
@@ -1979,28 +1971,20 @@ function UnitModal({
   wizardStep: UnitWizardStep;
   onStepChange: (step: UnitWizardStep) => void;
   onClose: () => void;
-  onSubmit: (event: React.FormEvent) => void;
+  onSubmit: (event?: React.FormEvent) => void;
   onChange: React.Dispatch<React.SetStateAction<UnitFormState>>;
 }) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editingUnit ? "Modifier l'unité" : 'Nouvelle unité locative'} description="Définissez les détails de cet espace pour pouvoir y associer un contrat de location.">
-      <form onSubmit={onSubmit} className="space-y-3.5">
+      <div className="space-y-3.5">
         <ProductWizard
           steps={UNIT_WIZARD_STEPS}
           activeStep={wizardStep}
-          onStepClick={(step) => onStepChange(step)}
-          footer={
-            <WizardFooter
-              saving={saving}
-              currentStep={wizardStep}
-              firstStep="main"
-              finalStep="summary"
-              onCancel={onClose}
-              onPrevious={() => onStepChange(wizardStep === 'summary' ? 'rent' : 'main')}
-              onNext={() => onStepChange(wizardStep === 'main' ? 'rent' : 'summary')}
-              submitLabel={editingUnit ? 'Mettre à jour' : "Créer l'unité"}
-            />
-          }
+          onStepChange={(step) => onStepChange(step)}
+          onCancel={onClose}
+          onFinalSubmit={() => void onSubmit()}
+          finalSubmitLabel={editingUnit ? 'Mettre à jour' : 'Créer l\'unité'}
+          isSubmitting={saving}
         >
         <div className={wizardStep === 'main' ? 'space-y-4' : 'hidden'}>
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Caractéristiques de l'unité</h3>
@@ -2086,7 +2070,7 @@ function UnitModal({
           </div>
         )}
         </ProductWizard>
-      </form>
+      </div>
     </Modal>
   );
 }
@@ -2114,36 +2098,4 @@ function WizardIntro({ title, description }: { title: string; description: strin
   );
 }
 
-function WizardFooter<T extends string>({
-  saving,
-  currentStep,
-  firstStep,
-  finalStep,
-  onCancel,
-  onPrevious,
-  onNext,
-  submitLabel,
-}: {
-  saving: boolean;
-  currentStep: T;
-  firstStep: T;
-  finalStep: T;
-  onCancel: () => void;
-  onPrevious: () => void;
-  onNext: () => void;
-  submitLabel: string;
-}) {
-  const isFirst = currentStep === firstStep;
-  const isFinal = currentStep === finalStep;
 
-  return (
-    <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
-      <button type="button" onClick={isFirst ? onCancel : onPrevious} disabled={saving} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
-        {isFirst ? 'Annuler' : 'Retour'}
-      </button>
-      <button type={isFinal ? 'submit' : 'button'} onClick={isFinal ? undefined : onNext} disabled={saving} className={`flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-lg transition disabled:opacity-50 ${isFinal ? 'bg-gradient-to-br from-brand-950 to-emerald-900 shadow-emerald-950/20 hover:-translate-y-0.5 hover:shadow-emerald-950/25' : 'bg-emerald-700 shadow-emerald-900/10 hover:bg-emerald-800'}`}>
-        {saving ? 'Enregistrement...' : isFinal ? submitLabel : 'Continuer'}
-      </button>
-    </div>
-  );
-}

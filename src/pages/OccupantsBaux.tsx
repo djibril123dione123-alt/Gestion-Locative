@@ -2274,43 +2274,38 @@ function OccupationFormModal({
     );
   }
 
-  const currentStepIndex = LOCATION_WIZARD_STEPS.findIndex((step) => step.id === wizardStep);
-  const canGoBack = currentStepIndex > 0;
-  const goBack = () => {
-    if (!canGoBack) return;
-    onStepChange(LOCATION_WIZARD_STEPS[currentStepIndex - 1].id);
-  };
-  const goNext = () => {
-    if (wizardStep === 'occupant') {
+
+  const handleNextStep = (step: LocationWizardStep) => {
+    if (step === 'occupant') {
       if (form.occupantMode === 'existing' && !form.locataire_id) {
         onValidationError('Sélectionnez un locataire ou créez-en un nouveau.');
-        return;
+        return false;
       }
       if (form.occupantMode === 'new') {
         const parsed = personInputFromForm(form.newOccupant);
         if (parsed.error) {
           onValidationError(parsed.error);
-          return;
+          return false;
         }
       }
     }
 
-    if (wizardStep === 'unite' && !form.unite_id) {
+    if (step === 'unite' && !form.unite_id) {
       onValidationError('Sélectionnez une unité disponible.');
-      return;
+      return false;
     }
 
-    if (wizardStep === 'conditions') {
+    if (step === 'conditions') {
       const rent = Number(form.loyer_mensuel);
       if (!form.date_debut || !form.date_fin || !Number.isFinite(rent) || rent <= 0) {
         onValidationError('Renseignez les dates et le loyer mensuel avant le résumé.');
-        return;
+        return false;
       }
     }
 
-    const nextStep = LOCATION_WIZARD_STEPS[Math.min(currentStepIndex + 1, LOCATION_WIZARD_STEPS.length - 1)];
-    onStepChange(nextStep.id);
+    return true;
   };
+
   const chooseUnit = (unit: OccupantBailAvailableUnit) => {
     update({
       unite_id: unit.id,
@@ -2322,38 +2317,17 @@ function OccupationFormModal({
 
   return (
     <Modal isOpen onClose={onClose} title="Nouvelle location">
-      <ProductWizard
-        steps={LOCATION_WIZARD_STEPS}
-        activeStep={wizardStep}
-        onStepClick={(step, index) => {
-          if (index <= currentStepIndex) onStepChange(step);
-        }}
-        footer={
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
-              onClick={wizardStep === 'occupant' ? onClose : goBack}
-              disabled={submitting}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-60"
-            >
-              {wizardStep === 'occupant' ? 'Annuler' : 'Retour'}
-            </button>
-            <button
-              type="button"
-              onClick={wizardStep === 'resume' ? onSubmit : goNext}
-              disabled={submitting || workflowLoading}
-              className={`rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                wizardStep === 'resume'
-                  ? 'bg-gradient-to-br from-brand-950 to-emerald-900 shadow-emerald-950/20 hover:-translate-y-0.5 hover:shadow-emerald-950/25'
-                  : 'bg-emerald-800 hover:bg-emerald-900'
-              }`}
-            >
-              {submitting ? 'Traitement...' : wizardStep === 'resume' ? 'Créer la location' : 'Continuer'}
-            </button>
-          </div>
-        }
-      >
       <div className="space-y-4">
+        <ProductWizard
+          steps={LOCATION_WIZARD_STEPS}
+          activeStep={wizardStep}
+          onStepChange={onStepChange}
+          onCancel={onClose}
+          onFinalSubmit={() => void onSubmit()}
+          finalSubmitLabel="Créer la location"
+          isSubmitting={submitting || workflowLoading}
+          onNextStep={handleNextStep}
+        >
         {wizardStep === 'occupant' && (
           <div className="space-y-4">
             <LifecycleIntro
@@ -2525,8 +2499,8 @@ function OccupationFormModal({
           </div>
         )}
 
+        </ProductWizard>
       </div>
-      </ProductWizard>
     </Modal>
   );
 }

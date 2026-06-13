@@ -711,8 +711,8 @@ export function Bailleurs() {
   /**
    * Soumission du formulaire
    */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
 
     // Validation basique
     if (!formData.prenom.trim() || !formData.nom.trim() || !formData.telephone.trim()) {
@@ -1852,25 +1852,17 @@ export function Bailleurs() {
         title={editingBailleur ? 'Modifier le bailleur' : 'Nouveau bailleur'}
         description="Créez la fiche propriétaire pour lui rattacher des biens, des contrats, et automatiser ses redditions."
       >
-        <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
 
           <ProductWizard
             steps={BAILLEUR_WIZARD_STEPS}
             activeStep={bailleurWizardStep}
-            onStepClick={(step) => setBailleurWizardStep(step)}
-            footer={
-              <WizardFooter
-                submitting={isSubmitting}
-                currentStep={bailleurWizardStep}
-                firstStep="identity"
-                finalStep="summary"
-                onCancel={closeModal}
-                onPrevious={() => setBailleurWizardStep(bailleurWizardStep === 'summary' ? 'admin' : 'identity')}
-                onNext={() => setBailleurWizardStep(bailleurWizardStep === 'identity' ? 'admin' : 'summary')}
-                submitLabel={editingBailleur ? 'Mettre à jour' : 'Créer le bailleur'}
-              />
-            }
+            onStepChange={(step) => setBailleurWizardStep(step)}
+            onCancel={closeModal}
+            onFinalSubmit={() => void handleSubmit()}
+            finalSubmitLabel={editingBailleur ? 'Mettre à jour' : 'Créer le bailleur'}
+            isSubmitting={isSubmitting}
           >
           <div className={bailleurWizardStep === 'identity' ? 'space-y-4' : 'hidden'}>
             <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">
@@ -1928,7 +1920,7 @@ export function Bailleurs() {
             </div>
           )}
           </ProductWizard>
-        </form>
+        </div>
       </Modal>
 
       <Modal
@@ -2135,50 +2127,4 @@ function WizardIntro({ title, description }: { title: string; description: strin
   );
 }
 
-function WizardFooter<T extends string>({
-  submitting,
-  currentStep,
-  firstStep,
-  finalStep,
-  onCancel,
-  onPrevious,
-  onNext,
-  submitLabel,
-}: {
-  submitting: boolean;
-  currentStep: T;
-  firstStep: T;
-  finalStep: T;
-  onCancel: () => void;
-  onPrevious: () => void;
-  onNext: () => void;
-  submitLabel: string;
-}) {
-  const isFirst = currentStep === firstStep;
-  const isFinal = currentStep === finalStep;
 
-  return (
-    <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
-      <button
-        type="button"
-        onClick={isFirst ? onCancel : onPrevious}
-        disabled={submitting}
-        className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
-      >
-        {isFirst ? 'Annuler' : 'Retour'}
-      </button>
-      <button
-        type={isFinal ? 'submit' : 'button'}
-        onClick={isFinal ? undefined : onNext}
-        disabled={submitting}
-        className={`flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-lg transition disabled:opacity-50 ${
-          isFinal
-            ? 'bg-gradient-to-br from-brand-950 to-emerald-900 shadow-emerald-950/20 hover:-translate-y-0.5 hover:shadow-emerald-950/25'
-            : 'bg-emerald-700 shadow-emerald-900/10 hover:bg-emerald-800'
-        }`}
-      >
-        {submitting ? 'Traitement...' : isFinal ? submitLabel : 'Continuer'}
-      </button>
-    </div>
-  );
-}

@@ -7,20 +7,37 @@ export interface ProductWizardStep<T extends string> {
   icon: LucideIcon;
 }
 
+/**
+ * A controlled Wizard component to safely handle multi-step form flows.
+ * 
+ * **CRITICAL RULES for usage:**
+ * 1. Do NOT embed internal form submissions (`<form onSubmit={...}>`) or independent "Continuer" `<button type="submit">` elements inside the wizard's children.
+ * 2. The Wizard intercepts native form submits and ensures that `onFinalSubmit` is ONLY called on the very last step.
+ * 3. On intermediate steps, pressing "Continuer" (which is effectively a submit action on the wrapper form) will just increment the step safely.
+ * 4. This component guarantees that premature creation (e.g. creating the record before the summary screen) is impossible.
+ */
 interface ProductWizardProps<T extends string> {
   steps: Array<ProductWizardStep<T>>;
   activeStep: T;
+  onStepChange: (step: T) => void;
   children: ReactNode;
-  footer: ReactNode;
-  onStepClick?: (step: T, index: number) => void;
+  onFinalSubmit: () => void;
+  finalSubmitLabel: string;
+  onCancel: () => void;
+  isSubmitting?: boolean;
+  onNextStep?: (currentStep: T) => boolean;
 }
 
 export function ProductWizard<T extends string>({
   steps,
   activeStep,
+  onStepChange,
   children,
-  footer,
-  onStepClick,
+  onFinalSubmit,
+  finalSubmitLabel,
+  onCancel,
+  isSubmitting = false,
+  onNextStep,
 }: ProductWizardProps<T>) {
   const currentIndex = Math.max(0, steps.findIndex((step) => step.id === activeStep));
   const active = steps[currentIndex] ?? steps[0];
@@ -30,8 +47,29 @@ export function ProductWizard<T extends string>({
     ? 'hidden gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-4'
     : 'hidden gap-2 sm:grid sm:grid-cols-3';
 
+  const isFirst = currentIndex === 0;
+  const isFinal = currentIndex === steps.length - 1;
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isFinal) {
+      onFinalSubmit();
+    } else {
+      if (onNextStep && !onNextStep(activeStep)) {
+        return;
+      }
+      const nextStep = steps[currentIndex + 1];
+      if (nextStep) onStepChange(nextStep.id);
+    }
+  };
+
+  const goPrevious = () => {
+    const prevStep = steps[currentIndex - 1];
+    if (prevStep) onStepChange(prevStep.id);
+  };
+
   return (
-    <div className="space-y-3 sm:space-y-4">
+    <form onSubmit={handleFormSubmit} className="space-y-3 sm:space-y-4">
       <div className="rounded-2xl border border-emerald-950/10 bg-[#fffaf1]/85 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
         <div className="flex items-center gap-3 sm:hidden">
           {ActiveIcon && (
@@ -60,14 +98,14 @@ export function ProductWizard<T extends string>({
             const Icon = step.icon;
             const activeStepItem = step.id === activeStep;
             const done = index < currentIndex;
-            const clickable = onStepClick && index <= currentIndex;
+            const clickable = index <= currentIndex;
 
             return (
               <button
                 key={step.id}
                 type="button"
-                disabled={!clickable}
-                onClick={() => clickable && onStepClick?.(step.id, index)}
+                disabled={!clickable || isSubmitting}
+                onClick={() => clickable && onStepChange(step.id)}
                 className={`flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${
                   activeStepItem
                     ? 'border-emerald-300 bg-white text-brand-950 shadow-sm ring-1 ring-emerald-100'
@@ -98,8 +136,28 @@ export function ProductWizard<T extends string>({
       </div>
       <div className="min-h-[12rem] sm:min-h-[14rem]">{children}</div>
       <div className="sticky bottom-0 z-10 -mx-4 border-t border-emerald-950/10 bg-[#fffdf8]/95 px-4 py-2.5 shadow-[0_-14px_30px_rgba(15,23,42,0.06)] backdrop-blur sm:-mx-5 sm:px-5 sm:py-3">
-        {footer}
+        <div className="flex flex-col-reverse justify-end gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={isFirst ? onCancel : goPrevious}
+            disabled={isSubmitting}
+            className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+          >
+            {isFirst ? 'Annuler' : 'Retour'}
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-lg transition disabled:opacity-50 ${
+              isFinal
+                ? 'bg-gradient-to-br from-brand-950 to-emerald-900 shadow-emerald-950/20 hover:-translate-y-0.5 hover:shadow-emerald-950/25'
+                : 'bg-emerald-700 shadow-emerald-900/10 hover:bg-emerald-800'
+            }`}
+          >
+            {isSubmitting ? 'Traitement...' : isFinal ? finalSubmitLabel : 'Continuer'}
+          </button>
+        </div>
       </div>
-    </div>
+    </form>
   );
 }

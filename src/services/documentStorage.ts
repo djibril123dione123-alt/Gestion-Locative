@@ -370,11 +370,6 @@ export async function uploadUserDocument(input: UploadUserDocumentInput) {
       description: input.description?.trim() || null,
       tags: input.tags ?? [],
       uploaded_by: input.userId,
-      bailleur_id: input.relations?.bailleur_id || null,
-      locataire_id: input.relations?.locataire_id || null,
-      immeuble_id: input.relations?.immeuble_id || null,
-      unite_id: input.relations?.unite_id || null,
-      contrat_id: input.relations?.contrat_id || null,
     })
     .select('*')
     .single();

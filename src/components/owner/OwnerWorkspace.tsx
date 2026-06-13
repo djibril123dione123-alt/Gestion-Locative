@@ -51,6 +51,7 @@ import type { AgencySettings } from '../../types';
 import { useToast } from '../../hooks/useToast';
 import { OfflineDataNotice } from '../ui/OfflineDataNotice';
 import { PageSkeleton } from '../ui/Skeleton';
+import { PremiumButton } from '../ui/PremiumButton';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { ToastContainer } from '../ui/Toast';
@@ -958,23 +959,21 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
+            <PremiumButton
+              variant="secondary"
               onClick={() => void handleGenerateOwnerReport()}
               disabled={generatingReport}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3.5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+              icon={generatingReport ? <Loader2 className="h-4 w-4 animate-spin text-brand-800" /> : <FileText className="h-4 w-4 text-brand-800" />}
             >
-              {generatingReport ? <Loader2 className="h-4 w-4 animate-spin text-brand-800" /> : <FileText className="h-4 w-4 text-brand-800" />}
               Générer rapport PDF
-            </button>
-            <button
-              type="button"
+            </PremiumButton>
+            <PremiumButton
+              variant="create"
               onClick={navigateToCreateProperty}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-900 px-3.5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-brand-950"
+              icon={<Plus className="h-4 w-4" />}
             >
-              <Plus className="h-4 w-4" />
               Ajouter un bien
-            </button>
+            </PremiumButton>
           </div>
         </section>
 
@@ -1064,15 +1063,14 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                     className="h-10 rounded-xl border border-emerald-950/10 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                     aria-label="Période du rapport propriétaire"
                   />
-                  <button
-                    type="button"
+                  <PremiumButton
+                    variant="primary"
                     onClick={() => void handleGenerateOwnerReport()}
                     disabled={generatingReport}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand-900 px-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 transition hover:bg-brand-950 disabled:cursor-not-allowed disabled:opacity-70"
+                    icon={generatingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                   >
-                    {generatingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                     Générer mon rapport PDF
-                  </button>
+                  </PremiumButton>
                 </div>
               </div>
 
@@ -1372,22 +1370,20 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             </label>
           </div>
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <button
-              type="button"
+            <PremiumButton
+              variant="secondary"
               onClick={() => setIsProfileModalOpen(false)}
-              className="inline-flex h-11 items-center justify-center rounded-xl border border-emerald-950/10 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
               Annuler
-            </button>
-            <button
-              type="button"
+            </PremiumButton>
+            <PremiumButton
+              variant="primary"
               onClick={() => void handleSaveOwnerProfile()}
               disabled={savingProfile}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-900 px-5 text-sm font-bold text-white shadow-lg shadow-emerald-950/15 hover:bg-brand-950 disabled:cursor-not-allowed disabled:opacity-70"
+              icon={savingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             >
-              {savingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
               Enregistrer
-            </button>
+            </PremiumButton>
           </div>
         </div>
       </Modal>
@@ -1508,11 +1504,13 @@ function CompactRow({
   );
 }
 
-function MiniStat({ label, value, tone }: { label: string; value: ReactNode; tone: 'blue' | 'orange' | 'amber' }) {
+function MiniStat({ label, value, tone }: { label: string; value: ReactNode; tone: 'blue' | 'orange' | 'amber' | 'red' | 'emerald' }) {
   const tones = {
     blue: 'from-emerald-50 to-[#fffdf8] border-emerald-100 text-brand-900',
     orange: 'from-orange-50 to-red-50 border-orange-100 text-orange-900',
     amber: 'from-amber-50 to-orange-50 border-amber-100 text-amber-900',
+    red: 'from-red-50 to-rose-50 border-red-100 text-red-900',
+    emerald: 'from-emerald-50 to-teal-50 border-emerald-100 text-emerald-900',
   };
   return (
     <div className={`rounded-2xl border bg-gradient-to-br p-2.5 ${tones[tone]}`}>

@@ -50,12 +50,12 @@ export function MobileFilterSheet({
         <div className="max-h-[58dvh] space-y-3 overflow-y-auto px-4 py-4">
           {children}
         </div>
-        <footer className="grid grid-cols-2 gap-2 border-t border-emerald-950/10 bg-white/55 px-4 py-3">
+        <footer className="grid grid-cols-2 gap-2 border-t border-emerald-950/10 bg-[#fff4df]/65 px-4 py-3">
           <button
             type="button"
             onClick={onReset}
             disabled={!onReset}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-[#fff8e8] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Réinitialiser
           </button>

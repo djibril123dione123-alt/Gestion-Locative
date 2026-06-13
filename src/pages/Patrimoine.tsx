@@ -988,7 +988,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 <input
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder={activeTab === 'biens' ? 'Rechercher nom, adresse, bailleur...' : 'Rechercher unité, bien, locataire...'}
+                  placeholder={activeTab === 'biens' ? 'Nom, adresse ou bailleur' : 'Unité, bien ou locataire'}
                   className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                 />
               </div>

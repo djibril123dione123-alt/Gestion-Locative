@@ -157,7 +157,7 @@ export const ADAPTIVE_DICTIONARY: Record<OrganizationType, SemanticDictionaryEnt
     navigationGroups: {
       portefeuille: {
         label: 'Portefeuille locatif',
-        description: 'Bailleur -> bien -> locataire -> bail',
+        description: 'Bailleur → bien → unité → location',
       },
       finance: {
         label: 'Encaissement & finance',

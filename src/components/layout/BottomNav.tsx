@@ -42,10 +42,10 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent',
 
   return (
     <nav
-      className="sk-bottom-nav fixed bottom-0 left-0 right-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.35rem)] lg:hidden"
+      className="sk-bottom-nav fixed bottom-0 left-0 right-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+0.3rem)] lg:hidden"
       aria-label="Navigation mobile principale"
     >
-      <div className="sk-bottom-nav-inner mx-auto flex max-w-[22rem] items-center gap-1 rounded-[2rem] border border-white/65 bg-[#fffdf8]/75 px-1.5 py-1.5 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-emerald-950/5 backdrop-blur-2xl backdrop-saturate-150">
+      <div className="sk-bottom-nav-inner mx-auto flex max-w-[21.5rem] items-center gap-1 rounded-[2rem] border border-white/65 bg-[#fffdf8]/75 px-1.5 py-1 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ring-1 ring-emerald-950/5 backdrop-blur-2xl backdrop-saturate-150">
         {items.filter(({ id }) => canAccess(id)).map(({ id, label, icon: Icon }) => {
           const active = isActive(id);
           return (
@@ -53,15 +53,15 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent',
               key={id}
               type="button"
               onClick={() => onNavigate(id)}
-              className={`sk-pressable group relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 transition-all duration-300 ${
+              className={`sk-pressable group relative flex min-h-[2.75rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1 transition-all duration-300 ${
                 active
                   ? 'bg-brand-950 text-white shadow-premium'
                   : 'text-slate-500 hover:bg-white/70 hover:text-brand-900'
               }`}
               aria-current={active ? 'page' : undefined}
             >
-              <Icon className={`h-[1.15rem] w-[1.15rem] transition-transform duration-300 ${active ? 'scale-105 text-orange-200 group-active:scale-95' : 'group-hover:-translate-y-0.5'}`} />
-              <span className="text-center text-[0.66rem] font-black leading-tight">{label}</span>
+              <Icon className={`h-[1.08rem] w-[1.08rem] transition-transform duration-300 ${active ? 'scale-105 text-orange-200 group-active:scale-95' : 'group-hover:-translate-y-0.5'}`} />
+              <span className="text-center text-[0.64rem] font-black leading-tight">{label}</span>
               {active && <span className="absolute bottom-1.5 h-1 w-1 rounded-full bg-action-500 ring-4 ring-action-500/15" />}
             </button>
           );
@@ -69,11 +69,11 @@ export function BottomNav({ currentPage, onNavigate, onOpenMenu, role = 'agent',
         <button
           type="button"
           onClick={onOpenMenu}
-          className="sk-pressable group relative flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1.5 text-slate-500 transition-all duration-300 hover:bg-white/70 hover:text-brand-900"
+          className="sk-pressable group relative flex min-h-[2.75rem] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1 text-slate-500 transition-all duration-300 hover:bg-white/70 hover:text-brand-900"
           aria-label="Ouvrir plus de navigation"
         >
-          <MoreHorizontal className="h-[1.15rem] w-[1.15rem] transition-transform duration-300 group-hover:-translate-y-0.5" />
-          <span className="text-[0.66rem] font-black leading-tight">Plus</span>
+          <MoreHorizontal className="h-[1.08rem] w-[1.08rem] transition-transform duration-300 group-hover:-translate-y-0.5" />
+          <span className="text-[0.64rem] font-black leading-tight">Plus</span>
         </button>
       </div>
     </nav>

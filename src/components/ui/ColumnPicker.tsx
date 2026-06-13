@@ -35,7 +35,7 @@ export function ColumnPicker({ columns, visibility, onToggle, onSetAll }: Column
   const allHidden = toggleable.every((c) => visibility[c.key] === false);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative hidden sm:block">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}

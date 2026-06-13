@@ -79,7 +79,7 @@ const NAV: Array<MenuLeaf | MenuGroup> = [
   {
     id: 'portefeuille',
     label: 'Portefeuille',
-    description: 'Bailleur -> bien -> locataire -> bail',
+    description: 'Bailleur → bien → unité → location',
     icon: Building2,
     roles: ['admin', 'agent', 'comptable', 'bailleur'],
     items: [

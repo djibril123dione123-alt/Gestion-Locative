@@ -4,7 +4,7 @@
  * Fusionne la lecture Locataires + Contrats en une ligne par bail actif.
  * Ne remplace pas les pages existantes Locataires et Contrats.
  *
- * Colonnes : Occupant · Téléphone · Bien / Unité · Référence · Loyer · Statut · Actions
+ * Colonnes : Locataire · Téléphone · Bien / Unité · Référence · Loyer · Statut · Actions
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -61,7 +61,7 @@ import {
   type OccupantBailPersonOption,
 } from '../repositories/occupantsBauxRepository';
 import { readWithCache, invalidateOperationalCaches, notifyDataChanged } from '../services/offlineReadCache';
-import { formatCurrency, formatDate, formatSenegalPhone, normalizeSenegalPhone } from '../lib/formatters';
+import { formatDate, formatSenegalPhone, normalizeSenegalPhone } from '../lib/formatters';
 import { createContratViaEdge, renewContratViaEdge, updateContratViaEdge } from '../services/api/contratApi';
 import { generateContratPDF } from '../lib/pdf';
 
@@ -963,7 +963,7 @@ export function OccupantsBaux() {
                 Locations
               </h1>
               <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
-                Vue unifiée locataire → bail → unité ·{' '}
+                Vue unifiée locataire → location → unité ·{' '}
                 <span className="font-semibold text-emerald-700">{rows.length}</span> location
                 {rows.length !== 1 ? 's' : ''} suivie{rows.length !== 1 ? 's' : ''}
               </p>
@@ -973,7 +973,7 @@ export function OccupantsBaux() {
               <button
                 type="button"
                 onClick={() => void handleRefresh()}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-[#fff8e8]"
                 title="Actualiser"
               >
                 <RefreshCw className="h-4 w-4" />
@@ -1022,7 +1022,7 @@ export function OccupantsBaux() {
           </div>
 
           {/* Tableau principal */}
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_20px_54px_rgba(15,23,42,0.055)] ring-1 ring-white/80">
             {/* Toolbar */}
             <div className="border-b border-slate-100 px-4 py-4 sm:px-6">
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
@@ -1030,10 +1030,10 @@ export function OccupantsBaux() {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Rechercher locataire, téléphone, bien, référence..."
+                    placeholder="Nom, téléphone ou bien"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                    className="h-10 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1182,7 +1182,7 @@ export function OccupantsBaux() {
                         )}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-emerald-950/5 bg-[#fffdf8]/60">
                       {paginated.map((row) => (
                         <DesktopRow
                           key={row.contrat_id}
@@ -1342,7 +1342,7 @@ function DesktopRow({
   return (
     <tr
       onClick={onSelect}
-      className={`group cursor-pointer border-b border-slate-100 transition-colors ${selected ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200' : 'hover:bg-emerald-50/45'}`}
+      className={`group cursor-pointer border-b border-emerald-950/5 transition-colors ${selected ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200' : 'bg-[#fffdf8]/70 hover:bg-emerald-50/50'}`}
     >
       {/* Occupant */}
       {isVisible('occupant') && (
@@ -1385,7 +1385,7 @@ function DesktopRow({
       {/* Référence */}
       {isVisible('reference') && (
         <td className={`px-5 py-3.5 ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
-          <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">
+          <span className="rounded bg-[#fff4df] px-1.5 py-0.5 font-mono text-xs text-slate-600">
             {row.contrat_ref}
           </span>
         </td>
@@ -1394,7 +1394,7 @@ function DesktopRow({
       {isVisible('loyer') && (
         <td className="px-5 py-3.5 text-right">
           <MoneyText value={row.loyer_mensuel} className="font-bold text-slate-900" />
-          <span className="ml-1 text-xs text-slate-400">/mois</span>
+          <span className="ml-1 text-xs text-slate-400"> / mois</span>
         </td>
       )}
       {/* Période */}
@@ -1630,7 +1630,7 @@ function DrawerResume({ row, details, isIndividualOwner }: { row: OccupantBailRo
         <MiniMetric label="Début" value={formatDate(row.date_debut)} />
         <MiniMetric label="Fin" value={row.date_fin ? formatDate(row.date_fin) : 'Ouvert'} />
         <MiniMetric label="Prochain paiement" value={nextExpectedLabel} tone="amber" />
-        <MiniMetric label="Reliquat contrat" value={<MoneyText value={reliquatContrat} />} tone={reliquatContrat > 0 ? 'red' : 'emerald'} />
+        <MiniMetric label="Reliquat location" value={<MoneyText value={reliquatContrat} />} tone={reliquatContrat > 0 ? 'red' : 'emerald'} />
       </div>
 
       <InfoBlock title="Synthèse opérationnelle">
@@ -2263,7 +2263,7 @@ function OccupationFormModal({
         unit.bailleur_nom ?? '',
       ].join(' '),
       badge: 'Libre',
-      rightLabel: formatCurrency(unit.loyer_base ?? 0),
+      rightLabel: <MoneyText value={unit.loyer_base ?? 0} />,
     })),
     [availableUnits],
   );

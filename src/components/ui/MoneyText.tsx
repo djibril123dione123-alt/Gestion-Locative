@@ -10,20 +10,24 @@ interface MoneyTextProps {
 function formatCompactCfa(value: number) {
   const abs = Math.abs(value);
   const sign = value < 0 ? '-' : '';
-  const format = (amount: number) => Number.isInteger(amount)
-    ? amount.toLocaleString('fr-FR', { maximumFractionDigits: 0 })
-    : amount.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const formatScaled = (amount: number) => {
+    const rounded = Math.round(amount * 10) / 10;
+    return rounded.toLocaleString('fr-FR', {
+      minimumFractionDigits: Number.isInteger(rounded) ? 0 : 1,
+      maximumFractionDigits: Number.isInteger(rounded) ? 0 : 1,
+    });
+  };
 
   if (abs >= 1_000_000_000) {
-    return `${sign}${format(abs / 1_000_000_000)} Md F CFA`;
+    return `${sign}${formatScaled(abs / 1_000_000_000)} Md F CFA`;
   }
 
   if (abs >= 1_000_000) {
-    return `${sign}${format(abs / 1_000_000)} M F CFA`;
+    return `${sign}${formatScaled(abs / 1_000_000)} M F CFA`;
   }
 
   if (abs >= 100_000) {
-    return `${sign}${format(abs / 1_000)} k F CFA`;
+    return `${sign}${Math.round(abs / 1_000).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} k F CFA`;
   }
 
   return `${sign}${abs.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} F CFA`;

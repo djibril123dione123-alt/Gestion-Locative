@@ -592,7 +592,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
     const paymentActivities = data.payments.slice(0, 3).map((payment) => ({
       id: `pay-${payment.id}`,
       title: payment.statut === 'partiel' ? 'Paiement partiel reçu' : 'Paiement reçu',
-      text: `${formatCurrency(parseAmount(payment.montant_total))} · ${payment.contrats?.unites?.nom ?? 'Loyer'}`,
+      text: <><MoneyText value={parseAmount(payment.montant_total)} /> · {payment.contrats?.unites?.nom ?? 'Loyer'}</>,
       date: payment.date_paiement ?? payment.created_at,
       icon: CheckCircle2,
       tone: 'bg-emerald-50 text-emerald-700 border-emerald-100',
@@ -1142,7 +1142,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                     icon={activity.icon}
                     customTone={activity.tone}
                     title={activity.title}
-                    subtitle={`${activity.text} · ${formatDate(activity.date)}`}
+                    subtitle={<>{activity.text} · {formatDate(activity.date)}</>}
                   />
                 ))}
               </OwnerListCard>
@@ -1486,7 +1486,7 @@ function CompactRow({
   badge?: string;
   badgeClassName?: string;
   title: string;
-  subtitle: string;
+  subtitle: ReactNode;
   value?: ReactNode;
 }) {
   const tones = {
@@ -1510,7 +1510,7 @@ function CompactRow({
 
 function MiniStat({ label, value, tone }: { label: string; value: ReactNode; tone: 'blue' | 'orange' | 'amber' }) {
   const tones = {
-    blue: 'from-sky-50 to-blue-50 border-sky-100 text-blue-900',
+    blue: 'from-emerald-50 to-[#fffdf8] border-emerald-100 text-brand-900',
     orange: 'from-orange-50 to-red-50 border-orange-100 text-orange-900',
     amber: 'from-amber-50 to-orange-50 border-amber-100 text-amber-900',
   };

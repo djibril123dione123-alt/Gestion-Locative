@@ -403,7 +403,7 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
           tone={stats.impayesMois > 0 ? 'red' : 'slate'}
         />
         <KpiCard
-          title="Contrats actifs"
+          title="Locations en cours"
           value={stats.contratsActifs}
           subtitle={`${stats.totalLocataires} locataires`}
           icon={FileText}
@@ -507,7 +507,7 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
             <StatRow label={accountProfile.isIndividualOwner ? 'Biens suivis' : 'Immeubles gérés'} value={stats.totalImmeubles} />
             <StatRow label="Unités disponibles" value={stats.unitesLibres} />
             <StatRow label="Unités louées" value={stats.unitesLouees} />
-            <StatRow label="Contrats en cours" value={stats.contratsActifs} />
+            <StatRow label="Locations en cours" value={stats.contratsActifs} />
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Search } from 'lucide-react';
 
 export interface SmartComboboxOption {
@@ -7,7 +7,7 @@ export interface SmartComboboxOption {
   subtitle?: string;
   keywords?: string;
   badge?: string;
-  rightLabel?: string;
+  rightLabel?: ReactNode;
   initials?: string;
 }
 
@@ -134,7 +134,7 @@ export function SmartCombobox({
   return (
     <div ref={wrapperRef} className={`relative min-w-0 ${className}`}>
       <div className="relative flex items-center">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-800/55" />
         <input
           ref={inputRef}
           type="text"
@@ -159,7 +159,7 @@ export function SmartCombobox({
           role="combobox"
           aria-expanded={open}
           aria-autocomplete="list"
-          className="h-12 w-full min-w-0 rounded-2xl border border-emerald-950/10 bg-white/95 pl-10 pr-11 text-sm font-semibold text-slate-700 shadow-sm outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-brand-700 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200"
+          className="h-12 w-full min-w-0 rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/95 pl-10 pr-11 text-sm font-semibold leading-5 text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200"
         />
         <button
           type="button"
@@ -170,15 +170,15 @@ export function SmartCombobox({
             if (!open) inputRef.current?.focus();
           }}
           aria-label={open ? 'Fermer la liste' : 'Ouvrir la liste'}
-          className="absolute right-0 top-0 flex h-12 w-11 items-center justify-center text-slate-400 transition hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+          className="absolute right-0 top-0 flex h-12 w-11 items-center justify-center rounded-r-2xl text-slate-400 transition hover:bg-[#fff6df] hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         </button>
       </div>
 
       {open && (
-        <div className="absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-emerald-950/10 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.16)] ring-1 ring-white/80">
-          <div className="border-b border-slate-100 px-3 py-2 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">
+        <div className="absolute left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] ring-1 ring-white/80">
+          <div className="border-b border-emerald-950/10 bg-[#fff6df]/65 px-3 py-2 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
             {searchPlaceholder || 'Choisir dans la liste'}
           </div>
           <div ref={listboxRef} className="max-h-72 overflow-y-auto p-1.5" role="listbox">
@@ -200,11 +200,11 @@ export function SmartCombobox({
                     onClick={() => selectOption(option)}
                     onMouseEnter={() => setActiveIndex(index)}
                     className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition ${
-                      isActive ? 'bg-emerald-100/50' : ''
+                      isActive ? 'bg-emerald-100/45' : ''
                     } ${
                       isSelected
                         ? 'bg-emerald-50 text-brand-900'
-                        : 'text-slate-700 hover:bg-slate-50'
+                        : 'text-slate-700 hover:bg-[#fff6df]'
                     }`}
                   >
                     {option.initials ? (

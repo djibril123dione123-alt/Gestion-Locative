@@ -20,7 +20,6 @@ import {
   Phone,
   Mail,
   MapPin,
-  Download,
   SlidersHorizontal,
   X,
   BarChart3,
@@ -1223,45 +1222,6 @@ export function Bailleurs() {
     }
   };
 
-  const handleExportCsv = () => {
-    const rows = filteredBailleurs.map((bailleur) => {
-      const summary = summariesByBailleur[bailleur.id] ?? emptySummary();
-      return {
-        Bailleur: formatPersonName(bailleur, ''),
-        Telephone: formatSenegalPhone(bailleur.telephone, ''),
-        Email: bailleur.email ?? '',
-        Commission: formatCommission(bailleur.commission),
-        Biens: summary.immeubles.length,
-        Unites: summary.unites.length,
-        Reliquats: Math.round(summary.reliquats),
-        Net: Math.round(summary.net),
-        Statut: getStatusLabel(bailleur),
-      };
-    });
-    const headers = Object.keys(rows[0] ?? {
-      Bailleur: '',
-      Telephone: '',
-      Email: '',
-      Commission: '',
-      Biens: '',
-      Unites: '',
-      Reliquats: '',
-      Net: '',
-      Statut: '',
-    });
-    const csv = [
-      headers.join(';'),
-      ...rows.map((row) => headers.map((header) => `"${String(row[header as keyof typeof row] ?? '').replace(/"/g, '""')}"`).join(';')),
-    ].join('\n');
-    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `bailleurs-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
   /**
    * Fermeture du modal
    */
@@ -1335,14 +1295,14 @@ export function Bailleurs() {
         id: `paiement-${paiement.id}`,
         icon: CreditCard,
         title: 'Paiement reçu',
-        detail: `${formatCurrency(paiement.montant_total)} · ${paiement.mois_concerne ?? 'Période non renseignée'}`,
+        detail: <><MoneyText value={paiement.montant_total} /> · {paiement.mois_concerne ?? 'Période non renseignée'}</>,
         date: paiement.date_paiement,
       })),
       ...selectedSummary.contrats.slice(0, 2).map((contrat) => ({
         id: `contrat-${contrat.id}`,
         icon: FileText,
         title: 'Contrat suivi',
-        detail: `${contrat.locataires ? formatPersonName(contrat.locataires, '') : 'Locataire non renseigné'} · ${formatCurrency(contrat.loyer_mensuel)}`,
+        detail: <>{contrat.locataires ? formatPersonName(contrat.locataires, '') : 'Locataire non renseigné'} · <MoneyText value={contrat.loyer_mensuel} /></>,
         date: contrat.date_debut,
       })),
     ].slice(0, 5);
@@ -1583,15 +1543,6 @@ export function Bailleurs() {
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button
-                type="button"
-                onClick={handleExportCsv}
-                disabled={filteredBailleurs.length === 0}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3.5 py-2.5 text-sm font-bold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Download className="h-4 w-4" />
-                Exporter CSV
-              </button>
-              <button
                 onClick={() => { setBailleurWizardStep('identity'); setIsModalOpen(true); }}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[#b96b16] to-[#8a4f12] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-amber-900/15 transition hover:-translate-y-0.5 hover:shadow-amber-900/25"
               >
@@ -1615,7 +1566,7 @@ export function Bailleurs() {
                 <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-emerald-800" />
                 <input
                   type="text"
-                  placeholder="Rechercher par nom, téléphone, email..."
+                  placeholder="Nom, téléphone ou email"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
@@ -1824,6 +1775,9 @@ export function Bailleurs() {
                         <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-slate-400" />{formatSenegalPhone(selectedBailleur.telephone)}</p>
                         <p className="flex items-center gap-2 truncate"><Mail className="h-4 w-4 text-slate-400" />{selectedBailleur.email || 'Email non renseigné'}</p>
                         <p className="flex items-center gap-2 truncate"><MapPin className="h-4 w-4 text-slate-400" />{selectedBailleur.adresse || 'Adresse non renseignée'}</p>
+                        <p className="mt-3 rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-2 text-xs font-bold leading-5 text-slate-600 shadow-sm">
+                          Portefeuille actif · {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {selectedSummary.activeContracts} location{selectedSummary.activeContracts > 1 ? 's' : ''} · <span className="text-emerald-800"><MoneyText value={selectedSummary.net} compact /></span> net à reverser
+                        </p>
                       </div>
                     </div>
 
@@ -1838,24 +1792,24 @@ export function Bailleurs() {
                       <div>
                         <p className="mb-2 text-[0.66rem] font-black uppercase tracking-[0.12em] text-slate-400">Gestion</p>
                         <div className="grid grid-cols-2 gap-2">
-                          <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><FileText className="h-4 w-4" />Modifier</button>
-                          <button type="button" onClick={() => setActiveDrawerTab('paiements')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><Wallet className="h-4 w-4" />Paiements</button>
-                          <button type="button" onClick={() => setActiveDrawerTab('documents')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><FileText className="h-4 w-4" />Documents</button>
-                          <button type="button" onClick={() => setActiveDrawerTab('biens')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><Building2 className="h-4 w-4" />Biens</button>
+                          <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><FileText className="h-4 w-4" />Modifier</button>
+                          <button type="button" onClick={() => setActiveDrawerTab('paiements')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><Wallet className="h-4 w-4" />Paiements</button>
+                          <button type="button" onClick={() => setActiveDrawerTab('documents')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><FileText className="h-4 w-4" />Documents</button>
+                          <button type="button" onClick={() => setActiveDrawerTab('biens')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><Building2 className="h-4 w-4" />Biens</button>
                         </div>
                       </div>
                       <div>
                         <p className="mb-2 text-[0.66rem] font-black uppercase tracking-[0.12em] text-red-400">Danger</p>
-                        <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-white px-3 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
+                        <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-2 p-3">
-                    <div className="grid grid-cols-1 gap-2 min-[430px]:grid-cols-3">
-                      <MiniMetric label="Loyers" value={<MoneyText value={selectedSummary.loyers} />} tone="emerald" />
-                      <MiniMetric label="Reliquats" value={<MoneyText value={selectedSummary.reliquats} />} tone="red" />
-                      <MiniMetric label="Net" value={<MoneyText value={selectedSummary.net} />} tone="emerald" />
+                    <div className="grid grid-cols-3 gap-2">
+                      <MiniMetric label="Loyers" value={<MoneyText value={selectedSummary.loyers} compact />} tone="emerald" />
+                      <MiniMetric label="Reliquats" value={<MoneyText value={selectedSummary.reliquats} compact />} tone="red" />
+                      <MiniMetric label="Net" value={<MoneyText value={selectedSummary.net} compact />} tone="emerald" />
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <MiniMetric label="Biens" value={String(selectedSummary.immeubles.length)} tone="blue" />
@@ -1865,7 +1819,7 @@ export function Bailleurs() {
                   </div>
 
                   <div className="border-y border-emerald-950/10 bg-[#fffdf8]/85 px-2.5 py-2">
-                    <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-50/80 p-1 scrollbar-none">
+                    <div className="flex gap-1 overflow-x-auto rounded-xl bg-[#fff4df]/80 p-1 scrollbar-none">
                       {[...DRAWER_PRIMARY_TABS, ...DRAWER_MORE_TABS].map((tab) => (
                         <button
                           key={tab.id}
@@ -1873,7 +1827,7 @@ export function Bailleurs() {
                           onClick={() => setActiveDrawerTab(tab.id)}
                           className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${activeDrawerTab === tab.id
                               ? 'bg-emerald-900 text-white shadow-sm'
-                              : 'text-slate-500 hover:bg-white hover:text-emerald-900'
+                              : 'text-slate-500 hover:bg-[#fffdf8] hover:text-emerald-900'
                             }`}
                         >
                           {tab.label}

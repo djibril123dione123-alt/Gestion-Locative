@@ -12,7 +12,7 @@ interface PremiumToolbarProps {
 
 export function PremiumToolbar({ search, actions, filters, meta, children, className = '' }: PremiumToolbarProps) {
   return (
-    <div className={`${premiumTokens.toolbar} ${className}`}>
+    <div className={`relative z-20 overflow-visible ${premiumTokens.toolbar} ${className}`}>
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
         <div className="min-w-0">{search ?? children}</div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}

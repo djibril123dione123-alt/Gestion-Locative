@@ -88,7 +88,6 @@ export interface UploadUserDocumentInput {
   retentionPolicy?: RetentionPolicy;
   relations?: {
     bailleur_id?: string | null;
-    locataire_id?: string | null;
     immeuble_id?: string | null;
     unite_id?: string | null;
     contrat_id?: string | null;

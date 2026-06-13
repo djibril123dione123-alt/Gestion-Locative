@@ -171,6 +171,7 @@ interface PatrimoineData {
 
 interface PropertyFormState {
   nom: string;
+  type_bien: string;
   adresse: string;
   quartier: string;
   ville: string;
@@ -328,6 +329,7 @@ function getUnitStatusLabel(unit: UnitRow, summary?: UnitSummary) {
 function createPropertyForm(): PropertyFormState {
   return {
     nom: '',
+    type_bien: '',
     adresse: '',
     quartier: '',
     ville: '',
@@ -675,6 +677,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
         setEditingProperty(property);
         setPropertyForm({
           nom: property.nom ?? '',
+          type_bien: inferPropertyType(property),
           adresse: property.adresse ?? '',
           quartier: property.quartier ?? '',
           ville: property.ville ?? '',
@@ -730,8 +733,17 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
     if (tab === 'unites') setActiveTab('unites');
     if (tab === 'biens' || tab === 'immeubles') setActiveTab('biens');
 
-    if (params.get('action') !== 'new' || loading || propertyModalOpen) return;
-    void openPropertyModal();
+    const action = params.get('action');
+    if (!action || loading || propertyModalOpen || unitModalOpen) return;
+
+    if (action === 'new-unit') {
+      setActiveTab('unites');
+      openUnitModal();
+    } else if (action === 'new') {
+      void openPropertyModal();
+    } else {
+      return;
+    }
     params.delete('action');
     navigate(
       {
@@ -740,7 +752,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
       },
       { replace: true },
     );
-  }, [loading, location.pathname, location.search, navigate, openPropertyModal, propertyModalOpen]);
+  }, [loading, location.pathname, location.search, navigate, openPropertyModal, openUnitModal, propertyModalOpen, unitModalOpen]);
 
   const closePropertyModal = () => {
     setPropertyModalOpen(false);
@@ -1872,7 +1884,7 @@ function PropertyModal({
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Type">
-              <select value={inferTypeFromName(form.nom, PROPERTY_TYPES)} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value === 'Autre' ? current.nom : event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
+              <select value={form.type_bien} onChange={(event) => onChange((current) => ({ ...current, type_bien: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100">
                 <option value="">Choisir un type</option>
                 {PROPERTY_TYPES.map((type) => <option key={type}>{type}</option>)}
                 <option>Autre</option>
@@ -1934,7 +1946,7 @@ function PropertyModal({
               amountLabel="Loyer à venir"
               meta={[
                 { label: 'Ville', value: form.ville || '-' },
-                { label: 'Type', value: inferTypeFromName(form.nom, PROPERTY_TYPES) || 'Autre' },
+                { label: 'Type', value: form.type_bien || 'Autre' },
                 { label: 'Bailleur', value: isIndividualOwner ? 'Moi' : ownerName(owners.find((owner) => owner.id === form.bailleur_id) ?? null) },
               ]}
             />
@@ -2073,11 +2085,6 @@ function UnitModal({
       </div>
     </Modal>
   );
-}
-
-function inferTypeFromName(name: string, options: string[]) {
-  const normalized = normalizeText(name);
-  return options.find((option) => normalized === normalizeText(option)) ?? '';
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {

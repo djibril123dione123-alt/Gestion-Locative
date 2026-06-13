@@ -8,13 +8,13 @@ export interface ProductWizardStep<T extends string> {
 }
 
 /**
- * A controlled Wizard component to safely handle multi-step form flows.
- * 
- * **CRITICAL RULES for usage:**
- * 1. Do NOT embed internal form submissions (`<form onSubmit={...}>`) or independent "Continuer" `<button type="submit">` elements inside the wizard's children.
- * 2. The Wizard intercepts native form submits and ensures that `onFinalSubmit` is ONLY called on the very last step.
- * 3. On intermediate steps, pressing "Continuer" (which is effectively a submit action on the wrapper form) will just increment the step safely.
- * 4. This component guarantees that premature creation (e.g. creating the record before the summary screen) is impossible.
+ * Controlled wizard for multi-step product flows.
+ *
+ * Critical usage rules:
+ * 1. Children must not include their own `<form onSubmit={...}>`.
+ * 2. The intermediate "Continuer" action is always a plain button.
+ * 3. `onFinalSubmit` is only reachable from the last step.
+ * 4. Premature creation before the summary screen is impossible from this component.
  */
 interface ProductWizardProps<T extends string> {
   steps: Array<ProductWizardStep<T>>;
@@ -50,17 +50,18 @@ export function ProductWizard<T extends string>({
   const isFirst = currentIndex === 0;
   const isFinal = currentIndex === steps.length - 1;
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isFinal) {
-      onFinalSubmit();
-    } else {
-      if (onNextStep && !onNextStep(activeStep)) {
-        return;
-      }
-      const nextStep = steps[currentIndex + 1];
-      if (nextStep) onStepChange(nextStep.id);
+  const goNext = () => {
+    if (isFinal) return;
+    if (onNextStep && !onNextStep(activeStep)) {
+      return;
     }
+    const nextStep = steps[currentIndex + 1];
+    if (nextStep) onStepChange(nextStep.id);
+  };
+
+  const submitFinal = () => {
+    if (!isFinal || isSubmitting) return;
+    onFinalSubmit();
   };
 
   const goPrevious = () => {
@@ -69,7 +70,7 @@ export function ProductWizard<T extends string>({
   };
 
   return (
-    <form onSubmit={handleFormSubmit} className="space-y-3 sm:space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <div className="rounded-2xl border border-emerald-950/10 bg-[#fffaf1]/85 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
         <div className="flex items-center gap-3 sm:hidden">
           {ActiveIcon && (
@@ -146,7 +147,8 @@ export function ProductWizard<T extends string>({
             {isFirst ? 'Annuler' : 'Retour'}
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={isFinal ? submitFinal : goNext}
             disabled={isSubmitting}
             className={`flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-white shadow-lg transition disabled:opacity-50 ${
               isFinal
@@ -158,6 +160,6 @@ export function ProductWizard<T extends string>({
           </button>
         </div>
       </div>
-    </form>
+    </div>
   );
 }

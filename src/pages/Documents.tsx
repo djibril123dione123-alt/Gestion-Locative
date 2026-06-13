@@ -415,7 +415,6 @@ export function Documents() {
         tags,
         relations: {
           bailleur_id: inferredEntityType === 'bailleur' ? form.entityId || null : null,
-          locataire_id: inferredEntityType === 'locataire' ? form.entityId || null : null,
           immeuble_id: inferredEntityType === 'immeuble' ? form.entityId || null : null,
           unite_id: inferredEntityType === 'unite' ? form.entityId || null : null,
           contrat_id: inferredEntityType === 'contrat' ? form.entityId || null : null,

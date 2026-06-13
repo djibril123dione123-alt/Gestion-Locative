@@ -44,7 +44,7 @@ import { PageSkeleton } from '../components/ui/Skeleton';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { Modal } from '../components/ui/Modal';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
-import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 import {
@@ -1020,7 +1020,7 @@ export function OccupantsBaux() {
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <SearchableSelect
+                  <SmartCombobox
                     value={ownerFilter}
                     options={ownerSelectOptions}
                     onChange={setOwnerFilter}
@@ -1028,7 +1028,7 @@ export function OccupantsBaux() {
                     searchPlaceholder="Rechercher un propriétaire..."
                     className="w-full sm:w-56"
                   />
-                  <SearchableSelect
+                  <SmartCombobox
                     value={propertyFilter}
                     options={propertySelectOptions}
                     onChange={setPropertyFilter}
@@ -1036,7 +1036,7 @@ export function OccupantsBaux() {
                     searchPlaceholder="Rechercher un bien..."
                     className="w-full sm:w-52"
                   />
-                  <SearchableSelect
+                  <SmartCombobox
                     value={periodFilter}
                     options={periodSelectOptions}
                     onChange={(next) => setPeriodFilter(next as PeriodFilter)}
@@ -1090,7 +1090,7 @@ export function OccupantsBaux() {
                           </th>
                         )}
                         {occupantColumns.isVisible('telephone') && (
-                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : ''}`}>
+                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
                             <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Téléphone</span>
                           </th>
                         )}
@@ -1100,12 +1100,12 @@ export function OccupantsBaux() {
                           </th>
                         )}
                         {occupantColumns.isVisible('proprietaire') && (
-                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : ''}`}>
+                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
                             <span className="flex items-center gap-1.5"><Home className="h-3.5 w-3.5" /> Propriétaire</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('reference') && (
-                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : ''}`}>
+                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
                             <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Référence</span>
                           </th>
                         )}
@@ -1115,7 +1115,7 @@ export function OccupantsBaux() {
                           </th>
                         )}
                         {occupantColumns.isVisible('periode') && (
-                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : ''}`}>
+                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
                             <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Période</span>
                           </th>
                         )}
@@ -1296,7 +1296,7 @@ function DesktopRow({
       )}
       {/* Téléphone */}
       {isVisible('telephone') && (
-        <td className={`px-5 py-3.5 ${compact ? 'hidden' : ''}`}>
+        <td className={`px-5 py-3.5 ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
           {row.telephone ? (
             <a
               href={`tel:${row.telephone}`}
@@ -1321,13 +1321,13 @@ function DesktopRow({
       )}
       {/* Propriétaire */}
       {isVisible('proprietaire') && (
-        <td className={`px-5 py-3.5 ${compact ? 'hidden' : ''}`}>
+        <td className={`px-5 py-3.5 ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
           <p className="max-w-[150px] truncate text-sm font-medium text-slate-700">{ownerName(row)}</p>
         </td>
       )}
       {/* Référence */}
       {isVisible('reference') && (
-        <td className={`px-5 py-3.5 ${compact ? 'hidden' : ''}`}>
+        <td className={`px-5 py-3.5 ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
           <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600">
             {row.contrat_ref}
           </span>
@@ -1342,7 +1342,7 @@ function DesktopRow({
       )}
       {/* Période */}
       {isVisible('periode') && (
-        <td className={`px-5 py-3.5 ${compact ? 'hidden' : ''}`}>
+        <td className={`px-5 py-3.5 ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
           <p className="text-xs text-slate-600">
             {formatDate(row.date_debut)}
             {row.date_fin && <> → {formatDate(row.date_fin)}</>}
@@ -1820,7 +1820,7 @@ function LifecycleModals({
           </label>
           <label className="block">
             <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Motif</span>
-            <SearchableSelect
+            <SmartCombobox
               value={resiliationForm.motif}
               options={[
                 { value: '', label: 'Sélectionner un motif' },

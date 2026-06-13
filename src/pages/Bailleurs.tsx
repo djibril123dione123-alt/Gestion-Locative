@@ -47,7 +47,8 @@ import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages'
 import { formatDate, formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 import { formatPersonName } from '../lib/people';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
-import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { SmartCombobox } from '../components/ui/SmartCombobox';
+import { MiniMetric } from '../components/ui/MetricCard';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
@@ -308,11 +309,11 @@ function KpiTile({
   label: string;
   value: string;
   helper: string;
-  tone: 'emerald' | 'gold' | 'red' | 'blue';
+  tone: 'emerald' | 'amber' | 'red' | 'blue';
 }) {  const tones = {
     emerald: { gradient: 'from-white to-emerald-50/65', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100' },
     blue: { gradient: 'from-white to-sky-50/65', text: 'text-sky-800', icon: 'bg-sky-50 text-sky-800 ring-sky-100' },
-    gold: { gradient: 'from-white to-amber-50/65', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100' },
+    amber: { gradient: 'from-white to-amber-50/65', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100' },
     red: { gradient: 'from-white to-red-50/65', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100' },
   }[tone];
   return (
@@ -1501,12 +1502,12 @@ export function Bailleurs() {
                 Bilan préparé pour <strong className="font-black">{formatMonthLabel(reportMonth)}</strong> · {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {reportPaiements.length} paiement{reportPaiements.length > 1 ? 's' : ''}
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                <DrawerMetric label="Loyers" value={formatCurrency(reportLoyers)} tone="emerald" />
-                <DrawerMetric label="Reliquats" value={formatCurrency(reportReliquats)} tone="red" />
-                <DrawerMetric label="Commissions" value={formatCurrency(reportCommissions)} tone="gold" />
-                <DrawerMetric label="Dépenses" value={formatCurrency(reportExpenses)} tone="blue" />
-                <DrawerMetric label="Net" value={formatCurrency(reportNet)} tone="slate" />
-                <DrawerMetric label="Documents" value={String(reportDocuments.length)} tone="slate" />
+                <MiniMetric label="Loyers" value={formatCurrency(reportLoyers)} tone="emerald" />
+                <MiniMetric label="Reliquats" value={formatCurrency(reportReliquats)} tone="red" />
+                <MiniMetric label="Commissions" value={formatCurrency(reportCommissions)} tone="amber" />
+                <MiniMetric label="Dépenses" value={formatCurrency(reportExpenses)} tone="blue" />
+                <MiniMetric label="Net" value={formatCurrency(reportNet)} tone="slate" />
+                <MiniMetric label="Documents" value={String(reportDocuments.length)} tone="slate" />
               </div>
               <button
                 type="button"
@@ -1569,8 +1570,9 @@ export function Bailleurs() {
         />
       )}
 
-      <div className={`relative min-h-full transition-all duration-300 ${detailPanelOpen ? 'xl:mr-[34rem]' : ''}`}>
-        <section className="min-w-0 space-y-6">
+      <div className="flex min-h-full">
+        <div className={`flex-1 min-w-0 transition-all duration-300 ${detailPanelOpen ? 'hidden xl:block xl:pr-[34rem]' : ''}`}>
+          <section className="min-w-0 space-y-6">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Portefeuille propriétaire</p>
@@ -1603,7 +1605,7 @@ export function Bailleurs() {
             <KpiTile icon={Users} label="Bailleurs actifs" value={globalKpis.activeBailleurs.toString()} helper={`${bailleurs.length} propriétaire${bailleurs.length > 1 ? 's' : ''} dans la base`} tone="emerald" />
             <KpiTile icon={AlertCircle} label="Reliquats totaux" value={formatCurrency(globalKpis.reliquats)} helper="À suivre sur les paiements partiels" tone="red" />
             <KpiTile icon={Wallet} label="Net à reverser" value={formatCurrency(globalKpis.net)} helper="Somme des parts bailleurs" tone="emerald" />
-            <KpiTile icon={ReceiptText} label="Commissions" value={formatCurrency(globalKpis.commissions)} helper={`${globalKpis.immeubles} biens à ${globalKpis.unites} unités`} tone="gold" />
+            <KpiTile icon={ReceiptText} label="Commissions" value={formatCurrency(globalKpis.commissions)} helper={`${globalKpis.immeubles} biens à ${globalKpis.unites} unités`} tone="amber" />
           </div>
 
           <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
@@ -1761,7 +1763,7 @@ export function Bailleurs() {
           )}
           </section>
         </section>
-      </div>
+        </div>
 
       {detailPanelOpen && (
         <aside className="fixed inset-y-0 right-0 z-50 flex w-full flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:w-[34rem] xl:border-l xl:border-emerald-950/10">
@@ -1809,14 +1811,14 @@ export function Bailleurs() {
 
                   <div className="space-y-2 p-3">
                     <div className="grid grid-cols-1 gap-2 min-[430px]:grid-cols-3">
-                      <DrawerMetric label="Loyers" value={formatCurrency(selectedSummary.loyers)} tone="emerald" />
-                      <DrawerMetric label="Reliquats" value={formatCurrency(selectedSummary.reliquats)} tone="red" />
-                      <DrawerMetric label="Net" value={formatCurrency(selectedSummary.net)} tone="emerald" />
+                      <MiniMetric label="Loyers" value={formatCurrency(selectedSummary.loyers)} tone="emerald" />
+                      <MiniMetric label="Reliquats" value={formatCurrency(selectedSummary.reliquats)} tone="red" />
+                      <MiniMetric label="Net" value={formatCurrency(selectedSummary.net)} tone="emerald" />
                     </div>
                     <div className="grid grid-cols-3 gap-2">
-                      <DrawerMetric label="Biens" value={String(selectedSummary.immeubles.length)} tone="blue" />
-                      <DrawerMetric label="Unités" value={String(selectedSummary.unites.length)} tone="gold" />
-                      <DrawerMetric label="Contrats" value={String(selectedSummary.activeContracts)} tone="slate" />
+                      <MiniMetric label="Biens" value={String(selectedSummary.immeubles.length)} tone="blue" />
+                      <MiniMetric label="Unités" value={String(selectedSummary.unites.length)} tone="amber" />
+                      <MiniMetric label="Contrats" value={String(selectedSummary.activeContracts)} tone="slate" />
                     </div>
                   </div>
 
@@ -1844,6 +1846,7 @@ export function Bailleurs() {
             </div>
           </aside>
         )}
+      </div>
 
       {/* Modal de création/édition */}
       <Modal
@@ -1960,7 +1963,7 @@ export function Bailleurs() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-bold text-slate-700">Statut</label>
-                <SearchableSelect
+                <SmartCombobox
                   value={lifecycleForm.statut}
                   options={[
                     { value: 'resilie', label: 'Résilié' },

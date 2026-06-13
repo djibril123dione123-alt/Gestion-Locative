@@ -35,7 +35,8 @@ import { ToastContainer } from '../components/ui/Toast';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { EmptyState } from '../components/ui/EmptyState';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
-import { SearchableSelect } from '../components/ui/SearchableSelect';
+import { SmartCombobox } from '../components/ui/SmartCombobox';
+import { MetricCard, MiniMetric } from '../components/ui/MetricCard';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { useAuth } from '../contexts/AuthContext';
 import { usePlanLimits } from '../hooks/usePlanLimits';
@@ -985,7 +986,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
               {activeTab === 'biens' ? (
                 <>
                   {!isIndividualOwner && (
-                    <SearchableSelect
+                    <SmartCombobox
                       value={ownerFilter}
                       options={ownerFilterOptions}
                       onChange={setOwnerFilter}
@@ -994,7 +995,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                       className="w-full sm:w-56"
                     />
                   )}
-                  <SearchableSelect
+                  <SmartCombobox
                     value={propertyFilter}
                     options={propertyFilterOptions}
                     onChange={(next) => setPropertyFilter(next as PropertyFilter)}
@@ -1011,7 +1012,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 </>
               ) : (
                 <>
-                  <SearchableSelect
+                  <SmartCombobox
                     value={unitFilter}
                     options={unitFilterOptions}
                     onChange={(next) => setUnitFilter(next as UnitFilter)}
@@ -1179,30 +1180,6 @@ function buildDangerMessage(
     return `Vous allez archiver "${property?.nom ?? dangerTarget.name}". Relations détectées : ${units} unité(s), ${contracts} contrat(s), ${payments} paiement(s), ${documents} document(s). Les données restent conservées, mais le bien ne sera plus actif.`;
   }
   return `Vous allez archiver "${unit?.nom ?? dangerTarget.name}". Relations détectées : ${unitSummary?.contract ? '1 bail actif ou historique' : 'aucun bail actif'}, ${unitSummary?.payments.length ?? 0} paiement(s), ${unitSummary?.documents.length ?? 0} document(s).`;
-}
-
-function MetricCard({ label, value, icon: Icon, tone, wide = false }: { label: string; value: ReactNode; icon: LucideIcon; tone: 'emerald' | 'blue' | 'amber' | 'green' | 'red'; wide?: boolean }) {
-  const tones = {
-    emerald: { gradient: 'from-white to-emerald-50/65', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100' },
-    blue: { gradient: 'from-white to-sky-50/65', text: 'text-sky-800', icon: 'bg-sky-50 text-sky-800 ring-sky-100' },
-    amber: { gradient: 'from-white to-amber-50/65', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100' },
-    green: { gradient: 'from-white to-lime-50/65', text: 'text-emerald-800', icon: 'bg-emerald-50 text-emerald-800 ring-emerald-100' },
-    red: { gradient: 'from-white to-red-50/65', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100' },
-  }[tone];
-
-  return (
-    <article className={`min-w-0 rounded-2xl border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-3 shadow-[0_10px_28px_rgba(15,23,42,0.045)] ring-1 ring-white/70 ${wide ? 'xl:col-span-1' : ''}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className={`truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] ${tones.text}`}>{label}</p>
-          <p className="mt-1.5 truncate text-[1.1rem] font-extrabold tracking-tight text-slate-950 sm:text-[1.18rem]" title={typeof value === 'string' ? value : undefined}>{value}</p>
-        </div>
-        <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ring-1 ${tones.icon}`}>
-          <Icon className="h-4 w-4" />
-        </div>
-      </div>
-    </article>
-  );
 }
 
 function StatusBadge({ label }: { label: string }) {
@@ -1463,15 +1440,6 @@ function UnitsTable({
         })}
       </div>
     </section>
-  );
-}
-
-function MiniMetric({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-2.5 py-2 shadow-[0_8px_18px_rgba(15,23,42,0.025)]">
-      <p className="text-[0.61rem] font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</p>
-      <p className="mt-1 truncate whitespace-nowrap text-xs font-semibold tabular-nums text-slate-800">{value}</p>
-    </div>
   );
 }
 
@@ -1806,7 +1774,7 @@ function PropertyModal({
             </Field>
             {!isIndividualOwner && (
             <Field label="Bailleur rattaché *">
-              <SearchableSelect
+              <SmartCombobox
                 value={form.bailleur_id}
                 options={[
                   { value: '', label: 'Sélectionner un bailleur' },
@@ -1879,7 +1847,7 @@ function UnitModal({
         <div className="space-y-4">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Caractéristiques de l'unité</h3>
           <Field label="Bien parent *">
-            <SearchableSelect
+            <SmartCombobox
               value={form.immeuble_id}
               options={[
                 { value: '', label: 'Sélectionner un bien' },

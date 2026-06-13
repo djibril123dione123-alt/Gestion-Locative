@@ -792,7 +792,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       doc.setFontSize(8.4);
       doc.setTextColor(71, 85, 105);
       doc.text(
-        'Synthèse des revenus encaissés, reliquats, charges et contrats actifs de votre espace propriétaire.',
+        'Synthèse des revenus encaissés, reliquats, charges et locations en cours de votre espace propriétaire.',
         14,
         y + 2,
       );
@@ -825,7 +825,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       autoTable(doc, {
         startY: y,
         head: [['Bien', 'Unité', 'Locataire', 'Loyer', 'Encaissé', 'Reliquat', 'Statut']],
-        body: rows.length > 0 ? rows : [['-', '-', 'Aucun contrat actif', formatCurrency(0), formatCurrency(0), formatCurrency(0), '-']],
+        body: rows.length > 0 ? rows : [['-', '-', 'Aucun location en cours', formatCurrency(0), formatCurrency(0), formatCurrency(0), '-']],
         ...getAutoTableTheme(settings),
         columnStyles: {
           3: { halign: 'right' },
@@ -1075,7 +1075,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                 </div>
               </div>
 
-              <div className="mt-3 grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-2.5 xl:grid-cols-4">
                 <MiniStat label="Encaissé" value={formatCurrency(reportSummary.collected)} tone="blue" />
                 <MiniStat label="Reliquats" value={formatCurrency(reportSummary.reliquats)} tone="amber" />
                 <MiniStat label="Charges" value={formatCurrency(reportSummary.expenses)} tone="orange" />

@@ -57,7 +57,7 @@ export function generateContratText(data: ContratData): string {
   const city = data.agence.city || 'Dakar';
   const tribunal = data.agence.mention_tribunal || 'Tribunal de commerce de Dakar';
   const penalites = data.agence.mention_penalites ||
-    "À défaut de paiement d'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours), des pénalités qui s'élèvent à 1000 FCFA par jour de retard seront appliquées pendant 03 jours. Passé ce délai, la procédure judiciaire sera enclenchée.";
+    "À défaut de paiement d'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours), des pénalités qui s'élèvent à 1000 F CFA par jour de retard seront appliquées pendant 03 jours. Passé ce délai, la procédure judiciaire sera enclenchée.";
   const fraisHuissier = data.agence.frais_huissier || 37500;
 
   const managerIdentity = managerIdNumber
@@ -111,11 +111,11 @@ ARTICLE 5 : OBLIGATIONS DU LOCATAIRE
 12) Satisfaire à toutes les charges de ville ou de police habituelles.
 
 ARTICLE 6 : MONTANT DU LOYER
-Le montant du loyer initial est fixé à la somme de ${String(data.contrat.loyer_mensuel).replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')} FCFA (${data.contrat.loyer_lettres}).
+Le montant du loyer initial est fixé à la somme de ${String(data.contrat.loyer_mensuel).replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')} F CFA (${data.contrat.loyer_lettres}).
 Le loyer est payé mensuellement d'avance avant le 05 du mois, chez le mandataire.
 
 ARTICLE 7 : DÉPÔT DE GARANTIE
-Le dépôt de garantie est fixé à la somme de ${String(data.contrat.depot_garantie).replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')} FCFA (${data.contrat.depot_lettres}) correspondant à un mois de loyer payé d'avance et un mois de caution.
+Le dépôt de garantie est fixé à la somme de ${String(data.contrat.depot_garantie).replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')} F CFA (${data.contrat.depot_lettres}) correspondant à un mois de loyer payé d'avance et un mois de caution.
 
 ARTICLE 8 : PÉNALITÉS
 ${penalites}
@@ -133,7 +133,7 @@ ARTICLE 11 : ÉLECTION DE DOMICILE
 Pour l'exécution des obligations, le bailleur fait élection de domicile en sa demeure et le locataire dans les lieux loués.
 
 ARTICLE 12 : IMPORTANT
-En cas de non-paiement du loyer dans les délais impartis, une somme de ${String(fraisHuissier).replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')} FCFA est prélevée sur la caution pour les frais d'huissier afin d'assignation en expulsion, conformément à la loi sénégalaise.
+En cas de non-paiement du loyer dans les délais impartis, une somme de ${String(fraisHuissier).replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')} F CFA est prélevée sur la caution pour les frais d'huissier afin d'assignation en expulsion, conformément à la loi sénégalaise.
 
 Fait à ${city}, le ${data.contrat.date_du_jour} en deux originaux.
 

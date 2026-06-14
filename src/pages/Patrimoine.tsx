@@ -1157,6 +1157,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     }}
                     onArchive={() => setDangerTarget({ type: 'bien', id: selectedProperty.id, name: selectedProperty.nom })}
                     onNavigate={navigate}
+                    onSelectUnit={selectUnit}
                   />
                 )}
                 {selectedUnit && selectedUnitSummary && (
@@ -1563,6 +1564,7 @@ function PropertyDrawer({
   onAddUnit,
   onArchive,
   onNavigate,
+  onSelectUnit,
 }: {
   property: PropertyRow;
   summary: PropertySummary;
@@ -1573,6 +1575,7 @@ function PropertyDrawer({
   onAddUnit: () => void;
   onArchive: () => void;
   onNavigate: (to: string) => void;
+  onSelectUnit: (unit: UnitRow) => void;
 }) {
   const visual = getPropertyVisual(property);
   return (
@@ -1641,6 +1644,7 @@ function PropertyDrawer({
                   icon: DoorOpen,
                   title: unit.nom,
                   subtitle: <><MoneyText value={unit.loyer_base ?? 0} /> - {getUnitStatusLabel(unit)}</>,
+                  onClick: () => onSelectUnit(unit),
                 }))} />
               ),
             },
@@ -1653,6 +1657,7 @@ function PropertyDrawer({
                   icon: ClipboardList,
                   title: formatPersonName(contract.locataires, 'Locataire'),
                   subtitle: <><MoneyText value={contract.loyer_mensuel ?? 0} /> - {contract.statut ?? 'Bail'}</>,
+                  onClick: () => { window.location.hash = '#/occupants-baux'; },
                 }))} />
               ),
             },
@@ -1665,6 +1670,7 @@ function PropertyDrawer({
                   icon: FileText,
                   title: document.name || document.document_category || 'Document',
                   subtitle: formatDate(document.created_at),
+                  onClick: () => { window.location.hash = '#/documents'; },
                 }))} />
               ),
             },
@@ -1757,6 +1763,7 @@ function UnitDrawer({
                   icon: Wallet,
                   title: <MoneyText value={payment.montant_total ?? 0} />,
                   subtitle: `${payment.mois_concerne ?? 'Mois'} - ${formatDate(payment.date_paiement)}`,
+                  onClick: () => { window.location.hash = '#/paiements'; },
                 }))} />
               ),
             },
@@ -1769,6 +1776,7 @@ function UnitDrawer({
                   icon: FileText,
                   title: document.name || document.document_category || 'Document',
                   subtitle: formatDate(document.created_at),
+                  onClick: () => { window.location.hash = '#/documents'; },
                 }))} />
               ),
             },
@@ -1809,13 +1817,16 @@ function DrawerTabs({ tabs }: { tabs: Array<{ label: string; content: ReactNode 
   const [active, setActive] = useState(0);
   return (
     <div className="rounded-2xl border border-emerald-950/10 bg-white p-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
-      <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-50 p-1">
+      <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none rounded-xl bg-slate-50 p-1.5">
         {tabs.map((tab, index) => (
           <button
             key={tab.label}
             type="button"
-            onClick={() => setActive(index)}
-            className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${active === index ? 'bg-white text-brand-900 shadow-sm ring-1 ring-emerald-950/10' : 'text-slate-500 hover:bg-white/80 hover:text-slate-800'}`}
+            onClick={(e) => {
+              setActive(index);
+              e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }}
+            className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold transition ${active === index ? 'bg-white text-brand-900 shadow-sm ring-1 ring-emerald-950/10' : 'text-slate-500 hover:bg-white/80 hover:text-slate-800'}`}
           >
             {tab.label}
           </button>
@@ -1826,21 +1837,39 @@ function DrawerTabs({ tabs }: { tabs: Array<{ label: string; content: ReactNode 
   );
 }
 
-function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: ReactNode; subtitle: ReactNode }> }) {
+function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: ReactNode; subtitle: ReactNode; onClick?: () => void }> }) {
   return (
     <div className="space-y-2">
       {rows.map((row, index) => {
         const Icon = row.icon;
+        const isClickable = !!row.onClick;
+        const Wrapper = isClickable ? 'button' : 'div';
+        const wrapperProps = isClickable
+          ? {
+              type: 'button',
+              onClick: row.onClick,
+              className: 'group flex w-full items-center justify-between gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 text-left shadow-[0_6px_16px_rgba(15,23,42,0.025)] transition hover:bg-emerald-50/50 cursor-pointer focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500',
+              'aria-label': `Ouvrir ${typeof row.title === 'string' ? row.title : 'les détails'}`,
+            }
+          : {
+              className: 'flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-[0_6px_16px_rgba(15,23,42,0.025)]',
+            };
+
         return (
-          <div key={`${row.title}-${index}`} className="flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-[0_6px_16px_rgba(15,23,42,0.025)]">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white text-brand-800 shadow-sm ring-1 ring-black/5">
-              <Icon className="h-4 w-4" />
+          <Wrapper key={`${typeof row.title === 'string' ? row.title : index}-${index}`} {...(wrapperProps as any)}>
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white text-brand-800 shadow-sm ring-1 ring-black/5">
+                <Icon className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-900">{row.title}</p>
+                <p className="line-clamp-2 text-xs font-medium text-slate-500">{row.subtitle}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-900">{row.title}</p>
-              <p className="line-clamp-2 text-xs font-medium text-slate-500">{row.subtitle}</p>
-            </div>
-          </div>
+            {isClickable && (
+              <ChevronRight className="flex-shrink-0 h-4 w-4 mr-1 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+            )}
+          </Wrapper>
         );
       })}
     </div>
@@ -2039,7 +2068,7 @@ function UnitModal({
               placeholder="Sélectionner un bien"
               searchPlaceholder="Rechercher un bien..."
               emptyLabel="Aucun bien disponible."
-              emptyActionLabel="CrÃ©er un bien"
+              emptyActionLabel="Créer un bien"
               onEmptyAction={() => {
                 onClose();
                 window.location.hash = '#/patrimoine?action=new';

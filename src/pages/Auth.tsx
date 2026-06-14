@@ -142,8 +142,8 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_18%,rgba(255,138,0,0.16),transparent_22rem),radial-gradient(circle_at_78%_84%,rgba(52,211,153,0.12),transparent_20rem)]" />
       <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black/55 to-transparent" />
 
-      <section className="relative z-10 flex min-h-screen flex-col justify-center overflow-y-auto px-4 py-8 sm:px-6 lg:px-10">
-        <div className="mx-auto my-auto grid w-full max-w-7xl items-center gap-7 lg:grid-cols-[1.02fr_0.78fr]">
+      <section className="relative z-10 flex min-h-[100dvh] flex-col overflow-y-auto px-4 py-8 pb-12 sm:px-6 lg:px-10">
+        <div className="mx-auto my-auto grid w-full max-w-7xl items-center gap-7 lg:grid-cols-[1.02fr_0.78fr] pb-safe">
           <aside className="hidden min-h-[40rem] flex-col justify-between rounded-[1.75rem] border border-white/12 bg-white/[0.045] p-8 shadow-[0_34px_120px_rgba(0,0,0,0.42)] backdrop-blur-md lg:flex">
             <BrandLogo size="sm" tone="dark" showTagline />
 
@@ -178,8 +178,8 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
               <div className="border-b border-emerald-950/10 bg-gradient-to-br from-white/92 to-brand-surface/88 px-5 py-5 sm:px-7">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.16em] text-brand-800">
-                      <Sparkles className="h-3.5 w-3.5" />
+                    <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-900/10 bg-emerald-50 px-2.5 py-1 sm:px-3 sm:py-1.5 text-[10px] sm:text-[11px] font-black uppercase tracking-[0.16em] text-brand-800">
+                      <Sparkles className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
                       Espace privé
                     </div>
                     <h2 className="mt-4 font-serif text-3xl font-black tracking-tight text-brand-950">
@@ -232,16 +232,16 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                       type="button"
                       onClick={handleGoogleSignIn}
                       disabled={loading || googleLoading}
-                      className="group flex w-full items-center justify-center gap-3 rounded-xl border border-emerald-950/10 bg-white px-4 py-2.5.5 font-black text-slate-900 shadow-[0_16px_44px_rgba(6,17,13,0.1)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-[0_22px_54px_rgba(6,17,13,0.15)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="group flex min-h-[3rem] w-full items-center justify-center gap-2 sm:gap-3 rounded-xl border border-emerald-950/10 bg-white px-3 sm:px-4 py-2.5 font-black text-slate-900 shadow-[0_16px_44px_rgba(6,17,13,0.1)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-[0_22px_54px_rgba(6,17,13,0.15)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-black text-slate-950 shadow-sm transition-transform duration-300 group-hover:scale-105">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-black text-slate-950 shadow-sm transition-transform duration-300 group-hover:scale-105">
                         {googleLoading ? (
                           <span className="h-4 w-4 rounded-full border-2 border-brand-700 border-t-transparent animate-spin" />
                         ) : (
                           <img src="/brand/google-g.png" alt="" className="h-5 w-5 object-contain" />
                         )}
                       </span>
-                      <span>
+                      <span className="flex items-center pt-0.5">
                         {googleLoading ? 'Ouverture de Google...' : 'Continuer avec Google'}
                       </span>
                     </button>
@@ -313,7 +313,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                             setError("Veuillez remplir votre prénom, nom et email pour continuer.");
                           }
                         }}
-                        className="flex min-h-[2.75rem] w-full transform items-center justify-center gap-2 rounded-xl bg-[#072F24] px-5 py-2.5 font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25"
+                        className="flex min-h-[3rem] w-full transform items-center justify-center gap-2 rounded-xl bg-[#072F24] px-5 py-2.5 font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25"
                       >
                         Continuer
                       </button>
@@ -386,7 +386,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                       <button
                         type="submit"
                         disabled={loading || googleLoading || (mode === 'register' && !acceptedTerms)}
-                        className="flex min-h-[2.75rem] w-full transform items-center justify-center gap-2 rounded-xl bg-[#072F24] px-5 py-2.5 font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex min-h-[3rem] w-full transform items-center justify-center gap-2 rounded-xl bg-[#072F24] px-5 py-2.5 font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {loading ? (
                           <>
@@ -455,7 +455,7 @@ function Field({ label, required = false, inputProps }: FieldProps) {
         required={required}
         aria-invalid={inputProps['aria-invalid']}
         {...inputProps}
-        className={`sk-input min-h-[2.75rem] w-full border-emerald-950/10 bg-white/92 px-4 py-2.5 font-semibold shadow-sm transition hover:border-emerald-200 focus:border-action-500 ${inputProps.className ?? ''}`}
+        className={`sk-input min-h-[3rem] w-full border-emerald-950/10 bg-white/92 px-4 py-2.5 font-semibold shadow-sm transition hover:border-emerald-200 focus:border-action-500 ${inputProps.className ?? ''}`}
       />
     </div>
   );
@@ -471,12 +471,12 @@ function TermsConsent({
   compact?: boolean;
 }) {
   return (
-    <label className={`mb-4 flex items-start gap-3 rounded-xl border border-brand-900/10 bg-[#fbfdfc] text-left text-sm leading-6 text-slate-700 ${compact ? 'p-3' : 'p-4'}`}>
+    <label className={`mb-4 flex items-start gap-3 rounded-xl border border-brand-900/10 bg-[#fbfdfc] text-left text-xs sm:text-sm leading-5 sm:leading-6 text-slate-700 ${compact ? 'p-3' : 'p-3 sm:p-4'}`}>
       <input
         type="checkbox"
         checked={accepted}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-1 h-4 w-4 rounded border-emerald-950/20 text-brand-700 focus:ring-action-400"
+        className="mt-0.5 sm:mt-1 h-4 w-4 shrink-0 rounded border-emerald-950/20 text-brand-700 focus:ring-action-400"
       />
       <span>
         J'accepte les{' '}

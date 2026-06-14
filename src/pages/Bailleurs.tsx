@@ -29,6 +29,7 @@ import {
   CircleUser,
   DoorOpen,
   Percent,
+  ChevronRight,
 } from 'lucide-react';
 import {
   addFooter,
@@ -290,22 +291,40 @@ function EmptyDrawerState({
 function CompactList({
   rows,
 }: {
-  rows: Array<{ id: string; title: string; subtitle: ReactNode; value?: ReactNode; badge?: string }>;
+  rows: Array<{ id: string; title: string; subtitle: ReactNode; value?: ReactNode; badge?: string; onClick?: () => void }>;
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8] shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
-      {rows.map((row) => (
-        <div key={row.id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-3.5 py-2.5 last:border-b-0">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-950">{row.title}</p>
-            <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">{row.subtitle}</p>
-          </div>
-          <div className="shrink-0 text-right">
-            {row.value && <p className="text-sm font-bold text-slate-950">{row.value}</p>}
-            {row.badge && <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800">{row.badge}</span>}
-          </div>
-        </div>
-      ))}
+      {rows.map((row) => {
+        const isClickable = !!row.onClick;
+        const Wrapper = isClickable ? 'button' : 'div';
+        const wrapperProps = isClickable
+          ? {
+              type: 'button',
+              onClick: row.onClick,
+              className: 'group flex w-full items-center justify-between gap-3 border-b border-slate-100 px-3.5 py-2.5 last:border-b-0 text-left transition hover:bg-emerald-50/50 cursor-pointer focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500',
+              'aria-label': `Ouvrir ${row.title}`,
+            }
+          : {
+              className: 'flex items-center justify-between gap-3 border-b border-slate-100 px-3.5 py-2.5 last:border-b-0',
+            };
+
+        return (
+          <Wrapper key={row.id} {...(wrapperProps as any)}>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-slate-950">{row.title}</p>
+              <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">{row.subtitle}</p>
+            </div>
+            <div className="shrink-0 flex flex-col items-end text-right">
+              {row.value && <p className="text-sm font-bold text-slate-950">{row.value}</p>}
+              <div className="mt-1 flex items-center justify-end gap-1.5">
+                {row.badge && <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800">{row.badge}</span>}
+                {isClickable && <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />}
+              </div>
+            </div>
+          </Wrapper>
+        );
+      })}
     </div>
   );
 }
@@ -332,7 +351,7 @@ function KpiTile({
     <article className={`@container group min-w-0 rounded-[1.05rem] border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-2.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)]`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className={`truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] ${tones.text}`}>{label}</p>
+          <p className={`line-clamp-2 min-h-[2.5em] text-[0.68rem] font-bold uppercase tracking-[0.12em] ${tones.text}`}>{label}</p>
           <p className="mt-1.5 whitespace-nowrap text-[1.02rem] font-extrabold tracking-tight text-slate-950 sm:text-[1.1rem]">{value}</p>
           {helper && <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">{helper}</p>}
         </div>
@@ -1379,14 +1398,23 @@ export function Bailleurs() {
             const potential = units.reduce((sum, unite) => sum + Number(unite.loyer_base ?? 0), 0);
             const rate = units.length ? Math.round((occupied / units.length) * 100) : 0;
             return (
-              <div key={immeuble.id} className="grid gap-2.5 border-b border-slate-100 px-3.5 py-3 last:border-b-0 sm:grid-cols-[1.2fr_0.7fr_0.7fr] sm:items-center">
-                <div>
+              <button
+                key={immeuble.id}
+                type="button"
+                onClick={() => { window.location.hash = '#/patrimoine'; }}
+                className="group flex w-full flex-col gap-2.5 border-b border-slate-100 px-3.5 py-3 text-left last:border-b-0 hover:bg-emerald-50/50 focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500 sm:flex-row sm:items-center sm:justify-between"
+                aria-label={`Ouvrir le bien ${immeuble.nom}`}
+              >
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold text-slate-950">{immeuble.nom}</p>
                   <p className="mt-0.5 text-xs text-slate-500">{[immeuble.adresse, immeuble.quartier, immeuble.ville].filter(Boolean).join(', ') || 'Adresse non renseignée'}</p>
                 </div>
-                <div className="text-sm text-slate-600">{units.length} unité{units.length > 1 ? 's' : ''} · {rate}% occupé</div>
-                <div className="text-right text-sm font-bold text-slate-950"><MoneyText value={potential} /></div>
-              </div>
+                <div className="flex-shrink-0 text-sm text-slate-600">{units.length} unité{units.length > 1 ? 's' : ''} · {rate}% occupé</div>
+                <div className="flex flex-shrink-0 items-center justify-end gap-2 text-right">
+                  <div className="text-sm font-bold text-slate-950"><MoneyText value={potential} /></div>
+                  <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                </div>
+              </button>
             );
           })}
         </div>
@@ -1403,6 +1431,7 @@ export function Bailleurs() {
           subtitle: `Début ${formatDate(contrat.date_debut)} · Fin ${formatDate(contrat.date_fin)}`,
           value: <MoneyText value={contrat.loyer_mensuel} />,
           badge: contrat.statut ?? '—',
+          onClick: () => { window.location.hash = '#/occupants-baux'; },
         }))} />
       );
     }
@@ -1413,10 +1442,11 @@ export function Bailleurs() {
       ) : (
         <CompactList rows={recentPaiements.map((paiement) => ({
           id: paiement.id,
-          title: paiement.mois_concerne ?? 'Mois non renseigné',
-          subtitle: <>{formatDate(paiement.date_paiement)} · reliquat <MoneyText value={paiement.reliquat} /></>,
+          title: paiement.mois_concerne || 'Mois non précisé',
+          subtitle: `Le ${formatDate(paiement.date_paiement)} · Réf. ${paiement.reference || '—'}`,
           value: <MoneyText value={paiement.montant_total} />,
-          badge: paiement.statut ?? '—',
+          badge: paiement.statut ?? undefined,
+          onClick: () => { window.location.hash = '#/paiements'; },
         }))} />
       );
     }
@@ -1427,9 +1457,11 @@ export function Bailleurs() {
       ) : (
         <CompactList rows={selectedSummary.depenses.slice(0, 8).map((depense) => ({
           id: depense.id,
-          title: depense.categorie ?? 'Dépense',
-          subtitle: `${formatDate(depense.date_depense)} · ${depense.description ?? 'Sans description'}`,
+          title: depense.categorie || 'Dépense',
+          subtitle: `Le ${formatDate(depense.date_depense)} · ${depense.description || 'Autre'}`,
           value: <MoneyText value={depense.montant} />,
+          badge: depense.actif === false ? 'Inactif' : undefined,
+          onClick: () => { window.location.hash = '#/depenses'; },
         }))} />
       );
     }
@@ -1492,9 +1524,10 @@ export function Bailleurs() {
           ) : (
             <CompactList rows={reportDocuments.slice(0, 5).map((document) => ({
               id: document.id,
-              title: document.name ?? 'Rapport bailleur',
-              subtitle: `${getDocumentRoleLabel(document)} · ${formatDate(document.created_at)}`,
-              value: document.lifecycle_status ?? 'actif',
+              title: document.name || 'Bilan',
+              subtitle: `Le ${formatDate((document as any).created_at)}`,
+              badge: 'PDF',
+              onClick: () => { window.location.hash = '#/documents'; },
             }))} />
           )}
         </div>
@@ -1506,9 +1539,10 @@ export function Bailleurs() {
     ) : (
       <CompactList rows={selectedSummary.documents.slice(0, 8).map((document) => ({
         id: document.id,
-        title: document.name ?? 'Document',
-        subtitle: `${getDocumentRoleLabel(document)} · ${formatDate(document.created_at)}`,
-        value: document.lifecycle_status ?? 'actif',
+        title: document.name || 'Document sans nom',
+        subtitle: `Le ${formatDate((document as any).created_at)}`,
+        badge: document.lifecycle_status || document.document_category || 'GED',
+        onClick: () => { window.location.hash = '#/documents'; },
       }))} />
     );
   };
@@ -1697,7 +1731,7 @@ export function Bailleurs() {
                               </div>
                             </div>
                           </td>}
-                          {showBailleurColumn('telephone') && <td className="whitespace-nowrap px-3.5 py-2.5 text-sm text-slate-700">{formatSenegalPhone(bailleur.telephone)}</td>}
+                          {showBailleurColumn('telephone') && <td className="whitespace-nowrap px-3.5 py-2.5 text-sm text-slate-700">{bailleur.telephone ? <a href={`tel:${bailleur.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(bailleur.telephone)}</a> : ''}</td>}
                           {showBailleurColumn('commission') && <td className="whitespace-nowrap px-3.5 py-2.5 text-sm font-semibold text-slate-700">{formatCommission(bailleur.commission)}</td>}
                           {showBailleurColumn('biens') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-sm font-semibold text-slate-700`}>{summary.immeubles.length}</td>}
                           {showBailleurColumn('unites') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-sm font-semibold text-slate-700`}>{summary.unites.length}</td>}
@@ -1723,7 +1757,7 @@ export function Bailleurs() {
                       key={bailleur.id}
                       onClick={() => { setSelectedBailleurId(bailleur.id); setDetailOpen(true); }}
                       title={displayBailleurName(bailleur)}
-                      subtitle={formatSenegalPhone(bailleur.telephone)}
+                      subtitle={bailleur.telephone ? <a href={`tel:${bailleur.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(bailleur.telephone)}</a> : 'Téléphone non renseigné'}
                       initials={getInitials(bailleur)}
                       status={getStatusLabel(bailleur)}
                       statusTone={bailleur.actif ? 'emerald' : 'slate'}
@@ -1773,8 +1807,8 @@ export function Bailleurs() {
                             {getStatusLabel(selectedBailleur)}
                           </span>
                         </div>
-                        <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-slate-400" />{formatSenegalPhone(selectedBailleur.telephone)}</p>
-                        <p className="flex items-center gap-2 truncate"><Mail className="h-4 w-4 text-slate-400" />{selectedBailleur.email || 'Email non renseigné'}</p>
+                        <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-slate-400" />{selectedBailleur.telephone ? <a href={`tel:${selectedBailleur.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(selectedBailleur.telephone)}</a> : 'Téléphone non renseigné'}</p>
+                        <p className="flex items-center gap-2 truncate"><Mail className="h-4 w-4 text-slate-400" />{selectedBailleur.email ? <a href={`mailto:${selectedBailleur.email}`} className="hover:text-brand-700 hover:underline">{selectedBailleur.email}</a> : 'Email non renseigné'}</p>
                         <p className="flex items-center gap-2 truncate"><MapPin className="h-4 w-4 text-slate-400" />{selectedBailleur.adresse || 'Adresse non renseignée'}</p>
                         <p className="mt-3 rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-2 text-xs font-bold leading-5 text-slate-600 shadow-sm">
                           Portefeuille actif · {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {selectedSummary.activeContracts} location{selectedSummary.activeContracts > 1 ? 's' : ''} · <span className="text-emerald-800"><MoneyText value={selectedSummary.net} compact /></span> net à reverser
@@ -1820,13 +1854,16 @@ export function Bailleurs() {
                   </div>
 
                   <div className="border-y border-emerald-950/10 bg-[#fffdf8]/85 px-2.5 py-2">
-                    <div className="flex gap-1 overflow-x-auto rounded-xl bg-[#fff4df]/80 p-1 scrollbar-none">
+                    <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none rounded-xl bg-[#fff4df]/80 p-1.5">
                       {[...DRAWER_PRIMARY_TABS, ...DRAWER_MORE_TABS].map((tab) => (
                         <button
                           key={tab.id}
                           type="button"
-                          onClick={() => setActiveDrawerTab(tab.id)}
-                          className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${activeDrawerTab === tab.id
+                          onClick={(e) => {
+                            setActiveDrawerTab(tab.id);
+                            e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                          }}
+                          className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold transition ${activeDrawerTab === tab.id
                               ? 'bg-emerald-900 text-white shadow-sm'
                               : 'text-slate-500 hover:bg-[#fffdf8] hover:text-emerald-900'
                             }`}

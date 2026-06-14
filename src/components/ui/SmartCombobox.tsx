@@ -78,10 +78,10 @@ export function SmartCombobox({
     if (viewportWidth < 640) {
       setMenuPlacement({
         mobile: true,
-        left: 12,
-        width: Math.max(280, viewportWidth - 24),
-        bottom: 12,
-        maxHeight: Math.min(460, Math.max(260, viewportHeight * 0.72)),
+        left: 0,
+        width: viewportWidth,
+        bottom: 0,
+        maxHeight: Math.min(viewportHeight * 0.85, 500),
       });
       return;
     }
@@ -221,22 +221,26 @@ export function SmartCombobox({
 
   const menu = open && menuPlacement && typeof document !== 'undefined'
     ? createPortal(
-      <div
-        ref={menuRef}
-        style={menuStyle}
-        className={`fixed z-[10000] overflow-hidden border border-emerald-950/10 bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.18)] ring-1 ring-white/80 ${
-          menuPlacement.mobile ? 'rounded-[1.65rem]' : 'rounded-2xl'
-        }`}
-      >
-        <div className="border-b border-emerald-950/10 bg-[#fff6df]/75 px-3 py-2 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
-          {searchPlaceholder || 'Choisir dans la liste'}
-        </div>
+      <>
+        {menuPlacement.mobile && (
+          <div className="fixed inset-0 z-[9990] bg-slate-900/40 backdrop-blur-sm transition-opacity" aria-hidden="true" onClick={() => setOpen(false)} />
+        )}
         <div
-          ref={listboxRef}
-          className="overflow-y-auto p-1.5"
-          style={{ maxHeight: Math.max(160, menuPlacement.maxHeight - 42) }}
-          role="listbox"
+          ref={menuRef}
+          style={menuPlacement.mobile ? { bottom: 0, left: 0, right: 0, maxHeight: menuPlacement.maxHeight } : menuStyle}
+          className={`fixed z-[10000] overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.18)] ${
+            menuPlacement.mobile ? 'w-full rounded-t-3xl border-t border-emerald-950/10 pb-4' : 'rounded-2xl border border-emerald-950/10 ring-1 ring-white/80'
+          }`}
         >
+          <div className="border-b border-emerald-950/10 bg-[#fff6df]/75 px-3 py-2 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+            {searchPlaceholder || 'Choisir dans la liste'}
+          </div>
+          <div
+            ref={listboxRef}
+            className="overflow-y-auto overscroll-contain touch-pan-y p-1.5"
+            style={{ maxHeight: Math.max(160, menuPlacement.maxHeight - 42) }}
+            role="listbox"
+          >
           {filteredOptions.length === 0 ? (
             <div className="px-3 py-4 text-center text-sm font-medium text-slate-500">
               <p>{emptyLabel}</p>
@@ -322,7 +326,8 @@ export function SmartCombobox({
             })
           )}
         </div>
-      </div>,
+      </div>
+      </>,
       document.body,
     )
     : null;

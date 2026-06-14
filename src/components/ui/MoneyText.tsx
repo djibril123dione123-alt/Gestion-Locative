@@ -34,7 +34,10 @@ function formatCompactCfa(value: number) {
 }
 
 export function MoneyText({ value, className = '', compact = false, suffix }: MoneyTextProps) {
-  const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+  let numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+  if (numericValue >= -3 && numericValue <= 3) {
+    numericValue = 0;
+  }
   const label = Number.isFinite(numericValue) ? formatCurrency(numericValue) : String(value ?? '0 F CFA');
   const display = Number.isFinite(numericValue) && compact ? formatCompactCfa(numericValue) : label;
   const visible = suffix ? `${display} ${suffix}` : display;

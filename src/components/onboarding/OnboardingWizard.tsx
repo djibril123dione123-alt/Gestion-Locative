@@ -297,7 +297,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
     onComplete();
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Impossible d'enregistrer l'Ã©tat de configuration.";
+      const message = err instanceof Error ? err.message : "Impossible d'enregistrer l'état de configuration.";
       toast.error(message);
     } finally {
       setLoading(false);
@@ -503,7 +503,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                       onChange={(event) => setForm((prev) => ({ ...prev, devise: event.target.value }))}
                       className={fieldClass}
                     >
-                      <option value="XOF">FCFA BCEAO (XOF)</option>
+                      <option value="XOF">F CFA BCEAO (XOF)</option>
                       <option value="EUR">Euro (EUR)</option>
                       <option value="USD">Dollar (USD)</option>
                     </select>

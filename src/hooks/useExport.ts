@@ -177,7 +177,7 @@ export function useExport(): UseExportReturn {
           Immeuble: fmt(c.immeuble_nom),
           'Début': fmt(c.date_debut),
           'Fin': fmt(c.date_fin),
-          'Loyer (FCFA)': fmt(c.loyer_mensuel),
+          'Loyer (F CFA)': fmt(c.loyer_mensuel),
           Statut: fmt(c.statut),
           Destination: fmt(c.destination),
         }));
@@ -232,7 +232,7 @@ export function useExport(): UseExportReturn {
             Locataire: fmt(c.locataire_nom),
             Unité: fmt(c.unite_nom),
             'Début': fmt(c.date_debut),
-            'Loyer (FCFA)': fmt(c.loyer_mensuel),
+            'Loyer (F CFA)': fmt(c.loyer_mensuel),
             Statut: fmt(c.statut),
           }));
           const ws = XLSX.utils.json_to_sheet(rows);

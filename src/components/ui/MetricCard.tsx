@@ -27,7 +27,7 @@ export function MetricCard({ label, value, icon: Icon, tone, wide = false, class
       className={`@container group min-w-0 rounded-[1.05rem] border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-2.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)] ${wide ? 'sm:col-span-2' : ''} ${className}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-slate-600 line-clamp-1">{label}</h3>
+        <h3 className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-slate-600 line-clamp-2 min-h-[2.5em]">{label}</h3>
         <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1 ${tones.icon} shadow-sm transition-transform duration-300 group-hover:scale-110`}>
           <Icon className="h-3.5 w-3.5" />
         </div>
@@ -57,7 +57,7 @@ export function MiniMetric({ label, value, tone = 'slate', className = '' }: Min
 
   return (
     <div className={`@container flex w-full flex-col rounded-xl border px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] ${toneClass} ${className}`}>
-      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-current opacity-60 line-clamp-1">{label}</p>
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-current opacity-60 line-clamp-2 min-h-[2.5em]">{label}</p>
       <p className="mt-0.5 w-full whitespace-nowrap text-sm font-black tracking-tight text-current">{value}</p>
     </div>
   );

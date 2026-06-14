@@ -38,9 +38,7 @@ export function Table<T extends { id: string }>({
       const to = encodeURIComponent(text);
       return (
         <a
-          href={`https://mail.google.com/mail/?view=cm&fs=1&to=${to}`}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={`mailto:${text}`}
           aria-label={`Envoyer un email à ${text}`}
           className="font-bold text-brand-700 underline-offset-2 transition hover:text-brand-950 hover:underline"
         >

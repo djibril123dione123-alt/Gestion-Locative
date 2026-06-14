@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
@@ -764,10 +764,17 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               <input
                 type="text"
+                placeholder="Rechercher..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="sk-input pl-10 pr-4 sm:hidden"
+              />
+              <input
+                type="text"
                 placeholder="Rechercher un locataire, une référence, un produit…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="sk-input pl-10 pr-4"
+                className="sk-input pl-10 pr-4 hidden sm:block"
               />
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:items-center">

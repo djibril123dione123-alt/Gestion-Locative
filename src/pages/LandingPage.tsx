@@ -97,10 +97,10 @@ const modules = [
 ];
 
 const financeRows = [
-  ['Loyer reçu', 'Appartement F6', '+500 000 FCFA', 'Payé'],
-  ['Paiement partiel', 'Studio Point E', '+180 000 FCFA', 'Reliquat'],
+  ['Loyer reçu', 'Appartement F6', '+500 000 F CFA', 'Payé'],
+  ['Paiement partiel', 'Studio Point E', '+180 000 F CFA', 'Reliquat'],
   ['Relance prévue', 'Villa Almadies', 'J+5', 'À suivre'],
-  ['Net bailleur', 'Portefeuille Diop', '1 080 000 FCFA', 'Prêt'],
+  ['Net bailleur', 'Portefeuille Diop', '1 080 000 F CFA', 'Prêt'],
 ];
 
 const documentRows = [
@@ -110,9 +110,9 @@ const documentRows = [
 ];
 
 const landlordRows = [
-  ['Immeuble Liberté', '8 unités', '2,4M FCFA', '96%'],
-  ['Résidence Plateau', '12 unités', '3,8M FCFA', '91%'],
-  ['Villa Almadies', '1 unité', '850k FCFA', '100%'],
+  ['Immeuble Liberté', '8 unités', '2,4M F CFA', '96%'],
+  ['Résidence Plateau', '12 unités', '3,8M F CFA', '91%'],
+  ['Villa Almadies', '1 unité', '850k F CFA', '100%'],
 ];
 
 const terrainFeatures = [
@@ -134,7 +134,7 @@ const plans = [
     name: 'Starter',
     audience: 'Bailleur individuel',
     price: '5 000',
-    unit: 'FCFA/mois',
+    unit: 'F CFA/mois',
     storage: '1 Go',
     capacity: 'Jusqu’à 10 unités',
     promise: 'Structurer un petit patrimoine sans Excel dispersé.',
@@ -144,7 +144,7 @@ const plans = [
     name: 'Pro',
     audience: 'Gestion active',
     price: '15 000',
-    unit: 'FCFA/mois',
+    unit: 'F CFA/mois',
     storage: '20 Go',
     capacity: 'Jusqu’à 100 unités',
     promise: 'Piloter les encaissements et rassurer les propriétaires.',
@@ -155,7 +155,7 @@ const plans = [
     name: 'Business',
     audience: 'Agence structurée',
     price: '35 000',
-    unit: 'FCFA/mois',
+    unit: 'F CFA/mois',
     storage: '100 Go',
     capacity: 'Jusqu’à 500 unités',
     promise: 'Coordonner une équipe avec permissions, GED et workflows.',
@@ -445,7 +445,7 @@ function HeroProductPreview() {
 
         <div className="hidden gap-3 p-4 md:grid md:grid-cols-3">
           {[
-            ['Payé', '8,4M', 'FCFA encaissés'],
+            ['Payé', '8,4M', 'F CFA encaissés'],
             ['À relancer', '11', 'loyers ouverts'],
             ['À reverser', '1,08M', 'net bailleurs'],
           ].map(([label, value, caption]) => (

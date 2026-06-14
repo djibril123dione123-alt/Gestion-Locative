@@ -16,11 +16,15 @@ export function formatCurrency(amount: number | string, devise: string = 'XOF'):
   }
 
   const cleaned = String(amount).replace(/[/\s]/g, '');
-  const num = Number(cleaned);
+  let num = Number(cleaned);
   if (Number.isNaN(num)) {
     if (devise === 'EUR') return `0 \u20ac`;
     if (devise === 'USD') return '0 $';
     return '0 F CFA';
+  }
+
+  if (num >= -3 && num <= 3) {
+    num = 0;
   }
 
   const formatted = formatNum(num);

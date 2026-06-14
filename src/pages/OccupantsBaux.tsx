@@ -990,10 +990,17 @@ export function OccupantsBaux() {
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
+                    placeholder="Rechercher..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-10 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100 sm:hidden"
+                  />
+                  <input
+                    type="text"
                     placeholder="Nom, téléphone ou bien"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                    className="hidden sm:block h-10 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1309,7 +1316,7 @@ function DesktopRow({
       {isVisible('occupant') && (
         <td className="px-5 py-3.5">
           <p className="font-semibold text-slate-900">{fullName(row)}</p>
-          {row.email && <p className="mt-0.5 max-w-[160px] truncate text-xs text-slate-400">{row.email}</p>}
+          {row.email && <a href={`mailto:${row.email}`} className="mt-0.5 block max-w-[160px] truncate text-xs text-slate-400 hover:text-emerald-700 hover:underline">{row.email}</a>}
         </td>
       )}
       {/* Téléphone */}
@@ -1390,7 +1397,7 @@ function LocationMobileCard({ row, onSelect }: { row: OccupantBailRow; onSelect:
     <div className="px-3 py-2">
       <PremiumMobileCard
         title={fullName(row)}
-        subtitle={`${row.telephone ? formatSenegalPhone(row.telephone) : 'Téléphone non renseigné'} · ${row.immeuble_nom ?? 'Bien non renseigné'} · ${row.unite_nom}`}
+        subtitle={<>{row.telephone ? <a href={`tel:${row.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(row.telephone)}</a> : 'Téléphone non renseigné'} · {row.immeuble_nom ?? 'Bien non renseigné'} · {row.unite_nom}</>}
         initials={`${row.prenom?.[0] ?? ''}${row.nom?.[0] ?? ''}`.toUpperCase() || 'OB'}
         status={STATUT_BADGE[row.statut]?.label ?? row.statut}
         statusTone={row.statut === 'actif' ? 'emerald' : row.statut === 'expire' ? 'amber' : row.statut === 'resilie' ? 'red' : 'slate'}
@@ -1471,7 +1478,7 @@ function OccupantBailDrawer({
               </div>
               <p className="flex items-center gap-2 text-sm font-medium text-slate-600">
                 <Phone className="h-4 w-4 text-slate-400" />
-                {row.telephone ? formatSenegalPhone(row.telephone) : 'Téléphone non renseigné'}
+                {row.telephone ? <a href={`tel:${row.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(row.telephone)}</a> : 'Téléphone non renseigné'}
               </p>
               <p className="flex items-center gap-2 truncate text-sm font-medium text-slate-600">
                 <Building2 className="h-4 w-4 text-slate-400" />
@@ -1539,13 +1546,16 @@ function OccupantBailDrawer({
         </div>
 
         <div className="border-b border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-2">
-          <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-50/80 p-1">
+          <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none rounded-xl bg-slate-50/80 p-1.5">
             {DRAWER_TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => onTabChange(tab.id)}
-                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                onClick={(e) => {
+                  onTabChange(tab.id);
+                  e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                }}
+                className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold transition ${
                   activeTab === tab.id
                     ? 'bg-emerald-900 text-white shadow-sm'
                     : 'text-slate-500 hover:bg-white hover:text-emerald-900'
@@ -1600,8 +1610,8 @@ function DrawerResume({ row, details, isIndividualOwner }: { row: OccupantBailRo
 
       <InfoBlock title="Locataire">
         <InfoLine icon={Users} label="Nom" value={fullName(row)} />
-        <InfoLine icon={Phone} label="Téléphone" value={row.telephone ? formatSenegalPhone(row.telephone) : 'Non renseigné'} />
-        <InfoLine icon={Mail} label="Email" value={row.email || 'Non renseigné'} />
+        <InfoLine icon={Phone} label="Téléphone" value={row.telephone ? <a href={`tel:${row.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(row.telephone)}</a> : 'Non renseigné'} />
+        <InfoLine icon={Mail} label="Email" value={row.email ? <a href={`mailto:${row.email}`} className="hover:text-brand-700 hover:underline">{row.email}</a> : 'Non renseigné'} />
         <InfoLine icon={MapPin} label="Adresse" value={row.adresse_personnelle || 'Non renseignée'} />
       </InfoBlock>
 
@@ -1654,28 +1664,34 @@ function DrawerPayments({
   return (
     <div className="space-y-3">
       {payments.map((payment) => (
-        <div
+        <button
           key={payment.id}
-          className="rounded-2xl border border-emerald-950/10 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)]"
+          type="button"
+          onClick={() => { window.location.hash = '#/paiements'; }}
+          className="group w-full rounded-2xl border border-emerald-950/10 bg-white p-3 text-left shadow-[0_10px_26px_rgba(15,23,42,0.035)] transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500"
+          aria-label={`Ouvrir le paiement de ${payment.mois_concerne}`}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <p className="font-bold text-slate-900"><MoneyText value={payment.montant_total} /></p>
+              <p className="font-bold text-slate-900 group-hover:text-emerald-900"><MoneyText value={payment.montant_total} /></p>
               <p className="mt-0.5 text-xs font-medium text-slate-500">
                 {payment.mois_concerne} · {formatDate(payment.date_paiement)}
               </p>
               {payment.reference && <p className="mt-1 font-mono text-[0.7rem] text-slate-400">{payment.reference}</p>}
             </div>
-            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
-              {payment.statut}
-            </span>
+            <div className="flex flex-col items-end gap-2">
+              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
+                {payment.statut}
+              </span>
+              <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+            </div>
           </div>
           {payment.reliquat !== null && payment.reliquat > 0 && (
             <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
               Reliquat restant : <MoneyText value={payment.reliquat} />
             </p>
           )}
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -1730,25 +1746,31 @@ function DrawerDocuments({
         />
       )}
       {!loading && !error && documents.map((document) => (
-        <div
+        <button
           key={`${document.source}-${document.id}`}
-          className="rounded-2xl border border-emerald-950/10 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)]"
+          type="button"
+          onClick={() => { window.location.hash = '#/documents'; }}
+          className="group w-full rounded-2xl border border-emerald-950/10 bg-white p-3 text-left shadow-[0_10px_26px_rgba(15,23,42,0.035)] transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500"
+          aria-label={`Ouvrir le document ${document.title}`}
         >
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-700 ring-1 ring-slate-100">
-              <FileText className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-bold text-slate-900">{document.title}</p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">{document.subtitle}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.08em] text-slate-400">
-                <span>{document.source === 'registry' ? 'Registre' : document.source === 'profile' ? 'Profil' : 'GED'}</span>
-                {document.status && <span>· {document.status}</span>}
-                {document.created_at && <span>· {formatDate(document.created_at)}</span>}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-700 ring-1 ring-slate-100 transition group-hover:bg-white group-hover:text-emerald-700 group-hover:ring-emerald-200">
+                <FileText className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-slate-900 transition group-hover:text-emerald-900">{document.title}</p>
+                <p className="mt-0.5 text-xs font-medium text-slate-500">{document.subtitle}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.08em] text-slate-400">
+                  <span>{document.source === 'registry' ? 'Registre' : document.source === 'profile' ? 'Profil' : 'GED'}</span>
+                  {document.status && <span>· {document.status}</span>}
+                  {document.created_at && <span>· {formatDate(document.created_at)}</span>}
+                </div>
               </div>
             </div>
+            <ChevronRight className="mt-2.5 h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -2345,7 +2367,7 @@ function OccupationFormModal({
                     placeholder={workflowLoading ? 'Chargement des locataires...' : 'Rechercher ou choisir un locataire'}
                     searchPlaceholder="Nom, téléphone ou email"
                     emptyLabel="Aucun locataire trouvé"
-                    emptyActionLabel="CrÃ©er un nouveau locataire"
+                    emptyActionLabel="Créer un nouveau locataire"
                     onEmptyAction={() => update({ occupantMode: 'new', locataire_id: '' })}
                     disabled={workflowLoading}
                     className="mt-1"
@@ -2355,7 +2377,7 @@ function OccupationFormModal({
                   <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
                     <p className="text-sm font-black text-emerald-950">{selectedOccupant.prenom} {selectedOccupant.nom}</p>
                     <p className="mt-1 text-xs font-semibold text-emerald-800/80">
-                      {selectedOccupant.telephone ? formatSenegalPhone(selectedOccupant.telephone) : 'Téléphone non renseigné'} · {selectedOccupant.email ?? 'Email non renseigné'}
+                      {selectedOccupant.telephone ? <a href={`tel:${selectedOccupant.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(selectedOccupant.telephone)}</a> : 'Téléphone non renseigné'} · {selectedOccupant.email ? <a href={`mailto:${selectedOccupant.email}`} className="hover:text-brand-700 hover:underline">{selectedOccupant.email}</a> : 'Email non renseigné'}
                     </p>
                   </div>
                 ) : (
@@ -2401,7 +2423,7 @@ function OccupationFormModal({
                 placeholder={workflowLoading ? 'Chargement des unités libres...' : 'Rechercher bien, unité ou numéro'}
                 searchPlaceholder="Bien, unité, numéro ou étage"
                 emptyLabel="Aucune unité libre trouvée"
-                emptyActionLabel="CrÃ©er une unitÃ©"
+                emptyActionLabel="Créer une unité"
                 onEmptyAction={() => {
                   onClose();
                   window.location.hash = '#/patrimoine?tab=unites&action=new-unit';

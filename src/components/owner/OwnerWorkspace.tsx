@@ -599,6 +599,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       date: payment.date_paiement ?? payment.created_at,
       icon: CheckCircle2,
       tone: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+      onClick: () => { window.location.hash = '#/paiements'; },
     }));
     const documentActivities = data.documents.slice(0, 2).map((document) => ({
       id: `doc-${document.id}`,
@@ -607,6 +608,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       date: document.createdAt,
       icon: FileText,
       tone: 'bg-blue-50 text-blue-700 border-blue-100',
+      onClick: () => { window.location.hash = '#/documents'; },
     }));
     const contractActivities = data.contracts.slice(0, 2).map((contract) => ({
       id: `contract-${contract.id}`,
@@ -615,6 +617,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       date: contract.date_debut,
       icon: ReceiptText,
       tone: 'bg-orange-50 text-orange-700 border-orange-100',
+      onClick: () => { window.location.hash = '#/occupants-baux'; },
     }));
     return [...paymentActivities, ...documentActivities, ...contractActivities]
       .sort((a, b) => new Date(b.date ?? 0).getTime() - new Date(a.date ?? 0).getTime())
@@ -1263,6 +1266,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                     customTone={activity.tone}
                     title={activity.title}
                     subtitle={<>{activity.text} · {formatDate(activity.date)}</>}
+                    onClick={activity.onClick}
                   />
                 ))}
               </OwnerListCard>
@@ -1564,6 +1568,7 @@ function CompactRow({
   title,
   subtitle,
   value,
+  onClick,
 }: {
   icon?: LucideIcon;
   tone?: 'emerald' | 'orange' | 'blue';
@@ -1573,14 +1578,16 @@ function CompactRow({
   title: string;
   subtitle: ReactNode;
   value?: ReactNode;
+  onClick?: () => void;
 }) {
   const tones = {
     emerald: 'bg-emerald-50 text-emerald-700 border-emerald-100',
     orange: 'bg-orange-50 text-orange-700 border-orange-100',
     blue: 'bg-blue-50 text-blue-700 border-blue-100',
   };
+  const Container = onClick ? 'button' : 'div';
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl border border-transparent p-2 transition hover:border-emerald-950/10 hover:bg-white">
+    <Container type={onClick ? "button" : undefined} onClick={onClick} className={`flex w-full text-left items-center gap-2.5 rounded-2xl border border-transparent p-2 transition hover:border-emerald-950/10 hover:bg-white ${onClick ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-sm' : ''}`}>
       <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border text-[0.66rem] font-bold ${badgeClassName ?? customTone ?? tones[tone]}`}>
         {badge ?? (Icon ? <Icon className="h-4 w-4" /> : null)}
       </div>
@@ -1589,7 +1596,7 @@ function CompactRow({
         <p className="line-clamp-2 text-xs font-medium leading-4 text-slate-500">{subtitle}</p>
       </div>
       {value && <p className="flex-shrink-0 text-right text-xs font-bold text-brand-800">{value}</p>}
-    </div>
+    </Container>
   );
 }
 

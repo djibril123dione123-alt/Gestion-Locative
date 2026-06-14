@@ -440,8 +440,14 @@ export function Equipe() {
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
+                placeholder="Rechercher..."
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 sm:hidden"
+              />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
                 placeholder="Rechercher un membre..."
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="hidden sm:block h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               />
             </label>
             <select

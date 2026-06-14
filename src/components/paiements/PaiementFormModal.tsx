@@ -8,7 +8,8 @@ import { isCommissionMissing } from '../../services/domain/commissionService';
 import type { ContratRow, PaiementFormData, PaiementRow } from './paiementTypes';
 import { buildPaymentMonthOptions, getPaymentMonthState } from '../../services/domain/paymentSchedule';
 import { formatPersonName } from '../../lib/people';
-
+import { MoneyText } from '../ui/MoneyText';
+import { formatCurrency } from '../../lib/formatters';
 interface PaiementFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -81,27 +82,27 @@ export function PaiementFormModal({
   const canSubmit = isOnline && !isSaving && Boolean(selectedContrat && formData.mois_display && monthOptions.length > 0 && tropPercuPreview <= 0);
   const contractOptions: SmartComboboxOption[] = contrats.map((contrat) => ({
     value: contrat.id,
-    label: `${formatPersonName(contrat.locataires)} - ${contrat.unites?.nom ?? 'UnitÃ© non renseignÃ©e'}`,
+    label: `${formatPersonName(contrat.locataires)} - ${contrat.unites?.nom ?? 'Unité non renseignée'}`,
     subtitle: [
       contrat.unites?.immeubles?.nom,
-      contrat.loyer_mensuel ? `${Number(contrat.loyer_mensuel).toLocaleString('fr-FR')} FCFA` : null,
-    ].filter(Boolean).join(' Â· '),
+      contrat.loyer_mensuel ? formatCurrency(contrat.loyer_mensuel) : null,
+    ].filter(Boolean).join(' · '),
     keywords: `${formatPersonName(contrat.locataires)} ${contrat.unites?.nom ?? ''} ${contrat.unites?.immeubles?.nom ?? ''}`,
   }));
   const paymentMonthOptions: SmartComboboxOption[] = monthOptions.map((option) => ({
     value: option.value,
     label: option.label,
     subtitle: [
-      option.isPartial ? `Reliquat ${option.remainingAmount.toLocaleString('fr-FR')} FCFA` : null,
+      option.isPartial ? `Reliquat ${formatCurrency(option.remainingAmount)}` : null,
       option.isFuture ? 'Paiement en avance' : null,
-      option.isSold ? 'Mois soldÃ©' : null,
-    ].filter(Boolean).join(' Â· '),
-    badge: option.isPartial ? 'Partiel' : option.isFuture ? 'Avance' : option.isSold ? 'SoldÃ©' : undefined,
+      option.isSold ? 'Mois soldé' : null,
+    ].filter(Boolean).join(' · '),
+    badge: option.isPartial ? 'Partiel' : option.isFuture ? 'Avance' : option.isSold ? 'Soldé' : undefined,
     disabled: option.isSold && option.value !== formData.mois_display,
   }));
   const paymentModeOptions: SmartComboboxOption[] = [
-    { value: 'especes', label: 'EspÃ¨ces' },
-    { value: 'cheque', label: 'ChÃ¨que' },
+    { value: 'especes', label: 'Espèces' },
+    { value: 'cheque', label: 'Chèque' },
     { value: 'virement', label: 'Virement' },
     { value: 'mobile_money', label: 'Mobile Money' },
   ];
@@ -181,7 +182,7 @@ export function PaiementFormModal({
                   Loyer attendu
                 </p>
                 <p className="mt-1 text-sm font-black tabular-nums">
-                  {loyerAttendu.toLocaleString('fr-FR')} FCFA
+                  <MoneyText value={loyerAttendu} />
                 </p>
               </div>
             </div>
@@ -233,7 +234,7 @@ export function PaiementFormModal({
               </div>
               <div className="rounded-xl border border-emerald-950/10 bg-white/75 p-3 shadow-sm">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500">Montant dû</p>
-                <p className="mt-1 text-sm font-black tabular-nums text-slate-950">{loyerAttendu.toLocaleString('fr-FR')} FCFA</p>
+                <p className="mt-1 text-sm font-black tabular-nums text-slate-950"><MoneyText value={loyerAttendu} /></p>
               </div>
               <div className="rounded-xl bg-emerald-50 p-3">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-emerald-700">
@@ -242,17 +243,17 @@ export function PaiementFormModal({
                     Le reliquat est le reste a payer pour cette echeance apres le montant encaisse. Il permet de suivre les paiements partiels sans perdre le fil comptable.
                   </TooltipHint>
                 </p>
-                <p className="mt-1 text-sm font-black tabular-nums text-emerald-950">{reliquatPreview.toLocaleString('fr-FR')} FCFA</p>
+                <p className="mt-1 text-sm font-black tabular-nums text-emerald-950"><MoneyText value={reliquatPreview} /></p>
               </div>
               <div className="rounded-xl bg-orange-50 p-3">
                 <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-orange-700">Avance</p>
-                <p className="mt-1 text-sm font-black tabular-nums text-orange-950">{tropPercuPreview.toLocaleString('fr-FR')} FCFA</p>
+                <p className="mt-1 text-sm font-black tabular-nums text-orange-950"><MoneyText value={tropPercuPreview} /></p>
               </div>
             </div>
             {paiementsPrecedents > 0 && (
               <div className="mt-3 rounded-xl border border-emerald-200 bg-white p-3 text-xs leading-5 text-slate-700">
-                Paiements deja enregistres sur ce mois : <strong>{paiementsPrecedents.toLocaleString('fr-FR')} FCFA</strong>.
-                Ce nouveau paiement portera le total du mois a <strong>{totalApresPaiement.toLocaleString('fr-FR')} FCFA</strong>.
+                Paiements deja enregistres sur ce mois : <strong><MoneyText value={paiementsPrecedents} /></strong>.
+                Ce nouveau paiement portera le total du mois a <strong><MoneyText value={totalApresPaiement} /></strong>.
               </div>
             )}
             {tropPercuPreview > 0 && (
@@ -289,7 +290,7 @@ export function PaiementFormModal({
                   <span>{tauxCouverture}% couvert</span>
                   <span>
                     {reliquatPreview > 0
-                      ? `Reliquat : ${reliquatPreview.toLocaleString('fr-FR')} FCFA`
+                      ? `Reliquat : ${formatCurrency(reliquatPreview)}`
                       : 'Échéance soldée'}
                   </span>
                 </div>

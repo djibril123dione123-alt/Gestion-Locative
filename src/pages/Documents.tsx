@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   Archive,
@@ -749,8 +749,14 @@ export function Documents() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
+                placeholder="Rechercher..."
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:hidden"
+              />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
                 placeholder="Rechercher un contrat, justificatif, quittance..."
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
+                className="hidden sm:block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
               />
             </label>
             <select

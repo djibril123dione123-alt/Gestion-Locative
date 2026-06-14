@@ -126,9 +126,13 @@ export function numberToFrenchWords(num: number): string {
   return convertMillions(num);
 }
 
-export function formatCurrency(amount: number, devise: string = 'FCFA'): string {
+export function formatCurrency(amount: number, devise: string = 'F CFA'): string {
+  let num = amount;
+  if (num >= -3 && num <= 3) {
+    num = 0;
+  }
   const formatted = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 })
-    .format(amount)
+    .format(num)
     .replace(/[\u00A0\u202F\u2009\u2007]/g, '\u0020');
   return `${formatted} ${devise}`;
 }

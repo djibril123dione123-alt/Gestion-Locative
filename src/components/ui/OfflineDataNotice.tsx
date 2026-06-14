@@ -34,7 +34,7 @@ export function OfflineDataNotice({
     : 'border-emerald-200 bg-emerald-50 text-emerald-950';
 
   return (
-    <div className={`flex flex-col gap-3 rounded-2xl border px-4 py-3 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between ${tone}`}>
+    <div className={`relative flex flex-col gap-3 rounded-2xl border px-4 py-3 pr-12 text-sm shadow-sm sm:flex-row sm:items-center sm:justify-between ${tone}`}>
       <div className="flex items-start gap-3">
         <Icon className="mt-0.5 h-4 w-4 flex-shrink-0" />
         <div>
@@ -54,7 +54,7 @@ export function OfflineDataNotice({
           type="button"
           onClick={onRetry}
           disabled={retrying}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/80 px-3 py-2 text-xs font-black uppercase tracking-wide text-slate-800 shadow-sm ring-1 ring-black/5 transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
+          className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-white/80 px-3 py-2 text-xs font-black uppercase tracking-wide text-slate-800 shadow-sm ring-1 ring-black/5 transition hover:bg-white disabled:cursor-wait disabled:opacity-60"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${retrying ? 'animate-spin' : ''}`} />
           Réessayer
@@ -63,7 +63,7 @@ export function OfflineDataNotice({
       <button
         type="button"
         onClick={() => setDismissed(true)}
-        className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/60 text-slate-700 shadow-sm ring-1 ring-black/5 transition hover:bg-white"
+        className="absolute right-2.5 top-2.5 sm:top-1/2 sm:-translate-y-1/2 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/60 text-slate-700 shadow-sm ring-1 ring-black/5 transition hover:bg-white"
         aria-label="Masquer le bandeau"
       >
         <X className="h-4 w-4" />

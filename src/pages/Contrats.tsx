@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { createContratViaEdge, updateContratViaEdge, ContratApiError } from '../services/api/contratApi';
 import { useAuth } from '../contexts/AuthContext';
@@ -841,10 +841,17 @@ export function Contrats() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
               <input
                 type="text"
+                placeholder="Rechercher..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="sk-input pl-10 pr-4 sm:hidden"
+              />
+              <input
+                type="text"
                 placeholder="Rechercher un locataire, produit, immeuble, destination..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="sk-input pl-10 pr-4"
+                className="sk-input pl-10 pr-4 hidden sm:block"
               />
             </div>
             <ColumnPicker

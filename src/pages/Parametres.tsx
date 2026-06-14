@@ -569,7 +569,7 @@ export function Parametres() {
                   />
                   {isIndividualOwner && (
                     <p className="mt-2 text-xs font-semibold text-slate-500">
-                      Ce nom sert aussi de nom affichÃ© sur les documents propriÃ©taire.
+                      Ce nom sert aussi de nom affiché sur les documents propriétaire.
                     </p>
                   )}
                 </div>
@@ -803,7 +803,7 @@ export function Parametres() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Frais d'huissier (FCFA)
+                    Frais d'huissier (F CFA)
                   </label>
                   <input
                     type="number"
@@ -817,7 +817,7 @@ export function Parametres() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Pénalité par jour (FCFA)
+                    Pénalité par jour (F CFA)
                   </label>
                   <input
                     type="number"

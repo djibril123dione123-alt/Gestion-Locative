@@ -802,7 +802,7 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
     subtitle: `${item.unit} · ${item.property}`,
     value: formatCurrency(item.remaining),
     tone: 'red',
-    page: 'loyers-impayes',
+    page: 'paiements',
   }));
 
   const healthMessage = reliquats > 0
@@ -846,19 +846,26 @@ function mapEventToActivity(event: EventRow): ActivityItem {
   const type = String(event.event_type ?? 'activity').toLowerCase();
   const payload = event.payload ?? {};
   const amount = firstNumber(payload, ['montant', 'montant_total', 'amount', 'loyer_mensuel']);
-  const businessRef = firstText(payload, ['locataire', 'occupant', 'bailleur', 'name', 'nom_complet', 'reference', 'ref', 'unit', 'unite']) ?? 'Dossier Samay Këur';
+  const businessRef = firstText(payload, ['locataire', 'occupant', 'bailleur', 'name', 'nom_complet', 'nom', 'prenom', 'reference', 'ref', 'unit', 'unite', 'immeuble', 'document_category', 'title']) ?? 'Dossier en cours';
 
-  const title = type.includes('paiement')
-    ? type.includes('cancel') || type.includes('annul') ? 'Paiement annulé' : 'Paiement encaissé'
-    : type.includes('contrat') || type.includes('bail')
-      ? type.includes('created') || type.includes('create') ? 'Location créée' : type.includes('renew') ? 'Location renouvelée' : 'Location mise à jour'
-      : type.includes('document')
-        ? type.includes('created') || type.includes('generate') ? 'Document généré' : 'Document traité'
-        : type.includes('bailleur')
-          ? 'Bailleur mis à jour'
-          : type.includes('immeuble') || type.includes('unite')
-            ? 'Patrimoine mis à jour'
-            : 'Action enregistrée';
+  let title = 'Action enregistrée';
+  if (type.includes('paiement')) {
+    title = type.includes('cancel') || type.includes('annul') ? 'Paiement annulé' : 'Paiement encaissé';
+  } else if (type.includes('contrat') || type.includes('bail')) {
+    title = type.includes('created') || type.includes('create') ? 'Location créée' : type.includes('renew') ? 'Location renouvelée' : 'Contrat généré';
+  } else if (type.includes('document')) {
+    title = type.includes('created') || type.includes('generate') ? 'Document ajouté' : 'Document traité';
+  } else if (type.includes('bailleur')) {
+    title = type.includes('created') || type.includes('create') ? 'Bailleur ajouté' : 'Bailleur modifié';
+  } else if (type.includes('immeuble')) {
+    title = type.includes('created') || type.includes('create') ? 'Bien ajouté' : 'Bien modifié';
+  } else if (type.includes('unite')) {
+    title = type.includes('created') || type.includes('create') ? 'Unité créée' : 'Unité modifiée';
+  } else if (type.includes('locataire')) {
+    title = type.includes('created') || type.includes('create') ? 'Locataire ajouté' : 'Locataire modifié';
+  } else {
+    title = 'Mise à jour système';
+  }
   const page = type.includes('paiement')
     ? 'paiements'
     : type.includes('contrat') || type.includes('bail')
@@ -1099,11 +1106,11 @@ function DashboardAlert({ model, onNavigate }: { model: ReturnType<typeof buildD
 
 function MetricGrid({ model }: { model: ReturnType<typeof buildDashboardModel> }) {
   const metrics = [
-    { label: 'Encaissements du mois', amount: model.encaissements, icon: Wallet, tone: 'emerald' as const, helper: `${model.stats.nbPaiementsMois} paiements`, accent: 'Volume locatif' },
-    { label: 'Reliquats à recouvrer', amount: model.reliquats, icon: AlertCircle, tone: model.reliquats > 0 ? 'red' as const : 'emerald' as const, helper: `${model.unpaidCount} dossiers`, accent: 'À traiter' },
+    { label: 'Encaissements', amount: model.encaissements, icon: Wallet, tone: 'emerald' as const, helper: `${model.stats.nbPaiementsMois} paiements`, accent: 'Volume locatif' },
+    { label: 'Reliquats', amount: model.reliquats, icon: AlertCircle, tone: model.reliquats > 0 ? 'red' as const : 'emerald' as const, helper: `${model.unpaidCount} dossiers`, accent: 'À traiter' },
     { label: 'Net bailleurs', amount: model.netBailleurs, icon: Users, tone: 'emerald' as const, helper: 'À reverser', accent: 'Net propriétaire' },
-    { label: 'Commissions agence', amount: model.commissions, icon: ReceiptText, tone: 'amber' as const, helper: 'Revenus agence', accent: 'Marge brute' },
-    { label: 'Locations en cours', value: model.locationsActives, icon: Home, tone: 'slate' as const, helper: `${model.tenants} locataires`, accent: 'Actives' },
+    { label: 'Commissions', amount: model.commissions, icon: ReceiptText, tone: 'amber' as const, helper: 'Revenus agence', accent: 'Marge brute' },
+    { label: 'Baux actifs', value: model.locationsActives, icon: Home, tone: 'slate' as const, helper: `${model.tenants} locataires`, accent: 'En cours' },
     { label: 'Occupation', value: `${model.occupancy}%`, icon: TrendingUp, tone: 'slate' as const, helper: `${model.occupiedUnits}/${model.units} unités`, accent: 'Patrimoine' },
   ];
 
@@ -1162,26 +1169,26 @@ function DashboardKpiCard({
   }[tone];
 
   return (
-    <article className={`group min-w-0 overflow-hidden rounded-[1.05rem] border p-3 ring-1 ring-white/60 transition duration-300 hover:-translate-y-0.5 sm:p-3.5 ${styles.card}`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[0.6rem] font-bold uppercase tracking-[0.12em] text-slate-500 line-clamp-1">{label}</p>
-          <span className={`mt-1 inline-flex rounded px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wide ${styles.accent}`}>
+    <article className={`group min-w-0 overflow-hidden rounded-[1.05rem] border p-2.5 ring-1 ring-white/60 transition duration-300 hover:-translate-y-0.5 sm:p-3.5 ${styles.card}`}>
+      <div className="flex items-start justify-between gap-1.5 sm:gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 min-h-[2.5em] text-[9px] leading-tight font-bold uppercase tracking-[0.06em] text-slate-500 sm:text-[10px] sm:leading-snug sm:tracking-[0.1em]">{label}</p>
+          <span className={`mt-1 inline-flex rounded px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide sm:px-1.5 sm:text-[9px] ${styles.accent}`}>
             {accent}
           </span>
         </div>
-        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition duration-300 group-hover:scale-105 ${styles.icon}`}>
-          <Icon className="h-3.5 w-3.5" />
+        <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition duration-300 group-hover:scale-105 sm:h-7 sm:w-7 ${styles.icon}`}>
+          <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
         </div>
       </div>
 
-      <div className="mt-3 min-w-0">
+      <div className="mt-2.5 min-w-0 sm:mt-3">
         {money ? (
-          <p className={`whitespace-nowrap text-lg font-black tracking-tight tabular-nums sm:text-xl ${styles.amount}`} title={formatCurrency(amount ?? 0)}>
+          <p className={`truncate text-base font-black tracking-tight tabular-nums sm:text-xl ${styles.amount}`} title={formatCurrency(amount ?? 0)}>
             {money}
           </p>
         ) : (
-          <p className={`text-lg font-black tracking-tight sm:text-xl ${styles.amount}`}>
+          <p className={`truncate text-base font-black tracking-tight sm:text-xl ${styles.amount}`}>
             {value}
           </p>
         )}
@@ -1268,9 +1275,18 @@ function DashboardFinancialSummary({ model, onNavigate }: { model: ReturnType<ty
       </div>
 
       {model.commissionChange !== null && (
-        <p className={`mt-2 text-xs font-bold ${model.commissionChange >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-          {model.commissionChange >= 0 ? '↗' : '↘'} {Math.abs(model.commissionChange)}% sur les commissions vs mois précédent
-        </p>
+        <div className="mt-3 flex items-center">
+          <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${
+            model.commissionChange >= 0 
+              ? 'bg-emerald-50 text-emerald-700' 
+              : 'bg-rose-50/80 text-rose-500'
+          }`}>
+            {model.commissionChange >= 0 ? '↗' : '↘'} {Math.abs(model.commissionChange)}%
+          </span>
+          <span className="ml-2 text-[11px] font-medium text-slate-500">
+            sur les commissions vs mois précédent
+          </span>
+        </div>
       )}
     </DashboardSection>
   );
@@ -1388,14 +1404,18 @@ function TopUnpaidList({ items, onNavigate }: { items: WatchItem[]; onNavigate?:
               key={item.id}
               type="button"
               onClick={() => onNavigate?.(item.page)}
-              className="flex w-full items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/85 p-3 text-left transition hover:bg-red-50/50"
+              className="group flex w-full items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/85 p-3 text-left transition hover:border-red-200 hover:bg-red-50/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500"
+              aria-label={`Traiter l'impayé de ${item.title}`}
             >
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#f7efe2] text-xs font-black text-slate-700">{index + 1}</span>
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#f7efe2] text-xs font-black text-slate-700 transition group-hover:bg-red-100 group-hover:text-red-700">{index + 1}</span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-black text-slate-950">{item.title}</span>
-                <span className="block truncate text-xs font-medium text-red-600">{item.subtitle}</span>
+                <span className="block truncate text-sm font-black text-slate-950 transition group-hover:text-red-950">{item.title}</span>
+                <span className="block truncate text-xs font-medium text-red-600/80 transition group-hover:text-red-700">{item.subtitle}</span>
               </span>
-              <span className="shrink-0 text-right text-xs font-black leading-tight text-red-600">{item.value}</span>
+              <div className="flex shrink-0 items-center gap-2">
+                <span className="text-right text-xs font-black leading-tight text-red-600 transition group-hover:text-red-700">{item.value}</span>
+                <ChevronRight className="h-4 w-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-red-500" />
+              </div>
             </button>
           ))}
         </div>
@@ -1475,7 +1495,7 @@ function MiniFinance({ label, value, tone }: { label: string; value: ReactNode; 
       : 'border-emerald-950/10 bg-[#fffdf8] text-slate-900';
   return (
     <div className={`@container rounded-xl border px-3 py-2 ${cls}`}>
-      <p className="truncate text-[0.62rem] font-black uppercase tracking-[0.12em] opacity-65">{label}</p>
+      <p className="line-clamp-2 min-h-[2.5em] text-[0.62rem] font-black uppercase tracking-[0.12em] opacity-65">{label}</p>
       <p className="mt-1 truncate text-sm font-black">{value}</p>
     </div>
   );

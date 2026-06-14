@@ -104,7 +104,10 @@ export async function invalidateOperationalCaches(
   const add = (key: string) => tasks.push(invalidateCachedValue(scope, key));
   const addPrefix = (key: string) => tasks.push(invalidateCachedValuesByPrefix(scope, key));
 
-  if (domains.includes('dashboard')) add('dashboard');
+  if (domains.includes('dashboard')) {
+    add('dashboard');
+    addPrefix('dashboard:');
+  }
   if (domains.includes('paiements')) add('paiements-page');
   if (domains.includes('impayes')) add('loyers-impayes-page');
   if (domains.includes('contrats')) add('contrats-page');

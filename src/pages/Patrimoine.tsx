@@ -442,7 +442,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           let documents: DocumentRow[] = [];
           const documentsRes = await supabase
             .from('documents')
-            .select('id, name, document_category, entity_type, entity_id, bailleur_id, created_at')
+            .select('id, name, document_category, entity_type, entity_id, created_at')
             .eq('agency_id', profile.agency_id)
             .limit(350);
 
@@ -547,7 +547,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
         if (document.entity_type === 'immeuble' && document.entity_id === property.id) return true;
         if (document.entity_type === 'unite' && document.entity_id && unitIds.has(document.entity_id)) return true;
         if (document.entity_type === 'contrat' && document.entity_id && contractIds.has(document.entity_id)) return true;
-        return document.bailleur_id === property.bailleur_id;
+        return document.entity_id === property.id && document.entity_type === 'immeuble';
       });
       const occupiedUnits = units.filter((unit) => isOccupiedStatus(unit.statut) || contractsByUnitId.get(unit.id)?.some(isActiveContract)).length;
       const expectedRent = units.reduce((sum, unit) => sum + amount(unit.loyer_base), 0);

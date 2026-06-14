@@ -330,7 +330,7 @@ export const occupantsBauxRepository = {
         .select('id, name, document_category, entity_type, lifecycle_status, created_at')
         .eq('agency_id', input.agencyId)
         .neq('lifecycle_status', 'deleted')
-        .or(`entity_id.eq.${input.contratId},entity_id.eq.${input.locataireId},contrat_id.eq.${input.contratId}`)
+        .or(`entity_id.eq.${input.contratId},entity_id.eq.${input.locataireId}`)
         .order('created_at', { ascending: false })
         .limit(8),
       supabase

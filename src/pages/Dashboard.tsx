@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo, type ReactNode } from 'react
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../lib/formatters';
+import { applyCfaSettlementTolerance } from '../lib/cfaSettlement';
 import {
   AlertCircle,
   ArrowRight,
@@ -13,7 +14,6 @@ import {
   DoorOpen,
   FileCheck2,
   FileText,
-  Filter,
   Home,
   LayoutDashboard,
   LineChart as LineChartIcon,
@@ -26,6 +26,7 @@ import {
   UserRound,
   Users,
   Wallet,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   Bar,
@@ -45,7 +46,6 @@ import { DemoDataLoader } from '../components/billing/DemoDataLoader';
 import { OwnerWorkspace } from '../components/owner/OwnerWorkspace';
 import { PremiumPageShell } from '../components/ui/PremiumPageShell';
 import { PremiumButton } from '../components/ui/PremiumButton';
-import { MetricCard } from '../components/ui/MetricCard';
 import { MoneyText } from '../components/ui/MoneyText';
 
 const FR_MONTHS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -203,6 +203,7 @@ interface ActivityItem {
   subtitle: string;
   meta: string;
   amount?: number;
+  sortAt?: string | null;
   tone: 'emerald' | 'amber' | 'red' | 'slate';
   icon: typeof AlertCircle;
   page: string;
@@ -345,7 +346,7 @@ function buildMonthlyPoints(
       ? toNumber(rpcRevenue)
       : monthPayments.reduce((sum, payment) => sum + toNumber(payment.montant_total), 0);
     const commissions = monthPayments.reduce((sum, payment) => sum + toNumber(payment.part_agence), 0);
-    const impayes = monthPayments.reduce((sum, payment) => sum + toNumber(payment.reliquat), 0);
+    const impayes = monthPayments.reduce((sum, payment) => sum + applyCfaSettlementTolerance(toNumber(payment.reliquat)), 0);
     const totalDepenses = depenses
       .filter((depense) => monthKey(depense.date_depense) === monthKeyValue)
       .reduce((sum, depense) => sum + toNumber(depense.montant), 0);
@@ -593,12 +594,11 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
   }
 
   return (
-    <PremiumPageShell className="space-y-4 pb-24 sm:space-y-5 lg:pb-7">
+    <PremiumPageShell className="space-y-4 pb-28 sm:space-y-5 lg:pb-8">
       <DashboardHeader
         selectedMonth={selectedMonth}
         onMonthChange={setSelectedMonth}
         onNavigate={onNavigate}
-        hasUnpaid={model.reliquats > 0}
       />
 
       {cacheTimestamp && <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadDashboardData} />}
@@ -609,15 +609,24 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
       <MetricGrid model={model} />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.78fr)_minmax(0,1.18fr)_minmax(320px,0.72fr)]">
-        <DashboardPriorityList priorities={model.priorities} onNavigate={onNavigate} />
-        <DashboardFinancialSummary model={model} onNavigate={onNavigate} />
-        <DashboardHealthCard model={model} onNavigate={onNavigate} />
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,0.95fr)_minmax(320px,0.7fr)]">
-        <DashboardActivityFeed items={model.activities} onNavigate={onNavigate} />
-        <DashboardWatchList items={model.watchItems} onNavigate={onNavigate} />
-        <TopUnpaidList items={model.topUnpaid} onNavigate={onNavigate} />
+        <div className="order-1">
+          <DashboardPriorityList priorities={model.priorities} onNavigate={onNavigate} />
+        </div>
+        <div className="order-3 xl:order-2">
+          <DashboardFinancialSummary model={model} onNavigate={onNavigate} />
+        </div>
+        <div className="order-4 xl:order-3">
+          <DashboardHealthCard model={model} onNavigate={onNavigate} />
+        </div>
+        <div className="order-5 xl:order-4">
+          <DashboardActivityFeed items={model.activities} onNavigate={onNavigate} />
+        </div>
+        <div className="order-6 xl:order-5">
+          <DashboardWatchList items={model.watchItems} onNavigate={onNavigate} />
+        </div>
+        <div className="order-2 xl:order-6">
+          <TopUnpaidList items={model.topUnpaid} onNavigate={onNavigate} />
+        </div>
       </div>
 
       <DashboardQuickActions onNavigate={onNavigate} />
@@ -636,17 +645,18 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
   const encaissements = monthPayments.reduce((sum, payment) => sum + toNumber(payment.montant_total), 0) || stats.revenusMois;
   const previousEncaissements = previousPayments.reduce((sum, payment) => sum + toNumber(payment.montant_total), 0);
   const commissions = monthPayments.reduce((sum, payment) => sum + toNumber(payment.part_agence), 0);
+  const previousCommissions = previousPayments.reduce((sum, payment) => sum + toNumber(payment.part_agence), 0);
   const netBailleurs = monthPayments.reduce(
     (sum, payment) => sum + (payment.part_bailleur != null ? toNumber(payment.part_bailleur) : Math.max(0, toNumber(payment.montant_total) - toNumber(payment.part_agence))),
     0,
   );
   const depensesMois = monthDepenses.reduce((sum, depense) => sum + toNumber(depense.montant), 0);
-  const reliquatsFromPayments = monthPayments.reduce((sum, payment) => sum + toNumber(payment.reliquat), 0);
-  const reliquats = Math.max(stats.impayesMois, reliquatsFromPayments);
+  const reliquatsFromPayments = monthPayments.reduce((sum, payment) => sum + applyCfaSettlementTolerance(toNumber(payment.reliquat)), 0);
   const expectedRent = activeContracts.reduce((sum, contrat) => sum + toNumber(contrat.loyer_mensuel), 0);
   const monthTrend = data.monthly.find((point) => point.monthKey === selectedMonth);
   const margeNette = (monthTrend?.marge ?? commissions - depensesMois);
   const revenueChange = percentChange(encaissements, previousEncaissements);
+  const commissionChange = percentChange(commissions, previousCommissions);
   const occupancy = Math.round(stats.tauxOccupation);
 
   const contractBalances = activeContracts
@@ -655,7 +665,7 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
         .filter((payment) => payment.contrat_id === contrat.id)
         .reduce((sum, payment) => sum + toNumber(payment.montant_total), 0);
       const loyer = toNumber(contrat.loyer_mensuel);
-      const remaining = Math.max(0, loyer - paid);
+      const remaining = applyCfaSettlementTolerance(Math.max(0, loyer - paid));
       return {
         id: contrat.id,
         remaining,
@@ -667,6 +677,10 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
     })
     .filter((item) => item.remaining > 0)
     .sort((a, b) => b.remaining - a.remaining);
+
+  const contractBalanceTotal = contractBalances.reduce((sum, item) => sum + item.remaining, 0);
+  const reliquats = Math.max(applyCfaSettlementTolerance(stats.impayesMois), reliquatsFromPayments, contractBalanceTotal);
+  const unpaidCount = reliquats > 0 ? (contractBalances.length || stats.nbImpayesMois) : 0;
 
   const expiringContracts = activeContracts
     .map((contrat) => ({ contrat, days: daysUntil(contrat.date_fin) }))
@@ -683,7 +697,7 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
     {
       id: 'unpaid',
       title: 'Relances à suivre',
-      value: `${contractBalances.length || stats.nbImpayesMois} dossier${(contractBalances.length || stats.nbImpayesMois) > 1 ? 's' : ''}`,
+      value: `${unpaidCount} dossier${unpaidCount > 1 ? 's' : ''}`,
       description: reliquats > 0 ? `${formatCurrency(reliquats)} à recouvrer` : 'Aucun reliquat critique',
       tone: reliquats > 0 ? 'red' : 'emerald',
       icon: reliquats > 0 ? AlertCircle : CheckCircle2,
@@ -725,9 +739,10 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
   const eventActivities = events.map((event) => mapEventToActivity(event));
   const paymentActivities = monthPayments.slice(0, 5).map((payment) => ({
     id: `payment-${payment.id}`,
-    title: 'Paiement reçu',
+    title: 'Paiement encaissé',
     subtitle: `${fullName(payment.contrats?.locataires, 'Locataire')} · ${payment.contrats?.unites?.nom ?? 'Unité'}`,
     meta: relativeDate(payment.created_at || payment.date_paiement),
+    sortAt: payment.created_at || payment.date_paiement,
     amount: toNumber(payment.montant_total),
     tone: 'emerald' as const,
     icon: Wallet,
@@ -735,30 +750,24 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
   }));
   const documentActivities = documents.slice(0, 4).map((document) => ({
     id: `document-${document.id}`,
-    title: 'Document ajouté',
+    title: 'Document généré',
     subtitle: document.name ?? document.document_category ?? 'Document',
     meta: relativeDate(document.created_at),
+    sortAt: document.created_at,
     tone: 'slate' as const,
     icon: FileText,
     page: 'documents',
   }));
   const activities = [...eventActivities, ...paymentActivities, ...documentActivities]
     .sort((a, b) => {
-      const aDate = events.find((event) => `event-${event.id}` === a.id)?.created_at;
-      const bDate = events.find((event) => `event-${event.id}` === b.id)?.created_at;
-      return new Date(bDate ?? '').getTime() - new Date(aDate ?? '').getTime();
+      const aTime = new Date(a.sortAt ?? '').getTime();
+      const bTime = new Date(b.sortAt ?? '').getTime();
+      return (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0);
     })
     .slice(0, 6);
 
   const watchItems: WatchItem[] = [
-    ...contractBalances.slice(0, 3).map((item) => ({
-      id: `watch-unpaid-${item.id}`,
-      title: item.tenant,
-      subtitle: `${item.unit} · ${item.property}`,
-      value: <MoneyText value={item.remaining} compact />,
-      tone: 'red' as const,
-      page: 'loyers-impayes',
-    })),
+
     ...expiringContracts.slice(0, 3).map(({ contrat, days }) => ({
       id: `watch-expiring-${contrat.id}`,
       title: fullName(contrat.locataires, 'Location'),
@@ -775,13 +784,21 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
       tone: 'slate' as const,
       page: 'patrimoine',
     })),
+    ...pendingDocuments.slice(0, 2).map((document) => ({
+      id: `watch-document-${document.id}`,
+      title: document.name ?? 'Document à classer',
+      subtitle: document.document_category ?? 'GED',
+      value: 'À traiter',
+      tone: 'amber' as const,
+      page: 'documents',
+    })),
   ].slice(0, 6);
 
   const topUnpaid: WatchItem[] = contractBalances.slice(0, 5).map((item) => ({
     id: `top-${item.id}`,
     title: item.tenant,
     subtitle: `${item.unit} · ${item.property}`,
-    value: <MoneyText value={item.remaining} compact />,
+    value: formatCurrency(item.remaining),
     tone: 'red',
     page: 'loyers-impayes',
   }));
@@ -798,7 +815,9 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
     encaissements,
     previousEncaissements,
     revenueChange,
+    commissionChange,
     reliquats,
+    unpaidCount,
     commissions,
     netBailleurs,
     depensesMois,
@@ -822,25 +841,65 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
 }
 
 function mapEventToActivity(event: EventRow): ActivityItem {
-  const type = event.event_type ?? 'activity';
+  const type = String(event.event_type ?? 'activity').toLowerCase();
+  const payload = event.payload ?? {};
+  const amount = firstNumber(payload, ['montant', 'montant_total', 'amount', 'loyer_mensuel']);
+  const businessRef = firstText(payload, ['locataire', 'occupant', 'bailleur', 'name', 'nom_complet', 'reference', 'ref', 'unit', 'unite']) ?? 'Dossier Samay Këur';
+
   const title = type.includes('paiement')
-    ? 'Paiement mis à jour'
-    : type.includes('contrat')
-      ? 'Location mise à jour'
+    ? type.includes('cancel') || type.includes('annul') ? 'Paiement annulé' : 'Paiement encaissé'
+    : type.includes('contrat') || type.includes('bail')
+      ? type.includes('created') || type.includes('create') ? 'Location créée' : type.includes('renew') ? 'Location renouvelée' : 'Location mise à jour'
       : type.includes('document')
-        ? 'Document traité'
-        : 'Activité enregistrée';
-  const page = type.includes('paiement') ? 'paiements' : type.includes('contrat') ? 'occupants-baux' : type.includes('document') ? 'documents' : 'notifications';
+        ? type.includes('created') || type.includes('generate') ? 'Document généré' : 'Document traité'
+        : type.includes('bailleur')
+          ? 'Bailleur mis à jour'
+          : type.includes('immeuble') || type.includes('unite')
+            ? 'Patrimoine mis à jour'
+            : 'Action enregistrée';
+  const page = type.includes('paiement')
+    ? 'paiements'
+    : type.includes('contrat') || type.includes('bail')
+      ? 'occupants-baux'
+      : type.includes('document')
+        ? 'documents'
+        : type.includes('bailleur')
+          ? 'bailleurs'
+          : type.includes('immeuble') || type.includes('unite')
+            ? 'patrimoine'
+            : 'notifications';
 
   return {
     id: `event-${event.id}`,
     title,
-    subtitle: String(event.payload?.reference ?? event.entity_type ?? 'Samay Këur'),
+    subtitle: businessRef,
     meta: relativeDate(event.created_at),
+    amount,
     tone: type.includes('cancel') || type.includes('resilie') ? 'red' : type.includes('created') ? 'emerald' : 'slate',
     icon: type.includes('paiement') ? Wallet : type.includes('contrat') ? FileText : Sparkles,
+    sortAt: event.created_at,
     page,
   };
+}
+
+function firstText(payload: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+  return null;
+}
+
+function firstNumber(payload: Record<string, unknown>, keys: string[]): number | undefined {
+  for (const key of keys) {
+    const value = toNumber(payload[key]);
+    if (value > 0) {
+      return value;
+    }
+  }
+  return undefined;
 }
 
 function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: DashboardProps & { onLoaded: () => void }) {
@@ -930,12 +989,10 @@ function DashboardHeader({
   selectedMonth,
   onMonthChange,
   onNavigate,
-  hasUnpaid,
 }: {
   selectedMonth: string;
   onMonthChange: (value: string) => void;
   onNavigate?: (page: string) => void;
-  hasUnpaid: boolean;
 }) {
   return (
     <header className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
@@ -946,7 +1003,7 @@ function DashboardHeader({
           Vue unifiée de votre portefeuille locatif, vos encaissements et vos priorités.
         </p>
       </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:items-center">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:flex xl:items-center">
         <label className="flex min-h-11 items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/95 px-3 py-2 text-left text-sm font-bold text-slate-800 shadow-sm">
           <CalendarDays className="h-4 w-4 text-slate-500" />
           <span className="flex flex-col">
@@ -960,13 +1017,7 @@ function DashboardHeader({
             />
           </span>
         </label>
-        <PremiumButton
-          variant="secondary"
-          icon={<Filter className="h-4 w-4" />}
-          onClick={() => onNavigate?.(hasUnpaid ? 'loyers-impayes' : 'tableau-de-bord-financier')}
-        >
-          {hasUnpaid ? 'Voir les impayés' : 'Détail financier'}
-        </PremiumButton>
+
         <PremiumButton
           variant="primary"
           icon={<Wallet className="h-4 w-4" />}
@@ -1020,7 +1071,7 @@ function DashboardAlert({ model, onNavigate }: { model: ReturnType<typeof buildD
         </div>
         <div className="min-w-0">
           <p className="font-black text-red-950">
-            {model.stats.nbImpayesMois} loyer{model.stats.nbImpayesMois > 1 ? 's' : ''} impayé{model.stats.nbImpayesMois > 1 ? 's' : ''} à recouvrer
+            {model.unpaidCount} loyer{model.unpaidCount > 1 ? 's' : ''} impayé{model.unpaidCount > 1 ? 's' : ''} à recouvrer
           </p>
           <p className="truncate text-sm font-semibold text-red-700">
             <MoneyText value={model.reliquats} /> en attente de paiement
@@ -1036,46 +1087,109 @@ function DashboardAlert({ model, onNavigate }: { model: ReturnType<typeof buildD
 }
 
 function MetricGrid({ model }: { model: ReturnType<typeof buildDashboardModel> }) {
+  const metrics = [
+    { label: 'Encaissements du mois', amount: model.encaissements, icon: Wallet, tone: 'emerald' as const, helper: `${model.stats.nbPaiementsMois} paiements`, accent: 'Volume locatif' },
+    { label: 'Reliquats à recouvrer', amount: model.reliquats, icon: AlertCircle, tone: model.reliquats > 0 ? 'red' as const : 'emerald' as const, helper: `${model.unpaidCount} dossiers`, accent: 'À traiter' },
+    { label: 'Net bailleurs', amount: model.netBailleurs, icon: Users, tone: 'emerald' as const, helper: 'À reverser', accent: 'Net propriétaire' },
+    { label: 'Commissions agence', amount: model.commissions, icon: ReceiptText, tone: 'amber' as const, helper: 'Revenus agence', accent: 'Marge brute' },
+    { label: 'Locations en cours', value: model.locationsActives, icon: Home, tone: 'slate' as const, helper: `${model.tenants} locataires`, accent: 'Actives' },
+    { label: 'Occupation', value: `${model.occupancy}%`, icon: TrendingUp, tone: 'slate' as const, helper: `${model.occupiedUnits}/${model.units} unités`, accent: 'Patrimoine' },
+  ];
+
   return (
     <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
-      <MetricCard
-        label="Encaissements du mois"
-        value={<MoneyText value={model.encaissements} compact />}
-        icon={Wallet}
-        tone="emerald"
-      />
-      <MetricCard
-        label="Reliquats à recouvrer"
-        value={<MoneyText value={model.reliquats} compact />}
-        icon={AlertCircle}
-        tone={model.reliquats > 0 ? 'red' : 'emerald'}
-      />
-      <MetricCard
-        label="Net bailleurs"
-        value={<MoneyText value={model.netBailleurs} compact />}
-        icon={Users}
-        tone="green"
-      />
-      <MetricCard
-        label="Commissions agence"
-        value={<MoneyText value={model.commissions} compact />}
-        icon={ReceiptText}
-        tone="amber"
-      />
-      <MetricCard
-        label="Locations en cours"
-        value={model.locationsActives}
-        icon={Home}
-        tone="slate"
-      />
-      <MetricCard
-        label="Occupation"
-        value={`${model.occupancy}%`}
-        icon={TrendingUp}
-        tone="slate"
-      />
+      {metrics.map((metric) => (
+        <DashboardKpiCard key={metric.label} {...metric} />
+      ))}
     </section>
   );
+}
+
+function DashboardKpiCard({
+  label,
+  value,
+  amount,
+  helper,
+  accent,
+  icon: Icon,
+  tone,
+}: {
+  label: string;
+  value?: ReactNode;
+  amount?: number;
+  helper: string;
+  accent: string;
+  icon: LucideIcon;
+  tone: 'emerald' | 'red' | 'amber' | 'slate';
+}) {
+  const money = amount != null ? formatPrimaryCfa(amount) : null;
+  const styles = {
+    emerald: {
+      card: 'border-emerald-200/55 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.075),transparent_42%),linear-gradient(135deg,#ffffff_0%,#f5fcf8_100%)] shadow-[0_14px_30px_rgba(4,120,87,0.06)] hover:border-emerald-300/70',
+      icon: 'bg-emerald-50/85 text-emerald-800 ring-1 ring-emerald-200/70',
+      accent: 'bg-emerald-50/80 text-emerald-800 ring-1 ring-emerald-200/70',
+      amount: 'text-emerald-950',
+      rail: 'from-emerald-300/65 via-emerald-500/65 to-emerald-700/60',
+    },
+    red: {
+      card: 'border-red-200/60 bg-[radial-gradient(circle_at_top_right,rgba(248,113,113,0.075),transparent_42%),linear-gradient(135deg,#ffffff_0%,#fff9f9_100%)] shadow-[0_14px_30px_rgba(185,28,28,0.06)] hover:border-red-300/70',
+      icon: 'bg-red-50/85 text-red-700 ring-1 ring-red-200/70',
+      accent: 'bg-red-50/80 text-red-700 ring-1 ring-red-200/70',
+      amount: 'text-red-950',
+      rail: 'from-red-300/65 via-red-400/70 to-red-600/60',
+    },
+    amber: {
+      card: 'border-amber-200/60 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.075),transparent_42%),linear-gradient(135deg,#ffffff_0%,#fffaf2_100%)] shadow-[0_14px_30px_rgba(154,91,17,0.055)] hover:border-amber-300/70',
+      icon: 'bg-amber-50/85 text-amber-800 ring-1 ring-amber-200/70',
+      accent: 'bg-amber-50/80 text-amber-800 ring-1 ring-amber-200/70',
+      amount: 'text-amber-950',
+      rail: 'from-amber-300/65 via-amber-500/65 to-amber-700/60',
+    },
+    slate: {
+      card: 'border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(15,23,42,0.04),transparent_42%),linear-gradient(135deg,#ffffff_0%,#f9fafb_100%)] shadow-[0_14px_30px_rgba(15,23,42,0.055)] hover:border-slate-300/80',
+      icon: 'bg-slate-50/90 text-slate-800 ring-1 ring-slate-200',
+      accent: 'bg-slate-50/85 text-slate-700 ring-1 ring-slate-200',
+      amount: 'text-slate-950',
+      rail: 'from-slate-300/80 via-slate-500/70 to-slate-700/65',
+    },
+  }[tone];
+
+  return (
+    <article className={`group relative min-w-0 overflow-hidden rounded-[1.15rem] border p-2.5 ring-1 ring-white/80 transition duration-300 hover:-translate-y-0.5 sm:p-3 ${styles.card}`}>
+      <div className={`absolute inset-x-4 top-0 h-0.5 rounded-b-full bg-gradient-to-r ${styles.rail}`} />
+      <div className="pointer-events-none absolute -right-10 -top-12 h-20 w-20 rounded-full bg-white/45 blur-2xl transition duration-500 group-hover:scale-110" />
+      <div className="relative flex min-h-[5.45rem] flex-col justify-between gap-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</p>
+            <span className={`mt-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-[0.06em] ${styles.accent}`}>
+              {accent}
+            </span>
+          </div>
+          <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl transition duration-300 group-hover:scale-105 ${styles.icon}`}>
+            <Icon className="h-3.5 w-3.5" />
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          {money ? (
+            <p className={`whitespace-nowrap text-[clamp(0.92rem,1.62vw,1.22rem)] font-black leading-none tracking-tight tabular-nums ${styles.amount}`} title={formatCurrency(amount ?? 0)}>
+              {money}
+            </p>
+          ) : (
+            <p className={`text-[clamp(1.12rem,1.9vw,1.48rem)] font-black leading-none tracking-tight ${styles.amount}`}>
+              {value}
+            </p>
+          )}
+          <p className="mt-1 truncate text-[0.68rem] font-bold text-slate-600">{helper}</p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function formatPrimaryCfa(value: number) {
+  return formatCurrency(value).replace(/\s/g, '\u00A0');
 }
 
 function DashboardPriorityList({ priorities, onNavigate }: { priorities: PriorityItem[]; onNavigate?: (page: string) => void }) {
@@ -1114,17 +1228,16 @@ function DashboardPriorityList({ priorities, onNavigate }: { priorities: Priorit
 }
 
 function DashboardFinancialSummary({ model, onNavigate }: { model: ReturnType<typeof buildDashboardModel>; onNavigate?: (page: string) => void }) {
-  const hasChartData = model.monthly.some((point) => point.encaissements > 0 || point.depenses > 0 || point.commissions > 0);
+  const hasChartData = model.monthly.some((point) => point.commissions > 0 || point.depenses > 0 || point.marge !== 0);
   return (
     <DashboardSection
-      title={`Performance financière — ${model.selectedLabel}`}
-      subtitle="Synthèse opérationnelle du mois et tendance annuelle."
+      title={`Performance agence — ${model.selectedLabel}`}
+      subtitle="Commissions, dépenses et marge nette. Les encaissements restent le volume locatif traité."
       action={<button type="button" onClick={() => onNavigate?.('tableau-de-bord-financier')} className="text-xs font-black text-emerald-800 hover:text-emerald-950">Voir le détail financier</button>}
     >
-      <div className="grid gap-2.5 sm:grid-cols-5">
-        <MiniFinance label="Brut encaissé" value={<MoneyText value={model.encaissements} compact />} tone="emerald" />
+      <div className="grid gap-2.5 sm:grid-cols-4">
+        <MiniFinance label="Volume locatif" value={<MoneyText value={model.encaissements} compact />} tone="slate" />
         <MiniFinance label="Commissions" value={<MoneyText value={model.commissions} compact />} tone="emerald" />
-        <MiniFinance label="Net bailleurs" value={<MoneyText value={model.netBailleurs} compact />} tone="slate" />
         <MiniFinance label="Dépenses" value={<MoneyText value={model.depensesMois} compact />} tone="red" />
         <MiniFinance label="Marge nette" value={<MoneyText value={model.margeNette} compact />} tone={model.margeNette >= 0 ? 'emerald' : 'red'} />
       </div>
@@ -1141,19 +1254,19 @@ function DashboardFinancialSummary({ model, onNavigate }: { model: ReturnType<ty
                 labelClassName="font-bold text-slate-900"
                 contentStyle={{ borderRadius: '14px', border: '1px solid #d9e4dc', boxShadow: '0 18px 44px rgba(15,23,42,0.10)' }}
               />
-              <Bar dataKey="encaissements" name="Encaissements" fill="#047857" radius={[8, 8, 0, 0]} maxBarSize={26} />
+              <Bar dataKey="commissions" name="Commissions" fill="#047857" radius={[8, 8, 0, 0]} maxBarSize={26} />
               <Bar dataKey="depenses" name="Dépenses" fill="#ef4444" radius={[8, 8, 0, 0]} maxBarSize={20} />
-              <Line type="monotone" dataKey="commissions" name="Commissions" stroke="#9A5B11" strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="marge" name="Marge nette" stroke="#9A5B11" strokeWidth={2.5} dot={false} />
             </BarChart>
           </ResponsiveContainer>
         ) : (
-          <CompactEmptyState icon={LineChartIcon} title="Aucune donnée financière" text="Les encaissements et dépenses apparaîtront ici." />
+          <CompactEmptyState icon={LineChartIcon} title="Aucune donnée agence" text="Les commissions, dépenses et marges apparaîtront ici." />
         )}
       </div>
 
-      {model.revenueChange !== null && (
-        <p className={`mt-2 text-xs font-bold ${model.revenueChange >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
-          {model.revenueChange >= 0 ? '↗' : '↘'} {Math.abs(model.revenueChange)}% vs mois précédent
+      {model.commissionChange !== null && (
+        <p className={`mt-2 text-xs font-bold ${model.commissionChange >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+          {model.commissionChange >= 0 ? '↗' : '↘'} {Math.abs(model.commissionChange)}% sur les commissions vs mois précédent
         </p>
       )}
     </DashboardSection>
@@ -1234,7 +1347,7 @@ function DashboardActivityFeed({ items, onNavigate }: { items: ActivityItem[]; o
 
 function DashboardWatchList({ items, onNavigate }: { items: WatchItem[]; onNavigate?: (page: string) => void }) {
   return (
-    <DashboardSection title="À surveiller cette semaine" subtitle="Échéances, reliquats et unités à traiter.">
+    <DashboardSection title="À surveiller cette semaine" subtitle="Échéances, documents et unités disponibles.">
       {items.length === 0 ? (
         <CompactEmptyState icon={CheckCircle2} title="Rien de critique" text="Aucune échéance urgente pour le moment." />
       ) : (
@@ -1279,7 +1392,7 @@ function TopUnpaidList({ items, onNavigate }: { items: WatchItem[]; onNavigate?:
                 <span className="block truncate text-sm font-black text-slate-950">{item.title}</span>
                 <span className="block truncate text-xs font-medium text-red-600">{item.subtitle}</span>
               </span>
-              <span className="text-xs font-black text-red-600">{item.value}</span>
+              <span className="shrink-0 text-right text-xs font-black leading-tight text-red-600">{item.value}</span>
             </button>
           ))}
         </div>

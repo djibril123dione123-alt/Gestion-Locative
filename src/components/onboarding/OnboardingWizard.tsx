@@ -137,7 +137,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
 
   const canContinue = step !== 0 || form.agencyName.trim().length >= 2;
   const fieldClass =
-    'h-12 w-full rounded-2xl border border-emerald-950/10 bg-white/95 px-4 py-3 text-base font-bold text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-amber-500 focus:ring-4 focus:ring-amber-300/25';
+    'h-12 w-full rounded-2xl border border-white/20 bg-[#FDFBF7] px-4 py-3 text-base font-bold text-slate-950 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] outline-none transition placeholder:text-slate-500 focus:border-amber-400/70 focus:bg-white focus:ring-4 focus:ring-amber-400/20';
   const labelClass = 'mb-2 block text-sm font-black text-slate-700';
   const mutedCopyClass = 'text-sm leading-6 text-slate-600';
   const getVisibleStepTitle = (index: number) => {
@@ -606,7 +606,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                     type="button"
                     onClick={next}
                     disabled={loading || !canContinue}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/18 transition hover:-translate-y-0.5 hover:bg-brand-950 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600 disabled:shadow-none"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#072F24] px-5 py-3 text-sm font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : step === STEPS.length - 1 ? <CheckCircle2 className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
                     {step === STEPS.length - 1 ? 'Terminer' : 'Continuer'}

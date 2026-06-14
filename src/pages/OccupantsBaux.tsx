@@ -381,17 +381,6 @@ export function OccupantsBaux() {
     [profile?.agency_id, profile?.id]
   );
 
-  const handleRefresh = useCallback(async () => {
-    if (!profile?.agency_id || !profile?.id) return;
-    await invalidateOperationalCaches(
-      { agencyId: profile.agency_id, userId: profile.id },
-      ['locataires', 'contrats']
-    );
-    notifyDataChanged(['locataires', 'contrats']);
-    await loadData(true);
-    notifySuccess('Données actualisées');
-  }, [loadData, notifySuccess, profile?.agency_id, profile?.id]);
-
   const refreshAfterLifecycle = useCallback(async () => {
     if (!profile?.agency_id || !profile?.id) return;
     await invalidateOperationalCaches(
@@ -931,7 +920,7 @@ export function OccupantsBaux() {
       <div className={`grid items-start gap-5 ${selectedRow ? 'xl:grid-cols-[minmax(0,1fr)_31.5rem]' : 'grid-cols-1'}`}>
         <section className="min-w-0 space-y-6">
           {/* En-tête */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Domaine locatif</p>
               <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">
@@ -944,16 +933,7 @@ export function OccupantsBaux() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <PremiumButton
-                variant="secondary"
-                type="button"
-                onClick={() => void handleRefresh()}
-                icon={<RefreshCw className="h-4 w-4" />}
-                title="Actualiser"
-              >
-                <span className="hidden sm:inline">Actualiser</span>
-              </PremiumButton>
+            <div className="flex flex-col gap-2 sm:flex-row">
               <PremiumButton
                 variant="create"
                 type="button"
@@ -963,7 +943,7 @@ export function OccupantsBaux() {
                 Nouvelle location
               </PremiumButton>
             </div>
-          </div>
+          </header>
 
           {/* KPI cards */}
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
@@ -1503,13 +1483,13 @@ function OccupantBailDrawer({
             <div>
               <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Documents principaux</p>
               <div className="flex flex-col gap-2">
-                <button type="button" onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} className="flex items-center gap-3 rounded-2xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] p-3.5 text-left text-sm font-black text-white shadow-[0_14px_34px_rgba(4,24,18,0.18)] transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:translate-y-0 disabled:opacity-60">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/12 text-white shadow-sm ring-1 ring-white/15">
-                    <Download className="h-5 w-5" />
+                <button type="button" onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} className="flex items-center gap-3 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] p-2.5 px-3 text-left text-sm font-black text-white shadow-[0_10px_24px_rgba(4,24,18,0.18)] transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:translate-y-0 disabled:opacity-60">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/12 text-white shadow-sm ring-1 ring-white/15">
+                    <Download className="h-4 w-4" />
                   </span>
-                  <span>
-                    <span className="block">{pdfGenerating ? 'Génération en cours...' : 'Contrat PDF'}</span>
-                    <span className="mt-0.5 block text-xs font-semibold text-emerald-50/70">{row.contrat_ref}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate">{pdfGenerating ? 'Génération en cours...' : 'Contrat PDF'}</span>
+                    <span className="block truncate text-[0.68rem] font-semibold text-emerald-50/70">{row.contrat_ref}</span>
                   </span>
                 </button>
               </div>

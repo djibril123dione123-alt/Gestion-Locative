@@ -442,7 +442,7 @@ function buildBailleurSummary(bailleurId: string, data: BailleurPageData): Baill
   ]);
   const documents = data.documents.filter((item) => {
     if (item.lifecycle_status === 'deleted' || item.lifecycle_status === 'archived') return false;
-    if (item.bailleur_id === bailleurId) return true;
+    if (item.entity_id === bailleurId && item.entity_type === 'bailleur') return true;
     return Boolean(item.entity_id && entityIds.has(item.entity_id));
   });
 
@@ -579,7 +579,7 @@ export function Bailleurs() {
           let documents: DetailDocument[] = [];
           const documentsRes = await supabase
             .from('documents')
-            .select('id, name, document_category, entity_type, entity_id, bailleur_id, lifecycle_status, created_at')
+            .select('id, name, document_category, entity_type, entity_id, lifecycle_status, created_at')
             .eq('agency_id', profile.agency_id)
             .limit(300);
           if (!documentsRes.error) {

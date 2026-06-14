@@ -34,6 +34,7 @@ import {
 
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { applyCfaSettlementTolerance } from '../../lib/cfaSettlement';
 import { formatCurrency, formatDate, formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
 import { formatPersonName } from '../../lib/people';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../../services/offlineReadCache';
@@ -52,6 +53,7 @@ import { useToast } from '../../hooks/useToast';
 import { OfflineDataNotice } from '../ui/OfflineDataNotice';
 import { PageSkeleton } from '../ui/Skeleton';
 import { PremiumButton } from '../ui/PremiumButton';
+import { MetricCard } from '../ui/MetricCard';
 import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { ToastContainer } from '../ui/Toast';
@@ -494,12 +496,12 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       return {
         contract,
         paid,
-        due: Math.max(0, parseAmount(contract.loyer_mensuel) - paid),
+        due: applyCfaSettlementTolerance(Math.max(0, parseAmount(contract.loyer_mensuel) - paid)),
       };
     });
     const fallbackReliquat = currentPayments
       .filter((payment) => String(payment.statut ?? '').toLowerCase() === 'partiel')
-      .reduce((sum, payment) => sum + Math.max(0, parseAmount(payment.contrats?.loyer_mensuel) - parseAmount(payment.montant_total)), 0);
+      .reduce((sum, payment) => sum + applyCfaSettlementTolerance(Math.max(0, parseAmount(payment.contrats?.loyer_mensuel) - parseAmount(payment.montant_total))), 0);
     const reliquats = activeContracts.length > 0
       ? contractPaid.reduce((sum, row) => sum + row.due, 0)
       : fallbackReliquat;
@@ -554,13 +556,13 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
     const rows = activeContracts.map((contract) => {
       const paid = paidByContract.get(contract.id) ?? 0;
       const rent = parseAmount(contract.loyer_mensuel);
-      const remaining = Math.max(0, rent - paid);
+      const remaining = applyCfaSettlementTolerance(Math.max(0, rent - paid));
       return {
         contract,
         rent,
         paid,
         remaining,
-        status: paid >= rent && rent > 0 ? 'Soldé' : paid > 0 ? 'Partiel' : 'Impayé',
+        status: remaining === 0 && rent > 0 ? 'Soldé' : paid > 0 ? 'Partiel' : 'Impayé',
       };
     });
 
@@ -1105,11 +1107,11 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
           </div>
         </section>
 
-        <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <OwnerKpi title="Loyers encaissés" value={<MoneyText value={summary.collected} compact />} subtitle="Ce mois-ci" icon={Wallet} tone="emerald" />
-          <OwnerKpi title="Reliquats à recouvrer" value={<MoneyText value={summary.reliquats} compact />} subtitle={`${summary.lateContracts} location${summary.lateContracts > 1 ? 's' : ''} en retard`} icon={CalendarClock} tone="red" />
-          <OwnerKpi title="Net propriétaire" value={<MoneyText value={summary.netOwner} compact />} subtitle={<><MoneyText value={summary.expenses} compact /> de charges</>} icon={TrendingUp} tone="green" />
-          <OwnerKpi title="Taux d'occupation" value={`${summary.occupationRate}%`} subtitle={`${summary.occupiedUnits} unité${summary.occupiedUnits > 1 ? 's' : ''} sur ${summary.totalUnits} occupée${summary.totalUnits > 1 ? 's' : ''}`} icon={Building2} tone="amber" />
+        <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 xl:gap-3">
+          <MetricCard label="Loyers encaissés" value={<MoneyText value={summary.collected} compact />} icon={Wallet} tone="emerald" />
+          <MetricCard label="Reliquats" value={<MoneyText value={summary.reliquats} compact />} icon={CalendarClock} tone={summary.reliquats > 0 ? "red" : "emerald"} />
+          <MetricCard label="Net propriétaire" value={<MoneyText value={summary.netOwner} compact />} icon={TrendingUp} tone="green" />
+          <MetricCard label="Occupation" value={`${summary.occupationRate}%`} icon={Building2} tone="amber" />
         </section>
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_34rem]">
@@ -1516,39 +1518,6 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         </div>
       </Modal>
     </div>
-  );
-}
-
-interface OwnerKpiProps {
-  title: string;
-  value: ReactNode;
-  subtitle: ReactNode;
-  icon: LucideIcon;
-  tone: 'emerald' | 'red' | 'green' | 'amber';
-}
-
-const KPI_TONES: Record<OwnerKpiProps['tone'], { title: string; icon: string; bg: string; badge: string }> = {
-  emerald: { title: 'text-brand-800', icon: 'text-brand-800 bg-emerald-100', bg: 'from-white to-emerald-50/70', badge: 'text-emerald-700 bg-emerald-50' },
-  red: { title: 'text-red-700', icon: 'text-red-700 bg-red-100', bg: 'from-white to-red-50/70', badge: 'text-red-700 bg-red-50' },
-  green: { title: 'text-emerald-800', icon: 'text-emerald-800 bg-emerald-100', bg: 'from-white to-emerald-50/70', badge: 'text-emerald-700 bg-emerald-50' },
-  amber: { title: 'text-amber-700', icon: 'text-amber-800 bg-amber-100', bg: 'from-white to-amber-50/70', badge: 'text-amber-700 bg-amber-50' },
-};
-
-function OwnerKpi({ title, value, subtitle, icon: Icon, tone }: OwnerKpiProps) {
-  const colors = KPI_TONES[tone];
-  return (
-    <article className={`min-w-0 rounded-2xl border border-emerald-950/10 bg-gradient-to-br ${colors.bg} p-3 shadow-[0_12px_36px_rgba(15,23,42,0.06)]`}>
-      <div className="flex items-start justify-between gap-2.5">
-        <div className="min-w-0">
-          <p className={`truncate text-[0.66rem] font-bold uppercase tracking-[0.14em] ${colors.title}`}>{title}</p>
-          <p className="mt-1.5 whitespace-nowrap text-lg font-black tracking-tight text-slate-950 sm:text-xl">{value}</p>
-          <p className="mt-1 truncate text-xs font-medium text-slate-500">{subtitle}</p>
-        </div>
-        <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${colors.icon}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-    </article>
   );
 }
 

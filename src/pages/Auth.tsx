@@ -162,7 +162,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
 
             <div className="grid max-w-xl grid-cols-3 gap-3">
               {['Contrôle total', 'Transparence QR', 'Finance claire'].map((item) => (
-                <div key={item} className="rounded-2xl border border-white/10 bg-black/22 px-4 py-3 backdrop-blur">
+                <div key={item} className="rounded-2xl border border-white/10 bg-black/22 px-4 py-2.5 backdrop-blur">
                   <p className="text-[11px] font-black uppercase tracking-[0.15em] text-amber-100">{item}</p>
                 </div>
               ))}
@@ -195,8 +195,8 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                 </div>
               </div>
 
-              <div className="px-5 py-5 sm:px-7 sm:py-6">
-                <div className="mb-5 grid grid-cols-2 gap-1 rounded-xl border border-emerald-950/10 bg-brand-surface p-1">
+              <div className="px-5 py-4 sm:px-7 sm:py-5">
+                <div className="mb-4 grid grid-cols-2 gap-1 rounded-xl border border-emerald-950/10 bg-brand-surface p-1">
                   <button
                     type="button"
                     onClick={() => switchMode('login')}
@@ -226,13 +226,13 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
 
 
 
-                {mode === 'login' || (mode === 'register' && registerStep === 2) ? (
-                  <div className="mb-5 mt-4">
+                {mode === 'login' || (mode === 'register' && registerStep === 2 && acceptedTerms) ? (
+                  <div className="mb-4 mt-3">
                     <button
                       type="button"
                       onClick={handleGoogleSignIn}
-                      disabled={loading || googleLoading || (mode === 'register' && !acceptedTerms)}
-                      className="group flex w-full items-center justify-center gap-3 rounded-xl border border-emerald-950/10 bg-white px-4 py-3.5 font-black text-slate-900 shadow-[0_16px_44px_rgba(6,17,13,0.1)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-[0_22px_54px_rgba(6,17,13,0.15)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={loading || googleLoading}
+                      className="group flex w-full items-center justify-center gap-3 rounded-xl border border-emerald-950/10 bg-white px-4 py-2.5.5 font-black text-slate-900 shadow-[0_16px_44px_rgba(6,17,13,0.1)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-[0_22px_54px_rgba(6,17,13,0.15)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-lg font-black text-slate-950 shadow-sm transition-transform duration-300 group-hover:scale-105">
                         {googleLoading ? (
@@ -245,30 +245,26 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                         {googleLoading ? 'Ouverture de Google...' : 'Continuer avec Google'}
                       </span>
                     </button>
-                    {mode === 'register' && !acceptedTerms && (
-                      <p className="mt-2 text-center text-xs font-semibold text-slate-500">
-                        Acceptez les conditions pour continuer avec Google.
-                      </p>
-                    )}
+
                   </div>
                 ) : null}
 
-                <div className="mb-5 flex items-center gap-3">
+                <div className="mb-4 flex items-center gap-3">
                   <span className="h-px flex-1 bg-emerald-950/10" />
                   <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">ou par email</span>
                   <span className="h-px flex-1 bg-emerald-950/10" />
                 </div>
 
                 {error && (
-                  <div id="auth-error" className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 animate-slideInUp">
+                  <div id="auth-error" className="mb-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 animate-slideInUp">
                     <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
                     <p className="text-sm font-semibold leading-6 text-red-800">{error}</p>
                   </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-4" aria-describedby={error ? 'auth-error' : undefined}>
+                <form onSubmit={handleSubmit} className="space-y-3" aria-describedby={error ? 'auth-error' : undefined}>
                   {mode === 'register' && registerStep === 1 && (
-                    <div className="space-y-4 animate-slideInLeft">
+                    <div className="space-y-3 animate-slideInLeft">
                       <div className="grid grid-cols-2 gap-3">
                         <Field
                           label="Prénom"
@@ -317,7 +313,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                             setError("Veuillez remplir votre prénom, nom et email pour continuer.");
                           }
                         }}
-                        className="flex min-h-12 w-full transform items-center justify-center gap-2 rounded-xl bg-[#072F24] px-6 py-3 font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25"
+                        className="flex min-h-[2.75rem] w-full transform items-center justify-center gap-2 rounded-xl bg-[#072F24] px-5 py-2.5 font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25"
                       >
                         Continuer
                       </button>
@@ -325,7 +321,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                   )}
 
                   {(mode === 'login' || (mode === 'register' && registerStep === 2)) && (
-                    <div className="space-y-4 animate-slideInLeft">
+                    <div className="space-y-3 animate-slideInLeft">
                       {mode === 'login' && (
                         <Field
                           label="Email"
@@ -353,7 +349,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                             aria-invalid={!!error}
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            className="sk-input min-h-12 w-full border-emerald-950/10 bg-[#fbfdfc] px-4 py-3 pr-12 font-semibold shadow-sm transition hover:border-emerald-200 focus:border-action-500"
+                            className="sk-input min-h-[2.75rem] w-full border-emerald-950/10 bg-[#fbfdfc] px-4 py-2.5 pr-12 font-semibold shadow-sm transition hover:border-emerald-200 focus:border-action-500"
                             placeholder="••••••••"
                           />
                           <button
@@ -390,7 +386,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                       <button
                         type="submit"
                         disabled={loading || googleLoading || (mode === 'register' && !acceptedTerms)}
-                        className="flex min-h-12 w-full transform items-center justify-center gap-2 rounded-xl bg-[#072F24] px-6 py-3 font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex min-h-[2.75rem] w-full transform items-center justify-center gap-2 rounded-xl bg-[#072F24] px-5 py-2.5 font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {loading ? (
                           <>
@@ -459,7 +455,7 @@ function Field({ label, required = false, inputProps }: FieldProps) {
         required={required}
         aria-invalid={inputProps['aria-invalid']}
         {...inputProps}
-        className={`sk-input min-h-12 w-full border-emerald-950/10 bg-white/92 px-4 py-3 font-semibold shadow-sm transition hover:border-emerald-200 focus:border-action-500 ${inputProps.className ?? ''}`}
+        className={`sk-input min-h-[2.75rem] w-full border-emerald-950/10 bg-white/92 px-4 py-2.5 font-semibold shadow-sm transition hover:border-emerald-200 focus:border-action-500 ${inputProps.className ?? ''}`}
       />
     </div>
   );

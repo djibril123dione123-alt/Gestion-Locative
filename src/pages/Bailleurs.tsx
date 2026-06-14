@@ -329,7 +329,7 @@ function KpiTile({
     red: { gradient: 'from-white to-rose-50/70', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100' },
   }[tone];
   return (
-    <article className={`group min-w-0 rounded-[1.05rem] border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-2.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)]`}>
+    <article className={`@container group min-w-0 rounded-[1.05rem] border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-2.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)]`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className={`truncate text-[0.68rem] font-bold uppercase tracking-[0.12em] ${tones.text}`}>{label}</p>
@@ -1562,7 +1562,7 @@ export function Bailleurs() {
 
           <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
           <div className="border-b border-emerald-950/10 bg-[linear-gradient(180deg,#fff6df,#fffdf7)] p-3.5 sm:p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex flex-row gap-2 sm:gap-3 items-center">
               <div className="relative min-w-0 flex-1">
                 <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-emerald-800" />
                 <input

@@ -952,7 +952,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-brand-800 shadow-[0_8px_30px_rgba(0,0,0,0.04)] ring-1 ring-emerald-900/5">
               <Sparkles className="h-8 w-8" />
             </div>
-            <h1 className="text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+            <h1 className="font-serif text-4xl font-black tracking-tight text-brand-950 sm:text-5xl">
               Votre espace propriétaire est prêt.
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-lg font-medium leading-8 text-slate-600">
@@ -1081,7 +1081,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
               <Sparkles className="h-3.5 w-3.5" />
               Espace propriétaire
             </div>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
+            <h1 className="mt-2 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">
               Espace propriétaire
             </h1>
             <p className="mt-1.5 max-w-2xl text-sm font-medium leading-6 text-slate-600 sm:text-[0.95rem]">
@@ -1089,14 +1089,6 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <PremiumButton
-              variant="primary"
-              onClick={() => void handleGenerateOwnerReport()}
-              disabled={generatingReport}
-              icon={generatingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-            >
-              Générer rapport PDF
-            </PremiumButton>
             <PremiumButton
               variant="create"
               onClick={navigateToCreateProperty}

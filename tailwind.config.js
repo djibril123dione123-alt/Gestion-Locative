@@ -3,6 +3,10 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      containers: {
+        'tiny': '150px',
+        'small': '220px',
+      },
       colors: {
         brand: {
           paper: '#F2EDE3',
@@ -50,5 +54,7 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/container-queries'),
+  ],
 };

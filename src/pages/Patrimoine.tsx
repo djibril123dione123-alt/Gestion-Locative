@@ -945,10 +945,17 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
-              onClick={() => void openPropertyModal()}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-emerald-950/25"
+              onClick={() => {
+                setActiveTab('biens');
+                void openPropertyModal();
+              }}
+              className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition hover:-translate-y-0.5 ${
+                activeTab === 'biens'
+                  ? 'border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] text-white shadow-lg shadow-emerald-950/18 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-emerald-950/25'
+                  : 'border-emerald-950/10 bg-[#fffdf8] text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] hover:border-emerald-200 hover:bg-emerald-50'
+              }`}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className={`h-4 w-4 ${activeTab !== 'biens' ? 'text-brand-800' : ''}`} />
               {isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'}
             </button>
             <button
@@ -957,9 +964,13 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 setActiveTab('unites');
                 openUnitModal(null, selectedProperty?.id ?? '');
               }}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50"
+              className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition hover:-translate-y-0.5 ${
+                activeTab === 'unites'
+                  ? 'border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] text-white shadow-lg shadow-emerald-950/18 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-emerald-950/25'
+                  : 'border-emerald-950/10 bg-[#fffdf8] text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] hover:border-emerald-200 hover:bg-emerald-50'
+              }`}
             >
-              <DoorOpen className="h-4 w-4 text-brand-800" />
+              <DoorOpen className={`h-4 w-4 ${activeTab !== 'unites' ? 'text-brand-800' : ''}`} />
               Nouvelle unité
             </button>
           </div>
@@ -994,7 +1005,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 </button>
               ))}
             </div>
-            <div className="flex min-w-0 flex-col gap-2 sm:flex-row lg:max-w-4xl lg:flex-1 lg:justify-end">
+            <div className="flex min-w-0 flex-row gap-2 items-center lg:max-w-4xl lg:flex-1 lg:justify-end">
               <div className="relative min-w-0 flex-1 lg:max-w-md">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input

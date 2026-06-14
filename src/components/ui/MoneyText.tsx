@@ -39,8 +39,21 @@ export function MoneyText({ value, className = '', compact = false, suffix }: Mo
   const display = Number.isFinite(numericValue) && compact ? formatCompactCfa(numericValue) : label;
   const visible = suffix ? `${display} ${suffix}` : display;
 
+  if (Number.isFinite(numericValue) && compact) {
+    const compactDisplay = formatCompactCfa(numericValue);
+    const compactVisible = suffix ? `${compactDisplay} ${suffix}` : compactDisplay;
+    const fullVisible = suffix ? `${label} ${suffix}` : label;
+
+    return (
+      <span className={`@container flex w-full max-w-full items-baseline whitespace-nowrap tabular-nums ${className}`} title={fullVisible}>
+        <span className="@tiny:hidden">{compactVisible}</span>
+        <span className="hidden @tiny:inline">{fullVisible}</span>
+      </span>
+    );
+  }
+
   return (
-    <span className={`inline-flex max-w-full items-baseline whitespace-nowrap tabular-nums ${className}`} title={suffix ? `${label} ${suffix}` : label}>
+    <span className={`inline-flex max-w-full items-baseline whitespace-nowrap tabular-nums ${className}`} title={visible}>
       {visible}
     </span>
   );

@@ -609,27 +609,29 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
       <MetricGrid model={model} />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.78fr)_minmax(0,1.18fr)_minmax(320px,0.72fr)]">
-        <div className="order-1">
+        <div className="order-2 xl:order-1">
           <DashboardPriorityList priorities={model.priorities} onNavigate={onNavigate} />
         </div>
-        <div className="order-3 xl:order-2">
+        <div className="order-1 xl:order-2">
           <DashboardFinancialSummary model={model} onNavigate={onNavigate} />
         </div>
         <div className="order-4 xl:order-3">
           <DashboardHealthCard model={model} onNavigate={onNavigate} />
         </div>
-        <div className="order-5 xl:order-4">
+        <div className="order-6 xl:order-4">
           <DashboardActivityFeed items={model.activities} onNavigate={onNavigate} />
         </div>
-        <div className="order-6 xl:order-5">
+        <div className="order-5 xl:order-5">
           <DashboardWatchList items={model.watchItems} onNavigate={onNavigate} />
         </div>
-        <div className="order-2 xl:order-6">
+        <div className="order-3 xl:order-6">
           <TopUnpaidList items={model.topUnpaid} onNavigate={onNavigate} />
         </div>
       </div>
 
-      <DashboardQuickActions onNavigate={onNavigate} />
+      <div className="hidden sm:block">
+        <DashboardQuickActions onNavigate={onNavigate} />
+      </div>
     </PremiumPageShell>
   );
 }
@@ -995,27 +997,43 @@ function DashboardHeader({
   onNavigate?: (page: string) => void;
 }) {
   return (
-    <header className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-      <div className="min-w-0">
-        <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-action-600">Pilotage agence</p>
-        <h1 className="mt-1 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Tableau de bord</h1>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-600">
-          Vue unifiée de votre portefeuille locatif, vos encaissements et vos priorités.
-        </p>
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex w-full items-start justify-between gap-3 sm:w-auto">
+        <div className="min-w-0">
+          <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-action-600">Pilotage agence</p>
+          <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">Tableau de bord</h1>
+          <p className="mt-1 hidden max-w-3xl text-sm leading-6 text-slate-600 sm:block">
+            Vue unifiée de votre portefeuille locatif, vos encaissements et vos priorités.
+          </p>
+        </div>
+
+        {/* Sélecteur de mois - En haut à droite sur mobile */}
+        <label className="mt-1 flex shrink-0 flex-col items-center justify-center rounded-xl border border-emerald-950/10 bg-white/95 p-1.5 shadow-sm transition hover:border-emerald-200 sm:hidden">
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(event) => onMonthChange(event.target.value || CURRENT_MONTH)}
+            className="w-[110px] bg-transparent text-center text-[0.8rem] font-black text-slate-900 outline-none"
+            aria-label="Période du tableau de bord"
+          />
+        </label>
       </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 xl:flex xl:items-center">
-        <label className="flex min-h-11 items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/95 px-3 py-2 text-left text-sm font-bold text-slate-800 shadow-sm">
-          <CalendarDays className="h-4 w-4 text-slate-500" />
-          <span className="flex flex-col">
-            <span className="text-[0.58rem] uppercase tracking-[0.16em] text-slate-500">Période</span>
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(event) => onMonthChange(event.target.value || CURRENT_MONTH)}
-              className="w-36 bg-transparent text-sm font-black text-slate-950 outline-none"
-              aria-label="Période du tableau de bord"
-            />
-          </span>
+      
+      <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:hidden">
+        Vue unifiée de votre portefeuille locatif, vos encaissements et vos priorités.
+      </p>
+
+      <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+        {/* Sélecteur de mois - Position classique sur desktop */}
+        <label className="hidden h-10 items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/95 px-3 text-left text-sm font-bold text-slate-800 shadow-[0_2px_8px_rgba(15,23,42,0.03)] transition hover:border-emerald-200 sm:flex">
+          <CalendarDays className="h-4 w-4 text-emerald-700" />
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(event) => onMonthChange(event.target.value || CURRENT_MONTH)}
+            className="w-32 bg-transparent text-sm font-black text-slate-900 outline-none"
+            aria-label="Période du tableau de bord"
+          />
         </label>
 
         <PremiumButton
@@ -1024,13 +1042,6 @@ function DashboardHeader({
           onClick={() => onNavigate?.('paiements')}
         >
           Enregistrer un paiement
-        </PremiumButton>
-        <PremiumButton
-          variant="secondary"
-          icon={<FileText className="h-4 w-4" />}
-          onClick={() => onNavigate?.('tableau-de-bord-financier')}
-        >
-          Générer rapport PDF
         </PremiumButton>
       </div>
     </header>
@@ -1125,64 +1136,56 @@ function DashboardKpiCard({
   const money = amount != null ? formatPrimaryCfa(amount) : null;
   const styles = {
     emerald: {
-      card: 'border-emerald-200/55 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.075),transparent_42%),linear-gradient(135deg,#ffffff_0%,#f5fcf8_100%)] shadow-[0_14px_30px_rgba(4,120,87,0.06)] hover:border-emerald-300/70',
+      card: 'border-emerald-200/55 bg-gradient-to-br from-white to-emerald-50/50 shadow-[0_4px_12px_rgba(4,120,87,0.03)] hover:border-emerald-300/70 hover:shadow-[0_8px_20px_rgba(4,120,87,0.05)]',
       icon: 'bg-emerald-50/85 text-emerald-800 ring-1 ring-emerald-200/70',
-      accent: 'bg-emerald-50/80 text-emerald-800 ring-1 ring-emerald-200/70',
+      accent: 'text-emerald-700 bg-emerald-50 border border-emerald-100',
       amount: 'text-emerald-950',
-      rail: 'from-emerald-300/65 via-emerald-500/65 to-emerald-700/60',
     },
     red: {
-      card: 'border-red-200/60 bg-[radial-gradient(circle_at_top_right,rgba(248,113,113,0.075),transparent_42%),linear-gradient(135deg,#ffffff_0%,#fff9f9_100%)] shadow-[0_14px_30px_rgba(185,28,28,0.06)] hover:border-red-300/70',
+      card: 'border-red-200/60 bg-gradient-to-br from-white to-rose-50/40 shadow-[0_4px_12px_rgba(185,28,28,0.03)] hover:border-red-300/70 hover:shadow-[0_8px_20px_rgba(185,28,28,0.05)]',
       icon: 'bg-red-50/85 text-red-700 ring-1 ring-red-200/70',
-      accent: 'bg-red-50/80 text-red-700 ring-1 ring-red-200/70',
+      accent: 'text-red-700 bg-red-50 border border-red-100',
       amount: 'text-red-950',
-      rail: 'from-red-300/65 via-red-400/70 to-red-600/60',
     },
     amber: {
-      card: 'border-amber-200/60 bg-[radial-gradient(circle_at_top_right,rgba(245,158,11,0.075),transparent_42%),linear-gradient(135deg,#ffffff_0%,#fffaf2_100%)] shadow-[0_14px_30px_rgba(154,91,17,0.055)] hover:border-amber-300/70',
+      card: 'border-amber-200/60 bg-gradient-to-br from-white to-amber-50/50 shadow-[0_4px_12px_rgba(154,91,17,0.03)] hover:border-amber-300/70 hover:shadow-[0_8px_20px_rgba(154,91,17,0.05)]',
       icon: 'bg-amber-50/85 text-amber-800 ring-1 ring-amber-200/70',
-      accent: 'bg-amber-50/80 text-amber-800 ring-1 ring-amber-200/70',
+      accent: 'text-amber-800 bg-amber-50 border border-amber-100',
       amount: 'text-amber-950',
-      rail: 'from-amber-300/65 via-amber-500/65 to-amber-700/60',
     },
     slate: {
-      card: 'border-slate-200/80 bg-[radial-gradient(circle_at_top_right,rgba(15,23,42,0.04),transparent_42%),linear-gradient(135deg,#ffffff_0%,#f9fafb_100%)] shadow-[0_14px_30px_rgba(15,23,42,0.055)] hover:border-slate-300/80',
+      card: 'border-slate-200/80 bg-gradient-to-br from-white to-slate-50/60 shadow-[0_4px_12px_rgba(15,23,42,0.03)] hover:border-slate-300/80 hover:shadow-[0_8px_20px_rgba(15,23,42,0.05)]',
       icon: 'bg-slate-50/90 text-slate-800 ring-1 ring-slate-200',
-      accent: 'bg-slate-50/85 text-slate-700 ring-1 ring-slate-200',
+      accent: 'text-slate-700 bg-slate-50 border border-slate-200',
       amount: 'text-slate-950',
-      rail: 'from-slate-300/80 via-slate-500/70 to-slate-700/65',
     },
   }[tone];
 
   return (
-    <article className={`group relative min-w-0 overflow-hidden rounded-[1.15rem] border p-2.5 ring-1 ring-white/80 transition duration-300 hover:-translate-y-0.5 sm:p-3 ${styles.card}`}>
-      <div className={`absolute inset-x-4 top-0 h-0.5 rounded-b-full bg-gradient-to-r ${styles.rail}`} />
-      <div className="pointer-events-none absolute -right-10 -top-12 h-20 w-20 rounded-full bg-white/45 blur-2xl transition duration-500 group-hover:scale-110" />
-      <div className="relative flex min-h-[5.45rem] flex-col justify-between gap-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</p>
-            <span className={`mt-1.5 inline-flex rounded-full px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-[0.06em] ${styles.accent}`}>
-              {accent}
-            </span>
-          </div>
-          <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl transition duration-300 group-hover:scale-105 ${styles.icon}`}>
-            <Icon className="h-3.5 w-3.5" />
-          </div>
-        </div>
-
+    <article className={`group min-w-0 overflow-hidden rounded-[1.05rem] border p-3 ring-1 ring-white/60 transition duration-300 hover:-translate-y-0.5 sm:p-3.5 ${styles.card}`}>
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          {money ? (
-            <p className={`whitespace-nowrap text-[clamp(0.92rem,1.62vw,1.22rem)] font-black leading-none tracking-tight tabular-nums ${styles.amount}`} title={formatCurrency(amount ?? 0)}>
-              {money}
-            </p>
-          ) : (
-            <p className={`text-[clamp(1.12rem,1.9vw,1.48rem)] font-black leading-none tracking-tight ${styles.amount}`}>
-              {value}
-            </p>
-          )}
-          <p className="mt-1 truncate text-[0.68rem] font-bold text-slate-600">{helper}</p>
+          <p className="text-[0.6rem] font-bold uppercase tracking-[0.12em] text-slate-500 line-clamp-1">{label}</p>
+          <span className={`mt-1 inline-flex rounded px-1.5 py-0.5 text-[0.55rem] font-bold uppercase tracking-wide ${styles.accent}`}>
+            {accent}
+          </span>
         </div>
+        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition duration-300 group-hover:scale-105 ${styles.icon}`}>
+          <Icon className="h-3.5 w-3.5" />
+        </div>
+      </div>
+
+      <div className="mt-3 min-w-0">
+        {money ? (
+          <p className={`whitespace-nowrap text-lg font-black tracking-tight tabular-nums sm:text-xl ${styles.amount}`} title={formatCurrency(amount ?? 0)}>
+            {money}
+          </p>
+        ) : (
+          <p className={`text-lg font-black tracking-tight sm:text-xl ${styles.amount}`}>
+            {value}
+          </p>
+        )}
+        <p className="mt-0.5 truncate text-[0.65rem] font-medium text-slate-500">{helper}</p>
       </div>
     </article>
   );
@@ -1235,7 +1238,7 @@ function DashboardFinancialSummary({ model, onNavigate }: { model: ReturnType<ty
       subtitle="Commissions, dépenses et marge nette. Les encaissements restent le volume locatif traité."
       action={<button type="button" onClick={() => onNavigate?.('tableau-de-bord-financier')} className="text-xs font-black text-emerald-800 hover:text-emerald-950">Voir le détail financier</button>}
     >
-      <div className="grid gap-2.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
         <MiniFinance label="Volume locatif" value={<MoneyText value={model.encaissements} compact />} tone="slate" />
         <MiniFinance label="Commissions" value={<MoneyText value={model.commissions} compact />} tone="emerald" />
         <MiniFinance label="Dépenses" value={<MoneyText value={model.depensesMois} compact />} tone="red" />
@@ -1471,7 +1474,7 @@ function MiniFinance({ label, value, tone }: { label: string; value: ReactNode; 
       ? 'border-red-200 bg-red-50 text-red-900'
       : 'border-emerald-950/10 bg-[#fffdf8] text-slate-900';
   return (
-    <div className={`rounded-xl border px-3 py-2 ${cls}`}>
+    <div className={`@container rounded-xl border px-3 py-2 ${cls}`}>
       <p className="truncate text-[0.62rem] font-black uppercase tracking-[0.12em] opacity-65">{label}</p>
       <p className="mt-1 truncate text-sm font-black">{value}</p>
     </div>

@@ -243,7 +243,7 @@ function personInputFromForm(form: OccupantFormState): { data: OccupantBailPerso
   if (!prenom) return { data: null, error: "Le prénom du locataire est obligatoire." };
   if (!nom) return { data: null, error: "Le nom du locataire est obligatoire." };
   if (!normalizedPhone) return { data: null, error: 'Le téléphone doit être un numéro sénégalais valide.' };
-  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  if (email && !/^[^s@]+@[^s@]+.[^s@]+$/.test(email)) {
     return { data: null, error: "L'email du locataire n'est pas valide." };
   }
 
@@ -956,8 +956,13 @@ export function OccupantsBaux() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`group flex items-center justify-between gap-3 rounded-[1.05rem] border px-3 py-2.5 text-left shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 ${
                     activeTab === tab.id
-                      ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-300/35 shadow-emerald-100'
-                      : 'border-emerald-950/10 bg-gradient-to-br from-white to-stone-50/70 hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/50'
+                      ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-300/35 shadow-emerald-100 -translate-y-0.5'
+                      : `border-emerald-950/10 bg-gradient-to-br hover:-translate-y-0.5 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)] ${
+                          tab.tone === 'emerald' ? 'from-white to-emerald-50/70 hover:border-emerald-200' :
+                          tab.tone === 'blue' ? 'from-white to-slate-50/75 hover:border-slate-200' :
+                          tab.tone === 'amber' ? 'from-white to-amber-50/70 hover:border-amber-200' :
+                          'from-white to-rose-50/70 hover:border-red-200'
+                        }`
                   }`}
                 >
                   <span>
@@ -980,8 +985,8 @@ export function OccupantsBaux() {
           <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_20px_54px_rgba(15,23,42,0.055)] ring-1 ring-white/80">
             {/* Toolbar */}
             <div className="border-b border-slate-100 px-4 py-4 sm:px-6">
-              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-                <div className="relative min-w-0">
+              <div className="flex flex-row gap-2 sm:gap-3 items-center">
+                <div className="relative min-w-0 flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
@@ -1111,7 +1116,7 @@ export function OccupantsBaux() {
                           </th>
                         )}
                         {occupantColumns.isVisible('proprietaire') && (
-                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
+                          <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 hidden lg:table-cell">
                             <span className="flex items-center gap-1.5"><Home className="h-3.5 w-3.5" /> Propriétaire</span>
                           </th>
                         )}
@@ -1483,14 +1488,12 @@ function OccupantBailDrawer({
             <div>
               <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Documents principaux</p>
               <div className="flex flex-col gap-2">
-                <button type="button" onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} className="flex items-center gap-3 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] p-2.5 px-3 text-left text-sm font-black text-white shadow-[0_10px_24px_rgba(4,24,18,0.18)] transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:translate-y-0 disabled:opacity-60">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/12 text-white shadow-sm ring-1 ring-white/15">
+                <button type="button" onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} className="flex items-center justify-between gap-3 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] p-3 text-left text-sm font-black text-white shadow-[0_10px_24px_rgba(4,24,18,0.18)] transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:translate-y-0 disabled:opacity-60">
+                  <span className="flex items-center gap-3">
                     <Download className="h-4 w-4" />
+                    <span className="truncate">{pdfGenerating ? 'Génération en cours...' : 'Contrat PDF'}</span>
                   </span>
-                  <span className="min-w-0">
-                    <span className="block truncate">{pdfGenerating ? 'Génération en cours...' : 'Contrat PDF'}</span>
-                    <span className="block truncate text-[0.68rem] font-semibold text-emerald-50/70">{row.contrat_ref}</span>
-                  </span>
+                  <span className="truncate text-[0.68rem] font-semibold text-emerald-50/70">{row.contrat_ref}</span>
                 </button>
               </div>
             </div>
@@ -2058,7 +2061,7 @@ function MiniMetric({ label, value, tone = 'slate' }: { label: string; value: Re
   }[tone];
 
   return (
-    <div className={`rounded-2xl border p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)] ${toneClass}`}>
+    <div className={`@container rounded-2xl border p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)] ${toneClass}`}>
       <p className="text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p>
       <p className="mt-1 whitespace-nowrap text-sm font-black text-current">{value}</p>
     </div>

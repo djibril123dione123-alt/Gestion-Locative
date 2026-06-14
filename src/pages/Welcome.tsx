@@ -38,10 +38,10 @@ interface AgencyRequestRow {
 }
 
 const welcomeInputClass =
-  'w-full rounded-2xl border border-emerald-950/10 bg-white/90 px-4 py-3.5 text-base font-semibold text-brand-950 shadow-inner shadow-emerald-950/[0.03] outline-none transition placeholder:text-slate-400 focus:border-amber-500/70 focus:bg-white focus:ring-4 focus:ring-amber-400/20 disabled:cursor-not-allowed disabled:opacity-60';
+  'w-full rounded-2xl border border-white/20 bg-[#FDFBF7] px-4 py-3.5 text-base font-semibold text-brand-950 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] outline-none transition placeholder:text-slate-500 focus:border-amber-400/70 focus:bg-white focus:ring-4 focus:ring-amber-400/20 disabled:cursor-not-allowed disabled:opacity-60';
 
 const welcomePrimaryButtonClass =
-  'flex w-full min-h-12 items-center justify-center rounded-2xl border border-amber-300/30 bg-[linear-gradient(135deg,#B86B18_0%,#D08A24_46%,#8F4A12_100%)] px-6 py-3.5 text-sm font-black text-white shadow-[0_18px_46px_rgba(130,72,18,0.28)] transition hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(130,72,18,0.32)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/50 disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-white/20 disabled:bg-none disabled:bg-slate-700/80 disabled:text-slate-200 disabled:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]';
+  'flex w-full min-h-12 items-center justify-center rounded-2xl border border-emerald-950/10 bg-[#072F24] px-6 py-3.5 text-sm font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] hover:shadow-[0_24px_60px_rgba(7,47,36,0.32)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25 disabled:translate-y-0 disabled:cursor-not-allowed disabled:border-white/20 disabled:bg-none disabled:bg-slate-700/80 disabled:text-slate-200 disabled:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]';
 
 function WelcomeShell({ children, compact = false }: { children: React.ReactNode; compact?: boolean }) {
   return (
@@ -252,25 +252,25 @@ export default function Welcome() {
             <div className="mb-5 flex justify-center">
               <BrandLogo size="sm" tone="dark" animated showTagline stacked className="items-center justify-center" />
             </div>
-            <div className="rounded-[1.75rem] border border-amber-200/35 bg-[#fffaf0]/94 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8 [@media(max-height:800px)]:p-6">
+            <div className="rounded-[1.75rem] border border-white/18 bg-brand-950/68 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8 [@media(max-height:800px)]:p-6">
               <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/35 bg-[linear-gradient(135deg,#F7E6BF,#C8872E)] text-brand-950 shadow-[0_18px_48px_rgba(143,74,18,0.20)] [@media(max-height:800px)]:mb-4 [@media(max-height:800px)]:h-14 [@media(max-height:800px)]:w-14">
                 <Clock className="h-8 w-8 [@media(max-height:800px)]:h-7 [@media(max-height:800px)]:w-7" />
               </div>
               <div className="mb-3 inline-flex rounded-full border border-amber-300/30 bg-amber-50 px-3 py-1 text-[11px] font-black uppercase text-amber-800">
                 Validation manuelle
               </div>
-              <h1 className="mb-3 font-serif text-3xl font-black text-brand-950 [@media(max-height:800px)]:text-2xl">Demande en cours d'examen</h1>
-              <p className="mx-auto mb-5 max-w-md text-sm font-semibold leading-7 text-slate-600 sm:text-base">
+              <h1 className="mb-3 font-serif text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">Demande en cours d'examen</h1>
+              <p className="mx-auto mb-5 max-w-md text-sm font-semibold leading-7 text-slate-200 sm:text-base">
                 Votre demande de création d'{requestKindLabel}{' '}
-                <span className="font-black text-brand-950">« {existingRequest.agency_name} »</span>{' '}
+                <span className="font-black text-white">« {existingRequest.agency_name} »</span>{' '}
                 a bien été reçue le{' '}
-                <span className="font-black text-brand-950">
+                <span className="font-black text-white">
                   {new Date(existingRequest.created_at).toLocaleDateString('fr-FR')}
                 </span>
                 . Notre équipe l'examinera dans les meilleurs délais.
               </p>
-              <div className="mb-5 rounded-2xl border border-amber-200/60 bg-amber-50/80 p-4 text-left shadow-inner shadow-white/50">
-                <p className="flex items-start gap-3 text-sm font-semibold leading-6 text-amber-950">
+              <div className="mb-5 rounded-2xl border border-amber-200/30 bg-amber-100/12 p-4 text-left shadow-inner shadow-white/50">
+                <p className="flex items-start gap-3 text-sm font-semibold leading-6 text-[#FFF7E6]">
                   <Mail className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
                   <span>
                     Vous recevrez une notification par email dès l'approbation. Vous pouvez fermer cet onglet
@@ -293,7 +293,7 @@ export default function Welcome() {
                 await supabase.auth.signOut();
                 window.location.reload();
               }}
-              className="mt-4 text-sm font-bold text-slate-500 transition hover:text-brand-800"
+              className="mt-4 text-sm font-bold text-slate-400 transition hover:text-white"
             >
               Se déconnecter
             </button>
@@ -313,14 +313,14 @@ export default function Welcome() {
             <div className="mb-5 flex justify-center">
               <BrandLogo size="sm" tone="dark" animated showTagline stacked className="items-center justify-center" />
             </div>
-            <div className="rounded-[1.75rem] border border-red-200/40 bg-[#fffaf0]/94 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8">
+            <div className="rounded-[1.75rem] border border-white/18 bg-brand-950/68 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8">
               <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-red-200 bg-red-50 text-red-700 shadow-[0_18px_48px_rgba(153,27,27,0.14)]">
                 <XCircle className="h-8 w-8" />
               </div>
-              <h1 className="mb-3 font-serif text-3xl font-black text-brand-950">Demande non approuvée</h1>
-              <p className="mx-auto mb-4 max-w-md text-sm font-semibold leading-7 text-slate-600 sm:text-base">
+              <h1 className="mb-3 font-serif text-3xl font-black text-[#FFF7E6]">Demande non approuvée</h1>
+              <p className="mx-auto mb-4 max-w-md text-sm font-semibold leading-7 text-slate-200 sm:text-base">
               Votre demande pour votre {requestKindLabel}{' '}
-                <span className="font-black text-brand-950">« {existingRequest.agency_name} »</span>{' '}
+                <span className="font-black text-white">« {existingRequest.agency_name} »</span>{' '}
                 n'a pas été approuvée par notre équipe.
             </p>
             {existingRequest.rejection_reason && (
@@ -361,12 +361,12 @@ export default function Welcome() {
           <div className="mb-5 flex justify-center">
             <BrandLogo size="sm" tone="dark" animated showTagline stacked className="items-center justify-center" />
           </div>
-          <div className="rounded-[1.75rem] border border-emerald-200/45 bg-[#fffaf0]/94 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8">
+          <div className="rounded-[1.75rem] border border-white/18 bg-brand-950/68 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8">
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-800 shadow-[0_18px_48px_rgba(6,95,70,0.16)]">
               <CheckCircle2 className="h-8 w-8" />
             </div>
-            <h1 className="mb-3 font-serif text-3xl font-black text-brand-950">Demande approuvée !</h1>
-            <p className="mb-6 text-sm font-semibold leading-7 text-slate-600 sm:text-base">
+            <h1 className="mb-3 font-serif text-3xl font-black text-[#FFF7E6]">Demande approuvée !</h1>
+            <p className="mb-6 text-sm font-semibold leading-7 text-slate-200 sm:text-base">
             {requestCreatedLabel} a été créé{existingRequest?.is_bailleur_account ? '' : 'e'}. Cliquez ci-dessous pour accéder à votre espace.
           </p>
           <button
@@ -405,12 +405,12 @@ export default function Welcome() {
                   ? 'border-amber-200 bg-amber-200 text-brand-950 shadow-[0_10px_26px_rgba(208,138,36,0.26)]'
                   : isDone
                     ? 'border-emerald-200/70 bg-emerald-200/90 text-brand-950'
-                    : 'border-white/26 bg-white/12 text-slate-200'
+                    : 'border-white/40 bg-white/20 text-white'
               }`}>
                 {String(itemStep).padStart(2, '0')}
               </div>
               <span className={`min-w-0 text-[11px] font-black uppercase leading-tight sm:text-xs ${
-                isActive ? 'text-amber-100' : isDone ? 'text-emerald-100' : 'text-slate-200/86'
+                isActive ? 'text-amber-100' : isDone ? 'text-emerald-100' : 'text-slate-100'
               }`}>
                 {label}
               </span>
@@ -477,7 +477,7 @@ export default function Welcome() {
 
               <button
                 onClick={() => { setAccountType('bailleur'); nextStep(); }}
-                className="group relative min-h-full overflow-hidden rounded-[1.65rem] border border-amber-200/50 bg-white/[0.88] p-5 text-left text-brand-950 shadow-[0_28px_90px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-amber-200 hover:bg-white/[0.94] hover:shadow-[0_34px_120px_rgba(120,62,0,0.24)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300/50 sm:p-7 [@media(max-height:800px)]:rounded-2xl [@media(max-height:800px)]:p-4 sm:[@media(max-height:800px)]:p-5"
+                className="group relative min-h-full overflow-hidden rounded-[1.65rem] border border-emerald-200/40 bg-white/[0.88] p-5 text-left text-brand-950 shadow-[0_28px_90px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:bg-white/[0.94] hover:shadow-[0_34px_120px_rgba(6,17,13,0.34)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/50 sm:p-7 [@media(max-height:800px)]:rounded-2xl [@media(max-height:800px)]:p-4 sm:[@media(max-height:800px)]:p-5"
                 data-testid="card-account-bailleur"
               >
                 <div className="mb-6 flex items-start justify-between gap-4 [@media(max-height:800px)]:mb-3">
@@ -498,7 +498,7 @@ export default function Welcome() {
                   <li className="flex items-center gap-3 rounded-xl border border-amber-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><CheckCircle2 className="h-4 w-4 text-action-600" />Suivi des loyers</li>
                   <li className="flex items-center gap-3 rounded-xl border border-amber-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><User className="h-4 w-4 text-action-600" />Tableau de bord clair</li>
                 </ul>
-                <div className="flex min-h-12 items-center justify-between rounded-xl bg-action-500 px-4 py-3 text-sm font-black text-white shadow-[0_18px_40px_rgba(255,138,0,0.22)] transition group-hover:bg-action-600 [@media(max-height:800px)]:min-h-10 [@media(max-height:800px)]:px-3 [@media(max-height:800px)]:py-2.5">
+                <div className="flex min-h-12 items-center justify-between rounded-xl bg-brand-950 px-4 py-3 text-sm font-black text-white shadow-[0_18px_40px_rgba(6,17,13,0.22)] transition group-hover:bg-brand-800 [@media(max-height:800px)]:min-h-10 [@media(max-height:800px)]:px-3 [@media(max-height:800px)]:py-2.5">
                   Créer un espace bailleur
                   <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1 [@media(max-height:800px)]:h-4 [@media(max-height:800px)]:w-4" />
                 </div>
@@ -646,9 +646,9 @@ export default function Welcome() {
               <div className="rounded-2xl border border-amber-200/30 bg-amber-100/12 p-4 shadow-inner shadow-white/5">
                 <div className="mb-2 flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-amber-200" />
-                  <h3 className="font-black text-amber-100">Validation par notre équipe</h3>
+                  <h3 className="font-black text-[#FFF7E6]">Validation par notre équipe</h3>
                 </div>
-                <p className="text-sm font-semibold leading-6 text-amber-50/86">
+                <p className="text-sm font-semibold leading-6 text-slate-200">
                   Votre demande sera examinée sous 24h ouvrées. Vous recevrez une notification
                   par email dès l'approbation.
                 </p>

@@ -939,6 +939,134 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
     );
   }
 
+  if (data.properties.length === 0 && data.contracts.length === 0 && !loading) {
+    return (
+      <div className="sk-page-shell space-y-6 lg:space-y-8 animate-fadeIn min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,244,214,0.95),transparent_30rem),linear-gradient(180deg,#fffaf0,#f8f4ea_46%,#f7fbf8)] px-4 py-6 sm:px-6 lg:px-7">
+        <section className="relative overflow-hidden rounded-[2rem] border border-emerald-950/5 bg-[linear-gradient(135deg,#FDFBF7_0%,#F3F9F6_100%)] p-8 shadow-[0_24px_60px_rgba(6,17,13,0.06)] lg:p-12">
+          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-200/30 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 left-0 h-56 w-56 rounded-full bg-amber-200/20 blur-3xl" />
+
+          <div className="relative mx-auto max-w-4xl text-center">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-brand-800 shadow-[0_8px_30px_rgba(0,0,0,0.04)] ring-1 ring-emerald-900/5">
+              <Sparkles className="h-8 w-8" />
+            </div>
+            <h1 className="text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+              Votre espace propriétaire est prêt.
+            </h1>
+            <p className="mx-auto mt-5 max-w-2xl text-lg font-medium leading-8 text-slate-600">
+              Ajoutez votre premier bien pour commencer le suivi de vos loyers, documents et paiements.
+            </p>
+
+            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => onNavigate?.('patrimoine')}
+                className="inline-flex min-h-[3.5rem] items-center justify-center gap-2 rounded-2xl bg-[#072F24] px-8 py-3 text-base font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25"
+              >
+                <Building2 className="h-5 w-5" />
+                Ajouter mon premier bien
+              </button>
+              <button
+                type="button"
+                onClick={() => void loadOwnerWorkspace()}
+                className="inline-flex min-h-[3.5rem] items-center justify-center gap-2 rounded-2xl border border-emerald-950/10 bg-white px-8 py-3 text-base font-bold text-slate-700 shadow-sm transition-all duration-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25"
+              >
+                <RefreshCw className="h-5 w-5" />
+                Actualiser
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
+          <div className="lg:col-span-2">
+            <h2 className="mb-5 text-xl font-black text-slate-950">Feuille de route</h2>
+            <div className="overflow-hidden rounded-[1.5rem] border border-slate-200/60 bg-white shadow-sm">
+              <div className="grid grid-cols-1 divide-y divide-slate-100">
+                <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                    <Building2 className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-slate-900">1. Ajouter un bien</h3>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">À faire</span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-600">Renseignez votre maison, appartement ou immeuble.</p>
+                  </div>
+                  <button onClick={() => onNavigate?.('patrimoine')} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
+                    Commencer
+                  </button>
+                </div>
+                <div className="flex flex-col gap-4 p-5 opacity-70 sm:flex-row sm:items-center sm:p-6">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+                    <Home className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-slate-900">2. Ajouter une unité si nécessaire</h3>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">Découpez le bien en appartements, chambres ou locaux.</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-4 p-5 opacity-70 sm:flex-row sm:items-center sm:p-6">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+                    <Users className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-slate-900">3. Créer une location</h3>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">Associez un locataire à une unité.</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-4 p-5 opacity-70 sm:flex-row sm:items-center sm:p-6">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+                    <Banknote className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-slate-900">4. Suivre les paiements</h3>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">Visualisez loyers encaissés, reliquats et documents.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="mb-5 text-xl font-black text-slate-950">Ce que vous pourrez suivre</h2>
+            <div className="flex flex-col gap-4">
+              <div className="rounded-[1.5rem] border border-emerald-950/10 bg-[#FDFBF7] p-5 shadow-sm">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                  <Wallet className="h-5 w-5" />
+                </div>
+                <h3 className="font-bold text-slate-900">Loyers et encaissements</h3>
+                <p className="mt-1 text-sm text-slate-600">Vue claire sur vos revenus réguliers et le net propriétaire.</p>
+              </div>
+              <div className="rounded-[1.5rem] border border-emerald-950/10 bg-[#FDFBF7] p-5 shadow-sm">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                  <AlertCircle className="h-5 w-5" />
+                </div>
+                <h3 className="font-bold text-slate-900">Reliquats et impayés</h3>
+                <p className="mt-1 text-sm text-slate-600">Détection des retards de paiement pour un suivi rigoureux.</p>
+              </div>
+              <div className="rounded-[1.5rem] border border-emerald-950/10 bg-[#FDFBF7] p-5 shadow-sm">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <h3 className="font-bold text-slate-900">Rapports et documents</h3>
+                <p className="mt-1 text-sm text-slate-600">Génération automatique des bilans propriétaires en PDF.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+
   return (
     <div className="min-h-full bg-[radial-gradient(circle_at_top_left,rgba(255,244,214,0.95),transparent_30rem),linear-gradient(180deg,#fffaf0,#f8f4ea_46%,#f7fbf8)] px-4 py-4 sm:px-6 lg:px-7">
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />

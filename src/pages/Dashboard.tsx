@@ -25,8 +25,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { PageSkeleton } from '../components/ui/Skeleton';
-import { EmptyState } from '../components/ui/EmptyState';
-import { FirstStepsChecklist } from '../components/onboarding/FirstStepsChecklist';
+
 import { readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { DemoDataLoader } from '../components/billing/DemoDataLoader';
@@ -64,7 +63,7 @@ export function Dashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {
   return <AgencyDashboard onNavigate={onNavigate} onStartSetupWizard={onStartSetupWizard} />;
 }
 
-function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}) {
+function AgencyDashboard({ onNavigate }: DashboardProps = {}) {
   const { profile, user, accountProfile, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalBailleurs: 0,
@@ -234,113 +233,124 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
 
   if (isNewUser) {
     return (
-      <>
-        <div className="sk-page-shell space-y-6 lg:space-y-8 animate-fadeIn">
-          <section className="sk-premium-panel relative overflow-hidden p-5 sm:p-7 lg:p-8">
-            <div className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-emerald-200/40 blur-3xl" />
-            <div className="pointer-events-none absolute bottom-0 left-0 h-44 w-44 rounded-full bg-orange-200/35 blur-3xl" />
-            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-900/10 bg-emerald-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-brand-800">
-                  <Sparkles className="h-4 w-4" />
-                  Première connexion
+      <div className="sk-page-shell space-y-6 lg:space-y-8 animate-fadeIn">
+        <section className="relative overflow-hidden rounded-[2rem] border border-emerald-950/5 bg-[linear-gradient(135deg,#FDFBF7_0%,#F3F9F6_100%)] p-8 shadow-[0_24px_60px_rgba(6,17,13,0.06)] lg:p-12">
+          <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-200/30 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 left-0 h-56 w-56 rounded-full bg-orange-200/20 blur-3xl" />
+
+          <div className="relative mx-auto max-w-4xl text-center">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-brand-800 shadow-[0_8px_30px_rgba(0,0,0,0.04)] ring-1 ring-emerald-900/5">
+              <Sparkles className="h-8 w-8" />
+            </div>
+            <h1 className="text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+              Votre agence est prête à être structurée.
+            </h1>
+            <p className="mx-auto mt-5 max-w-2xl text-lg font-medium leading-8 text-slate-600">
+              Commencez par créer votre premier bailleur, puis rattachez ses biens, ses locataires et ses paiements.
+            </p>
+
+            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => onNavigate?.('bailleurs')}
+                className="inline-flex min-h-[3.5rem] items-center justify-center gap-2 rounded-2xl bg-[#072F24] px-8 py-3 text-base font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25"
+              >
+                <UserRound className="h-5 w-5" />
+                Créer mon premier bailleur
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
+          <div className="lg:col-span-2">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-xl font-black text-slate-950">Feuille de route</h2>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-800">
+                0/4 étapes
+              </span>
+            </div>
+            <div className="overflow-hidden rounded-[1.5rem] border border-slate-200/60 bg-white shadow-sm">
+              <div className="grid grid-cols-1 divide-y divide-slate-100">
+                <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                    <UserRound className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-slate-900">1. Créer un bailleur</h3>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">À faire</span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-600">Le propriétaire légal du bien.</p>
+                  </div>
+                  <button onClick={() => onNavigate?.('bailleurs')} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50">
+                    Commencer
+                  </button>
                 </div>
-                <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-                  {accountProfile.isIndividualOwner
-                    ? 'Votre espace proprietaire est pret a demarrer.'
-                    : 'Structurez votre agence en commencant par un bailleur.'}
-                </h1>
-                <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-slate-600 sm:text-base">
-                  {accountProfile.isIndividualOwner
-                    ? 'Ajoutez votre premier bien, puis reliez un locataire, un bail et un premier loyer pour donner vie au tableau de bord.'
-                    : "Creez d'abord le bailleur, puis rattachez son bien, ses locataires, ses encaissements et ses quittances."}
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-                <button
-                  type="button"
-                  onClick={() => onNavigate?.(accountProfile.isIndividualOwner ? 'patrimoine' : 'bailleurs')}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/18 transition hover:-translate-y-0.5 hover:bg-brand-950"
-                >
-                  {accountProfile.isIndividualOwner ? <Building2 className="h-5 w-5" /> : <UserRound className="h-5 w-5" />}
-                  {accountProfile.isIndividualOwner ? 'Ajouter mon premier bien' : 'Creer mon premier bailleur'}
-                </button>
-                <button
-                  type="button"
-                  onClick={onStartSetupWizard}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-900/10 bg-white px-5 py-3 text-sm font-black text-brand-800 shadow-sm transition hover:bg-emerald-50"
-                >
-                  <Sparkles className="h-5 w-5" />
-                  {accountProfile.isIndividualOwner ? 'Ajuster mon profil' : "Ajuster l'agence"}
-                </button>
+                <div className="flex flex-col gap-4 p-5 opacity-70 sm:flex-row sm:items-center sm:p-6">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+                    <Building2 className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-slate-900">2. Ajouter un bien</h3>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">Rattachez un immeuble ou une maison au bailleur.</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-4 p-5 opacity-70 sm:flex-row sm:items-center sm:p-6">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-slate-900">3. Créer une location</h3>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">Associez un locataire à une unité.</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-4 p-5 opacity-70 sm:flex-row sm:items-center sm:p-6">
+                  <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400">
+                    <DollarSign className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-bold text-slate-900">4. Enregistrer un paiement</h3>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">Suivez le premier loyer et le net bailleur.</p>
+                  </div>
+                </div>
               </div>
             </div>
-          </section>
-
-          <FirstStepsChecklist
-            onNavigate={onNavigate}
-            onStartWizard={onStartSetupWizard}
-            onDemoLoaded={loadDashboardData}
-            showDemoData
-          />
-
-          <div className="sk-card-premium p-8">
-            <EmptyState
-              icon={Sparkles}
-              title={accountProfile.isIndividualOwner ? 'Votre espace proprietaire attend son premier bien.' : 'Votre agence attend son premier bailleur.'}
-              description={
-                accountProfile.isIndividualOwner
-                  ? 'Ajoutez un bien, une unite, un locataire et un bail pour activer le suivi des loyers, impayes et quittances.'
-                  : "Creez un bailleur, rattachez son bien, puis ajoutez locataire, bail et paiement pour activer les indicateurs agence."
-              }
-              action={{
-                label: accountProfile.isIndividualOwner ? 'Ajouter mon premier bien' : 'Ajouter un bailleur',
-                onClick: () => onNavigate?.(accountProfile.isIndividualOwner ? 'patrimoine' : 'bailleurs'),
-              }}
-            />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="sk-card p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-brand-700 rounded-lg flex items-center justify-center">
-                  <Building2 className="w-6 h-6 text-white" />
+          <div>
+            <h2 className="mb-5 text-xl font-black text-slate-950">Progression</h2>
+            <div className="rounded-[1.5rem] border border-emerald-950/10 bg-white p-5 shadow-[0_12px_36px_rgba(15,23,42,0.04)]">
+              <div className="mb-4">
+                <div className="flex items-center justify-between text-sm font-bold text-slate-900">
+                  <span>Mise en route</span>
+                  <span className="text-emerald-700">0%</span>
                 </div>
-                <h3 className="font-black text-slate-950">{accountProfile.isIndividualOwner ? 'Parcours proprietaire' : 'Portefeuille agence'}</h3>
+                <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: '0%' }} />
+                </div>
               </div>
-              <p className="text-sm font-medium text-slate-700">
-                {accountProfile.isIndividualOwner
-                  ? 'Gerez vos biens, unites, locataires et baux dans une seule plateforme intuitive'
-                  : 'Gerez vos bailleurs, biens, unites et locataires dans une seule plateforme intuitive'}
+              <p className="text-sm font-medium leading-relaxed text-slate-600">
+                Votre portefeuille sera actif dès que le premier bailleur sera créé.
               </p>
             </div>
-            <div className="sk-card p-6">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-action-600 rounded-lg flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-black text-slate-950">Suivi financier</h3>
-              </div>
-              <p className="text-sm font-medium text-slate-700">
-                Encaissements, rapports mensuels, detection des impayes automatique et exports PDF
+
+            <h2 className="mb-5 mt-8 text-xl font-black text-slate-950">Exemples</h2>
+            <div className="rounded-[1.5rem] border border-slate-200/50 bg-[#FDFBF7] p-5 shadow-sm">
+              <p className="mb-4 text-sm font-medium leading-relaxed text-slate-600">
+                Vous voulez tester avant de configurer vos vrais bailleurs ? Générez des données fictives.
               </p>
-            </div>
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-bold text-green-900">Rapports intelligents</h3>
-              </div>
-              <p className="text-sm text-green-800">
-                {accountProfile.isIndividualOwner
-                  ? 'Statistiques en temps reel, revenus mensuels et resume proprietaire automatises'
-                  : 'Statistiques en temps reel, graphiques mensuels et bilans automatises pour chaque bailleur'}
-              </p>
+              <DemoDataLoader variant="compact" onLoaded={loadDashboardData} />
             </div>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 

@@ -4,8 +4,12 @@ import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Button } from '../components/ui/Button';
+import { Plus, Search, XCircle, Pencil, SlidersHorizontal } from 'lucide-react';
+import { FinanceDrawer, FinanceInfoCard, FinanceLine } from '../components/finance/FinancePrimitives';
+import { PremiumButton } from '../components/ui/PremiumButton';
+import { SmartCombobox } from '../components/ui/SmartCombobox';
+import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { ToastContainer } from '../components/ui/Toast';
-import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
@@ -48,7 +52,7 @@ export function Depenses() {
   const [immeubles, setImmeubles] = useState<ImmeubleOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDepense, setSelectedDepense] = useState<Depense | null>(null);
   const [editingDepense, setEditingDepense] = useState<Depense | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Depense | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -65,7 +69,7 @@ export function Depenses() {
     immeuble_id: '',
   });
 
-  const categories = ['🌐 Internet', '⚡ Électricité', '💧 Eau', '👷 Salaires', '🚌 Prime de transport','📱 Crédit téléphonique', '📦 Autres'];
+  const categories = ['🌐 Internet', '⚡ Électricité', '💧 Eau', '👷 Salaires', '🚌 Prime de transport', '📱 Crédit téléphonique', '📦 Autres'];
 
   useEffect(() => {
     const q = searchTerm.toLowerCase();
@@ -185,6 +189,7 @@ export function Depenses() {
       beneficiaire: depense.beneficiaire ?? '',
       immeuble_id: depense.immeuble_id || '',
     });
+    setSelectedDepense(null);
     setIsModalOpen(true);
   };
 
@@ -250,6 +255,11 @@ export function Depenses() {
     { key: 'immeuble', label: 'Immeuble', render: (d: Depense) => d.immeubles?.nom || '-' },
   ];
   const columns = allColumns.filter((c) => colIsVisible(c.key));
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [selectedMois, setSelectedMois] = useState('');
+  const [selectedCategorie, setSelectedCategorie] = useState('');
+  const [selectedImmeuble, setSelectedImmeuble] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   if (loading) return <PageSkeleton title="Dépenses" variant="table" />;
 
@@ -270,19 +280,61 @@ export function Depenses() {
         </Button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6">
-        <div className="mb-6">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5" />
+      <div className="sk-premium-panel">
+        <div className="flex flex-col gap-4 border-b border-emerald-950/10 p-4 lg:flex-row lg:items-center lg:justify-between lg:px-5">
+          <div className="flex flex-1 items-center gap-3">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Rechercher..."
+                placeholder="Rechercher une dépense..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                className="sk-input pl-9"
               />
             </div>
+
+            <button
+              onClick={() => setMobileFiltersOpen(true)}
+              className="sk-action sk-action-secondary lg:hidden"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filtres
+            </button>
+          </div>
+
+          <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
+            <SmartCombobox
+              value={selectedMois}
+              options={[{ value: '', label: 'Mois en cours' }]}
+              onChange={setSelectedMois}
+              placeholder="Mois en cours"
+              searchPlaceholder="Rechercher un mois..."
+              className="w-48"
+            />
+            <SmartCombobox
+              value={selectedCategorie}
+              options={[
+                { value: '', label: 'Toutes les catégories' },
+                ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
+              ]}
+              onChange={setSelectedCategorie}
+              placeholder="Toutes les catégories"
+              searchPlaceholder="Rechercher une catégorie..."
+              className="w-56"
+            />
+            <SmartCombobox
+              value={selectedImmeuble}
+              options={[
+                { value: '', label: 'Toutes les affectations' },
+                ...immeubles.map((i) => ({ value: i.id, label: i.nom }))
+              ]}
+              onChange={setSelectedImmeuble}
+              placeholder="Toutes les affectations"
+              searchPlaceholder="Rechercher une affectation..."
+              className="w-56"
+            />
+
             <ColumnPicker
               columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
               visibility={colVis}
@@ -291,8 +343,50 @@ export function Depenses() {
             />
           </div>
         </div>
+
+        <MobileFilterSheet
+          isOpen={mobileFiltersOpen}
+          title="Filtres Dépenses"
+          onClose={() => setMobileFiltersOpen(false)}
+          onReset={() => {
+            setSelectedMois('');
+            setSelectedCategorie('');
+            setSelectedImmeuble('');
+          }}
+        >
+          <div className="grid gap-3">
+            <SmartCombobox
+              value={selectedMois}
+              options={[{ value: '', label: 'Mois en cours' }]}
+              onChange={setSelectedMois}
+              placeholder="Mois en cours"
+              searchPlaceholder="Rechercher un mois..."
+            />
+            <SmartCombobox
+              value={selectedCategorie}
+              options={[
+                { value: '', label: 'Toutes les catégories' },
+                ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
+              ]}
+              onChange={setSelectedCategorie}
+              placeholder="Toutes les catégories"
+              searchPlaceholder="Rechercher une catégorie..."
+            />
+            <SmartCombobox
+              value={selectedImmeuble}
+              options={[
+                { value: '', label: 'Toutes les affectations' },
+                ...immeubles.map((i) => ({ value: i.id, label: i.nom }))
+              ]}
+              onChange={setSelectedImmeuble}
+              placeholder="Toutes les affectations"
+              searchPlaceholder="Rechercher une affectation..."
+            />
+          </div>
+        </MobileFilterSheet>
+
         <div className="overflow-x-auto">
-          <Table columns={columns} data={filtered} onEdit={handleEdit} onDelete={handleDelete} />
+          <Table columns={columns} data={filtered} onRowClick={(d) => setSelectedDepense(d)} />
         </div>
       </div>
 
@@ -379,6 +473,57 @@ export function Depenses() {
           </div>
         </form>
       </Modal>
+
+      {/* Drawer */}
+      {selectedDepense && (
+        <FinanceDrawer
+          title={`Dépense ${selectedDepense.categorie}`}
+          subtitle={`Enregistrée le ${new Date(selectedDepense.date_depense).toLocaleDateString('fr-FR')}`}
+          onClose={() => setSelectedDepense(null)}
+          badge={
+            <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-bold bg-slate-100 text-slate-700 border-slate-200">
+              {selectedDepense.categorie}
+            </span>
+          }
+          actions={
+            <>
+              <PremiumButton
+                variant="secondary"
+                size="sm"
+                icon={<Pencil className="h-4 w-4" />}
+                onClick={() => handleEdit(selectedDepense)}
+                fullWidth
+              >
+                Corriger
+              </PremiumButton>
+              <PremiumButton
+                variant="danger"
+                size="sm"
+                icon={<XCircle className="h-4 w-4" />}
+                onClick={() => {
+                  handleDelete(selectedDepense);
+                  setSelectedDepense(null);
+                }}
+                fullWidth
+              >
+                Annuler
+              </PremiumButton>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <FinanceInfoCard title="Détail Financier">
+              <FinanceLine label="Montant" value={<span className="font-black text-slate-900">{formatCurrency(selectedDepense.montant)}</span>} />
+              <FinanceLine label="Date" value={new Date(selectedDepense.date_depense).toLocaleDateString('fr-FR')} />
+            </FinanceInfoCard>
+            <FinanceInfoCard title="Affectation & Description">
+              <FinanceLine label="Bénéficiaire" value={selectedDepense.beneficiaire || '—'} />
+              <FinanceLine label="Immeuble" value={selectedDepense.immeubles?.nom || '—'} />
+              <FinanceLine label="Description" value={selectedDepense.description || '—'} />
+            </FinanceInfoCard>
+          </div>
+        </FinanceDrawer>
+      )}
 
       <ConfirmModal
         isOpen={!!deleteTarget}

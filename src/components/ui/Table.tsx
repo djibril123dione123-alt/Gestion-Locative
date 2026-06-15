@@ -13,6 +13,7 @@ interface TableProps<T> {
   data: T[];
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
+  onRowClick?: (item: T) => void;
 }
 
 export function Table<T extends { id: string }>({
@@ -20,6 +21,7 @@ export function Table<T extends { id: string }>({
   data,
   onEdit,
   onDelete,
+  onRowClick,
 }: TableProps<T>) {
   const getCellValue = (item: T, key: string): React.ReactNode => {
     const value = (item as Record<string, unknown>)[key];
@@ -155,7 +157,11 @@ export function Table<T extends { id: string }>({
 
             <tbody>
               {data.map((item) => (
-                <tr key={item.id} className="border-b border-slate-100 transition hover:bg-emerald-50/55">
+                <tr 
+                  key={item.id} 
+                  className={`border-b border-slate-100 transition hover:bg-emerald-50/55 ${onRowClick ? 'cursor-pointer' : ''}`}
+                  onClick={() => onRowClick && onRowClick(item)}
+                >
                   {columns.map((column) => (
                     <td key={column.key} className="px-4 py-3.5 text-sm font-medium text-slate-700 xl:px-5 xl:py-4">
                       {renderContactValue(column.key, column.render ? column.render(item) : getCellValue(item, column.key))}

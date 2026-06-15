@@ -12,7 +12,7 @@ interface EncaissementsProps {
 
 const TABS = [
   { id: 'recus', label: 'Paiements reçus', icon: CreditCard },
-  { id: 'impayes', label: 'Loyers impayés', icon: AlertCircle },
+  { id: 'impayes', label: 'Créances à recouvrer', icon: AlertCircle },
 ];
 
 const PageLoader = () => <PageSkeleton title="Encaissements" variant="table" className="p-4 sm:p-6" />;

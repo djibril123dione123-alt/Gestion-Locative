@@ -41,7 +41,8 @@ const Patrimoine = lazy(() => import('./pages/Patrimoine').then(m => ({ default:
 const Locataires = lazy(() => import('./pages/Locataires').then(m => ({ default: m.Locataires })));
 const Contrats = lazy(() => import('./pages/Contrats').then(m => ({ default: m.Contrats })));
 const OccupantsBaux = lazy(() => import('./pages/OccupantsBaux').then(m => ({ default: m.OccupantsBaux })));
-const Encaissements = lazy(() => import('./pages/Encaissements').then(m => ({ default: m.Encaissements })));
+const Paiements = lazy(() => import('./pages/Paiements').then(m => ({ default: m.Paiements })));
+const LoyersImpayes = lazy(() => import('./pages/LoyersImpayes').then(m => ({ default: m.LoyersImpayes })));
 const Depenses = lazy(() => import('./pages/Depenses').then(m => ({ default: m.Depenses })));
 const Commissions = lazy(() => import('./pages/Commissions').then(m => ({ default: m.Commissions })));
 const Analyses = lazy(() => import('./pages/Analyses').then(m => ({ default: m.Analyses })));
@@ -81,8 +82,8 @@ const PAGE_LABELS: Record<string, string> = {
     locataires: 'Locataires',
     contrats: 'Contrats',
     'occupants-baux': 'Locations',
-    paiements: 'Encaissements',
-    'loyers-impayes': 'Impayés',
+    paiements: 'Paiements reçus',
+    'loyers-impayes': 'Créances à recouvrer',
     depenses: 'Dépenses',
     commissions: 'Commissions',
     'tableau-de-bord-financier': 'Pilotage financier',
@@ -475,9 +476,9 @@ function AppContent() {
             case 'occupants-baux':
                 return <OccupantsBaux />;
             case 'paiements':
-                return <Encaissements initialTab="recus" />;
+                return <Paiements />;
             case 'loyers-impayes':
-                return <Encaissements initialTab="impayes" />;
+                return <LoyersImpayes />;
             case 'depenses':
                 return <Depenses />;
             case 'commissions':

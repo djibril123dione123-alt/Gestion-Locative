@@ -28,6 +28,8 @@ export interface PaiementRow {
   montant_attendu?: number | null;
   montant_encaisse_cumul?: number | null;
   reliquat?: number | null;
+  part_agence?: number | null;
+  part_bailleur?: number | null;
   reference: string | null;
   actif?: boolean;
   deleted_at?: string | null;
@@ -52,7 +54,7 @@ export interface ContratRow {
   } | null;
 }
 
-export type StatusFilter = 'tous' | 'paye' | 'partiel';
+export type StatusFilter = 'tous' | 'paye' | 'partiel' | 'avance' | 'annule';
 
 export type FormModePayment = 'especes' | 'cheque' | 'virement' | 'mobile_money';
 export type FormPaiementStatut = 'paye' | 'partiel';
@@ -65,7 +67,7 @@ export interface StatusLabel {
 
 export const STATUS_LABELS: Record<string, StatusLabel> = {
   paye: {
-    label: 'Payé',
+    label: 'Soldé',
     classes: 'bg-emerald-100 text-emerald-700 border-emerald-200',
     icon: CheckCircle2,
   },

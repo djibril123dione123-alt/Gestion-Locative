@@ -12,10 +12,7 @@ function formatCompactCfa(value: number) {
   const sign = value < 0 ? '-' : '';
   const formatScaled = (amount: number) => {
     const rounded = Math.round(amount * 10) / 10;
-    return rounded.toLocaleString('fr-FR', {
-      minimumFractionDigits: Number.isInteger(rounded) ? 0 : 1,
-      maximumFractionDigits: Number.isInteger(rounded) ? 0 : 1,
-    });
+    return rounded.toString().replace('.', ',');
   };
 
   if (abs >= 1_000_000_000) {
@@ -27,10 +24,10 @@ function formatCompactCfa(value: number) {
   }
 
   if (abs >= 100_000) {
-    return `${sign}${Math.round(abs / 1_000).toLocaleString('fr-FR', { maximumFractionDigits: 0 })} k F CFA`;
+    return `${sign}${Math.round(abs / 1_000).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} k F CFA`;
   }
 
-  return `${sign}${abs.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} F CFA`;
+  return `${sign}${Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} F CFA`;
 }
 
 export function MoneyText({ value, className = '', compact = false, suffix }: MoneyTextProps) {

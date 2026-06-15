@@ -3,9 +3,9 @@
  */
 
 function formatNum(num: number): string {
-  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 })
-    .format(num)
-    .replace(/[\u00A0\u202F\u2009\u2007]/g, '\u0020');
+  return Math.round(num)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
 export function formatCurrency(amount: number | string, devise: string = 'XOF'): string {

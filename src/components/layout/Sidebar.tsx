@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import {
-  BarChart3,
+  AlertCircle,
   Building2,
   CalendarDays,
   ChevronDown,
@@ -91,13 +91,13 @@ const NAV: Array<MenuLeaf | MenuGroup> = [
   {
     id: 'finance',
     label: 'Finances',
-    description: 'Encaissements, charges et pilotage global',
+    description: 'Paiements, créances et dépenses',
     icon: Wallet,
     roles: ['admin', 'agent', 'comptable', 'bailleur'],
     items: [
       { id: 'paiements', label: 'Encaissements', icon: CreditCard, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
-      { id: 'depenses', label: 'Depenses', icon: TrendingDown, roles: ['admin'] },
-      { id: 'tableau-de-bord-financier', label: 'Pilotage financier', icon: BarChart3, roles: ['admin'] },
+      { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle, roles: ['admin', 'agent', 'comptable', 'bailleur'] },
+      { id: 'depenses', label: 'Dépenses', icon: TrendingDown, roles: ['admin'] },
     ],
   },
   {
@@ -142,6 +142,7 @@ const PARENT_OF: Record<string, string> = {
   contrats: 'portefeuille',
   'occupants-baux': 'portefeuille',
   paiements: 'finance',
+  'loyers-impayes': 'finance',
   depenses: 'finance',
   'tableau-de-bord-financier': 'finance',
   'filtres-avances': 'finance',
@@ -246,7 +247,6 @@ export function Sidebar({
   const isLeafActive = (id: string) => {
     if (currentPage === id) return true;
     if (id === 'patrimoine') return currentPage === 'immeubles' || currentPage === 'unites';
-    if (id === 'paiements') return currentPage === 'loyers-impayes';
     return id === 'tableau-de-bord-financier' && currentPage === 'filtres-avances';
   };
 

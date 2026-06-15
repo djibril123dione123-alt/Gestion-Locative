@@ -752,7 +752,9 @@ export function Paiements({ }: PaiementsProps) {
   return (
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      <div className="sk-page-shell space-y-6">
+      <div className="flex min-h-full">
+        <div className={`flex-1 min-w-0 transition-all duration-300 ${selectedPaiement && selectedStatus ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
+          <section className="sk-page-shell space-y-6">
         <FinancePageHeader
           eyebrow="Encaissement & finance"
           title={isIndividualOwner ? 'Mes loyers reçus' : 'Paiements reçus'}
@@ -924,6 +926,9 @@ export function Paiements({ }: PaiementsProps) {
             </div>
           </div>
         )}
+
+        </section>
+        </div>
 
         <PaiementFormModal
           isOpen={isModalOpen}

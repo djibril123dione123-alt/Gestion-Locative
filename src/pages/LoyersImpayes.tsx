@@ -457,7 +457,9 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     }
 
     return (
-        <div className="sk-page-shell space-y-6">
+        <div className="flex min-h-full">
+        <div className={`flex-1 min-w-0 transition-all duration-300 ${drawerLoyer ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
+          <section className="sk-page-shell space-y-6">
             {cacheTimestamp && (
                 <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
             )}
@@ -641,7 +643,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                 )}
             </div>
 
-            {/* Drawer */}
+            </section>
+        </div>
+
+        {/* Drawer */}
             {drawerLoyer && (
                 <FinanceDrawer
                     title={`Loyer ${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`}

@@ -165,29 +165,32 @@ export function FinanceDrawer({
   actions?: ReactNode;
 }) {
   return (
-    <aside className="fixed inset-x-0 bottom-0 z-50 max-h-[94vh] overflow-hidden rounded-t-[1.7rem] border border-emerald-950/10 bg-[#fffdf8] shadow-[0_-22px_70px_rgba(15,23,42,0.22)] lg:fixed lg:inset-y-0 lg:right-0 lg:left-auto lg:h-screen lg:max-h-none lg:w-[29rem] lg:rounded-none lg:border-y-0 lg:border-r-0">
-      <div className="sticky top-0 z-10 border-b border-emerald-950/10 bg-[#fffdf8]/95 px-5 py-4 backdrop-blur">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-xl font-black text-slate-950">{title}</h2>
-              {badge}
+    <aside className="fixed inset-y-0 right-0 z-[60] flex w-full flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:w-[31.5rem] xl:border-l xl:border-emerald-950/10">
+      <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={onClose} aria-hidden="true" />
+      <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
+        <div className="sticky top-0 z-10 border-b border-emerald-950/10 bg-[#fffdf8]/95 px-5 py-4 backdrop-blur">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate text-xl font-black text-slate-950">{title}</h2>
+                {badge}
+              </div>
+              {subtitle && <div className="mt-1 text-xs font-semibold leading-5 text-slate-500">{subtitle}</div>}
             </div>
-            {subtitle && <div className="mt-1 text-xs font-semibold leading-5 text-slate-500">{subtitle}</div>}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-emerald-950/10 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
+              aria-label="Fermer le détail"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-emerald-950/10 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"
-            aria-label="Fermer le détail"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          {actions && <div className="mt-4 flex flex-wrap gap-2">{actions}</div>}
         </div>
-        {actions && <div className="mt-4 flex flex-wrap gap-2">{actions}</div>}
-      </div>
-      <div className="h-[calc(94vh-6rem)] overflow-y-auto px-5 py-4 lg:h-[calc(100vh-6rem)]">
-        {children}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {children}
+        </div>
       </div>
     </aside>
   );

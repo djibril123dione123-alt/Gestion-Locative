@@ -334,7 +334,9 @@ export function Depenses() {
   if (loading) return <PageSkeleton title="Dépenses" variant="table" />;
 
   return (
-    <div className="sk-page-shell space-y-6">
+    <div className="flex min-h-full">
+      <div className={`flex-1 min-w-0 transition-all duration-300 ${selectedDepense ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
+        <section className="sk-page-shell space-y-6">
       <OfflineDataNotice
         cachedAt={cacheTimestamp}
         onRetry={loadData}
@@ -467,6 +469,9 @@ export function Depenses() {
             selectedId={selectedDepense?.id}
           />
         </div>
+      </div>
+
+      </section>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingDepense ? 'Modifier dépense' : 'Nouvelle dépense'}>

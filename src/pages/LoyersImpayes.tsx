@@ -111,16 +111,6 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     const { isOnline } = useNetworkStatus();
     const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
 
-    const monthOptions = useMemo(() => {
-        return [
-            { value: '', label: 'Période' },
-            ...Array.from(new Set(impayes.map((p) => (p.mois_concerne || '').slice(0, 7)).filter(Boolean)))
-                .sort()
-                .reverse()
-                .map((m) => ({ value: m, label: m })),
-        ];
-    }, [impayes]);
-
     useEffect(() => {
         let result = impayes;
 
@@ -136,10 +126,6 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
             result = result.filter(i =>
                 `${i.bailleur_prenom} ${i.bailleur_nom}` === selectedBailleur
             );
-        }
-
-        if (selectedMois) {
-            result = result.filter(i => (i.mois_concerne || '').slice(0, 7) === selectedMois);
         }
 
         if (statusFilter !== 'tous') {
@@ -531,11 +517,11 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                     <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
                         <SmartCombobox
                             value={selectedMois}
-                            options={monthOptions}
+                            options={[{ value: '', label: 'Mois en cours' }]}
                             onChange={setSelectedMois}
-                            placeholder="Période"
+                            placeholder="Mois en cours"
                             searchPlaceholder="Rechercher..."
-                            className="w-32"
+                            className="w-48 shrink-0"
                         />
                         {!isIndividualOwner && (
                             <SmartCombobox
@@ -578,9 +564,9 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                     <div className="grid gap-3">
                         <SmartCombobox
                             value={selectedMois}
-                            options={monthOptions}
+                            options={[{ value: '', label: 'Mois en cours' }]}
                             onChange={setSelectedMois}
-                            placeholder="Période"
+                            placeholder="Mois en cours"
                             searchPlaceholder="Rechercher..."
                         />
                         {!isIndividualOwner && (

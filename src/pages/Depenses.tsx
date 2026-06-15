@@ -378,11 +378,11 @@ export function Depenses() {
           <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
             <SmartCombobox
               value={selectedMois}
-              options={[{ value: '', label: 'Période' }]}
+              options={[{ value: '', label: 'Mois en cours' }]}
               onChange={setSelectedMois}
-              placeholder="Période"
+              placeholder="Mois en cours"
               searchPlaceholder="Rechercher..."
-              className="w-32"
+              className="w-48 shrink-0"
             />
             <SmartCombobox
               value={selectedCategorie}
@@ -393,7 +393,7 @@ export function Depenses() {
               onChange={setSelectedCategorie}
               placeholder="Catégories"
               searchPlaceholder="Rechercher..."
-              className="w-40"
+              className="w-56 shrink-0"
             />
             <SmartCombobox
               value={selectedImmeuble}
@@ -404,7 +404,7 @@ export function Depenses() {
               onChange={setSelectedImmeuble}
               placeholder="Affectations"
               searchPlaceholder="Rechercher..."
-              className="w-44"
+              className="w-56 shrink-0"
             />
 
             <ColumnPicker

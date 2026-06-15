@@ -1,7 +1,8 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
 import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, CreditCard, Wallet, Building2, CalendarDays, ReceiptText, SlidersHorizontal } from 'lucide-react';
+import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { formatCurrency } from '../lib/formatters';
@@ -15,7 +16,7 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { getOpenReceivables, type OpenReceivableStatus } from '../services/api/financeApi';
-import { FinanceDrawer, FinanceInfoCard, FinanceLine } from '../components/finance/FinancePrimitives';
+import { FinanceDrawer, FinanceInfoCard, FinanceKpiGrid, FinanceLine, FinancePageHeader } from '../components/finance/FinancePrimitives';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { HandCoins } from 'lucide-react';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
@@ -293,10 +294,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         }
     };
 
-    const totalImpaye = filtered.reduce((sum, i) => sum + i.montant_du, 0);
-    const totalEnRetard = filtered
-        .filter((i) => i.statut === 'en_retard' || i.statut === 'partiel')
-        .reduce((sum, i) => sum + i.montant_du, 0);
+
 
     const statusTabs = [
         { id: 'tous', label: 'Toutes', count: impayes.length },
@@ -369,6 +367,62 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         return colIsVisible(c.key);
     });
 
+    const kpis = useMemo(() => {
+        return {
+            ouvertes: filtered.length,
+            retardsReliquats: filtered.filter(i => i.statut === 'en_retard' || i.statut === 'partiel').reduce((sum, i) => sum + i.montant_du, 0),
+            dejaEncaisse: filtered.reduce((sum, i) => sum + i.montant_encaisse, 0),
+            attendus: filtered.reduce((sum, i) => sum + i.montant_attendu, 0),
+            aVenir: filtered.filter(i => i.statut === 'a_venir').length,
+            partiels: filtered.filter(i => i.statut === 'partiel').length,
+        };
+    }, [filtered]);
+
+    const financeMetrics = [
+        {
+            label: 'Créances ouvertes',
+            value: kpis.ouvertes,
+            helper: 'Échéances non soldées',
+            icon: AlertCircle,
+            tone: 'amber' as const,
+        },
+        {
+            label: 'Retards et reliquats',
+            value: <MoneyText value={kpis.retardsReliquats} />,
+            helper: 'À recouvrer',
+            icon: Wallet,
+            tone: 'red' as const,
+        },
+        {
+            label: 'Déjà encaissé',
+            value: <MoneyText value={kpis.dejaEncaisse} />,
+            helper: 'Sur ces créances',
+            icon: HandCoins,
+            tone: 'emerald' as const,
+        },
+        {
+            label: 'Loyers attendus',
+            value: <MoneyText value={kpis.attendus} />,
+            helper: 'Total théorique',
+            icon: Building2,
+            tone: 'slate' as const,
+        },
+        {
+            label: 'Échéances à venir',
+            value: kpis.aVenir,
+            helper: 'Mois futurs',
+            icon: CalendarDays,
+            tone: 'blue' as const,
+        },
+        {
+            label: 'Partiels',
+            value: kpis.partiels,
+            helper: 'En cours de paiement',
+            icon: CreditCard,
+            tone: 'amber' as const,
+        },
+    ];
+
     if (loading) {
         return (
             <LoadingState
@@ -402,58 +456,43 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     }
 
     return (
-        <div className="sk-page-shell space-y-5">
+        <div className="sk-page-shell space-y-6">
             {cacheTimestamp && (
                 <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
             )}
 
             {!embedded && (
-                <div className="sk-page-hero flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">
-                            {isIndividualOwner ? 'Mes impayés' : 'Loyers impayés'}
-                        </h1>
-                        <p className="mt-1 text-sm font-medium text-slate-600 sm:text-base">
-                            {isIndividualOwner
-                                ? 'Suivez vos loyers en retard, les reliquats et les paiements partiels.'
-                                : 'Suivi des loyers en retard, reliquats et paiements partiels'}
-                        </p>
+                <>
+                    <FinancePageHeader
+                        eyebrow="Encaissement & finance"
+                        title={isIndividualOwner ? 'Mes créances à recouvrer' : 'Créances à recouvrer'}
+                        description={
+                            isIndividualOwner
+                                ? 'Suivez les échéances ouvertes, retards, paiements partiels et restes dus.'
+                                : 'Suivez les échéances ouvertes, retards, paiements partiels et restes dus.'
+                        }
+                    />
+                    <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-emerald-950/10">
+                        <Tabs
+                            tabs={[
+                                { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
+                                { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
+                            ]}
+                            activeId="loyers-impayes"
+                            onChange={(id) => { window.location.hash = `#/${id}`; }}
+                        />
                     </div>
-                </div>
+                </>
             )}
 
             {/* Statistiques */}
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="sk-metric-tile border-red-200/80 p-4 sm:p-5">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 sm:p-3 rounded-lg bg-red-50 text-red-600">
-                            <AlertCircle className="w-5 sm:w-6 h-5 sm:h-6" />
-                        </div>
-                        <div>
-                            <h3 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-sm">Retards et reliquats</h3>
-                            <p className="mt-1 text-lg font-extrabold text-red-600 sm:text-2xl">{formatCurrency(totalEnRetard)}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="sk-metric-tile p-4 sm:p-5">
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-sm">Échéances ouvertes</h3>
-                    <p className="text-lg font-extrabold text-slate-950 sm:text-2xl">{filtered.length}</p>
-                </div>
-
-                <div className="sk-metric-tile p-4 sm:p-5">
-                    <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-sm">Solde a recouvrer</h3>
-                    <p className="text-lg font-extrabold text-slate-950 sm:text-2xl">
-                        {formatCurrency(totalImpaye)}
-                    </p>
-                </div>
-            </div>
+            <FinanceKpiGrid metrics={financeMetrics} />
 
             {/* Filtres + Table */}
             <div className="sk-premium-panel">
                 <div className="flex flex-col gap-4 border-b border-emerald-950/10 p-4 lg:flex-row lg:items-center lg:justify-between lg:px-5">
                     <div className="flex flex-1 items-center gap-3">
-                        <div className="relative max-w-sm flex-1">
+                        <div className="relative max-w-xs flex-1">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
                                 type="text"
@@ -465,8 +504,9 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                         </div>
 
                         <button
+                            type="button"
                             onClick={() => setMobileFiltersOpen(true)}
-                            className="sk-action sk-action-secondary lg:hidden"
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
                         >
                             <SlidersHorizontal className="h-4 w-4" />
                             Filtres

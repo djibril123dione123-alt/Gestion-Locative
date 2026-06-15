@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
-import { Button } from '../components/ui/Button';
-import { Plus, Search, XCircle, Pencil, SlidersHorizontal } from 'lucide-react';
-import { FinanceDrawer, FinanceInfoCard, FinanceLine } from '../components/finance/FinancePrimitives';
+// import { Button } from '../components/ui/Button';
+import { Plus, Search, XCircle, Pencil, SlidersHorizontal, TrendingDown, ReceiptText, Wallet, Building2 } from 'lucide-react';
+import { FinanceDrawer, FinanceInfoCard, FinanceLine, FinancePageHeader, FinanceKpiGrid } from '../components/finance/FinancePrimitives';
+import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
@@ -261,29 +262,99 @@ export function Depenses() {
   const [selectedImmeuble, setSelectedImmeuble] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const kpis = useMemo(() => {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const depensesMois = filtered
+      .filter((d) => d.date_depense.slice(0, 7) === currentMonth)
+      .reduce((sum, d) => sum + d.montant, 0);
+    const depensesActives = filtered.length;
+    const depensesAgence = filtered
+      .filter((d) => !d.immeuble_id)
+      .reduce((sum, d) => sum + d.montant, 0);
+    const depensesBailleurs = filtered
+      .filter((d) => d.immeuble_id)
+      .reduce((sum, d) => sum + d.montant, 0);
+    const biensConcernes = new Set(filtered.filter((d) => d.immeuble_id).map((d) => d.immeuble_id)).size;
+
+    return {
+      depensesMois,
+      depensesActives,
+      depensesAgence,
+      depensesBailleurs,
+      biensConcernes,
+      netApresDepenses: 0,
+    };
+  }, [filtered]);
+
+  const financeMetrics = useMemo(() => [
+    {
+      label: 'Dépenses du mois',
+      value: <MoneyText value={kpis.depensesMois} />,
+      helper: 'Mois en cours',
+      icon: TrendingDown,
+      tone: 'red' as const,
+    },
+    {
+      label: 'Dépenses actives',
+      value: kpis.depensesActives,
+      helper: 'Écritures',
+      icon: ReceiptText,
+      tone: 'slate' as const,
+    },
+    {
+      label: 'Dépenses agence',
+      value: <MoneyText value={kpis.depensesAgence} />,
+      helper: 'Sur fonds propres',
+      icon: Wallet,
+      tone: 'amber' as const,
+    },
+    {
+      label: 'Dépenses bailleurs',
+      value: <MoneyText value={kpis.depensesBailleurs} />,
+      helper: 'Imputables aux biens',
+      icon: Building2,
+      tone: 'emerald' as const,
+    },
+    {
+      label: 'Biens concernés',
+      value: kpis.biensConcernes,
+      helper: 'Immeubles / Unités',
+      icon: Building2,
+      tone: 'blue' as const,
+    },
+    {
+      label: 'Net après dépenses',
+      value: <MoneyText value={kpis.netApresDepenses} />,
+      helper: 'Calcul global',
+      icon: TrendingDown,
+      tone: 'slate' as const,
+    },
+  ], [kpis]);
+
   if (loading) return <PageSkeleton title="Dépenses" variant="table" />;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <div className="sk-page-shell space-y-6">
       <OfflineDataNotice
         cachedAt={cacheTimestamp}
         onRetry={loadData}
         message="Les dépenses affichées viennent du dernier chargement réussi. Les écritures financières restent bloquées hors ligne."
       />
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Dépenses</h1>
-          <p className="text-sm sm:text-base text-slate-600">Gestion des frais d'exploitation</p>
-        </div>
-        <Button onClick={() => setIsModalOpen(true)} icon={Plus}>
-          Nouvelle dépense
-        </Button>
-      </div>
+      <FinancePageHeader
+        eyebrow="Charges & exploitation"
+        title="Dépenses"
+        description="Suivez les charges, frais d'exploitation, dépenses rattachées et corrections via les workflows financiers contrôlés."
+        primaryLabel="Nouvelle dépense"
+        primaryIcon={<Plus className="h-4 w-4" />}
+        onPrimary={() => setIsModalOpen(true)}
+      />
+
+      <FinanceKpiGrid metrics={financeMetrics} />
 
       <div className="sk-premium-panel">
         <div className="flex flex-col gap-4 border-b border-emerald-950/10 p-4 lg:flex-row lg:items-center lg:justify-between lg:px-5">
           <div className="flex flex-1 items-center gap-3">
-            <div className="relative max-w-sm flex-1">
+            <div className="relative max-w-xs flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -295,8 +366,9 @@ export function Depenses() {
             </div>
 
             <button
+              type="button"
               onClick={() => setMobileFiltersOpen(true)}
-              className="sk-action sk-action-secondary lg:hidden"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
             >
               <SlidersHorizontal className="h-4 w-4" />
               Filtres
@@ -306,33 +378,33 @@ export function Depenses() {
           <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
             <SmartCombobox
               value={selectedMois}
-              options={[{ value: '', label: 'Mois en cours' }]}
+              options={[{ value: '', label: 'Période' }]}
               onChange={setSelectedMois}
-              placeholder="Mois en cours"
-              searchPlaceholder="Rechercher un mois..."
-              className="w-48"
+              placeholder="Période"
+              searchPlaceholder="Rechercher..."
+              className="w-32"
             />
             <SmartCombobox
               value={selectedCategorie}
               options={[
-                { value: '', label: 'Toutes les catégories' },
+                { value: '', label: 'Catégories' },
                 ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
               ]}
               onChange={setSelectedCategorie}
-              placeholder="Toutes les catégories"
-              searchPlaceholder="Rechercher une catégorie..."
-              className="w-56"
+              placeholder="Catégories"
+              searchPlaceholder="Rechercher..."
+              className="w-40"
             />
             <SmartCombobox
               value={selectedImmeuble}
               options={[
-                { value: '', label: 'Toutes les affectations' },
+                { value: '', label: 'Affectations' },
                 ...immeubles.map((i) => ({ value: i.id, label: i.nom }))
               ]}
               onChange={setSelectedImmeuble}
-              placeholder="Toutes les affectations"
-              searchPlaceholder="Rechercher une affectation..."
-              className="w-56"
+              placeholder="Affectations"
+              searchPlaceholder="Rechercher..."
+              className="w-44"
             />
 
             <ColumnPicker

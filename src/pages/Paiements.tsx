@@ -790,7 +790,7 @@ export function Paiements({ }: PaiementsProps) {
         <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-2 relative min-w-0 flex-1">
-              <div className="relative min-w-0 flex-1 lg:max-w-[280px] xl:max-w-md">
+              <div className="relative min-w-0 flex-1 lg:max-w-xs xl:max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   value={searchTerm}

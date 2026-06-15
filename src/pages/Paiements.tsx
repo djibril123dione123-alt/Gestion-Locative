@@ -919,6 +919,7 @@ export function Paiements({ }: PaiementsProps) {
                 columns={columns}
                 data={filtered}
                 onRowClick={(p) => setSelectedPaiement(p)}
+                selectedId={selectedPaiement?.id}
               />
             </div>
           </div>

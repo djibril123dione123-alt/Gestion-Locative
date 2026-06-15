@@ -460,7 +460,12 @@ export function Depenses() {
 
       <div className="sk-card overflow-hidden">
         <div className="overflow-x-auto">
-          <Table columns={columns} data={filtered} onRowClick={(d) => setSelectedDepense(d)} />
+          <Table 
+            columns={columns} 
+            data={filtered} 
+            onRowClick={(d) => setSelectedDepense(d)} 
+            selectedId={selectedDepense?.id}
+          />
         </div>
       </div>
 

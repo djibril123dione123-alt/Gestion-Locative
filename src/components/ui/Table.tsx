@@ -14,6 +14,7 @@ interface TableProps<T> {
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
   onRowClick?: (item: T) => void;
+  selectedId?: string | null;
 }
 
 export function Table<T extends { id: string }>({
@@ -22,6 +23,7 @@ export function Table<T extends { id: string }>({
   onEdit,
   onDelete,
   onRowClick,
+  selectedId,
 }: TableProps<T>) {
   const getCellValue = (item: T, key: string): React.ReactNode => {
     const value = (item as Record<string, unknown>)[key];
@@ -81,12 +83,25 @@ export function Table<T extends { id: string }>({
   return (
     <>
       <div className="space-y-3 sm:hidden">
-        {data.map((item) => (
-          <article
-            key={item.id}
-            className="sk-mobile-card overflow-hidden transition duration-200 active:scale-[0.992]"
-          >
-            <div className="divide-y divide-slate-100">
+        {data.map((item) => {
+          const isSelected = selectedId === item.id;
+          return (
+            <article
+              key={item.id}
+              className={`sk-mobile-card overflow-hidden transition duration-200 active:scale-[0.992] ${onRowClick ? 'cursor-pointer hover:border-emerald-200 hover:shadow-md outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:border-emerald-400' : ''} ${isSelected ? 'border-emerald-300 ring-1 ring-emerald-300 bg-emerald-50/40 shadow-sm' : ''}`}
+              onClick={() => onRowClick && onRowClick(item)}
+              tabIndex={onRowClick ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
+                  onRowClick(item);
+                }
+              }}
+              role={onRowClick ? "button" : undefined}
+              aria-label={onRowClick ? "Ouvrir les détails" : undefined}
+              aria-pressed={isSelected}
+            >
+              <div className="divide-y divide-slate-100">
               {columns.map((col, index) => {
                 const rawValue = col.render ? col.render(item) : getCellValue(item, col.key);
                 const value = renderContactValue(col.key, rawValue);
@@ -134,7 +149,8 @@ export function Table<T extends { id: string }>({
               </div>
             )}
           </article>
-        ))}
+        );
+        })}
       </div>
 
       <div className="sk-table-shell hidden sm:block">
@@ -156,12 +172,32 @@ export function Table<T extends { id: string }>({
             </thead>
 
             <tbody>
-              {data.map((item) => (
-                <tr 
-                  key={item.id} 
-                  className={`border-b border-slate-100 transition hover:bg-emerald-50/55 ${onRowClick ? 'cursor-pointer' : ''}`}
-                  onClick={() => onRowClick && onRowClick(item)}
-                >
+              {data.map((item) => {
+                const isSelected = selectedId === item.id;
+                return (
+                  <tr 
+                    key={item.id} 
+                    className={`border-b transition duration-150 outline-none ${
+                      onRowClick 
+                        ? 'cursor-pointer hover:bg-emerald-50/60 focus-visible:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300' 
+                        : ''
+                    } ${
+                      isSelected 
+                        ? 'bg-emerald-50/80 border-emerald-200 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-1 after:bg-brand-600' 
+                        : 'border-slate-100'
+                    }`}
+                    onClick={() => onRowClick && onRowClick(item)}
+                    tabIndex={onRowClick ? 0 : undefined}
+                    onKeyDown={(e) => {
+                      if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        onRowClick(item);
+                      }
+                    }}
+                    role={onRowClick ? "button" : undefined}
+                    aria-label={onRowClick ? "Ouvrir les détails" : undefined}
+                    aria-selected={isSelected}
+                  >
                   {columns.map((column) => (
                     <td key={column.key} className="px-4 py-3.5 text-sm font-medium text-slate-700 xl:px-5 xl:py-4">
                       {renderContactValue(column.key, column.render ? column.render(item) : getCellValue(item, column.key))}
@@ -193,7 +229,8 @@ export function Table<T extends { id: string }>({
                     </td>
                   )}
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>

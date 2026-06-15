@@ -591,6 +591,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                         columns={columns}
                         data={paginated}
                         onRowClick={(i) => setDrawerLoyer(i)}
+                        selectedId={drawerLoyer?.id}
                     />
                 </div>
 

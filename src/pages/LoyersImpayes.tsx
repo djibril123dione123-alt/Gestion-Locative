@@ -91,6 +91,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedBailleur, setSelectedBailleur] = useState('');
+    const [selectedMois, setSelectedMois] = useState('');
     const [bailleurs, setBailleurs] = useState<BailleurOption[]>([]);
     const [statusFilter, setStatusFilter] = useState('tous');
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -110,6 +111,16 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     const { isOnline } = useNetworkStatus();
     const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
 
+    const monthOptions = useMemo(() => {
+        return [
+            { value: '', label: 'Période' },
+            ...Array.from(new Set(impayes.map((p) => (p.mois_concerne || '').slice(0, 7)).filter(Boolean)))
+                .sort()
+                .reverse()
+                .map((m) => ({ value: m, label: m })),
+        ];
+    }, [impayes]);
+
     useEffect(() => {
         let result = impayes;
 
@@ -125,6 +136,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
             result = result.filter(i =>
                 `${i.bailleur_prenom} ${i.bailleur_nom}` === selectedBailleur
             );
+        }
+
+        if (selectedMois) {
+            result = result.filter(i => (i.mois_concerne || '').slice(0, 7) === selectedMois);
         }
 
         if (statusFilter !== 'tous') {
@@ -489,10 +504,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
             <FinanceKpiGrid metrics={financeMetrics} />
 
             {/* Filtres + Table */}
-            <div className="sk-premium-panel">
-                <div className="flex flex-col gap-4 border-b border-emerald-950/10 p-4 lg:flex-row lg:items-center lg:justify-between lg:px-5">
-                    <div className="flex flex-1 items-center gap-3">
-                        <div className="relative max-w-xs flex-1">
+            <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex items-center gap-2 relative min-w-0 flex-1">
+                        <div className="relative min-w-0 flex-1">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
                                 type="text"
@@ -514,6 +529,14 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                     </div>
 
                     <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
+                        <SmartCombobox
+                            value={selectedMois}
+                            options={monthOptions}
+                            onChange={setSelectedMois}
+                            placeholder="Période"
+                            searchPlaceholder="Rechercher..."
+                            className="w-32"
+                        />
                         {!isIndividualOwner && (
                             <SmartCombobox
                                 value={selectedBailleur}
@@ -549,9 +572,17 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                     onClose={() => setMobileFiltersOpen(false)}
                     onReset={() => {
                         setSelectedBailleur('');
+                        setSelectedMois('');
                     }}
                 >
                     <div className="grid gap-3">
+                        <SmartCombobox
+                            value={selectedMois}
+                            options={monthOptions}
+                            onChange={setSelectedMois}
+                            placeholder="Période"
+                            searchPlaceholder="Rechercher..."
+                        />
                         {!isIndividualOwner && (
                             <SmartCombobox
                                 value={selectedBailleur}
@@ -566,7 +597,9 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                         )}
                     </div>
                 </MobileFilterSheet>
+            </div>
 
+            <div className="sk-card overflow-hidden">
                 <div className="overflow-x-auto">
                     <Table
                         columns={columns}

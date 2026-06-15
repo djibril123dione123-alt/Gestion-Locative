@@ -351,10 +351,10 @@ export function Depenses() {
 
       <FinanceKpiGrid metrics={financeMetrics} />
 
-      <div className="sk-premium-panel">
-        <div className="flex flex-col gap-4 border-b border-emerald-950/10 p-4 lg:flex-row lg:items-center lg:justify-between lg:px-5">
-          <div className="flex flex-1 items-center gap-3">
-            <div className="relative max-w-xs flex-1">
+      <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-2 relative min-w-0 flex-1">
+            <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -456,7 +456,9 @@ export function Depenses() {
             />
           </div>
         </MobileFilterSheet>
+      </div>
 
+      <div className="sk-card overflow-hidden">
         <div className="overflow-x-auto">
           <Table columns={columns} data={filtered} onRowClick={(d) => setSelectedDepense(d)} />
         </div>

@@ -40,6 +40,36 @@ export function formatNumber(amount: number | string): string {
   return formatNum(num);
 }
 
+export function formatCompactCurrency(amount: number | string, devise: string = 'XOF'): string {
+  if (!amount && amount !== 0) {
+    if (devise === 'EUR') return `0 \u20ac`;
+    if (devise === 'USD') return '0 $';
+    return '0 F CFA';
+  }
+
+  const cleaned = String(amount).replace(/[/\s]/g, '');
+  let num = Number(cleaned);
+  if (Number.isNaN(num)) return '0';
+
+  const isNegative = num < 0;
+  num = Math.abs(num);
+
+  let formatted = '';
+  if (num >= 1000000) {
+    formatted = (num / 1000000).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' M';
+  } else if (num >= 1000) {
+    formatted = (num / 1000).toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 1 }) + ' k';
+  } else {
+    formatted = formatNum(num);
+  }
+
+  const prefix = isNegative ? '-' : '';
+
+  if (devise === 'EUR') return `${prefix}${formatted} \u20ac`;
+  if (devise === 'USD') return `${prefix}${formatted} $`;
+  return `${prefix}${formatted} F CFA`;
+}
+
 export function formatDate(dateString: string | null | undefined): string {
   if (!dateString) return '-';
   try {

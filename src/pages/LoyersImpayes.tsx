@@ -299,9 +299,9 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
     const statusTabs = [
         { id: 'tous', label: 'Toutes', count: impayes.length },
-        { id: 'a_venir', label: 'À venir', count: impayes.filter(i => i.statut === 'a_venir').length },
         { id: 'retard', label: 'En retard', count: impayes.filter(i => i.statut === 'en_retard').length },
-        { id: 'partiel', label: 'Partiel', count: impayes.filter(i => i.statut === 'partiel').length },
+        { id: 'partiel', label: 'Partiels', count: impayes.filter(i => i.statut === 'partiel').length },
+        { id: 'a_venir', label: 'À venir', count: impayes.filter(i => i.statut === 'a_venir').length },
     ];
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
@@ -345,7 +345,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
             render: (i: LoyerImpaye) => {
                 const meta = STATUS_META[i.statut];
                 return (
-                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${meta.classes}`}>
+                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold whitespace-nowrap ${meta.classes}`}>
                         {meta.label}
                     </span>
                 );
@@ -354,18 +354,31 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         {
             key: 'montant_encaisse',
             label: 'Encaissé',
-            render: (i: LoyerImpaye) => formatCurrency(i.montant_encaisse),
+            render: (i: LoyerImpaye) => <MoneyText value={i.montant_encaisse} />,
         },
         {
             key: 'montant_du',
             label: 'Montant dû',
-            render: (i: LoyerImpaye) => formatCurrency(i.montant_du),
+            render: (i: LoyerImpaye) => <span className="text-red-600 font-bold"><MoneyText value={i.montant_du} /></span>,
         },
-        { key: 'telephone_locataire', label: 'Téléphone' },
+        {
+            key: 'telephone_locataire',
+            label: 'Téléphone',
+            render: (i: LoyerImpaye) => {
+                if (!i.telephone_locataire) return '—';
+                const cleaned = i.telephone_locataire.replace(/\D/g, '');
+                const formatted = cleaned.length === 9
+                    ? `${cleaned.slice(0, 2)} ${cleaned.slice(2, 5)} ${cleaned.slice(5, 7)} ${cleaned.slice(7, 9)}`
+                    : i.telephone_locataire;
+                return <a href={`tel:${cleaned}`} className="text-brand-600 hover:underline hover:text-brand-800" onClick={(e) => e.stopPropagation()}>{formatted}</a>;
+            }
+        },
     ];
     const columns = allColumns.filter((c) => {
         if (isIndividualOwner && c.key === 'bailleur') return false;
-        return colIsVisible(c.key);
+        if (!colIsVisible(c.key)) return false;
+        if (drawerLoyer && (c.key === 'immeuble_nom' || c.key === 'bailleur' || c.key === 'telephone_locataire')) return false;
+        return true;
     });
 
     const kpis = useMemo(() => {
@@ -469,11 +482,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                     <FinancePageHeader
                         eyebrow="Encaissement & finance"
                         title={isIndividualOwner ? 'Mes créances à recouvrer' : 'Créances à recouvrer'}
-                        description={
-                            isIndividualOwner
-                                ? 'Suivez les échéances ouvertes, retards, paiements partiels et restes dus.'
-                                : 'Suivez les échéances ouvertes, retards, paiements partiels et restes dus.'
-                        }
+                        description="Retards, partiels et restes dus."
                     />
                     <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-emerald-950/10">
                         <Tabs
@@ -594,6 +603,37 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                         data={paginated}
                         onRowClick={(i) => setDrawerLoyer(i)}
                         selectedId={drawerLoyer?.id}
+                        mobileRender={(i) => {
+                            const status = STATUS_META[i.statut] || STATUS_META['en_retard'];
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            const StatusIcon = (status as any).icon || AlertCircle;
+                            return (
+                                <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <span className="font-black text-slate-900 truncate">{i.locataire_prenom} {i.locataire_nom}</span>
+                                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${status.classes}`}>
+                                            <StatusIcon className="h-3 w-3" />
+                                            {status.label}
+                                        </span>
+                                    </div>
+
+                                    <div className="text-xs font-semibold text-slate-500 truncate">
+                                        {i.immeuble_nom || '—'} · {i.unite_nom || '—'}
+                                    </div>
+
+                                    <div className="flex items-center justify-between mt-1">
+                                        <span className="text-base font-black text-red-600"><MoneyText value={i.montant_du} /></span>
+                                        <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(i.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
+                                    </div>
+
+                                    {i.montant_encaisse > 0 && (
+                                        <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
+                                            <span>Déjà encaissé: <MoneyText value={i.montant_encaisse} /></span>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        }}
                     />
                 </div>
 
@@ -649,43 +689,50 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         {/* Drawer */}
             {drawerLoyer && (
                 <FinanceDrawer
-                    title={`Loyer ${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`}
-                    subtitle={`Période: ${new Date(drawerLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`}
+                    title="CRÉANCE À RECOUVRER"
+                    amount={<MoneyText value={drawerLoyer.montant_du} />}
+                    details={[
+                        `${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`,
+                        `${drawerLoyer.immeuble_nom || '—'} · ${drawerLoyer.unite_nom || '—'}`
+                    ]}
+                    subtitle={`${STATUS_META[drawerLoyer.statut].label} · ${new Date(drawerLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`}
                     onClose={() => setDrawerLoyer(null)}
-                    badge={
-                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${STATUS_META[drawerLoyer.statut].classes}`}>
-                            {STATUS_META[drawerLoyer.statut].label}
-                        </span>
-                    }
                     actions={
                         <>
                             {drawerLoyer.montant_du > 0 && (
                                 <PremiumButton
-                                    variant="primary"
+                                    variant="create"
                                     size="sm"
                                     icon={<HandCoins className="h-4 w-4" />}
                                     onClick={() => handlePayerClick(drawerLoyer)}
                                     fullWidth
                                 >
-                                    Encaisser
+                                    Encaisser ce loyer
                                 </PremiumButton>
                             )}
                         </>
                     }
                 >
                     <div className="space-y-4">
-                        <FinanceInfoCard title="Locataire">
-                            <FinanceLine label="Nom" value={`${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`} />
-                            <FinanceLine label="Téléphone" value={drawerLoyer.telephone_locataire || '—'} />
-                        </FinanceInfoCard>
-                        <FinanceInfoCard title="Bien & Propriétaire">
-                            <FinanceLine label="Bien" value={`${drawerLoyer.immeuble_nom} · ${drawerLoyer.unite_nom}`} />
-                            <FinanceLine label={isIndividualOwner ? 'Propriétaire' : 'Bailleur'} value={`${drawerLoyer.bailleur_prenom} ${drawerLoyer.bailleur_nom}`} />
-                        </FinanceInfoCard>
-                        <FinanceInfoCard title="Détail Financier">
+                        <FinanceInfoCard title="Résumé créance">
                             <FinanceLine label="Loyer attendu" value={<MoneyText value={drawerLoyer.montant_attendu} />} />
                             <FinanceLine label="Déjà encaissé" value={<MoneyText value={drawerLoyer.montant_encaisse} className="font-semibold text-emerald-800" />} />
                             <FinanceLine label="Reste dû" value={<MoneyText value={drawerLoyer.montant_du} className={drawerLoyer.montant_du > 3 ? 'font-black text-red-700' : 'font-black text-emerald-800'} />} strong />
+                        </FinanceInfoCard>
+                        <FinanceInfoCard title="Affectation">
+                            <FinanceLine label="Bien" value={`${drawerLoyer.immeuble_nom} · ${drawerLoyer.unite_nom}`} />
+                            <FinanceLine label={isIndividualOwner ? 'Propriétaire' : 'Bailleur'} value={`${drawerLoyer.bailleur_prenom} ${drawerLoyer.bailleur_nom}`} />
+                            <FinanceLine label="Période" value={new Date(drawerLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })} />
+                        </FinanceInfoCard>
+                        <FinanceInfoCard title="Contact">
+                            <FinanceLine label="Locataire" value={`${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`} />
+                            <FinanceLine label="Téléphone" value={drawerLoyer.telephone_locataire || '—'} />
+                        </FinanceInfoCard>
+                        <FinanceInfoCard title="Historique / source serveur">
+                            <div className="text-xs text-slate-500">
+                                <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Échéance certifiée par le grand livre</p>
+                                <p className="mt-1.5 flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Aucun montant reconstruit côté interface</p>
+                            </div>
                         </FinanceInfoCard>
                     </div>
                 </FinanceDrawer>

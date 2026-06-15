@@ -15,6 +15,8 @@ interface TableProps<T> {
   onDelete?: (item: T) => void;
   onRowClick?: (item: T) => void;
   selectedId?: string | null;
+  mobileRender?: (item: T) => React.ReactNode;
+  compact?: boolean;
 }
 
 export function Table<T extends { id: string }>({
@@ -24,6 +26,8 @@ export function Table<T extends { id: string }>({
   onDelete,
   onRowClick,
   selectedId,
+  mobileRender,
+  compact,
 }: TableProps<T>) {
   const getCellValue = (item: T, key: string): React.ReactNode => {
     const value = (item as Record<string, unknown>)[key];
@@ -101,54 +105,60 @@ export function Table<T extends { id: string }>({
               aria-label={onRowClick ? "Ouvrir les détails" : undefined}
               aria-pressed={isSelected}
             >
-              <div className="divide-y divide-slate-100">
-              {columns.map((col, index) => {
-                const rawValue = col.render ? col.render(item) : getCellValue(item, col.key);
-                const value = renderContactValue(col.key, rawValue);
-                if (value === null || value === undefined || value === '') return null;
-                const isPrimary = index === 0;
-                return (
-                  <div
-                    key={col.key}
-                    className={`flex items-start justify-between gap-3 px-4 ${isPrimary ? 'bg-brand-surface/75 py-4' : 'py-3'}`}
-                  >
-                    <span className="w-24 flex-shrink-0 text-xs font-black uppercase tracking-wide text-slate-500">
-                      {col.label}
-                    </span>
-                    <span
-                      className={`min-w-0 flex-1 text-right leading-5 text-slate-800 [&_.sk-action-group]:flex [&_.sk-action-group]:flex-wrap [&_.sk-action-group]:justify-end [&_.sk-action-group]:gap-2 [&_.sk-action-group-right]:flex [&_.sk-action-group-right]:flex-wrap [&_.sk-action-group-right]:justify-end [&_.sk-action-group-right]:gap-2 ${
-                        isPrimary ? 'text-base font-black' : 'text-sm font-semibold'
-                      }`}
-                    >
-                      {value}
-                    </span>
+              {mobileRender ? (
+                mobileRender(item)
+              ) : (
+                <>
+                  <div className="divide-y divide-slate-100">
+                    {columns.map((col, index) => {
+                      const rawValue = col.render ? col.render(item) : getCellValue(item, col.key);
+                      const value = renderContactValue(col.key, rawValue);
+                      if (value === null || value === undefined || value === '') return null;
+                      const isPrimary = index === 0;
+                      return (
+                        <div
+                          key={col.key}
+                          className={`flex items-start justify-between gap-3 px-4 ${isPrimary ? 'bg-brand-surface/75 py-4' : 'py-3'}`}
+                        >
+                          <span className="w-24 flex-shrink-0 text-xs font-black uppercase tracking-wide text-slate-500">
+                            {col.label}
+                          </span>
+                          <span
+                            className={`min-w-0 flex-1 text-right leading-5 text-slate-800 [&_.sk-action-group]:flex [&_.sk-action-group]:flex-wrap [&_.sk-action-group]:justify-end [&_.sk-action-group]:gap-2 [&_.sk-action-group-right]:flex [&_.sk-action-group-right]:flex-wrap [&_.sk-action-group-right]:justify-end [&_.sk-action-group-right]:gap-2 ${
+                              isPrimary ? 'text-base font-black' : 'text-sm font-semibold'
+                            }`}
+                          >
+                            {value}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-            {(onEdit || onDelete) && (
-              <div className="grid grid-cols-2 gap-2 border-t border-emerald-950/10 bg-brand-surface/75 px-4 py-3">
-                {onEdit && (
-                  <button
-                    type="button"
-                    onClick={() => onEdit(item)}
-                    className="sk-action sk-action-secondary flex-1"
-                  >
-                    Modifier
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    type="button"
-                    onClick={() => onDelete(item)}
-                    className="sk-action sk-action-danger flex-1"
-                  >
-                    Supprimer
-                  </button>
-                )}
-              </div>
-            )}
-          </article>
+                  {(onEdit || onDelete) && (
+                    <div className="grid grid-cols-2 gap-2 border-t border-emerald-950/10 bg-brand-surface/75 px-4 py-3">
+                      {onEdit && (
+                        <button
+                          type="button"
+                          onClick={() => onEdit(item)}
+                          className="sk-action sk-action-secondary flex-1"
+                        >
+                          Modifier
+                        </button>
+                      )}
+                      {onDelete && (
+                        <button
+                          type="button"
+                          onClick={() => onDelete(item)}
+                          className="sk-action sk-action-danger flex-1"
+                        >
+                          Supprimer
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </article>
         );
         })}
       </div>
@@ -159,12 +169,12 @@ export function Table<T extends { id: string }>({
             <thead className="sticky top-0 z-10 border-b border-emerald-950/10 bg-[linear-gradient(180deg,rgba(248,244,236,0.98),rgba(255,255,255,0.94))] backdrop-blur">
               <tr>
                 {columns.map((column) => (
-                  <th key={column.key} className="px-4 py-3.5 text-left text-xs font-black uppercase text-slate-500 xl:px-5 xl:py-4">
+                  <th key={column.key} className={`px-4 text-left text-xs font-black uppercase text-slate-500 xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`}>
                     {column.label}
                   </th>
                 ))}
                 {(onEdit || onDelete) && (
-                  <th className="px-4 py-3.5 text-right text-xs font-black uppercase text-slate-500 xl:px-5 xl:py-4">
+                  <th className={`px-4 text-right text-xs font-black uppercase text-slate-500 xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`}>
                     Actions
                   </th>
                 )}
@@ -199,13 +209,13 @@ export function Table<T extends { id: string }>({
                     aria-selected={isSelected}
                   >
                   {columns.map((column) => (
-                    <td key={column.key} className="px-4 py-3.5 text-sm font-medium text-slate-700 xl:px-5 xl:py-4">
+                    <td key={column.key} className={`px-4 text-sm font-medium text-slate-700 xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`}>
                       {renderContactValue(column.key, column.render ? column.render(item) : getCellValue(item, column.key))}
                     </td>
                   ))}
 
                   {(onEdit || onDelete) && (
-                    <td className="px-4 py-3.5 text-right xl:px-5 xl:py-4">
+                    <td className={`px-4 text-right xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`}>
                       <div className="sk-action-group-right">
                         {onEdit && (
                           <button

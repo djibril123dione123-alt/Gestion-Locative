@@ -121,8 +121,8 @@ export function PaiementFormModal({
       mois_concerne: preferredMonth ? `${preferredMonth.value}-01` : prev.mois_concerne,
       montant_total: selected
         ? String(preferredMonth?.remainingAmount && preferredMonth.remainingAmount > 0
-            ? preferredMonth.remainingAmount
-            : selected.loyer_mensuel)
+          ? preferredMonth.remainingAmount
+          : selected.loyer_mensuel)
         : '',
       statut: 'paye',
     }));

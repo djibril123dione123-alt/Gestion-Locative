@@ -20,7 +20,6 @@ import {
   FileDown,
   Pencil,
   FileCheck2,
-  Mail,
   ReceiptText,
   XCircle,
   AlertCircle,
@@ -32,7 +31,7 @@ import { useTracking } from '../hooks/useTracking';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
-import { formatCurrency } from '../lib/formatters';
+import { formatCurrency, formatCompactCurrency } from '../lib/formatters';
 import {
   buildPaiementPayload,
   formatPaiementError,
@@ -615,58 +614,61 @@ export function Paiements({ }: PaiementsProps) {
     {
       key: 'mois_concerne',
       label: 'Période',
-      render: (p: PaiementRow) =>
-        new Date(p.mois_concerne).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' }),
+      render: (p: PaiementRow) => (
+        <span className="whitespace-nowrap">{new Date(p.mois_concerne).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}</span>
+      ),
     },
     {
       key: 'montant_total',
       label: 'Montant reçu',
       render: (p: PaiementRow) => (
-        <MoneyText value={p.montant_total} className="font-black text-emerald-800" />
+        <span className="whitespace-nowrap"><MoneyText value={p.montant_total} className="font-black text-emerald-800" /></span>
       ),
     },
     {
       key: 'reliquat',
       label: 'Reliquat',
       render: (p: PaiementRow) => (
-        <span className={`font-semibold tabular-nums ${Number(p.reliquat || 0) > 0 ? 'text-orange-700' : 'text-emerald-700'}`}>
+        <span className={`whitespace-nowrap font-semibold tabular-nums ${Number(p.reliquat || 0) > 0 ? 'text-orange-700' : 'text-emerald-700'}`}>
           <MoneyText value={Number(p.reliquat || 0)} />
         </span>
       ),
     },
     {
       key: 'date_paiement',
-      label: 'Date paiement',
-      render: (p: PaiementRow) => new Date(p.date_paiement).toLocaleDateString('fr-FR'),
+      label: 'Date',
+      render: (p: PaiementRow) => (
+        <span className="whitespace-nowrap">{new Date(p.date_paiement).toLocaleDateString('fr-FR')}</span>
+      ),
     },
     {
       key: 'mode',
       label: 'Mode',
       render: (p: PaiementRow) => (
-        <span className="text-slate-600 text-sm">
-          {MODE_LABELS[p.mode_paiement] || p.mode_paiement}
-        </span>
+        <span className="whitespace-nowrap text-slate-500">{MODE_LABELS[p.mode_paiement] || p.mode_paiement}</span>
       ),
     },
-    {
-      key: 'statut',
-      label: 'Statut',
-      render: (p: PaiementRow) => {
-        const s = getPaiementStatusMeta(p);
-        const Icon = s.icon;
-        return (
-          <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${s.classes}`}
-          >
-            <Icon className="w-3.5 h-3.5" />
-            {s.label}
-          </span>
-        );
+      {
+        key: 'statut',
+        label: 'Statut',
+        render: (p: PaiementRow) => {
+          const meta = getPaiementStatusMeta(p);
+          const Icon = meta.icon;
+          return (
+            <span className={`whitespace-nowrap inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${meta.classes}`}>
+              <Icon className="w-3.5 h-3.5" />
+              {meta.label}
+            </span>
+          );
+        },
       },
-    },
-  ];
+    ];
 
-  const columns = allColumns.filter((c) => isVisible(c.key));
+    const columns = allColumns.filter((c) => {
+      if (!isVisible(c.key)) return false;
+      if (selectedPaiement && (c.key === 'mode' || c.key === 'mois_concerne')) return false;
+      return true;
+    });
 
   const statusFilters: { id: StatusFilter; label: string; count: number }[] = [
     { id: 'tous', label: 'Tous', count: counts.tous },
@@ -734,7 +736,9 @@ export function Paiements({ }: PaiementsProps) {
     {
       label: 'Taux de recouvrement',
       value: `${summaryRecoveryRate}%`,
-      helper: <MoneyText value={financeSummary?.loyers_encaisses ?? kpis.encaisseMois} suffix={`/ ${formatCurrency(summaryBase)}`} />,
+      helper: <span className="truncate" title={`${formatCurrency(financeSummary?.loyers_encaisses ?? kpis.encaisseMois)} / ${formatCurrency(summaryBase)}`}>
+          Sur {formatCompactCurrency(summaryBase)} attendus
+        </span>,
       icon: FileCheck2,
       tone: summaryRecoveryRate >= 80 ? 'emerald' as const : 'amber' as const,
     },
@@ -758,11 +762,7 @@ export function Paiements({ }: PaiementsProps) {
         <FinancePageHeader
           eyebrow="Encaissement & finance"
           title={isIndividualOwner ? 'Mes loyers reçus' : 'Paiements reçus'}
-          description={
-            isIndividualOwner
-              ? 'Suivez les loyers validés, paiements partiels, avances et quittances générées.'
-              : 'Suivez les encaissements validés, paiements partiels, avances et quittances générées.'
-          }
+          description="Encaissements validés et quittances."
           primaryLabel="Nouveau paiement"
           primaryIcon={<Plus className="h-4 w-4" />}
           onPrimary={() => setIsModalOpen(true)}
@@ -915,13 +915,44 @@ export function Paiements({ }: PaiementsProps) {
             />
           </div>
         ) : (
-          <div className="sk-card overflow-hidden">
+          <div className="sk-card overflow-hidden mb-28 lg:mb-0">
             <div className="overflow-x-auto">
               <Table
                 columns={columns}
                 data={filtered}
                 onRowClick={(p) => setSelectedPaiement(p)}
                 selectedId={selectedPaiement?.id}
+                mobileRender={(p) => {
+                  const status = getPaiementStatusMeta(p);
+                  const StatusIcon = status.icon;
+                  return (
+                    <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="font-black text-slate-900 truncate">{formatPersonName(p.contrats?.locataires, 'Locataire inconnu')}</span>
+                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black tracking-wider ${status.classes}`}>
+                          <StatusIcon className="h-3 w-3" />
+                          <span className="capitalize">{status.label.toLowerCase()}</span>
+                        </span>
+                      </div>
+
+                      <div className="text-xs font-semibold text-slate-500 truncate">
+                        {p.contrats?.unites?.immeubles?.nom || '—'} · {p.contrats?.unites?.nom || '—'}
+                      </div>
+
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-base font-black text-emerald-800"><MoneyText value={p.montant_total} /></span>
+                        <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(p.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
+                        <span>{MODE_LABELS[p.mode_paiement] || p.mode_paiement} · {new Date(p.date_paiement).toLocaleDateString('fr-FR')}</span>
+                        {Number(p.reliquat) > 0 && (
+                           <span className="text-orange-600">Reste: <MoneyText value={p.reliquat} /></span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                }}
               />
             </div>
           </div>
@@ -945,8 +976,14 @@ export function Paiements({ }: PaiementsProps) {
 
         {selectedPaiement && selectedStatus && (
           <FinanceDrawer
-            title={`Paiement ${selectedPaiement.reference || selectedPaiement.id.slice(0, 8)}`}
-            subtitle={`Enregistré le ${new Date(selectedPaiement.date_paiement).toLocaleDateString('fr-FR')} · ${formatPersonName(selectedPaiement.contrats?.locataires, 'Locataire')}`}
+            title={`Paiement #${selectedPaiement.reference || selectedPaiement.id.slice(0, 8).toUpperCase()}`}
+            amount={<MoneyText value={selectedPaiement.montant_total} />}
+            details={[
+              formatPersonName(selectedPaiement.contrats?.locataires, 'Locataire'),
+              `${selectedPaiement.contrats?.unites?.immeubles?.nom || '•'} • ${selectedPaiement.contrats?.unites?.nom || '•'}`,
+              new Date(selectedPaiement.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+            ]}
+            subtitle={`Enregistré le ${new Date(selectedPaiement.date_paiement).toLocaleDateString('fr-FR')} • ${MODE_LABELS[selectedPaiement.mode_paiement] || selectedPaiement.mode_paiement}`}
             onClose={() => setSelectedPaiement(null)}
             badge={(() => {
               const Icon = selectedStatus.icon;
@@ -958,35 +995,15 @@ export function Paiements({ }: PaiementsProps) {
               );
             })()}
             actions={
-              <>
-                <PremiumButton
-                  variant="primary"
-                  size="sm"
-                  icon={<ReceiptText className="h-4 w-4" />}
-                  onClick={() => exportFacture(selectedPaiement.id)}
-                  disabled={exportingId === selectedPaiement.id}
-                >
-                  Voir quittance
-                </PremiumButton>
-                <PremiumButton
-                  variant="secondary"
-                  size="sm"
-                  icon={<FileDown className="h-4 w-4" />}
-                  onClick={() => exportFacture(selectedPaiement.id)}
-                  disabled={exportingId === selectedPaiement.id}
-                >
-                  Télécharger PDF
-                </PremiumButton>
-                <PremiumButton
-                  variant="secondary"
-                  size="sm"
-                  icon={<Mail className="h-4 w-4" />}
-                  disabled
-                  title="Envoi email à brancher sur le service notification"
-                >
-                  Envoyer
-                </PremiumButton>
-              </>
+              <PremiumButton
+                variant="primary"
+                size="sm"
+                icon={<ReceiptText className="h-4 w-4" />}
+                onClick={() => exportFacture(selectedPaiement.id)}
+                disabled={exportingId === selectedPaiement.id}
+              >
+                Voir quittance
+              </PremiumButton>
             }
           >
             <div className="space-y-4">
@@ -1017,24 +1034,32 @@ export function Paiements({ }: PaiementsProps) {
               </FinanceInfoCard>
 
               <FinanceInfoCard title="Documents liés">
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-red-100 bg-red-50/70 p-3">
+                <div className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${
+                  selectedPaiement.statut === 'annule' ? 'border-red-100 bg-red-50/70 text-red-600' : 'border-emerald-950/5 bg-[#fffdf8] text-brand-950'
+                }`}>
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-red-600 shadow-sm">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg shadow-sm bg-white ${
+                      selectedPaiement.statut === 'annule' ? 'text-red-600' : 'text-emerald-700'
+                    }`}>
                       <FileCheck2 className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-black text-slate-900">Quittance / facture</p>
-                      <p className="text-xs font-semibold text-slate-500">QR vérifiable selon registre documentaire</p>
+                      <p className="truncate text-sm font-black">Quittance / facture</p>
+                      <p className="text-xs font-semibold opacity-70">
+                        {selectedPaiement.statut === 'annule' ? 'Paiement annulé, document non valide' : 'QR vérifiable selon registre documentaire'}
+                      </p>
                     </div>
                   </div>
-                  <PremiumButton
-                    variant="secondary"
-                    size="sm"
-                    icon={<FileDown className="h-4 w-4" />}
-                    onClick={() => exportFacture(selectedPaiement.id)}
-                  >
-                    PDF
-                  </PremiumButton>
+                  {selectedPaiement.statut !== 'annule' && (
+                    <PremiumButton
+                      variant="secondary"
+                      size="sm"
+                      icon={<FileDown className="h-4 w-4" />}
+                      onClick={() => exportFacture(selectedPaiement.id)}
+                    >
+                      PDF
+                    </PremiumButton>
+                  )}
                 </div>
               </FinanceInfoCard>
 
@@ -1042,10 +1067,15 @@ export function Paiements({ }: PaiementsProps) {
                 {[
                   { label: 'Paiement enregistré', detail: selectedPaiement.created_at || selectedPaiement.date_paiement, isDate: true },
                   { label: 'Écriture ledger créée', detail: 'Journal de caisse', isDate: false },
-                  { label: 'Quittance générable', detail: 'Document prêt', isDate: false },
-                ].map((item) => (
-                  <div key={item.label} className="flex gap-3 border-b border-slate-100 pb-3 last:border-b-0 last:pb-0">
-                    <div className="mt-1 h-2.5 w-2.5 rounded-full bg-emerald-700" />
+                  { label: 'Quittance générée', detail: 'Document prêt', isDate: false },
+                  { label: 'Document archivé GED', detail: 'Registre des quittances', isDate: false },
+                  ...(selectedPaiement.statut === 'annule' ? [{ label: 'Paiement annulé', detail: selectedPaiement.deleted_at || 'Date inconnue', isDate: true }] : []),
+                ].map((item, idx, arr) => (
+                  <div key={item.label} className="relative flex gap-3 pb-3 last:pb-0">
+                    {idx !== arr.length - 1 && (
+                      <div className="absolute left-[5px] top-4 -bottom-2 w-0.5 bg-slate-100" />
+                    )}
+                    <div className="relative mt-1 flex h-3 w-3 shrink-0 items-center justify-center rounded-full bg-emerald-700 ring-4 ring-[#fffdf8]" />
                     <div>
                       <p className="text-sm font-black text-slate-900">{item.label}</p>
                       <p className="text-xs font-semibold text-slate-500">

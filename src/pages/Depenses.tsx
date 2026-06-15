@@ -13,7 +13,6 @@ import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { ToastContainer } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
@@ -244,18 +243,22 @@ export function Depenses() {
     });
   };
 
-  const ALL_COLUMN_KEYS_DEPENSES = ['date_depense', 'categorie', 'description', 'beneficiaire', 'montant', 'immeuble'] as const;
+  const ALL_COLUMN_KEYS_DEPENSES = ['date_depense', 'categorie', 'montant', 'immeuble', 'beneficiaire', 'statut'] as const;
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('depenses', [...ALL_COLUMN_KEYS_DEPENSES]);
 
   const allColumns = [
-    { key: 'date_depense', label: 'Date' },
-    { key: 'categorie', label: 'Catégorie' },
-    { key: 'description', label: 'Description' },
-    { key: 'beneficiaire', label: 'Bénéficiaire' },
-    { key: 'montant', label: 'Montant', render: (d: Depense) => formatCurrency(d.montant) },
-    { key: 'immeuble', label: 'Immeuble', render: (d: Depense) => d.immeubles?.nom || '-' },
+    { key: 'date_depense', label: 'Date', render: (d: Depense) => <span className="whitespace-nowrap">{new Date(d.date_depense).toLocaleDateString('fr-FR')}</span> },
+    { key: 'categorie', label: 'Catégorie', render: (d: Depense) => <span className="whitespace-nowrap font-medium text-slate-800">{d.categorie}</span> },
+    { key: 'montant', label: 'Montant', render: (d: Depense) => <span className="whitespace-nowrap font-black text-emerald-800"><MoneyText value={d.montant} /></span> },
+    { key: 'immeuble', label: 'Affectation', render: (d: Depense) => <span className="truncate max-w-[150px] inline-block">{d.immeubles?.nom || 'Général'}</span> },
+    { key: 'beneficiaire', label: 'Bénéficiaire / Desc.', render: (d: Depense) => <div className="truncate max-w-[180px] text-slate-600 font-medium">{d.beneficiaire || d.description || '—'}</div> },
+    { key: 'statut', label: 'Statut', render: () => <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 whitespace-nowrap"><ReceiptText className="h-3 w-3" /> Enregistrée</span> },
   ];
-  const columns = allColumns.filter((c) => colIsVisible(c.key));
+  const columns = allColumns.filter((c) => {
+    if (!colIsVisible(c.key)) return false;
+    if (selectedDepense && (c.key === 'categorie' || c.key === 'beneficiaire')) return false;
+    return true;
+  });
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedMois, setSelectedMois] = useState('');
   const [selectedCategorie, setSelectedCategorie] = useState('');
@@ -337,141 +340,166 @@ export function Depenses() {
     <div className="flex min-h-full">
       <div className={`flex-1 min-w-0 transition-all duration-300 ${selectedDepense ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
         <section className="sk-page-shell space-y-6">
-      <OfflineDataNotice
-        cachedAt={cacheTimestamp}
-        onRetry={loadData}
-        message="Les dépenses affichées viennent du dernier chargement réussi. Les écritures financières restent bloquées hors ligne."
-      />
-      <FinancePageHeader
-        eyebrow="Charges & exploitation"
-        title="Dépenses"
-        description="Suivez les charges, frais d'exploitation, dépenses rattachées et corrections via les workflows financiers contrôlés."
-        primaryLabel="Nouvelle dépense"
-        primaryIcon={<Plus className="h-4 w-4" />}
-        onPrimary={() => setIsModalOpen(true)}
-      />
+          <OfflineDataNotice
+            cachedAt={cacheTimestamp}
+            onRetry={loadData}
+            message="Les dépenses affichées viennent du dernier chargement réussi. Les écritures financières restent bloquées hors ligne."
+          />
+          <FinancePageHeader
+            eyebrow="CHARGES & EXPLOITATION"
+            title="Dépenses"
+            description="Suivez les charges, frais d’exploitation, dépenses rattachées et corrections via les workflows financiers contrôlés."
+            primaryLabel="Nouvelle dépense"
+            primaryIcon={<Plus className="h-4 w-4" />}
+            onPrimary={() => setIsModalOpen(true)}
+          />
 
-      <FinanceKpiGrid metrics={financeMetrics} />
+          <FinanceKpiGrid metrics={financeMetrics} />
 
-      <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-3 relative min-w-0 flex-1">
-            <div className="relative min-w-0 flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Rechercher..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+          <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-3 relative min-w-0 flex-1">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Rechercher..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setMobileFiltersOpen(true)}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filtres
+                </button>
+              </div>
+
+              <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
+                <SmartCombobox
+                  value={selectedMois}
+                  options={[{ value: '', label: 'Mois en cours' }]}
+                  onChange={setSelectedMois}
+                  placeholder="Mois en cours"
+                  searchPlaceholder="Rechercher..."
+                  className="w-48 shrink-0"
+                />
+                <SmartCombobox
+                  value={selectedCategorie}
+                  options={[
+                    { value: '', label: 'Catégories' },
+                    ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
+                  ]}
+                  onChange={setSelectedCategorie}
+                  placeholder="Catégories"
+                  searchPlaceholder="Rechercher..."
+                  className="w-56 shrink-0"
+                />
+                <SmartCombobox
+                  value={selectedImmeuble}
+                  options={[
+                    { value: '', label: 'Affectations' },
+                    ...immeubles.map((i) => ({ value: i.id, label: i.nom }))
+                  ]}
+                  onChange={setSelectedImmeuble}
+                  placeholder="Affectations"
+                  searchPlaceholder="Rechercher..."
+                  className="w-56 shrink-0"
+                />
+
+                <ColumnPicker
+                  columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
+                  visibility={colVis}
+                  onToggle={colToggle}
+                  onSetAll={colSetAll}
+                />
+              </div>
+            </div>
+          </div>
+
+          <MobileFilterSheet
+            isOpen={mobileFiltersOpen}
+            title="Filtres Dépenses"
+            onClose={() => setMobileFiltersOpen(false)}
+            onReset={() => {
+              setSelectedMois('');
+              setSelectedCategorie('');
+              setSelectedImmeuble('');
+            }}
+          >
+            <div className="grid gap-3">
+              <SmartCombobox
+                value={selectedMois}
+                options={[{ value: '', label: 'Mois en cours' }]}
+                onChange={setSelectedMois}
+                placeholder="Mois en cours"
+                searchPlaceholder="Rechercher..."
+              />
+              <SmartCombobox
+                value={selectedCategorie}
+                options={[
+                  { value: '', label: 'Catégories' },
+                  ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
+                ]}
+                onChange={setSelectedCategorie}
+                placeholder="Catégories"
+                searchPlaceholder="Rechercher..."
+              />
+              <SmartCombobox
+                value={selectedImmeuble}
+                options={[
+                  { value: '', label: 'Affectations' },
+                  ...immeubles.map((i) => ({ value: i.id, label: i.nom }))
+                ]}
+                onChange={setSelectedImmeuble}
+                placeholder="Affectations"
+                searchPlaceholder="Rechercher..."
               />
             </div>
+          </MobileFilterSheet>
 
-            <button
-              type="button"
-              onClick={() => setMobileFiltersOpen(true)}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              Filtres
-            </button>
+          <div className="sk-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table
+                columns={columns}
+                data={filtered}
+                onRowClick={(d) => setSelectedDepense(d)}
+                selectedId={selectedDepense?.id}
+                mobileRender={(d) => {
+                  const status = { icon: ReceiptText, classes: 'bg-emerald-100 text-emerald-700 border-emerald-200', label: 'Enregistrée' };
+                  return (
+                    <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="font-black text-slate-900 truncate">
+                          {d.categorie}
+                        </span>
+                        <span className="font-black tracking-tight text-slate-900 whitespace-nowrap">
+                          <MoneyText value={d.montant} />
+                        </span>
+                      </div>
+
+                      <div className="text-sm font-semibold text-slate-600 truncate">
+                        {d.description || 'Dépense'}
+                      </div>
+
+                      <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
+                        <span className="truncate pr-2">
+                          {new Date(d.date_depense).toLocaleDateString('fr-FR')} · {d.immeubles?.nom || 'Général'} · {status.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                }}
+              />
+            </div>
           </div>
 
-          <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
-            <SmartCombobox
-              value={selectedMois}
-              options={[{ value: '', label: 'Mois en cours' }]}
-              onChange={setSelectedMois}
-              placeholder="Mois en cours"
-              searchPlaceholder="Rechercher..."
-              className="w-48 shrink-0"
-            />
-            <SmartCombobox
-              value={selectedCategorie}
-              options={[
-                { value: '', label: 'Catégories' },
-                ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
-              ]}
-              onChange={setSelectedCategorie}
-              placeholder="Catégories"
-              searchPlaceholder="Rechercher..."
-              className="w-56 shrink-0"
-            />
-            <SmartCombobox
-              value={selectedImmeuble}
-              options={[
-                { value: '', label: 'Affectations' },
-                ...immeubles.map((i) => ({ value: i.id, label: i.nom }))
-              ]}
-              onChange={setSelectedImmeuble}
-              placeholder="Affectations"
-              searchPlaceholder="Rechercher..."
-              className="w-56 shrink-0"
-            />
-
-            <ColumnPicker
-              columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
-              visibility={colVis}
-              onToggle={colToggle}
-              onSetAll={colSetAll}
-            />
-          </div>
-        </div>
-      </div>
-
-      <MobileFilterSheet
-        isOpen={mobileFiltersOpen}
-        title="Filtres Dépenses"
-        onClose={() => setMobileFiltersOpen(false)}
-        onReset={() => {
-          setSelectedMois('');
-          setSelectedCategorie('');
-          setSelectedImmeuble('');
-        }}
-      >
-        <div className="grid gap-3">
-          <SmartCombobox
-            value={selectedMois}
-            options={[{ value: '', label: 'Mois en cours' }]}
-            onChange={setSelectedMois}
-            placeholder="Mois en cours"
-            searchPlaceholder="Rechercher..."
-          />
-          <SmartCombobox
-            value={selectedCategorie}
-            options={[
-              { value: '', label: 'Catégories' },
-              ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
-            ]}
-            onChange={setSelectedCategorie}
-            placeholder="Catégories"
-            searchPlaceholder="Rechercher..."
-          />
-          <SmartCombobox
-            value={selectedImmeuble}
-            options={[
-              { value: '', label: 'Affectations' },
-              ...immeubles.map((i) => ({ value: i.id, label: i.nom }))
-            ]}
-            onChange={setSelectedImmeuble}
-            placeholder="Affectations"
-            searchPlaceholder="Rechercher..."
-          />
-        </div>
-      </MobileFilterSheet>
-
-      <div className="sk-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table 
-            columns={columns} 
-            data={filtered} 
-            onRowClick={(d) => setSelectedDepense(d)} 
-            selectedId={selectedDepense?.id}
-          />
-        </div>
-      </div>
-
-      </section>
+        </section>
       </div>
 
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingDepense ? 'Modifier dépense' : 'Nouvelle dépense'}>
@@ -561,49 +589,75 @@ export function Depenses() {
       {/* Drawer */}
       {selectedDepense && (
         <FinanceDrawer
-          title={`Dépense ${selectedDepense.categorie}`}
-          subtitle={`Enregistrée le ${new Date(selectedDepense.date_depense).toLocaleDateString('fr-FR')}`}
+          title="DÉPENSE ENREGISTRÉE"
+          amount={<MoneyText value={selectedDepense.montant} />}
+          details={[
+            selectedDepense.categorie,
+            new Date(selectedDepense.date_depense).toLocaleDateString('fr-FR')
+          ]}
+          subtitle="Enregistrée"
           onClose={() => setSelectedDepense(null)}
-          badge={
-            <span className="inline-flex rounded-full border px-2.5 py-1 text-xs font-bold bg-slate-100 text-slate-700 border-slate-200">
-              {selectedDepense.categorie}
-            </span>
-          }
-          actions={
-            <>
-              <PremiumButton
-                variant="secondary"
-                size="sm"
-                icon={<Pencil className="h-4 w-4" />}
-                onClick={() => handleEdit(selectedDepense)}
-                fullWidth
-              >
-                Corriger
-              </PremiumButton>
-              <PremiumButton
-                variant="danger"
-                size="sm"
-                icon={<XCircle className="h-4 w-4" />}
-                onClick={() => {
-                  handleDelete(selectedDepense);
-                  setSelectedDepense(null);
-                }}
-                fullWidth
-              >
-                Annuler
-              </PremiumButton>
-            </>
-          }
         >
           <div className="space-y-4">
-            <FinanceInfoCard title="Détail Financier">
-              <FinanceLine label="Montant" value={<span className="font-black text-slate-900">{formatCurrency(selectedDepense.montant)}</span>} />
+            <FinanceInfoCard title="Résumé">
+              <FinanceLine label="Montant" value={<MoneyText value={selectedDepense.montant} className="font-black text-emerald-800" />} strong />
               <FinanceLine label="Date" value={new Date(selectedDepense.date_depense).toLocaleDateString('fr-FR')} />
+              <FinanceLine label="Catégorie" value={selectedDepense.categorie} />
             </FinanceInfoCard>
-            <FinanceInfoCard title="Affectation & Description">
+
+            <FinanceInfoCard title="Affectation & description">
+              <FinanceLine label="Bien / Immeuble" value={selectedDepense.immeubles?.nom || 'Général (non affecté)'} />
               <FinanceLine label="Bénéficiaire" value={selectedDepense.beneficiaire || '—'} />
-              <FinanceLine label="Immeuble" value={selectedDepense.immeubles?.nom || '—'} />
               <FinanceLine label="Description" value={selectedDepense.description || '—'} />
+            </FinanceInfoCard>
+
+            <FinanceInfoCard title="Justificatif">
+              <div className="text-sm font-semibold text-slate-500 flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <ReceiptText className="w-4 h-4" /> Aucun justificatif téléversé
+              </div>
+            </FinanceInfoCard>
+
+            <FinanceInfoCard title="Impact financier">
+              <FinanceLine label="Déduction loyer" value="Non applicable" />
+              <FinanceLine label="À la charge de" value={selectedDepense.immeuble_id ? 'Bailleur' : 'Agence'} />
+            </FinanceInfoCard>
+
+            <FinanceInfoCard title="Historique">
+              <div className="relative flex gap-3">
+                <div className="relative flex h-3 w-3 mt-1 shrink-0 items-center justify-center rounded-full bg-emerald-700 ring-4 ring-[#fffdf8]" />
+                <div>
+                  <p className="text-sm font-black text-slate-900">Enregistrée au grand livre</p>
+                  <p className="text-xs font-semibold text-slate-500">{new Date(selectedDepense.date_depense).toLocaleString('fr-FR')}</p>
+                </div>
+              </div>
+            </FinanceInfoCard>
+
+            <FinanceInfoCard title="Actions contrôlées">
+              <div className="grid grid-cols-1 gap-2">
+                <PremiumButton
+                  variant="secondary"
+                  icon={<Pencil className="h-4 w-4" />}
+                  onClick={() => handleEdit(selectedDepense)}
+                  fullWidth
+                >
+                  Modifier
+                </PremiumButton>
+                <PremiumButton
+                  variant="danger"
+                  icon={<XCircle className="h-4 w-4" />}
+                  onClick={() => {
+                    handleDelete(selectedDepense);
+                    setSelectedDepense(null);
+                  }}
+                  fullWidth
+                >
+                  Annuler
+                </PremiumButton>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  <PremiumButton variant="secondary" size="sm" icon={<ReceiptText className="h-4 w-4" />} disabled>Justificatif</PremiumButton>
+                  <PremiumButton variant="secondary" size="sm" icon={<Building2 className="h-4 w-4" />} disabled>GED</PremiumButton>
+                </div>
+              </div>
             </FinanceInfoCard>
           </div>
         </FinanceDrawer>

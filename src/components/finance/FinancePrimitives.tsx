@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { X } from 'lucide-react';
 import { type MetricTone } from '../ui/MetricCard';
@@ -152,6 +152,8 @@ export function FinanceStatusTabs<T extends string>({
 export function FinanceDrawer({
   title,
   subtitle,
+  amount,
+  details,
   badge,
   onClose,
   children,
@@ -159,6 +161,8 @@ export function FinanceDrawer({
 }: {
   title: string;
   subtitle?: ReactNode;
+  amount?: ReactNode;
+  details?: ReactNode[];
   badge?: ReactNode;
   onClose: () => void;
   children: ReactNode;
@@ -167,15 +171,26 @@ export function FinanceDrawer({
   return (
     <aside className="fixed inset-y-0 right-0 z-[60] flex w-full flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:w-[31.5rem] xl:border-l xl:border-emerald-950/10">
       <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={onClose} aria-hidden="true" />
-      <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
-        <div className="sticky top-0 z-10 border-b border-emerald-950/10 bg-[#fffdf8]/95 px-5 py-4 backdrop-blur">
+      <div className="relative z-10 flex h-full flex-col bg-[#fffdf8]">
+        <div className="sticky top-0 z-10 shrink-0 border-b border-emerald-950/10 bg-[#fffdf8]/95 px-5 py-4 backdrop-blur">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate text-xl font-black text-slate-950">{title}</h2>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-800/70">{title}</p>
                 {badge}
               </div>
-              {subtitle && <div className="mt-1 text-xs font-semibold leading-5 text-slate-500">{subtitle}</div>}
+              {amount && <div className="mt-1 text-3xl font-black tracking-tight text-slate-950">{amount}</div>}
+              {details && details.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-sm font-semibold text-slate-600">
+                  {details.map((detail, idx) => (
+                    <React.Fragment key={idx}>
+                      {idx > 0 && <span className="text-slate-300">·</span>}
+                      <span>{detail}</span>
+                    </React.Fragment>
+                  ))}
+                </div>
+              )}
+              {subtitle && <div className="mt-1.5 text-xs font-semibold leading-5 text-slate-500">{subtitle}</div>}
             </div>
             <button
               type="button"

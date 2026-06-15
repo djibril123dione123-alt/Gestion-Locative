@@ -352,16 +352,16 @@ export function Depenses() {
       <FinanceKpiGrid metrics={financeMetrics} />
 
       <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center gap-2 relative min-w-0 flex-1">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3 relative min-w-0 flex-1">
             <div className="relative min-w-0 flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Rechercher une dépense..."
+                placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="sk-input pl-9"
+                className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
               />
             </div>
 
@@ -415,48 +415,48 @@ export function Depenses() {
             />
           </div>
         </div>
-
-        <MobileFilterSheet
-          isOpen={mobileFiltersOpen}
-          title="Filtres Dépenses"
-          onClose={() => setMobileFiltersOpen(false)}
-          onReset={() => {
-            setSelectedMois('');
-            setSelectedCategorie('');
-            setSelectedImmeuble('');
-          }}
-        >
-          <div className="grid gap-3">
-            <SmartCombobox
-              value={selectedMois}
-              options={[{ value: '', label: 'Mois en cours' }]}
-              onChange={setSelectedMois}
-              placeholder="Mois en cours"
-              searchPlaceholder="Rechercher un mois..."
-            />
-            <SmartCombobox
-              value={selectedCategorie}
-              options={[
-                { value: '', label: 'Toutes les catégories' },
-                ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
-              ]}
-              onChange={setSelectedCategorie}
-              placeholder="Toutes les catégories"
-              searchPlaceholder="Rechercher une catégorie..."
-            />
-            <SmartCombobox
-              value={selectedImmeuble}
-              options={[
-                { value: '', label: 'Toutes les affectations' },
-                ...immeubles.map((i) => ({ value: i.id, label: i.nom }))
-              ]}
-              onChange={setSelectedImmeuble}
-              placeholder="Toutes les affectations"
-              searchPlaceholder="Rechercher une affectation..."
-            />
-          </div>
-        </MobileFilterSheet>
       </div>
+
+      <MobileFilterSheet
+        isOpen={mobileFiltersOpen}
+        title="Filtres Dépenses"
+        onClose={() => setMobileFiltersOpen(false)}
+        onReset={() => {
+          setSelectedMois('');
+          setSelectedCategorie('');
+          setSelectedImmeuble('');
+        }}
+      >
+        <div className="grid gap-3">
+          <SmartCombobox
+            value={selectedMois}
+            options={[{ value: '', label: 'Mois en cours' }]}
+            onChange={setSelectedMois}
+            placeholder="Mois en cours"
+            searchPlaceholder="Rechercher..."
+          />
+          <SmartCombobox
+            value={selectedCategorie}
+            options={[
+              { value: '', label: 'Catégories' },
+              ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
+            ]}
+            onChange={setSelectedCategorie}
+            placeholder="Catégories"
+            searchPlaceholder="Rechercher..."
+          />
+          <SmartCombobox
+            value={selectedImmeuble}
+            options={[
+              { value: '', label: 'Affectations' },
+              ...immeubles.map((i) => ({ value: i.id, label: i.nom }))
+            ]}
+            onChange={setSelectedImmeuble}
+            placeholder="Affectations"
+            searchPlaceholder="Rechercher..."
+          />
+        </div>
+      </MobileFilterSheet>
 
       <div className="sk-card overflow-hidden">
         <div className="overflow-x-auto">

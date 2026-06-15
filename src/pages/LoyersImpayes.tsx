@@ -491,8 +491,8 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
             {/* Filtres + Table */}
             <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-center gap-2 relative min-w-0 flex-1">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex items-center gap-3 relative min-w-0 flex-1">
                         <div className="relative min-w-0 flex-1">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
@@ -500,7 +500,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 placeholder="Rechercher..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="sk-input pl-9"
+                                className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                             />
                         </div>
 
@@ -551,39 +551,39 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                 <div className="flex items-center px-4 py-2 lg:px-5">
                     <FinanceStatusTabs tabs={statusTabs} active={statusFilter} onChange={setStatusFilter} />
                 </div>
-
-                <MobileFilterSheet
-                    isOpen={mobileFiltersOpen}
-                    title="Filtres Créances"
-                    onClose={() => setMobileFiltersOpen(false)}
-                    onReset={() => {
-                        setSelectedBailleur('');
-                        setSelectedMois('');
-                    }}
-                >
-                    <div className="grid gap-3">
-                        <SmartCombobox
-                            value={selectedMois}
-                            options={[{ value: '', label: 'Mois en cours' }]}
-                            onChange={setSelectedMois}
-                            placeholder="Mois en cours"
-                            searchPlaceholder="Rechercher..."
-                        />
-                        {!isIndividualOwner && (
-                            <SmartCombobox
-                                value={selectedBailleur}
-                                options={[
-                                    { value: '', label: 'Tous les bailleurs' },
-                                    ...bailleurs.map((b) => ({ value: b.label, label: b.label }))
-                                ]}
-                                onChange={setSelectedBailleur}
-                                placeholder="Tous les bailleurs"
-                                searchPlaceholder="Rechercher un bailleur..."
-                            />
-                        )}
-                    </div>
-                </MobileFilterSheet>
             </div>
+
+            <MobileFilterSheet
+                isOpen={mobileFiltersOpen}
+                title="Filtres Créances"
+                onClose={() => setMobileFiltersOpen(false)}
+                onReset={() => {
+                    setSelectedBailleur('');
+                    setSelectedMois('');
+                }}
+            >
+                <div className="grid gap-3">
+                    <SmartCombobox
+                        value={selectedMois}
+                        options={[{ value: '', label: 'Mois en cours' }]}
+                        onChange={setSelectedMois}
+                        placeholder="Mois en cours"
+                        searchPlaceholder="Rechercher..."
+                    />
+                    {!isIndividualOwner && (
+                        <SmartCombobox
+                            value={selectedBailleur}
+                            options={[
+                                { value: '', label: 'Tous les bailleurs' },
+                                ...bailleurs.map((b) => ({ value: b.label, label: b.label }))
+                            ]}
+                            onChange={setSelectedBailleur}
+                            placeholder="Tous les bailleurs"
+                            searchPlaceholder="Rechercher un bailleur..."
+                        />
+                    )}
+                </div>
+            </MobileFilterSheet>
 
             <div className="sk-card overflow-hidden">
                 <div className="overflow-x-auto">

@@ -856,36 +856,36 @@ export function Paiements({ }: PaiementsProps) {
           <div className="flex items-center">
             <FinanceStatusTabs tabs={statusFilters} active={statusFilter} onChange={setStatusFilter} />
           </div>
-
-          <MobileFilterSheet
-            isOpen={mobileFiltersOpen}
-            title="Filtres Paiements"
-            onClose={() => setMobileFiltersOpen(false)}
-            onReset={() => {
-              setMonthFilter('current');
-              setBailleurFilter('all');
-            }}
-          >
-            <div className="grid gap-3">
-              <SmartCombobox
-                value={monthFilter}
-                options={monthOptions}
-                onChange={setMonthFilter}
-                placeholder="Période"
-                searchPlaceholder="Rechercher une période..."
-              />
-              {!isIndividualOwner && (
-                <SmartCombobox
-                  value={bailleurFilter}
-                  options={bailleurOptionsFilter}
-                  onChange={setBailleurFilter}
-                  placeholder="Tous les bailleurs"
-                  searchPlaceholder="Rechercher un bailleur..."
-                />
-              )}
-            </div>
-          </MobileFilterSheet>
         </div>
+
+        <MobileFilterSheet
+          isOpen={mobileFiltersOpen}
+          title="Filtres Paiements"
+          onClose={() => setMobileFiltersOpen(false)}
+          onReset={() => {
+            setMonthFilter('current');
+            setBailleurFilter('all');
+          }}
+        >
+          <div className="grid gap-3">
+            <SmartCombobox
+              value={monthFilter}
+              options={monthOptions}
+              onChange={setMonthFilter}
+              placeholder="Période"
+              searchPlaceholder="Rechercher une période..."
+            />
+            {!isIndividualOwner && (
+              <SmartCombobox
+                value={bailleurFilter}
+                options={bailleurOptionsFilter}
+                onChange={setBailleurFilter}
+                placeholder="Tous les bailleurs"
+                searchPlaceholder="Rechercher un bailleur..."
+              />
+            )}
+          </div>
+        </MobileFilterSheet>
 
         {loading ? (
           <div className="sk-premium-panel p-4 sm:p-6">

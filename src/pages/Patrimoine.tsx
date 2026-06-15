@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
+  Activity,
   AlertCircle,
   Banknote,
   Briefcase,
   Building2,
+  ChevronRight,
+  CircleUser,
   ClipboardList,
   DoorOpen,
   FileText,
@@ -26,8 +29,6 @@ import {
   Warehouse,
   X,
   type LucideIcon,
-  Activity,
-  CircleUser,
 } from 'lucide-react';
 
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -1843,7 +1844,7 @@ function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: ReactNod
       {rows.map((row, index) => {
         const Icon = row.icon;
         const isClickable = !!row.onClick;
-        const Wrapper = isClickable ? 'button' : 'div';
+        const Wrapper: React.ElementType = isClickable ? 'button' : 'div';
         const wrapperProps = isClickable
           ? {
               type: 'button',
@@ -1856,7 +1857,7 @@ function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: ReactNod
             };
 
         return (
-          <Wrapper key={`${typeof row.title === 'string' ? row.title : index}-${index}`} {...(wrapperProps as any)}>
+          <Wrapper key={`${typeof row.title === 'string' ? row.title : index}-${index}`} {...(wrapperProps as React.HTMLAttributes<HTMLElement> & { type?: 'button'; onClick?: () => void })}>
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white text-brand-800 shadow-sm ring-1 ring-black/5">
                 <Icon className="h-4 w-4" />
@@ -2162,5 +2163,3 @@ function WizardIntro({ title, description }: { title: string; description: strin
     </div>
   );
 }
-
-

@@ -1,4 +1,5 @@
 import type { ContratRow, PaiementRow } from '../../components/paiements/paiementTypes';
+import { applyCfaSettlementTolerance } from '../../lib/cfaSettlement';
 
 export interface PaymentMonthOption {
   value: string;
@@ -52,15 +53,17 @@ export function buildPaymentMonthOptions(
   const start = monthStart(contrat.date_debut || '') ?? todayMonth;
   const contractEnd = contrat.date_fin ? monthStart(contrat.date_fin) : null;
   const futureEnd = addMonths(todayMonth, options.monthsAhead ?? 12);
-  const end = contractEnd && contractEnd > futureEnd ? contractEnd : futureEnd;
+  const end = contractEnd && contractEnd < futureEnd ? contractEnd : futureEnd;
   const selectedMonth = options.selectedMonth?.slice(0, 7);
   const loyer = Number(contrat.loyer_mensuel || 0);
   const result: PaymentMonthOption[] = [];
 
+  if (end < start) return result;
+
   for (let cursor = new Date(start.getFullYear(), start.getMonth(), 1); cursor <= end; cursor = addMonths(cursor, 1)) {
     const value = monthKey(cursor);
     const paidAmount = getPaidAmountForMonth(paiements, contrat.id, value, options.excludePaymentId);
-    const remainingAmount = Math.max(loyer - paidAmount, 0);
+    const remainingAmount = applyCfaSettlementTolerance(Math.max(loyer - paidAmount, 0));
     const isSold = remainingAmount <= 0 && loyer > 0;
     const isSelectedMonth = selectedMonth === value;
 
@@ -89,7 +92,7 @@ export function getPaymentMonthState(
   if (!contrat || !month) return null;
   const paidAmount = getPaidAmountForMonth(paiements, contrat.id, month.slice(0, 7), excludePaymentId);
   const loyer = Number(contrat.loyer_mensuel || 0);
-  const remainingAmount = Math.max(loyer - paidAmount, 0);
+  const remainingAmount = applyCfaSettlementTolerance(Math.max(loyer - paidAmount, 0));
   return {
     paidAmount,
     remainingAmount,

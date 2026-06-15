@@ -297,20 +297,8 @@ function CompactList({
     <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8] shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
       {rows.map((row) => {
         const isClickable = !!row.onClick;
-        const Wrapper = isClickable ? 'button' : 'div';
-        const wrapperProps = isClickable
-          ? {
-              type: 'button',
-              onClick: row.onClick,
-              className: 'group flex w-full items-center justify-between gap-3 border-b border-slate-100 px-3.5 py-2.5 last:border-b-0 text-left transition hover:bg-emerald-50/50 cursor-pointer focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500',
-              'aria-label': `Ouvrir ${row.title}`,
-            }
-          : {
-              className: 'flex items-center justify-between gap-3 border-b border-slate-100 px-3.5 py-2.5 last:border-b-0',
-            };
-
-        return (
-          <Wrapper key={row.id} {...(wrapperProps as any)}>
+        const content = (
+          <>
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-slate-950">{row.title}</p>
               <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">{row.subtitle}</p>
@@ -322,7 +310,26 @@ function CompactList({
                 {isClickable && <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />}
               </div>
             </div>
-          </Wrapper>
+          </>
+        );
+
+        return isClickable ? (
+          <button
+            key={row.id}
+            type="button"
+            onClick={row.onClick}
+            className="group flex w-full items-center justify-between gap-3 border-b border-slate-100 px-3.5 py-2.5 text-left transition last:border-b-0 hover:bg-emerald-50/50 focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500"
+            aria-label={`Ouvrir ${row.title}`}
+          >
+            {content}
+          </button>
+        ) : (
+          <div
+            key={row.id}
+            className="flex items-center justify-between gap-3 border-b border-slate-100 px-3.5 py-2.5 last:border-b-0"
+          >
+            {content}
+          </div>
         );
       })}
     </div>
@@ -1525,7 +1532,7 @@ export function Bailleurs() {
             <CompactList rows={reportDocuments.slice(0, 5).map((document) => ({
               id: document.id,
               title: document.name || 'Bilan',
-              subtitle: `Le ${formatDate((document as any).created_at)}`,
+              subtitle: `Le ${formatDate(document.created_at)}`,
               badge: 'PDF',
               onClick: () => { window.location.hash = '#/documents'; },
             }))} />
@@ -1540,7 +1547,7 @@ export function Bailleurs() {
       <CompactList rows={selectedSummary.documents.slice(0, 8).map((document) => ({
         id: document.id,
         title: document.name || 'Document sans nom',
-        subtitle: `Le ${formatDate((document as any).created_at)}`,
+        subtitle: `Le ${formatDate(document.created_at)}`,
         badge: document.lifecycle_status || document.document_category || 'GED',
         onClick: () => { window.location.hash = '#/documents'; },
       }))} />
@@ -2163,5 +2170,4 @@ function WizardIntro({ title, description }: { title: string; description: strin
     </div>
   );
 }
-
 

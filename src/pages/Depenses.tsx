@@ -14,6 +14,7 @@ import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { cancelDepenseViaRpc, createDepenseViaRpc, updateDepenseViaRpc } from '../services/api/financeApi';
 
 interface Depense {
   id: string;
@@ -41,7 +42,7 @@ interface DepenseFormData {
 }
 
 export function Depenses() {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const [depenses, setDepenses] = useState<Depense[]>([]);
   const [filtered, setFiltered] = useState<Depense[]>([]);
   const [immeubles, setImmeubles] = useState<ImmeubleOption[]>([]);
@@ -93,7 +94,13 @@ export function Depenses() {
         'depenses-page',
         async () => {
           const [depensesRes, immeublesRes] = await Promise.all([
-            supabase.from('depenses').select('*, immeubles(nom)').eq('agency_id', profile.agency_id).order('created_at', { ascending: false }),
+            supabase
+              .from('depenses')
+              .select('*, immeubles(nom)')
+              .eq('agency_id', profile.agency_id)
+              .eq('actif', true)
+              .is('deleted_at', null)
+              .order('created_at', { ascending: false }),
             supabase.from('immeubles').select('id, nom').eq('agency_id', profile.agency_id).eq('actif', true),
           ]);
           if (depensesRes.error) throw depensesRes.error;
@@ -142,9 +149,16 @@ export function Depenses() {
       };
 
       if (editingDepense) {
-        await supabase.from('depenses').update(data).eq('id', editingDepense.id);
+        await updateDepenseViaRpc({
+          id: editingDepense.id,
+          agency_id: profile.agency_id,
+          ...data,
+        });
       } else {
-        await supabase.from('depenses').insert([{ ...data, created_by: user?.id, agency_id: profile.agency_id }]);
+        await createDepenseViaRpc({
+          agency_id: profile.agency_id,
+          ...data,
+        });
       }
 
       closeModal();
@@ -181,23 +195,27 @@ export function Depenses() {
 
   const confirmDelete = async () => {
     if (!deleteTarget) return;
+    if (!profile?.agency_id || !profile.id) return;
+    const agencyId = profile.agency_id;
+    const userId = profile.id;
     if (!navigator.onLine) {
       toast.error('Connexion indisponible : suppression impossible hors ligne.');
       return;
     }
     setDeleting(true);
     try {
-      const { error } = await supabase.from('depenses').delete().eq('id', deleteTarget.id);
-      if (error) throw error;
-      toast.success('Dépense supprimée');
+      await cancelDepenseViaRpc({
+        agencyId,
+        id: deleteTarget.id,
+        reason: 'Annulation depuis la page Depenses',
+      });
+      toast.success('Dépense annulée');
       setDeleteTarget(null);
-      if (profile?.agency_id && profile?.id) {
-        await invalidateOperationalCaches(
-          { agencyId: profile.agency_id, userId: profile.id },
-          ['dashboard', 'depenses', 'finances'],
-        );
-        notifyDataChanged(['depenses', 'dashboard', 'finances']);
-      }
+      await invalidateOperationalCaches(
+        { agencyId, userId },
+        ['dashboard', 'depenses', 'finances'],
+      );
+      notifyDataChanged(['depenses', 'dashboard', 'finances']);
       await loadData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur';
@@ -366,9 +384,9 @@ export function Depenses() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
-        title="Supprimer cette dépense ?"
-        message={`Cette dépense de ${deleteTarget?.montant ?? 0} sera définitivement supprimée.`}
-        confirmLabel="Supprimer"
+        title="Annuler cette dépense ?"
+        message={`Cette dépense de ${deleteTarget?.montant ?? 0} sera conservée dans l'historique, mais retirée des vues actives.`}
+        confirmLabel="Annuler la dépense"
         cancelLabel="Annuler"
         isDestructive
         isLoading={deleting}

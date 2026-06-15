@@ -1,5 +1,4 @@
 ﻿import { useCallback, useEffect, useRef, useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
 import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, CreditCard, Wallet, Building2, CalendarDays, ReceiptText } from 'lucide-react';
@@ -13,17 +12,19 @@ import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { LoadingState } from '../components/ui/LoadingState';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
-import { invalidateOperationalCaches, loadCachedValue, notifyDataChanged, saveCachedValue, withReadTimeout } from '../services/offlineReadCache';
+import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { getOpenReceivables, type OpenReceivableStatus } from '../services/api/financeApi';
 
 const ITEMS_PER_PAGE = 20;
 const LOOKBACK_MONTHS = 12;
 const LOOKAHEAD_MONTHS = 2;
 
-type LoyerStatut = 'a_venir' | 'en_retard' | 'partiel' | 'paye_en_avance';
+type LoyerStatut = OpenReceivableStatus;
 
 interface LoyerImpaye {
   id: string;
+  contrat_id: string;
   locataire_nom: string;
   locataire_prenom: string;
   unite_nom: string;
@@ -47,29 +48,6 @@ interface BailleurOption {
   label: string;
 }
 
-interface ContratActifRow {
-  id: string;
-  loyer_mensuel: number;
-  date_debut: string;
-  date_fin?: string | null;
-  locataires?: { nom?: string | null; prenom?: string | null; telephone?: string | null } | null;
-  unites?: {
-    nom?: string | null;
-    immeubles?: {
-      nom?: string | null;
-      bailleurs?: { nom?: string | null; prenom?: string | null } | null;
-    } | null;
-  } | null;
-}
-
-interface PaiementAggregate {
-  contrat_id: string;
-  mois_concerne: string;
-  statut: string;
-  montant_total: number | null;
-  date_paiement?: string | null;
-}
-
 function monthStart(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
@@ -89,34 +67,10 @@ function monthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
 }
 
-function getDueDateForMonth(month: string, contractStart: string): Date {
-  const monthDate = new Date(month);
-  const startDate = new Date(contractStart);
-  const desiredDay = Number.isFinite(startDate.getDate()) ? startDate.getDate() : 1;
-  const lastDay = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
-  return new Date(monthDate.getFullYear(), monthDate.getMonth(), Math.min(desiredDay, lastDay));
-}
-
-function generateContractMonths(contract: ContratActifRow, today: Date): string[] {
-  const startLimit = addMonths(monthStart(today), -LOOKBACK_MONTHS);
-  const endLimit = addMonths(monthStart(today), LOOKAHEAD_MONTHS);
-  const contractStart = monthStart(new Date(contract.date_debut));
-  const contractEnd = contract.date_fin ? monthStart(new Date(contract.date_fin)) : endLimit;
-  const start = contractStart > startLimit ? contractStart : startLimit;
-  const end = contractEnd < endLimit ? contractEnd : endLimit;
-
-  const months: string[] = [];
-  for (let cursor = start; cursor <= end; cursor = addMonths(cursor, 1)) {
-    months.push(monthKey(cursor));
-  }
-  return months;
-}
-
 const STATUS_META: Record<LoyerStatut, { label: string; classes: string }> = {
   a_venir: { label: 'À venir', classes: 'bg-slate-100 text-slate-700 border-slate-200' },
   en_retard: { label: 'En retard', classes: 'bg-red-100 text-red-700 border-red-200' },
   partiel: { label: 'Partiel', classes: 'bg-orange-100 text-orange-700 border-orange-200' },
-  paye_en_avance: { label: 'Payé en avance', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
 };
 
 export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
@@ -166,138 +120,61 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
   }, [searchTerm, selectedBailleur, impayes]);
 
   const loadData = useCallback(async () => {
-    if (!profile?.agency_id) return;
+    if (!profile?.agency_id || !profile.id) return;
+    const agencyId = profile.agency_id;
+    const userId = profile.id;
     const reqId = ++requestIdRef.current;
     if (impayes.length === 0) setLoading(true);
     setError(null);
-    const cacheScope = { agencyId: profile.agency_id, userId: profile.id };
-    const cacheKey = 'loyers-impayes-page';
+    const cacheScope = { agencyId, userId };
+    const cacheKey = 'loyers-impayes-page:v2';
     try {
-      const cached = await loadCachedValue<{ impayes: LoyerImpaye[]; bailleurs: BailleurOption[] }>(cacheScope, cacheKey);
-      if (!isOnline && cached) {
-        setImpayes(cached.data.impayes);
-        setFiltered(cached.data.impayes);
-        setBailleurs(cached.data.bailleurs);
-        setPage(1);
-        setCacheTimestamp(cached.timestamp);
-        return;
-      }
-
-      const { data: contratsActifs, error: contratsError } = await withReadTimeout(
-        supabase
-          .from('contrats')
-          .select(`
-            id,
-            loyer_mensuel,
-            date_debut,
-            date_fin,
-            locataires(nom, prenom, telephone),
-            unites(
-              nom,
-              immeubles(
-                nom,
-                bailleurs(nom, prenom)
-              )
-            )
-          `)
-          .eq('statut', 'actif')
-          .eq('agency_id', profile.agency_id),
-        7_000,
-      );
-      if (contratsError) throw contratsError;
-
-      const contratsRows = ((contratsActifs ?? []) as ContratActifRow[]);
-      const contratIds = contratsRows.map((c) => c.id);
       const currentDate = new Date();
       const startPeriod = monthKey(addMonths(monthStart(currentDate), -LOOKBACK_MONTHS));
       const endPeriod = monthKey(addMonths(monthStart(currentDate), LOOKAHEAD_MONTHS));
 
-      if (contratIds.length === 0) {
-        setImpayes([]);
-        setFiltered([]);
-        setBailleurs([]);
-        setPage(1);
-        return;
-      }
-
-      const { data: paiementsExistants, error: paiementsError } = await withReadTimeout(
-        supabase
-          .from('paiements')
-          .select('contrat_id, mois_concerne, statut, montant_total, date_paiement')
-          .eq('agency_id', profile.agency_id)
-          .in('contrat_id', contratIds)
-          .gte('mois_concerne', startPeriod)
-          .lte('mois_concerne', endPeriod),
-        7_000,
+      const result = await readWithCache<{ impayes: LoyerImpaye[]; bailleurs: BailleurOption[] }>(
+        cacheScope,
+        cacheKey,
+        async () => {
+          const receivables = await getOpenReceivables({
+            agencyId,
+            start: startPeriod,
+            end: endPeriod,
+          });
+          const impayesList = receivables.map<LoyerImpaye>((row) => ({
+            id: row.id,
+            contrat_id: row.contrat_id,
+            locataire_nom: row.locataire_nom,
+            locataire_prenom: row.locataire_prenom,
+            telephone_locataire: row.telephone_locataire,
+            unite_nom: row.unite_nom,
+            immeuble_nom: row.immeuble_nom,
+            bailleur_nom: row.bailleur_nom,
+            bailleur_prenom: row.bailleur_prenom,
+            montant_attendu: Number(row.montant_attendu || 0),
+            montant_encaisse: Number(row.montant_encaisse || 0),
+            montant_du: Number(row.montant_du || 0),
+            mois_concerne: row.mois_concerne,
+            date_echeance: row.date_echeance,
+            statut: row.statut,
+          }));
+          const uniqueBailleurs = Array.from(
+            new Set(impayesList.map((i) => `${i.bailleur_prenom} ${i.bailleur_nom}`)),
+          ).filter((b) => b.trim());
+          return {
+            impayes: impayesList,
+            bailleurs: uniqueBailleurs.map((label) => ({ label })),
+          };
+        },
+        { timeoutMs: 7_000 },
       );
-      if (paiementsError) throw paiementsError;
-
-      const paiementsMap = new Map<string, { amount: number; earliestDate: string | null }>();
-      (paiementsExistants as PaiementAggregate[] | null)?.forEach(p => {
-        if (p.statut !== 'paye' && p.statut !== 'partiel') return;
-        const key = `${p.contrat_id}-${p.mois_concerne}`;
-        const existing = paiementsMap.get(key) ?? { amount: 0, earliestDate: null };
-        const paymentDate = p.date_paiement ?? null;
-        paiementsMap.set(key, {
-          amount: existing.amount + Number(p.montant_total || 0),
-          earliestDate:
-            !existing.earliestDate || (paymentDate && paymentDate < existing.earliestDate)
-              ? paymentDate
-              : existing.earliestDate,
-        });
-      });
-
-      const impayesList: LoyerImpaye[] = [];
-
-      contratsRows.forEach((contrat) => {
-        generateContractMonths(contrat, currentDate).forEach(mois => {
-          const key = `${contrat.id}-${mois}`;
-          const paiementInfo = paiementsMap.get(key) ?? { amount: 0, earliestDate: null };
-          const montantEncaisse = paiementInfo.amount;
-          const montantAttendu = Number(contrat.loyer_mensuel || 0);
-          const montantDu = Math.max(montantAttendu - montantEncaisse, 0);
-          const dueDate = getDueDateForMonth(mois, contrat.date_debut);
-          const isFutureMonth = monthStart(new Date(mois)) > monthStart(currentDate);
-          const paidBeforePeriod =
-            Boolean(paiementInfo.earliestDate) &&
-            new Date(paiementInfo.earliestDate as string) < new Date(mois);
-
-          let statut: LoyerStatut | null = null;
-          if (montantDu <= 0 && (isFutureMonth || paidBeforePeriod)) {
-            statut = 'paye_en_avance';
-          } else if (montantDu > 0 && montantEncaisse > 0) {
-            statut = 'partiel';
-          } else if (montantDu > 0 && dueDate > currentDate) {
-            statut = 'a_venir';
-          } else if (montantDu > 0) {
-            statut = 'en_retard';
-          }
-
-          if (statut) {
-            impayesList.push({
-              id: `${contrat.id}-${mois}`,
-              locataire_nom: contrat.locataires?.nom || '',
-              locataire_prenom: contrat.locataires?.prenom || '',
-              unite_nom: contrat.unites?.nom || '',
-              immeuble_nom: contrat.unites?.immeubles?.nom || '',
-              bailleur_nom: contrat.unites?.immeubles?.bailleurs?.nom || '',
-              bailleur_prenom: contrat.unites?.immeubles?.bailleurs?.prenom || '',
-              montant_attendu: montantAttendu,
-              montant_encaisse: montantEncaisse,
-              montant_du: montantDu,
-              mois_concerne: mois,
-              date_echeance: toDateInput(dueDate),
-              statut,
-              telephone_locataire: contrat.locataires?.telephone || '',
-            });
-          }
-        });
-      });
 
       if (reqId !== requestIdRef.current) return;
 
+      const impayesList = [...result.data.impayes];
       impayesList.sort((a, b) => {
-        const priority: Record<LoyerStatut, number> = { en_retard: 0, partiel: 1, a_venir: 2, paye_en_avance: 3 };
+        const priority: Record<LoyerStatut, number> = { en_retard: 0, partiel: 1, a_venir: 2 };
         return priority[a.statut] - priority[b.statut] || a.mois_concerne.localeCompare(b.mois_concerne);
       });
 
@@ -305,31 +182,16 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
       setFiltered(impayesList);
       setPage(1);
 
-      const uniqueBailleurs = Array.from(
-        new Set(impayesList.map(i => `${i.bailleur_prenom} ${i.bailleur_nom}`))
-      ).filter(b => b.trim());
-      const nextBailleurs = uniqueBailleurs.map(b => ({ label: b }));
-      setBailleurs(nextBailleurs);
-      setCacheTimestamp(null);
-      saveCachedValue(cacheScope, cacheKey, { impayes: impayesList, bailleurs: nextBailleurs }).catch(() => {});
+      setBailleurs(result.data.bailleurs);
+      setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
 
     } catch (err) {
       if (reqId !== requestIdRef.current) return;
-      const cached = await loadCachedValue<{ impayes: LoyerImpaye[]; bailleurs: BailleurOption[] }>(cacheScope, cacheKey);
-      if (cached) {
-        setImpayes(cached.data.impayes);
-        setFiltered(cached.data.impayes);
-        setBailleurs(cached.data.bailleurs);
-        setPage(1);
-        setCacheTimestamp(cached.timestamp);
-        setError(null);
-        return;
-      }
       setError(err instanceof Error ? err.message : 'Erreur lors du chargement des loyers impayés');
     } finally {
       if (reqId === requestIdRef.current) setLoading(false);
     }
-  }, [impayes.length, isOnline, profile?.agency_id, profile?.id]);
+  }, [impayes.length, profile?.agency_id, profile?.id]);
 
   useEffect(() => {
     if (profile?.agency_id) {
@@ -373,19 +235,8 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         throw new Error('Le montant du paiement doit etre superieur a zero.');
       }
 
-      // L'id est de la forme "<uuid>-YYYY-MM". On extrait l'UUID via regex
-      // plutôt qu'un slice fragile.
-      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
-      const match = selectedLoyer.id.match(UUID_REGEX);
-      if (!match) {
-        throw new Error('Identifiant de loyer invalide');
-      }
-      const contratId = match[0];
-
-      // Creation via Edge Function (validation Zod + commission + agency_id cote serveur)
-      // Le trigger trg_update_bilan_mensuel met a jour bilans_mensuels automatiquement.
       await createPaiementViaEdge({
-        contrat_id: contratId,
+        contrat_id: selectedLoyer.contrat_id,
         montant_total: montantSaisi,
         mois_concerne: selectedLoyer.mois_concerne,
         date_paiement: paymentForm.date_paiement,

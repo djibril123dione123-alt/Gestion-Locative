@@ -35,7 +35,6 @@ export function Table<T extends { id: string }>({
     const normalizedKey = key.toLowerCase();
 
     if ((normalizedKey.includes('email') || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) && text.includes('@')) {
-      const to = encodeURIComponent(text);
       return (
         <a
           href={`mailto:${text}`}

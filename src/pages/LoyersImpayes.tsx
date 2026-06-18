@@ -314,7 +314,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         ? Math.max(paymentAmount - selectedLoyer.montant_du, 0)
         : 0;
 
-    const ALL_COLUMN_KEYS_LOYERS = ['locataire', 'unite_nom', 'immeuble_nom', 'bailleur', 'mois_concerne', 'statut', 'montant_encaisse', 'montant_du', 'telephone_locataire', 'actions'] as const;
+    const ALL_COLUMN_KEYS_LOYERS = ['locataire', 'unite_nom', 'immeuble_nom', 'bailleur', 'mois_concerne', 'statut', 'montant_encaisse', 'montant_du', 'telephone_locataire'] as const;
     const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('loyersImpayes', [...ALL_COLUMN_KEYS_LOYERS]);
 
     const allColumns = [
@@ -440,7 +440,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     if (loading) {
         return (
             <LoadingState
-                label="Loyers impayés"
+                label="Créances à recouvrer"
                 description="Analyse des échéances, reliquats et paiements partiels."
                 compact
                 className="min-h-[45vh]"
@@ -471,222 +471,222 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
     return (
         <div className="flex min-h-full">
-        <div className={`flex-1 min-w-0 transition-all duration-300 ${drawerLoyer ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
-          <section className="sk-page-shell space-y-6">
-            {cacheTimestamp && (
-                <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
-            )}
-
-            {!embedded && (
-                <>
-                    <FinancePageHeader
-                        eyebrow="Encaissement & finance"
-                        title={isIndividualOwner ? 'Mes créances à recouvrer' : 'Créances à recouvrer'}
-                        description="Retards, partiels et restes dus."
-                    />
-                    <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-emerald-950/10">
-                        <Tabs
-                            tabs={[
-                                { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
-                                { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
-                            ]}
-                            activeId="loyers-impayes"
-                            onChange={(id) => { window.location.hash = `#/${id}`; }}
-                        />
-                    </div>
-                </>
-            )}
-
-            {/* Statistiques */}
-            <FinanceKpiGrid metrics={financeMetrics} />
-
-            {/* Filtres + Table */}
-            <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-center gap-3 relative min-w-0 flex-1">
-                        <div className="relative min-w-0 flex-1">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Rechercher..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                            />
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() => setMobileFiltersOpen(true)}
-                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
-                        >
-                            <SlidersHorizontal className="h-4 w-4" />
-                            Filtres
-                        </button>
-                    </div>
-
-                    <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
-                        <SmartCombobox
-                            value={selectedMois}
-                            options={[{ value: '', label: 'Mois en cours' }]}
-                            onChange={setSelectedMois}
-                            placeholder="Mois en cours"
-                            searchPlaceholder="Rechercher..."
-                            className="w-48 shrink-0"
-                        />
-                        {!isIndividualOwner && (
-                            <SmartCombobox
-                                value={selectedBailleur}
-                                options={[
-                                    { value: '', label: 'Tous les bailleurs' },
-                                    ...bailleurs.map((b) => ({ value: b.label, label: b.label }))
-                                ]}
-                                onChange={setSelectedBailleur}
-                                placeholder="Tous les bailleurs"
-                                searchPlaceholder="Rechercher un bailleur..."
-                                className="w-56"
-                            />
-                        )}
-
-                        <ColumnPicker
-                            columns={allColumns
-                                .filter((c) => !(isIndividualOwner && c.key === 'bailleur'))
-                                .map((c) => ({ key: c.key, label: c.label, required: false }))}
-                            visibility={colVis}
-                            onToggle={colToggle}
-                            onSetAll={colSetAll}
-                        />
-                    </div>
-                </div>
-
-                <div className="flex items-center px-4 py-2 lg:px-5">
-                    <FinanceStatusTabs tabs={statusTabs} active={statusFilter} onChange={setStatusFilter} />
-                </div>
-            </div>
-
-            <MobileFilterSheet
-                isOpen={mobileFiltersOpen}
-                title="Filtres Créances"
-                onClose={() => setMobileFiltersOpen(false)}
-                onReset={() => {
-                    setSelectedBailleur('');
-                    setSelectedMois('');
-                }}
-            >
-                <div className="grid gap-3">
-                    <SmartCombobox
-                        value={selectedMois}
-                        options={[{ value: '', label: 'Mois en cours' }]}
-                        onChange={setSelectedMois}
-                        placeholder="Mois en cours"
-                        searchPlaceholder="Rechercher..."
-                    />
-                    {!isIndividualOwner && (
-                        <SmartCombobox
-                            value={selectedBailleur}
-                            options={[
-                                { value: '', label: 'Tous les bailleurs' },
-                                ...bailleurs.map((b) => ({ value: b.label, label: b.label }))
-                            ]}
-                            onChange={setSelectedBailleur}
-                            placeholder="Tous les bailleurs"
-                            searchPlaceholder="Rechercher un bailleur..."
-                        />
+            <div className={`flex-1 min-w-0 transition-all duration-300 ${drawerLoyer ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
+                <section className="sk-page-shell space-y-6">
+                    {cacheTimestamp && (
+                        <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
                     )}
-                </div>
-            </MobileFilterSheet>
 
-            <div className="sk-card overflow-hidden">
-                <div className="overflow-x-auto">
-                    <Table
-                        columns={columns}
-                        data={paginated}
-                        onRowClick={(i) => setDrawerLoyer(i)}
-                        selectedId={drawerLoyer?.id}
-                        mobileRender={(i) => {
-                            const status = STATUS_META[i.statut] || STATUS_META['en_retard'];
-                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            const StatusIcon = (status as any).icon || AlertCircle;
-                            return (
-                                <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <span className="font-black text-slate-900 truncate">{i.locataire_prenom} {i.locataire_nom}</span>
-                                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${status.classes}`}>
-                                            <StatusIcon className="h-3 w-3" />
-                                            {status.label}
-                                        </span>
-                                    </div>
+                    {!embedded && (
+                        <>
+                            <FinancePageHeader
+                                eyebrow="Encaissement & finance"
+                                title={isIndividualOwner ? 'Mes créances à recouvrer' : 'Créances à recouvrer'}
+                                description="Retards, partiels et restes dus."
+                            />
+                            <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-emerald-950/10">
+                                <Tabs
+                                    tabs={[
+                                        { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
+                                        { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
+                                    ]}
+                                    activeId="loyers-impayes"
+                                    onChange={(id) => { window.location.hash = `#/${id}`; }}
+                                />
+                            </div>
+                        </>
+                    )}
 
-                                    <div className="text-xs font-semibold text-slate-500 truncate">
-                                        {i.immeuble_nom || '—'} · {i.unite_nom || '—'}
-                                    </div>
+                    {/* Statistiques */}
+                    <FinanceKpiGrid metrics={financeMetrics} />
 
-                                    <div className="flex items-center justify-between mt-1">
-                                        <span className="text-base font-black text-red-600"><MoneyText value={i.montant_du} /></span>
-                                        <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(i.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
-                                    </div>
-
-                                    {i.montant_encaisse > 0 && (
-                                        <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
-                                            <span>Déjà encaissé: <MoneyText value={i.montant_encaisse} /></span>
-                                        </div>
-                                    )}
+                    {/* Filtres + Table */}
+                    <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex items-center gap-3 relative min-w-0 flex-1">
+                                <div className="relative min-w-0 flex-1">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Rechercher..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                                    />
                                 </div>
-                            );
-                        }}
-                    />
-                </div>
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="mt-4 flex flex-col gap-3 border-t border-emerald-950/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm text-slate-500">
-                            {filtered.length} résultat{filtered.length > 1 ? 's' : ''} — page {page} / {totalPages}
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setPage(p => Math.max(1, p - 1))}
-                                disabled={page === 1}
-                                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                            >
-                                <ChevronLeft className="w-4 h-4 text-slate-600" />
-                            </button>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1)
-                                .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                                .reduce<(number | '...')[]>((acc, p, idx, arr) => {
-                                    if (idx > 0 && typeof arr[idx - 1] === 'number' && (p as number) - (arr[idx - 1] as number) > 1) {
-                                        acc.push('...');
-                                    }
-                                    acc.push(p);
-                                    return acc;
-                                }, [])
-                                .map((p, idx) =>
-                                    p === '...'
-                                        ? <span key={`e${idx}`} className="px-2 text-slate-400 text-sm">…</span>
-                                        : <button
-                                            key={p}
-                                            onClick={() => setPage(p as number)}
-                                            className={`sk-action sk-action-icon ${page === p ? 'sk-action-primary' : 'sk-action-secondary'}`}
-                                        >
-                                            {p}
-                                        </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setMobileFiltersOpen(true)}
+                                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
+                                >
+                                    <SlidersHorizontal className="h-4 w-4" />
+                                    Filtres
+                                </button>
+                            </div>
+
+                            <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
+                                <SmartCombobox
+                                    value={selectedMois}
+                                    options={[{ value: '', label: 'Mois en cours' }]}
+                                    onChange={setSelectedMois}
+                                    placeholder="Mois en cours"
+                                    searchPlaceholder="Rechercher..."
+                                    className="w-48 shrink-0"
+                                />
+                                {!isIndividualOwner && (
+                                    <SmartCombobox
+                                        value={selectedBailleur}
+                                        options={[
+                                            { value: '', label: 'Tous les bailleurs' },
+                                            ...bailleurs.map((b) => ({ value: b.label, label: b.label }))
+                                        ]}
+                                        onChange={setSelectedBailleur}
+                                        placeholder="Tous les bailleurs"
+                                        searchPlaceholder="Rechercher un bailleur..."
+                                        className="w-56"
+                                    />
                                 )}
-                            <button
-                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages}
-                                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                            >
-                                <ChevronRight className="w-4 h-4 text-slate-600" />
-                            </button>
+
+                                <ColumnPicker
+                                    columns={allColumns
+                                        .filter((c) => !(isIndividualOwner && c.key === 'bailleur'))
+                                        .map((c) => ({ key: c.key, label: c.label, required: false }))}
+                                    visibility={colVis}
+                                    onToggle={colToggle}
+                                    onSetAll={colSetAll}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center px-4 py-2 lg:px-5">
+                            <FinanceStatusTabs tabs={statusTabs} active={statusFilter} onChange={setStatusFilter} />
                         </div>
                     </div>
-                )}
+
+                    <MobileFilterSheet
+                        isOpen={mobileFiltersOpen}
+                        title="Filtres Créances"
+                        onClose={() => setMobileFiltersOpen(false)}
+                        onReset={() => {
+                            setSelectedBailleur('');
+                            setSelectedMois('');
+                        }}
+                    >
+                        <div className="grid gap-3">
+                            <SmartCombobox
+                                value={selectedMois}
+                                options={[{ value: '', label: 'Mois en cours' }]}
+                                onChange={setSelectedMois}
+                                placeholder="Mois en cours"
+                                searchPlaceholder="Rechercher..."
+                            />
+                            {!isIndividualOwner && (
+                                <SmartCombobox
+                                    value={selectedBailleur}
+                                    options={[
+                                        { value: '', label: 'Tous les bailleurs' },
+                                        ...bailleurs.map((b) => ({ value: b.label, label: b.label }))
+                                    ]}
+                                    onChange={setSelectedBailleur}
+                                    placeholder="Tous les bailleurs"
+                                    searchPlaceholder="Rechercher un bailleur..."
+                                />
+                            )}
+                        </div>
+                    </MobileFilterSheet>
+
+                    <div className="sk-card overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <Table
+                                columns={columns}
+                                data={paginated}
+                                onRowClick={(i) => setDrawerLoyer(i)}
+                                selectedId={drawerLoyer?.id}
+                                mobileRender={(i) => {
+                                    const status = STATUS_META[i.statut] || STATUS_META['en_retard'];
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    const StatusIcon = (status as any).icon || AlertCircle;
+                                    return (
+                                        <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <span className="font-black text-slate-900 truncate">{i.locataire_prenom} {i.locataire_nom}</span>
+                                                <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${status.classes}`}>
+                                                    <StatusIcon className="h-3 w-3" />
+                                                    {status.label}
+                                                </span>
+                                            </div>
+
+                                            <div className="text-xs font-semibold text-slate-500 truncate">
+                                                {i.immeuble_nom || '—'} · {i.unite_nom || '—'}
+                                            </div>
+
+                                            <div className="flex items-center justify-between mt-1">
+                                                <span className="text-base font-black text-red-600"><MoneyText value={i.montant_du} /></span>
+                                                <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(i.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
+                                            </div>
+
+                                            {i.montant_encaisse > 0 && (
+                                                <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
+                                                    <span>Déjà encaissé: <MoneyText value={i.montant_encaisse} /></span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                }}
+                            />
+                        </div>
+
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="mt-4 flex flex-col gap-3 border-t border-emerald-950/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-sm text-slate-500">
+                                    {filtered.length} résultat{filtered.length > 1 ? 's' : ''} — page {page} / {totalPages}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                                        disabled={page === 1}
+                                        className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                    >
+                                        <ChevronLeft className="w-4 h-4 text-slate-600" />
+                                    </button>
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                        .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                                        .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                                            if (idx > 0 && typeof arr[idx - 1] === 'number' && (p as number) - (arr[idx - 1] as number) > 1) {
+                                                acc.push('...');
+                                            }
+                                            acc.push(p);
+                                            return acc;
+                                        }, [])
+                                        .map((p, idx) =>
+                                            p === '...'
+                                                ? <span key={`e${idx}`} className="px-2 text-slate-400 text-sm">…</span>
+                                                : <button
+                                                    key={p}
+                                                    onClick={() => setPage(p as number)}
+                                                    className={`sk-action sk-action-icon ${page === p ? 'sk-action-primary' : 'sk-action-secondary'}`}
+                                                >
+                                                    {p}
+                                                </button>
+                                        )}
+                                    <button
+                                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={page === totalPages}
+                                        className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                                    >
+                                        <ChevronRight className="w-4 h-4 text-slate-600" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                </section>
             </div>
 
-            </section>
-        </div>
-
-        {/* Drawer */}
+            {/* Drawer */}
             {drawerLoyer && (
                 <FinanceDrawer
                     title="CRÉANCE À RECOUVRER"
@@ -728,10 +728,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             <FinanceLine label="Locataire" value={`${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`} />
                             <FinanceLine label="Téléphone" value={drawerLoyer.telephone_locataire || '—'} />
                         </FinanceInfoCard>
-                        <FinanceInfoCard title="Historique / source serveur">
+                        <FinanceInfoCard title="Traçabilité certifiée">
                             <div className="text-xs text-slate-500">
-                                <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Échéance certifiée par le grand livre</p>
-                                <p className="mt-1.5 flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Aucun montant reconstruit côté interface</p>
+                                <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Échéance issue de l’historique financier sécurisé</p>
+                                <p className="mt-1.5 flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Montants confirmés par le traitement financier</p>
                             </div>
                         </FinanceInfoCard>
                     </div>

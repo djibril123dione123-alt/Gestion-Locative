@@ -31,6 +31,7 @@ export interface PaiementRow {
   part_agence?: number | null;
   part_bailleur?: number | null;
   reference: string | null;
+  notes?: string | null;
   actif?: boolean;
   deleted_at?: string | null;
   contrats?: PaiementContrats | null;
@@ -56,7 +57,8 @@ export interface ContratRow {
 
 export type StatusFilter = 'tous' | 'paye' | 'partiel' | 'avance' | 'annule';
 
-export type FormModePayment = 'especes' | 'cheque' | 'virement' | 'mobile_money';
+export type FormModePayment = 'especes' | 'cheque' | 'virement' | 'mobile_money' | 'autre';
+export type PaymentChannel = 'especes' | 'wave' | 'orange_money' | 'virement' | 'cheque' | 'autre' | 'mobile_money';
 export type FormPaiementStatut = 'paye' | 'partiel';
 
 export interface StatusLabel {
@@ -107,6 +109,14 @@ export const MODE_LABELS: Record<string, string> = {
   autre: 'Autre',
 };
 
+export function getPaymentModeLabel(payment: Pick<PaiementRow, 'mode_paiement' | 'notes'>): string {
+  if (payment.mode_paiement === 'mobile_money') {
+    if (payment.notes?.includes('Canal: Wave')) return 'Wave';
+    if (payment.notes?.includes('Canal: Orange Money')) return 'Orange Money';
+  }
+  return MODE_LABELS[payment.mode_paiement] || payment.mode_paiement;
+}
+
 export interface PaiementFormData {
   contrat_id: string;
   montant_total: string;
@@ -114,6 +124,8 @@ export interface PaiementFormData {
   mois_display: string;
   date_paiement: string;
   mode_paiement: FormModePayment;
+  payment_channel: PaymentChannel;
   statut: FormPaiementStatut;
   reference: string;
+  correction_reason: string;
 }

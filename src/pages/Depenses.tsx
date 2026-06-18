@@ -1,11 +1,11 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
-import { ConfirmModal } from '../components/ui/ConfirmModal';
 // import { Button } from '../components/ui/Button';
 import { Plus, Search, XCircle, Pencil, SlidersHorizontal, TrendingDown, ReceiptText, Wallet, Building2 } from 'lucide-react';
 import { FinanceDrawer, FinanceInfoCard, FinanceLine, FinancePageHeader, FinanceKpiGrid } from '../components/finance/FinancePrimitives';
+import { DepenseFormModal, type DepenseFormData, type DepenseImmeubleOption } from '../components/finance/DepenseFormModal';
+import { FinanceReasonModal } from '../components/finance/FinanceReasonModal';
 import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
@@ -20,6 +20,17 @@ import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '.
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { cancelDepenseViaRpc, createDepenseViaRpc, updateDepenseViaRpc } from '../services/api/financeApi';
 
+const EXPENSE_CATEGORIES = [
+  'Maintenance',
+  'Électricité',
+  'Eau',
+  'Salaires',
+  'Transport',
+  'Télécommunications',
+  'Internet',
+  'Autres',
+];
+
 interface Depense {
   id: string;
   montant: number;
@@ -28,48 +39,41 @@ interface Depense {
   description: string | null;
   beneficiaire: string | null;
   immeuble_id: string | null;
+  piece_justificative?: string | null;
   immeubles?: { nom?: string | null } | null;
-}
-
-interface ImmeubleOption {
-  id: string;
-  nom: string;
-}
-
-interface DepenseFormData {
-  montant: string;
-  date_depense: string;
-  categorie: string;
-  description: string;
-  beneficiaire: string;
-  immeuble_id: string;
 }
 
 export function Depenses() {
   const { profile } = useAuth();
   const [depenses, setDepenses] = useState<Depense[]>([]);
   const [filtered, setFiltered] = useState<Depense[]>([]);
-  const [immeubles, setImmeubles] = useState<ImmeubleOption[]>([]);
+  const [immeubles, setImmeubles] = useState<DepenseImmeubleOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
   const [selectedDepense, setSelectedDepense] = useState<Depense | null>(null);
   const [editingDepense, setEditingDepense] = useState<Depense | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Depense | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const toast = useToast();
   const notifyError = toast.error;
+  const submittingRef = useRef(false);
+  const filterCategories = useMemo(
+    () => Array.from(new Set([...EXPENSE_CATEGORIES, ...depenses.map((depense) => depense.categorie).filter(Boolean)])),
+    [depenses],
+  );
 
   const [formData, setFormData] = useState<DepenseFormData>({
     montant: '',
     date_depense: new Date().toISOString().split('T')[0],
-    categorie: 'maintenance' as const,
+    categorie: 'Maintenance',
     description: '',
     beneficiaire: '',
     immeuble_id: '',
+    piece_justificative: '',
+    affectation: 'agence',
   });
-
-  const categories = ['🌐 Internet', '⚡ Électricité', '💧 Eau', '👷 Salaires', '🚌 Prime de transport', '📱 Crédit téléphonique', '📦 Autres'];
 
   useEffect(() => {
     const q = searchTerm.toLowerCase();
@@ -93,7 +97,7 @@ export function Depenses() {
     if (!profile?.agency_id) return;
     if (depenses.length === 0) setLoading(true);
     try {
-      const result = await readWithCache<{ depenses: Depense[]; immeubles: ImmeubleOption[] }>(
+      const result = await readWithCache<{ depenses: Depense[]; immeubles: DepenseImmeubleOption[] }>(
         { agencyId: profile.agency_id, userId: profile.id },
         'depenses-page',
         async () => {
@@ -105,13 +109,13 @@ export function Depenses() {
               .eq('actif', true)
               .is('deleted_at', null)
               .order('created_at', { ascending: false }),
-            supabase.from('immeubles').select('id, nom').eq('agency_id', profile.agency_id).eq('actif', true),
+            supabase.from('immeubles').select('id, nom, bailleurs(id, nom, prenom)').eq('agency_id', profile.agency_id).eq('actif', true),
           ]);
           if (depensesRes.error) throw depensesRes.error;
           if (immeublesRes.error) throw immeublesRes.error;
           return {
             depenses: (depensesRes.data || []) as Depense[],
-            immeubles: (immeublesRes.data || []) as ImmeubleOption[],
+            immeubles: (immeublesRes.data || []) as unknown as DepenseImmeubleOption[],
           };
         },
         { timeoutMs: 7_000 }
@@ -136,20 +140,33 @@ export function Depenses() {
   }, [loadData, profile?.agency_id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    if (!profile?.agency_id) return;
+    if (!profile?.agency_id || submittingRef.current) return;
     e.preventDefault();
     if (!navigator.onLine) {
       toast.error('Connexion indisponible : enregistrement impossible hors ligne.');
       return;
     }
+    const montant = Number(formData.montant);
+    if (!Number.isFinite(montant) || montant <= 0) {
+      toast.error('Le montant doit être supérieur à 0 F CFA.');
+      return;
+    }
+    if (formData.affectation === 'bien' && !formData.immeuble_id) {
+      toast.error('Sélectionnez le bien concerné par cette dépense.');
+      return;
+    }
+
+    submittingRef.current = true;
+    setIsSaving(true);
     try {
       const data = {
-        montant: parseFloat(formData.montant),
+        montant,
         date_depense: formData.date_depense,
         categorie: formData.categorie,
         description: formData.description,
         beneficiaire: formData.beneficiaire,
-        immeuble_id: formData.immeuble_id || null,
+        immeuble_id: formData.affectation === 'bien' ? formData.immeuble_id || null : null,
+        piece_justificative: formData.piece_justificative || null,
       };
 
       if (editingDepense) {
@@ -176,6 +193,9 @@ export function Depenses() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur';
       toast.error(msg);
+    } finally {
+      submittingRef.current = false;
+      setIsSaving(false);
     }
   };
 
@@ -188,6 +208,8 @@ export function Depenses() {
       description: depense.description ?? '',
       beneficiaire: depense.beneficiaire ?? '',
       immeuble_id: depense.immeuble_id || '',
+      piece_justificative: depense.piece_justificative || '',
+      affectation: depense.immeuble_id ? 'bien' : 'agence',
     });
     setSelectedDepense(null);
     setIsModalOpen(true);
@@ -198,13 +220,13 @@ export function Depenses() {
     setDeleteTarget(depense);
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (reason: string) => {
     if (!deleteTarget) return;
     if (!profile?.agency_id || !profile.id) return;
     const agencyId = profile.agency_id;
     const userId = profile.id;
     if (!navigator.onLine) {
-      toast.error('Connexion indisponible : suppression impossible hors ligne.');
+      toast.error('Connexion indisponible : annulation impossible hors ligne.');
       return;
     }
     setDeleting(true);
@@ -212,7 +234,7 @@ export function Depenses() {
       await cancelDepenseViaRpc({
         agencyId,
         id: deleteTarget.id,
-        reason: 'Annulation depuis la page Depenses',
+        reason,
       });
       toast.success('Dépense annulée');
       setDeleteTarget(null);
@@ -236,11 +258,28 @@ export function Depenses() {
     setFormData({
       montant: '',
       date_depense: new Date().toISOString().split('T')[0],
-      categorie: 'maintenance',
+      categorie: 'Maintenance',
       description: '',
       beneficiaire: '',
       immeuble_id: '',
+      piece_justificative: '',
+      affectation: 'agence',
     });
+  };
+
+  const openCreateModal = () => {
+    setEditingDepense(null);
+    setFormData({
+      montant: '',
+      date_depense: new Date().toISOString().split('T')[0],
+      categorie: 'Maintenance',
+      description: '',
+      beneficiaire: '',
+      immeuble_id: '',
+      piece_justificative: '',
+      affectation: 'agence',
+    });
+    setIsModalOpen(true);
   };
 
   const ALL_COLUMN_KEYS_DEPENSES = ['date_depense', 'categorie', 'montant', 'immeuble', 'beneficiaire', 'statut'] as const;
@@ -351,7 +390,7 @@ export function Depenses() {
             description="Suivez les charges, frais d’exploitation, dépenses rattachées et corrections via les workflows financiers contrôlés."
             primaryLabel="Nouvelle dépense"
             primaryIcon={<Plus className="h-4 w-4" />}
-            onPrimary={() => setIsModalOpen(true)}
+            onPrimary={openCreateModal}
           />
 
           <FinanceKpiGrid metrics={financeMetrics} />
@@ -393,7 +432,7 @@ export function Depenses() {
                   value={selectedCategorie}
                   options={[
                     { value: '', label: 'Catégories' },
-                    ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
+                    ...filterCategories.map((category) => ({ value: category, label: category }))
                   ]}
                   onChange={setSelectedCategorie}
                   placeholder="Catégories"
@@ -444,7 +483,7 @@ export function Depenses() {
                 value={selectedCategorie}
                 options={[
                   { value: '', label: 'Catégories' },
-                  ...categories.map((c) => ({ value: c, label: c.charAt(0).toUpperCase() + c.slice(1) }))
+                  ...filterCategories.map((category) => ({ value: category, label: category }))
                 ]}
                 onChange={setSelectedCategorie}
                 placeholder="Catégories"
@@ -502,89 +541,17 @@ export function Depenses() {
         </section>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingDepense ? 'Modifier dépense' : 'Nouvelle dépense'}>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Montant *</label>
-              <input
-                type="number"
-                required
-                value={formData.montant}
-                onChange={(e) => setFormData({ ...formData, montant: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Date *</label>
-              <input
-                type="date"
-                required
-                value={formData.date_depense}
-                onChange={(e) => setFormData({ ...formData, date_depense: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Catégorie *</label>
-            <select
-              required
-              value={formData.categorie}
-              onChange={(e) => setFormData({ ...formData, categorie: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-            >
-              {categories.map((c) => (
-                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
-            <input
-              type="text"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Bénéficiaire</label>
-            <input
-              type="text"
-              value={formData.beneficiaire}
-              onChange={(e) => setFormData({ ...formData, beneficiaire: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Immeuble</label>
-            <select
-              value={formData.immeuble_id}
-              onChange={(e) => setFormData({ ...formData, immeuble_id: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
-            >
-              <option value="">Sélectionner (optionnel)</option>
-              {immeubles.map((i) => (
-                <option key={i.id} value={i.id}>{i.nom}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
-            <button type="button" onClick={closeModal} className="px-4 py-2 sm:px-6 sm:py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 text-sm sm:text-base">
-              Annuler
-            </button>
-            <button type="submit" className="sk-action sk-action-primary px-4 sm:px-6">
-              {editingDepense ? 'Modifier' : 'Créer'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+      <DepenseFormModal
+        isOpen={isModalOpen}
+        editing={Boolean(editingDepense)}
+        formData={formData}
+        setFormData={setFormData}
+        immeubles={immeubles}
+        isSaving={isSaving}
+        originalAmount={editingDepense?.montant}
+        onClose={closeModal}
+        onSubmit={handleSubmit}
+      />
 
       {/* Drawer */}
       {selectedDepense && (
@@ -612,9 +579,20 @@ export function Depenses() {
             </FinanceInfoCard>
 
             <FinanceInfoCard title="Justificatif">
-              <div className="text-sm font-semibold text-slate-500 flex items-center gap-2 bg-slate-50 p-3 rounded-xl border border-slate-100">
-                <ReceiptText className="w-4 h-4" /> Aucun justificatif téléversé
-              </div>
+              {selectedDepense.piece_justificative ? (
+                <a
+                  href={selectedDepense.piece_justificative}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-black text-emerald-800 transition hover:bg-emerald-100"
+                >
+                  <ReceiptText className="h-4 w-4" /> Ouvrir le justificatif
+                </a>
+              ) : (
+                <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm font-semibold text-slate-500">
+                  <ReceiptText className="h-4 w-4" /> Aucun justificatif référencé
+                </div>
+              )}
             </FinanceInfoCard>
 
             <FinanceInfoCard title="Impact financier">
@@ -626,7 +604,7 @@ export function Depenses() {
               <div className="relative flex gap-3">
                 <div className="relative flex h-3 w-3 mt-1 shrink-0 items-center justify-center rounded-full bg-emerald-700 ring-4 ring-[#fffdf8]" />
                 <div>
-                  <p className="text-sm font-black text-slate-900">Enregistrée au grand livre</p>
+                  <p className="text-sm font-black text-slate-900">Écriture financière créée</p>
                   <p className="text-xs font-semibold text-slate-500">{new Date(selectedDepense.date_depense).toLocaleString('fr-FR')}</p>
                 </div>
               </div>
@@ -655,7 +633,7 @@ export function Depenses() {
                 </PremiumButton>
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   <PremiumButton variant="secondary" size="sm" icon={<ReceiptText className="h-4 w-4" />} disabled>Justificatif</PremiumButton>
-                  <PremiumButton variant="secondary" size="sm" icon={<Building2 className="h-4 w-4" />} disabled>GED</PremiumButton>
+                  <PremiumButton variant="secondary" size="sm" icon={<Building2 className="h-4 w-4" />} disabled>Documents</PremiumButton>
                 </div>
               </div>
             </FinanceInfoCard>
@@ -663,17 +641,27 @@ export function Depenses() {
         </FinanceDrawer>
       )}
 
-      <ConfirmModal
+      <FinanceReasonModal
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
-        title="Annuler cette dépense ?"
-        message={`Cette dépense de ${deleteTarget?.montant ?? 0} sera conservée dans l'historique, mais retirée des vues actives.`}
-        confirmLabel="Annuler la dépense"
-        cancelLabel="Annuler"
-        isDestructive
+        title="Annuler la dépense"
+        description="Cette opération restera consultable dans l’historique sécurisé."
+        warning="La dépense sera marquée annulée et retirée des vues actives, sans effacement de sa trace."
+        confirmLabel="Confirmer l’annulation"
         isLoading={deleting}
-      />
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Montant</p>
+            <p className="mt-1 text-base font-black text-slate-950"><MoneyText value={deleteTarget?.montant ?? 0} /></p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Catégorie</p>
+            <p className="mt-1 text-sm font-black text-slate-950">{deleteTarget?.categorie || '—'}</p>
+          </div>
+        </div>
+      </FinanceReasonModal>
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>
   );

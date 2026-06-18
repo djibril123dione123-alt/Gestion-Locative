@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
 import { Tabs } from '../components/ui/Tabs';
 import { ToastContainer } from '../components/ui/Toast';
-import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
@@ -50,11 +49,12 @@ import { PremiumButton } from '../components/ui/PremiumButton';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { FinanceDrawer, FinanceInfoCard, FinanceKpiGrid, FinanceLine, FinancePageHeader, FinanceStatusTabs } from '../components/finance/FinancePrimitives';
+import { FinanceReasonModal } from '../components/finance/FinanceReasonModal';
 import { getAgencyFinancialSummary, type AgencyFinancialSummary } from '../services/api/financeApi';
 import {
   STATUS_LABELS,
   STATUS_LABEL_FALLBACK,
-  MODE_LABELS,
+  getPaymentModeLabel,
   type PaiementRow,
   type ContratRow,
   type StatusFilter,
@@ -91,6 +91,8 @@ export function Paiements({ }: PaiementsProps) {
   const [selectedPaiement, setSelectedPaiement] = useState<PaiementRow | null>(null);
   const [financeSummary, setFinanceSummary] = useState<AgencyFinancialSummary | null>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const submittingRef = useRef(false);
+  const idempotencyKeyRef = useRef(crypto.randomUUID());
 
   const today = new Date();
   const currentMonthYYYYMM = today.toISOString().slice(0, 7);
@@ -102,8 +104,10 @@ export function Paiements({ }: PaiementsProps) {
     mois_display: currentMonthYYYYMM,
     date_paiement: today.toISOString().split('T')[0],
     mode_paiement: 'especes',
+    payment_channel: 'especes',
     statut: 'paye',
     reference: '',
+    correction_reason: '',
   });
 
   const [formData, setFormData] = useState<PaiementFormData>(makeInitialForm);
@@ -112,6 +116,14 @@ export function Paiements({ }: PaiementsProps) {
     setIsModalOpen(false);
     setEditingPaiement(null);
     setFormData(makeInitialForm());
+    idempotencyKeyRef.current = crypto.randomUUID();
+  };
+
+  const openCreateModal = () => {
+    setEditingPaiement(null);
+    setFormData(makeInitialForm());
+    idempotencyKeyRef.current = crypto.randomUUID();
+    setIsModalOpen(true);
   };
 
   const loadData = async () => {
@@ -328,15 +340,23 @@ export function Paiements({ }: PaiementsProps) {
       mois_concerne: paiement.mois_concerne,
       date_paiement: paiement.date_paiement,
       mode_paiement: paiement.mode_paiement as PaiementFormData['mode_paiement'],
+      payment_channel: paiement.mode_paiement === 'mobile_money'
+        ? paiement.notes?.includes('Canal: Orange Money')
+          ? 'orange_money'
+          : paiement.notes?.includes('Canal: Wave')
+            ? 'wave'
+            : 'mobile_money'
+        : paiement.mode_paiement as PaiementFormData['payment_channel'],
       statut: paiement.statut === 'partiel' ? 'partiel' : 'paye',
       reference: paiement.reference || '',
+      correction_reason: '',
     });
     setIsModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.agency_id) return;
+    if (!profile?.agency_id || submittingRef.current) return;
 
     const montant = Number(formData.montant_total);
     if (!formData.contrat_id) {
@@ -357,6 +377,7 @@ export function Paiements({ }: PaiementsProps) {
     }
 
     const moisConcerne = `${formData.mois_display}-01`;
+    submittingRef.current = true;
     setIsSaving(true);
 
     try {
@@ -380,6 +401,28 @@ export function Paiements({ }: PaiementsProps) {
         return;
       }
 
+      if (editingPaiement && formData.correction_reason.trim().length < 5) {
+        showError('Indiquez la raison de la correction pour préserver une trace claire.');
+        return;
+      }
+
+      const predictedStatus = monthState && montant < monthState.remainingAmount ? 'partiel' : 'paye';
+      const channelNote = formData.payment_channel === 'wave'
+        ? 'Canal: Wave'
+        : formData.payment_channel === 'orange_money'
+          ? 'Canal: Orange Money'
+          : formData.payment_channel === 'autre'
+            ? 'Canal: Autre'
+            : null;
+      const correctionNote = editingPaiement
+        ? `Motif de correction: ${formData.correction_reason.trim()}`
+        : null;
+      const notes = [correctionNote, channelNote, editingPaiement?.notes]
+        .filter(Boolean)
+        .filter((note, index, values) => values.indexOf(note) === index)
+        .join(' | ')
+        .slice(0, 500) || null;
+
       const data = buildPaiementPayload(
         {
           contrat_id: formData.contrat_id,
@@ -387,7 +430,7 @@ export function Paiements({ }: PaiementsProps) {
           mois_concerne: moisConcerne,
           date_paiement: formData.date_paiement,
           mode_paiement: formData.mode_paiement,
-          statut: formData.statut,
+          statut: predictedStatus,
           reference: formData.reference || null,
         },
         {
@@ -408,9 +451,10 @@ export function Paiements({ }: PaiementsProps) {
           id: editingPaiement.id,
           montant_total: montant,
           mode_paiement: formData.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre',
-          statut: formData.statut as 'paye' | 'partiel',
+          statut: predictedStatus,
           date_paiement: formData.date_paiement,
           reference: formData.reference || null,
+          notes,
         });
         emitEvent({
           type: 'paiement.updated',
@@ -420,16 +464,16 @@ export function Paiements({ }: PaiementsProps) {
           payload: { montant, mode: formData.mode_paiement },
         });
       } else {
-        const idempotencyKey = crypto.randomUUID();
         await createPaiementViaEdge({
           contrat_id: formData.contrat_id,
           montant_total: montant,
           mois_concerne: moisConcerne,
           date_paiement: formData.date_paiement,
           mode_paiement: formData.mode_paiement as 'especes' | 'virement' | 'cheque' | 'mobile_money' | 'autre',
-          statut: formData.statut as 'paye' | 'partiel',
-          idempotency_key: idempotencyKey,
+          statut: predictedStatus,
+          idempotency_key: idempotencyKeyRef.current,
           reference: formData.reference || null,
+          notes,
         });
         track({
           action: 'paiement_create',
@@ -459,6 +503,7 @@ export function Paiements({ }: PaiementsProps) {
         showError(formatPaiementError(error));
       }
     } finally {
+      submittingRef.current = false;
       setIsSaving(false);
     }
   };
@@ -467,7 +512,7 @@ export function Paiements({ }: PaiementsProps) {
     setDeleteTarget(paiement);
   };
 
-  const confirmDelete = async () => {
+  const confirmDelete = async (reason: string) => {
     if (!profile?.agency_id || !deleteTarget) return;
     if (!isOnline) {
       showError('Connexion indisponible : annulation impossible hors ligne.');
@@ -475,7 +520,7 @@ export function Paiements({ }: PaiementsProps) {
     }
     setIsDeleting(true);
     try {
-      await cancelPaiementViaEdge({ id: deleteTarget.id });
+      await cancelPaiementViaEdge({ id: deleteTarget.id, raison: reason });
       emitEvent({
         type: 'paiement.cancelled',
         agency_id: profile.agency_id,
@@ -645,30 +690,30 @@ export function Paiements({ }: PaiementsProps) {
       key: 'mode',
       label: 'Mode',
       render: (p: PaiementRow) => (
-        <span className="whitespace-nowrap text-slate-500">{MODE_LABELS[p.mode_paiement] || p.mode_paiement}</span>
+        <span className="whitespace-nowrap text-slate-500">{getPaymentModeLabel(p)}</span>
       ),
     },
-      {
-        key: 'statut',
-        label: 'Statut',
-        render: (p: PaiementRow) => {
-          const meta = getPaiementStatusMeta(p);
-          const Icon = meta.icon;
-          return (
-            <span className={`whitespace-nowrap inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${meta.classes}`}>
-              <Icon className="w-3.5 h-3.5" />
-              {meta.label}
-            </span>
-          );
-        },
+    {
+      key: 'statut',
+      label: 'Statut',
+      render: (p: PaiementRow) => {
+        const meta = getPaiementStatusMeta(p);
+        const Icon = meta.icon;
+        return (
+          <span className={`whitespace-nowrap inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${meta.classes}`}>
+            <Icon className="w-3.5 h-3.5" />
+            {meta.label}
+          </span>
+        );
       },
-    ];
+    },
+  ];
 
-    const columns = allColumns.filter((c) => {
-      if (!isVisible(c.key)) return false;
-      if (selectedPaiement && (c.key === 'mode' || c.key === 'mois_concerne')) return false;
-      return true;
-    });
+  const columns = allColumns.filter((c) => {
+    if (!isVisible(c.key)) return false;
+    if (selectedPaiement && (c.key === 'mode' || c.key === 'mois_concerne')) return false;
+    return true;
+  });
 
   const statusFilters: { id: StatusFilter; label: string; count: number }[] = [
     { id: 'tous', label: 'Tous', count: counts.tous },
@@ -737,8 +782,8 @@ export function Paiements({ }: PaiementsProps) {
       label: 'Taux de recouvrement',
       value: `${summaryRecoveryRate}%`,
       helper: <span className="truncate" title={`${formatCurrency(financeSummary?.loyers_encaisses ?? kpis.encaisseMois)} / ${formatCurrency(summaryBase)}`}>
-          Sur {formatCompactCurrency(summaryBase)} attendus
-        </span>,
+        Sur {formatCompactCurrency(summaryBase)} attendus
+      </span>,
       icon: FileCheck2,
       tone: summaryRecoveryRate >= 80 ? 'emerald' as const : 'amber' as const,
     },
@@ -759,206 +804,206 @@ export function Paiements({ }: PaiementsProps) {
       <div className="flex min-h-full">
         <div className={`flex-1 min-w-0 transition-all duration-300 ${selectedPaiement && selectedStatus ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
           <section className="sk-page-shell space-y-6">
-        <FinancePageHeader
-          eyebrow="Encaissement & finance"
-          title={isIndividualOwner ? 'Mes loyers reçus' : 'Paiements reçus'}
-          description="Encaissements validés et quittances."
-          primaryLabel="Nouveau paiement"
-          primaryIcon={<Plus className="h-4 w-4" />}
-          onPrimary={() => setIsModalOpen(true)}
-        />
-
-        <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-emerald-950/10">
-          <Tabs
-            tabs={[
-              { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
-              { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
-            ]}
-            activeId="paiements"
-            onChange={(id) => { window.location.hash = `#/${id}`; }}
-          />
-        </div>
-
-        {cacheTimestamp && (
-          <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
-        )}
-
-        {loading ? (
-          <SkeletonCards count={6} />
-        ) : (
-          <FinanceKpiGrid metrics={financeMetrics} />
-        )}
-
-        <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-2 relative min-w-0 flex-1">
-              <div className="relative min-w-0 flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Rechercher..."
-                  className="lg:hidden h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                />
-                <input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Rechercher un locataire, contrat, référence..."
-                  className="hidden lg:block h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                />
-              </div>
-              <div className="flex shrink-0 gap-2 items-center lg:hidden">
-                <button
-                  type="button"
-                  onClick={() => setMobileFiltersOpen(true)}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60"
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Filtres
-                </button>
-                <ColumnPicker
-                  columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
-                  visibility={visibility}
-                  onToggle={toggle}
-                  onSetAll={setAll}
-                />
-              </div>
-            </div>
-
-            <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
-              <SmartCombobox
-                value={monthFilter}
-                options={monthOptions}
-                onChange={setMonthFilter}
-                placeholder="Période"
-                searchPlaceholder="Rechercher une période..."
-                className="w-48"
-              />
-
-              {!isIndividualOwner && (
-                <SmartCombobox
-                  value={bailleurFilter}
-                  options={bailleurOptionsFilter}
-                  onChange={setBailleurFilter}
-                  placeholder="Tous les bailleurs"
-                  searchPlaceholder="Rechercher un bailleur..."
-                  className="w-56"
-                />
-              )}
-
-              <ColumnPicker
-                columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
-                visibility={visibility}
-                onToggle={toggle}
-                onSetAll={setAll}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center">
-            <FinanceStatusTabs tabs={statusFilters} active={statusFilter} onChange={setStatusFilter} />
-          </div>
-        </div>
-
-        <MobileFilterSheet
-          isOpen={mobileFiltersOpen}
-          title="Filtres Paiements"
-          onClose={() => setMobileFiltersOpen(false)}
-          onReset={() => {
-            setMonthFilter('current');
-            setBailleurFilter('all');
-          }}
-        >
-          <div className="grid gap-3">
-            <SmartCombobox
-              value={monthFilter}
-              options={monthOptions}
-              onChange={setMonthFilter}
-              placeholder="Période"
-              searchPlaceholder="Rechercher une période..."
+            <FinancePageHeader
+              eyebrow="Encaissement & finance"
+              title={isIndividualOwner ? 'Mes loyers reçus' : 'Paiements reçus'}
+              description="Encaissements validés et quittances."
+              primaryLabel="Nouveau paiement"
+              primaryIcon={<Plus className="h-4 w-4" />}
+              onPrimary={openCreateModal}
             />
-            {!isIndividualOwner && (
-              <SmartCombobox
-                value={bailleurFilter}
-                options={bailleurOptionsFilter}
-                onChange={setBailleurFilter}
-                placeholder="Tous les bailleurs"
-                searchPlaceholder="Rechercher un bailleur..."
+
+            <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-emerald-950/10">
+              <Tabs
+                tabs={[
+                  { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
+                  { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
+                ]}
+                activeId="paiements"
+                onChange={(id) => { window.location.hash = `#/${id}`; }}
               />
+            </div>
+
+            {cacheTimestamp && (
+              <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
             )}
-          </div>
-        </MobileFilterSheet>
 
-        {loading ? (
-          <div className="sk-premium-panel p-4 sm:p-6">
-            <SkeletonTable rows={6} cols={6} />
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="sk-card">
-            <EmptyState
-              icon={CreditCard}
-              title={
-                statusFilter === 'tous' && !searchTerm
-                  ? 'Aucun paiement enregistré'
-                  : 'Aucun résultat'
-              }
-              description={
-                statusFilter === 'tous' && !searchTerm
-                  ? 'Commencez par enregistrer un premier encaissement de loyer.'
-                  : 'Essayez un autre filtre ou élargissez votre recherche.'
-              }
-              action={
-                statusFilter === 'tous' && !searchTerm
-                  ? { label: 'Nouveau paiement', onClick: () => setIsModalOpen(true) }
-                  : undefined
-              }
-            />
-          </div>
-        ) : (
-          <div className="sk-card overflow-hidden mb-28 lg:mb-0">
-            <div className="overflow-x-auto">
-              <Table
-                columns={columns}
-                data={filtered}
-                onRowClick={(p) => setSelectedPaiement(p)}
-                selectedId={selectedPaiement?.id}
-                mobileRender={(p) => {
-                  const status = getPaiementStatusMeta(p);
-                  const StatusIcon = status.icon;
-                  return (
-                    <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="font-black text-slate-900 truncate">{formatPersonName(p.contrats?.locataires, 'Locataire inconnu')}</span>
-                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black tracking-wider ${status.classes}`}>
-                          <StatusIcon className="h-3 w-3" />
-                          <span className="capitalize">{status.label.toLowerCase()}</span>
-                        </span>
-                      </div>
+            {loading ? (
+              <SkeletonCards count={6} />
+            ) : (
+              <FinanceKpiGrid metrics={financeMetrics} />
+            )}
 
-                      <div className="text-xs font-semibold text-slate-500 truncate">
-                        {p.contrats?.unites?.immeubles?.nom || '—'} · {p.contrats?.unites?.nom || '—'}
-                      </div>
+            <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-center gap-2 relative min-w-0 flex-1">
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Rechercher..."
+                      className="lg:hidden h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                    />
+                    <input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Rechercher un locataire, contrat, référence..."
+                      className="hidden lg:block h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                    />
+                  </div>
+                  <div className="flex shrink-0 gap-2 items-center lg:hidden">
+                    <button
+                      type="button"
+                      onClick={() => setMobileFiltersOpen(true)}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60"
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Filtres
+                    </button>
+                    <ColumnPicker
+                      columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
+                      visibility={visibility}
+                      onToggle={toggle}
+                      onSetAll={setAll}
+                    />
+                  </div>
+                </div>
 
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-base font-black text-emerald-800"><MoneyText value={p.montant_total} /></span>
-                        <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(p.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
-                      </div>
+                <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
+                  <SmartCombobox
+                    value={monthFilter}
+                    options={monthOptions}
+                    onChange={setMonthFilter}
+                    placeholder="Période"
+                    searchPlaceholder="Rechercher une période..."
+                    className="w-48"
+                  />
 
-                      <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
-                        <span>{MODE_LABELS[p.mode_paiement] || p.mode_paiement} · {new Date(p.date_paiement).toLocaleDateString('fr-FR')}</span>
-                        {Number(p.reliquat) > 0 && (
-                           <span className="text-orange-600">Reste: <MoneyText value={p.reliquat} /></span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }}
-              />
+                  {!isIndividualOwner && (
+                    <SmartCombobox
+                      value={bailleurFilter}
+                      options={bailleurOptionsFilter}
+                      onChange={setBailleurFilter}
+                      placeholder="Tous les bailleurs"
+                      searchPlaceholder="Rechercher un bailleur..."
+                      className="w-56"
+                    />
+                  )}
+
+                  <ColumnPicker
+                    columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
+                    visibility={visibility}
+                    onToggle={toggle}
+                    onSetAll={setAll}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <FinanceStatusTabs tabs={statusFilters} active={statusFilter} onChange={setStatusFilter} />
+              </div>
             </div>
-          </div>
-        )}
 
-        </section>
+            <MobileFilterSheet
+              isOpen={mobileFiltersOpen}
+              title="Filtres Paiements"
+              onClose={() => setMobileFiltersOpen(false)}
+              onReset={() => {
+                setMonthFilter('current');
+                setBailleurFilter('all');
+              }}
+            >
+              <div className="grid gap-3">
+                <SmartCombobox
+                  value={monthFilter}
+                  options={monthOptions}
+                  onChange={setMonthFilter}
+                  placeholder="Période"
+                  searchPlaceholder="Rechercher une période..."
+                />
+                {!isIndividualOwner && (
+                  <SmartCombobox
+                    value={bailleurFilter}
+                    options={bailleurOptionsFilter}
+                    onChange={setBailleurFilter}
+                    placeholder="Tous les bailleurs"
+                    searchPlaceholder="Rechercher un bailleur..."
+                  />
+                )}
+              </div>
+            </MobileFilterSheet>
+
+            {loading ? (
+              <div className="sk-premium-panel p-4 sm:p-6">
+                <SkeletonTable rows={6} cols={6} />
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="sk-card">
+                <EmptyState
+                  icon={CreditCard}
+                  title={
+                    statusFilter === 'tous' && !searchTerm
+                      ? 'Aucun paiement enregistré'
+                      : 'Aucun résultat'
+                  }
+                  description={
+                    statusFilter === 'tous' && !searchTerm
+                      ? 'Commencez par enregistrer un premier encaissement de loyer.'
+                      : 'Essayez un autre filtre ou élargissez votre recherche.'
+                  }
+                  action={
+                    statusFilter === 'tous' && !searchTerm
+                      ? { label: 'Nouveau paiement', onClick: openCreateModal }
+                      : undefined
+                  }
+                />
+              </div>
+            ) : (
+              <div className="sk-card overflow-hidden mb-28 lg:mb-0">
+                <div className="overflow-x-auto">
+                  <Table
+                    columns={columns}
+                    data={filtered}
+                    onRowClick={(p) => setSelectedPaiement(p)}
+                    selectedId={selectedPaiement?.id}
+                    mobileRender={(p) => {
+                      const status = getPaiementStatusMeta(p);
+                      const StatusIcon = status.icon;
+                      return (
+                        <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
+                          <div className="flex items-start justify-between gap-3">
+                            <span className="font-black text-slate-900 truncate">{formatPersonName(p.contrats?.locataires, 'Locataire inconnu')}</span>
+                            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black tracking-wider ${status.classes}`}>
+                              <StatusIcon className="h-3 w-3" />
+                              <span className="capitalize">{status.label.toLowerCase()}</span>
+                            </span>
+                          </div>
+
+                          <div className="text-xs font-semibold text-slate-500 truncate">
+                            {p.contrats?.unites?.immeubles?.nom || '—'} · {p.contrats?.unites?.nom || '—'}
+                          </div>
+
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-base font-black text-emerald-800"><MoneyText value={p.montant_total} /></span>
+                            <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(p.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
+                            <span>{getPaymentModeLabel(p)} · {new Date(p.date_paiement).toLocaleDateString('fr-FR')}</span>
+                            {Number(p.reliquat) > 0 && (
+                              <span className="text-orange-600">Reste: <MoneyText value={p.reliquat} /></span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+          </section>
         </div>
 
         <PaiementFormModal
@@ -976,14 +1021,16 @@ export function Paiements({ }: PaiementsProps) {
 
         {selectedPaiement && selectedStatus && (
           <FinanceDrawer
-            title={`Paiement #${selectedPaiement.reference || selectedPaiement.id.slice(0, 8).toUpperCase()}`}
+            title={selectedPaiement.reference
+              ? `Paiement ${selectedPaiement.reference}`
+              : `Paiement du ${new Date(selectedPaiement.date_paiement).toLocaleDateString('fr-FR')}`}
             amount={<MoneyText value={selectedPaiement.montant_total} />}
             details={[
               formatPersonName(selectedPaiement.contrats?.locataires, 'Locataire'),
               `${selectedPaiement.contrats?.unites?.immeubles?.nom || '•'} • ${selectedPaiement.contrats?.unites?.nom || '•'}`,
               new Date(selectedPaiement.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
             ]}
-            subtitle={`Enregistré le ${new Date(selectedPaiement.date_paiement).toLocaleDateString('fr-FR')} • ${MODE_LABELS[selectedPaiement.mode_paiement] || selectedPaiement.mode_paiement}`}
+            subtitle={`Enregistré le ${new Date(selectedPaiement.date_paiement).toLocaleDateString('fr-FR')} • ${getPaymentModeLabel(selectedPaiement)}`}
             onClose={() => setSelectedPaiement(null)}
             badge={(() => {
               const Icon = selectedStatus.icon;
@@ -1014,7 +1061,7 @@ export function Paiements({ }: PaiementsProps) {
                   value={new Date(selectedPaiement.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
                 />
                 <FinanceLine label="Date paiement" value={new Date(selectedPaiement.date_paiement).toLocaleDateString('fr-FR')} />
-                <FinanceLine label="Mode paiement" value={MODE_LABELS[selectedPaiement.mode_paiement] || selectedPaiement.mode_paiement} />
+                <FinanceLine label="Mode paiement" value={getPaymentModeLabel(selectedPaiement)} />
                 <FinanceLine label="Référence" value={selectedPaiement.reference || '—'} />
               </FinanceInfoCard>
 
@@ -1022,7 +1069,7 @@ export function Paiements({ }: PaiementsProps) {
                 <FinanceLine label="Locataire" value={formatPersonName(selectedPaiement.contrats?.locataires, '—')} />
                 <FinanceLine label="Bien / unité" value={`${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`} />
                 <FinanceLine label={isIndividualOwner ? 'Propriétaire' : 'Bailleur'} value={formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')} />
-                <FinanceLine label="Contrat" value={selectedPaiement.contrat_id.slice(0, 8).toUpperCase()} />
+                <FinanceLine label="Bail" value="Bail associé à cette occupation" />
               </FinanceInfoCard>
 
               <FinanceInfoCard title="Impact financier">
@@ -1034,13 +1081,11 @@ export function Paiements({ }: PaiementsProps) {
               </FinanceInfoCard>
 
               <FinanceInfoCard title="Documents liés">
-                <div className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${
-                  selectedPaiement.statut === 'annule' ? 'border-red-100 bg-red-50/70 text-red-600' : 'border-emerald-950/5 bg-[#fffdf8] text-brand-950'
-                }`}>
+                <div className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${selectedPaiement.statut === 'annule' ? 'border-red-100 bg-red-50/70 text-red-600' : 'border-emerald-950/5 bg-[#fffdf8] text-brand-950'
+                  }`}>
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg shadow-sm bg-white ${
-                      selectedPaiement.statut === 'annule' ? 'text-red-600' : 'text-emerald-700'
-                    }`}>
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg shadow-sm bg-white ${selectedPaiement.statut === 'annule' ? 'text-red-600' : 'text-emerald-700'
+                      }`}>
                       <FileCheck2 className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
@@ -1066,7 +1111,7 @@ export function Paiements({ }: PaiementsProps) {
               <FinanceInfoCard title="Historique">
                 {[
                   { label: 'Paiement enregistré', detail: selectedPaiement.created_at || selectedPaiement.date_paiement, isDate: true },
-                  { label: 'Écriture ledger créée', detail: 'Journal de caisse', isDate: false },
+                  { label: 'Écriture financière créée', detail: 'Traçabilité certifiée', isDate: false },
                   { label: 'Quittance générée', detail: 'Document prêt', isDate: false },
                   { label: 'Document archivé GED', detail: 'Registre des quittances', isDate: false },
                   ...(selectedPaiement.statut === 'annule' ? [{ label: 'Paiement annulé', detail: selectedPaiement.deleted_at || 'Date inconnue', isDate: true }] : []),
@@ -1116,17 +1161,31 @@ export function Paiements({ }: PaiementsProps) {
           </FinanceDrawer>
         )}
 
-        <ConfirmModal
+        <FinanceReasonModal
           isOpen={!!deleteTarget}
           onClose={() => setDeleteTarget(null)}
           onConfirm={confirmDelete}
-          title="Annuler ce paiement"
-          message="Le paiement sera annulé via le workflow serveur et conservé dans l'historique financier. Aucune suppression physique ne sera effectuée."
-          confirmText="Annuler le paiement"
-          cancelText="Annuler"
-          variant="danger"
+          title="Annuler le paiement"
+          description="Cette action corrige l’historique sans effacer l’opération."
+          warning="Le paiement sera marqué annulé et restera visible dans l’historique sécurisé."
+          confirmLabel="Confirmer l’annulation"
           isLoading={isDeleting}
-        />
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Montant</p>
+              <p className="mt-1 text-base font-black text-slate-950"><MoneyText value={deleteTarget?.montant_total ?? 0} /></p>
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Période</p>
+              <p className="mt-1 text-sm font-black text-slate-950">
+                {deleteTarget?.mois_concerne
+                  ? new Date(deleteTarget.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+                  : '—'}
+              </p>
+            </div>
+          </div>
+        </FinanceReasonModal>
       </div>
     </>
   );

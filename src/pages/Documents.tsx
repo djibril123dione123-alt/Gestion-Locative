@@ -94,7 +94,19 @@ interface DocumentItem {
   retentionPolicy: RetentionPolicy;
   createdAt: string;
   reference?: string;
+  documentType?: string;
 }
+
+type MobileDocumentFilter = 'all' | 'quittance' | 'contrat' | 'rapport' | 'mandat' | 'archives';
+
+const MOBILE_DOCUMENT_FILTERS: Array<{ id: MobileDocumentFilter; label: string }> = [
+  { id: 'all', label: 'Tous' },
+  { id: 'quittance', label: 'Quittances' },
+  { id: 'contrat', label: 'Contrats' },
+  { id: 'rapport', label: 'Rapports' },
+  { id: 'mandat', label: 'Mandats' },
+  { id: 'archives', label: 'Archives' },
+];
 
 interface EntityOption {
   id: string;
@@ -221,6 +233,7 @@ function registryToDocumentItem(row: RegistryDocumentRow): DocumentItem {
     retentionPolicy: row.retention_policy ?? 'critical',
     createdAt: row.generated_at,
     reference: row.reference,
+    documentType: row.document_type,
   };
 }
 
@@ -242,6 +255,7 @@ export function Documents() {
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<UserDocumentCategory | 'all'>('all');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'uploaded' | 'generated'>('all');
+  const [mobileFilter, setMobileFilter] = useState<MobileDocumentFilter>('all');
   const [entityOptions, setEntityOptions] = useState<Record<UserDocumentEntityType, EntityOption[]>>({
     agency: [],
     bailleur: [],
@@ -351,12 +365,15 @@ export function Documents() {
     return items.filter((item) => {
       if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
       if (sourceFilter !== 'all' && item.source !== sourceFilter) return false;
+      if (mobileFilter === 'archives' && item.lifecycleStatus !== 'archived') return false;
+      if (mobileFilter === 'rapport' && item.documentType !== 'rapport_bailleur' && item.documentType !== 'rapport') return false;
+      if (!['all', 'archives', 'rapport'].includes(mobileFilter) && item.documentType !== mobileFilter) return false;
       if (!normalizedQuery) return true;
       return [item.title, item.subtitle, item.reference, DOCUMENT_CATEGORY_LABELS[item.category]]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalizedQuery));
     });
-  }, [categoryFilter, items, query, sourceFilter]);
+  }, [categoryFilter, items, mobileFilter, query, sourceFilter]);
 
   const categoryCounts = useMemo(() => {
     return CATEGORIES.reduce<Record<UserDocumentCategory, number>>((acc, category) => {
@@ -513,24 +530,27 @@ export function Documents() {
   const temporaryBucket = bucketValue(breakdown, 'temporary');
 
   return (
-    <div className="sk-mobile-page space-y-4 sm:space-y-5">
-      <div className="sk-mobile-hero bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-4 text-white shadow-2xl shadow-emerald-950/15 sm:p-6">
-        <div className="absolute -right-20 -top-20 h-56 w-56 rounded-full bg-orange-300/15 blur-3xl" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl">
+    <div className="sk-mobile-page min-w-0 space-y-3.5 sm:space-y-5">
+      <div className="sk-mobile-hero max-w-full bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-3.5 text-white shadow-2xl shadow-emerald-950/15 sm:p-6">
+        <div className="absolute -right-20 -top-20 hidden h-56 w-56 rounded-full bg-orange-300/15 blur-3xl sm:block" />
+        <div className="relative flex min-w-0 flex-col gap-3 sm:gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0 max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-100">
               <LockKeyhole className="h-3.5 w-3.5 text-orange-200" />
               Coffre documentaire
             </div>
-            <h1 className="mt-4 text-2xl font-extrabold tracking-tight sm:text-4xl">Documents</h1>
-            <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-emerald-50/75 sm:text-base">
-              {isIndividualOwner
-                ? 'Archivez, retrouvez et sécurisez vos contrats, quittances et justificatifs sans fouiller dans vos dossiers.'
-                : "Archivez, retrouvez et sécurisez les documents métier de l'agence sans dupliquer inutilement les fichiers générés."}
+            <h1 className="mt-2.5 text-2xl font-extrabold tracking-tight sm:mt-4 sm:text-4xl">Documents</h1>
+            <p className="mt-1.5 max-w-xl text-sm font-medium leading-5 text-emerald-50/75 sm:mt-2 sm:text-base sm:leading-6">
+              <span className="sm:hidden">Centralisez, retrouvez et vérifiez vos documents.</span>
+              <span className="hidden sm:inline">
+                {isIndividualOwner
+                  ? 'Archivez, retrouvez et sécurisez vos contrats, quittances et justificatifs sans fouiller dans vos dossiers.'
+                  : "Archivez, retrouvez et sécurisez les documents métier de l'agence sans dupliquer inutilement les fichiers générés."}
+              </span>
             </p>
           </div>
 
-          <div className="w-full rounded-2xl border border-white/10 bg-white/[0.08] p-4 backdrop-blur lg:max-w-sm">
+          <div className="min-w-0 w-full max-w-full rounded-xl border border-white/10 bg-white/[0.08] p-3 backdrop-blur sm:rounded-2xl sm:p-4 lg:max-w-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-100/65">Stockage</p>
@@ -538,28 +558,28 @@ export function Documents() {
                   {formatStorageSize(usage?.used_bytes)} <span className="text-sm font-semibold text-emerald-100/55">/ {formatStorageSize(usage?.limit_bytes)}</span>
                 </p>
               </div>
-              <HardDrive className="h-7 w-7 text-orange-200" />
+              <HardDrive className="h-5 w-5 text-orange-200 sm:h-7 sm:w-7" />
             </div>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
+            <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/10 sm:mt-4 sm:h-2">
               <div className={`h-full rounded-full ${usageTone(usedPercent)} transition-all duration-700`} style={{ width: `${usedPercent}%` }} />
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-emerald-50/70">
-              <span>Uploads {formatStorageSize(usage?.uploaded_bytes)}</span>
-              <span>Générés {formatStorageSize(usage?.generated_bytes)}</span>
-              <span>Archives {formatStorageSize(usage?.archived_bytes)}</span>
+            <div className="mt-2 grid min-w-0 grid-cols-3 gap-1.5 text-[10px] text-emerald-50/70 sm:mt-3 sm:gap-2 sm:text-xs">
+              <span className="min-w-0"><span className="block truncate">Uploads</span><strong className="block truncate text-emerald-50/90">{formatStorageSize(usage?.uploaded_bytes)}</strong></span>
+              <span className="min-w-0"><span className="block truncate">Générés</span><strong className="block truncate text-emerald-50/90">{formatStorageSize(usage?.generated_bytes)}</strong></span>
+              <span className="min-w-0"><span className="block truncate">Archives</span><strong className="block truncate text-emerald-50/90">{formatStorageSize(usage?.archived_bytes)}</strong></span>
             </div>
           </div>
         </div>
-        <div className="relative mt-5 flex flex-col gap-2 sm:flex-row">
+        <div className="relative mt-3 flex min-w-0 flex-col gap-2 sm:mt-5 sm:flex-row">
           <button
             type="button"
             onClick={() => navigate('/documents/scan')}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F]"
+            className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] sm:rounded-2xl sm:py-3"
           >
             <ShieldCheck className="h-4 w-4" />
             Scanner un document
           </button>
-          <p className="rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-xs font-semibold leading-5 text-emerald-50/70 sm:flex-1">
+          <p className="hidden min-w-0 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-xs font-semibold leading-5 text-emerald-50/70 sm:block sm:flex-1">
             Vérifiez un QR Samay Këur ou une référence sans quitter votre espace documentaire.
           </p>
         </div>
@@ -592,65 +612,65 @@ export function Documents() {
         message="Les documents affichés viennent du dernier chargement réussi. Les fichiers eux-mêmes nécessitent une connexion pour être ouverts ou modifiés."
       />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {[
           { label: 'Documents actifs', value: items.filter((item) => item.lifecycleStatus === 'active').length, icon: FileCheck2 },
           { label: 'Fichiers uploadés', value: items.filter((item) => item.source === 'uploaded').length, icon: Upload },
           { label: 'Documents générés', value: items.filter((item) => item.source === 'generated').length, icon: FileText },
           { label: 'Documents critiques', value: items.filter((item) => item.retentionPolicy === 'critical').length, icon: ShieldCheck },
         ].map((metric) => (
-          <div key={metric.label} className="sk-metric-tile p-3 sm:p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{metric.label}</p>
-              <metric.icon className="h-4 w-4 text-emerald-700" />
+          <div key={metric.label} className="sk-metric-tile min-w-0 p-2.5 sm:p-4">
+            <div className="flex min-w-0 items-start justify-between gap-2">
+              <p className="min-w-0 text-[10px] font-semibold uppercase leading-4 tracking-[0.06em] text-slate-500 sm:text-xs sm:tracking-[0.08em]">{metric.label}</p>
+              <metric.icon className="h-3.5 w-3.5 flex-shrink-0 text-emerald-700 sm:h-4 sm:w-4" />
             </div>
-            <p className="mt-2 text-xl font-extrabold text-slate-950 sm:mt-3 sm:text-2xl">{metric.value}</p>
+            <p className="mt-1.5 text-lg font-extrabold leading-none text-slate-950 sm:mt-3 sm:text-2xl">{metric.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-        <div className="sk-premium-panel p-4">
+      <div className="grid min-w-0 gap-3 sm:gap-4 xl:grid-cols-[1fr_1fr]">
+        <div className="sk-premium-panel min-w-0 p-3 sm:p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Repartition stockage</p>
-              <h2 className="mt-1 text-lg font-extrabold text-slate-950">Usage documentaire</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-xs sm:tracking-[0.1em]">Répartition stockage</p>
+              <h2 className="mt-0.5 text-base font-extrabold text-slate-950 sm:mt-1 sm:text-lg">Usage documentaire</h2>
             </div>
             <BarChart3 className="h-5 w-5 text-emerald-700" />
           </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
             {[
               { label: 'Uploads utilisateurs', bucket: uploadedBucket },
               { label: 'Generes par le systeme', bucket: generatedBucket },
               { label: 'Critiques', bucket: criticalBucket },
               { label: 'Temporaires', bucket: temporaryBucket },
             ].map((entry) => (
-              <div key={entry.label} className="rounded-[1.15rem] border border-emerald-950/10 bg-white/75 p-3 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">{entry.label}</p>
-                <p className="mt-1 text-base font-bold text-slate-950">{formatStorageSize(entry.bucket?.bytes ?? 0)}</p>
-                <p className="text-xs font-semibold text-slate-500">{entry.bucket?.count ?? 0} fichier(s)</p>
+              <div key={entry.label} className="min-w-0 rounded-xl border border-emerald-950/10 bg-white/75 p-2.5 shadow-sm sm:rounded-[1.15rem] sm:p-3">
+                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 sm:text-xs sm:tracking-[0.08em]">{entry.label}</p>
+                <p className="mt-1 truncate text-sm font-bold text-slate-950 sm:text-base">{formatStorageSize(entry.bucket?.bytes ?? 0)}</p>
+                <p className="text-[11px] font-semibold text-slate-500 sm:text-xs">{entry.bucket?.count ?? 0} fichier(s)</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="sk-premium-panel p-4">
+        <div className="sk-premium-panel min-w-0 p-3 sm:p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Lifecycle management</p>
-              <h2 className="mt-1 text-lg font-extrabold text-slate-950">Maintenance non destructive</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-xs sm:tracking-[0.1em]">Cycle documentaire</p>
+              <h2 className="mt-0.5 text-base font-extrabold text-slate-950 sm:mt-1 sm:text-lg">Maintenance non destructive</h2>
             </div>
             <RefreshCw className={`h-5 w-5 text-emerald-700 ${maintenanceAction ? 'animate-spin' : ''}`} />
           </div>
-          <p className="mt-2 text-sm leading-5 text-slate-500">
+          <p className="mt-2 hidden text-sm leading-5 text-slate-500 sm:block">
             Les documents critiques restent proteges. Les actions ci-dessous archivent ou marquent les fichiers a revoir sans supprimer brutalement les preuves.
           </p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+          <div className="mt-2.5 grid grid-cols-3 gap-1.5 sm:mt-4 sm:gap-2">
             <button
               type="button"
               onClick={() => runMaintenance('optimize', () => optimizeDocumentStorage(agencyId))}
               disabled={maintenanceAction !== null || !agencyId}
-              className="sk-action sk-action-primary justify-center disabled:opacity-60"
+              className="sk-action sk-action-primary min-w-0 justify-center px-2 text-xs disabled:opacity-60 sm:px-3 sm:text-sm"
             >
               Optimiser
             </button>
@@ -658,7 +678,7 @@ export function Documents() {
               type="button"
               onClick={() => runMaintenance('temporary', () => cleanupTemporaryDocuments(agencyId, 30))}
               disabled={maintenanceAction !== null || !agencyId}
-              className="sk-action sk-action-secondary justify-center disabled:opacity-60"
+              className="sk-action sk-action-secondary min-w-0 justify-center px-2 text-xs disabled:opacity-60 sm:px-3 sm:text-sm"
             >
               Temporaires
             </button>
@@ -666,7 +686,7 @@ export function Documents() {
               type="button"
               onClick={() => runMaintenance('orphans', () => markOrphanDocumentRecords(agencyId))}
               disabled={maintenanceAction !== null || !agencyId}
-              className="sk-action sk-action-secondary justify-center disabled:opacity-60"
+              className="sk-action sk-action-secondary min-w-0 justify-center px-2 text-xs disabled:opacity-60 sm:px-3 sm:text-sm"
             >
               Orphelins
             </button>
@@ -674,8 +694,8 @@ export function Documents() {
         </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[240px_1fr]">
-        <aside className="space-y-3 lg:sticky lg:top-4 lg:self-start">
+      <div className="grid min-w-0 gap-3 sm:gap-5 xl:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="min-w-0 space-y-3 xl:sticky xl:top-4 xl:self-start">
           <button
             type="button"
             onClick={() => setUploadOpen(true)}
@@ -686,26 +706,52 @@ export function Documents() {
             Ajouter un document
           </button>
 
-          <div className="sk-premium-panel p-3">
+          <div className="sk-premium-panel min-w-0 p-2.5 sm:p-3">
             <button
               type="button"
-              onClick={() => setCategoryFilter('all')}
-              className={`mb-2 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-semibold transition ${
+              onClick={() => {
+                setCategoryFilter('all');
+                setMobileFilter('all');
+              }}
+              className={`mb-2 hidden w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-semibold transition xl:flex ${
                 categoryFilter === 'all' ? 'bg-emerald-950 text-white' : 'text-slate-700 hover:bg-emerald-50'
               }`}
             >
               <span>Tous les dossiers</span>
               <span>{items.length}</span>
             </button>
-            <div className="flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-1 lg:overflow-visible lg:pb-0">
+            <div className="scrollbar-hide -mx-0.5 flex max-w-full gap-1.5 overflow-x-auto px-0.5 pb-1 xl:hidden">
+              {MOBILE_DOCUMENT_FILTERS.map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => {
+                    setMobileFilter(filter.id);
+                    setCategoryFilter('all');
+                  }}
+                  className={`flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                    mobileFilter === filter.id
+                      ? 'border-emerald-950 bg-emerald-950 text-white'
+                      : 'border-emerald-950/10 bg-white text-slate-600'
+                  }`}
+                >
+                  {filter.label}
+                  {filter.id === 'all' && <span className="text-[10px] opacity-65">{items.length}</span>}
+                </button>
+              ))}
+            </div>
+            <div className="hidden space-y-1 xl:block">
               {visibleCategories.map((category) => {
                 const Icon = CATEGORY_ICONS[category];
                 return (
                   <button
                     key={category}
                     type="button"
-                    onClick={() => setCategoryFilter(category)}
-                    className={`flex min-w-[8.5rem] items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium transition sm:text-sm xl:w-full ${
+                    onClick={() => {
+                      setCategoryFilter(category);
+                      setMobileFilter('all');
+                    }}
+                    className={`flex w-full min-w-0 items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium transition ${
                       categoryFilter === category ? 'bg-emerald-50 text-emerald-950' : 'text-slate-600 hover:bg-slate-50'
                     }`}
                   >
@@ -742,8 +788,8 @@ export function Documents() {
           ) : null}
         </aside>
 
-        <section className="space-y-4">
-          <div className="sk-premium-panel flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
+        <section className="min-w-0 max-w-full space-y-3 pb-2 sm:space-y-4 sm:pb-0">
+          <div className="sk-premium-panel flex min-w-0 max-w-full flex-col gap-2.5 p-3 sm:flex-row sm:items-center sm:gap-3">
             <label className="relative min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
@@ -777,13 +823,13 @@ export function Documents() {
               <EmptyState icon={FolderOpen} title="Aucun document" description="Ajustez les filtres ou archivez un premier fichier." />
             </div>
           ) : (
-            <div className="grid gap-3 xl:grid-cols-2">
+            <div className="grid min-w-0 max-w-full gap-3 xl:grid-cols-2">
               {filteredItems.map((item) => {
                 const Icon = CATEGORY_ICONS[item.category];
                 return (
                   <article
                     key={`${item.source}-${item.id}`}
-                    className="group sk-mobile-card p-4 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-800/20 hover:shadow-premium active:scale-[0.992]"
+                    className="group sk-mobile-card min-w-0 max-w-full overflow-hidden p-3.5 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-800/20 hover:shadow-premium active:scale-[0.992] sm:p-4"
                   >
                     <div className="flex items-start gap-3">
                       <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10">
@@ -803,18 +849,18 @@ export function Documents() {
                             </span>
                           )}
                         </div>
-                        <h2 className="mt-3 truncate text-base font-semibold text-slate-950">{item.title}</h2>
-                        <p className="mt-1 line-clamp-2 text-sm leading-5 text-slate-500">{item.subtitle}</p>
+                        <h2 className="mt-2.5 line-clamp-2 break-words text-base font-semibold text-slate-950 [overflow-wrap:anywhere] sm:mt-3">{item.title}</h2>
+                        <p className="mt-1 line-clamp-2 break-words text-sm leading-5 text-slate-500 [overflow-wrap:anywhere]">{item.subtitle}</p>
                         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-400">
                           <span>{formatStorageSize(item.size)}</span>
                           <span>{new Date(item.createdAt).toLocaleDateString('fr-FR')}</span>
-                          <span>{ENTITY_LABELS[item.lifecycleStatus] ?? item.lifecycleStatus}</span>
+                          <span className="break-words [overflow-wrap:anywhere]">{ENTITY_LABELS[item.lifecycleStatus] ?? item.lifecycleStatus}</span>
                           {item.entityType && <span>{entityLabel(item.entityType)}</span>}
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3 sm:justify-end">
+                    <div className="mt-3 flex min-w-0 flex-wrap gap-2 border-t border-slate-100 pt-3 sm:mt-4 sm:justify-end">
                       {item.source === 'uploaded' && item.retentionPolicy !== 'critical' && item.lifecycleStatus === 'active' && (
                         <button type="button" onClick={() => setArchiveTarget(item)} className="sk-action sk-action-secondary flex-1 justify-center sm:flex-none">
                           <Archive className="h-4 w-4" />

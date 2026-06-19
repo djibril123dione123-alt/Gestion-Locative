@@ -110,9 +110,9 @@ function getVisualState(state: VerificationState | 'loading') {
 
 function DetailRow({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-2xl border border-white/28 bg-white/[0.16] px-3.5 py-3 shadow-sm shadow-black/20 backdrop-blur">
-      <span className="text-xs font-black uppercase tracking-[0.12em] text-emerald-50/85">{label}</span>
-      <span className="min-w-0 text-right text-sm font-black text-white drop-shadow-sm">{value || '—'}</span>
+    <div className="grid min-w-0 max-w-full grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] items-start gap-2 rounded-xl border border-white/28 bg-white/[0.16] px-3 py-2.5 shadow-sm shadow-black/20 backdrop-blur sm:gap-4 sm:rounded-2xl sm:px-3.5 sm:py-3">
+      <span className="min-w-0 text-[10px] font-black uppercase leading-4 tracking-[0.08em] text-emerald-50/85 sm:text-xs sm:tracking-[0.12em]">{label}</span>
+      <span className="min-w-0 break-words text-right text-xs font-black leading-5 text-white drop-shadow-sm [overflow-wrap:anywhere] sm:text-sm">{value || '—'}</span>
     </div>
   );
 }
@@ -136,7 +136,7 @@ export function DocumentVerificationResultCard({
 
   return (
     <section
-      className={`relative overflow-hidden rounded-[1.7rem] border ${visual.panel} p-5 shadow-2xl shadow-emerald-950/35 ring-1 ring-emerald-100/20 sm:p-7`}
+      className={`relative w-full min-w-0 max-w-full overflow-hidden rounded-[1.25rem] border ${visual.panel} p-3.5 shadow-2xl shadow-emerald-950/35 ring-1 ring-emerald-100/20 sm:rounded-[1.7rem] sm:p-7`}
       style={{
         background: 'linear-gradient(145deg, #04150f 0%, #073526 48%, #101827 100%)',
       }}
@@ -145,35 +145,35 @@ export function DocumentVerificationResultCard({
       <div className={`pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full ${visual.glow} blur-3xl`} />
       <div className="relative">
         {showBrand && (
-          <div className="mb-6 flex items-center justify-between gap-4 border-b border-white/12 pb-5">
-            <div className="flex items-center gap-3">
+          <div className="mb-4 flex min-w-0 items-center justify-between gap-3 border-b border-white/12 pb-3 sm:mb-6 sm:gap-4 sm:pb-5">
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
               <BrandMark size="md" tone="dark" animated withTile={false} />
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-50/75">Samay Këur</p>
-                <h1 className="text-lg font-black text-white sm:text-xl">Vérification documentaire</h1>
+              <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-50/75 sm:text-xs sm:tracking-[0.22em]">Samay Këur</p>
+                <h1 className="truncate text-base font-black text-white sm:text-xl">Vérification documentaire</h1>
               </div>
             </div>
-            <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ring-1 ${visual.badge}`}>
-              <Icon className={`h-6 w-6 ${visual.iconClass}`} />
+            <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl ring-1 sm:h-11 sm:w-11 sm:rounded-2xl ${visual.badge}`}>
+              <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${visual.iconClass}`} />
             </div>
           </div>
         )}
 
         <div className="text-center">
-          <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-3xl ring-1 ${visual.badge}`}>
-            <Icon className={`h-8 w-8 ${visual.iconClass}`} />
+          <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-2xl ring-1 sm:h-16 sm:w-16 sm:rounded-3xl ${visual.badge}`}>
+            <Icon className={`h-6 w-6 sm:h-8 sm:w-8 ${visual.iconClass}`} />
           </div>
-          <p className="mt-5 text-xs font-black uppercase tracking-[0.22em] text-orange-100">Registre sécurisé</p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-white drop-shadow-sm sm:text-3xl">
+          <p className="mt-3 text-[10px] font-black uppercase tracking-[0.16em] text-orange-100 sm:mt-5 sm:text-xs sm:tracking-[0.22em]">Registre sécurisé</p>
+          <h2 className="mt-1.5 break-words text-xl font-black tracking-tight text-white drop-shadow-sm [overflow-wrap:anywhere] sm:mt-2 sm:text-3xl">
             {visual.title}
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm font-semibold leading-6 text-emerald-50">
+          <p className="mx-auto mt-2.5 max-w-2xl break-words text-xs font-semibold leading-5 text-emerald-50 [overflow-wrap:anywhere] sm:mt-4 sm:text-sm sm:leading-6">
             {result?.message || copy.message}
           </p>
         </div>
 
         {details && (
-          <div className={`mt-6 grid gap-3 ${compact ? '' : 'sm:grid-cols-2'}`}>
+          <div className={`mt-4 grid min-w-0 max-w-full gap-2 sm:mt-6 sm:gap-3 ${compact ? '' : 'sm:grid-cols-2'}`}>
             <DetailRow label="Statut" value={getVerificationCopy(result.state).title} />
             <DetailRow label="Référence" value={details.reference} />
             <DetailRow label="Type" value={getDocumentTypeLabel(details.type)} />
@@ -187,14 +187,14 @@ export function DocumentVerificationResultCard({
           </div>
         )}
 
-        <div className="mt-6 rounded-2xl border border-white/24 bg-black/35 p-4 shadow-inner shadow-black/25">
+        <div className="mt-4 max-w-full rounded-xl border border-white/24 bg-black/35 p-3 shadow-inner shadow-black/25 sm:mt-6 sm:rounded-2xl sm:p-4">
           <div className="flex items-start gap-3">
             {result?.state === 'authentic' ? (
               <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-200" />
             ) : (
               <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-200" />
             )}
-            <p className="text-xs font-semibold leading-5 text-emerald-50/90">
+            <p className="min-w-0 break-words text-[11px] font-semibold leading-5 text-emerald-50/90 [overflow-wrap:anywhere] sm:text-xs">
               {result?.state === 'authentic'
                 ? "Cette page confirme l'authenticité du document enregistré dans le registre documentaire Samay Këur. Les informations affichées doivent correspondre au document scanné."
                 : "Ne vous fiez pas à ce document tant que son authenticité n'a pas été confirmée par l'émetteur."}
@@ -202,12 +202,12 @@ export function DocumentVerificationResultCard({
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-4 flex min-w-0 flex-col gap-2 sm:mt-6 sm:flex-row sm:justify-center sm:gap-3">
           {onRetry && (
             <button
               type="button"
               onClick={onRetry}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/22 bg-white/14 px-4 py-3 text-sm font-black text-white transition hover:bg-white/20"
+              className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl border border-white/22 bg-white/14 px-4 py-2.5 text-sm font-black text-white transition hover:bg-white/20 sm:rounded-2xl sm:py-3"
             >
               <RefreshCw className="h-4 w-4" />
               Réessayer
@@ -217,7 +217,7 @@ export function DocumentVerificationResultCard({
             <button
               type="button"
               onClick={onDiscover}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/20 transition hover:from-[#0A3F30] hover:to-[#06281F]"
+              className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-950/20 transition hover:from-[#0A3F30] hover:to-[#06281F] sm:rounded-2xl sm:py-3"
             >
               Découvrir Samay Këur
             </button>

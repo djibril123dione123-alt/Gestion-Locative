@@ -80,6 +80,11 @@ interface RegistryDocumentRow {
   metadata?: { file_name?: string; [key: string]: unknown } | null;
 }
 
+interface DocumentBusinessContext {
+  subject?: string;
+  location?: string;
+}
+
 interface DocumentItem {
   id: string;
   source: 'uploaded' | 'generated';
@@ -95,6 +100,9 @@ interface DocumentItem {
   createdAt: string;
   reference?: string;
   documentType?: string;
+  fileName: string;
+  businessContext?: DocumentBusinessContext;
+  period?: string | null;
 }
 
 type MobileDocumentFilter = 'all' | 'quittance' | 'contrat' | 'rapport' | 'mandat' | 'archives';
@@ -107,6 +115,29 @@ const MOBILE_DOCUMENT_FILTERS: Array<{ id: MobileDocumentFilter; label: string }
   { id: 'mandat', label: 'Mandats' },
   { id: 'archives', label: 'Archives' },
 ];
+
+const QR_CAPABLE_DOCUMENT_TYPES = new Set([
+  'quittance',
+  'facture',
+  'contrat',
+  'mandat',
+  'rapport',
+  'rapport_bailleur',
+  'rapport_proprietaire',
+]);
+
+const DOCUMENT_TYPE_TITLES: Record<string, string> = {
+  quittance: 'Quittance',
+  facture: 'Facture',
+  contrat: 'Contrat de bail',
+  mandat: 'Mandat de gestion',
+  rapport: 'Rapport',
+  rapport_bailleur: 'Rapport bailleur',
+  rapport_proprietaire: 'Rapport propriétaire',
+  export: 'Export financier',
+  pdf: 'Document',
+  document: 'Document',
+};
 
 interface EntityOption {
   id: string;
@@ -159,6 +190,34 @@ const ENTITY_LABELS: Record<string, string> = {
   orphaned: 'À vérifier',
 };
 
+function formatPersonName(person?: { nom?: string | null; prenom?: string | null } | null) {
+  return [person?.prenom, person?.nom].filter(Boolean).join(' ').trim();
+}
+
+function singleRelation<T>(value?: T | T[] | null) {
+  return Array.isArray(value) ? value[0] : value ?? undefined;
+}
+
+function formatDocumentPeriod(period?: string | null) {
+  if (!period) return '';
+  const normalized = /^\d{4}-\d{2}$/.test(period) ? `${period}-01` : period;
+  const date = new Date(`${normalized}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return period;
+  return new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(date);
+}
+
+function documentTypeTitle(documentType?: string) {
+  if (!documentType) return 'Document';
+  return DOCUMENT_TYPE_TITLES[documentType] ?? documentType.replace(/_/g, ' ');
+}
+
+function lifecycleLabel(item: DocumentItem) {
+  if (item.lifecycleStatus === 'archived') return 'Archivé';
+  if (item.lifecycleStatus === 'temporary') return 'À revoir';
+  if (item.lifecycleStatus === 'orphaned' || (item.source === 'uploaded' && !item.businessContext?.subject)) return 'À classer';
+  return ENTITY_LABELS[item.lifecycleStatus] ?? item.lifecycleStatus;
+}
+
 function normalizeCategory(value?: string | null): UserDocumentCategory {
   if (value && CATEGORIES.includes(value as UserDocumentCategory)) return value as UserDocumentCategory;
   return 'administratif';
@@ -174,15 +233,15 @@ function usageMessage(percent: number) {
   if (percent >= 90) {
     return {
       tone: 'border-red-200 bg-red-50 text-red-800',
-      title: 'Quota presque atteint',
-      text: 'Archivez les doublons et nettoyez les temporaires avant de nouveaux uploads lourds.',
+      title: 'Espace presque plein',
+      text: 'Classez les doublons et les documents temporaires avant de nouveaux ajouts.',
     };
   }
   if (percent >= 75) {
     return {
       tone: 'border-orange-200 bg-orange-50 text-orange-800',
-      title: 'Stockage a surveiller',
-      text: 'Le coffre documentaire approche de sa limite. Les fichiers critiques restent conserves.',
+      title: 'Espace à surveiller',
+      text: 'Le coffre approche de sa limite. Les preuves protégées restent conservées.',
     };
   }
   return null;
@@ -208,6 +267,7 @@ function toDocumentItem(row: UserDocumentRow): DocumentItem {
     lifecycleStatus: row.lifecycle_status ?? 'active',
     retentionPolicy: row.retention_policy ?? 'standard',
     createdAt: row.created_at,
+    fileName: row.name,
   };
 }
 
@@ -218,12 +278,18 @@ function registryCategory(documentType: string): UserDocumentCategory {
   return 'archives';
 }
 
-function registryToDocumentItem(row: RegistryDocumentRow): DocumentItem {
+function registryToDocumentItem(row: RegistryDocumentRow, businessContext?: DocumentBusinessContext): DocumentItem {
+  const fallbackFileName = row.metadata?.file_name || row.reference;
+  const typeTitle = documentTypeTitle(row.document_type);
+  const metadataTitle = typeof row.metadata?.title === 'string' ? row.metadata.title.trim() : '';
+  const periodLabel = formatDocumentPeriod(row.period);
+  const locationLabel = row.document_type === 'mandat' && businessContext?.subject ? 'Agence / Bailleur' : businessContext?.location;
+  const contextualSubtitle = [locationLabel, periodLabel].filter(Boolean).join(' · ');
   return {
     id: row.id,
     source: 'generated',
-    title: row.metadata?.file_name || row.reference,
-    subtitle: `${row.document_type.replace(/_/g, ' ')} · v${row.version}${row.period ? ` · ${row.period}` : ''}`,
+    title: businessContext?.subject ? `${typeTitle} — ${businessContext.subject}` : metadataTitle || fallbackFileName,
+    subtitle: contextualSubtitle || 'Document à classer',
     storagePath: row.storage_path,
     mimeType: row.mime_type,
     size: Number(row.file_size ?? 0),
@@ -234,6 +300,9 @@ function registryToDocumentItem(row: RegistryDocumentRow): DocumentItem {
     createdAt: row.generated_at,
     reference: row.reference,
     documentType: row.document_type,
+    fileName: fallbackFileName,
+    businessContext,
+    period: row.period,
   };
 }
 
@@ -315,7 +384,7 @@ export function Documents() {
               supabase.from('locataires').select('id, nom, prenom').eq('agency_id', scopedAgencyId),
               supabase.from('immeubles').select('id, nom').eq('agency_id', scopedAgencyId),
               supabase.from('unites').select('id, nom').eq('agency_id', scopedAgencyId),
-              supabase.from('contrats').select('id, locataires(nom, prenom), unites(nom)').eq('agency_id', scopedAgencyId),
+              supabase.from('contrats').select('id, locataires(nom, prenom), unites(nom, immeubles(nom))').eq('agency_id', scopedAgencyId),
             ]);
 
           if (docRes.error) throw docRes.error;
@@ -326,18 +395,108 @@ export function Documents() {
           if (unitesRes.error) throw unitesRes.error;
           if (contratsRes.error) throw contratsRes.error;
 
-          const uploaded = ((docRes.data ?? []) as UserDocumentRow[]).map(toDocumentItem);
-          const generated = ((registryRes.data ?? []) as RegistryDocumentRow[]).map(registryToDocumentItem);
-          const nextItems = [...uploaded, ...generated].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          const registryRows = (registryRes.data ?? []) as RegistryDocumentRow[];
+          const paymentIds = registryRows
+            .filter((row) => row.document_type === 'quittance' || row.document_type === 'facture')
+            .map((row) => row.entity_id);
+          const paiementsRes = paymentIds.length
+            ? await supabase
+                .from('paiements')
+                .select('id, contrats(locataires(nom, prenom), unites(nom, immeubles(nom)))')
+                .eq('agency_id', scopedAgencyId)
+                .in('id', paymentIds)
+            : { data: [], error: null };
+          if (paiementsRes.error) throw paiementsRes.error;
+
+          type ContractContextRow = {
+            id: string;
+            locataires?: { nom?: string | null; prenom?: string | null } | Array<{ nom?: string | null; prenom?: string | null }> | null;
+            unites?: {
+              nom?: string | null;
+              immeubles?: { nom?: string | null } | Array<{ nom?: string | null }> | null;
+            } | Array<{
+              nom?: string | null;
+              immeubles?: { nom?: string | null } | Array<{ nom?: string | null }> | null;
+            }> | null;
+          };
+          type PaymentContextRow = {
+            id: string;
+            contrats?: ContractContextRow | ContractContextRow[] | null;
+          };
+
+          const bailleurLabels = new Map(
+            ((bailleursRes.data ?? []) as Array<{ id: string; nom: string; prenom?: string | null }>).map((row) => [row.id, formatPersonName(row)])
+          );
+          const contractContexts = new Map(
+            ((contratsRes.data ?? []) as unknown as ContractContextRow[]).map((row) => {
+              const locataire = singleRelation(row.locataires);
+              const unite = singleRelation(row.unites);
+              const immeuble = singleRelation(unite?.immeubles);
+              return [
+                row.id,
+                {
+                  subject: formatPersonName(locataire) || undefined,
+                  location: [unite?.nom, immeuble?.nom].filter(Boolean).join(' · ') || undefined,
+                } satisfies DocumentBusinessContext,
+              ];
+            })
+          );
+          const paymentContexts = new Map(
+            ((paiementsRes.data ?? []) as unknown as PaymentContextRow[]).map((row) => {
+              const contrat = singleRelation(row.contrats);
+              const locataire = singleRelation(contrat?.locataires);
+              const unite = singleRelation(contrat?.unites);
+              const immeuble = singleRelation(unite?.immeubles);
+              return [
+                row.id,
+                {
+                  subject: formatPersonName(locataire) || undefined,
+                  location: [unite?.nom, immeuble?.nom].filter(Boolean).join(' · ') || undefined,
+                } satisfies DocumentBusinessContext,
+              ];
+            })
+          );
+
           const nextEntityOptions = {
             agency: [{ id: scopedAgencyId, label: isIndividualOwner ? 'Compte propriétaire' : 'Agence' }],
             bailleur: ((bailleursRes.data ?? []) as Array<{ id: string; nom: string; prenom?: string | null }>).map((row) => ({ id: row.id, label: [row.prenom, row.nom].filter(Boolean).join(' ').trim() })),
             locataire: ((locatairesRes.data ?? []) as Array<{ id: string; nom: string; prenom?: string | null }>).map((row) => ({ id: row.id, label: [row.prenom, row.nom].filter(Boolean).join(' ').trim() })),
             immeuble: ((immeublesRes.data ?? []) as Array<{ id: string; nom: string }>).map((row) => ({ id: row.id, label: row.nom })),
             unite: ((unitesRes.data ?? []) as Array<{ id: string; nom: string }>).map((row) => ({ id: row.id, label: row.nom })),
-            contrat: ((contratsRes.data ?? []) as Array<{ id: string; locataires?: { nom?: string | null; prenom?: string | null } | null; unites?: { nom?: string | null } | null; }>).map((row) => ({ id: row.id, label: ([row.locataires?.prenom, row.locataires?.nom].filter(Boolean).join(' ').trim() + ' - ' + (row.unites?.nom ?? 'Unité')).trim() })),
+            contrat: ((contratsRes.data ?? []) as unknown as ContractContextRow[]).map((row) => ({
+              id: row.id,
+              label: `${formatPersonName(singleRelation(row.locataires))} - ${singleRelation(row.unites)?.nom ?? 'Unité'}`.trim(),
+            })),
             operation: [],
           };
+
+          const entityLabels = new Map<string, string>();
+          Object.entries(nextEntityOptions).forEach(([entityType, options]) => {
+            options.forEach((option) => entityLabels.set(`${entityType}:${option.id}`, option.label));
+          });
+          const uploaded = ((docRes.data ?? []) as UserDocumentRow[]).map((row) => {
+            const item = toDocumentItem(row);
+            const subject = row.entity_type && row.entity_id ? entityLabels.get(`${row.entity_type}:${row.entity_id}`) : undefined;
+            return {
+              ...item,
+              title: `Document libre — ${row.name}`,
+              subtitle: subject
+                ? `${subject} · ${DOCUMENT_CATEGORY_LABELS[item.category]}`
+                : row.description || 'Document à classer',
+              businessContext: subject ? { subject } : undefined,
+            };
+          });
+          const generated = registryRows.map((row) => {
+            let context: DocumentBusinessContext | undefined;
+            if (row.document_type === 'quittance' || row.document_type === 'facture') context = paymentContexts.get(row.entity_id);
+            else if (row.document_type === 'contrat') context = contractContexts.get(row.entity_id);
+            else if (row.document_type === 'mandat' || row.document_type === 'rapport_bailleur' || row.document_type === 'rapport_proprietaire') {
+              const subject = bailleurLabels.get(row.entity_id);
+              context = subject ? { subject } : undefined;
+            }
+            return registryToDocumentItem(row, context);
+          });
+          const nextItems = [...uploaded, ...generated].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           return { items: nextItems, usage: storageUsage, breakdown: storageBreakdown, entityOptions: nextEntityOptions };
         },
         { timeoutMs: 7_000 }
@@ -369,7 +528,15 @@ export function Documents() {
       if (mobileFilter === 'rapport' && item.documentType !== 'rapport_bailleur' && item.documentType !== 'rapport') return false;
       if (!['all', 'archives', 'rapport'].includes(mobileFilter) && item.documentType !== mobileFilter) return false;
       if (!normalizedQuery) return true;
-      return [item.title, item.subtitle, item.reference, DOCUMENT_CATEGORY_LABELS[item.category]]
+      return [
+        item.title,
+        item.subtitle,
+        item.fileName,
+        item.reference,
+        item.businessContext?.subject,
+        item.businessContext?.location,
+        DOCUMENT_CATEGORY_LABELS[item.category],
+      ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalizedQuery));
     });
@@ -497,7 +664,7 @@ export function Documents() {
         }
         return count;
       }, 0);
-      toast.success(total > 0 ? `${total} element(s) mis a jour` : 'Aucune action necessaire');
+      toast.success(total > 0 ? `${total} document(s) classé(s)` : 'Votre coffre est déjà bien classé');
       await load();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Maintenance documentaire impossible');
@@ -527,7 +694,13 @@ export function Documents() {
   const uploadedBucket = bucketValue(breakdown, 'uploaded');
   const generatedBucket = bucketValue(breakdown, 'generated');
   const criticalBucket = bucketValue(breakdown, 'critical');
-  const temporaryBucket = bucketValue(breakdown, 'temporary');
+  const reviewBucket = bucketValue(breakdown, 'orphaned');
+  const verifiableCount = items.filter(
+    (item) => item.source === 'generated' && item.documentType && QR_CAPABLE_DOCUMENT_TYPES.has(item.documentType)
+  ).length;
+  const toClassifyCount = items.filter(
+    (item) => item.lifecycleStatus === 'orphaned' || (item.source === 'uploaded' && !item.entityType)
+  ).length;
 
   return (
     <div className="sk-mobile-page min-w-0 space-y-3.5 sm:space-y-5">
@@ -544,8 +717,8 @@ export function Documents() {
               <span className="sm:hidden">Centralisez, retrouvez et vérifiez vos documents.</span>
               <span className="hidden sm:inline">
                 {isIndividualOwner
-                  ? 'Archivez, retrouvez et sécurisez vos contrats, quittances et justificatifs sans fouiller dans vos dossiers.'
-                  : "Archivez, retrouvez et sécurisez les documents métier de l'agence sans dupliquer inutilement les fichiers générés."}
+                  ? 'Centralisez, retrouvez et vérifiez les preuves liées à vos biens.'
+                  : 'Centralisez, retrouvez et vérifiez les preuves de votre agence.'}
               </span>
             </p>
           </div>
@@ -553,7 +726,7 @@ export function Documents() {
           <div className="min-w-0 w-full max-w-full rounded-xl border border-white/10 bg-white/[0.08] p-3 backdrop-blur sm:rounded-2xl sm:p-4 lg:max-w-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-100/65">Stockage</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-100/65">Espace sécurisé</p>
                 <p className="mt-1 text-lg font-extrabold">
                   {formatStorageSize(usage?.used_bytes)} <span className="text-sm font-semibold text-emerald-100/55">/ {formatStorageSize(usage?.limit_bytes)}</span>
                 </p>
@@ -570,18 +743,30 @@ export function Documents() {
             </div>
           </div>
         </div>
-        <div className="relative mt-3 flex min-w-0 flex-col gap-2 sm:mt-5 sm:flex-row">
-          <button
-            type="button"
-            onClick={() => navigate('/documents/scan')}
-            className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] sm:rounded-2xl sm:py-3"
-          >
-            <ShieldCheck className="h-4 w-4" />
-            Scanner un document
-          </button>
-          <p className="hidden min-w-0 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-xs font-semibold leading-5 text-emerald-50/70 sm:block sm:flex-1">
-            Vérifiez un QR Samay Këur ou une référence sans quitter votre espace documentaire.
-          </p>
+        <div className="relative mt-3 min-w-0 sm:mt-5">
+          <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex">
+            <button
+              type="button"
+              onClick={() => navigate('/documents/scan')}
+              className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-2.5 py-2.5 text-xs font-black text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] sm:gap-2 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm"
+            >
+              <ShieldCheck className="h-4 w-4 flex-shrink-0" />
+              <span className="min-w-0">Scanner un document</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setUploadOpen(true)}
+              data-testid="button-upload-document"
+              className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-white/18 bg-white/[0.1] px-2.5 py-2.5 text-xs font-black text-white transition hover:-translate-y-0.5 hover:bg-white/[0.16] sm:gap-2 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm"
+            >
+              <Upload className="h-4 w-4 flex-shrink-0" />
+              <span className="min-w-0">Ajouter un document</span>
+            </button>
+            <p className="hidden min-w-0 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-xs font-semibold leading-5 text-emerald-50/70 sm:block sm:flex-1">
+              Scannez un QR ou collez une référence pour vérifier une preuve.
+            </p>
+          </div>
+          <p className="mt-1.5 text-center text-[11px] font-semibold text-emerald-50/65 sm:hidden">Scannez un QR ou une référence.</p>
         </div>
       </div>
 
@@ -614,10 +799,10 @@ export function Documents() {
 
       <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {[
-          { label: 'Documents actifs', value: items.filter((item) => item.lifecycleStatus === 'active').length, icon: FileCheck2 },
-          { label: 'Fichiers uploadés', value: items.filter((item) => item.source === 'uploaded').length, icon: Upload },
-          { label: 'Documents générés', value: items.filter((item) => item.source === 'generated').length, icon: FileText },
-          { label: 'Documents critiques', value: items.filter((item) => item.retentionPolicy === 'critical').length, icon: ShieldCheck },
+          { label: 'Documents actifs', value: items.filter((item) => item.lifecycleStatus === 'active').length, helper: 'Disponibles', icon: FileCheck2 },
+          { label: 'Générés automatiquement', value: items.filter((item) => item.source === 'generated').length, helper: 'Par Samay Këur', icon: FileText },
+          { label: 'Vérifiables QR', value: verifiableCount, helper: 'Types compatibles', icon: ShieldCheck },
+          { label: 'À classer', value: toClassifyCount, helper: 'Sans lien métier', icon: FolderOpen },
         ].map((metric) => (
           <div key={metric.label} className="sk-metric-tile min-w-0 p-2.5 sm:p-4">
             <div className="flex min-w-0 items-start justify-between gap-2">
@@ -625,6 +810,7 @@ export function Documents() {
               <metric.icon className="h-3.5 w-3.5 flex-shrink-0 text-emerald-700 sm:h-4 sm:w-4" />
             </div>
             <p className="mt-1.5 text-lg font-extrabold leading-none text-slate-950 sm:mt-3 sm:text-2xl">{metric.value}</p>
+            <p className="mt-1 truncate text-[10px] font-semibold text-slate-400 sm:text-xs">{metric.helper}</p>
           </div>
         ))}
       </div>
@@ -633,17 +819,18 @@ export function Documents() {
         <div className="sk-premium-panel min-w-0 p-3 sm:p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-xs sm:tracking-[0.1em]">Répartition stockage</p>
-              <h2 className="mt-0.5 text-base font-extrabold text-slate-950 sm:mt-1 sm:text-lg">Usage documentaire</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-xs sm:tracking-[0.1em]">Vos preuves classées</p>
+              <h2 className="mt-0.5 text-base font-extrabold text-slate-950 sm:mt-1 sm:text-lg">Organisation documentaire</h2>
+              <p className="mt-1 hidden text-xs font-semibold text-slate-500 sm:block">Vos preuves classées par origine et statut.</p>
             </div>
             <BarChart3 className="h-5 w-5 text-emerald-700" />
           </div>
           <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
             {[
-              { label: 'Uploads utilisateurs', bucket: uploadedBucket },
-              { label: 'Generes par le systeme', bucket: generatedBucket },
-              { label: 'Critiques', bucket: criticalBucket },
-              { label: 'Temporaires', bucket: temporaryBucket },
+              { label: 'Ajoutés manuellement', bucket: uploadedBucket },
+              { label: 'Générés automatiquement', bucket: generatedBucket },
+              { label: 'Preuves protégées', bucket: criticalBucket },
+              { label: 'À revoir', bucket: reviewBucket },
             ].map((entry) => (
               <div key={entry.label} className="min-w-0 rounded-xl border border-emerald-950/10 bg-white/75 p-2.5 shadow-sm sm:rounded-[1.15rem] sm:p-3">
                 <p className="truncate text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 sm:text-xs sm:tracking-[0.08em]">{entry.label}</p>
@@ -657,13 +844,13 @@ export function Documents() {
         <div className="sk-premium-panel min-w-0 p-3 sm:p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-xs sm:tracking-[0.1em]">Cycle documentaire</p>
-              <h2 className="mt-0.5 text-base font-extrabold text-slate-950 sm:mt-1 sm:text-lg">Maintenance non destructive</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-xs sm:tracking-[0.1em]">Coffre organisé</p>
+              <h2 className="mt-0.5 text-base font-extrabold text-slate-950 sm:mt-1 sm:text-lg">Classement sécurisé</h2>
             </div>
             <RefreshCw className={`h-5 w-5 text-emerald-700 ${maintenanceAction ? 'animate-spin' : ''}`} />
           </div>
           <p className="mt-2 hidden text-sm leading-5 text-slate-500 sm:block">
-            Les documents critiques restent proteges. Les actions ci-dessous archivent ou marquent les fichiers a revoir sans supprimer brutalement les preuves.
+            Classez, archivez ou marquez les documents à revoir sans supprimer les preuves.
           </p>
           <div className="mt-2.5 grid grid-cols-3 gap-1.5 sm:mt-4 sm:gap-2">
             <button
@@ -672,7 +859,7 @@ export function Documents() {
               disabled={maintenanceAction !== null || !agencyId}
               className="sk-action sk-action-primary min-w-0 justify-center px-2 text-xs disabled:opacity-60 sm:px-3 sm:text-sm"
             >
-              Optimiser
+              Classer
             </button>
             <button
               type="button"
@@ -680,7 +867,7 @@ export function Documents() {
               disabled={maintenanceAction !== null || !agencyId}
               className="sk-action sk-action-secondary min-w-0 justify-center px-2 text-xs disabled:opacity-60 sm:px-3 sm:text-sm"
             >
-              Temporaires
+              À revoir
             </button>
             <button
               type="button"
@@ -688,7 +875,7 @@ export function Documents() {
               disabled={maintenanceAction !== null || !agencyId}
               className="sk-action sk-action-secondary min-w-0 justify-center px-2 text-xs disabled:opacity-60 sm:px-3 sm:text-sm"
             >
-              Orphelins
+              Sans dossier lié
             </button>
           </div>
         </div>
@@ -696,16 +883,6 @@ export function Documents() {
 
       <div className="grid min-w-0 gap-3 sm:gap-5 xl:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="min-w-0 space-y-3 xl:sticky xl:top-4 xl:self-start">
-          <button
-            type="button"
-            onClick={() => setUploadOpen(true)}
-            className="sk-action sk-action-financial w-full justify-center py-3"
-            data-testid="button-upload-document"
-          >
-            <Upload className="h-4 w-4" />
-            Ajouter un document
-          </button>
-
           <div className="sk-premium-panel min-w-0 p-2.5 sm:p-3">
             <button
               type="button"
@@ -768,7 +945,7 @@ export function Documents() {
 
           {breakdown?.large_files?.length ? (
             <div className="sk-premium-panel p-3">
-              <p className="px-1 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Fichiers lourds</p>
+              <p className="px-1 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Documents à surveiller</p>
               <div className="mt-2 space-y-2">
                 {breakdown.large_files.slice(0, 4).map((file) => (
                   <button
@@ -795,13 +972,13 @@ export function Documents() {
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Rechercher..."
+                placeholder="Rechercher un document..."
                 className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:hidden"
               />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Rechercher un contrat, justificatif, quittance..."
+                placeholder="Rechercher un document, une référence, un locataire..."
                 className="hidden sm:block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
               />
             </label>
@@ -810,9 +987,9 @@ export function Documents() {
               onChange={(event) => setSourceFilter(event.target.value as typeof sourceFilter)}
               className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:w-auto"
             >
-              <option value="all">Toutes sources</option>
-              <option value="uploaded">Uploads utilisateurs</option>
-              <option value="generated">Documents générés</option>
+              <option value="all">Tous les documents</option>
+              <option value="uploaded">Ajoutés manuellement</option>
+              <option value="generated">Générés automatiquement</option>
             </select>
           </div>
 
@@ -826,48 +1003,73 @@ export function Documents() {
             <div className="grid min-w-0 max-w-full gap-3 xl:grid-cols-2">
               {filteredItems.map((item) => {
                 const Icon = CATEGORY_ICONS[item.category];
+                const statusLabel = lifecycleLabel(item);
+                const isQrVerifiable = item.source === 'generated' && Boolean(item.documentType && QR_CAPABLE_DOCUMENT_TYPES.has(item.documentType));
                 return (
                   <article
                     key={`${item.source}-${item.id}`}
-                    className="group sk-mobile-card min-w-0 max-w-full overflow-hidden p-3.5 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-800/20 hover:shadow-premium active:scale-[0.992] sm:p-4"
+                    className="group sk-mobile-card min-w-0 max-w-full overflow-hidden p-3 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-800/20 hover:shadow-premium active:scale-[0.992] sm:p-3.5"
                   >
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                            {categoryLabel(item.category)}
-                          </span>
-                          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-emerald-800">
-                            {item.source === 'generated' ? 'Généré' : 'Upload'}
-                          </span>
-                          {item.retentionPolicy === 'critical' && (
-                            <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-orange-700">
-                              Critique
-                            </span>
-                          )}
+                    <button
+                      type="button"
+                      onClick={() => openDocument(item)}
+                      className="block w-full min-w-0 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
+                      aria-label={`Ouvrir ${item.title}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10 sm:h-11 sm:w-11 sm:rounded-2xl">
+                          <Icon className="h-5 w-5" />
                         </div>
-                        <h2 className="mt-2.5 line-clamp-2 break-words text-base font-semibold text-slate-950 [overflow-wrap:anywhere] sm:mt-3">{item.title}</h2>
-                        <p className="mt-1 line-clamp-2 break-words text-sm leading-5 text-slate-500 [overflow-wrap:anywhere]">{item.subtitle}</p>
-                        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-400">
-                          <span>{formatStorageSize(item.size)}</span>
-                          <span>{new Date(item.createdAt).toLocaleDateString('fr-FR')}</span>
-                          <span className="break-words [overflow-wrap:anywhere]">{ENTITY_LABELS[item.lifecycleStatus] ?? item.lifecycleStatus}</span>
-                          {item.entityType && <span>{entityLabel(item.entityType)}</span>}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">{categoryLabel(item.category)}</p>
+                          <h2 className="mt-1 line-clamp-2 break-words text-[15px] font-extrabold leading-5 text-slate-950 [overflow-wrap:anywhere] sm:text-base">{item.title}</h2>
+                          <p className="mt-0.5 line-clamp-2 break-words text-xs font-semibold leading-5 text-slate-500 [overflow-wrap:anywhere] sm:text-sm">{item.subtitle}</p>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="mt-3 flex min-w-0 flex-wrap gap-2 border-t border-slate-100 pt-3 sm:mt-4 sm:justify-end">
+                      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
+                          {item.source === 'generated' ? 'Généré' : 'Ajouté'}
+                        </span>
+                        {isQrVerifiable && (
+                          <span className="rounded-full bg-sky-50 px-2 py-1 text-[10px] font-bold text-sky-700">Vérifiable QR</span>
+                        )}
+                        <span
+                          className={`rounded-full px-2 py-1 text-[10px] font-bold ${
+                            statusLabel === 'Archivé'
+                              ? 'bg-slate-100 text-slate-600'
+                              : statusLabel === 'À classer' || statusLabel === 'À revoir'
+                                ? 'bg-amber-50 text-amber-700'
+                                : 'bg-emerald-50 text-emerald-800'
+                          }`}
+                        >
+                          {statusLabel}
+                        </span>
+                        {item.retentionPolicy === 'critical' && !isQrVerifiable && (
+                          <span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-bold text-violet-700">Protégé</span>
+                        )}
+                      </div>
+
+                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-slate-400 sm:text-xs">
+                        <span>{formatStorageSize(item.size)}</span>
+                        <span>{new Date(item.createdAt).toLocaleDateString('fr-FR')}</span>
+                        {item.entityType && <span>{entityLabel(item.entityType)}</span>}
+                      </div>
+                      {item.reference && (
+                        <p className="mt-1.5 truncate font-mono text-[10px] font-semibold text-slate-400 sm:text-[11px]" title={item.reference}>
+                          Réf. {item.reference}
+                        </p>
+                      )}
+                    </button>
+
+                    <div className="mt-2.5 flex min-w-0 flex-wrap gap-2 border-t border-slate-100 pt-2.5 sm:justify-end">
                       {item.source === 'uploaded' && item.retentionPolicy !== 'critical' && item.lifecycleStatus === 'active' && (
                         <button type="button" onClick={() => setArchiveTarget(item)} className="sk-action sk-action-secondary flex-1 justify-center sm:flex-none">
                           <Archive className="h-4 w-4" />
                           Archiver
                         </button>
                       )}
-                      <button type="button" onClick={() => openDocument(item)} className="sk-action sk-action-primary flex-1 justify-center sm:flex-none">
+                      <button type="button" onClick={() => openDocument(item)} className="sk-action sk-action-secondary flex-1 justify-center sm:flex-none">
                         <Download className="h-4 w-4" />
                         Ouvrir
                       </button>

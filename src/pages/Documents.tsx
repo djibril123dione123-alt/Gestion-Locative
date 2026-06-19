@@ -4,7 +4,7 @@ import {
   Archive,
   BarChart3,
   Building2,
-  Download,
+  ChevronRight,
   FileArchive,
   FileCheck2,
   FileText,
@@ -103,17 +103,23 @@ interface DocumentItem {
   fileName: string;
   businessContext?: DocumentBusinessContext;
   period?: string | null;
+  isVerifiable?: boolean;
 }
 
-type MobileDocumentFilter = 'all' | 'quittance' | 'contrat' | 'rapport' | 'mandat' | 'archives';
+type DocumentTypeFilter = 'all' | 'quittance' | 'contrat' | 'mandat' | 'rapport' | 'facture' | 'justificatif' | 'archives' | 'unclassified';
+type DocumentSourceFilter = 'all' | 'uploaded' | 'generated' | 'qr';
+type DocumentStatusFilter = 'all' | 'active' | 'archived' | 'unclassified' | 'review';
 
-const MOBILE_DOCUMENT_FILTERS: Array<{ id: MobileDocumentFilter; label: string }> = [
+const DOCUMENT_TYPE_FILTERS: Array<{ id: DocumentTypeFilter; label: string }> = [
   { id: 'all', label: 'Tous' },
   { id: 'quittance', label: 'Quittances' },
   { id: 'contrat', label: 'Contrats' },
-  { id: 'rapport', label: 'Rapports' },
   { id: 'mandat', label: 'Mandats' },
+  { id: 'rapport', label: 'Rapports' },
+  { id: 'facture', label: 'Factures' },
+  { id: 'justificatif', label: 'Justificatifs' },
   { id: 'archives', label: 'Archives' },
+  { id: 'unclassified', label: 'À classer' },
 ];
 
 const QR_CAPABLE_DOCUMENT_TYPES = new Set([
@@ -218,6 +224,34 @@ function lifecycleLabel(item: DocumentItem) {
   return ENTITY_LABELS[item.lifecycleStatus] ?? item.lifecycleStatus;
 }
 
+function isQrVerifiableDocument(item: DocumentItem) {
+  return item.source === 'generated' && item.isVerifiable === true;
+}
+
+function isDocumentUnclassified(item: DocumentItem) {
+  return item.lifecycleStatus === 'orphaned' || (item.source === 'uploaded' && !item.businessContext?.subject);
+}
+
+function documentTypeBadge(item: DocumentItem) {
+  if (item.documentType === 'quittance') return 'QUITTANCES';
+  if (item.documentType === 'facture') return 'FACTURES';
+  if (item.documentType === 'contrat') return 'CONTRATS';
+  if (item.documentType === 'mandat') return 'MANDATS';
+  if (item.documentType === 'rapport' || item.documentType === 'rapport_bailleur' || item.documentType === 'rapport_proprietaire') return 'RAPPORTS';
+  if (item.source === 'uploaded' && !item.businessContext?.subject) return 'DOCUMENT LIBRE';
+  if (item.source === 'uploaded' && ['bailleurs', 'locataires', 'immeubles', 'unites', 'assurances'].includes(item.category)) return 'JUSTIFICATIFS';
+  return 'ADMINISTRATIF';
+}
+
+function matchesTypeFilter(item: DocumentItem, filter: DocumentTypeFilter) {
+  if (filter === 'all') return true;
+  if (filter === 'archives') return item.lifecycleStatus === 'archived';
+  if (filter === 'unclassified') return isDocumentUnclassified(item);
+  if (filter === 'justificatif') return documentTypeBadge(item) === 'JUSTIFICATIFS';
+  if (filter === 'rapport') return ['rapport', 'rapport_bailleur', 'rapport_proprietaire'].includes(item.documentType ?? '');
+  return item.documentType === filter;
+}
+
 function normalizeCategory(value?: string | null): UserDocumentCategory {
   if (value && CATEGORIES.includes(value as UserDocumentCategory)) return value as UserDocumentCategory;
   return 'administratif';
@@ -278,7 +312,7 @@ function registryCategory(documentType: string): UserDocumentCategory {
   return 'archives';
 }
 
-function registryToDocumentItem(row: RegistryDocumentRow, businessContext?: DocumentBusinessContext): DocumentItem {
+function registryToDocumentItem(row: RegistryDocumentRow, businessContext?: DocumentBusinessContext, isVerifiable = false): DocumentItem {
   const fallbackFileName = row.metadata?.file_name || row.reference;
   const typeTitle = documentTypeTitle(row.document_type);
   const metadataTitle = typeof row.metadata?.title === 'string' ? row.metadata.title.trim() : '';
@@ -303,6 +337,7 @@ function registryToDocumentItem(row: RegistryDocumentRow, businessContext?: Docu
     fileName: fallbackFileName,
     businessContext,
     period: row.period,
+    isVerifiable,
   };
 }
 
@@ -322,9 +357,9 @@ export function Documents() {
   const [maintenanceAction, setMaintenanceAction] = useState<string | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<DocumentItem | null>(null);
   const [query, setQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<UserDocumentCategory | 'all'>('all');
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'uploaded' | 'generated'>('all');
-  const [mobileFilter, setMobileFilter] = useState<MobileDocumentFilter>('all');
+  const [sourceFilter, setSourceFilter] = useState<DocumentSourceFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<DocumentStatusFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<DocumentTypeFilter>('all');
   const [entityOptions, setEntityOptions] = useState<Record<UserDocumentEntityType, EntityOption[]>>({
     agency: [],
     bailleur: [],
@@ -396,6 +431,19 @@ export function Documents() {
           if (contratsRes.error) throw contratsRes.error;
 
           const registryRows = (registryRes.data ?? []) as RegistryDocumentRow[];
+          const registryReferences = registryRows.map((row) => row.reference);
+          const verificationRes = registryReferences.length
+            ? await supabase
+                .from('document_verifications')
+                .select('document_ref')
+                .eq('agency_id', scopedAgencyId)
+                .in('document_ref', registryReferences)
+            : { data: [], error: null };
+          const verifiableReferences = new Set(
+            ((verificationRes.data ?? []) as Array<{ document_ref?: string | null }>)
+              .map((row) => row.document_ref)
+              .filter((reference): reference is string => Boolean(reference))
+          );
           const paymentIds = registryRows
             .filter((row) => row.document_type === 'quittance' || row.document_type === 'facture')
             .map((row) => row.entity_id);
@@ -494,7 +542,8 @@ export function Documents() {
               const subject = bailleurLabels.get(row.entity_id);
               context = subject ? { subject } : undefined;
             }
-            return registryToDocumentItem(row, context);
+            const isVerifiable = QR_CAPABLE_DOCUMENT_TYPES.has(row.document_type) && verifiableReferences.has(row.reference);
+            return registryToDocumentItem(row, context, isVerifiable);
           });
           const nextItems = [...uploaded, ...generated].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           return { items: nextItems, usage: storageUsage, breakdown: storageBreakdown, entityOptions: nextEntityOptions };
@@ -522,11 +571,14 @@ export function Documents() {
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return items.filter((item) => {
-      if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
-      if (sourceFilter !== 'all' && item.source !== sourceFilter) return false;
-      if (mobileFilter === 'archives' && item.lifecycleStatus !== 'archived') return false;
-      if (mobileFilter === 'rapport' && item.documentType !== 'rapport_bailleur' && item.documentType !== 'rapport') return false;
-      if (!['all', 'archives', 'rapport'].includes(mobileFilter) && item.documentType !== mobileFilter) return false;
+      if (sourceFilter === 'uploaded' && item.source !== 'uploaded') return false;
+      if (sourceFilter === 'generated' && item.source !== 'generated') return false;
+      if (sourceFilter === 'qr' && !isQrVerifiableDocument(item)) return false;
+      if (statusFilter === 'active' && item.lifecycleStatus !== 'active') return false;
+      if (statusFilter === 'archived' && item.lifecycleStatus !== 'archived') return false;
+      if (statusFilter === 'unclassified' && !isDocumentUnclassified(item)) return false;
+      if (statusFilter === 'review' && item.lifecycleStatus !== 'temporary') return false;
+      if (!matchesTypeFilter(item, typeFilter)) return false;
       if (!normalizedQuery) return true;
       return [
         item.title,
@@ -540,14 +592,18 @@ export function Documents() {
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(normalizedQuery));
     });
-  }, [categoryFilter, items, mobileFilter, query, sourceFilter]);
+  }, [items, query, sourceFilter, statusFilter, typeFilter]);
 
-  const categoryCounts = useMemo(() => {
-    return CATEGORIES.reduce<Record<UserDocumentCategory, number>>((acc, category) => {
-      acc[category] = items.filter((item) => item.category === category).length;
+  const typeFilterCounts = useMemo(() => {
+    return DOCUMENT_TYPE_FILTERS.reduce<Record<DocumentTypeFilter, number>>((acc, filter) => {
+      acc[filter.id] = items.filter((item) => matchesTypeFilter(item, filter.id)).length;
       return acc;
-    }, {} as Record<UserDocumentCategory, number>);
+    }, {} as Record<DocumentTypeFilter, number>);
   }, [items]);
+  const visibleTypeFilters = useMemo(
+    () => DOCUMENT_TYPE_FILTERS.filter((filter) => filter.id === 'all' || (typeFilterCounts[filter.id] ?? 0) > 0),
+    [typeFilterCounts]
+  );
 
   const openDocument = async (item: DocumentItem) => {
     if (!navigator.onLine) {
@@ -695,12 +751,9 @@ export function Documents() {
   const generatedBucket = bucketValue(breakdown, 'generated');
   const criticalBucket = bucketValue(breakdown, 'critical');
   const reviewBucket = bucketValue(breakdown, 'orphaned');
-  const verifiableCount = items.filter(
-    (item) => item.source === 'generated' && item.documentType && QR_CAPABLE_DOCUMENT_TYPES.has(item.documentType)
-  ).length;
-  const toClassifyCount = items.filter(
-    (item) => item.lifecycleStatus === 'orphaned' || (item.source === 'uploaded' && !item.entityType)
-  ).length;
+  const verifiableCount = items.filter(isQrVerifiableDocument).length;
+  const toClassifyCount = items.filter(isDocumentUnclassified).length;
+  const archivedCount = items.filter((item) => item.lifecycleStatus === 'archived').length;
 
   return (
     <div className="sk-mobile-page min-w-0 space-y-3.5 sm:space-y-5">
@@ -800,174 +853,25 @@ export function Documents() {
       <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {[
           { label: 'Documents actifs', value: items.filter((item) => item.lifecycleStatus === 'active').length, helper: 'Disponibles', icon: FileCheck2 },
-          { label: 'Générés automatiquement', value: items.filter((item) => item.source === 'generated').length, helper: 'Par Samay Këur', icon: FileText },
-          { label: 'Vérifiables QR', value: verifiableCount, helper: 'Types compatibles', icon: ShieldCheck },
+          { label: 'Vérifiables QR', value: verifiableCount, helper: 'Preuves contrôlables', icon: ShieldCheck },
           { label: 'À classer', value: toClassifyCount, helper: 'Sans lien métier', icon: FolderOpen },
+          { label: 'Archivés', value: archivedCount, helper: 'Conservés', icon: Archive },
         ].map((metric) => (
-          <div key={metric.label} className="sk-metric-tile min-w-0 p-2.5 sm:p-4">
+          <div key={metric.label} className="sk-metric-tile min-w-0 p-2.5 sm:p-3">
             <div className="flex min-w-0 items-start justify-between gap-2">
               <p className="min-w-0 text-[10px] font-semibold uppercase leading-4 tracking-[0.06em] text-slate-500 sm:text-xs sm:tracking-[0.08em]">{metric.label}</p>
               <metric.icon className="h-3.5 w-3.5 flex-shrink-0 text-emerald-700 sm:h-4 sm:w-4" />
             </div>
-            <p className="mt-1.5 text-lg font-extrabold leading-none text-slate-950 sm:mt-3 sm:text-2xl">{metric.value}</p>
+            <p className="mt-1.5 text-lg font-extrabold leading-none text-slate-950 sm:mt-2 sm:text-xl">{metric.value}</p>
             <p className="mt-1 truncate text-[10px] font-semibold text-slate-400 sm:text-xs">{metric.helper}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid min-w-0 gap-3 sm:gap-4 xl:grid-cols-[1fr_1fr]">
-        <div className="sk-premium-panel min-w-0 p-3 sm:p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-xs sm:tracking-[0.1em]">Vos preuves classées</p>
-              <h2 className="mt-0.5 text-base font-extrabold text-slate-950 sm:mt-1 sm:text-lg">Organisation documentaire</h2>
-              <p className="mt-1 hidden text-xs font-semibold text-slate-500 sm:block">Vos preuves classées par origine et statut.</p>
-            </div>
-            <BarChart3 className="h-5 w-5 text-emerald-700" />
-          </div>
-          <div className="mt-2.5 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3">
-            {[
-              { label: 'Ajoutés manuellement', bucket: uploadedBucket },
-              { label: 'Générés automatiquement', bucket: generatedBucket },
-              { label: 'Preuves protégées', bucket: criticalBucket },
-              { label: 'À revoir', bucket: reviewBucket },
-            ].map((entry) => (
-              <div key={entry.label} className="min-w-0 rounded-xl border border-emerald-950/10 bg-white/75 p-2.5 shadow-sm sm:rounded-[1.15rem] sm:p-3">
-                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 sm:text-xs sm:tracking-[0.08em]">{entry.label}</p>
-                <p className="mt-1 truncate text-sm font-bold text-slate-950 sm:text-base">{formatStorageSize(entry.bucket?.bytes ?? 0)}</p>
-                <p className="text-[11px] font-semibold text-slate-500 sm:text-xs">{entry.bucket?.count ?? 0} fichier(s)</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="sk-premium-panel min-w-0 p-3 sm:p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500 sm:text-xs sm:tracking-[0.1em]">Coffre organisé</p>
-              <h2 className="mt-0.5 text-base font-extrabold text-slate-950 sm:mt-1 sm:text-lg">Classement sécurisé</h2>
-            </div>
-            <RefreshCw className={`h-5 w-5 text-emerald-700 ${maintenanceAction ? 'animate-spin' : ''}`} />
-          </div>
-          <p className="mt-2 hidden text-sm leading-5 text-slate-500 sm:block">
-            Classez, archivez ou marquez les documents à revoir sans supprimer les preuves.
-          </p>
-          <div className="mt-2.5 grid grid-cols-3 gap-1.5 sm:mt-4 sm:gap-2">
-            <button
-              type="button"
-              onClick={() => runMaintenance('optimize', () => optimizeDocumentStorage(agencyId))}
-              disabled={maintenanceAction !== null || !agencyId}
-              className="sk-action sk-action-primary min-w-0 justify-center px-2 text-xs disabled:opacity-60 sm:px-3 sm:text-sm"
-            >
-              Classer
-            </button>
-            <button
-              type="button"
-              onClick={() => runMaintenance('temporary', () => cleanupTemporaryDocuments(agencyId, 30))}
-              disabled={maintenanceAction !== null || !agencyId}
-              className="sk-action sk-action-secondary min-w-0 justify-center px-2 text-xs disabled:opacity-60 sm:px-3 sm:text-sm"
-            >
-              À revoir
-            </button>
-            <button
-              type="button"
-              onClick={() => runMaintenance('orphans', () => markOrphanDocumentRecords(agencyId))}
-              disabled={maintenanceAction !== null || !agencyId}
-              className="sk-action sk-action-secondary min-w-0 justify-center px-2 text-xs disabled:opacity-60 sm:px-3 sm:text-sm"
-            >
-              Sans dossier lié
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid min-w-0 gap-3 sm:gap-5 xl:grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="min-w-0 space-y-3 xl:sticky xl:top-4 xl:self-start">
-          <div className="sk-premium-panel min-w-0 p-2.5 sm:p-3">
-            <button
-              type="button"
-              onClick={() => {
-                setCategoryFilter('all');
-                setMobileFilter('all');
-              }}
-              className={`mb-2 hidden w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-semibold transition xl:flex ${
-                categoryFilter === 'all' ? 'bg-emerald-950 text-white' : 'text-slate-700 hover:bg-emerald-50'
-              }`}
-            >
-              <span>Tous les dossiers</span>
-              <span>{items.length}</span>
-            </button>
-            <div className="scrollbar-hide -mx-0.5 flex max-w-full gap-1.5 overflow-x-auto px-0.5 pb-1 xl:hidden">
-              {MOBILE_DOCUMENT_FILTERS.map((filter) => (
-                <button
-                  key={filter.id}
-                  type="button"
-                  onClick={() => {
-                    setMobileFilter(filter.id);
-                    setCategoryFilter('all');
-                  }}
-                  className={`flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-                    mobileFilter === filter.id
-                      ? 'border-emerald-950 bg-emerald-950 text-white'
-                      : 'border-emerald-950/10 bg-white text-slate-600'
-                  }`}
-                >
-                  {filter.label}
-                  {filter.id === 'all' && <span className="text-[10px] opacity-65">{items.length}</span>}
-                </button>
-              ))}
-            </div>
-            <div className="hidden space-y-1 xl:block">
-              {visibleCategories.map((category) => {
-                const Icon = CATEGORY_ICONS[category];
-                return (
-                  <button
-                    key={category}
-                    type="button"
-                    onClick={() => {
-                      setCategoryFilter(category);
-                      setMobileFilter('all');
-                    }}
-                    className={`flex w-full min-w-0 items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium transition ${
-                      categoryFilter === category ? 'bg-emerald-50 text-emerald-950' : 'text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <Icon className="h-4 w-4" />
-                      {categoryLabel(category)}
-                    </span>
-                    <span className="text-xs text-slate-400">{categoryCounts[category] ?? 0}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {breakdown?.large_files?.length ? (
-            <div className="sk-premium-panel p-3">
-              <p className="px-1 text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Documents à surveiller</p>
-              <div className="mt-2 space-y-2">
-                {breakdown.large_files.slice(0, 4).map((file) => (
-                  <button
-                    key={file.storage_path}
-                    type="button"
-                    onClick={() => createDocumentSignedUrl(file.storage_path).then((url) => window.open(url, '_blank', 'noopener,noreferrer')).catch(() => toast.error('Ouverture du document impossible'))}
-                    className="w-full rounded-xl border border-slate-100 bg-slate-50/80 p-3 text-left transition hover:border-emerald-800/20 hover:bg-emerald-50/60"
-                  >
-                    <p className="truncate text-sm font-semibold text-slate-800">{file.title}</p>
-                    <p className="mt-1 text-xs font-semibold text-slate-500">
-                      {formatStorageSize(file.file_size)} · {categoryLabel(normalizeCategory(file.category))}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </aside>
-
-        <section className="min-w-0 max-w-full space-y-3 pb-2 sm:space-y-4 sm:pb-0">
-          <div className="sk-premium-panel flex min-w-0 max-w-full flex-col gap-2.5 p-3 sm:flex-row sm:items-center sm:gap-3">
-            <label className="relative min-w-0 flex-1">
+      <section className="min-w-0 max-w-full space-y-3 pb-24 sm:space-y-4 sm:pb-0">
+          <div className="sk-premium-panel min-w-0 max-w-full p-3">
+            <div className="grid min-w-0 grid-cols-2 gap-2.5 lg:flex lg:items-center">
+            <label className="relative col-span-2 min-w-0 flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={query}
@@ -984,13 +888,43 @@ export function Documents() {
             </label>
             <select
               value={sourceFilter}
-              onChange={(event) => setSourceFilter(event.target.value as typeof sourceFilter)}
-              className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:w-auto"
+              onChange={(event) => setSourceFilter(event.target.value as DocumentSourceFilter)}
+              className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:text-sm lg:w-[210px]"
             >
               <option value="all">Tous les documents</option>
               <option value="uploaded">Ajoutés manuellement</option>
               <option value="generated">Générés automatiquement</option>
+              <option value="qr">Vérifiables QR</option>
             </select>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as DocumentStatusFilter)}
+              className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:text-sm lg:w-[170px]"
+            >
+              <option value="all">Tous les statuts</option>
+              <option value="active">Actifs</option>
+              <option value="unclassified">À classer</option>
+              <option value="review">À revoir</option>
+              <option value="archived">Archivés</option>
+            </select>
+            </div>
+            <div className="scrollbar-hide -mx-1 mt-2.5 flex max-w-[calc(100%+0.5rem)] gap-1.5 overflow-x-auto px-1 pb-1">
+              {visibleTypeFilters.map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  onClick={() => setTypeFilter(filter.id)}
+                  className={`flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                    typeFilter === filter.id
+                      ? 'border-emerald-950 bg-emerald-950 text-white shadow-sm'
+                      : 'border-emerald-950/10 bg-white text-slate-600 hover:border-emerald-800/25 hover:bg-emerald-50'
+                  }`}
+                >
+                  {filter.label}
+                  <span className="text-[10px] opacity-60">{typeFilterCounts[filter.id] ?? 0}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {loading ? (
@@ -1002,13 +936,16 @@ export function Documents() {
           ) : (
             <div className="grid min-w-0 max-w-full gap-3 xl:grid-cols-2">
               {filteredItems.map((item) => {
-                const Icon = CATEGORY_ICONS[item.category];
+                const Icon = ['rapport', 'rapport_bailleur', 'rapport_proprietaire'].includes(item.documentType ?? '')
+                  ? BarChart3
+                  : CATEGORY_ICONS[item.category];
                 const statusLabel = lifecycleLabel(item);
-                const isQrVerifiable = item.source === 'generated' && Boolean(item.documentType && QR_CAPABLE_DOCUMENT_TYPES.has(item.documentType));
+                const isQrVerifiable = isQrVerifiableDocument(item);
+                const canArchive = item.source === 'uploaded' && item.retentionPolicy !== 'critical' && item.lifecycleStatus === 'active';
                 return (
                   <article
                     key={`${item.source}-${item.id}`}
-                    className="group sk-mobile-card min-w-0 max-w-full overflow-hidden p-3 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-800/20 hover:shadow-premium active:scale-[0.992] sm:p-3.5"
+                    className="group sk-mobile-card min-w-0 max-w-full overflow-hidden p-3 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-800/20 hover:shadow-premium active:scale-[0.992]"
                   >
                     <button
                       type="button"
@@ -1016,15 +953,19 @@ export function Documents() {
                       className="block w-full min-w-0 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
                       aria-label={`Ouvrir ${item.title}`}
                     >
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start gap-2.5 sm:gap-3">
                         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10 sm:h-11 sm:w-11 sm:rounded-2xl">
                           <Icon className="h-5 w-5" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">{categoryLabel(item.category)}</p>
+                          <p className="truncate text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-700">{documentTypeBadge(item)}</p>
                           <h2 className="mt-1 line-clamp-2 break-words text-[15px] font-extrabold leading-5 text-slate-950 [overflow-wrap:anywhere] sm:text-base">{item.title}</h2>
                           <p className="mt-0.5 line-clamp-2 break-words text-xs font-semibold leading-5 text-slate-500 [overflow-wrap:anywhere] sm:text-sm">{item.subtitle}</p>
                         </div>
+                        <span className="inline-flex flex-shrink-0 items-center gap-1 text-xs font-bold text-emerald-800">
+                          <span className="hidden sm:inline">Ouvrir</span>
+                          <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                        </span>
                       </div>
 
                       <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -1062,25 +1003,50 @@ export function Documents() {
                       )}
                     </button>
 
-                    <div className="mt-2.5 flex min-w-0 flex-wrap gap-2 border-t border-slate-100 pt-2.5 sm:justify-end">
-                      {item.source === 'uploaded' && item.retentionPolicy !== 'critical' && item.lifecycleStatus === 'active' && (
-                        <button type="button" onClick={() => setArchiveTarget(item)} className="sk-action sk-action-secondary flex-1 justify-center sm:flex-none">
+                    {canArchive && (
+                      <div className="mt-2 flex min-w-0 justify-end border-t border-slate-100 pt-2">
+                        <button type="button" onClick={() => setArchiveTarget(item)} className="sk-action sk-action-secondary min-h-8 justify-center px-2.5 py-1.5 text-xs">
                           <Archive className="h-4 w-4" />
                           Archiver
                         </button>
-                      )}
-                      <button type="button" onClick={() => openDocument(item)} className="sk-action sk-action-secondary flex-1 justify-center sm:flex-none">
-                        <Download className="h-4 w-4" />
-                        Ouvrir
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </article>
                 );
               })}
             </div>
           )}
+
+          <details className="sk-premium-panel group/details min-w-0 overflow-hidden">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-bold text-slate-700 sm:px-4">
+              <span className="flex min-w-0 items-center gap-2">
+                <RefreshCw className={`h-4 w-4 flex-shrink-0 text-emerald-700 ${maintenanceAction ? 'animate-spin' : ''}`} />
+                <span className="truncate">Organisation et classement du coffre</span>
+              </span>
+              <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-open/details:rotate-90" />
+            </summary>
+            <div className="border-t border-slate-100 p-3 sm:p-4">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { label: 'Ajoutés', bucket: uploadedBucket },
+                  { label: 'Générés', bucket: generatedBucket },
+                  { label: 'Protégés', bucket: criticalBucket },
+                  { label: 'À revoir', bucket: reviewBucket },
+                ].map((entry) => (
+                  <div key={entry.label} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5">
+                    <p className="truncate text-[10px] font-bold uppercase tracking-[0.06em] text-slate-400">{entry.label}</p>
+                    <p className="mt-1 text-sm font-extrabold text-slate-900">{entry.bucket?.count ?? 0}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-1.5 sm:flex sm:justify-end sm:gap-2">
+                <button type="button" onClick={() => runMaintenance('optimize', () => optimizeDocumentStorage(agencyId))} disabled={maintenanceAction !== null || !agencyId} className="sk-action sk-action-primary min-w-0 justify-center px-2 text-xs disabled:opacity-60">Classer</button>
+                <button type="button" onClick={() => runMaintenance('temporary', () => cleanupTemporaryDocuments(agencyId, 30))} disabled={maintenanceAction !== null || !agencyId} className="sk-action sk-action-secondary min-w-0 justify-center px-2 text-xs disabled:opacity-60">À revoir</button>
+                <button type="button" onClick={() => runMaintenance('orphans', () => markOrphanDocumentRecords(agencyId))} disabled={maintenanceAction !== null || !agencyId} className="sk-action sk-action-secondary min-w-0 justify-center px-2 text-xs disabled:opacity-60">Sans lien</button>
+              </div>
+            </div>
+          </details>
         </section>
-      </div>
 
       <Modal isOpen={uploadOpen} onClose={() => setUploadOpen(false)} title="Ajouter un document">
         <form onSubmit={submitUpload} className="space-y-4">

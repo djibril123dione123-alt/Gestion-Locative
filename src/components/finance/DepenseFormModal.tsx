@@ -43,7 +43,7 @@ interface DepenseFormModalProps {
   isSaving: boolean;
   originalAmount?: number | null;
   onClose: () => void;
-  onSubmit: (event: React.FormEvent) => Promise<void>;
+  onSubmit: () => Promise<void>;
 }
 
 const EXPENSE_STEPS = [
@@ -114,7 +114,7 @@ export function DepenseFormModal({
       title={editing ? 'Modifier la dépense' : 'Nouvelle dépense'}
       description="Qualifiez la charge, son affectation et sa preuve avant validation."
     >
-      <form onSubmit={onSubmit} className="space-y-4 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+      <form onSubmit={(event) => event.preventDefault()} className="space-y-3 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
         <FinanceWizardStepper currentStep={currentStep} steps={EXPENSE_STEPS} />
 
         {currentStep === 1 && (
@@ -172,9 +172,15 @@ export function DepenseFormModal({
                 value={formData.description}
                 onChange={(event) => setFormData((previous) => ({ ...previous, description: event.target.value }))}
                 placeholder="Objet de la dépense, intervention ou période concernée"
-                rows={3}
+                rows={2}
+                className="min-h-[4.5rem]"
               />
             </div>
+            {!stepOneValid && (
+              <p className="text-xs font-semibold text-amber-700" role="status">
+                Renseignez un montant supérieur à 0 F CFA, une date et une catégorie pour continuer.
+              </p>
+            )}
           </div>
         )}
 
@@ -210,7 +216,7 @@ export function DepenseFormModal({
                   <Building2 className="h-5 w-5 shrink-0 text-emerald-700" aria-hidden="true" />
                   <span>
                     <span className="block text-sm font-black text-slate-950">Dépense bailleur / bien</span>
-                    <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">Le bailleur est déduit du bien sélectionné.</span>
+                    <span className="mt-1 block text-xs font-semibold leading-5 text-slate-500">Charge liée à un bien, visible dans le suivi du bien et du bailleur selon la règle métier.</span>
                   </span>
                 </button>
               </div>
@@ -288,10 +294,16 @@ export function DepenseFormModal({
                 </div>
                 <ShieldCheck className="h-5 w-5 text-emerald-700" aria-hidden="true" />
               </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.1em] text-emerald-700">Montant</p>
                   <p className="mt-1 text-lg font-black text-emerald-950"><MoneyText value={amount} /></p>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Date</p>
+                  <p className="mt-1 text-sm font-black text-slate-950">
+                    {formData.date_depense ? new Date(`${formData.date_depense}T00:00:00`).toLocaleDateString('fr-FR') : '—'}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">À la charge de</p>
@@ -305,6 +317,14 @@ export function DepenseFormModal({
                   <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Affectation</p>
                   <p className="mt-1 text-sm font-black text-slate-950">{selectedImmeuble?.nom || 'Dépense générale'}</p>
                 </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Bénéficiaire</p>
+                  <p className="mt-1 truncate text-sm font-black text-slate-950">{formData.beneficiaire.trim() || 'Non renseigné'}</p>
+                </div>
+              </div>
+              <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Description</p>
+                <p className="mt-1 text-sm font-semibold leading-5 text-slate-700">{formData.description.trim() || 'Aucune description ajoutée.'}</p>
               </div>
               <div className="mt-3 flex items-start gap-3 rounded-xl border border-emerald-100 bg-[#fffdf8] p-3">
                 {formData.piece_justificative ? (
@@ -314,14 +334,21 @@ export function DepenseFormModal({
                 )}
                 <div>
                   <p className="text-sm font-black text-slate-950">{formData.piece_justificative ? 'Justificatif référencé' : 'Aucun justificatif'}</p>
-                  <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">L’écriture financière sera créée par le workflow sécurisé existant.</p>
+                  <p className="mt-1 break-all text-xs font-semibold leading-5 text-slate-500">
+                    {formData.piece_justificative
+                      ? formData.piece_justificative
+                      : 'Aucun justificatif ajouté. La dépense peut être enregistrée, mais un justificatif renforce la traçabilité.'}
+                  </p>
                 </div>
+              </div>
+              <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs font-semibold leading-5 text-emerald-950">
+                Impact financier : cette charge sera enregistrée dans le suivi {formData.affectation === 'bien' ? 'du bien et du bailleur associés' : 'de l’agence'} par le workflow sécurisé existant.
               </div>
             </section>
           </div>
         )}
 
-        <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t border-emerald-950/10 bg-white/95 px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-between sm:bg-transparent sm:px-0">
+        <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t border-emerald-950/10 bg-white/95 px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_28px_rgba(15,23,42,0.06)] backdrop-blur sm:flex-row sm:justify-between">
           <Button
             type="button"
             variant="secondary"
@@ -339,7 +366,7 @@ export function DepenseFormModal({
               Continuer <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button type="submit" loading={isSaving} disabled={!canSubmit}>
+            <Button type="button" onClick={() => void onSubmit()} loading={isSaving} disabled={!canSubmit}>
               {editing ? 'Modifier la dépense' : 'Enregistrer la dépense'}
             </Button>
           )}

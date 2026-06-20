@@ -1,18 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
-  Building2,
-  CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CreditCard,
   FileCheck2,
-  Home,
   Info,
-  ReceiptText,
   ShieldCheck,
-  UserRound,
   Wallet,
   WifiOff,
 } from 'lucide-react';
@@ -37,7 +31,7 @@ interface PaiementFormModalProps {
   contrats: ContratRow[];
   paiements: PaiementRow[];
   isSaving: boolean;
-  onSubmit: (event: React.FormEvent) => Promise<void>;
+  onSubmit: () => Promise<void>;
   isOnline: boolean;
 }
 
@@ -51,6 +45,23 @@ function paymentChannelToMode(channel: PaymentChannel): PaiementFormData['mode_p
   if (channel === 'wave' || channel === 'orange_money' || channel === 'mobile_money') return 'mobile_money';
   if (channel === 'autre') return 'autre' as PaiementFormData['mode_paiement'];
   return channel;
+}
+
+function formatPaymentPeriod(monthKey: string): string {
+  if (!/^\d{4}-\d{2}$/.test(monthKey)) return 'Non renseignée';
+  return new Date(`${monthKey}-01T00:00:00`).toLocaleDateString('fr-FR', {
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+function SummaryLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 items-start justify-between gap-3">
+      <dt className="shrink-0 font-semibold text-slate-500">{label}</dt>
+      <dd className="min-w-0 text-right font-black text-slate-950">{value}</dd>
+    </div>
+  );
 }
 
 export function PaiementFormModal({
@@ -200,7 +211,7 @@ export function PaiementFormModal({
       title={editingPaiement ? 'Corriger une erreur de paiement' : 'Nouveau paiement'}
       description={editingPaiement ? 'Comparez les valeurs et justifiez la correction.' : 'Enregistrez un encaissement en trois étapes contrôlées.'}
     >
-      <form onSubmit={onSubmit} className="space-y-4 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+      <form onSubmit={(event) => event.preventDefault()} className="space-y-3 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
         <FinanceWizardStepper currentStep={currentStep} steps={PAYMENT_STEPS} />
 
         {currentStep === 1 && (
@@ -253,26 +264,24 @@ export function PaiementFormModal({
             </div>
 
             {selectedContrat && (
-              <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-4 shadow-sm">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {[
-                    { icon: UserRound, label: 'Locataire', value: locataireLabel || 'Non renseigné' },
-                    { icon: Building2, label: 'Bailleur', value: bailleurLabel || 'Non renseigné' },
-                    { icon: Home, label: 'Bien / unité', value: [immeubleLabel, uniteLabel].filter(Boolean).join(' · ') || 'Non renseigné' },
-                    { icon: CreditCard, label: 'Loyer attendu', value: formatCurrency(loyerAttendu) },
-                    { icon: ReceiptText, label: 'Déjà encaissé', value: formatCurrency(paiementsPrecedents) },
-                    { icon: CalendarDays, label: 'Reste à payer', value: formatCurrency(selectedMonthState?.remainingAmount ?? loyerAttendu) },
-                  ].map(({ icon: Icon, label, value }) => (
-                    <div key={label} className="min-w-0 rounded-xl border border-slate-200 bg-white p-3">
-                      <Icon className="h-4 w-4 text-emerald-700" aria-hidden="true" />
-                      <p className="mt-2 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">{label}</p>
-                      <p className="mt-1 truncate text-sm font-black text-slate-950">{value}</p>
-                    </div>
-                  ))}
+              <section className="grid gap-3 rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3 shadow-sm sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-white p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-800">Identité de l’échéance</p>
+                  <dl className="mt-2 space-y-2 text-xs">
+                    <SummaryLine label="Locataire" value={locataireLabel || 'Non renseigné'} />
+                    <SummaryLine label="Bien / unité" value={[immeubleLabel, uniteLabel].filter(Boolean).join(' · ') || 'Non renseigné'} />
+                    <SummaryLine label="Bailleur" value={bailleurLabel || 'Non renseigné'} />
+                    <SummaryLine label="Période" value={formatPaymentPeriod(formData.mois_display)} />
+                  </dl>
                 </div>
-                <div className="mt-3 flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-900">
-                  <span>Statut actuel</span>
-                  <span>{selectedMonthState?.isPartial ? 'Partiel' : selectedMonthState?.isSold ? 'Soldé' : 'À encaisser'}</span>
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-800">Situation financière</p>
+                  <dl className="mt-2 space-y-2 text-xs">
+                    <SummaryLine label="Loyer attendu" value={formatCurrency(loyerAttendu)} />
+                    <SummaryLine label="Déjà encaissé" value={formatCurrency(paiementsPrecedents)} />
+                    <SummaryLine label="Reste à payer" value={formatCurrency(selectedMonthState?.remainingAmount ?? loyerAttendu)} />
+                    <SummaryLine label="Statut actuel" value={selectedMonthState?.isPartial ? 'Partiel' : selectedMonthState?.isSold ? 'Soldé' : 'À encaisser'} />
+                  </dl>
                 </div>
               </section>
             )}
@@ -310,6 +319,10 @@ export function PaiementFormModal({
                   </div>
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
                     <div className="h-full rounded-full bg-emerald-700 transition-all duration-300" style={{ width: `${tauxCouverture}%` }} />
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-emerald-900">
+                    <span>Après paiement : <strong>{finalStatus}</strong></span>
+                    {tropPercuPreview > 0 && <span>Avance détectée : <strong>{formatCurrency(tropPercuPreview)}</strong></span>}
                   </div>
                 </div>
               )}
@@ -372,6 +385,27 @@ export function PaiementFormModal({
 
         {currentStep === 3 && (
           <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <section className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-800">Identité</p>
+                <dl className="mt-2 space-y-2 text-xs">
+                  <SummaryLine label="Locataire" value={locataireLabel || 'Non renseigné'} />
+                  <SummaryLine label="Bien / unité" value={[immeubleLabel, uniteLabel].filter(Boolean).join(' · ') || 'Non renseigné'} />
+                  <SummaryLine label="Bailleur" value={bailleurLabel || 'Non renseigné'} />
+                  <SummaryLine label="Période" value={formatPaymentPeriod(formData.mois_display)} />
+                </dl>
+              </section>
+              <section className="rounded-xl border border-slate-200 bg-white p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-emerald-800">Paiement</p>
+                <dl className="mt-2 space-y-2 text-xs">
+                  <SummaryLine label="Montant encaissé" value={formatCurrency(montantSaisi)} />
+                  <SummaryLine label="Date" value={formData.date_paiement ? new Date(`${formData.date_paiement}T00:00:00`).toLocaleDateString('fr-FR') : 'Non renseignée'} />
+                  <SummaryLine label="Mode" value={paymentModeOptions.find((option) => option.value === formData.payment_channel)?.label ?? 'Non renseigné'} />
+                  <SummaryLine label="Référence" value={formData.reference.trim() || 'Non renseignée'} />
+                </dl>
+              </section>
+            </div>
+
             {editingPaiement && (
               <section className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4">
                 <p className="text-xs font-black uppercase tracking-[0.12em] text-amber-900">Valeur actuelle → nouvelle valeur</p>
@@ -398,9 +432,11 @@ export function PaiementFormModal({
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 {[
-                  { label: 'Montant dû', value: loyerAttendu, tone: 'slate' },
-                  { label: 'Montant reçu', value: montantSaisi, tone: 'emerald' },
-                  { label: 'Reliquat', value: reliquatPreview, tone: reliquatPreview > 0 ? 'orange' : 'emerald' },
+                  { label: 'Loyer attendu', value: loyerAttendu, tone: 'slate' },
+                  { label: 'Déjà encaissé', value: paiementsPrecedents, tone: 'slate' },
+                  { label: 'Nouveau paiement', value: montantSaisi, tone: 'emerald' },
+                  { label: 'Total après paiement', value: totalApresPaiement, tone: 'emerald' },
+                  { label: 'Reliquat après paiement', value: reliquatPreview, tone: reliquatPreview > 0 ? 'orange' : 'emerald' },
                   { label: 'Avance', value: tropPercuPreview, tone: tropPercuPreview > 0 ? 'orange' : 'slate' },
                   { label: `Commission (${tauxCommission}%)`, value: commissionPreview, tone: 'slate' },
                   { label: 'Net bailleur', value: netBailleurPreview, tone: 'emerald' },
@@ -430,7 +466,7 @@ export function PaiementFormModal({
                   <FileCheck2 className="h-5 w-5 shrink-0 text-emerald-700" aria-hidden="true" />
                   <div>
                     <p className="text-[10px] font-black uppercase text-slate-500">Document généré</p>
-                    <p className="text-sm font-black text-slate-950">Quittance ou reçu vérifiable</p>
+                    <p className="text-sm font-black text-slate-950">Quittance ou reçu avec QR vérifiable</p>
                   </div>
                 </div>
               </div>
@@ -461,7 +497,7 @@ export function PaiementFormModal({
           </div>
         )}
 
-        <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t border-emerald-950/10 bg-white/95 px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-between sm:bg-transparent sm:px-0">
+        <div className="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-2 border-t border-emerald-950/10 bg-white/95 px-4 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-12px_28px_rgba(15,23,42,0.06)] backdrop-blur sm:flex-row sm:justify-between">
           <Button
             type="button"
             variant="secondary"
@@ -480,7 +516,7 @@ export function PaiementFormModal({
               Continuer <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button type="submit" loading={isSaving} disabled={!canSubmit}>
+            <Button type="button" onClick={() => void onSubmit()} loading={isSaving} disabled={!canSubmit}>
               {editingPaiement ? 'Valider la correction' : 'Enregistrer le paiement'}
             </Button>
           )}

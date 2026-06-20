@@ -34,11 +34,13 @@ interface PublicVerificationResponse {
     type: string;
     agency: string;
     issued_at: string | null;
-    amount_xof?: number | null;
-    payment_status?: string | null;
-    period?: string | null;
-    registered_at?: string | null;
   };
+}
+
+export const PUBLIC_VERIFICATION_TOKEN_PATTERN = /^[a-f0-9]{64}$/i;
+
+export function isValidPublicVerificationToken(value?: string | null) {
+  return PUBLIC_VERIFICATION_TOKEN_PATTERN.test(String(value ?? '').trim());
 }
 
 interface VerificationRow {
@@ -49,7 +51,7 @@ interface VerificationRow {
   amount_xof: number | string | null;
   payment_status: string | null;
   document_status: 'authentic' | 'revoked' | 'superseded';
-  metadata?: { period?: string | null; [key: string]: unknown } | null;
+  metadata?: { period?: string | null;[key: string]: unknown } | null;
   created_at: string | null;
 }
 
@@ -69,8 +71,8 @@ export function extractVerificationInput(rawValue: string): { token: string | nu
     const fromSearch = parseParams(url.searchParams);
     const verifyPathValue = url.pathname.match(/\/verify\/([^/?#]+)/)?.[1] ?? null;
     return {
-      token: fromHash.token ?? fromSearch.token ?? (/^[a-f0-9]{64}$/i.test(verifyPathValue ?? '') ? verifyPathValue : null),
-      reference: fromHash.reference ?? fromSearch.reference ?? (verifyPathValue && !/^[a-f0-9]{64}$/i.test(verifyPathValue) ? decodeURIComponent(verifyPathValue) : null),
+      token: fromHash.token ?? fromSearch.token ?? (isValidPublicVerificationToken(verifyPathValue) ? verifyPathValue : null),
+      reference: fromHash.reference ?? fromSearch.reference ?? (verifyPathValue && !isValidPublicVerificationToken(verifyPathValue) ? decodeURIComponent(verifyPathValue) : null),
     };
   } catch {
     // Not a URL: continue with plain token/reference detection.
@@ -86,7 +88,7 @@ export function extractVerificationInput(rawValue: string): { token: string | nu
     if (parsed.token || parsed.reference) return parsed;
   }
 
-  if (/^[a-f0-9]{64}$/i.test(value)) return { token: value, reference: null };
+  if (isValidPublicVerificationToken(value)) return { token: value, reference: null };
   return { token: null, reference: value };
 }
 
@@ -97,8 +99,8 @@ export function getVerificationQueryParams() {
   const params = new URLSearchParams(hashQuery || window.location.search);
   const verifyPathValue = window.location.pathname.match(/\/verify\/([^/?#]+)/)?.[1] ?? '';
   return {
-    token: params.get('token') ?? (/^[a-f0-9]{64}$/i.test(verifyPathValue) ? verifyPathValue : ''),
-    ref: params.get('ref') ?? params.get('reference') ?? (verifyPathValue && !/^[a-f0-9]{64}$/i.test(verifyPathValue) ? decodeURIComponent(verifyPathValue) : ''),
+    token: params.get('token') ?? (isValidPublicVerificationToken(verifyPathValue) ? verifyPathValue : ''),
+    ref: params.get('ref') ?? params.get('reference') ?? (verifyPathValue && !isValidPublicVerificationToken(verifyPathValue) ? decodeURIComponent(verifyPathValue) : ''),
     type: params.get('type') ?? '',
   };
 }
@@ -192,10 +194,10 @@ function normalizePublicResponse(data: PublicVerificationResponse): DocumentVeri
       type: data.document.type,
       issuer: data.document.agency,
       issuedAt: data.document.issued_at,
-      amountXof: data.document.amount_xof == null ? null : Number(data.document.amount_xof),
-      paymentStatus: data.document.payment_status ?? null,
-      period: data.document.period ?? null,
-      registeredAt: data.document.registered_at ?? null,
+      amountXof: null,
+      paymentStatus: null,
+      period: null,
+      registeredAt: null,
       lastCheckedAt: new Date().toISOString(),
     },
   };
@@ -234,11 +236,11 @@ export async function verifyDocumentToken(
   const cleanReference = options?.reference?.trim() ?? '';
   const cleanType = options?.type?.trim() ?? '';
 
-  if (cleanToken && !/^[a-f0-9]{64}$/i.test(cleanToken) && !cleanReference) {
-    return { state: 'invalid', message: getVerificationCopy('invalid').message };
-  }
-  if (!cleanToken && !cleanReference) {
-    return { state: 'invalid', message: getVerificationCopy('invalid').message };
+  if (!isValidPublicVerificationToken(cleanToken)) {
+    return {
+      state: 'invalid',
+      message: 'Le lien public doit contenir le jeton de sécurité imprimé dans le QR code.',
+    };
   }
 
   try {
@@ -249,16 +251,18 @@ export async function verifyDocumentToken(
     }
 
     const params = new URLSearchParams();
-    if (/^[a-f0-9]{64}$/i.test(cleanToken)) params.set('token', cleanToken);
+    params.set('token', cleanToken.toLowerCase());
     if (cleanReference) params.set('ref', cleanReference);
     if (cleanType) params.set('type', cleanType);
 
     const response = await fetch(`${baseUrl}/functions/v1/verify-document?${params.toString()}`, {
       method: 'GET',
       headers: { apikey: anonKey },
+      cache: 'no-store',
+      referrerPolicy: 'no-referrer',
     });
     const data = (await response.json()) as PublicVerificationResponse;
-    if (!response.ok && response.status >= 500) {
+    if (!response.ok && (response.status === 429 || response.status >= 500)) {
       return { state: 'network_error', message: data.error ?? getVerificationCopy('network_error').message };
     }
     return normalizePublicResponse(data);

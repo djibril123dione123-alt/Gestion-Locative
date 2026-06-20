@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
@@ -61,6 +61,7 @@ import {
   type PaiementFormData,
 } from '../components/paiements/paiementTypes';
 import { formatPersonName } from '../lib/people';
+import { buildMonthFilterOptions, resolveMonthFilter } from '../lib/monthFilters';
 
 interface PaiementsProps {
   embedded?: boolean;
@@ -205,8 +206,8 @@ export function Paiements({ }: PaiementsProps) {
     if (statusFilter === 'partiel') list = list.filter((p) => p.statut === 'partiel' || Number(p.reliquat ?? 0) > 3);
     if (statusFilter === 'annule') list = list.filter((p) => p.statut === 'annule' || p.deleted_at);
     if (statusFilter === 'avance') list = list.filter((p) => Number(p.montant_total ?? 0) > Number(p.montant_attendu ?? p.contrats?.loyer_mensuel ?? 0));
-    if (monthFilter !== 'all') {
-      const targetMonth = monthFilter === 'current' ? currentMonthYYYYMM : monthFilter;
+    const targetMonth = resolveMonthFilter(monthFilter);
+    if (targetMonth) {
       list = list.filter((p) => (p.mois_concerne || '').slice(0, 7) === targetMonth);
     }
     if (bailleurFilter !== 'all') {
@@ -236,7 +237,7 @@ export function Paiements({ }: PaiementsProps) {
       });
     }
     return list;
-  }, [paiements, statusFilter, monthFilter, bailleurFilter, searchTerm, currentMonthYYYYMM]);
+  }, [paiements, statusFilter, monthFilter, bailleurFilter, searchTerm]);
 
   const bailleurOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -253,20 +254,10 @@ export function Paiements({ }: PaiementsProps) {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [paiements, contrats]);
 
-  const monthOptions = useMemo(() => {
-    return [
-      { value: 'current', label: 'Mois en cours' },
-      { value: 'all', label: 'Tous les mois' },
-      ...Array.from(new Set(paiements.map((p) => (p.mois_concerne || '').slice(0, 7)).filter(Boolean)))
-        .sort()
-        .reverse()
-        .slice(0, 18)
-        .map((month) => ({
-          value: month,
-          label: new Date(`${month}-01`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
-        })),
-    ];
-  }, [paiements]);
+  const monthOptions = useMemo(
+    () => buildMonthFilterOptions(paiements.map((paiement) => paiement.mois_concerne)),
+    [paiements],
+  );
 
   const bailleurOptionsFilter = useMemo(() => {
     return [
@@ -354,8 +345,7 @@ export function Paiements({ }: PaiementsProps) {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     if (!profile?.agency_id || submittingRef.current) return;
 
     const montant = Number(formData.montant_total);

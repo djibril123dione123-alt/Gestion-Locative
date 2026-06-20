@@ -43,6 +43,7 @@ export function DocumentScanner() {
   const frameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanningRef = useRef(false);
+  const manualInputRef = useRef<HTMLInputElement | null>(null);
 
   const [manualValue, setManualValue] = useState('');
   const [cameraStatus, setCameraStatus] = useState<'idle' | 'starting' | 'active' | 'unsupported' | 'denied' | 'error'>('idle');
@@ -139,6 +140,19 @@ export function DocumentScanner() {
 
   useEffect(() => () => stopCamera(), [stopCamera]);
 
+  const resetScanner = useCallback(() => {
+    stopCamera();
+    setCameraStatus('idle');
+    setResult(null);
+    setManualValue('');
+    setLastInput('');
+  }, [stopCamera]);
+
+  const focusManualInput = () => {
+    manualInputRef.current?.focus();
+    manualInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   const cameraMessage = {
     idle: 'Activez la caméra pour scanner le QR code imprimé sur un document Samay Këur.',
     starting: 'Ouverture de la caméra...',
@@ -149,28 +163,28 @@ export function DocumentScanner() {
   }[cameraStatus];
 
   return (
-    <div className="sk-mobile-page min-w-0 space-y-3.5 sm:space-y-5">
-      <div className="sk-mobile-hero max-w-full overflow-hidden bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-3.5 text-white shadow-2xl shadow-emerald-950/15 sm:p-6">
-        <div className="absolute -right-20 -top-20 hidden h-56 w-56 rounded-full bg-orange-300/15 blur-3xl sm:block" />
-        <div className="relative flex min-w-0 flex-col gap-3 sm:gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="sk-mobile-page min-w-0 space-y-3.5 pb-24 sm:space-y-5 lg:pb-2">
+      <div className="relative max-w-full overflow-hidden rounded-[1.25rem] border border-emerald-950/10 bg-white p-3.5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:rounded-[1.7rem] sm:p-5">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-800 via-emerald-500 to-amber-400" />
+        <div className="relative flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-100">
-              <ShieldCheck className="h-3.5 w-3.5 text-orange-200" />
-              Vérification documentaire
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.13em] text-emerald-800 sm:text-xs">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Registre documentaire
             </div>
-            <h1 className="mt-2.5 text-2xl font-extrabold tracking-tight sm:mt-4 sm:text-4xl">Scanner un document</h1>
-            <p className="mt-1.5 max-w-xl text-sm font-medium leading-5 text-emerald-50/75 sm:mt-2 sm:text-base sm:leading-6">
-              <span className="sm:hidden">Scannez un QR pour vérifier un document Samay Këur.</span>
-              <span className="hidden sm:inline">Scannez le QR d’une quittance, facture, contrat, mandat ou rapport pour confirmer son authenticité sans quitter l’application.</span>
+            <h1 className="mt-2.5 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Scanner un document</h1>
+            <p className="mt-1.5 max-w-2xl text-sm font-semibold leading-5 text-slate-500 sm:text-base sm:leading-6">
+              Scannez le QR d’une quittance, d’un contrat ou d’un rapport pour confirmer son authenticité.
             </p>
           </div>
-          <div className="hidden rounded-2xl border border-white/10 bg-white/[0.08] p-4 text-sm font-semibold text-emerald-50/75 backdrop-blur sm:block lg:max-w-xs">
-            Les données affichées doivent correspondre au document scanné. En cas d’écart, contactez l’émetteur.
+          <div className="hidden max-w-xs items-start gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/80 px-3.5 py-3 text-xs font-semibold leading-5 text-slate-600 lg:flex">
+            <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-700" />
+            Seules les informations publiques nécessaires au contrôle sont affichées.
           </div>
         </div>
       </div>
 
-      <div className="grid min-w-0 max-w-full gap-3.5 sm:gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+      <div className="grid min-w-0 max-w-full gap-3.5 sm:gap-5 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
         <section className="min-w-0 max-w-full space-y-3 sm:space-y-4">
           <div className="sk-premium-panel min-w-0 max-w-full overflow-hidden p-3 sm:p-4">
             <div className="flex min-w-0 items-start justify-between gap-3">
@@ -182,18 +196,32 @@ export function DocumentScanner() {
               <QrCode className="h-6 w-6 text-emerald-800" />
             </div>
 
-            <div className="relative mt-3 aspect-[16/10] max-h-[15rem] w-full max-w-full overflow-hidden rounded-xl border border-emerald-950/10 bg-slate-950 sm:mt-4 sm:aspect-[4/3] sm:max-h-none sm:rounded-[1.35rem]">
+            <div className="relative mt-3 h-[12.5rem] w-full max-w-full overflow-hidden rounded-xl border border-emerald-950/10 bg-slate-950 sm:mt-4 sm:h-[17rem] sm:rounded-[1.35rem] lg:h-[19rem]">
               <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
               {cameraStatus !== 'active' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950 text-center text-white">
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-[radial-gradient(circle_at_50%_15%,#153f34_0%,#071713_55%,#020807_100%)] px-4 text-center text-white">
                   {cameraStatus === 'starting' ? (
-                    <Loader2 className="h-10 w-10 animate-spin text-emerald-200" />
+                    <Loader2 className="h-8 w-8 animate-spin text-emerald-200" />
                   ) : cameraStatus === 'unsupported' || cameraStatus === 'denied' || cameraStatus === 'error' ? (
-                    <CameraOff className="h-10 w-10 text-orange-200" />
+                    <CameraOff className="h-8 w-8 text-amber-200" />
                   ) : (
-                    <Camera className="h-10 w-10 text-emerald-200" />
+                    <Camera className="h-8 w-8 text-emerald-200" />
                   )}
-                  <p className="mt-3 max-w-xs px-4 text-sm font-semibold text-emerald-50/70">{cameraMessage}</p>
+                  <p className="mt-2.5 max-w-xs text-xs font-semibold leading-5 text-emerald-50/75 sm:text-sm">{cameraMessage}</p>
+                  {cameraStatus !== 'starting' && (
+                    <div className="mt-3 flex max-w-full flex-wrap justify-center gap-2">
+                      {cameraStatus !== 'unsupported' && (
+                        <button type="button" onClick={startCamera} className="sk-action sk-action-primary justify-center px-3 py-2 text-xs">
+                          <Camera className="h-4 w-4" />
+                          {cameraStatus === 'idle' ? 'Ouvrir la caméra' : 'Réessayer'}
+                        </button>
+                      )}
+                      <button type="button" onClick={focusManualInput} className="sk-action border-white/20 bg-white/10 px-3 py-2 text-xs text-white hover:bg-white/15">
+                        <Keyboard className="h-4 w-4" />
+                        Coller une référence
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               {cameraStatus === 'active' && (
@@ -205,31 +233,22 @@ export function DocumentScanner() {
               )}
             </div>
 
-            <div className="mt-3 grid min-w-0 grid-cols-2 gap-2 sm:mt-4 sm:flex sm:flex-row">
-              {cameraStatus === 'active' ? (
+            {cameraStatus === 'active' && (
+              <div className="mt-3 flex min-w-0 gap-2 sm:mt-4">
                 <button type="button" onClick={stopCamera} className="sk-action sk-action-secondary min-w-0 justify-center px-2">
                   <CameraOff className="h-4 w-4" />
                   Arrêter
                 </button>
-              ) : (
-                <button type="button" onClick={startCamera} className="sk-action sk-action-primary min-w-0 justify-center px-2">
-                  <Camera className="h-4 w-4" />
-                  Ouvrir la caméra
+                <button
+                  type="button"
+                  onClick={resetScanner}
+                  className="sk-action sk-action-secondary min-w-0 justify-center px-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Scanner un autre document
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  setResult(null);
-                  setManualValue('');
-                  setLastInput('');
-                }}
-                className="sk-action sk-action-secondary min-w-0 justify-center px-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Scanner un autre document
-              </button>
-            </div>
+              </div>
+            )}
           </div>
 
           <form
@@ -253,9 +272,10 @@ export function DocumentScanner() {
             </div>
             <div className="mt-3 flex min-w-0 flex-col gap-2 sm:mt-4 sm:flex-row">
               <input
+                ref={manualInputRef}
                 value={manualValue}
                 onChange={(event) => setManualValue(event.target.value)}
-                placeholder="Ex : QL-2026-05-ABC123 ou URL de vérification"
+                placeholder="Ex : QIT-2026-05-ABC123 ou URL de vérification"
                 className="min-h-11 min-w-0 max-w-full flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:min-h-12 sm:rounded-2xl sm:px-4 sm:py-3"
               />
               <button type="submit" disabled={verifying} className="sk-action sk-action-financial justify-center disabled:opacity-60">
@@ -263,6 +283,9 @@ export function DocumentScanner() {
                 Vérifier
               </button>
             </div>
+            <p className="mt-2 text-[11px] font-semibold leading-4 text-slate-500">
+              Utilisez la référence imprimée ou l’URL complète contenue dans le QR code.
+            </p>
           </form>
         </section>
 
@@ -272,11 +295,12 @@ export function DocumentScanner() {
               result={result}
               loading={verifying}
               onRetry={lastInput ? () => void verifyValue(lastInput) : undefined}
+              onReset={resetScanner}
               compact
               showBrand={false}
             />
           ) : (
-            <div className="flex min-h-[12rem] max-w-full flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-emerald-200 bg-white/85 p-4 text-center shadow-sm sm:min-h-[24rem] sm:rounded-[1.7rem] sm:p-6">
+            <div className="flex min-h-[12rem] max-w-full flex-col items-center justify-center rounded-[1.25rem] border border-dashed border-emerald-200 bg-white/85 p-4 text-center shadow-sm sm:min-h-[17rem] sm:rounded-[1.7rem] sm:p-6 lg:min-h-[20rem]">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10 sm:h-16 sm:w-16 sm:rounded-3xl">
                 <ShieldCheck className="h-6 w-6 sm:h-8 sm:w-8" />
               </div>

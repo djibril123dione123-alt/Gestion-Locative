@@ -143,7 +143,7 @@ export const ADAPTIVE_DICTIONARY: Record<OrganizationType, SemanticDictionaryEnt
       units: 'Unites',
       tenants: 'Locataires',
       payments: 'Encaissements',
-      unpaidRents: 'Loyers impayes',
+      unpaidRents: 'Créances à recouvrer',
       commissions: 'Commissions',
       reports: 'Rapports bailleurs',
       documents: 'Documents',

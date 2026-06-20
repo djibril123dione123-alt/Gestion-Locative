@@ -40,7 +40,7 @@ export const PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { id: 'contrats', label: 'Contrats & baux', description: 'Création, modification et suivi des baux.', category: 'Portefeuille locatif', sensitive: true },
   { id: 'occupants-baux', label: 'Locations', description: 'Gérez tout le cycle de vie de vos locations en un seul endroit.', category: 'Portefeuille locatif' },
   { id: 'paiements', label: 'Encaissements', description: 'Paiements reçus, reçus et actions financières.', category: 'Finance & reporting', sensitive: true },
-  { id: 'loyers-impayes', label: 'Loyers impayés', description: 'Suivi des reliquats et relances.', category: 'Finance & reporting', sensitive: true },
+  { id: 'loyers-impayes', label: 'Créances à recouvrer', description: 'Retards, partiels et restes dus.', category: 'Finance & reporting', sensitive: true },
   { id: 'depenses', label: 'Dépenses', description: 'Charges, dépenses et justificatifs.', category: 'Finance & reporting', sensitive: true },
   { id: 'commissions', label: 'Commissions', description: 'Ventilation agence/bailleur et commissions.', category: 'Finance & reporting', sensitive: true },
   { id: 'documents', label: 'Documents', description: 'Contrats, quittances, rapports et exports.', category: 'Opérations terrain' },

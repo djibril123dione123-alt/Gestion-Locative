@@ -23,6 +23,7 @@ import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { FinanceStatusTabs } from '../components/finance/FinancePrimitives';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { MoneyText } from '../components/ui/MoneyText';
+import { buildMonthFilterOptions, resolveMonthFilter } from '../lib/monthFilters';
 
 const ITEMS_PER_PAGE = 20;
 const LOOKBACK_MONTHS = 12;
@@ -91,7 +92,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedBailleur, setSelectedBailleur] = useState('');
-    const [selectedMois, setSelectedMois] = useState('');
+    const [selectedMois, setSelectedMois] = useState('current');
     const [bailleurs, setBailleurs] = useState<BailleurOption[]>([]);
     const [statusFilter, setStatusFilter] = useState('tous');
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
@@ -110,9 +111,14 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     const toast = useToast();
     const { isOnline } = useNetworkStatus();
     const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
+    const monthOptions = useMemo(
+        () => buildMonthFilterOptions(impayes.map((impaye) => impaye.mois_concerne)),
+        [impayes],
+    );
 
     useEffect(() => {
         let result = impayes;
+        const targetMonth = resolveMonthFilter(selectedMois);
 
         if (searchTerm) {
             result = result.filter(i =>
@@ -128,6 +134,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
             );
         }
 
+        if (targetMonth) {
+            result = result.filter((item) => item.mois_concerne.slice(0, 7) === targetMonth);
+        }
+
         if (statusFilter !== 'tous') {
             result = result.filter(i => {
                 if (statusFilter === 'a_venir') return i.statut === 'a_venir';
@@ -138,7 +148,8 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         }
 
         setFiltered(result);
-    }, [searchTerm, selectedBailleur, impayes, statusFilter]);
+        setPage(1);
+    }, [searchTerm, selectedBailleur, selectedMois, impayes, statusFilter]);
 
     const loadData = useCallback(async () => {
         if (!profile?.agency_id || !profile.id) return;
@@ -208,7 +219,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
         } catch (err) {
             if (reqId !== requestIdRef.current) return;
-            setError(err instanceof Error ? err.message : 'Erreur lors du chargement des loyers impayés');
+            setError(err instanceof Error ? err.message : 'Erreur lors du chargement des créances à recouvrer');
         } finally {
             if (reqId === requestIdRef.current) setLoading(false);
         }
@@ -528,10 +539,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
                                 <SmartCombobox
                                     value={selectedMois}
-                                    options={[{ value: '', label: 'Mois en cours' }]}
+                                    options={monthOptions}
                                     onChange={setSelectedMois}
-                                    placeholder="Mois en cours"
-                                    searchPlaceholder="Rechercher..."
+                                    placeholder="Période"
+                                    searchPlaceholder="Rechercher un mois"
                                     className="w-48 shrink-0"
                                 />
                                 {!isIndividualOwner && (
@@ -570,16 +581,16 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                         onClose={() => setMobileFiltersOpen(false)}
                         onReset={() => {
                             setSelectedBailleur('');
-                            setSelectedMois('');
+                            setSelectedMois('current');
                         }}
                     >
                         <div className="grid gap-3">
                             <SmartCombobox
                                 value={selectedMois}
-                                options={[{ value: '', label: 'Mois en cours' }]}
+                                options={monthOptions}
                                 onChange={setSelectedMois}
-                                placeholder="Mois en cours"
-                                searchPlaceholder="Rechercher..."
+                                placeholder="Période"
+                                searchPlaceholder="Rechercher un mois"
                             />
                             {!isIndividualOwner && (
                                 <SmartCombobox

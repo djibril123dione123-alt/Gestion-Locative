@@ -201,32 +201,29 @@ export async function saveGeneratedPdf(
 }
 
 async function sha256Hex(value: string): Promise<string> {
-  if (typeof crypto !== 'undefined' && crypto.subtle) {
-    const data = new TextEncoder().encode(value);
-    const digest = await crypto.subtle.digest('SHA-256', data);
-    return Array.from(new Uint8Array(digest))
-      .map((byte) => byte.toString(16).padStart(2, '0'))
-      .join('');
+  if (typeof crypto === 'undefined' || !crypto.subtle) {
+    throw new Error('Web Crypto est requis pour enregistrer une preuve documentaire.');
   }
-  return btoa(unescape(encodeURIComponent(value))).replace(/[^a-zA-Z0-9]/g, '').slice(0, 64);
+
+  const data = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
-async function buildVerificationUrl(payload: {
+function buildVerificationUrl(payload: {
   type: string;
   ref: string;
-  agency: string;
-  amount?: number;
-  date?: string;
-  token?: string;
+  token: string;
 }) {
-  const token = payload.token ?? await sha256Hex(`${payload.type}|${payload.ref}|${payload.agency}|${payload.amount ?? 0}|${payload.date ?? ''}`);
   const base = getPublicVerifyBaseUrl();
   const params = new URLSearchParams({
-    token,
+    token: payload.token,
     ref: payload.ref,
     type: payload.type,
   });
-  return `${base}/verify?${params.toString()}`;
+  return base + '/verify?' + params.toString();
 }
 
 function getPublicVerifyBaseUrl() {
@@ -240,33 +237,39 @@ function getPublicVerifyBaseUrl() {
 }
 
 async function createDocumentVerificationToken(payload: DocumentVerificationPayload): Promise<string> {
-  const random = new Uint8Array(32);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(random);
-  } else {
-    for (let index = 0; index < random.length; index++) {
-      random[index] = Math.floor(Math.random() * 256);
-    }
+  if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+    throw new Error('Un générateur aléatoire sécurisé est requis pour créer le QR documentaire.');
   }
+
+  const random = new Uint8Array(32);
+  crypto.getRandomValues(random);
   const entropy = Array.from(random).map((byte) => byte.toString(16).padStart(2, '0')).join('');
-  return sha256Hex(`${entropy}|${payload.ref}|${payload.type}|${payload.agency}|${Date.now()}`);
+  return sha256Hex([entropy, payload.ref, payload.type, payload.agency, Date.now()].join('|'));
 }
 
-async function registerDocumentVerification(payload: DocumentVerificationPayload): Promise<{ token: string; url: string; registered: boolean }> {
-  const token = await createDocumentVerificationToken(payload);
-  const issuedAt = payload.date ? new Date(payload.date).toISOString() : new Date().toISOString();
-  const payloadHash = await sha256Hex([
-    payload.type,
-    payload.ref,
-    payload.agencyId ?? '',
-    payload.agency,
-    payload.amount ?? 0,
-    issuedAt,
-    payload.paymentStatus ?? '',
-  ].join('|'));
+type DocumentVerificationRegistration =
+  | { token: string; url: string; registered: true }
+  | { token: null; url: null; registered: false };
 
-  let registered = false;
-  if (payload.agencyId) {
+async function registerDocumentVerification(payload: DocumentVerificationPayload): Promise<DocumentVerificationRegistration> {
+  if (!payload.agencyId) {
+    console.warn('[PDF] QR omis : organisation émettrice absente.');
+    return { token: null, url: null, registered: false };
+  }
+
+  try {
+    const token = await createDocumentVerificationToken(payload);
+    const issuedAt = payload.date ? new Date(payload.date).toISOString() : new Date().toISOString();
+    const payloadHash = await sha256Hex([
+      payload.type,
+      payload.ref,
+      payload.agencyId,
+      payload.agency,
+      payload.amount ?? 0,
+      issuedAt,
+      payload.paymentStatus ?? '',
+    ].join('|'));
+
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from('document_verifications').insert({
       token,
@@ -285,18 +288,21 @@ async function registerDocumentVerification(payload: DocumentVerificationPayload
         version: 1,
       },
     });
-    if (error) {
-      console.warn('[PDF] Enregistrement de vérification impossible:', error.message);
-    } else {
-      registered = true;
-    }
-  }
 
-  return {
-    token,
-    registered,
-    url: await buildVerificationUrl({ ...payload, token }),
-  };
+    if (error) {
+      console.warn('[PDF] QR omis : enregistrement de vérification impossible:', error.message);
+      return { token: null, url: null, registered: false };
+    }
+
+    return {
+      token,
+      registered: true,
+      url: buildVerificationUrl({ type: payload.type, ref: payload.ref, token }),
+    };
+  } catch (error) {
+    console.warn('[PDF] QR omis : preuve documentaire non enregistrée.', error);
+    return { token: null, url: null, registered: false };
+  }
 }
 
 async function loadImageAsPngDataUrl(
@@ -1152,30 +1158,65 @@ async function drawVerificationBlock(
     date,
     paymentStatus,
   });
-  const qrDataUrl = await QRCode.toDataURL(verification.url, {
-    width: 192,
-    margin: 1,
-    errorCorrectionLevel: 'H',
-  });
+  const qrDataUrl = verification.registered
+    ? await QRCode.toDataURL(verification.url, {
+        width: 192,
+        margin: 1,
+        errorCorrectionLevel: 'H',
+      })
+    : null;
 
   const blockHeight = 28;
-  drawSectionFrame(doc, x, y, width, blockHeight, settings, { accent: 'neutral', fill: true });
+  drawSectionFrame(doc, x, y, width, blockHeight, settings, {
+    accent: verification.registered ? 'neutral' : 'orange',
+    fill: true,
+  });
 
-  const qrSize = 17;
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(x + 3.5, y + 4.6, qrSize + 2, qrSize + 2, 1.4, 1.4, 'F');
-  doc.addImage(qrDataUrl, 'PNG', x + 4.5, y + 5.5, qrSize, qrSize);
+  const textX = qrDataUrl ? x + 24 : x + 15;
+  if (qrDataUrl) {
+    const qrSize = 17;
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(x + 3.5, y + 4.6, qrSize + 2, qrSize + 2, 1.4, 1.4, 'F');
+    doc.addImage(qrDataUrl, 'PNG', x + 4.5, y + 5.5, qrSize, qrSize);
+  } else {
+    doc.setFillColor(255, 247, 237);
+    doc.setDrawColor(234, 88, 12);
+    doc.roundedRect(x + 4, y + 7, 7, 7, 1.5, 1.5, 'FD');
+    doc.setFont(undefined as unknown as string, 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(194, 65, 12);
+    doc.text('!', x + 7.5, y + 12, { align: 'center' });
+  }
+
   doc.setFont(undefined as unknown as string, 'bold');
   doc.setFontSize(7.2);
   doc.setTextColor(15, 23, 42);
-  doc.text('Authentification numérique', x + 24, y + 8);
+  doc.text(
+    verification.registered ? 'Authentification numérique' : 'Preuve numérique indisponible',
+    textX,
+    y + 8,
+  );
   doc.setFont(undefined as unknown as string, 'normal');
   doc.setFontSize(6.4);
   doc.setTextColor(...colors.muted);
-  const textWidth = width - 31;
-  doc.text(fitSingleLine(doc, `Réf. ${ref}`, textWidth), x + 24, y + 12.6);
-  doc.text(fitSingleLine(doc, `${individualOwner ? 'Propriétaire' : 'Émetteur'} : ${safeText(agency, 'Samay Keur')}`, textWidth), x + 24, y + 16.8);
-  doc.text(verification.registered ? 'Authenticité enregistrée dans le registre' : 'Vérification disponible', x + 24, y + 21);
+  const textWidth = width - (textX - x) - 5;
+  doc.text(fitSingleLine(doc, 'Réf. ' + ref, textWidth), textX, y + 12.6);
+  doc.text(
+    fitSingleLine(
+      doc,
+      (individualOwner ? 'Propriétaire' : 'Émetteur') + ' : ' + safeText(agency, 'Samay Këur'),
+      textWidth,
+    ),
+    textX,
+    y + 16.8,
+  );
+  doc.text(
+    verification.registered
+      ? 'Authenticité enregistrée dans le registre'
+      : 'Aucun QR public n’a été émis pour cette copie',
+    textX,
+    y + 21,
+  );
   doc.setTextColor(0);
 }
 
@@ -1202,11 +1243,13 @@ export async function drawLegalVerificationFooter(
     agencyId: settings?.agency_id,
     date,
   });
-  const qrDataUrl = await QRCode.toDataURL(verification.url, {
-    width: 192,
-    margin: 1,
-    errorCorrectionLevel: 'H',
-  });
+  const qrDataUrl = verification.registered
+    ? await QRCode.toDataURL(verification.url, {
+        width: 192,
+        margin: 1,
+        errorCorrectionLevel: 'H',
+      })
+    : null;
 
   doc.setPage(pageNumber);
   const qrSize = 15;
@@ -1214,23 +1257,43 @@ export async function drawLegalVerificationFooter(
   const blockHeight = 22;
   const x = pageWidth - 14 - blockWidth;
   const y = pageHeight - 45;
-  const textX = x + qrSize + 4;
+  const textX = qrDataUrl ? x + qrSize + 7 : x + 13;
 
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(184, 196, 211);
   doc.setLineWidth(0.17);
   doc.roundedRect(x, y, blockWidth, blockHeight, 1.8, 1.8, 'FD');
-  doc.addImage(qrDataUrl, 'PNG', x + 3, y + 3.5, qrSize, qrSize);
+
+  if (qrDataUrl) {
+    doc.addImage(qrDataUrl, 'PNG', x + 3, y + 3.5, qrSize, qrSize);
+  } else {
+    doc.setFillColor(255, 247, 237);
+    doc.setDrawColor(234, 88, 12);
+    doc.roundedRect(x + 3.5, y + 7.5, 6, 6, 1.3, 1.3, 'FD');
+    doc.setFont(undefined as unknown as string, 'bold');
+    doc.setFontSize(6.5);
+    doc.setTextColor(194, 65, 12);
+    doc.text('!', x + 6.5, y + 11.9, { align: 'center' });
+  }
 
   doc.setFont(undefined as unknown as string, 'bold');
   doc.setFontSize(6.2);
   doc.setTextColor(30, 41, 59);
-  doc.text('Authentification numérique', textX + 3, y + 6.5);
+  doc.text(
+    verification.registered ? 'Authentification numérique' : 'Preuve numérique indisponible',
+    textX,
+    y + 6.5,
+  );
   doc.setFont(undefined as unknown as string, 'normal');
   doc.setFontSize(5.6);
   doc.setTextColor(...colors.muted);
-  doc.text(fitSingleLine(doc, `Réf. ${ref}`, blockWidth - qrSize - 12), textX + 3, y + 11);
-  doc.text(verification.registered ? 'Authenticité enregistrée' : 'Vérification disponible', textX + 3, y + 15.2);
+  const availableWidth = blockWidth - (textX - x) - 4;
+  doc.text(fitSingleLine(doc, 'Réf. ' + ref, availableWidth), textX, y + 11);
+  doc.text(
+    verification.registered ? 'Authenticité enregistrée' : 'QR public non émis',
+    textX,
+    y + 15.2,
+  );
   doc.setTextColor(0);
 }
 

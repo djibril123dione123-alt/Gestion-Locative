@@ -22,7 +22,6 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { Modal } from '../components/ui/Modal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -46,6 +45,12 @@ import {
 } from '../services/documentStorage';
 import { readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { DocumentProofDrawer, type DocumentProofDrawerData } from '../components/documents/DocumentProofDrawer';
+import {
+  DocumentUploadWizard,
+  type DocumentUploadValue,
+} from '../components/documents/DocumentUploadWizard';
+import { getDocumentProofState, supportsPublicVerification } from '../components/documents/documentProofState';
 
 interface UserDocumentRow {
   id: string;
@@ -61,6 +66,7 @@ interface UserDocumentRow {
   lifecycle_status: 'active' | 'archived' | 'deleted' | 'temporary' | 'orphaned' | null;
   retention_policy: RetentionPolicy | null;
   description: string | null;
+  uploaded_by: string | null;
   created_at: string;
 }
 
@@ -77,7 +83,19 @@ interface RegistryDocumentRow {
   status: string;
   retention_policy: RetentionPolicy | null;
   generated_at: string;
-  metadata?: { file_name?: string; [key: string]: unknown } | null;
+  generated_by: string | null;
+  metadata?: { file_name?: string;[key: string]: unknown } | null;
+}
+
+interface DocumentVerificationRow {
+  document_ref: string;
+  token: string;
+  document_status: 'authentic' | 'revoked' | 'superseded';
+  issued_at: string;
+  created_at: string;
+  agency_name: string;
+  amount_xof: number | null;
+  payment_status: string | null;
 }
 
 interface DocumentBusinessContext {
@@ -85,7 +103,7 @@ interface DocumentBusinessContext {
   location?: string;
 }
 
-interface DocumentItem {
+interface DocumentItem extends DocumentProofDrawerData {
   id: string;
   source: 'uploaded' | 'generated';
   title: string;
@@ -121,16 +139,6 @@ const DOCUMENT_TYPE_FILTERS: Array<{ id: DocumentTypeFilter; label: string }> = 
   { id: 'archives', label: 'Archives' },
   { id: 'unclassified', label: 'À classer' },
 ];
-
-const QR_CAPABLE_DOCUMENT_TYPES = new Set([
-  'quittance',
-  'facture',
-  'contrat',
-  'mandat',
-  'rapport',
-  'rapport_bailleur',
-  'rapport_proprietaire',
-]);
 
 const DOCUMENT_TYPE_TITLES: Record<string, string> = {
   quittance: 'Quittance',
@@ -180,13 +188,6 @@ const CATEGORY_ICONS: Record<UserDocumentCategory, typeof FileText> = {
   autre: FolderOpen,
 };
 
-const ENTITY_BY_CATEGORY: Partial<Record<UserDocumentCategory, UserDocumentEntityType>> = {
-  bailleurs: 'bailleur',
-  locataires: 'locataire',
-  immeubles: 'immeuble',
-  unites: 'unite',
-  contrats: 'contrat',
-};
 
 const ENTITY_LABELS: Record<string, string> = {
   active: 'Actif',
@@ -225,7 +226,7 @@ function lifecycleLabel(item: DocumentItem) {
 }
 
 function isQrVerifiableDocument(item: DocumentItem) {
-  return item.source === 'generated' && item.isVerifiable === true;
+  return getDocumentProofState(item).kind === 'verifiable';
 }
 
 function isDocumentUnclassified(item: DocumentItem) {
@@ -285,7 +286,7 @@ function bucketValue(breakdown: StorageBreakdown | null, key: string) {
   return breakdown?.by_retention?.[key] ?? breakdown?.by_source?.[key] ?? breakdown?.by_lifecycle?.[key] ?? null;
 }
 
-function toDocumentItem(row: UserDocumentRow): DocumentItem {
+function toDocumentItem(row: UserDocumentRow, uploadedBy?: string): DocumentItem {
   const category = normalizeCategory(row.document_category);
   const storagePath = row.storage_path || row.file_url;
   return {
@@ -302,7 +303,22 @@ function toDocumentItem(row: UserDocumentRow): DocumentItem {
     retentionPolicy: row.retention_policy ?? 'standard',
     createdAt: row.created_at,
     fileName: row.name,
+    entityId: row.entity_id,
+    description: row.description,
+    uploadedBy,
   };
+}
+
+function publicVerificationUrl(item: DocumentItem) {
+  if (!item.verification?.token || !item.reference) return null;
+  const configuredBase = (import.meta.env.VITE_PUBLIC_VERIFY_BASE_URL as string | undefined)?.trim();
+  const base = (configuredBase || 'https://samaykeur.com').replace(/\/+$/, '');
+  const params = new URLSearchParams({
+    token: item.verification.token,
+    ref: item.reference,
+    type: item.documentType || 'document',
+  });
+  return `${base}/verify?${params.toString()}`;
 }
 
 function registryCategory(documentType: string): UserDocumentCategory {
@@ -312,7 +328,12 @@ function registryCategory(documentType: string): UserDocumentCategory {
   return 'archives';
 }
 
-function registryToDocumentItem(row: RegistryDocumentRow, businessContext?: DocumentBusinessContext, isVerifiable = false): DocumentItem {
+function registryToDocumentItem(
+  row: RegistryDocumentRow,
+  businessContext?: DocumentBusinessContext,
+  verification?: DocumentVerificationRow,
+  generatedBy?: string
+): DocumentItem {
   const fallbackFileName = row.metadata?.file_name || row.reference;
   const typeTitle = documentTypeTitle(row.document_type);
   const metadataTitle = typeof row.metadata?.title === 'string' ? row.metadata.title.trim() : '';
@@ -337,7 +358,22 @@ function registryToDocumentItem(row: RegistryDocumentRow, businessContext?: Docu
     fileName: fallbackFileName,
     businessContext,
     period: row.period,
-    isVerifiable,
+    isVerifiable: verification?.document_status === 'authentic',
+    entityId: row.entity_id,
+    version: row.version,
+    metadata: row.metadata ?? undefined,
+    uploadedBy: generatedBy,
+    verification: verification
+      ? {
+        token: verification.token,
+        status: verification.document_status,
+        issuedAt: verification.issued_at,
+        registeredAt: verification.created_at,
+        agencyName: verification.agency_name,
+        amountXof: verification.amount_xof,
+        paymentStatus: verification.payment_status,
+      }
+      : undefined,
   };
 }
 
@@ -353,9 +389,9 @@ export function Documents() {
   const [usage, setUsage] = useState<StorageUsage | null>(null);
   const [breakdown, setBreakdown] = useState<StorageBreakdown | null>(null);
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [maintenanceAction, setMaintenanceAction] = useState<string | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<DocumentItem | null>(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState<DocumentSourceFilter>('all');
   const [statusFilter, setStatusFilter] = useState<DocumentStatusFilter>('all');
@@ -370,16 +406,6 @@ export function Documents() {
     operation: [],
   });
 
-  const [form, setForm] = useState({
-    file: null as File | null,
-    name: '',
-    category: 'administratif' as UserDocumentCategory,
-    entityType: '' as UserDocumentEntityType | '',
-    entityId: '',
-    retentionPolicy: 'standard' as RetentionPolicy,
-    description: '',
-    tags: '',
-  });
 
   const load = useCallback(async () => {
     if (!profile?.agency_id) return;
@@ -396,19 +422,19 @@ export function Documents() {
         { agencyId: scopedAgencyId, userId: scopedUserId },
         'documents-page',
         async () => {
-          const [docRes, registryRes, storageUsage, storageBreakdown, bailleursRes, locatairesRes, immeublesRes, unitesRes, contratsRes] =
+          const [docRes, registryRes, storageUsage, storageBreakdown, bailleursRes, locatairesRes, immeublesRes, unitesRes, contratsRes, profilesRes] =
             await Promise.all([
               supabase
                 .from('documents')
                 .select(
-                  'id, name, file_url, storage_path, file_type, file_size, document_category, document_scope, entity_type, entity_id, lifecycle_status, retention_policy, description, created_at'
+                  'id, name, file_url, storage_path, file_type, file_size, document_category, document_scope, entity_type, entity_id, lifecycle_status, retention_policy, description, uploaded_by, created_at'
                 )
                 .eq('agency_id', scopedAgencyId)
                 .is('deleted_at', null)
                 .order('created_at', { ascending: false }),
               supabase
                 .from('document_registry')
-                .select('id, document_type, entity_id, period, reference, version, storage_path, file_size, mime_type, status, retention_policy, generated_at, metadata')
+                .select('id, document_type, entity_id, period, reference, version, storage_path, file_size, mime_type, status, retention_policy, generated_at, generated_by, metadata')
                 .eq('agency_id', scopedAgencyId)
                 .neq('status', 'deleted')
                 .order('generated_at', { ascending: false })
@@ -420,6 +446,7 @@ export function Documents() {
               supabase.from('immeubles').select('id, nom').eq('agency_id', scopedAgencyId),
               supabase.from('unites').select('id, nom').eq('agency_id', scopedAgencyId),
               supabase.from('contrats').select('id, locataires(nom, prenom), unites(nom, immeubles(nom))').eq('agency_id', scopedAgencyId),
+              supabase.from('user_profiles').select('id, nom, prenom').eq('agency_id', scopedAgencyId),
             ]);
 
           if (docRes.error) throw docRes.error;
@@ -434,25 +461,23 @@ export function Documents() {
           const registryReferences = registryRows.map((row) => row.reference);
           const verificationRes = registryReferences.length
             ? await supabase
-                .from('document_verifications')
-                .select('document_ref')
-                .eq('agency_id', scopedAgencyId)
-                .in('document_ref', registryReferences)
+              .from('document_verifications')
+              .select('document_ref, token, document_status, issued_at, created_at, agency_name, amount_xof, payment_status')
+              .eq('agency_id', scopedAgencyId)
+              .in('document_ref', registryReferences)
             : { data: [], error: null };
-          const verifiableReferences = new Set(
-            ((verificationRes.data ?? []) as Array<{ document_ref?: string | null }>)
-              .map((row) => row.document_ref)
-              .filter((reference): reference is string => Boolean(reference))
+          const verificationsByReference = new Map(
+            ((verificationRes.error ? [] : verificationRes.data ?? []) as DocumentVerificationRow[]).map((row) => [row.document_ref, row])
           );
           const paymentIds = registryRows
             .filter((row) => row.document_type === 'quittance' || row.document_type === 'facture')
             .map((row) => row.entity_id);
           const paiementsRes = paymentIds.length
             ? await supabase
-                .from('paiements')
-                .select('id, contrats(locataires(nom, prenom), unites(nom, immeubles(nom)))')
-                .eq('agency_id', scopedAgencyId)
-                .in('id', paymentIds)
+              .from('paiements')
+              .select('id, contrats(locataires(nom, prenom), unites(nom, immeubles(nom)))')
+              .eq('agency_id', scopedAgencyId)
+              .in('id', paymentIds)
             : { data: [], error: null };
           if (paiementsRes.error) throw paiementsRes.error;
 
@@ -474,6 +499,9 @@ export function Documents() {
 
           const bailleurLabels = new Map(
             ((bailleursRes.data ?? []) as Array<{ id: string; nom: string; prenom?: string | null }>).map((row) => [row.id, formatPersonName(row)])
+          );
+          const profileLabels = new Map(
+            ((profilesRes.error ? [] : profilesRes.data ?? []) as Array<{ id: string; nom: string; prenom?: string | null }>).map((row) => [row.id, formatPersonName(row)])
           );
           const contractContexts = new Map(
             ((contratsRes.data ?? []) as unknown as ContractContextRow[]).map((row) => {
@@ -523,7 +551,7 @@ export function Documents() {
             options.forEach((option) => entityLabels.set(`${entityType}:${option.id}`, option.label));
           });
           const uploaded = ((docRes.data ?? []) as UserDocumentRow[]).map((row) => {
-            const item = toDocumentItem(row);
+            const item = toDocumentItem(row, row.uploaded_by ? profileLabels.get(row.uploaded_by) : undefined);
             const subject = row.entity_type && row.entity_id ? entityLabels.get(`${row.entity_type}:${row.entity_id}`) : undefined;
             return {
               ...item,
@@ -542,8 +570,8 @@ export function Documents() {
               const subject = bailleurLabels.get(row.entity_id);
               context = subject ? { subject } : undefined;
             }
-            const isVerifiable = QR_CAPABLE_DOCUMENT_TYPES.has(row.document_type) && verifiableReferences.has(row.reference);
-            return registryToDocumentItem(row, context, isVerifiable);
+            const verification = supportsPublicVerification(row.document_type) ? verificationsByReference.get(row.reference) : undefined;
+            return registryToDocumentItem(row, context, verification, row.generated_by ? profileLabels.get(row.generated_by) : undefined);
           });
           const nextItems = [...uploaded, ...generated].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
           return { items: nextItems, usage: storageUsage, breakdown: storageBreakdown, entityOptions: nextEntityOptions };
@@ -577,7 +605,7 @@ export function Documents() {
       if (statusFilter === 'active' && item.lifecycleStatus !== 'active') return false;
       if (statusFilter === 'archived' && item.lifecycleStatus !== 'archived') return false;
       if (statusFilter === 'unclassified' && !isDocumentUnclassified(item)) return false;
-      if (statusFilter === 'review' && item.lifecycleStatus !== 'temporary') return false;
+      if (statusFilter === 'review' && item.lifecycleStatus !== 'temporary' && getDocumentProofState(item).kind !== 'review') return false;
       if (!matchesTypeFilter(item, typeFilter)) return false;
       if (!normalizedQuery) return true;
       return [
@@ -593,6 +621,16 @@ export function Documents() {
         .some((value) => String(value).toLowerCase().includes(normalizedQuery));
     });
   }, [items, query, sourceFilter, statusFilter, typeFilter]);
+  const selectedDocument = useMemo(
+    () => items.find((item) => `${item.source}-${item.id}` === selectedDocumentId) ?? null,
+    [items, selectedDocumentId]
+  );
+
+  useEffect(() => {
+    if (!selectedDocumentId) return;
+    const remainsVisible = filteredItems.some((item) => `${item.source}-${item.id}` === selectedDocumentId);
+    if (!selectedDocument || !remainsVisible) setSelectedDocumentId(null);
+  }, [filteredItems, selectedDocument, selectedDocumentId]);
 
   const typeFilterCounts = useMemo(() => {
     return DOCUMENT_TYPE_FILTERS.reduce<Record<DocumentTypeFilter, number>>((acc, filter) => {
@@ -605,82 +643,93 @@ export function Documents() {
     [typeFilterCounts]
   );
 
-  const openDocument = async (item: DocumentItem) => {
+  const resolveDocumentUrl = async (item: DocumentItem) => {
     if (!navigator.onLine) {
-      toast.error('Connexion indisponible : ouverture du fichier impossible hors ligne.');
-      return;
+      throw new Error('Connexion indisponible : le fichier ne peut pas être chargé hors ligne.');
     }
+    const url = await createDocumentSignedUrl(item.storagePath);
+    if (item.source === 'uploaded') {
+      void supabase.from('documents').update({ last_accessed_at: new Date().toISOString() }).eq('id', item.id);
+    } else {
+      void supabase.from('document_registry').update({ last_accessed_at: new Date().toISOString() }).eq('id', item.id);
+    }
+    return url;
+  };
+
+  const openDocument = async (item: DocumentItem) => {
     try {
-      const url = await createDocumentSignedUrl(item.storagePath);
+      const url = await resolveDocumentUrl(item);
       window.open(url, '_blank', 'noopener,noreferrer');
-      if (item.source === 'uploaded') {
-        await supabase.from('documents').update({ last_accessed_at: new Date().toISOString() }).eq('id', item.id);
-      } else {
-        await supabase.from('document_registry').update({ last_accessed_at: new Date().toISOString() }).eq('id', item.id);
-      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Ouverture du document impossible');
     }
   };
 
-  const submitUpload = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!profile?.agency_id || !form.file) {
-      toast.warning('Sélectionnez un fichier à archiver.');
-      return;
-    }
-    if (!navigator.onLine) {
-      toast.error('Connexion indisponible : archivage impossible hors ligne.');
-      return;
-    }
-
-    setUploading(true);
+  const downloadDocument = async (item: DocumentItem) => {
     try {
-      const inferredEntityType = form.entityType || ENTITY_BY_CATEGORY[form.category] || null;
-      const tags = form.tags
-        .split(',')
-        .map((tag) => tag.trim())
-        .filter(Boolean);
-
-      await uploadUserDocument({
-        agencyId: profile.agency_id,
-        userId: user?.id,
-        file: form.file,
-        name: form.name,
-        category: form.category,
-        entityType: inferredEntityType,
-        entityId: form.entityId || null,
-        description: form.description,
-        retentionPolicy: form.retentionPolicy,
-        tags,
-        relations: {
-          bailleur_id: inferredEntityType === 'bailleur' ? form.entityId || null : null,
-          immeuble_id: inferredEntityType === 'immeuble' ? form.entityId || null : null,
-          unite_id: inferredEntityType === 'unite' ? form.entityId || null : null,
-          contrat_id: inferredEntityType === 'contrat' ? form.entityId || null : null,
-        },
-      });
-
-      toast.success('Document archivé dans la GED');
-      setUploadOpen(false);
-      setForm({
-        file: null,
-        name: '',
-        category: 'administratif',
-        entityType: '',
-        entityId: '',
-        retentionPolicy: 'standard',
-        description: '',
-        tags: '',
-      });
-      load();
+      const url = await resolveDocumentUrl(item);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Téléchargement du document impossible');
+      const blobUrl = URL.createObjectURL(await response.blob());
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = item.fileName || `${item.reference || 'document'}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(blobUrl);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erreur lors de l'upload");
-    } finally {
-      setUploading(false);
+      toast.error(error instanceof Error ? error.message : 'Téléchargement du document impossible');
     }
   };
 
+  const verifyDocument = (item: DocumentItem) => {
+    const url = publicVerificationUrl(item);
+    if (!url) {
+      toast.warning('Ce document ne possède pas encore de preuve QR enregistrée.');
+      return;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const copyVerificationLink = async (item: DocumentItem) => {
+    const url = publicVerificationUrl(item);
+    if (!url) throw new Error('Lien de vérification indisponible');
+    await navigator.clipboard.writeText(url);
+    toast.success('Lien de vérification copié');
+  };
+
+  const submitUpload = async (value: DocumentUploadValue) => {
+    if (!profile?.agency_id) throw new Error('Organisation indisponible.');
+    if (!navigator.onLine) {
+      throw new Error('Connexion indisponible : ajout impossible hors ligne.');
+    }
+
+    const tags = value.tags.split(',').map((tag) => tag.trim()).filter(Boolean);
+    const entityType = value.entityType || null;
+
+    await uploadUserDocument({
+      agencyId: profile.agency_id,
+      userId: user?.id,
+      file: value.file,
+      name: value.name,
+      category: value.category,
+      entityType,
+      entityId: value.entityId || null,
+      description: value.description,
+      retentionPolicy: value.retentionPolicy,
+      tags,
+      relations: {
+        bailleur_id: entityType === 'bailleur' ? value.entityId || null : null,
+        immeuble_id: entityType === 'immeuble' ? value.entityId || null : null,
+        unite_id: entityType === 'unite' ? value.entityId || null : null,
+        contrat_id: entityType === 'contrat' ? value.entityId || null : null,
+      },
+    });
+
+    toast.success('Document ajouté au coffre');
+    await load();
+  };
   const archiveDocument = async () => {
     if (!archiveTarget || archiveTarget.source !== 'uploaded') return;
     if (!navigator.onLine) {
@@ -729,16 +778,10 @@ export function Documents() {
     }
   };
 
-  const selectedEntityType = form.entityType || ENTITY_BY_CATEGORY[form.category] || '';
-  const selectedEntityOptions = selectedEntityType ? entityOptions[selectedEntityType] ?? [] : [];
   const visibleCategories = useMemo(
     () => CATEGORIES.filter((category) => !(isIndividualOwner && category === 'bailleurs')),
     [isIndividualOwner]
   );
-  const categoryLabel = (category: UserDocumentCategory) => {
-    if (isIndividualOwner && category === 'bailleurs') return 'Propriétaire';
-    return DOCUMENT_CATEGORY_LABELS[category];
-  };
   const entityLabel = (entityType: UserDocumentEntityType) => {
     if (isIndividualOwner && entityType === 'agency') return 'Compte propriétaire';
     if (isIndividualOwner && entityType === 'bailleur') return 'Propriétaire';
@@ -868,45 +911,46 @@ export function Documents() {
         ))}
       </div>
 
-      <section className="min-w-0 max-w-full space-y-3 pb-24 sm:space-y-4 sm:pb-0">
+      <div className={`grid min-w-0 items-start gap-4 ${selectedDocument ? 'xl:grid-cols-[minmax(0,1fr)_31.5rem]' : ''}`}>
+        <section className="min-w-0 max-w-full space-y-3 pb-24 sm:space-y-4 sm:pb-0">
           <div className="sk-premium-panel min-w-0 max-w-full p-3">
             <div className="grid min-w-0 grid-cols-2 gap-2.5 lg:flex lg:items-center">
-            <label className="relative col-span-2 min-w-0 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Rechercher un document..."
-                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:hidden"
-              />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Rechercher un document, une référence, un locataire..."
-                className="hidden sm:block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
-              />
-            </label>
-            <select
-              value={sourceFilter}
-              onChange={(event) => setSourceFilter(event.target.value as DocumentSourceFilter)}
-              className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:text-sm lg:w-[210px]"
-            >
-              <option value="all">Tous les documents</option>
-              <option value="uploaded">Ajoutés manuellement</option>
-              <option value="generated">Générés automatiquement</option>
-              <option value="qr">Vérifiables QR</option>
-            </select>
-            <select
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as DocumentStatusFilter)}
-              className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:text-sm lg:w-[170px]"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value="active">Actifs</option>
-              <option value="unclassified">À classer</option>
-              <option value="review">À revoir</option>
-              <option value="archived">Archivés</option>
-            </select>
+              <label className="relative col-span-2 min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Rechercher un document..."
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:hidden"
+                />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Rechercher un document, une référence, un locataire..."
+                  className="hidden sm:block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
+                />
+              </label>
+              <select
+                value={sourceFilter}
+                onChange={(event) => setSourceFilter(event.target.value as DocumentSourceFilter)}
+                className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:text-sm lg:w-[210px]"
+              >
+                <option value="all">Tous les documents</option>
+                <option value="uploaded">Ajoutés manuellement</option>
+                <option value="generated">Générés automatiquement</option>
+                <option value="qr">Vérifiables QR</option>
+              </select>
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as DocumentStatusFilter)}
+                className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:text-sm lg:w-[170px]"
+              >
+                <option value="all">Tous les statuts</option>
+                <option value="active">Actifs</option>
+                <option value="unclassified">À classer</option>
+                <option value="review">À revoir</option>
+                <option value="archived">Archivés</option>
+              </select>
             </div>
             <div className="scrollbar-hide -mx-1 mt-2.5 flex max-w-[calc(100%+0.5rem)] gap-1.5 overflow-x-auto px-1 pb-1">
               {visibleTypeFilters.map((filter) => (
@@ -914,11 +958,10 @@ export function Documents() {
                   key={filter.id}
                   type="button"
                   onClick={() => setTypeFilter(filter.id)}
-                  className={`flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-                    typeFilter === filter.id
+                  className={`flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${typeFilter === filter.id
                       ? 'border-emerald-950 bg-emerald-950 text-white shadow-sm'
                       : 'border-emerald-950/10 bg-white text-slate-600 hover:border-emerald-800/25 hover:bg-emerald-50'
-                  }`}
+                    }`}
                 >
                   {filter.label}
                   <span className="text-[10px] opacity-60">{typeFilterCounts[filter.id] ?? 0}</span>
@@ -934,24 +977,26 @@ export function Documents() {
               <EmptyState icon={FolderOpen} title="Aucun document" description="Ajustez les filtres ou archivez un premier fichier." />
             </div>
           ) : (
-            <div className="grid min-w-0 max-w-full gap-3 xl:grid-cols-2">
+            <div className={`grid min-w-0 max-w-full gap-3 ${selectedDocument ? 'xl:grid-cols-1 2xl:grid-cols-2' : 'xl:grid-cols-2'}`}>
               {filteredItems.map((item) => {
                 const Icon = ['rapport', 'rapport_bailleur', 'rapport_proprietaire'].includes(item.documentType ?? '')
                   ? BarChart3
                   : CATEGORY_ICONS[item.category];
                 const statusLabel = lifecycleLabel(item);
-                const isQrVerifiable = isQrVerifiableDocument(item);
-                const canArchive = item.source === 'uploaded' && item.retentionPolicy !== 'critical' && item.lifecycleStatus === 'active';
+                const proofState = getDocumentProofState(item);
+                const showProofBadge = ['verifiable', 'review', 'revoked', 'superseded'].includes(proofState.kind);
+                const isSelected = `${item.source}-${item.id}` === selectedDocumentId;
                 return (
                   <article
                     key={`${item.source}-${item.id}`}
-                    className="group sk-mobile-card min-w-0 max-w-full overflow-hidden p-3 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-800/20 hover:shadow-premium active:scale-[0.992]"
+                    className={`group sk-mobile-card min-w-0 max-w-full overflow-hidden p-3 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-800/20 hover:shadow-premium active:scale-[0.992] ${isSelected ? 'border-emerald-700/45 bg-emerald-50/45 ring-2 ring-emerald-700/10' : ''}`}
                   >
                     <button
                       type="button"
-                      onClick={() => openDocument(item)}
+                      onClick={() => setSelectedDocumentId(`${item.source}-${item.id}`)}
                       className="block w-full min-w-0 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
-                      aria-label={`Ouvrir ${item.title}`}
+                      aria-label={`Consulter la fiche de ${item.title}`}
+                      aria-pressed={isSelected}
                     >
                       <div className="flex items-start gap-2.5 sm:gap-3">
                         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10 sm:h-11 sm:w-11 sm:rounded-2xl">
@@ -963,7 +1008,7 @@ export function Documents() {
                           <p className="mt-0.5 line-clamp-2 break-words text-xs font-semibold leading-5 text-slate-500 [overflow-wrap:anywhere] sm:text-sm">{item.subtitle}</p>
                         </div>
                         <span className="inline-flex flex-shrink-0 items-center gap-1 text-xs font-bold text-emerald-800">
-                          <span className="hidden sm:inline">Ouvrir</span>
+                          <span className="hidden sm:inline">Détails</span>
                           <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                         </span>
                       </div>
@@ -972,21 +1017,29 @@ export function Documents() {
                         <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
                           {item.source === 'generated' ? 'Généré' : 'Ajouté'}
                         </span>
-                        {isQrVerifiable && (
-                          <span className="rounded-full bg-sky-50 px-2 py-1 text-[10px] font-bold text-sky-700">Vérifiable QR</span>
+                        {showProofBadge && (
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${proofState.kind === 'verifiable'
+                              ? 'bg-sky-50 text-sky-700'
+                              : proofState.kind === 'revoked'
+                                ? 'bg-red-50 text-red-700'
+                                : proofState.kind === 'superseded'
+                                  ? 'bg-orange-50 text-orange-700'
+                                  : 'bg-amber-50 text-amber-700'
+                            }`}>
+                            {proofState.label}
+                          </span>
                         )}
                         <span
-                          className={`rounded-full px-2 py-1 text-[10px] font-bold ${
-                            statusLabel === 'Archivé'
+                          className={`rounded-full px-2 py-1 text-[10px] font-bold ${statusLabel === 'Archivé'
                               ? 'bg-slate-100 text-slate-600'
                               : statusLabel === 'À classer' || statusLabel === 'À revoir'
                                 ? 'bg-amber-50 text-amber-700'
                                 : 'bg-emerald-50 text-emerald-800'
-                          }`}
+                            }`}
                         >
                           {statusLabel}
                         </span>
-                        {item.retentionPolicy === 'critical' && !isQrVerifiable && (
+                        {item.retentionPolicy === 'critical' && proofState.kind !== 'verifiable' && (
                           <span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-bold text-violet-700">Protégé</span>
                         )}
                       </div>
@@ -1002,15 +1055,6 @@ export function Documents() {
                         </p>
                       )}
                     </button>
-
-                    {canArchive && (
-                      <div className="mt-2 flex min-w-0 justify-end border-t border-slate-100 pt-2">
-                        <button type="button" onClick={() => setArchiveTarget(item)} className="sk-action sk-action-secondary min-h-8 justify-center px-2.5 py-1.5 text-xs">
-                          <Archive className="h-4 w-4" />
-                          Archiver
-                        </button>
-                      </div>
-                    )}
                   </article>
                 );
               })}
@@ -1048,140 +1092,33 @@ export function Documents() {
           </details>
         </section>
 
-      <Modal isOpen={uploadOpen} onClose={() => setUploadOpen(false)} title="Ajouter un document">
-        <form onSubmit={submitUpload} className="space-y-4">
-          <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/60 p-4">
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-emerald-800/30 bg-white px-4 py-7 text-center transition hover:border-emerald-800">
-              <Upload className="h-8 w-8 text-emerald-800" />
-              <span className="mt-3 text-sm font-semibold text-slate-950">
-                {form.file ? form.file.name : 'Déposer ou sélectionner un fichier'}
-              </span>
-              <span className="mt-1 text-xs font-semibold text-slate-500">PDF, images, CSV ou Excel · compression image automatique · 50 Mo maximum</span>
-              <input
-                type="file"
-                required
-                accept=".pdf,.png,.jpg,.jpeg,.webp,.svg,.csv,.xls,.xlsx"
-                onChange={(event) => setForm({ ...form, file: event.target.files?.[0] ?? null })}
-                className="sr-only"
-              />
-            </label>
-          </div>
+        {selectedDocument && (
+          <DocumentProofDrawer
+            document={selectedDocument}
+            canArchive={selectedDocument.source === 'uploaded' && selectedDocument.retentionPolicy !== 'critical' && selectedDocument.lifecycleStatus === 'active'}
+            onClose={() => setSelectedDocumentId(null)}
+            onOpen={(item) => openDocument(item as DocumentItem)}
+            onDownload={(item) => downloadDocument(item as DocumentItem)}
+            onArchive={(item) => {
+              setSelectedDocumentId(null);
+              setArchiveTarget(item as DocumentItem);
+            }}
+            onVerify={selectedDocument.verification ? (item) => verifyDocument(item as DocumentItem) : undefined}
+            onCopyLink={selectedDocument.verification ? (item) => copyVerificationLink(item as DocumentItem) : undefined}
+            onNotify={(message) => toast.success(message)}
+            onError={(message) => toast.error(message)}
+          />
+        )}
+      </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="sm:col-span-2">
-              <span className="mb-1 block text-sm font-bold text-slate-700">Nom du document</span>
-              <input
-                value={form.name}
-                onChange={(event) => setForm({ ...form, name: event.target.value })}
-                placeholder="Ex : CNI locataire, assurance immeuble..."
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
-              />
-            </label>
-
-            <label>
-              <span className="mb-1 block text-sm font-bold text-slate-700">Dossier métier</span>
-              <select
-                value={form.category}
-                onChange={(event) => {
-                  const category = event.target.value as UserDocumentCategory;
-                  setForm({
-                    ...form,
-                    category,
-                    entityType: ENTITY_BY_CATEGORY[category] ?? '',
-                    entityId: '',
-                  });
-                }}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
-              >
-                {visibleCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {categoryLabel(category)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span className="mb-1 block text-sm font-bold text-slate-700">Conservation</span>
-              <select
-                value={form.retentionPolicy}
-                onChange={(event) => setForm({ ...form, retentionPolicy: event.target.value as RetentionPolicy })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
-              >
-                <option value="standard">Standard</option>
-                <option value="critical">Critique</option>
-                <option value="temporary">Temporaire</option>
-              </select>
-            </label>
-
-            <label>
-              <span className="mb-1 block text-sm font-bold text-slate-700">Type de lien</span>
-              <select
-                value={selectedEntityType}
-                onChange={(event) => setForm({ ...form, entityType: event.target.value as UserDocumentEntityType | '', entityId: '' })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
-              >
-                <option value="">Aucun lien</option>
-                {Object.keys(DOCUMENT_ENTITY_LABELS)
-                  .filter((id) => !(isIndividualOwner && id === 'bailleur'))
-                  .map((id) => (
-                    <option key={id} value={id}>
-                      {entityLabel(id as UserDocumentEntityType)}
-                    </option>
-                  ))}
-              </select>
-            </label>
-
-            <label>
-              <span className="mb-1 block text-sm font-bold text-slate-700">Élément lié</span>
-              <select
-                value={form.entityId}
-                disabled={!selectedEntityType || selectedEntityOptions.length === 0}
-                onChange={(event) => setForm({ ...form, entityId: event.target.value })}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none transition disabled:bg-slate-50 disabled:text-slate-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
-              >
-                <option value="">{selectedEntityType ? 'Sélectionner' : 'Aucun lien'}</option>
-                {selectedEntityOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="sm:col-span-2">
-              <span className="mb-1 block text-sm font-bold text-slate-700">Description</span>
-              <textarea
-                value={form.description}
-                onChange={(event) => setForm({ ...form, description: event.target.value })}
-                rows={3}
-                placeholder="Contexte, validité, observations internes..."
-                className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
-              />
-            </label>
-
-            <label className="sm:col-span-2">
-              <span className="mb-1 block text-sm font-bold text-slate-700">Tags</span>
-              <input
-                value={form.tags}
-                onChange={(event) => setForm({ ...form, tags: event.target.value })}
-                placeholder="urgent, signé, original..."
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
-              />
-            </label>
-          </div>
-
-          <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-            <button type="button" onClick={() => setUploadOpen(false)} className="sk-action sk-action-secondary justify-center">
-              Annuler
-            </button>
-            <button type="submit" disabled={uploading} className="sk-action sk-action-financial justify-center disabled:opacity-60">
-              {uploading ? 'Archivage...' : 'Archiver le document'}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
+      <DocumentUploadWizard
+        isOpen={uploadOpen}
+        isIndividualOwner={isIndividualOwner}
+        categories={visibleCategories}
+        entityOptions={entityOptions}
+        onClose={() => setUploadOpen(false)}
+        onUpload={submitUpload}
+      />
       <ConfirmModal
         isOpen={!!archiveTarget}
         onClose={() => setArchiveTarget(null)}

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
 // import { Button } from '../components/ui/Button';
@@ -19,6 +19,7 @@ import { PageSkeleton } from '../components/ui/Skeleton';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { cancelDepenseViaRpc, createDepenseViaRpc, updateDepenseViaRpc } from '../services/api/financeApi';
+import { buildMonthFilterOptions, resolveMonthFilter } from '../lib/monthFilters';
 
 const EXPENSE_CATEGORIES = [
   'Maintenance',
@@ -56,11 +57,20 @@ export function Depenses() {
   const [deleting, setDeleting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMois, setSelectedMois] = useState('current');
+  const [selectedCategorie, setSelectedCategorie] = useState('');
+  const [selectedImmeuble, setSelectedImmeuble] = useState('');
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const toast = useToast();
   const notifyError = toast.error;
   const submittingRef = useRef(false);
   const filterCategories = useMemo(
     () => Array.from(new Set([...EXPENSE_CATEGORIES, ...depenses.map((depense) => depense.categorie).filter(Boolean)])),
+    [depenses],
+  );
+  const monthOptions = useMemo(
+    () => buildMonthFilterOptions(depenses.map((depense) => depense.date_depense)),
     [depenses],
   );
 
@@ -77,6 +87,7 @@ export function Depenses() {
 
   useEffect(() => {
     const q = searchTerm.toLowerCase();
+    const targetMonth = resolveMonthFilter(selectedMois);
     setFiltered(
       depenses.filter((d) => {
         const searchable = [
@@ -88,10 +99,13 @@ export function Depenses() {
           .filter(Boolean)
           .join(' ')
           .toLowerCase();
-        return searchable.includes(q);
+        return searchable.includes(q)
+          && (!targetMonth || d.date_depense.slice(0, 7) === targetMonth)
+          && (!selectedCategorie || d.categorie === selectedCategorie)
+          && (!selectedImmeuble || d.immeuble_id === selectedImmeuble);
       }),
     );
-  }, [searchTerm, depenses]);
+  }, [depenses, searchTerm, selectedCategorie, selectedImmeuble, selectedMois]);
 
   const loadData = useCallback(async () => {
     if (!profile?.agency_id) return;
@@ -139,9 +153,8 @@ export function Depenses() {
     }
   }, [loadData, profile?.agency_id]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async () => {
     if (!profile?.agency_id || submittingRef.current) return;
-    e.preventDefault();
     if (!navigator.onLine) {
       toast.error('Connexion indisponible : enregistrement impossible hors ligne.');
       return;
@@ -298,12 +311,6 @@ export function Depenses() {
     if (selectedDepense && (c.key === 'categorie' || c.key === 'beneficiaire')) return false;
     return true;
   });
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [selectedMois, setSelectedMois] = useState('');
-  const [selectedCategorie, setSelectedCategorie] = useState('');
-  const [selectedImmeuble, setSelectedImmeuble] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
   const kpis = useMemo(() => {
     const currentMonth = new Date().toISOString().slice(0, 7);
     const depensesMois = filtered
@@ -387,7 +394,7 @@ export function Depenses() {
           <FinancePageHeader
             eyebrow="CHARGES & EXPLOITATION"
             title="Dépenses"
-            description="Suivez les charges, frais d’exploitation, dépenses rattachées et corrections via les workflows financiers contrôlés."
+            description="Charges et corrections contrôlées."
             primaryLabel="Nouvelle dépense"
             primaryIcon={<Plus className="h-4 w-4" />}
             onPrimary={openCreateModal}
@@ -422,10 +429,10 @@ export function Depenses() {
               <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
                 <SmartCombobox
                   value={selectedMois}
-                  options={[{ value: '', label: 'Mois en cours' }]}
+                  options={monthOptions}
                   onChange={setSelectedMois}
-                  placeholder="Mois en cours"
-                  searchPlaceholder="Rechercher..."
+                  placeholder="Période"
+                  searchPlaceholder="Rechercher un mois"
                   className="w-48 shrink-0"
                 />
                 <SmartCombobox
@@ -466,7 +473,7 @@ export function Depenses() {
             title="Filtres Dépenses"
             onClose={() => setMobileFiltersOpen(false)}
             onReset={() => {
-              setSelectedMois('');
+              setSelectedMois('current');
               setSelectedCategorie('');
               setSelectedImmeuble('');
             }}
@@ -474,10 +481,10 @@ export function Depenses() {
             <div className="grid gap-3">
               <SmartCombobox
                 value={selectedMois}
-                options={[{ value: '', label: 'Mois en cours' }]}
+                options={monthOptions}
                 onChange={setSelectedMois}
-                placeholder="Mois en cours"
-                searchPlaceholder="Rechercher..."
+                placeholder="Période"
+                searchPlaceholder="Rechercher un mois"
               />
               <SmartCombobox
                 value={selectedCategorie}

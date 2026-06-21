@@ -79,7 +79,7 @@ export function DocumentScanner() {
         : await verifyDocumentReference(parsed.reference ?? value, profile?.agency_id);
       setResult(next);
       if (next.state === 'authentic') {
-        toast.success('Document authentique');
+        toast.success(parsed.token ? 'Document authentique' : 'Preuve trouvée dans votre coffre');
       } else if (next.state === 'network_error') {
         toast.error('Vérification impossible pour le moment');
       }
@@ -196,7 +196,7 @@ export function DocumentScanner() {
               <QrCode className="h-6 w-6 text-emerald-800" />
             </div>
 
-            <div className="relative mt-3 h-[12.5rem] w-full max-w-full overflow-hidden rounded-xl border border-emerald-950/10 bg-slate-950 sm:mt-4 sm:h-[17rem] sm:rounded-[1.35rem] lg:h-[19rem]">
+            <div className="relative mt-3 h-[11rem] w-full max-w-full overflow-hidden rounded-xl border border-emerald-950/10 bg-slate-950 sm:mt-4 sm:h-[14rem] sm:rounded-[1.35rem] lg:h-[16rem]">
               <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
               {cameraStatus !== 'active' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-[radial-gradient(circle_at_50%_15%,#153f34_0%,#071713_55%,#020807_100%)] px-4 text-center text-white">

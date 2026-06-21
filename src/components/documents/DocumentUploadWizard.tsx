@@ -179,7 +179,7 @@ export function DocumentUploadWizard({
           <div className="flex h-16 w-16 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm">
             <CheckCircle2 className="h-8 w-8" />
           </div>
-          <p className="mt-5 text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Coffre documentaire</p>
+          <p className="mt-5 text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">Coffre documentaire</p>
           <h3 className="mt-2 text-xl font-black text-slate-950">Document ajouté avec succès</h3>
           <p className="mt-2 max-w-sm text-sm font-semibold leading-6 text-slate-500">
             {displayName} est maintenant disponible dans la GED avec son classement métier.
@@ -190,7 +190,7 @@ export function DocumentUploadWizard({
           </button>
         </div>
       ) : (
-        <form className="flex min-h-[31rem] flex-col" onSubmit={(event) => event.preventDefault()}>
+        <form className="flex min-h-[25rem] flex-col overflow-hidden" onSubmit={(event) => event.preventDefault()}>
           <ol className="mb-4 grid grid-cols-3 gap-2" aria-label="Progression de l’ajout">
             {STEPS.map((item) => {
               const active = item.id === step;
@@ -198,7 +198,7 @@ export function DocumentUploadWizard({
               return (
                 <li key={item.id} className="min-w-0">
                   <div className={`h-1 rounded-full ${active || done ? 'bg-emerald-700' : 'bg-slate-200'}`} />
-                  <div className="mt-2 flex items-center gap-1.5">
+                  <div className="mt-2 flex min-w-0 items-center gap-1.5">
                     <span className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-black ${done ? 'bg-emerald-700 text-white' : active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-400'}`}>
                       {done ? <Check className="h-3 w-3" /> : item.id}
                     </span>
@@ -217,70 +217,74 @@ export function DocumentUploadWizard({
             </div>
           )}
 
-          <div className="flex-1">
+          <div className="flex flex-col flex-1">
             {step === 1 && (
-              <div className="space-y-4">
+              <div className="flex flex-col gap-4">
                 <div
-                  className="rounded-2xl border border-dashed border-emerald-700/30 bg-emerald-50/50 p-3"
+                  className="rounded-2xl border border-dashed border-emerald-700/30 bg-emerald-50/50 p-2 sm:p-3 overflow-hidden"
                   onDragOver={(event) => event.preventDefault()}
                   onDrop={(event) => {
                     event.preventDefault();
                     chooseFile(event.dataTransfer.files?.[0] ?? null);
                   }}
                 >
-                  <label className="flex min-h-[12rem] cursor-pointer flex-col items-center justify-center rounded-xl bg-white px-4 py-5 text-center shadow-sm transition hover:bg-emerald-50/40">
-                    <Upload className="h-8 w-8 text-emerald-800" />
-                    <span className="mt-3 text-sm font-black text-slate-950">Déposer ou sélectionner un fichier</span>
-                    <span className="mt-1 max-w-sm text-xs font-semibold leading-5 text-slate-500">
-                      PDF, PNG, JPG, WEBP, SVG, CSV ou Excel · 50 Mo maximum
+                  <label className="flex min-h-[10rem] sm:min-h-[12rem] cursor-pointer flex-col items-center justify-center rounded-xl bg-white px-3 py-5 sm:px-4 sm:py-6 text-center shadow-sm transition hover:bg-emerald-50/40">
+                    <Upload className="mb-3 h-7 w-7 text-emerald-800 sm:h-9 sm:w-9" />
+                    <span className="block text-sm font-black text-slate-950 text-center">
+                      Déposez ou sélectionnez un fichier
+                    </span>
+                    <span className="mt-1.5 block max-w-[280px] sm:max-w-sm text-[11px] font-semibold leading-5 text-slate-500 sm:text-xs text-center break-words">
+                      PDF, PNG, JPG, WEBP, SVG, CSV ou Excel · 50 Mo max
                     </span>
                     <input
                       type="file"
                       accept=".pdf,.png,.jpg,.jpeg,.webp,.svg,.csv,.xls,.xlsx"
                       onChange={(event) => chooseFile(event.target.files?.[0] ?? null)}
-                      className="sr-only"
+                      className="hidden"
                     />
                   </label>
                 </div>
 
                 {value.file && (
-                  <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm overflow-hidden">
                     <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-emerald-800">
                       {previewUrl ? (
                         <img src={previewUrl} alt="Aperçu du document" className="h-full w-full object-cover" />
                       ) : value.file.type.startsWith('image/') ? (
-                        <FileImage className="h-6 w-6" />
+                        <FileImage className="h-6 w-6 flex-shrink-0" />
                       ) : (
-                        <FileText className="h-6 w-6" />
+                        <FileText className="h-6 w-6 flex-shrink-0" />
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-black text-slate-950">{value.file.name}</p>
-                      <p className="mt-1 text-xs font-semibold text-slate-500">
+                      <p className="mt-1 truncate text-xs font-semibold text-slate-500">
                         {fileTypeLabel(value.file)} · {formatStorageSize(value.file.size)}
                       </p>
                     </div>
-                    <ShieldCheck className="h-5 w-5 flex-shrink-0 text-emerald-700" />
+                    <ShieldCheck className="hidden h-5 w-5 flex-shrink-0 text-emerald-700 sm:block" />
                   </div>
                 )}
               </div>
             )}
 
             {step === 2 && (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="sm:col-span-2">
-                  <span className="mb-1 block text-sm font-bold text-slate-700">Nom du document</span>
+              <div className="grid max-w-full gap-3 sm:grid-cols-2">
+                <label className="sm:col-span-2 min-w-0">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Nom du document</span>
                   <input
                     value={value.name}
                     onChange={(event) => setValue((current) => ({ ...current, name: event.target.value }))}
                     placeholder="Ex : CNI locataire, titre foncier..."
+                    className="min-w-0 max-w-full w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
                   />
                 </label>
 
-                <label>
-                  <span className="mb-1 block text-sm font-bold text-slate-700">Dossier métier</span>
+                <label className="min-w-0">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Dossier métier</span>
                   <select
                     value={value.category}
+                    className="min-w-0 max-w-full w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
                     onChange={(event) => {
                       const category = event.target.value as UserDocumentCategory;
                       setValue((current) => ({
@@ -295,10 +299,11 @@ export function DocumentUploadWizard({
                   </select>
                 </label>
 
-                <label>
-                  <span className="mb-1 block text-sm font-bold text-slate-700">Conservation</span>
+                <label className="min-w-0">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Conservation</span>
                   <select
                     value={value.retentionPolicy}
+                    className="min-w-0 max-w-full w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
                     onChange={(event) => setValue((current) => ({ ...current, retentionPolicy: event.target.value as RetentionPolicy }))}
                   >
                     <option value="standard">Standard</option>
@@ -307,10 +312,11 @@ export function DocumentUploadWizard({
                   </select>
                 </label>
 
-                <label>
-                  <span className="mb-1 block text-sm font-bold text-slate-700">Lier à</span>
+                <label className="min-w-0">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Lier à</span>
                   <select
                     value={selectedEntityType}
+                    className="min-w-0 max-w-full w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
                     onChange={(event) => setValue((current) => ({ ...current, entityType: event.target.value as UserDocumentEntityType | '', entityId: '' }))}
                   >
                     <option value="">Aucun élément</option>
@@ -320,11 +326,12 @@ export function DocumentUploadWizard({
                   </select>
                 </label>
 
-                <label>
-                  <span className="mb-1 block text-sm font-bold text-slate-700">Élément lié</span>
+                <label className="min-w-0">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Élément lié</span>
                   <select
                     value={value.entityId}
                     disabled={!selectedEntityType || selectedOptions.length === 0}
+                    className="min-w-0 max-w-full w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none transition disabled:bg-slate-50 disabled:text-slate-400 focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
                     onChange={(event) => setValue((current) => ({ ...current, entityId: event.target.value }))}
                   >
                     <option value="">{selectedEntityType ? 'Sélectionner' : 'Aucun lien'}</option>
@@ -338,13 +345,14 @@ export function DocumentUploadWizard({
                   </p>
                 )}
 
-                <label className="sm:col-span-2">
-                  <span className="mb-1 block text-sm font-bold text-slate-700">Description courte</span>
+                <label className="sm:col-span-2 min-w-0">
+                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Description courte</span>
                   <textarea
                     value={value.description}
                     onChange={(event) => setValue((current) => ({ ...current, description: event.target.value }))}
                     rows={2}
                     maxLength={300}
+                    className="min-w-0 max-w-full w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
                     placeholder="Contexte, validité ou observation interne..."
                   />
                 </label>
@@ -353,26 +361,25 @@ export function DocumentUploadWizard({
 
             {step === 3 && value.file && (
               <div className="space-y-4">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-700">Résumé avant ajout</p>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm max-w-full overflow-hidden">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">Résumé avant ajout</p>
                   <h3 className="mt-2 break-words text-lg font-black text-slate-950">{displayName}</h3>
                   <dl className="mt-4 divide-y divide-slate-100 text-sm">
                     <div className="flex justify-between gap-4 py-2.5"><dt className="font-semibold text-slate-500">Fichier</dt><dd className="min-w-0 truncate text-right font-bold text-slate-800">{value.file.name}</dd></div>
                     <div className="flex justify-between gap-4 py-2.5"><dt className="font-semibold text-slate-500">Taille</dt><dd className="font-bold text-slate-800">{formatStorageSize(value.file.size)}</dd></div>
                     <div className="flex justify-between gap-4 py-2.5"><dt className="font-semibold text-slate-500">Dossier</dt><dd className="font-bold text-slate-800">{categoryLabel(value.category)}</dd></div>
                     <div className="flex justify-between gap-4 py-2.5"><dt className="font-semibold text-slate-500">Contexte</dt><dd className="min-w-0 text-right font-bold text-slate-800">{selectedEntity?.label || 'Document à classer'}</dd></div>
-                    <div className="flex justify-between gap-4 py-2.5"><dt className="font-semibold text-slate-500">Statut initial</dt><dd className="font-bold text-emerald-700">{selectedEntity ? 'Classé' : 'À classer'}</dd></div>
+                    <div className="flex justify-between gap-4 py-2.5"><dt className="font-semibold text-slate-500">Statut initial</dt><dd className="font-bold text-emerald-700">{value.category === 'archives' ? 'Archivé' : (selectedEntity ? 'Classé' : 'À classer')}</dd></div>
                   </dl>
                 </div>
-                <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs font-semibold leading-5 text-emerald-900">
+                <div className="flex max-w-full items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs font-semibold leading-5 text-emerald-900">
                   <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0" />
                   Le fichier reste privé. Son accès passe par une URL signée temporaire et les règles de votre organisation.
                 </div>
               </div>
             )}
           </div>
-
-          <div className="sticky -bottom-4 z-10 -mx-4 mt-5 flex flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-4 pb-1 pt-3 backdrop-blur sm:-bottom-5 sm:-mx-6 sm:flex-row sm:justify-between sm:px-6">
+          <div className="sticky -bottom-4 z-10 mt-5 flex w-full flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 pb-1 pt-3 backdrop-blur sm:-bottom-5 sm:flex-row sm:justify-between">
             <button
               type="button"
               onClick={() => step === 1 ? close() : setStep((step - 1) as 1 | 2)}

@@ -5,7 +5,8 @@ export type VerificationState =
   | 'revoked'
   | 'superseded'
   | 'network_error'
-  | 'invalid';
+  | 'invalid'
+  | 'token_required';
 
 export interface VerifiedDocumentDetails {
   reference: string;
@@ -162,14 +163,25 @@ export function getVerificationCopy(state: VerificationState) {
       message: 'Le QR code ou la référence saisis ne sont pas exploitables.',
     };
   }
+  if (state === 'token_required') {
+    return {
+      title: 'Lien QR ou jeton sécurisé requis',
+      message: "Ne confirmez l'authenticité d'aucun document sans scanner le QR code ou utiliser un jeton de sécurité valide.",
+    };
+  }
   return {
-    title: 'Document introuvable',
-    message:
-      "Cette référence ne correspond à aucun document enregistré dans le registre Samay Këur. Ne vous fiez pas à ce document tant que son authenticité n'a pas été confirmée par l'émetteur.",
+    title: 'Document non reconnu',
+    message: "Vérifiez la référence ou contactez l’émetteur.",
   };
 }
 
 function normalizePublicResponse(data: PublicVerificationResponse): DocumentVerificationResult {
+  if (data.error === 'token_required' || data.error?.includes('token')) {
+    return {
+      state: 'token_required',
+      message: data.error === 'token_required' ? getVerificationCopy('token_required').message : data.error,
+    };
+  }
   if (!data.document) {
     return {
       state: 'not_found',

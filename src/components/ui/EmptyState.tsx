@@ -10,9 +10,13 @@ interface EmptyStateProps {
     label: string;
     onClick: () => void;
   };
+  secondaryAction?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
-export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, action, secondaryAction }: EmptyStateProps) {
   return (
     <div className="sk-empty-state overflow-hidden relative group">
       <div className="pointer-events-none absolute -right-8 -top-8 opacity-[0.04]">
@@ -32,13 +36,25 @@ export function EmptyState({ icon: Icon, title, description, action }: EmptyStat
       <h3 className="mb-2 text-xl font-black leading-snug text-slate-950 sm:text-2xl">{title}</h3>
       <p className="mb-6 max-w-md text-sm leading-7 text-slate-600 sm:text-base">{description}</p>
       
-      {action && (
-        <div className="relative inline-block">
-          {/* Subtle pulse behind button */}
-          <div className="absolute inset-0 rounded-xl bg-emerald-400 opacity-20 blur-md animate-pulse" />
-          <Button onClick={action.onClick} size="lg" className="relative w-full sm:w-auto shadow-emerald-900/10 hover:shadow-emerald-900/20">
-            {action.label}
-          </Button>
+      {(action || secondaryAction) && (
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full sm:w-auto">
+          {action && (
+            <div className="relative inline-block w-full sm:w-auto">
+              <div className="absolute inset-0 rounded-xl bg-emerald-400 opacity-20 blur-md animate-pulse" />
+              <Button onClick={action.onClick} size="lg" className="relative w-full shadow-emerald-900/10 hover:shadow-emerald-900/20">
+                {action.label}
+              </Button>
+            </div>
+          )}
+          {secondaryAction && (
+            <button
+              type="button"
+              onClick={secondaryAction.onClick}
+              className="sk-action sk-action-secondary w-full justify-center px-4 py-2.5 sm:w-auto text-sm"
+            >
+              {secondaryAction.label}
+            </button>
+          )}
         </div>
       )}
     </div>

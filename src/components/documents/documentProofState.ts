@@ -1,4 +1,4 @@
-﻿export type DocumentProofKind =
+export type DocumentProofKind =
   | 'verifiable'
   | 'review'
   | 'revoked'
@@ -46,7 +46,7 @@ export function getDocumentProofState(document: DocumentProofStateInput): Docume
     return { kind: 'archived', label: 'Archivé', description: 'Le document est conservé dans les archives.' };
   }
   if (document.verification?.status === 'authentic') {
-    return { kind: 'verifiable', label: 'Vérifiable QR', description: 'Une preuve publique est enregistrée.' };
+    return { kind: 'verifiable', label: 'Vérifiable QR', description: 'Lien public de vérification disponible.' };
   }
   if (document.source === 'generated' && supportsPublicVerification(document.documentType)) {
     return { kind: 'review', label: 'À vérifier', description: 'La preuve QR est absente ou incomplète.' };

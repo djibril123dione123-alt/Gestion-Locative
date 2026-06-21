@@ -67,17 +67,15 @@ interface DocumentProofDrawerProps {
   onError: (message: string) => void;
 }
 
-const NOT_PROVIDED = 'Non renseigné';
-
 function formatDate(value?: string | null) {
-  if (!value) return NOT_PROVIDED;
+  if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(date);
 }
 
 function formatPeriod(value?: string | null) {
-  if (!value) return NOT_PROVIDED;
+  if (!value) return null;
   const normalized = /^\d{4}-\d{2}$/.test(value) ? `${value}-01` : value;
   const date = new Date(`${normalized}T00:00:00`);
   if (Number.isNaN(date.getTime())) return value;
@@ -85,7 +83,7 @@ function formatPeriod(value?: string | null) {
 }
 
 function formatXof(value?: number | null) {
-  if (value === null || value === undefined || !Number.isFinite(Number(value))) return NOT_PROVIDED;
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return null;
   return `${new Intl.NumberFormat('fr-FR').format(Number(value))} F CFA`;
 }
 
@@ -95,7 +93,7 @@ function metadataText(metadata: Record<string, unknown> | undefined, keys: strin
     if (typeof value === 'string' && value.trim()) return value.trim();
     if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   }
-  return NOT_PROVIDED;
+  return null;
 }
 
 function metadataAmount(metadata: Record<string, unknown> | undefined, keys: string[]) {
@@ -104,7 +102,7 @@ function metadataAmount(metadata: Record<string, unknown> | undefined, keys: str
     if (typeof value === 'number' && Number.isFinite(value)) return formatXof(value);
     if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) return formatXof(Number(value));
   }
-  return NOT_PROVIDED;
+  return null;
 }
 
 function documentTypeLabel(document: DocumentProofDrawerData) {
@@ -133,7 +131,6 @@ function lifecycleLabel(status: string) {
   return labels[status] ?? status;
 }
 
-
 function InfoSection({ title, icon: Icon, children }: { title: string; icon: typeof FileText; children: ReactNode }) {
   return (
     <section className="rounded-2xl border border-emerald-950/10 bg-white/90 p-3.5 shadow-[0_10px_26px_rgba(15,23,42,0.035)] sm:p-4">
@@ -148,7 +145,9 @@ function InfoSection({ title, icon: Icon, children }: { title: string; icon: typ
   );
 }
 
-function InfoRow({ label, value, mono = false, strong = false }: { label: string; value: ReactNode; mono?: boolean; strong?: boolean }) {
+/** Only renders if value is not null/undefined/empty */
+function InfoRow({ label, value, mono = false, strong = false }: { label: string; value: ReactNode | null | undefined; mono?: boolean; strong?: boolean }) {
+  if (value === null || value === undefined || value === '') return null;
   return (
     <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3 py-2.5 first:pt-0 last:pb-0">
       <dt className="text-xs font-semibold text-slate-500">{label}</dt>
@@ -157,51 +156,62 @@ function InfoRow({ label, value, mono = false, strong = false }: { label: string
   );
 }
 
-function buildContextRows(document: DocumentProofDrawerData) {
-  const subject = document.businessContext?.subject || NOT_PROVIDED;
-  const location = document.businessContext?.location || NOT_PROVIDED;
+function buildContextRows(document: DocumentProofDrawerData): Array<[string, string | null]> {
+  const subject = document.businessContext?.subject || null;
+  const location = document.businessContext?.location || null;
   const type = document.documentType;
 
   if (type === 'quittance' || type === 'facture') {
-    return [
+    const rows: Array<[string, string | null]> = [
       ['Locataire', subject],
       ['Bien / unité', location],
       ['Période', formatPeriod(document.period)],
-      ['Paiement lié', document.entityId ? 'Enregistré' : NOT_PROVIDED],
-      ['Montant', formatXof(document.verification?.amountXof)],
     ];
+    if (document.entityId) rows.push(['Paiement lié', 'Enregistré']);
+    const amount = formatXof(document.verification?.amountXof);
+    if (amount) rows.push(['Montant', amount]);
+    return rows;
   }
   if (type === 'contrat') {
-    return [
+    const rows: Array<[string, string | null]> = [
       ['Locataire', subject],
       ['Bien / unité', location],
-      ['Date de début', metadataText(document.metadata, ['date_debut', 'start_date'])],
-      ['Date de fin', metadataText(document.metadata, ['date_fin', 'end_date'])],
-      ['Statut du bail', metadataText(document.metadata, ['statut', 'contract_status'])],
     ];
+    const dateDebut = metadataText(document.metadata, ['date_debut', 'start_date']);
+    const dateFin = metadataText(document.metadata, ['date_fin', 'end_date']);
+    const statut = metadataText(document.metadata, ['statut', 'contract_status']);
+    if (dateDebut) rows.push(['Date de début', dateDebut]);
+    if (dateFin) rows.push(['Date de fin', dateFin]);
+    if (statut) rows.push(['Statut du bail', statut]);
+    return rows;
   }
   if (type === 'mandat') {
     return [
       ['Bailleur', subject],
-      ['Émetteur', document.verification?.agencyName || NOT_PROVIDED],
+      ['Émetteur', document.verification?.agencyName || null],
       ['Date', formatDate(document.createdAt)],
       ['Statut', lifecycleLabel(document.lifecycleStatus)],
     ];
   }
   if (type === 'rapport' || type === 'rapport_bailleur' || type === 'rapport_proprietaire') {
-    return [
+    const rows: Array<[string, string | null]> = [
       ['Bailleur / propriétaire', subject],
       ['Période', formatPeriod(document.period)],
-      ['Total encaissé', metadataAmount(document.metadata, ['total_encaisse', 'total_collected'])],
-      ['Net propriétaire', metadataAmount(document.metadata, ['net_bailleur', 'net_proprietaire', 'owner_net'])],
     ];
+    const totalEncaisse = metadataAmount(document.metadata, ['total_encaisse', 'total_collected']);
+    const netBailleur = metadataAmount(document.metadata, ['net_bailleur', 'net_proprietaire', 'owner_net']);
+    if (totalEncaisse) rows.push(['Total encaissé', totalEncaisse]);
+    if (netBailleur) rows.push(['Net propriétaire', netBailleur]);
+    if (!totalEncaisse && !netBailleur) rows.push(['Résumé financier', 'Disponible dans le PDF']);
+    return rows;
   }
-  return [
-    ['Catégorie', document.category || NOT_PROVIDED],
-    ['Élément lié', subject],
-    ['Description', document.description || NOT_PROVIDED],
-    ['Ajouté par', document.uploadedBy || NOT_PROVIDED],
-  ];
+  // Document libre
+  const rows: Array<[string, string | null]> = [];
+  if (subject) rows.push(['Élément lié', subject]);
+  if (document.description) rows.push(['Description', document.description]);
+  if (document.uploadedBy) rows.push(['Ajouté par', document.uploadedBy]);
+  if (rows.length === 0) rows.push(['Dossier', document.category || null]);
+  return rows;
 }
 
 export function DocumentProofDrawer({
@@ -267,12 +277,15 @@ export function DocumentProofDrawer({
     }
   };
 
+  const hasContextRows = contextRows.some(([, v]) => v !== null && v !== '');
+
   return (
     <aside
-      className="fixed inset-0 z-[70] flex min-h-0 flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.2)] xl:sticky xl:top-4 xl:z-auto xl:h-[calc(100vh-2rem)] xl:rounded-3xl xl:border xl:border-emerald-950/10"
+      className="fixed inset-0 z-[70] flex min-h-0 flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.2)] xl:static xl:inset-auto xl:z-auto xl:h-full xl:min-h-0 xl:rounded-3xl xl:border xl:border-emerald-950/10"
       role="dialog"
       aria-label={`Fiche preuve ${document.title}`}
     >
+      {/* Header — sticky */}
       <header className="shrink-0 border-b border-emerald-950/10 bg-[#fffdf8]/95 px-4 py-3.5 backdrop-blur sm:px-5 sm:py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -284,10 +297,15 @@ export function DocumentProofDrawer({
             <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-500">
               <span className="rounded-full bg-slate-100 px-2 py-1">{lifecycleLabel(document.lifecycleStatus)}</span>
               <span className="rounded-full bg-slate-100 px-2 py-1">{document.source === 'generated' ? 'Généré' : 'Ajouté'}</span>
+              {document.version && document.version > 1 && (
+                <span className="rounded-full bg-emerald-100 px-2 py-1 text-emerald-800 font-bold">v{document.version}</span>
+              )}
             </div>
-            <p className="mt-2 truncate font-mono text-[11px] font-semibold text-slate-400" title={document.reference || undefined}>
-              {document.reference ? `Réf. ${document.reference}` : 'Référence non renseignée'}
-            </p>
+            {document.reference && (
+              <p className="mt-2 truncate font-mono text-[11px] font-semibold text-slate-400" title={document.reference}>
+                Réf. {document.reference}
+              </p>
+            )}
           </div>
           <button ref={closeButtonRef} type="button" onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-950/10 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-950" aria-label="Fermer la fiche preuve">
             <X className="h-4 w-4" />
@@ -295,73 +313,86 @@ export function DocumentProofDrawer({
         </div>
       </header>
 
+      {/* Scrollable body */}
       <div className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-3.5 py-3.5 pb-28 sm:px-5 sm:py-4 xl:pb-5">
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => run('open', () => onOpen(document))} disabled={pendingAction !== null} className="sk-action sk-action-primary min-w-0 justify-center disabled:opacity-60">
+
+        {/* Primary actions */}
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => run('open', () => onOpen(document))} disabled={pendingAction !== null} className="sk-action sk-action-primary flex-1 justify-center py-2 text-xs disabled:opacity-60">
             {pendingAction === 'open' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
             Ouvrir
           </button>
-          <button type="button" onClick={() => run('download', () => onDownload(document))} disabled={pendingAction !== null} className="sk-action sk-action-secondary min-w-0 justify-center disabled:opacity-60">
+          <button type="button" onClick={() => run('download', () => onDownload(document))} disabled={pendingAction !== null} className="sk-action sk-action-secondary flex-1 justify-center py-2 text-xs disabled:opacity-60">
             {pendingAction === 'download' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             Télécharger
           </button>
         </div>
 
-        <InfoSection title="Résumé" icon={FileCheck2}>
+        {/* 1. PREUVE ET REGISTRE — en premier */}
+        <InfoSection title="Preuve et registre" icon={ShieldCheck}>
+          <InfoRow label="État de preuve" value={proofState.label} strong />
+          <InfoRow label="Preuve QR" value={document.verification ? 'Enregistrée' : document.source === 'generated' ? 'Absente' : null} />
+          <InfoRow label="Registre GED" value={document.source === 'generated' ? 'Présent' : null} />
+          <InfoRow label="Référence" value={document.reference || null} mono />
+          <InfoRow label="Enregistré le" value={formatDate(document.verification?.registeredAt)} />
+          <InfoRow label="Lecture" value={proofState.description} />
+        </InfoSection>
+
+        {/* QR / Proof actions */}
+        {(document.reference || (onVerify && document.verification) || (onCopyLink && document.verification)) && (
+          <InfoSection title="Actions de preuve" icon={QrCode}>
+            <div className="grid grid-cols-2 gap-2 py-1">
+              {document.reference && (
+                <button type="button" onClick={copyReference} className="sk-action sk-action-secondary min-w-0 justify-center px-2.5 text-xs">
+                  {referenceCopied ? <Check className="h-4 w-4 text-emerald-700" /> : <Copy className="h-4 w-4" />}
+                  Copier réf.
+                </button>
+              )}
+              {onVerify && document.verification && (
+                <button type="button" onClick={() => onVerify(document)} className="sk-action sk-action-secondary min-w-0 justify-center px-2.5 text-xs">
+                  <QrCode className="h-4 w-4" />
+                  Vérifier QR
+                </button>
+              )}
+              {onCopyLink && document.verification && (
+                <button type="button" onClick={() => run('copy-link', () => onCopyLink(document))} disabled={pendingAction !== null} className="sk-action sk-action-secondary col-span-2 min-w-0 justify-center px-2.5 text-xs disabled:opacity-60">
+                  {pendingAction === 'copy-link' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                  Copier le lien de vérification
+                </button>
+              )}
+            </div>
+          </InfoSection>
+        )}
+
+        {/* 2. CONTEXTE MÉTIER */}
+        {hasContextRows && (
+          <InfoSection title="Contexte métier" icon={Clipboard}>
+            {contextRows.map(([label, value]) =>
+              value ? <InfoRow key={label} label={label} value={value} /> : null
+            )}
+          </InfoSection>
+        )}
+
+        {/* 3. RÉSUMÉ TECHNIQUE — compact */}
+        <InfoSection title="Fiche technique" icon={FileCheck2}>
           <InfoRow label="Type" value={documentTypeLabel(document)} />
           <InfoRow label="Source" value={document.source === 'generated' ? 'Généré automatiquement' : 'Ajouté manuellement'} />
-          <InfoRow label="Statut" value={lifecycleLabel(document.lifecycleStatus)} strong />
-          <InfoRow label="Date de création" value={formatDate(document.createdAt)} />
+          <InfoRow label="Date" value={formatDate(document.createdAt)} />
           <InfoRow label="Taille" value={formatStorageSize(document.size)} />
-          <InfoRow label="Version" value={document.version ? `v${document.version}` : NOT_PROVIDED} />
-          <InfoRow label="Origine" value={document.uploadedBy || NOT_PROVIDED} />
+          {document.version && <InfoRow label="Version" value={`v${document.version}`} />}
           {document.source === 'generated' && (
             <InfoRow label="Émetteur" value={document.verification?.agencyName || metadataText(document.metadata, ['agency_name', 'nom_agence'])} />
           )}
         </InfoSection>
 
-        <InfoSection title="Contexte métier" icon={Clipboard}>
-          {contextRows.map(([label, value]) => <InfoRow key={label} label={label} value={value} />)}
-        </InfoSection>
-
-        <InfoSection title="Preuve et registre" icon={ShieldCheck}>
-          <InfoRow label="Référence" value={document.reference || NOT_PROVIDED} mono />
-          <InfoRow label="État de preuve" value={proofState.label} strong />
-          <InfoRow label="Registre GED" value={document.source === 'generated' ? 'Présent' : 'Non applicable'} />
-          <InfoRow label="Preuve QR" value={document.verification ? 'Enregistrée' : 'Absente'} />
-          <InfoRow label="Jeton de vérification" value={document.verification?.token ? 'Présent' : 'Absent'} />
-          <InfoRow label="Enregistré le" value={formatDate(document.verification?.registeredAt)} />
-          <InfoRow label="Dernière vérification" value="Non disponible" />
-          <InfoRow label="Lecture" value={proofState.description} />
-        </InfoSection>
-
-        <InfoSection title="Actions de preuve" icon={QrCode}>
-          <div className="grid grid-cols-2 gap-2 py-1">
-            {document.reference && (
-              <button type="button" onClick={copyReference} className="sk-action sk-action-secondary min-w-0 justify-center px-2.5 text-xs">
-                {referenceCopied ? <Check className="h-4 w-4 text-emerald-700" /> : <Copy className="h-4 w-4" />}
-                Copier réf.
-              </button>
-            )}
-            {onVerify && document.verification && (
-              <button type="button" onClick={() => onVerify(document)} className="sk-action sk-action-secondary min-w-0 justify-center px-2.5 text-xs">
-                <QrCode className="h-4 w-4" />
-                Vérifier QR
-              </button>
-            )}
-            {onCopyLink && document.verification && (
-              <button type="button" onClick={() => run('copy-link', () => onCopyLink(document))} disabled={pendingAction !== null} className="sk-action sk-action-secondary col-span-2 min-w-0 justify-center px-2.5 text-xs disabled:opacity-60">
-                {pendingAction === 'copy-link' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
-                Copier le lien de vérification
-              </button>
-            )}
-          </div>
-        </InfoSection>
-
+        {/* 4. ARCHIVAGE — action secondaire */}
         {canArchive && (
           <section className="rounded-2xl border border-amber-200/70 bg-amber-50/55 p-3.5">
-            <p className="text-xs font-black uppercase tracking-[0.1em] text-amber-800">Action secondaire</p>
-            <p className="mt-1 text-xs font-semibold leading-5 text-amber-900/70">Le document restera conservé et traçable dans le coffre.</p>
+            <p className="text-xs font-black uppercase tracking-[0.1em] text-amber-800">Archiver ce document</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-amber-900/70">
+              Le document reste conservé et traçable. Il sort de la vue active mais n'est pas supprimé.
+              <span className="block mt-1 opacity-70">L'archivage ne révoque pas la preuve QR enregistrée.</span>
+            </p>
             <button type="button" onClick={() => onArchive(document)} className="sk-action mt-3 w-full justify-center border border-amber-300 bg-white text-amber-800 hover:bg-amber-50">
               <Archive className="h-4 w-4" />
               Archiver le document

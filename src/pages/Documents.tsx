@@ -29,7 +29,6 @@ import { SkeletonCards } from '../components/ui/Skeleton';
 import {
   createDocumentSignedUrl,
   DOCUMENT_CATEGORY_LABELS,
-  DOCUMENT_ENTITY_LABELS,
   formatStorageSize,
   cleanupTemporaryDocuments,
   getAgencyStorageBreakdown,
@@ -124,7 +123,7 @@ interface DocumentItem extends DocumentProofDrawerData {
   isVerifiable?: boolean;
 }
 
-type DocumentTypeFilter = 'all' | 'quittance' | 'contrat' | 'mandat' | 'rapport' | 'facture' | 'justificatif' | 'archives' | 'unclassified';
+type DocumentTypeFilter = 'all' | 'quittance' | 'contrat' | 'mandat' | 'rapport' | 'facture' | 'justificatif' | 'archives' | 'unclassified' | 'noqr';
 type DocumentSourceFilter = 'all' | 'uploaded' | 'generated' | 'qr';
 type DocumentStatusFilter = 'all' | 'active' | 'archived' | 'unclassified' | 'review';
 
@@ -136,8 +135,9 @@ const DOCUMENT_TYPE_FILTERS: Array<{ id: DocumentTypeFilter; label: string }> = 
   { id: 'rapport', label: 'Rapports' },
   { id: 'facture', label: 'Factures' },
   { id: 'justificatif', label: 'Justificatifs' },
-  { id: 'archives', label: 'Archives' },
+  { id: 'archives', label: 'Archivés' },
   { id: 'unclassified', label: 'À classer' },
+  { id: 'noqr', label: 'Sans QR' },
 ];
 
 const DOCUMENT_TYPE_TITLES: Record<string, string> = {
@@ -193,7 +193,7 @@ const ENTITY_LABELS: Record<string, string> = {
   active: 'Actif',
   archived: 'Archivé',
   deleted: 'Supprimé',
-  temporary: 'Temporaire',
+  temporary: 'À revoir',
   orphaned: 'À vérifier',
 };
 
@@ -248,6 +248,7 @@ function matchesTypeFilter(item: DocumentItem, filter: DocumentTypeFilter) {
   if (filter === 'all') return true;
   if (filter === 'archives') return item.lifecycleStatus === 'archived';
   if (filter === 'unclassified') return isDocumentUnclassified(item);
+  if (filter === 'noqr') return !isQrVerifiableDocument(item) && item.source === 'generated';
   if (filter === 'justificatif') return documentTypeBadge(item) === 'JUSTIFICATIFS';
   if (filter === 'rapport') return ['rapport', 'rapport_bailleur', 'rapport_proprietaire'].includes(item.documentType ?? '');
   return item.documentType === filter;
@@ -621,6 +622,7 @@ export function Documents() {
         .some((value) => String(value).toLowerCase().includes(normalizedQuery));
     });
   }, [items, query, sourceFilter, statusFilter, typeFilter]);
+
   const selectedDocument = useMemo(
     () => items.find((item) => `${item.source}-${item.id}` === selectedDocumentId) ?? null,
     [items, selectedDocumentId]
@@ -638,6 +640,7 @@ export function Documents() {
       return acc;
     }, {} as Record<DocumentTypeFilter, number>);
   }, [items]);
+
   const visibleTypeFilters = useMemo(
     () => DOCUMENT_TYPE_FILTERS.filter((filter) => filter.id === 'all' || (typeFilterCounts[filter.id] ?? 0) > 0),
     [typeFilterCounts]
@@ -730,6 +733,7 @@ export function Documents() {
     toast.success('Document ajouté au coffre');
     await load();
   };
+
   const archiveDocument = async () => {
     if (!archiveTarget || archiveTarget.source !== 'uploaded') return;
     if (!navigator.onLine) {
@@ -753,7 +757,7 @@ export function Documents() {
   ) => {
     if (!profile?.agency_id) return;
     if (!navigator.onLine) {
-      toast.error('Connexion indisponible : maintenance documentaire impossible hors ligne.');
+      toast.error('Connexion indisponible : organisation du coffre impossible hors ligne.');
       return;
     }
     setMaintenanceAction(action);
@@ -772,7 +776,7 @@ export function Documents() {
       toast.success(total > 0 ? `${total} document(s) classé(s)` : 'Votre coffre est déjà bien classé');
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Maintenance documentaire impossible');
+      toast.error(error instanceof Error ? error.message : 'Organisation du coffre impossible');
     } finally {
       setMaintenanceAction(null);
     }
@@ -782,11 +786,6 @@ export function Documents() {
     () => CATEGORIES.filter((category) => !(isIndividualOwner && category === 'bailleurs')),
     [isIndividualOwner]
   );
-  const entityLabel = (entityType: UserDocumentEntityType) => {
-    if (isIndividualOwner && entityType === 'agency') return 'Compte propriétaire';
-    if (isIndividualOwner && entityType === 'bailleur') return 'Propriétaire';
-    return DOCUMENT_ENTITY_LABELS[entityType];
-  };
   const agencyId = profile?.agency_id ?? '';
   const usedPercent = Math.min(100, Number(usage?.usage_percent ?? 0));
   const currentUsageMessage = usageMessage(usedPercent);
@@ -794,78 +793,97 @@ export function Documents() {
   const generatedBucket = bucketValue(breakdown, 'generated');
   const criticalBucket = bucketValue(breakdown, 'critical');
   const reviewBucket = bucketValue(breakdown, 'orphaned');
+  const activeCount = items.filter((item) => item.lifecycleStatus === 'active').length;
   const verifiableCount = items.filter(isQrVerifiableDocument).length;
   const toClassifyCount = items.filter(isDocumentUnclassified).length;
   const archivedCount = items.filter((item) => item.lifecycleStatus === 'archived').length;
 
+  // KPI filter handler: click on a KPI chip applies the relevant filter
+  const handleKpiClick = (kpi: 'active' | 'qr' | 'unclassified' | 'archived') => {
+    setQuery('');
+    setSourceFilter('all');
+    if (kpi === 'active') {
+      setStatusFilter(statusFilter === 'active' ? 'all' : 'active');
+      setTypeFilter('all');
+    } else if (kpi === 'qr') {
+      setTypeFilter(typeFilter === 'noqr' ? 'all' : typeFilter);
+      setSourceFilter(sourceFilter === 'qr' ? 'all' : 'qr');
+      setStatusFilter('all');
+    } else if (kpi === 'unclassified') {
+      setStatusFilter(statusFilter === 'unclassified' ? 'all' : 'unclassified');
+      setTypeFilter('all');
+    } else if (kpi === 'archived') {
+      setStatusFilter(statusFilter === 'archived' ? 'all' : 'archived');
+      setTypeFilter('all');
+    }
+  };
+
+  const drawerOpen = !!selectedDocument;
+
   return (
     <div className="sk-mobile-page min-w-0 space-y-3.5 sm:space-y-5">
-      <div className="sk-mobile-hero max-w-full bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-3.5 text-white shadow-2xl shadow-emerald-950/15 sm:p-6">
+
+      {/* ── HERO ── */}
+      <div className="sk-mobile-hero max-w-full bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-3.5 text-white shadow-2xl shadow-emerald-950/15 sm:p-5">
         <div className="absolute -right-20 -top-20 hidden h-56 w-56 rounded-full bg-orange-300/15 blur-3xl sm:block" />
-        <div className="relative flex min-w-0 flex-col gap-3 sm:gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-emerald-100">
-              <LockKeyhole className="h-3.5 w-3.5 text-orange-200" />
+        <div className="relative flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-5">
+
+          {/* Left: title + CTA */}
+          <div className="min-w-0 flex-1">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-100">
+              <LockKeyhole className="h-3 w-3 text-orange-200" />
               Coffre documentaire
             </div>
-            <h1 className="mt-2.5 text-2xl font-extrabold tracking-tight sm:mt-4 sm:text-4xl">Documents</h1>
-            <p className="mt-1.5 max-w-xl text-sm font-medium leading-5 text-emerald-50/75 sm:mt-2 sm:text-base sm:leading-6">
-              <span className="sm:hidden">Centralisez, retrouvez et vérifiez vos documents.</span>
-              <span className="hidden sm:inline">
-                {isIndividualOwner
-                  ? 'Centralisez, retrouvez et vérifiez les preuves liées à vos biens.'
-                  : 'Centralisez, retrouvez et vérifiez les preuves de votre agence.'}
-              </span>
+            <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">
+              Documents
+            </h1>
+            <p className="mt-1 text-sm font-medium leading-5 text-emerald-50/70 sm:text-sm max-w-lg">
+              {isIndividualOwner
+                ? 'Centralisez, retrouvez et vérifiez vos preuves.'
+                : 'Centralisez, retrouvez et vérifiez vos preuves.'}
             </p>
+            <div className="mt-3 flex min-w-0 flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/documents/scan')}
+                className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-3 py-2 text-xs font-black text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F]"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" />
+                Scanner un document
+              </button>
+              <button
+                type="button"
+                onClick={() => setUploadOpen(true)}
+                data-testid="button-upload-document"
+                className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-white/18 bg-white/[0.1] px-3 py-2 text-xs font-black text-white transition hover:-translate-y-0.5 hover:bg-white/[0.16]"
+              >
+                <Upload className="h-3.5 w-3.5 flex-shrink-0" />
+                Ajouter au coffre
+              </button>
+            </div>
           </div>
 
-          <div className="min-w-0 w-full max-w-full rounded-xl border border-white/10 bg-white/[0.08] p-3 backdrop-blur sm:rounded-2xl sm:p-4 lg:max-w-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-100/65">Espace sécurisé</p>
-                <p className="mt-1 text-lg font-extrabold">
-                  {formatStorageSize(usage?.used_bytes)} <span className="text-sm font-semibold text-emerald-100/55">/ {formatStorageSize(usage?.limit_bytes)}</span>
+          {/* Right: storage — compact/secondary */}
+          <div className="min-w-0 w-full sm:w-auto sm:min-w-[200px] sm:max-w-[220px] rounded-xl border border-white/10 bg-white/[0.07] p-2.5 backdrop-blur">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-100/55">Espace sécurisé</p>
+                <p className="mt-0.5 text-sm font-extrabold">
+                  {formatStorageSize(usage?.used_bytes)}{' '}
+                  <span className="text-xs font-semibold text-emerald-100/45">/ {formatStorageSize(usage?.limit_bytes)}</span>
                 </p>
               </div>
-              <HardDrive className="h-5 w-5 text-orange-200 sm:h-7 sm:w-7" />
+              <HardDrive className="h-4 w-4 text-emerald-200/60 flex-shrink-0" />
             </div>
-            <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/10 sm:mt-4 sm:h-2">
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
               <div className={`h-full rounded-full ${usageTone(usedPercent)} transition-all duration-700`} style={{ width: `${usedPercent}%` }} />
             </div>
-            <div className="mt-2 grid min-w-0 grid-cols-3 gap-1.5 text-[10px] text-emerald-50/70 sm:mt-3 sm:gap-2 sm:text-xs">
-              <span className="min-w-0"><span className="block truncate">Uploads</span><strong className="block truncate text-emerald-50/90">{formatStorageSize(usage?.uploaded_bytes)}</strong></span>
-              <span className="min-w-0"><span className="block truncate">Générés</span><strong className="block truncate text-emerald-50/90">{formatStorageSize(usage?.generated_bytes)}</strong></span>
-              <span className="min-w-0"><span className="block truncate">Archives</span><strong className="block truncate text-emerald-50/90">{formatStorageSize(usage?.archived_bytes)}</strong></span>
-            </div>
           </div>
-        </div>
-        <div className="relative mt-3 min-w-0 sm:mt-5">
-          <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex">
-            <button
-              type="button"
-              onClick={() => navigate('/documents/scan')}
-              className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-2.5 py-2.5 text-xs font-black text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] sm:gap-2 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm"
-            >
-              <ShieldCheck className="h-4 w-4 flex-shrink-0" />
-              <span className="min-w-0">Scanner un document</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setUploadOpen(true)}
-              data-testid="button-upload-document"
-              className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-white/18 bg-white/[0.1] px-2.5 py-2.5 text-xs font-black text-white transition hover:-translate-y-0.5 hover:bg-white/[0.16] sm:gap-2 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm"
-            >
-              <Upload className="h-4 w-4 flex-shrink-0" />
-              <span className="min-w-0">Ajouter un document</span>
-            </button>
-            <p className="hidden min-w-0 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 text-xs font-semibold leading-5 text-emerald-50/70 sm:block sm:flex-1">
-              Scannez un QR ou collez une référence pour vérifier une preuve.
-            </p>
-          </div>
-          <p className="mt-1.5 text-center text-[11px] font-semibold text-emerald-50/65 sm:hidden">Scannez un QR ou une référence.</p>
+
         </div>
       </div>
 
+      {/* ── USAGE WARNING ── */}
       {currentUsageMessage && (
         <div className={`flex flex-col gap-3 rounded-2xl border p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between ${currentUsageMessage.tone}`}>
           <div className="flex items-start gap-3">
@@ -893,47 +911,82 @@ export function Documents() {
         message="Les documents affichés viennent du dernier chargement réussi. Les fichiers eux-mêmes nécessitent une connexion pour être ouverts ou modifiés."
       />
 
+      {/* ── KPI MÉTIER — actionnables ── */}
       <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
         {[
-          { label: 'Documents actifs', value: items.filter((item) => item.lifecycleStatus === 'active').length, helper: 'Disponibles', icon: FileCheck2 },
-          { label: 'Vérifiables QR', value: verifiableCount, helper: 'Preuves contrôlables', icon: ShieldCheck },
-          { label: 'À classer', value: toClassifyCount, helper: 'Sans lien métier', icon: FolderOpen },
-          { label: 'Archivés', value: archivedCount, helper: 'Conservés', icon: Archive },
+          {
+            id: 'active' as const,
+            label: 'Preuves actives',
+            value: activeCount,
+            helper: 'Documents disponibles',
+            icon: FileCheck2,
+            isActive: statusFilter === 'active',
+          },
+          {
+            id: 'qr' as const,
+            label: 'Vérifiables QR',
+            value: verifiableCount,
+            helper: 'Preuves contrôlables publiquement',
+            icon: ShieldCheck,
+            isActive: sourceFilter === 'qr',
+          },
+          {
+            id: 'unclassified' as const,
+            label: 'À classer',
+            value: toClassifyCount,
+            helper: 'Sans lien métier',
+            icon: FolderOpen,
+            isActive: statusFilter === 'unclassified',
+          },
+          {
+            id: 'archived' as const,
+            label: 'Archivés',
+            value: archivedCount,
+            helper: 'Conservés hors vue active',
+            icon: Archive,
+            isActive: statusFilter === 'archived',
+          },
         ].map((metric) => (
-          <div key={metric.label} className="sk-metric-tile min-w-0 p-2.5 sm:p-3">
+          <button
+            key={metric.id}
+            type="button"
+            onClick={() => handleKpiClick(metric.id)}
+            className={`sk-metric-tile min-w-0 p-2.5 sm:p-3 text-left transition-all duration-200 cursor-pointer hover:-translate-y-0.5 ${metric.isActive ? 'ring-2 ring-emerald-700/25 border-emerald-700/30' : ''}`}
+            aria-pressed={metric.isActive}
+          >
             <div className="flex min-w-0 items-start justify-between gap-2">
               <p className="min-w-0 text-[10px] font-semibold uppercase leading-4 tracking-[0.06em] text-slate-500 sm:text-xs sm:tracking-[0.08em]">{metric.label}</p>
-              <metric.icon className="h-3.5 w-3.5 flex-shrink-0 text-emerald-700 sm:h-4 sm:w-4" />
+              <metric.icon className={`h-3.5 w-3.5 flex-shrink-0 sm:h-4 sm:w-4 ${metric.isActive ? 'text-emerald-700' : 'text-emerald-600/70'}`} />
             </div>
             <p className="mt-1.5 text-lg font-extrabold leading-none text-slate-950 sm:mt-2 sm:text-xl">{metric.value}</p>
             <p className="mt-1 truncate text-[10px] font-semibold text-slate-400 sm:text-xs">{metric.helper}</p>
-          </div>
+          </button>
         ))}
       </div>
 
-      <div className={`grid min-w-0 items-start gap-4 ${selectedDocument ? 'xl:grid-cols-[minmax(0,1fr)_31.5rem]' : ''}`}>
+      {/* ── MAIN CONTENT AREA — split view quand drawer ouvert ── */}
+      <div className={`grid min-w-0 items-start gap-4 ${drawerOpen ? 'xl:grid-cols-[minmax(0,1fr)_32rem]' : ''}`}>
+
+        {/* LIST SECTION */}
         <section className="min-w-0 max-w-full space-y-3 pb-24 sm:space-y-4 sm:pb-0">
+
+          {/* TOOLBAR */}
           <div className="sk-premium-panel min-w-0 max-w-full p-3">
+            {/* Line 1: search + selects */}
             <div className="grid min-w-0 grid-cols-2 gap-2.5 lg:flex lg:items-center">
               <label className="relative col-span-2 min-w-0 flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Rechercher un document..."
-                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:hidden"
-                />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
                   placeholder="Rechercher un document, une référence, un locataire..."
-                  className="hidden sm:block w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
+                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
                 />
               </label>
               <select
                 value={sourceFilter}
                 onChange={(event) => setSourceFilter(event.target.value as DocumentSourceFilter)}
-                className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:text-sm lg:w-[210px]"
+                className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 lg:w-[190px]"
               >
                 <option value="all">Tous les documents</option>
                 <option value="uploaded">Ajoutés manuellement</option>
@@ -943,7 +996,7 @@ export function Documents() {
               <select
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as DocumentStatusFilter)}
-                className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 sm:text-sm lg:w-[170px]"
+                className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 lg:w-[155px]"
               >
                 <option value="all">Tous les statuts</option>
                 <option value="active">Actifs</option>
@@ -952,6 +1005,8 @@ export function Documents() {
                 <option value="archived">Archivés</option>
               </select>
             </div>
+
+            {/* Line 2: type chips */}
             <div className="scrollbar-hide -mx-1 mt-2.5 flex max-w-[calc(100%+0.5rem)] gap-1.5 overflow-x-auto px-1 pb-1">
               {visibleTypeFilters.map((filter) => (
                 <button
@@ -959,7 +1014,11 @@ export function Documents() {
                   type="button"
                   onClick={() => setTypeFilter(filter.id)}
                   className={`flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${typeFilter === filter.id
-                      ? 'border-emerald-950 bg-emerald-950 text-white shadow-sm'
+                    ? filter.id === 'noqr'
+                      ? 'border-amber-700 bg-amber-700 text-white shadow-sm'
+                      : 'border-emerald-950 bg-emerald-950 text-white shadow-sm'
+                    : filter.id === 'noqr'
+                      ? 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-300 hover:bg-amber-100'
                       : 'border-emerald-950/10 bg-white text-slate-600 hover:border-emerald-800/25 hover:bg-emerald-50'
                     }`}
                 >
@@ -970,102 +1029,255 @@ export function Documents() {
             </div>
           </div>
 
+          {/* DOCUMENT LIST / TABLE */}
           {loading ? (
             <SkeletonCards count={6} />
           ) : filteredItems.length === 0 ? (
             <div className="rounded-2xl border border-emerald-950/10 bg-white/90 shadow-sm">
-              <EmptyState icon={FolderOpen} title="Aucun document" description="Ajustez les filtres ou archivez un premier fichier." />
+              <EmptyState
+                icon={FolderOpen}
+                title={query || typeFilter !== 'all' || statusFilter !== 'all' || sourceFilter !== 'all' ? 'Aucun document trouvé' : 'Aucun document'}
+                description={
+                  query || typeFilter !== 'all' || statusFilter !== 'all' || sourceFilter !== 'all'
+                    ? 'Ajustez les filtres ou réinitialisez la recherche.'
+                    : 'Ajoutez votre premier document au coffre.'
+                }
+              />
             </div>
           ) : (
-            <div className={`grid min-w-0 max-w-full gap-3 ${selectedDocument ? 'xl:grid-cols-1 2xl:grid-cols-2' : 'xl:grid-cols-2'}`}>
-              {filteredItems.map((item) => {
-                const Icon = ['rapport', 'rapport_bailleur', 'rapport_proprietaire'].includes(item.documentType ?? '')
-                  ? BarChart3
-                  : CATEGORY_ICONS[item.category];
-                const statusLabel = lifecycleLabel(item);
-                const proofState = getDocumentProofState(item);
-                const showProofBadge = ['verifiable', 'review', 'revoked', 'superseded'].includes(proofState.kind);
-                const isSelected = `${item.source}-${item.id}` === selectedDocumentId;
-                return (
-                  <article
-                    key={`${item.source}-${item.id}`}
-                    className={`group sk-mobile-card min-w-0 max-w-full overflow-hidden p-3 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-800/20 hover:shadow-premium active:scale-[0.992] ${isSelected ? 'border-emerald-700/45 bg-emerald-50/45 ring-2 ring-emerald-700/10' : ''}`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDocumentId(`${item.source}-${item.id}`)}
-                      className="block w-full min-w-0 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
-                      aria-label={`Consulter la fiche de ${item.title}`}
-                      aria-pressed={isSelected}
-                    >
-                      <div className="flex items-start gap-2.5 sm:gap-3">
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10 sm:h-11 sm:w-11 sm:rounded-2xl">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-700">{documentTypeBadge(item)}</p>
-                          <h2 className="mt-1 line-clamp-2 break-words text-[15px] font-extrabold leading-5 text-slate-950 [overflow-wrap:anywhere] sm:text-base">{item.title}</h2>
-                          <p className="mt-0.5 line-clamp-2 break-words text-xs font-semibold leading-5 text-slate-500 [overflow-wrap:anywhere] sm:text-sm">{item.subtitle}</p>
-                        </div>
-                        <span className="inline-flex flex-shrink-0 items-center gap-1 text-xs font-bold text-emerald-800">
-                          <span className="hidden sm:inline">Détails</span>
-                          <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                        </span>
-                      </div>
+            <>
+              {/* Desktop: dense list when drawer closed, compact when open */}
+              <div className={`hidden xl:block`}>
+                <div className="sk-table-shell overflow-hidden">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-emerald-950/8 bg-[#faf9f5]/95">
+                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Document</th>
+                        {!drawerOpen && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Contexte</th>}
+                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Période</th>
+                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Statut</th>
+                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Preuve</th>
+                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 text-right">Date</th>
+                        <th className="w-10" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100/80">
+                      {filteredItems.map((item) => {
+                        const Icon = ['rapport', 'rapport_bailleur', 'rapport_proprietaire'].includes(item.documentType ?? '')
+                          ? BarChart3
+                          : CATEGORY_ICONS[item.category];
+                        const proofState = getDocumentProofState(item);
+                        const isSelected = `${item.source}-${item.id}` === selectedDocumentId;
+                        const statusLabel = lifecycleLabel(item);
+                        return (
+                          <tr
+                            key={`${item.source}-${item.id}`}
+                            onClick={() => setSelectedDocumentId(`${item.source}-${item.id}`)}
+                            className={`group cursor-pointer transition-colors duration-150 hover:bg-emerald-50/60 ${isSelected ? 'bg-emerald-50/80 shadow-[inset_3px_0_0_0_#047857]' : ''}`}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedDocumentId(`${item.source}-${item.id}`); }}
+                            aria-pressed={isSelected}
+                          >
+                            {/* Document */}
+                            <td className="px-4 py-2.5">
+                              <div className="flex items-start gap-2.5 min-w-0">
+                                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10 mt-0.5">
+                                  <Icon className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate text-xs font-extrabold text-slate-900">{item.title}</p>
+                                  {drawerOpen ? (() => {
+                                    const subject = item.businessContext?.subject || item.subtitle;
+                                    const location = item.businessContext?.location;
+                                    
+                                    // Helper anti-duplication
+                                    const secondaryParts = [subject, location]
+                                      .filter((part): part is string => Boolean(part))
+                                      .filter(part => !item.title.toLowerCase().includes(part.toLowerCase()));
 
-                      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
-                          {item.source === 'generated' ? 'Généré' : 'Ajouté'}
-                        </span>
-                        {showProofBadge && (
-                          <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${proofState.kind === 'verifiable'
+                                    return (
+                                      <div className="mt-0.5 flex flex-col gap-0.5">
+                                        {secondaryParts.length > 0 ? (
+                                          <p className="truncate text-[11px] font-bold text-slate-600">{secondaryParts.join(' · ')}</p>
+                                        ) : item.reference ? (
+                                          <p className="truncate font-mono text-[10px] font-semibold text-slate-400">Réf. {item.reference}</p>
+                                        ) : null}
+                                      </div>
+                                    );
+                                  })() : (
+                                    <div className="mt-0.5 flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                                      <span className="flex-shrink-0 uppercase tracking-[0.05em] text-emerald-700/80">{documentTypeBadge(item)}</span>
+                                      {item.reference && (
+                                        <>
+                                          <span className="flex-shrink-0 text-slate-300">•</span>
+                                          <span className="flex-shrink-0 truncate font-mono max-w-[120px] sm:max-w-none">Réf. {item.reference}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            {/* Contexte */}
+                            {!drawerOpen && (
+                              <td className="px-3 py-2.5">
+                                <div className="min-w-0 max-w-[200px]">
+                                  {item.businessContext?.subject ? (
+                                    <p className="truncate text-xs font-bold text-slate-700">{item.businessContext.subject}</p>
+                                  ) : item.subtitle ? (
+                                    <p className="truncate text-xs font-bold text-slate-700">{item.subtitle}</p>
+                                  ) : (
+                                    <p className="text-xs font-semibold text-slate-400">—</p>
+                                  )}
+                                  {item.businessContext?.location && (
+                                    <p className="truncate text-[10px] font-semibold text-slate-500 mt-0.5">{item.businessContext.location}</p>
+                                  )}
+                                </div>
+                              </td>
+                            )}
+                            {/* Période / Version */}
+                            <td className="px-3 py-2.5">
+                              <div className="min-w-0">
+                                <p className="text-xs font-semibold text-slate-700">
+                                  {item.period ? formatDocumentPeriod(item.period) : '—'}
+                                </p>
+                                {item.version && item.version > 1 && (
+                                  <span className="inline-block mt-0.5 rounded bg-emerald-100/50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                                    v{item.version}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            {/* Statut */}
+                            <td className="px-3 py-2.5">
+                              <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${statusLabel === 'Archivé'
+                                ? 'bg-slate-100 text-slate-600'
+                                : statusLabel === 'À classer' || statusLabel === 'À revoir'
+                                  ? 'bg-amber-50 text-amber-700'
+                                  : 'bg-emerald-50 text-emerald-800'
+                                }`}>{statusLabel}</span>
+                            </td>
+                            {/* Preuve */}
+                            <td className="px-3 py-2.5">
+                              {proofState.kind === 'verifiable' ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">
+                                  <ShieldCheck className="h-3 w-3" />
+                                  QR
+                                </span>
+                              ) : proofState.kind === 'revoked' ? (
+                                <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-bold text-red-700">Révoquée</span>
+                              ) : proofState.kind === 'review' ? (
+                                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">À revoir</span>
+                              ) : item.source === 'generated' ? (
+                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">Sans QR</span>
+                              ) : (
+                                <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-400">Ajouté</span>
+                              )}
+                            </td>
+                            {/* Date */}
+                            <td className="px-3 py-2.5 text-right">
+                              <p className="text-xs font-semibold text-slate-500 whitespace-nowrap">{new Date(item.createdAt).toLocaleDateString('fr-FR')}</p>
+                            </td>
+                            {/* Chevron */}
+                            <td className="px-2 py-2.5">
+                              <ChevronRight className="h-4 w-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-700" />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Mobile + tablet: cards */}
+              <div className={`xl:hidden grid min-w-0 max-w-full gap-3`}>
+                {filteredItems.map((item) => {
+                  const Icon = ['rapport', 'rapport_bailleur', 'rapport_proprietaire'].includes(item.documentType ?? '')
+                    ? BarChart3
+                    : CATEGORY_ICONS[item.category];
+                  const statusLabel = lifecycleLabel(item);
+                  const proofState = getDocumentProofState(item);
+                  const showProofBadge = ['verifiable', 'review', 'revoked', 'superseded'].includes(proofState.kind);
+                  const isSelected = `${item.source}-${item.id}` === selectedDocumentId;
+                  return (
+                    <article
+                      key={`${item.source}-${item.id}`}
+                      className={`group sk-mobile-card min-w-0 max-w-full overflow-hidden p-3 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-800/20 hover:shadow-premium active:scale-[0.992] ${isSelected ? 'border-emerald-700/45 bg-emerald-50/45 ring-2 ring-emerald-700/10' : ''}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDocumentId(`${item.source}-${item.id}`)}
+                        className="block w-full min-w-0 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
+                        aria-label={`Consulter la fiche de ${item.title}`}
+                        aria-pressed={isSelected}
+                      >
+                        <div className="flex items-start gap-2.5 sm:gap-3">
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10 sm:h-11 sm:w-11 sm:rounded-2xl">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-700">{documentTypeBadge(item)}</p>
+                            <h2 className="mt-1 line-clamp-2 break-words text-[15px] font-extrabold leading-5 text-slate-950 [overflow-wrap:anywhere] sm:text-base">{item.title}</h2>
+                            <p className="mt-0.5 line-clamp-2 break-words text-xs font-semibold leading-5 text-slate-500 [overflow-wrap:anywhere] sm:text-sm">{item.subtitle}</p>
+                          </div>
+                          <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-700 mt-1" />
+                        </div>
+
+                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                          <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
+                            {item.source === 'generated' ? 'Généré' : 'Ajouté'}
+                          </span>
+                          {showProofBadge && (
+                            <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${proofState.kind === 'verifiable'
                               ? 'bg-sky-50 text-sky-700'
                               : proofState.kind === 'revoked'
                                 ? 'bg-red-50 text-red-700'
                                 : proofState.kind === 'superseded'
                                   ? 'bg-orange-50 text-orange-700'
                                   : 'bg-amber-50 text-amber-700'
-                            }`}>
-                            {proofState.label}
-                          </span>
-                        )}
-                        <span
-                          className={`rounded-full px-2 py-1 text-[10px] font-bold ${statusLabel === 'Archivé'
+                              }`}>
+                              {proofState.label}
+                            </span>
+                          )}
+                          <span
+                            className={`rounded-full px-2 py-1 text-[10px] font-bold ${statusLabel === 'Archivé'
                               ? 'bg-slate-100 text-slate-600'
                               : statusLabel === 'À classer' || statusLabel === 'À revoir'
                                 ? 'bg-amber-50 text-amber-700'
                                 : 'bg-emerald-50 text-emerald-800'
-                            }`}
-                        >
-                          {statusLabel}
-                        </span>
-                        {item.retentionPolicy === 'critical' && proofState.kind !== 'verifiable' && (
-                          <span className="rounded-full bg-violet-50 px-2 py-1 text-[10px] font-bold text-violet-700">Protégé</span>
-                        )}
-                      </div>
+                              }`}
+                          >
+                            {statusLabel}
+                          </span>
+                        </div>
 
-                      <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-slate-400 sm:text-xs">
-                        <span>{formatStorageSize(item.size)}</span>
-                        <span>{new Date(item.createdAt).toLocaleDateString('fr-FR')}</span>
-                        {item.entityType && <span>{entityLabel(item.entityType)}</span>}
-                      </div>
-                      {item.reference && (
-                        <p className="mt-1.5 truncate font-mono text-[10px] font-semibold text-slate-400 sm:text-[11px]" title={item.reference}>
-                          Réf. {item.reference}
-                        </p>
-                      )}
-                    </button>
-                  </article>
-                );
-              })}
-            </div>
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-slate-400 sm:text-xs">
+                          <span>{formatStorageSize(item.size)}</span>
+                          <span>{new Date(item.createdAt).toLocaleDateString('fr-FR')}</span>
+                          {item.period && <span>{formatDocumentPeriod(item.period)}</span>}
+                          {item.version && item.version > 1 && <span className="text-emerald-700 font-bold">v{item.version}</span>}
+                        </div>
+                        {item.reference && (
+                          <p className="mt-1.5 truncate font-mono text-[10px] font-semibold text-slate-400 sm:text-[11px]" title={item.reference}>
+                            Réf. {item.reference}
+                          </p>
+                        )}
+                      </button>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
           )}
 
+          {/* MAINTENANCE — masquée par défaut, vocabulaire métier */}
           <details className="sk-premium-panel group/details min-w-0 overflow-hidden">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-bold text-slate-700 sm:px-4">
               <span className="flex min-w-0 items-center gap-2">
                 <RefreshCw className={`h-4 w-4 flex-shrink-0 text-emerald-700 ${maintenanceAction ? 'animate-spin' : ''}`} />
-                <span className="truncate">Organisation et classement du coffre</span>
+                <span className="truncate">Organisation du coffre</span>
               </span>
               <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-open/details:rotate-90" />
             </summary>
@@ -1075,7 +1287,7 @@ export function Documents() {
                   { label: 'Ajoutés', bucket: uploadedBucket },
                   { label: 'Générés', bucket: generatedBucket },
                   { label: 'Protégés', bucket: criticalBucket },
-                  { label: 'À revoir', bucket: reviewBucket },
+                  { label: 'À classer', bucket: reviewBucket },
                 ].map((entry) => (
                   <div key={entry.label} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5">
                     <p className="truncate text-[10px] font-bold uppercase tracking-[0.06em] text-slate-400">{entry.label}</p>
@@ -1092,22 +1304,25 @@ export function Documents() {
           </details>
         </section>
 
+        {/* DRAWER — pleine hauteur colonne droite sur xl */}
         {selectedDocument && (
-          <DocumentProofDrawer
-            document={selectedDocument}
-            canArchive={selectedDocument.source === 'uploaded' && selectedDocument.retentionPolicy !== 'critical' && selectedDocument.lifecycleStatus === 'active'}
-            onClose={() => setSelectedDocumentId(null)}
-            onOpen={(item) => openDocument(item as DocumentItem)}
-            onDownload={(item) => downloadDocument(item as DocumentItem)}
-            onArchive={(item) => {
-              setSelectedDocumentId(null);
-              setArchiveTarget(item as DocumentItem);
-            }}
-            onVerify={selectedDocument.verification ? (item) => verifyDocument(item as DocumentItem) : undefined}
-            onCopyLink={selectedDocument.verification ? (item) => copyVerificationLink(item as DocumentItem) : undefined}
-            onNotify={(message) => toast.success(message)}
-            onError={(message) => toast.error(message)}
-          />
+          <div className="xl:sticky xl:top-4 xl:self-start xl:h-[calc(100vh-2rem)]">
+            <DocumentProofDrawer
+              document={selectedDocument}
+              canArchive={selectedDocument.source === 'uploaded' && selectedDocument.retentionPolicy !== 'critical' && selectedDocument.lifecycleStatus === 'active'}
+              onClose={() => setSelectedDocumentId(null)}
+              onOpen={(item) => openDocument(item as DocumentItem)}
+              onDownload={(item) => downloadDocument(item as DocumentItem)}
+              onArchive={(item) => {
+                setSelectedDocumentId(null);
+                setArchiveTarget(item as DocumentItem);
+              }}
+              onVerify={selectedDocument.verification ? (item) => verifyDocument(item as DocumentItem) : undefined}
+              onCopyLink={selectedDocument.verification ? (item) => copyVerificationLink(item as DocumentItem) : undefined}
+              onNotify={(message) => toast.success(message)}
+              onError={(message) => toast.error(message)}
+            />
+          </div>
         )}
       </div>
 

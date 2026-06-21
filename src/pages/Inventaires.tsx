@@ -309,7 +309,7 @@ export function Inventaires() {
       key: 'statut',
       label: 'Statut',
       render: (i: Inventaire) => (
-        <select
+        <select aria-label="Sélection"
           value={i.statut}
           onChange={(e) => updateStatut(i.id, e.target.value as Inventaire['statut'])}
           data-testid={`select-statut-${i.id}`}
@@ -334,7 +334,7 @@ export function Inventaires() {
           >
             <Download className="w-3 h-3" /> PDF
           </button>
-          <button
+          <button aria-label="Action"
             type="button"
             onClick={() => setDeleteTarget(i)}
             data-testid={`button-delete-${i.id}`}
@@ -366,18 +366,18 @@ export function Inventaires() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value as InventaireTypeFilter)} data-testid="filter-type" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        <select aria-label="Sélection" value={filterType} onChange={(e) => setFilterType(e.target.value as InventaireTypeFilter)} data-testid="filter-type" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Tous types</option>
           <option value="entree">Entrée</option>
           <option value="sortie">Sortie</option>
         </select>
-        <select value={filterStatut} onChange={(e) => setFilterStatut(e.target.value as InventaireStatutFilter)} data-testid="filter-statut" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        <select aria-label="Sélection" value={filterStatut} onChange={(e) => setFilterStatut(e.target.value as InventaireStatutFilter)} data-testid="filter-statut" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Tous statuts</option>
           <option value="en_cours">En cours</option>
           <option value="termine">Terminé</option>
           <option value="litige">Litige</option>
         </select>
-        <select value={filterImmeuble} onChange={(e) => setFilterImmeuble(e.target.value)} data-testid="filter-immeuble" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        <select aria-label="Sélection" value={filterImmeuble} onChange={(e) => setFilterImmeuble(e.target.value)} data-testid="filter-immeuble" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Tous immeubles</option>
           {immeubles.map((im) => (
             <option key={im.id} value={im.id}>{im.nom}</option>
@@ -408,7 +408,7 @@ export function Inventaires() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Contrat</label>
-              <select required value={form.contrat_id} onChange={(e) => setForm({ ...form, contrat_id: e.target.value })} data-testid="select-contrat" className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+              <select aria-label="Sélection" required value={form.contrat_id} onChange={(e) => setForm({ ...form, contrat_id: e.target.value })} data-testid="select-contrat" className="w-full px-3 py-2 border border-slate-300 rounded-lg">
                 <option value="">— Sélectionner —</option>
                 {contrats.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -419,19 +419,19 @@ export function Inventaires() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
-              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'entree' | 'sortie' })} data-testid="select-type" className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+              <select aria-label="Sélection" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'entree' | 'sortie' })} data-testid="select-type" className="w-full px-3 py-2 border border-slate-300 rounded-lg">
                 <option value="entree">Entrée</option>
                 <option value="sortie">Sortie</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
-              <input type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+              <input aria-label="Champ de saisie" type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
             </div>
             {form.type === 'sortie' && (
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Caution retenue (XOF)</label>
-                <input type="number" min={0} value={form.caution_retenue} onChange={(e) => setForm({ ...form, caution_retenue: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+                <input aria-label="Champ de saisie" type="number" min={0} value={form.caution_retenue} onChange={(e) => setForm({ ...form, caution_retenue: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
               </div>
             )}
           </div>
@@ -451,13 +451,13 @@ export function Inventaires() {
               {form.pieces.map((p, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-2 items-center">
                   <input type="text" placeholder="Nom de la pièce" required value={p.nom} onChange={(e) => updatePiece(idx, { nom: e.target.value })} className="col-span-4 px-2 py-1.5 border border-slate-300 rounded text-sm" />
-                  <select value={p.etat} onChange={(e) => updatePiece(idx, { etat: e.target.value as Piece['etat'] })} className={`col-span-3 px-2 py-1.5 border rounded text-sm ${etatColors[p.etat]}`}>
+                  <select aria-label="Sélection" value={p.etat} onChange={(e) => updatePiece(idx, { etat: e.target.value as Piece['etat'] })} className={`col-span-3 px-2 py-1.5 border rounded text-sm ${etatColors[p.etat]}`}>
                     <option value="bon">Bon</option>
                     <option value="moyen">Moyen</option>
                     <option value="mauvais">Mauvais</option>
                   </select>
                   <input type="text" placeholder="Observations" value={p.observations} onChange={(e) => updatePiece(idx, { observations: e.target.value })} className="col-span-4 px-2 py-1.5 border border-slate-300 rounded text-sm" />
-                  <button type="button" onClick={() => removePiece(idx)} className="col-span-1 text-red-600 hover:text-red-800"><Trash2 className="w-4 h-4" /></button>
+                  <button aria-label="Action" type="button" onClick={() => removePiece(idx)} className="col-span-1 text-red-600 hover:text-red-800"><Trash2 className="w-4 h-4" /></button>
                 </div>
               ))}
             </div>
@@ -465,7 +465,7 @@ export function Inventaires() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Observations générales</label>
-            <textarea value={form.observations} onChange={(e) => setForm({ ...form, observations: e.target.value })} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+            <textarea aria-label="Zone de texte" value={form.observations} onChange={(e) => setForm({ ...form, observations: e.target.value })} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">

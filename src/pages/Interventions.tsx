@@ -188,13 +188,13 @@ export function Interventions() {
       </div>
 
       <div className="flex flex-wrap gap-3 mb-4">
-        <select value={filterUrgence} onChange={(e) => setFilterUrgence(e.target.value as UrgenceFilter)} data-testid="filter-urgence" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        <select aria-label="Sélection" value={filterUrgence} onChange={(e) => setFilterUrgence(e.target.value as UrgenceFilter)} data-testid="filter-urgence" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Toute urgence</option>
           <option value="urgente">Urgente</option>
           <option value="normale">Normale</option>
           <option value="basse">Basse</option>
         </select>
-        <select value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value as CategorieFilter)} data-testid="filter-categorie" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        <select aria-label="Sélection" value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value as CategorieFilter)} data-testid="filter-categorie" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Toute catégorie</option>
           <option value="plomberie">Plomberie</option>
           <option value="electricite">Électricité</option>
@@ -203,7 +203,7 @@ export function Interventions() {
           <option value="climatisation">Climatisation</option>
           <option value="autre">Autre</option>
         </select>
-        <select value={filterImmeuble} onChange={(e) => setFilterImmeuble(e.target.value)} data-testid="filter-immeuble-int" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
+        <select aria-label="Sélection" value={filterImmeuble} onChange={(e) => setFilterImmeuble(e.target.value)} data-testid="filter-immeuble-int" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
           <option value="all">Tous immeubles</option>
           {immeubles.map((im) => (
             <option key={im.id} value={im.id}>{im.nom}</option>
@@ -305,30 +305,30 @@ export function Interventions() {
         <form onSubmit={submit} className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Titre</label>
-            <input type="text" required value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} data-testid="input-titre" className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+            <input aria-label="Champ de saisie" type="text" required value={form.titre} onChange={(e) => setForm({ ...form, titre: e.target.value })} data-testid="input-titre" className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-            <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+            <textarea aria-label="Zone de texte" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Immeuble</label>
-              <select value={form.immeuble_id} onChange={(e) => setForm({ ...form, immeuble_id: e.target.value, unite_id: '' })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+              <select aria-label="Sélection" value={form.immeuble_id} onChange={(e) => setForm({ ...form, immeuble_id: e.target.value, unite_id: '' })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
                 <option value="">— Aucun —</option>
                 {immeubles.map((i) => <option key={i.id} value={i.id}>{i.nom}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Unité</label>
-              <select value={form.unite_id} onChange={(e) => setForm({ ...form, unite_id: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+              <select aria-label="Sélection" value={form.unite_id} onChange={(e) => setForm({ ...form, unite_id: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
                 <option value="">— Aucune —</option>
                 {filteredUnites.map((u) => <option key={u.id} value={u.id}>{u.nom}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Catégorie</label>
-              <select value={form.categorie} onChange={(e) => setForm({ ...form, categorie: e.target.value as Categorie })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+              <select aria-label="Sélection" value={form.categorie} onChange={(e) => setForm({ ...form, categorie: e.target.value as Categorie })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
                 <option value="plomberie">Plomberie</option>
                 <option value="electricite">Électricité</option>
                 <option value="peinture">Peinture</option>
@@ -339,7 +339,7 @@ export function Interventions() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Urgence</label>
-              <select value={form.urgence} onChange={(e) => setForm({ ...form, urgence: e.target.value as Urgence })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+              <select aria-label="Sélection" value={form.urgence} onChange={(e) => setForm({ ...form, urgence: e.target.value as Urgence })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
                 <option value="basse">Basse</option>
                 <option value="normale">Normale</option>
                 <option value="urgente">Urgente</option>
@@ -347,7 +347,7 @@ export function Interventions() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Demandé par</label>
-              <select value={form.demande_par} onChange={(e) => setForm({ ...form, demande_par: e.target.value as DemandePar })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
+              <select aria-label="Sélection" value={form.demande_par} onChange={(e) => setForm({ ...form, demande_par: e.target.value as DemandePar })} className="w-full px-3 py-2 border border-slate-300 rounded-lg">
                 <option value="locataire">Locataire</option>
                 <option value="bailleur">Bailleur</option>
                 <option value="agent">Agent</option>
@@ -355,23 +355,23 @@ export function Interventions() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Date demande</label>
-              <input type="date" required value={form.date_demande} onChange={(e) => setForm({ ...form, date_demande: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+              <input aria-label="Champ de saisie" type="date" required value={form.date_demande} onChange={(e) => setForm({ ...form, date_demande: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Date souhaitée</label>
-              <input type="date" value={form.date_souhaitee} onChange={(e) => setForm({ ...form, date_souhaitee: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+              <input aria-label="Champ de saisie" type="date" value={form.date_souhaitee} onChange={(e) => setForm({ ...form, date_souhaitee: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Prestataire</label>
-              <input type="text" value={form.prestataire_nom} onChange={(e) => setForm({ ...form, prestataire_nom: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+              <input aria-label="Champ de saisie" type="text" value={form.prestataire_nom} onChange={(e) => setForm({ ...form, prestataire_nom: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Téléphone prestataire</label>
-              <input type="tel" value={form.prestataire_telephone} onChange={(e) => setForm({ ...form, prestataire_telephone: formatSenegalPhoneInput(e.target.value) })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+              <input aria-label="Champ de saisie" type="tel" value={form.prestataire_telephone} onChange={(e) => setForm({ ...form, prestataire_telephone: formatSenegalPhoneInput(e.target.value) })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Coût estimé</label>
-              <input type="number" min={0} value={form.cout_estime} onChange={(e) => setForm({ ...form, cout_estime: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+              <input aria-label="Champ de saisie" type="number" min={0} value={form.cout_estime} onChange={(e) => setForm({ ...form, cout_estime: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
             </div>
           </div>
           <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">

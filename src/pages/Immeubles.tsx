@@ -399,7 +399,7 @@ export function Immeubles() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Nom *</label>
-            <input
+            <input aria-label="Champ de saisie"
               type="text"
               required
               value={formData.nom}
@@ -410,7 +410,7 @@ export function Immeubles() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Adresse *</label>
-            <input
+            <input aria-label="Champ de saisie"
               type="text"
               required
               value={formData.adresse}
@@ -422,7 +422,7 @@ export function Immeubles() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Quartier</label>
-              <input
+              <input aria-label="Champ de saisie"
                 type="text"
                 value={formData.quartier}
                 onChange={(e) => setFormData({ ...formData, quartier: e.target.value })}
@@ -431,7 +431,7 @@ export function Immeubles() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Ville *</label>
-              <input
+              <input aria-label="Champ de saisie"
                 type="text"
                 required
                 value={formData.ville}
@@ -451,7 +451,7 @@ export function Immeubles() {
           ) : (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Bailleur *</label>
-              <select
+              <select aria-label="Sélection"
                 required
                 value={formData.bailleur_id}
                 onChange={(e) => setFormData({ ...formData, bailleur_id: e.target.value })}
@@ -469,7 +469,7 @@ export function Immeubles() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Description</label>
-            <textarea
+            <textarea aria-label="Zone de texte"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}

@@ -891,7 +891,7 @@ export function Contrats() {
             <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
               Locataire *
             </label>
-            <select
+            <select aria-label="Sélection"
               required
               value={formData.locataire_id}
               onChange={(e) =>
@@ -915,7 +915,7 @@ export function Contrats() {
             <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
               Produit libre *
             </label>
-            <select
+            <select aria-label="Sélection"
               required
               value={formData.unite_id}
               onChange={(e) => handleUniteChange(e.target.value)}
@@ -940,7 +940,7 @@ export function Contrats() {
             <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
               Destination *
             </label>
-            <select
+            <select aria-label="Sélection"
               required
               value={formData.destination}
               onChange={(e) =>
@@ -962,7 +962,7 @@ export function Contrats() {
               <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
                 Date début *
               </label>
-              <input
+              <input aria-label="Champ de saisie"
                 type="date"
                 required
                 value={formData.date_debut}
@@ -974,7 +974,7 @@ export function Contrats() {
               <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
                 Date fin
               </label>
-              <input
+              <input aria-label="Champ de saisie"
                 type="date"
                 value={formData.date_fin}
                 onChange={(e) =>
@@ -990,7 +990,7 @@ export function Contrats() {
               <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
                 Loyer mensuel *
               </label>
-              <input
+              <input aria-label="Champ de saisie"
                 type="number"
                 required
                 value={formData.loyer_mensuel}
@@ -1024,7 +1024,7 @@ export function Contrats() {
               <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
                 Caution (F CFA)
               </label>
-              <input
+              <input aria-label="Champ de saisie"
                 type="number"
                 value={formData.caution}
                 onChange={(e) =>
@@ -1104,7 +1104,7 @@ export function Contrats() {
               <label className="mb-2 block text-sm font-bold text-slate-700">Date de résiliation *</label>
               <div className="relative">
                 <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
+                <input aria-label="Champ de saisie"
                   type="date"
                   value={resiliationForm.date}
                   onChange={(e) => setResiliationForm((prev) => ({ ...prev, date: e.target.value }))}
@@ -1167,7 +1167,7 @@ export function Contrats() {
             <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
               Statut *
             </label>
-            <select
+            <select aria-label="Sélection"
               required
               value={formData.statut}
               onChange={(e) =>
@@ -1189,7 +1189,7 @@ export function Contrats() {
             <label className="block text-sm font-medium mb-2" style={{ color: BRAND_COLORS.gray }}>
               Date de fin
             </label>
-            <input
+            <input aria-label="Champ de saisie"
               type="date"
               value={formData.date_fin}
               onChange={(e) =>

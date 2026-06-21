@@ -655,7 +655,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                     {filtered.length} résultat{filtered.length > 1 ? 's' : ''} — page {page} / {totalPages}
                                 </p>
                                 <div className="flex items-center gap-2">
-                                    <button
+                                    <button aria-label="Action"
                                         onClick={() => setPage(p => Math.max(1, p - 1))}
                                         disabled={page === 1}
                                         className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
@@ -682,7 +682,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                                     {p}
                                                 </button>
                                         )}
-                                    <button
+                                    <button aria-label="Action"
                                         onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                                         disabled={page === totalPages}
                                         className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
@@ -822,7 +822,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                     <label className="mb-2 block text-sm font-bold text-slate-700">Montant encaissé</label>
-                                    <input
+                                    <input aria-label="Champ de saisie"
                                         type="number"
                                         min="1"
                                         step="1"
@@ -836,7 +836,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 </div>
                                 <div>
                                     <label className="mb-2 block text-sm font-bold text-slate-700">Date paiement</label>
-                                    <input
+                                    <input aria-label="Champ de saisie"
                                         type="date"
                                         value={paymentForm.date_paiement}
                                         onChange={(e) => setPaymentForm({ ...paymentForm, date_paiement: e.target.value })}
@@ -845,7 +845,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 </div>
                                 <div>
                                     <label className="mb-2 block text-sm font-bold text-slate-700">Mode paiement</label>
-                                    <select
+                                    <select aria-label="Sélection"
                                         value={paymentForm.mode_paiement}
                                         onChange={(e) => setPaymentForm({ ...paymentForm, mode_paiement: e.target.value })}
                                         className="sk-input"

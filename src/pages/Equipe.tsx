@@ -450,7 +450,7 @@ export function Equipe() {
                 className="hidden sm:block h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
               />
             </label>
-            <select
+            <select aria-label="Sélection"
               value={roleFilter}
               onChange={(event) => setRoleFilter(event.target.value as typeof roleFilter)}
               className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
@@ -588,7 +588,7 @@ export function Equipe() {
               Invitation créée. Envoyez ce lien à votre collaborateur pour qu'il rejoigne l'agence.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <input
+              <input aria-label="Champ de saisie"
                 type="text"
                 readOnly
                 value={generatedLink}
@@ -610,7 +610,7 @@ export function Equipe() {
           <form onSubmit={handleInvite} className="space-y-4">
             <div>
               <label className="mb-1 block text-sm font-bold text-slate-700">Email</label>
-              <input
+              <input aria-label="Champ de saisie"
                 type="email"
                 required
                 value={formData.email}
@@ -621,7 +621,7 @@ export function Equipe() {
             </div>
             <div>
               <label className="mb-1 block text-sm font-bold text-slate-700">Rôle</label>
-              <select
+              <select aria-label="Sélection"
                 value={formData.role}
                 onChange={(event) => setFormData({ ...formData, role: event.target.value as RoleOption })}
                 data-testid="select-invite-role"
@@ -694,7 +694,7 @@ export function Equipe() {
                               <p className="mt-1 text-sm leading-5 text-slate-500">{item.description}</p>
                               <p className="mt-1 text-xs font-bold text-slate-400">Défaut rôle : {ACCESS_LABELS[inherited]}</p>
                             </div>
-                            <select
+                            <select aria-label="Sélection"
                               value={draft.access_level}
                               onChange={(event) => updateDraftAccess(item.id, event.target.value as DraftAccessLevel)}
                               className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"

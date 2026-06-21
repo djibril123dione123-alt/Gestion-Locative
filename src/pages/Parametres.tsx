@@ -556,7 +556,7 @@ export function Parametres() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     {isIndividualOwner ? 'Nom affiché sur les documents' : "Nom de l'agence"}
                   </label>
-                  <input
+                  <input aria-label="Champ de saisie"
                     type="text"
                     value={isIndividualOwner ? settings.representant_nom ?? settings.nom_agence ?? '' : settings.nom_agence ?? ''}
                     onChange={(e) => {
@@ -578,7 +578,7 @@ export function Parametres() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Téléphone
                   </label>
-                  <input
+                  <input aria-label="Champ de saisie"
                     type="text"
                     value={formatSenegalPhone(settings.telephone, '')}
                     onChange={(e) => setSettings({ ...settings, telephone: formatSenegalPhoneInput(e.target.value) })}
@@ -588,7 +588,7 @@ export function Parametres() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
-                  <input
+                  <input aria-label="Champ de saisie"
                     type="email"
                     value={settings.email ?? ''}
                     onChange={(e) => setSettings({ ...settings, email: e.target.value })}
@@ -611,7 +611,7 @@ export function Parametres() {
 
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-2">Adresse</label>
-                  <input
+                  <input aria-label="Champ de saisie"
                     type="text"
                     value={settings.adresse ?? ''}
                     onChange={(e) => setSettings({ ...settings, adresse: e.target.value })}
@@ -622,7 +622,7 @@ export function Parametres() {
                 {!isIndividualOwner && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">NINEA</label>
-                  <input
+                  <input aria-label="Champ de saisie"
                     type="text"
                     value={settings.ninea ?? ''}
                     onChange={(e) => setSettings({ ...settings, ninea: e.target.value })}
@@ -636,7 +636,7 @@ export function Parametres() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Registre de Commerce (RC)
                   </label>
-                  <input
+                  <input aria-label="Champ de saisie"
                     type="text"
                     value={settings.rc ?? ''}
                     onChange={(e) => setSettings({ ...settings, rc: e.target.value })}
@@ -650,7 +650,7 @@ export function Parametres() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     {isIndividualOwner ? 'Nom du propriétaire' : 'Nom du représentant'}
                   </label>
-                  <input
+                  <input aria-label="Champ de saisie"
                     type="text"
                     value={settings.representant_nom ?? ''}
                     onChange={(e) => setSettings({ ...settings, representant_nom: e.target.value })}
@@ -678,7 +678,7 @@ export function Parametres() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     {isIndividualOwner ? "Type de pièce d'identité" : "Type de pièce d'identité du représentant"}
                   </label>
-                  <select
+                  <select aria-label="Sélection"
                     value={settings.manager_id_type ?? 'CNI'}
                     onChange={(e) =>
                       setSettings({ ...settings, manager_id_type: e.target.value })
@@ -745,7 +745,7 @@ export function Parametres() {
                   <label className="block text-sm font-black text-emerald-950 mb-2">
                     Mode documentaire
                   </label>
-                  <select
+                  <select aria-label="Sélection"
                     value={settings.document_mode ?? (isIndividualOwner ? 'simple' : 'professional')}
                     onChange={(e) => setSettings({ ...settings, document_mode: e.target.value as AgencySettings['document_mode'] })}
                     className="w-full px-4 py-2 border border-emerald-200 bg-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
@@ -764,7 +764,7 @@ export function Parametres() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Tribunal compétent
                 </label>
-                <input
+                <input aria-label="Champ de saisie"
                   type="text"
                   value={settings.mention_tribunal ?? ''}
                   onChange={(e) => setSettings({ ...settings, mention_tribunal: e.target.value })}
@@ -776,7 +776,7 @@ export function Parametres() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Texte des pénalités de retard
                 </label>
-                <textarea
+                <textarea aria-label="Zone de texte"
                   value={settings.mention_penalites ?? ''}
                   onChange={(e) =>
                     setSettings({ ...settings, mention_penalites: e.target.value })
@@ -790,7 +790,7 @@ export function Parametres() {
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   Pied de page des documents
                 </label>
-                <input
+                <input aria-label="Champ de saisie"
                   type="text"
                   value={settings.pied_page_personnalise ?? ''}
                   onChange={(e) =>
@@ -805,7 +805,7 @@ export function Parametres() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Frais d'huissier (F CFA)
                   </label>
-                  <input
+                  <input aria-label="Champ de saisie"
                     type="number"
                     value={settings.frais_huissier ?? 0}
                     onChange={(e) =>
@@ -819,7 +819,7 @@ export function Parametres() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Pénalité par jour (F CFA)
                   </label>
-                  <input
+                  <input aria-label="Champ de saisie"
                     type="number"
                     value={settings.penalite_retard_montant ?? 0}
                     onChange={(e) =>
@@ -836,7 +836,7 @@ export function Parametres() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Délai pénalités (jours)
                   </label>
-                  <input
+                  <input aria-label="Champ de saisie"
                     type="number"
                     value={settings.penalite_retard_delai_jours ?? 0}
                     onChange={(e) =>
@@ -949,7 +949,7 @@ export function Parametres() {
                     Couleur primaire
                   </label>
                   <div className="flex gap-3">
-                    <input
+                    <input aria-label="Champ de saisie"
                       type="color"
                       value={settings.couleur_primaire ?? '#F58220'}
                       onChange={(e) =>
@@ -957,7 +957,7 @@ export function Parametres() {
                       }
                       className="w-20 h-12 rounded-lg border border-slate-300 cursor-pointer"
                     />
-                    <input
+                    <input aria-label="Champ de saisie"
                       type="text"
                       value={settings.couleur_primaire ?? '#F58220'}
                       onChange={(e) =>
@@ -973,7 +973,7 @@ export function Parametres() {
                     Couleur secondaire
                   </label>
                   <div className="flex gap-3">
-                    <input
+                    <input aria-label="Champ de saisie"
                       type="color"
                       value={settings.couleur_secondaire ?? '#333333'}
                       onChange={(e) =>
@@ -981,7 +981,7 @@ export function Parametres() {
                       }
                       className="w-20 h-12 rounded-lg border border-slate-300 cursor-pointer"
                     />
-                    <input
+                    <input aria-label="Champ de saisie"
                       type="text"
                       value={settings.couleur_secondaire ?? '#333333'}
                       onChange={(e) =>

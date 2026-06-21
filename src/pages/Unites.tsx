@@ -313,7 +313,7 @@ export function Unites() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Immeuble *</label>
-            <select
+            <select aria-label="Sélection"
               required
               value={formData.immeuble_id}
               onChange={(e) => setFormData({ ...formData, immeuble_id: e.target.value })}
@@ -329,7 +329,7 @@ export function Unites() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Type *</label>
-              <select
+              <select aria-label="Sélection"
                 required
                 value={formData.nom}
                 onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
@@ -350,7 +350,7 @@ export function Unites() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Numéro</label>
-              <input
+              <input aria-label="Champ de saisie"
                 type="text"
                 value={formData.numero}
                 onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
@@ -362,7 +362,7 @@ export function Unites() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Étage</label>
-              <input
+              <input aria-label="Champ de saisie"
                 type="text"
                 value={formData.etage}
                 onChange={(e) => setFormData({ ...formData, etage: e.target.value })}
@@ -371,7 +371,7 @@ export function Unites() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Loyer de base *</label>
-              <input
+              <input aria-label="Champ de saisie"
                 type="number"
                 required
                 value={formData.loyer_base}
@@ -383,7 +383,7 @@ export function Unites() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Statut *</label>
-            <select
+            <select aria-label="Sélection"
               required
               value={formData.statut}
               onChange={(e) => setFormData({ ...formData, statut: e.target.value as UniteStatut })}

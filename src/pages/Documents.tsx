@@ -695,7 +695,7 @@ export function Documents() {
                   className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
                 />
               </label>
-              <select
+              <select aria-label="Sélection"
                 value={sourceFilter}
                 onChange={(event) => setSourceFilter(event.target.value as DocumentSourceFilter)}
                 className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 lg:w-[190px]"
@@ -705,7 +705,7 @@ export function Documents() {
                 <option value="generated">Générés automatiquement</option>
                 <option value="qr">Vérifiables QR</option>
               </select>
-              <select
+              <select aria-label="Sélection"
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as DocumentStatusFilter)}
                 className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 lg:w-[155px]"

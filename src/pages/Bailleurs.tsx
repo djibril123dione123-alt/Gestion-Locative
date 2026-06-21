@@ -1745,7 +1745,7 @@ export function Bailleurs() {
                           {showBailleurColumn('reliquats') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} whitespace-nowrap py-2.5 text-right text-sm font-bold tabular-nums text-red-600`}><MoneyText value={summary.reliquats} /></td>}
                           {showBailleurColumn('net') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} whitespace-nowrap py-2.5 text-right text-sm font-bold tabular-nums text-emerald-800`}><MoneyText value={summary.net} /></td>}
                           {showBailleurColumn('actions') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-right`}>
-                            <button type="button" onClick={(event) => { event.stopPropagation(); setSelectedBailleurId(bailleur.id); setDetailOpen(true); }} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-950">
+                            <button aria-label="Action" type="button" onClick={(event) => { event.stopPropagation(); setSelectedBailleurId(bailleur.id); setDetailOpen(true); }} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-950">
                               <MoreHorizontal className="h-4 w-4" />
                             </button>
                           </td>}
@@ -2043,7 +2043,7 @@ export function Bailleurs() {
               </div>
               <div>
                 <label className="mb-2 block text-sm font-bold text-slate-700">Date d'effet</label>
-                <input
+                <input aria-label="Champ de saisie"
                   type="date"
                   value={lifecycleForm.date}
                   onChange={(e) => setLifecycleForm({ ...lifecycleForm, date: e.target.value })}

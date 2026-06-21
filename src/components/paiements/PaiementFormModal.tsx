@@ -301,7 +301,7 @@ export function PaiementFormModal({
               <label className="mb-2 block text-sm font-black text-slate-800">
                 Montant encaissé <span className="text-red-600">*</span>
               </label>
-              <input
+              <input aria-label="Champ de saisie"
                 type="number"
                 required
                 min="1"
@@ -331,7 +331,7 @@ export function PaiementFormModal({
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-2 block text-sm font-black text-slate-800">Date du paiement <span className="text-red-600">*</span></label>
-                <input
+                <input aria-label="Champ de saisie"
                   type="date"
                   required
                   value={formData.date_paiement}

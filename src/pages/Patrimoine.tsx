@@ -1363,7 +1363,7 @@ function PropertiesTable({
                   {showColumn('reliquats') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-red-600`}><MoneyText value={summary?.reliquats ?? 0} /></td>}
                   {showColumn('statut') && <td className="px-4 py-2.5"><StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unité'} /></td>}
                   <td className={`${compact ? 'px-2' : 'px-4'} py-2.5 text-right`}>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(property); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
+                    <button aria-label="Action" type="button" onClick={(event) => { event.stopPropagation(); onSelect(property); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
                       <MoreHorizontal className="h-5 w-5" />
                     </button>
                   </td>
@@ -1483,7 +1483,7 @@ function UnitsTable({
                   {showColumn('reliquat') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-red-600`}><MoneyText value={summary?.reliquat ?? 0} /></td>}
                   {showColumn('bail') && <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{summary?.contract ? 'Oui' : 'Non'}</td>}
                   <td className={`${compact ? 'px-2' : 'px-4'} py-2.5 text-right`}>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); onSelect(unit); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
+                    <button aria-label="Action" type="button" onClick={(event) => { event.stopPropagation(); onSelect(unit); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
                       <MoreHorizontal className="h-5 w-5" />
                     </button>
                   </td>
@@ -1547,7 +1547,7 @@ function DrawerHeader({ icon: Icon, iconClass, title, subtitle, onClose }: { ico
             <p className="mt-1 line-clamp-2 text-sm font-medium text-slate-500">{subtitle}</p>
           </div>
         </div>
-        <button type="button" onClick={onClose} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-white hover:text-slate-900 hover:shadow-sm">
+        <button aria-label="Action" type="button" onClick={onClose} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-white hover:text-slate-900 hover:shadow-sm">
           <X className="h-5 w-5" />
         </button>
       </div>

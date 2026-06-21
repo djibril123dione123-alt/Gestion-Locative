@@ -104,7 +104,7 @@ export function Notifications() {
       </div>
 
       <div className="flex flex-wrap gap-3 mb-4">
-        <select
+        <select aria-label="Sélection"
           value={filterRead}
           onChange={(e) => setFilterRead(e.target.value as 'all' | 'unread' | 'read')}
           data-testid="select-filter-read"
@@ -114,7 +114,7 @@ export function Notifications() {
           <option value="unread">Non lues</option>
           <option value="read">Lues</option>
         </select>
-        <select
+        <select aria-label="Sélection"
           value={filterType}
           onChange={(e) => setFilterType(e.target.value)}
           data-testid="select-filter-type"

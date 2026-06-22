@@ -78,14 +78,22 @@ interface FinanceMetric {
 
 export function FinanceKpiGrid({ metrics }: { metrics: FinanceMetric[] }) {
   const getTones = (tone: MetricTone) => {
-    return {
+    const toneMap: Record<MetricTone, { gradient: string; text: string; icon: string }> = {
+      neutral: { gradient: 'from-white to-slate-50/75', text: 'text-slate-800', icon: 'bg-slate-50 text-slate-700 ring-slate-100' },
+      success: { gradient: 'from-white to-emerald-50/70', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100' },
+      warning: { gradient: 'from-white to-amber-50/70', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100' },
+      danger: { gradient: 'from-white to-rose-50/70', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100' },
+      info: { gradient: 'from-white to-slate-50/75', text: 'text-slate-800', icon: 'bg-slate-50 text-slate-700 ring-slate-100' },
+      financial: { gradient: 'from-white to-emerald-50/70', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100' },
+      proof: { gradient: 'from-white to-slate-50/75', text: 'text-slate-800', icon: 'bg-slate-50 text-slate-700 ring-slate-100' },
       emerald: { gradient: 'from-white to-emerald-50/70', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100' },
       blue: { gradient: 'from-white to-stone-50/75', text: 'text-slate-800', icon: 'bg-stone-50 text-slate-700 ring-stone-100' },
       amber: { gradient: 'from-white to-amber-50/70', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100' },
       red: { gradient: 'from-white to-rose-50/70', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100' },
       green: { gradient: 'from-white to-emerald-50/70', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100' },
       slate: { gradient: 'from-white to-stone-50/75', text: 'text-slate-800', icon: 'bg-stone-50 text-slate-700 ring-stone-100' },
-    }[tone];
+    };
+    return toneMap[tone] || toneMap.neutral;
   };
 
   return (

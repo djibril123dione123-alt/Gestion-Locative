@@ -137,7 +137,8 @@
   }
 
   .sk-page-hero {
-    @apply relative overflow-hidden rounded-[1.4rem] border border-emerald-900/10 p-4 shadow-premium sm:p-5 lg:p-6;
+    @apply relative overflow-hidden rounded-[1.4rem] border border-emerald-900/10 shadow-premium;
+    padding: clamp(1.15rem, 2vw, 1.5rem);
     background:
       radial-gradient(circle at 94% 4%, rgba(255, 138, 0, 0.14), transparent 15rem),
       radial-gradient(circle at 0% 100%, rgba(31, 59, 46, 0.12), transparent 18rem),

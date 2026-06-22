@@ -1,41 +1,155 @@
-import { ReactNode } from 'react';
-import { LucideIcon } from 'lucide-react';
+import React, { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 
-export type MetricTone = 'emerald' | 'blue' | 'amber' | 'green' | 'red' | 'slate';
+export type MetricTone =
+  | 'emerald' | 'blue' | 'amber' | 'green' | 'red' | 'slate' // Legacy
+  | 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'financial' | 'proof'; // Officiel
 
 interface MetricCardProps {
-  label: string;
+  /** @deprecated Utilisez `title` */
+  label?: string;
+  title?: string;
+  mobileTitle?: string;
   value: ReactNode;
-  icon: LucideIcon;
-  tone: MetricTone;
+  valueA11yLabel?: string;
+  icon: LucideIcon | React.ElementType;
+  tone?: MetricTone;
   wide?: boolean;
   className?: string;
+
+  // Interaction
+  onClick?: () => void;
+  ariaLabel?: string;
+
+  // États (priorité: isActive > active > selected)
+  isActive?: boolean;
+  active?: boolean;
+  selected?: boolean;
+
+  // Clones compatibility (ex: KpiTile de Bailleurs)
+  helper?: string;
+  variant?: string;
+  color?: string;
+  iconTone?: string;
+  accent?: string;
 }
 
-export function MetricCard({ label, value, icon: Icon, tone, wide = false, className = '' }: MetricCardProps) {
-  const tones = {
-    emerald: { gradient: 'from-white to-emerald-50/70', text: 'text-emerald-900', icon: 'bg-emerald-50 text-emerald-700 ring-emerald-100' },
-    blue: { gradient: 'from-white to-slate-50/75', text: 'text-slate-900', icon: 'bg-slate-50 text-slate-700 ring-slate-100' },
-    amber: { gradient: 'from-white to-amber-50/70', text: 'text-amber-900', icon: 'bg-amber-50 text-amber-700 ring-amber-100' },
-    green: { gradient: 'from-white to-emerald-50/70', text: 'text-emerald-900', icon: 'bg-emerald-50 text-emerald-700 ring-emerald-100' },
-    red: { gradient: 'from-white to-rose-50/70', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100' },
-    slate: { gradient: 'from-white to-stone-50/75', text: 'text-slate-900', icon: 'bg-stone-50 text-slate-700 ring-stone-100' },
-  }[tone];
+export function MetricCard({
+  label,
+  title,
+  mobileTitle,
+  value,
+  valueA11yLabel,
+  icon: Icon,
+  tone = 'neutral',
+  wide = false,
+  className = '',
+  onClick,
+  ariaLabel,
+  isActive,
+  active,
+  selected,
+  helper,
+}: MetricCardProps) {
+  const resolvedTitle = title ?? label ?? '';
+  const activeState = isActive ?? active ?? selected;
+  const hasToggleState = activeState !== undefined;
+  const finalActive = Boolean(activeState);
+
+  // Mapping des tons vers les styles (officiels + legacy)
+  const toneMap: Record<string, { gradient: string; text: string; icon: string; activeRing: string }> = {
+    // Nouveaux tones officiels
+    neutral: { gradient: 'from-white to-slate-50/75', text: 'text-slate-900', icon: 'bg-slate-50 text-slate-700 ring-slate-100', activeRing: 'ring-slate-700/25 border-slate-700/30' },
+    success: { gradient: 'from-white to-emerald-50/70', text: 'text-emerald-900', icon: 'bg-emerald-50 text-emerald-700 ring-emerald-100', activeRing: 'ring-emerald-700/25 border-emerald-700/30' },
+    warning: { gradient: 'from-white to-amber-50/70', text: 'text-amber-900', icon: 'bg-amber-50 text-amber-700 ring-amber-100', activeRing: 'ring-amber-700/25 border-amber-700/30' },
+    danger: { gradient: 'from-white to-rose-50/70', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100', activeRing: 'ring-red-700/25 border-red-700/30' },
+    info: { gradient: 'from-white to-sky-50/75', text: 'text-sky-900', icon: 'bg-sky-50 text-sky-700 ring-sky-100', activeRing: 'ring-sky-700/25 border-sky-700/30' },
+    financial: { gradient: 'from-white to-emerald-50/70', text: 'text-brand-900', icon: 'bg-brand-50 text-brand-700 ring-brand-100', activeRing: 'ring-brand-700/25 border-brand-700/30' },
+    proof: { gradient: 'from-white to-stone-50/70', text: 'text-slate-900', icon: 'bg-stone-50 text-slate-700 ring-stone-100', activeRing: 'ring-slate-700/25 border-slate-700/30' },
+
+    // Legacy tones
+    emerald: { gradient: 'from-white to-emerald-50/70', text: 'text-emerald-900', icon: 'bg-emerald-50 text-emerald-700 ring-emerald-100', activeRing: 'ring-emerald-700/25 border-emerald-700/30' },
+    blue: { gradient: 'from-white to-slate-50/75', text: 'text-slate-900', icon: 'bg-slate-50 text-slate-700 ring-slate-100', activeRing: 'ring-slate-700/25 border-slate-700/30' },
+    amber: { gradient: 'from-white to-amber-50/70', text: 'text-amber-900', icon: 'bg-amber-50 text-amber-700 ring-amber-100', activeRing: 'ring-amber-700/25 border-amber-700/30' },
+    green: { gradient: 'from-white to-emerald-50/70', text: 'text-emerald-900', icon: 'bg-emerald-50 text-emerald-700 ring-emerald-100', activeRing: 'ring-emerald-700/25 border-emerald-700/30' },
+    red: { gradient: 'from-white to-rose-50/70', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100', activeRing: 'ring-red-700/25 border-red-700/30' },
+    slate: { gradient: 'from-white to-stone-50/75', text: 'text-slate-900', icon: 'bg-stone-50 text-slate-700 ring-stone-100', activeRing: 'ring-slate-700/25 border-slate-700/30' },
+  };
+
+  const tones = toneMap[tone] || toneMap.neutral;
+
+  const isClickable = !!onClick;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isClickable) return;
+    if (e.key === 'Enter') {
+      onClick();
+    } else if (e.key === 'Space' || e.key === ' ') {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
+  const computedAriaLabel = ariaLabel ?? (valueA11yLabel ? `${resolvedTitle} : ${valueA11yLabel}` : resolvedTitle);
+
+  const containerClasses = [
+    '@container group min-w-0 rounded-[1.05rem] border bg-gradient-to-br',
+    tones.gradient,
+    'p-2.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] transition-all duration-200',
+    wide ? 'sm:col-span-2' : '',
+    isClickable ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100' : '',
+    finalActive
+      ? `shadow-inner ${tones.activeRing}`
+      : `ring-1 ring-white/70 border-emerald-950/10 ${isClickable ? 'hover:border-emerald-200' : ''}`,
+    className
+  ].filter(Boolean).join(' ');
+
+  const a11yProps: React.HTMLAttributes<HTMLDivElement> = {};
+  if (isClickable) {
+    a11yProps.role = "button";
+    a11yProps.tabIndex = 0;
+    a11yProps.onClick = onClick;
+    a11yProps.onKeyDown = handleKeyDown;
+    if (hasToggleState) {
+      a11yProps['aria-pressed'] = finalActive;
+    }
+  }
+  if (isClickable || valueA11yLabel) {
+    a11yProps['aria-label'] = computedAriaLabel;
+  }
 
   return (
-    <article
-      className={`@container group min-w-0 rounded-[1.05rem] border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-2.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)] ${wide ? 'sm:col-span-2' : ''} ${className}`}
+    <div
+      className={containerClasses}
+      {...a11yProps}
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-slate-600 line-clamp-2 min-h-[2.5em]">{label}</h3>
-        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1 ${tones.icon} shadow-sm transition-transform duration-300 group-hover:scale-110`}>
+        <div className="min-w-0 flex-1">
+          <h3 className={`text-[0.68rem] font-black uppercase tracking-[0.12em] text-slate-600 line-clamp-2 min-h-[2.5em] ${mobileTitle ? 'hidden sm:block' : 'block'}`}>
+            {resolvedTitle}
+          </h3>
+          {mobileTitle && (
+            <h3 className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-slate-600 line-clamp-2 min-h-[2.5em] sm:hidden">
+              {mobileTitle}
+            </h3>
+          )}
+
+          <div className="mt-1.5" {...(valueA11yLabel ? { 'aria-hidden': true } : {})}>
+            <div className={`w-full max-w-full whitespace-nowrap text-base font-black tracking-tight sm:text-lg ${tones.text}`}>
+              {value}
+            </div>
+          </div>
+
+          {helper && (
+            <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">{helper}</p>
+          )}
+        </div>
+
+        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1 ${tones.icon} shadow-sm transition-transform duration-300 ${isClickable ? 'group-hover:scale-110' : ''}`}>
           <Icon className="h-3.5 w-3.5" />
         </div>
       </div>
-      <p className={`mt-1.5 w-full max-w-full whitespace-nowrap text-base font-black tracking-tight sm:text-lg ${tones.text}`}>
-        {value}
-      </p>
-    </article>
+    </div>
   );
 }
 

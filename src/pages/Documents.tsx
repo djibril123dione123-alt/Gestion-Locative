@@ -90,6 +90,52 @@ const CATEGORY_ICONS: Record<UserDocumentCategory, typeof FileText> = {
   autre: FolderOpen,
 };
 
+function KpiTile({
+  icon: Icon,
+  label,
+  value,
+  helper,
+  tone,
+  isActive,
+  onClick
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: React.ReactNode;
+  helper: string;
+  tone: 'emerald' | 'amber' | 'red' | 'blue' | 'stone';
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const tones = {
+    emerald: { gradient: 'from-white to-emerald-50/70', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100', activeRing: 'ring-emerald-700/25 border-emerald-700/30' },
+    blue: { gradient: 'from-white to-sky-50/75', text: 'text-sky-800', icon: 'bg-sky-50 text-sky-700 ring-sky-100', activeRing: 'ring-sky-700/25 border-sky-700/30' },
+    amber: { gradient: 'from-white to-amber-50/70', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100', activeRing: 'ring-amber-700/25 border-amber-700/30' },
+    red: { gradient: 'from-white to-rose-50/70', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100', activeRing: 'ring-red-700/25 border-red-700/30' },
+    stone: { gradient: 'from-white to-stone-50/70', text: 'text-slate-700', icon: 'bg-stone-50 text-slate-700 ring-stone-100', activeRing: 'ring-slate-700/25 border-slate-700/30' },
+  }[tone];
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      {...(isActive ? { 'aria-pressed': true } : {})}
+      className={`@container text-left group min-w-0 rounded-[1.05rem] border bg-gradient-to-br ${tones.gradient} p-2.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)] ${isActive ? `${tones.activeRing} shadow-inner` : 'border-emerald-950/10 hover:border-emerald-200'}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className={`line-clamp-2 min-h-[2.5em] text-[0.68rem] font-bold uppercase tracking-[0.12em] ${tones.text}`}>{label}</p>
+          <p className="mt-1.5 whitespace-nowrap text-[1.02rem] font-extrabold tracking-tight text-slate-950 sm:text-[1.1rem]">{value}</p>
+          {helper && <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">{helper}</p>}
+        </div>
+        <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ring-1 transition-colors ${tones.icon} group-hover:scale-105`}>
+          <Icon className="h-3.5 w-3.5" />
+        </div>
+      </div>
+    </button>
+  );
+}
+
 export function Documents() {
   const { profile, user, accountProfile } = useAuth();
   const navigate = useNavigate();
@@ -533,9 +579,10 @@ export function Documents() {
   const drawerOpen = !!selectedDocument;
 
   return (
-    <div className="sk-mobile-page min-w-0 space-y-3.5 sm:space-y-5">
-
-      {/* ── HERO ── */}
+    <>
+    <div className={`sk-mobile-page min-w-0 ${drawerOpen ? 'xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(380px,440px)] xl:items-start xl:gap-5' : ''}`}>
+      <div className="flex min-w-0 flex-col gap-3.5 sm:gap-5">
+        {/* ── HERO ── */}
       <div className="sk-mobile-hero max-w-full bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-3.5 text-white shadow-2xl shadow-emerald-950/15 sm:p-5">
         <div className="absolute -right-20 -top-20 hidden h-56 w-56 rounded-full bg-orange-300/15 blur-3xl sm:block" />
         <div className="relative flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-5">
@@ -588,7 +635,10 @@ export function Documents() {
               <HardDrive className="h-4 w-4 text-emerald-200/60 flex-shrink-0" />
             </div>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
-              <div className={`h-full rounded-full ${usageTone(usedPercent)} transition-all duration-700`} style={{ width: `${usedPercent}%` }} />
+              <div
+                className={`h-full rounded-full ${usageTone(usedPercent)} transition-all duration-700`}
+                {...({ style: { width: `${usedPercent}%` } } as React.HTMLAttributes<HTMLDivElement>)}
+              />
             </div>
           </div>
 
@@ -625,62 +675,59 @@ export function Documents() {
 
       {/* ── KPI MÉTIER — actionnables ── */}
       <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-        {[
-          {
-            id: 'active' as const,
-            label: 'Preuves actives',
-            value: activeCount,
-            helper: 'Documents disponibles',
-            icon: FileCheck2,
-            isActive: statusFilter === 'active',
-          },
-          {
-            id: 'qr' as const,
-            label: 'Vérifiables QR',
-            value: verifiableCount,
-            helper: 'Preuves contrôlables publiquement',
-            icon: ShieldCheck,
-            isActive: sourceFilter === 'qr',
-          },
-          {
-            id: 'unclassified' as const,
-            label: 'À classer',
-            value: toClassifyCount,
-            helper: 'Sans lien métier',
-            icon: FolderOpen,
-            isActive: statusFilter === 'unclassified',
-          },
-          {
-            id: 'archived' as const,
-            label: 'Archivés',
-            value: archivedCount,
-            helper: 'Conservés hors vue active',
-            icon: Archive,
-            isActive: statusFilter === 'archived',
-          },
-        ].map((metric) => (
-          <button
-            key={metric.id}
-            type="button"
-            onClick={() => handleKpiClick(metric.id)}
-            className={`sk-metric-tile min-w-0 p-2.5 sm:p-3 text-left transition-all duration-200 cursor-pointer hover:-translate-y-0.5 ${metric.isActive ? 'ring-2 ring-emerald-700/25 border-emerald-700/30' : ''}`}
-            aria-pressed={metric.isActive}
-          >
-            <div className="flex min-w-0 items-start justify-between gap-2">
-              <p className="min-w-0 text-[10px] font-semibold uppercase leading-4 tracking-[0.06em] text-slate-500 sm:text-xs sm:tracking-[0.08em]">{metric.label}</p>
-              <metric.icon className={`h-3.5 w-3.5 flex-shrink-0 sm:h-4 sm:w-4 ${metric.isActive ? 'text-emerald-700' : 'text-emerald-600/70'}`} />
-            </div>
-            <p className="mt-1.5 text-lg font-extrabold leading-none text-slate-950 sm:mt-2 sm:text-xl">{metric.value}</p>
-            <p className="mt-1 truncate text-[10px] font-semibold text-slate-400 sm:text-xs">{metric.helper}</p>
-          </button>
-        ))}
-      </div>
+            {[
+              {
+                id: 'active' as const,
+                label: 'Preuves actives',
+                value: activeCount,
+                helper: 'Documents disponibles',
+                icon: FileCheck2,
+                isActive: statusFilter === 'active',
+                tone: 'emerald' as const,
+              },
+              {
+                id: 'qr' as const,
+                label: 'Vérifiables QR',
+                value: verifiableCount,
+                helper: 'Contrôlables publiquement',
+                icon: ShieldCheck,
+                isActive: sourceFilter === 'qr',
+                tone: 'blue' as const,
+              },
+              {
+                id: 'unclassified' as const,
+                label: 'À classer',
+                value: toClassifyCount,
+                helper: 'Sans lien métier',
+                icon: FolderOpen,
+                isActive: statusFilter === 'unclassified',
+                tone: 'amber' as const,
+              },
+              {
+                id: 'archived' as const,
+                label: 'Archivés',
+                value: archivedCount,
+                helper: 'Conservés hors vue active',
+                icon: Archive,
+                isActive: statusFilter === 'archived',
+                tone: 'stone' as const,
+              },
+            ].map((metric) => (
+              <KpiTile
+                key={metric.id}
+                icon={metric.icon}
+                label={metric.label}
+                value={metric.value}
+                helper={metric.helper}
+                tone={metric.tone}
+                isActive={metric.isActive}
+                onClick={() => handleKpiClick(metric.id)}
+              />
+            ))}
+          </div>
 
-      {/* ── MAIN CONTENT AREA — split view quand drawer ouvert ── */}
-      <div className={`grid min-w-0 items-start gap-4 ${drawerOpen ? 'xl:grid-cols-[minmax(0,1fr)_32rem]' : ''}`}>
-
-        {/* LIST SECTION */}
-        <section className="min-w-0 max-w-full space-y-3 pb-24 sm:space-y-4 sm:pb-0">
+          {/* LIST SECTION */}
+          <section className="min-w-0 max-w-full space-y-3 pb-24 sm:space-y-4 sm:pb-0">
 
           {/* TOOLBAR */}
           <div className="sk-premium-panel min-w-0 max-w-full p-3">
@@ -810,7 +857,7 @@ export function Documents() {
                             role="button"
                             tabIndex={0}
                             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setSelectedDocumentId(`${item.source}-${item.id}`); }}
-                            aria-pressed={isSelected}
+                            {...(isSelected ? { 'aria-pressed': true } : {})}
                           >
                             {/* Document */}
                             <td className="px-4 py-2.5">
@@ -823,7 +870,7 @@ export function Documents() {
                                   {drawerOpen ? (() => {
                                     const subject = item.businessContext?.subject || item.subtitle;
                                     const location = item.businessContext?.location;
-                                    
+
                                     // Helper anti-duplication
                                     const secondaryParts = [subject, location]
                                       .filter((part): part is string => Boolean(part))
@@ -944,7 +991,7 @@ export function Documents() {
                         onClick={() => setSelectedDocumentId(`${item.source}-${item.id}`)}
                         className="block w-full min-w-0 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
                         aria-label={`Consulter la fiche de ${item.title}`}
-                        aria-pressed={isSelected}
+                        {...(isSelected ? { 'aria-pressed': true } : {})}
                       >
                         <div className="flex items-start gap-2.5 sm:gap-3">
                           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10 sm:h-11 sm:w-11 sm:rounded-2xl">
@@ -1036,11 +1083,12 @@ export function Documents() {
             </div>
           </details>
         </section>
+      </div>
 
-        {/* DRAWER — pleine hauteur colonne droite sur xl */}
-        {selectedDocument && (
-          <div className="xl:sticky xl:top-4 xl:self-start xl:h-[calc(100vh-2rem)]">
-            <DocumentProofDrawer
+      {/* DRAWER — pleine hauteur colonne droite sur xl, à côté du Hero et du reste */}
+      {selectedDocument && (
+        <div className="xl:sticky xl:top-4 xl:self-start xl:h-[calc(100vh-2rem)] w-full">
+          <DocumentProofDrawer
               document={selectedDocument}
               canArchive={selectedDocument.source === 'uploaded' && selectedDocument.retentionPolicy !== 'critical' && selectedDocument.lifecycleStatus === 'active'}
               onClose={() => setSelectedDocumentId(null)}
@@ -1078,6 +1126,6 @@ export function Documents() {
       />
 
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
-    </div>
+    </>
   );
 }

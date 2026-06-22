@@ -580,7 +580,7 @@ function AppContent() {
 
                     <ErrorBoundary key={`error:${routeKey}`}>
                         <Suspense key={`suspense:${routeKey}`} fallback={<PageSkeleton title={pageLabel} variant={pageSkeletonVariant} />}>
-                            <div key={`page:${routeKey}`} className="min-h-full" data-route-page={currentPage}>
+                            <div key={`page:${routeKey}`} className="min-h-full mx-auto w-full max-w-[1600px] px-[clamp(1rem,1.5vw,1.75rem)]" data-route-page={currentPage}>
                                 {renderPage()}
                             </div>
                         </Suspense>

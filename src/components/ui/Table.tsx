@@ -1,12 +1,24 @@
 import React from 'react';
 import { BrandMark } from '../brand/BrandLogo';
 import { formatSenegalPhone, getSenegalPhoneHref } from '../../lib/formatters';
+import { PremiumMobileCard, PremiumMobileCardRow } from './PremiumMobileCard';
 
-interface Column<T> {
+export type TableColumnAlign = "left" | "center" | "right";
+export type TableColumnVisibility = "always" | "desktop" | "wide" | "compact";
+
+export interface TableColumn<T> {
   key: string;
   label: string;
   render?: (item: T) => React.ReactNode;
+  icon?: React.ReactNode;
+  align?: TableColumnAlign;
+  visibility?: TableColumnVisibility;
+  className?: string;
+  headerClassName?: string;
+  cellClassName?: string;
 }
+
+export type Column<T> = TableColumn<T>; // Rétrocompatibilité
 
 interface TableProps<T> {
   columns: Column<T>[];
@@ -18,6 +30,19 @@ interface TableProps<T> {
   mobileRender?: (item: T) => React.ReactNode;
   compact?: boolean;
 }
+
+const getAlignmentClass = (align?: TableColumnAlign) => {
+  if (align === 'right') return 'text-right';
+  if (align === 'center') return 'text-center';
+  return 'text-left';
+};
+
+const getVisibilityClass = (visibility?: TableColumnVisibility) => {
+  if (visibility === 'wide') return 'hidden xl:table-cell';
+  if (visibility === 'desktop') return 'hidden lg:table-cell';
+  if (visibility === 'compact') return 'hidden md:table-cell';
+  return '';
+};
 
 export function Table<T extends { id: string }>({
   columns,
@@ -89,90 +114,92 @@ export function Table<T extends { id: string }>({
       <div className="space-y-3 sm:hidden">
         {data.map((item) => {
           const isSelected = selectedId === item.id;
-          return (
-            <article
-              key={item.id}
-              className={`sk-mobile-card overflow-hidden transition duration-200 active:scale-[0.992] ${onRowClick ? 'cursor-pointer hover:border-emerald-200 hover:shadow-md outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:border-emerald-400' : ''} ${isSelected ? 'border-emerald-300 ring-1 ring-emerald-300 bg-emerald-50/40 shadow-sm' : ''}`}
-              onClick={() => onRowClick && onRowClick(item)}
-              tabIndex={onRowClick ? 0 : undefined}
-              onKeyDown={(e) => {
-                if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
-                  e.preventDefault();
-                  onRowClick(item);
-                }
-              }}
-              role={onRowClick ? "button" : undefined}
-              aria-label={onRowClick ? "Ouvrir les détails" : undefined}
-              aria-pressed={isSelected}
-            >
-              {mobileRender ? (
-                mobileRender(item)
-              ) : (
-                <>
-                  <div className="divide-y divide-slate-100">
-                    {columns.map((col, index) => {
-                      const rawValue = col.render ? col.render(item) : getCellValue(item, col.key);
-                      const value = renderContactValue(col.key, rawValue);
-                      if (value === null || value === undefined || value === '') return null;
-                      const isPrimary = index === 0;
-                      return (
-                        <div
-                          key={col.key}
-                          className={`flex items-start justify-between gap-3 px-4 ${isPrimary ? 'bg-brand-surface/75 py-4' : 'py-3'}`}
-                        >
-                          <span className="w-24 flex-shrink-0 text-xs font-black uppercase tracking-wide text-slate-500">
-                            {col.label}
-                          </span>
-                          <span
-                            className={`min-w-0 flex-1 text-right leading-5 text-slate-800 [&_.sk-action-group]:flex [&_.sk-action-group]:flex-wrap [&_.sk-action-group]:justify-end [&_.sk-action-group]:gap-2 [&_.sk-action-group-right]:flex [&_.sk-action-group-right]:flex-wrap [&_.sk-action-group-right]:justify-end [&_.sk-action-group-right]:gap-2 ${
-                              isPrimary ? 'text-base font-black' : 'text-sm font-semibold'
-                            }`}
-                          >
-                            {value}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {(onEdit || onDelete) && (
-                    <div className="grid grid-cols-2 gap-2 border-t border-emerald-950/10 bg-brand-surface/75 px-4 py-3">
-                      {onEdit && (
-                        <button
-                          type="button"
-                          onClick={() => onEdit(item)}
-                          className="sk-action sk-action-secondary flex-1"
-                        >
-                          Modifier
-                        </button>
-                      )}
-                      {onDelete && (
-                        <button
-                          type="button"
-                          onClick={() => onDelete(item)}
-                          className="sk-action sk-action-danger flex-1"
-                        >
-                          Supprimer
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </>
+
+          if (mobileRender) {
+            return (
+              <article
+                key={item.id}
+                className={`sk-mobile-card overflow-hidden transition duration-200 active:scale-[0.992] ${onRowClick ? 'cursor-pointer hover:border-emerald-200 hover:shadow-md outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:border-emerald-400' : ''} ${isSelected ? 'border-emerald-300 ring-1 ring-emerald-300 bg-emerald-50/40 shadow-sm' : ''}`}
+                onClick={() => onRowClick && onRowClick(item)}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={(e) => {
+                  if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    onRowClick(item);
+                  }
+                }}
+                {...(onRowClick ? { role: "button", "aria-label": "Ouvrir les détails", "aria-pressed": isSelected } : {})}
+              >
+                {mobileRender(item)}
+              </article>
+            );
+          }
+
+          const titleValue = columns.length > 0 ? renderContactValue(columns[0].key, columns[0].render ? columns[0].render(item) : getCellValue(item, columns[0].key)) : null;
+
+          const rows: PremiumMobileCardRow[] = columns.slice(1).map(col => {
+            const rawValue = col.render ? col.render(item) : getCellValue(item, col.key);
+            const value = renderContactValue(col.key, rawValue);
+            return { label: col.label, value, align: col.align };
+          }).filter(r => r.value !== null && r.value !== undefined && r.value !== '');
+
+          const actions = (onEdit || onDelete) ? (
+            <div className="grid grid-cols-2 gap-2 w-full">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+                  className="sk-action sk-action-secondary flex-1"
+                >
+                  Modifier
+                </button>
               )}
-            </article>
-        );
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onDelete(item); }}
+                  className="sk-action sk-action-danger flex-1"
+                >
+                  Supprimer
+                </button>
+              )}
+            </div>
+          ) : undefined;
+
+          return (
+            <PremiumMobileCard
+              key={item.id}
+              title={titleValue}
+              rows={rows}
+              actions={actions}
+              selected={isSelected}
+              onClick={onRowClick ? () => onRowClick(item) : undefined}
+              density={compact ? 'compact' : 'comfortable'}
+            />
+          );
         })}
       </div>
 
-      <div className="sk-table-shell hidden sm:block">
+      <div className="@container sk-table-shell hidden sm:block">
         <div className="sk-table-scroll">
           <table className="w-full min-w-[860px] border-collapse">
             <thead className="sticky top-0 z-10 border-b border-emerald-950/10 bg-[linear-gradient(180deg,rgba(248,244,236,0.98),rgba(255,255,255,0.94))] backdrop-blur">
               <tr>
-                {columns.map((column) => (
-                  <th key={column.key} className={`px-4 text-left text-xs font-black uppercase text-slate-500 xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`}>
-                    {column.label}
-                  </th>
-                ))}
+                {columns.map((column) => {
+                  const alignClass = getAlignmentClass(column.align);
+                  const visibilityClass = getVisibilityClass(column.visibility);
+                  const baseClasses = `px-4 text-xs font-black uppercase text-slate-500 xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`;
+                  const customClasses = `${column.className || ''} ${column.headerClassName || ''}`.trim();
+
+                  return (
+                    <th key={column.key} className={`${baseClasses} ${alignClass} ${visibilityClass} ${customClasses ? ` ${customClasses}` : ''}`}>
+                      <div className={`flex items-center gap-1.5 ${column.align === 'right' ? 'justify-end' : column.align === 'center' ? 'justify-center' : ''}`}>
+                        {column.icon && <span className="opacity-75 flex-shrink-0">{column.icon}</span>}
+                        <span className="truncate">{column.label}</span>
+                      </div>
+                    </th>
+                  );
+                })}
                 {(onEdit || onDelete) && (
                   <th className={`px-4 text-right text-xs font-black uppercase text-slate-500 xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`}>
                     Actions
@@ -181,20 +208,20 @@ export function Table<T extends { id: string }>({
               </tr>
             </thead>
 
-            <tbody>
+            <tbody className="divide-y divide-slate-100/60">
               {data.map((item) => {
                 const isSelected = selectedId === item.id;
                 return (
                   <tr 
                     key={item.id} 
-                    className={`border-b transition duration-150 outline-none ${
+                    className={`transition-colors duration-150 outline-none ${
                       onRowClick 
-                        ? 'cursor-pointer hover:bg-emerald-50/60 focus-visible:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300' 
-                        : ''
+                        ? 'cursor-pointer hover:bg-emerald-50/40 focus-visible:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300'
+                        : 'hover:bg-slate-50/40'
                     } ${
                       isSelected 
-                        ? 'bg-emerald-50/80 border-emerald-200 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-1 after:bg-brand-600' 
-                        : 'border-slate-100'
+                        ? 'bg-emerald-50/60 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-1 after:bg-brand-600'
+                        : ''
                     }`}
                     onClick={() => onRowClick && onRowClick(item)}
                     tabIndex={onRowClick ? 0 : undefined}
@@ -204,15 +231,20 @@ export function Table<T extends { id: string }>({
                         onRowClick(item);
                       }
                     }}
-                    role={onRowClick ? "button" : undefined}
-                    aria-label={onRowClick ? "Ouvrir les détails" : undefined}
-                    aria-selected={isSelected}
+                    {...(onRowClick ? { role: "button", "aria-label": "Ouvrir les détails", "aria-selected": isSelected } : {})}
                   >
-                  {columns.map((column) => (
-                    <td key={column.key} className={`px-4 text-sm font-medium text-slate-700 xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`}>
-                      {renderContactValue(column.key, column.render ? column.render(item) : getCellValue(item, column.key))}
-                    </td>
-                  ))}
+                  {columns.map((column) => {
+                    const alignClass = getAlignmentClass(column.align);
+                    const visibilityClass = getVisibilityClass(column.visibility);
+                    const baseClasses = `px-4 text-sm font-medium text-slate-700 xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`;
+                    const customClasses = `${column.className || ''} ${column.cellClassName || ''}`.trim();
+
+                    return (
+                      <td key={column.key} className={`${baseClasses} ${alignClass} ${visibilityClass} ${customClasses ? ` ${customClasses}` : ''}`}>
+                        {renderContactValue(column.key, column.render ? column.render(item) : getCellValue(item, column.key))}
+                      </td>
+                    );
+                  })}
 
                   {(onEdit || onDelete) && (
                     <td className={`px-4 text-right xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`}>

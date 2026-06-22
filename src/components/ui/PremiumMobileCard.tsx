@@ -5,6 +5,16 @@ import { MoneyText } from './MoneyText';
 
 type Tone = 'emerald' | 'amber' | 'red' | 'blue' | 'slate';
 
+export type PremiumMobileCardDensity = 'comfortable' | 'compact';
+
+export type PremiumMobileCardRow = {
+  label: ReactNode;
+  value: ReactNode;
+  icon?: ReactNode;
+  align?: 'left' | 'center' | 'right';
+  tone?: Tone | 'neutral' | 'success' | 'warning' | 'danger' | 'info';
+};
+
 interface PremiumMobileCardProps {
   title: ReactNode;
   subtitle?: ReactNode;
@@ -18,9 +28,16 @@ interface PremiumMobileCardProps {
   amountCompact?: boolean;
   amountSuffix?: string;
   meta?: Array<{ label: string; value: ReactNode; tone?: Tone }>;
+  rows?: PremiumMobileCardRow[];
+  actions?: ReactNode;
+  footer?: ReactNode;
+  active?: boolean;
   selected?: boolean;
   onClick?: () => void;
+  ariaLabel?: string;
+  density?: PremiumMobileCardDensity;
   className?: string;
+  children?: ReactNode;
 }
 
 const toneClasses: Record<Tone, string> = {
@@ -44,19 +61,46 @@ export function PremiumMobileCard({
   amountCompact = false,
   amountSuffix,
   meta = [],
+  rows = [],
+  actions,
+  footer,
+  active = false,
   selected = false,
   onClick,
+  ariaLabel,
+  density = 'comfortable',
   className = '',
+  children,
 }: PremiumMobileCardProps) {
-  const Comp = onClick ? 'button' : 'article';
+  const isEffectivelySelected = selected || active;
+  const hasInteractiveChildren = !!(actions || footer || children);
+  const isNativeButton = !!(onClick && !hasInteractiveChildren);
+  const Comp = isNativeButton ? 'button' : 'article';
+
+  const interactiveProps = onClick && !isNativeButton ? {
+    role: "button",
+    tabIndex: 0,
+    "aria-pressed": isEffectivelySelected,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClick();
+      }
+    }
+  } : {};
+
+  const pClass = density === 'compact' ? 'p-2.5' : 'p-3.5';
 
   return (
     <Comp
       data-premium-mobile-card="true"
-      type={onClick ? 'button' : undefined}
+      type={isNativeButton ? 'button' : undefined}
       onClick={onClick}
-      className={`block w-full rounded-[1.15rem] border bg-[#fffdf8] p-3 text-left shadow-[0_12px_30px_rgba(15,23,42,0.055)] ring-1 ring-white/80 transition active:scale-[0.99] ${
-        selected ? 'border-emerald-300 bg-emerald-50/55' : 'border-emerald-950/10 hover:border-emerald-200 hover:bg-emerald-50/35'
+      aria-label={ariaLabel}
+      {...(isNativeButton && { 'aria-pressed': isEffectivelySelected })}
+      {...interactiveProps}
+      className={`block w-full rounded-[1.15rem] border bg-[#fffdf8] ${pClass} text-left shadow-[0_12px_30px_rgba(15,23,42,0.055)] ring-1 ring-white/80 transition active:scale-[0.99] outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:border-emerald-400 ${
+        isEffectivelySelected ? 'border-emerald-300 bg-emerald-50/55' : 'border-emerald-950/10 hover:border-emerald-200 hover:bg-emerald-50/35'
       } ${className}`}
     >
       <div className="flex items-start gap-3">
@@ -78,7 +122,7 @@ export function PremiumMobileCard({
           </div>
 
           {(amount !== undefined || meta.length > 0) && (
-            <div className="mt-3 flex items-end justify-between gap-3">
+            <div className={`mt-3 flex items-end justify-between gap-3`}>
               {amount !== undefined ? (
                 <div className="min-w-0">
                   {amountLabel && <p className="text-[0.65rem] font-bold uppercase tracking-[0.09em] text-slate-400">{amountLabel}</p>}
@@ -94,6 +138,38 @@ export function PremiumMobileCard({
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {rows.length > 0 && (
+            <div className={`mt-3 flex flex-col ${density === 'compact' ? 'gap-1.5' : 'gap-2'} border-t border-slate-900/5 pt-3`}>
+              {rows.map((row, i) => (
+                <div key={i} className={`flex items-start justify-between gap-3 text-sm ${row.align === 'right' ? 'text-right flex-row-reverse' : 'text-left'}`}>
+                  <span className="text-slate-500 font-medium whitespace-nowrap flex items-center gap-1.5">
+                    {row.icon && <span className="opacity-70">{row.icon}</span>}
+                    {row.label}
+                  </span>
+                  <span className={`font-semibold text-slate-900 ${row.align === 'right' ? '' : 'text-right'}`}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {children && (
+            <div className="mt-3 border-t border-slate-900/5 pt-3">
+              {children}
+            </div>
+          )}
+
+          {actions && (
+            <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-900/5 pt-3" onClick={(e) => e.stopPropagation()}>
+              {actions}
+            </div>
+          )}
+
+          {footer && (
+            <div className="mt-3 border-t border-slate-900/5 pt-3 text-xs text-slate-500">
+              {footer}
             </div>
           )}
         </div>

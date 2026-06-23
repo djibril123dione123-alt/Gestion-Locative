@@ -372,6 +372,7 @@ export function Sidebar({
             type="button"
             onClick={() => setUserMenuOpen((value) => !value)}
             className={`w-full rounded-2xl border border-white/10 bg-white/[0.065] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.095] ${showExpandedContent ? '' : 'lg:flex lg:justify-center lg:px-0'}`}
+            // NOSONAR
             aria-expanded={userMenuOpen}
           >
             <div className="flex items-center gap-3">

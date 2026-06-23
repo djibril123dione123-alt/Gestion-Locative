@@ -30,8 +30,10 @@
   }
 
   html {
-    text-size-adjust: 100%;
+    /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
     -webkit-text-size-adjust: 100%;
+    /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
+    text-size-adjust: 100%;
     scroll-behavior: smooth;
     touch-action: auto;
     background: var(--sk-paper);
@@ -573,10 +575,7 @@
   .sk-splash-screen {
     background-image:
       linear-gradient(180deg, rgba(8, 17, 14, 0.34), rgba(8, 17, 14, 0.94)),
-      -webkit-image-set(url('/brand/image-premium-page-accueil-mobile.png') 1x);
-    background-image:
-      linear-gradient(180deg, rgba(8, 17, 14, 0.34), rgba(8, 17, 14, 0.94)),
-      image-set(url('/brand/image-premium-page-accueil-mobile.png') 1x);
+      url('/brand/image-premium-page-accueil-mobile.png');
     background-position: center;
     background-size: cover;
   }
@@ -585,10 +584,7 @@
     .sk-splash-screen {
       background-image:
         linear-gradient(180deg, rgba(8, 17, 14, 0.26), rgba(8, 17, 14, 0.92)),
-        -webkit-image-set(url('/brand/image-premium-page-accueil-desktop.png') 1x);
-      background-image:
-        linear-gradient(180deg, rgba(8, 17, 14, 0.26), rgba(8, 17, 14, 0.92)),
-        image-set(url('/brand/image-premium-page-accueil-desktop.png') 1x);
+        url('/brand/image-premium-page-accueil-desktop.png');
     }
   }
 
@@ -854,7 +850,9 @@
   }
 
   .premium-polish {
+    /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
     scrollbar-color: rgba(31, 59, 46, 0.38) rgba(242, 237, 227, 0.48);
+    /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
     scrollbar-width: thin;
   }
 
@@ -1064,6 +1062,7 @@
 
   .scrollbar-hide {
     -ms-overflow-style: none;
+    /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
     scrollbar-width: none;
   }
 

@@ -64,6 +64,10 @@ import {
   type BailleurLifecycleImpacts,
 } from '../services/api/bailleurApi';
 import type { AgencySettings } from '../types/agency';
+import { PageShell } from '../components/ui/PageShell';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
+import { MetricCard } from '../components/ui/MetricCard';
 
 /**
  * Interface Bailleur avec les champs commission et debut_contrat
@@ -336,39 +340,6 @@ function CompactList({
   );
 }
 
-function KpiTile({
-  icon: Icon,
-  label,
-  value,
-  helper,
-  tone,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: ReactNode;
-  helper: string;
-  tone: 'emerald' | 'amber' | 'red' | 'blue';
-}) {  const tones = {
-    emerald: { gradient: 'from-white to-emerald-50/70', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100' },
-    blue: { gradient: 'from-white to-stone-50/75', text: 'text-slate-800', icon: 'bg-stone-50 text-slate-700 ring-stone-100' },
-    amber: { gradient: 'from-white to-amber-50/70', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100' },
-    red: { gradient: 'from-white to-rose-50/70', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100' },
-  }[tone];
-  return (
-    <article className={`@container group min-w-0 rounded-[1.05rem] border border-emerald-950/10 bg-gradient-to-br ${tones.gradient} p-2.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)]`}>
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className={`line-clamp-2 min-h-[2.5em] text-[0.68rem] font-bold uppercase tracking-[0.12em] ${tones.text}`}>{label}</p>
-          <p className="mt-1.5 whitespace-nowrap text-[1.02rem] font-extrabold tracking-tight text-slate-950 sm:text-[1.1rem]">{value}</p>
-          {helper && <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">{helper}</p>}
-        </div>
-        <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ring-1 transition-colors ${tones.icon} group-hover:scale-105`}>
-          <Icon className="h-3.5 w-3.5" />
-        </div>
-      </div>
-    </article>
-  );
-}
 
 const todayInput = () => new Date().toISOString().split('T')[0];
 const currentMonthInput = () => new Date().toISOString().slice(0, 7);
@@ -1354,11 +1325,14 @@ export function Bailleurs() {
                 <p className="mt-1 text-xl font-extrabold tabular-nums text-slate-950"><MoneyText value={selectedSummary.loyers} /></p>
               </div>
               <div
-                className="flex h-16 w-16 items-center justify-center rounded-full text-center text-[11px] font-black text-brand-950 shadow-inner"
-                style={{ background: `conic-gradient(#047857 ${paidRate}%, #d1fae5 0)` }}
+                className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-center text-[11px] font-black text-brand-950"
                 aria-label={`Taux de recouvrement ${paidRate}%`}
               >
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fffdf8]">{paidRate}%</span>
+                <svg viewBox="0 0 36 36" className="absolute inset-0 h-full w-full -rotate-90">
+                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#d1fae5" strokeWidth="4" />
+                  <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#047857" strokeWidth="4" strokeDasharray={`${paidRate} ${100 - paidRate}`} />
+                </svg>
+                <span className="relative z-10 flex h-11 w-11 items-center justify-center rounded-full bg-[#fffdf8]">{paidRate}%</span>
               </div>
             </div>
             <div className="mt-4 space-y-2.5 text-sm">
@@ -1489,7 +1463,7 @@ export function Bailleurs() {
                 <label className="min-w-[10rem] text-xs font-semibold text-slate-600">
                   Période
                   <input
-                    type="month"
+                    {...{ type: 'month' }}
                     value={reportMonth}
                     onChange={(event) => setReportMonth(event.target.value || currentMonthInput())}
                     className="mt-1 w-full rounded-xl border border-amber-200 bg-[#fffdf8] px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-emerald-200 focus:ring-4 focus:ring-emerald-100"
@@ -1562,7 +1536,7 @@ export function Bailleurs() {
   }
 
   return (
-    <div className="sk-page-shell max-w-none animate-fadeIn bg-[radial-gradient(circle_at_top_left,rgba(255,247,230,0.95),transparent_28rem),linear-gradient(180deg,#fffaf1,#f8f4ea_48%,#f7faf8)]">
+    <PageShell spacing="standard" variant="dataDense" tone="paper">
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
       {cacheTimestamp && (
         <OfflineDataNotice
@@ -1575,31 +1549,57 @@ export function Bailleurs() {
       <div className="flex min-h-full">
         <div className={`flex-1 min-w-0 transition-all duration-300 ${detailPanelOpen ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
           <section className="min-w-0 space-y-6">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Portefeuille propriétaire</p>
-              <h1 className="mt-1.5 font-serif text-3xl font-black tracking-tight text-brand-950 lg:text-4xl">Bailleurs</h1>
-              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
-                Gérez vos propriétaires, leurs revenus locatifs et tous les documents associés.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <PremiumButton
-                variant="create"
-                onClick={() => { setBailleurWizardStep('identity'); setIsModalOpen(true); }}
-                icon={<Plus className="h-5 w-5" />}
-              >
-                Nouveau bailleur
-              </PremiumButton>
-            </div>
-          </div>
+            <PremiumPageHeader
+              eyebrow="PORTEFEUILLE PROPRIÉTAIRE"
+              title="Bailleurs"
+              description="Gérez vos propriétaires, leurs revenus locatifs et tous les documents associés."
+              mobileDescription="Propriétaires et reversements."
+              primaryAction={
+                <PremiumButton
+                  variant="create"
+                  onClick={() => { setBailleurWizardStep('identity'); setIsModalOpen(true); }}
+                  icon={<Plus className="h-5 w-5" />}
+                  className="w-full sm:w-auto"
+                >
+                  Nouveau bailleur
+                </PremiumButton>
+              }
+            />
 
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-            <KpiTile icon={Users} label="Bailleurs actifs" value={globalKpis.activeBailleurs.toString()} helper={`${bailleurs.length} propriétaire${bailleurs.length > 1 ? 's' : ''} dans la base`} tone="emerald" />
-            <KpiTile icon={AlertCircle} label="Reliquats" value={<MoneyText value={globalKpis.reliquats} compact />} helper="À suivre sur les paiements partiels" tone="red" />
-            <KpiTile icon={Wallet} label="Net" value={<MoneyText value={globalKpis.net} compact />} helper="Somme des parts bailleurs" tone="emerald" />
-            <KpiTile icon={ReceiptText} label="Commissions" value={<MoneyText value={globalKpis.commissions} compact />} helper={`${globalKpis.immeubles} biens à ${globalKpis.unites} unités`} tone="amber" />
-          </div>
+            <PremiumKpiGrid density="compact">
+              <MetricCard
+                density="compact"
+                title="BAILLEURS ACTIFS"
+                icon={Users}
+                value={globalKpis.activeBailleurs.toString()}
+                helper={`${bailleurs.length} propriétaire${bailleurs.length > 1 ? 's' : ''} dans la base`}
+                tone="emerald"
+              />
+              <MetricCard
+                density="compact"
+                title="RELIQUATS"
+                icon={AlertCircle}
+                value={<MoneyText value={globalKpis.reliquats} compact />}
+                helper="À suivre sur les paiements partiels"
+                tone="danger"
+              />
+              <MetricCard
+                density="compact"
+                title="NET BAILLEURS"
+                icon={Wallet}
+                value={<MoneyText value={globalKpis.net} compact />}
+                helper="Somme des parts bailleurs"
+                tone="financial"
+              />
+              <MetricCard
+                density="compact"
+                title="COMMISSIONS"
+                icon={ReceiptText}
+                value={<MoneyText value={globalKpis.commissions} compact />}
+                helper={`${globalKpis.immeubles} biens à ${globalKpis.unites} unités`}
+                tone="neutral"
+              />
+            </PremiumKpiGrid>
 
           <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
           <div className="border-b border-emerald-950/10 bg-[linear-gradient(180deg,#fff6df,#fffdf7)] p-3.5 sm:p-4">
@@ -2110,7 +2110,7 @@ export function Bailleurs() {
 
       {/* Conteneur de toasts */}
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
-    </div>
+    </PageShell>
   );
 }
 

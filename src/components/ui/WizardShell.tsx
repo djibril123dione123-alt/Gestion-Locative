@@ -163,9 +163,10 @@ export function WizardShell({
                   </p>
                 </div>
                 <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-emerald-950/10">
+
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-brand-900 to-action-500 transition-all duration-300"
-                    style={{ width: `${progress}%` }}
+                    {...{ style: { width: `${progress}%` } }}
                   />
                 </div>
               </div>

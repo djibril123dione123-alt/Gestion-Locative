@@ -57,13 +57,13 @@ const VARIANT_STYLES: Record<
   }
 > = {
   standard: {
-    // Fond clair premium, identique à .sk-page-hero
-    shell: 'sk-page-hero',
-    eyebrow: 'text-action-600',
+    // Fond clair premium avec padding dense et relief
+    shell: 'relative overflow-hidden rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] p-4 sm:p-5 shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70',
+    eyebrow: 'text-orange-600',
     title: 'text-brand-950',
     description: 'text-slate-600',
     decorBlob:
-      'absolute -right-20 -top-20 hidden h-56 w-56 rounded-full bg-orange-300/10 blur-3xl sm:block pointer-events-none',
+      'absolute -right-20 -top-20 hidden h-48 w-48 rounded-full bg-orange-300/10 blur-3xl sm:block pointer-events-none',
   },
   darkVault: {
     // Fond vert profond — coffre documentaire uniquement
@@ -111,7 +111,7 @@ function EyebrowBadge({
   }
   // standard
   return (
-    <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-action-600">
+    <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-orange-600">
       {text}
     </p>
   );
@@ -150,26 +150,60 @@ export function PremiumPageHeader({
   // Sur darkVault, le titre doit être blanc
   const titleClass =
     variant === 'darkVault'
-      ? 'mt-1 min-w-0 font-serif text-[clamp(1.5rem,2.3vw,2.25rem)] leading-[1.15] font-black tracking-tight text-white'
-      : `mt-1 min-w-0 font-serif text-[clamp(1.5rem,2.3vw,2.25rem)] leading-[1.15] font-black tracking-tight ${titleColorClass}`;
+      ? 'mt-1 min-w-0 font-serif text-[clamp(1.25rem,1.8vw,1.6rem)] leading-[1.15] font-black tracking-tight text-white'
+      : `mt-1 min-w-0 font-serif text-3xl sm:text-4xl font-black tracking-tight ${titleColorClass}`;
 
   const hasActions =
     resolvedPrimaryAction || resolvedSecondaryAction || legacyActions;
   const hasSideContent = !!sideContent;
 
+  if (variant === 'standard') {
+    return (
+      <header className={`flex flex-col gap-4 rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 sm:p-5 lg:flex-row lg:items-center lg:justify-between ${className}`}>
+        <div className="min-w-0">
+          <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-orange-600">{eyebrow}</p>
+          <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{title}</h1>
+
+          {resolvedDescription && (
+            mobileDescription ? (
+              <>
+                <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-slate-600 lg:hidden">{mobileDescription}</p>
+                <p className="mt-1 hidden max-w-2xl text-sm font-medium leading-6 text-slate-600 lg:block">{resolvedDescription}</p>
+              </>
+            ) : (
+              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-slate-600">{resolvedDescription}</p>
+            )
+          )}
+
+          {/* meta slot (rétrocompatibilité) */}
+          {meta && <div className="mt-2">{meta}</div>}
+
+          {/* children slot (rétrocompatibilité) */}
+          {children && <div className="mt-3">{children}</div>}
+        </div>
+
+        {(hasActions || hasSideContent) && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
+            {sideContent}
+            {resolvedSecondaryAction}
+            {resolvedPrimaryAction}
+            {legacyActions}
+          </div>
+        )}
+      </header>
+    );
+  }
+
   return (
     <header
-      className={`@container ${styles.shell} ${className}`}
+      className={`@container ${styles.shell} flex flex-col gap-4 @2xl:flex-row @2xl:items-center @2xl:justify-between ${className}`}
       role="banner"
     >
       {/* Bulle décorative */}
       <div className={styles.decorBlob} aria-hidden="true" />
 
-      {/* Grille principale : texte + side */}
-      <div className="relative flex min-w-0 flex-col gap-3 @2xl:flex-row @2xl:items-end @2xl:justify-between @2xl:gap-5">
-
-        {/* Colonne gauche : eyebrow + title + description + actions */}
-        <div className="min-w-0 flex-1">
+      {/* Colonne gauche : eyebrow + title + description + meta/children legacy */}
+      <div className="min-w-0 flex-1 relative z-10">
           <EyebrowBadge text={eyebrow} variant={variant} />
 
           <h1 className={titleClass}>{title}</h1>
@@ -180,19 +214,19 @@ export function PremiumPageHeader({
               {mobileDescription ? (
                 <>
                   <p
-                    className={`mt-1 max-w-lg text-sm font-medium leading-5 @md:hidden ${styles.description}`}
+                    className={`mt-1 max-w-2xl text-sm font-medium leading-6 @md:hidden ${styles.description}`}
                   >
                     {mobileDescription}
                   </p>
                   <p
-                    className={`mt-1 hidden max-w-lg text-sm font-medium leading-5 @md:block ${styles.description}`}
+                    className={`mt-1 hidden max-w-2xl text-sm font-medium leading-6 @md:block ${styles.description}`}
                   >
                     {resolvedDescription}
                   </p>
                 </>
               ) : (
                 <p
-                  className={`mt-1 max-w-lg text-sm font-medium leading-5 line-clamp-2 ${styles.description}`}
+                  className={`mt-1 max-w-2xl text-sm font-medium leading-6 line-clamp-2 ${styles.description}`}
                 >
                   {resolvedDescription}
                 </p>
@@ -203,26 +237,19 @@ export function PremiumPageHeader({
           {/* meta slot (rétrocompatibilité) */}
           {meta && <div className="mt-2">{meta}</div>}
 
-          {/* Actions */}
-          {hasActions && (
-            <div className="mt-3 flex min-w-0 flex-wrap gap-2">
-              {resolvedPrimaryAction}
-              {resolvedSecondaryAction}
-              {legacyActions}
-            </div>
-          )}
-
           {/* children slot (rétrocompatibilité) */}
           {children && <div className="mt-3">{children}</div>}
         </div>
 
-        {/* Colonne droite : sideContent */}
-        {hasSideContent && (
-          <div className="min-w-0 w-full shrink-0 @2xl:w-auto @2xl:min-w-[200px] @2xl:max-w-[240px]">
+        {/* Colonne droite : Actions et sideContent */}
+        {(hasActions || hasSideContent) && (
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center @2xl:justify-end relative z-10">
             {sideContent}
+            {resolvedSecondaryAction}
+            {resolvedPrimaryAction}
+            {legacyActions}
           </div>
         )}
-      </div>
     </header>
   );
 }

@@ -14,6 +14,7 @@ interface MetricCardProps {
   valueA11yLabel?: string;
   icon: LucideIcon | React.ElementType;
   tone?: MetricTone;
+  density?: 'comfortable' | 'compact';
   wide?: boolean;
   className?: string;
 
@@ -42,6 +43,7 @@ export function MetricCard({
   valueA11yLabel,
   icon: Icon,
   tone = 'neutral',
+  density = 'comfortable',
   wide = false,
   className = '',
   onClick,
@@ -92,10 +94,13 @@ export function MetricCard({
 
   const computedAriaLabel = ariaLabel ?? (valueA11yLabel ? `${resolvedTitle} : ${valueA11yLabel}` : resolvedTitle);
 
+  const isCompact = density === 'compact';
+
   const containerClasses = [
     '@container group min-w-0 rounded-[1.05rem] border bg-gradient-to-br',
     tones.gradient,
-    'p-2.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] transition-all duration-200',
+    isCompact ? 'p-1.5 px-2.5 sm:px-3 sm:py-2' : 'p-2.5 sm:p-3',
+    'shadow-[0_9px_24px_rgba(15,23,42,0.045)] transition-all duration-200',
     wide ? 'sm:col-span-2' : '',
     isClickable ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100' : '',
     finalActive
@@ -123,30 +128,30 @@ export function MetricCard({
       className={containerClasses}
       {...a11yProps}
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className={`flex items-start justify-between ${isCompact ? 'gap-1.5' : 'gap-2'}`}>
         <div className="min-w-0 flex-1">
-          <h3 className={`text-[0.68rem] font-black uppercase tracking-[0.12em] text-slate-600 line-clamp-2 min-h-[2.5em] ${mobileTitle ? 'hidden sm:block' : 'block'}`}>
+          <h3 className={`font-black uppercase tracking-[0.12em] text-slate-600 ${isCompact ? 'text-[0.55rem] leading-none line-clamp-1' : 'text-[0.68rem] min-h-[2.5em] line-clamp-2'} ${mobileTitle ? 'hidden sm:block' : 'block'}`}>
             {resolvedTitle}
           </h3>
           {mobileTitle && (
-            <h3 className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-slate-600 line-clamp-2 min-h-[2.5em] sm:hidden">
+            <h3 className={`font-black uppercase tracking-[0.12em] text-slate-600 sm:hidden ${isCompact ? 'text-[0.55rem] leading-none line-clamp-1' : 'text-[0.68rem] min-h-[2.5em] line-clamp-2'}`}>
               {mobileTitle}
             </h3>
           )}
 
-          <div className="mt-1.5" {...(valueA11yLabel ? { 'aria-hidden': true } : {})}>
-            <div className={`w-full max-w-full whitespace-nowrap text-base font-black tracking-tight sm:text-lg ${tones.text}`}>
+          <div className={isCompact ? 'mt-0.5' : 'mt-1.5'} {...(valueA11yLabel ? { 'aria-hidden': true } : {})}>
+            <div className={`w-full max-w-full whitespace-nowrap font-black tracking-tight ${isCompact ? 'text-sm' : 'text-base sm:text-lg'} ${tones.text}`}>
               {value}
             </div>
           </div>
 
           {helper && (
-            <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">{helper}</p>
+            <p className={`${isCompact ? 'mt-0 text-[0.6rem] leading-tight line-clamp-1' : 'mt-0.5 text-xs'} hidden text-slate-500 sm:block`}>{helper}</p>
           )}
         </div>
 
-        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ring-1 ${tones.icon} shadow-sm transition-transform duration-300 ${isClickable ? 'group-hover:scale-110' : ''}`}>
-          <Icon className="h-3.5 w-3.5" />
+        <div className={`flex shrink-0 items-center justify-center rounded-lg ring-1 ${tones.icon} shadow-sm transition-transform duration-300 ${isClickable ? 'group-hover:scale-110' : ''} ${isCompact ? 'h-5 w-5 mt-0.5' : 'h-7 w-7'}`}>
+          <Icon className={isCompact ? 'h-2.5 w-2.5' : 'h-3.5 w-3.5'} />
         </div>
       </div>
     </div>

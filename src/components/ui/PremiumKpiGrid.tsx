@@ -6,6 +6,7 @@ export interface PremiumKpiGridProps {
   children: React.ReactNode;
   variant?: PremiumKpiGridVariant;
   maxItems?: number;
+  density?: "comfortable" | "compact";
   isLoading?: boolean;
   skeletonCount?: number;
   ariaLabel?: string;
@@ -16,6 +17,7 @@ export function PremiumKpiGrid({
   children,
   variant = "standard",
   maxItems,
+  density = "comfortable",
   isLoading = false,
   skeletonCount,
   ariaLabel,
@@ -45,9 +47,10 @@ export function PremiumKpiGrid({
   // Remplacement des classes viewport classiques (lg:, xl:, 2xl:) par des container queries (@2xl:, @4xl:, @6xl:)
   // Cela garantit que la grille s'adapte à la largeur RÉELLE de son parent (par ex, si un drawer est ouvert)
   // et non à la largeur totale de l'écran.
+  const isCompact = density === "compact";
   const gridClasses = variant === "dashboard" 
-    ? "grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4 @6xl:grid-cols-6"
-    : "grid-cols-2 @4xl:grid-cols-4";
+    ? (isCompact ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" : "grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4 @6xl:grid-cols-6")
+    : (isCompact ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 @4xl:grid-cols-4");
 
   return (
     <section 
@@ -55,7 +58,7 @@ export function PremiumKpiGrid({
       aria-label={ariaLabel ?? "Indicateurs clés"}
       {...(isLoading ? { 'aria-busy': true } : {})}
     >
-      <div className={`grid gap-3 ${gridClasses}`}>
+      <div className={`grid ${isCompact ? 'gap-2 sm:gap-2.5' : 'gap-3'} ${gridClasses}`}>
         {isLoading ? (
           skeletons.map((_, i) => (
             <div 

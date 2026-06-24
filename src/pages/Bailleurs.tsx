@@ -9,7 +9,6 @@ import {
   Search,
   FileText,
   AlertCircle,
-  Ban,
   ShieldAlert,
   Building2,
   Home,
@@ -19,9 +18,7 @@ import {
   Users,
   Phone,
   Mail,
-  MapPin,
   SlidersHorizontal,
-  X,
   BarChart3,
   FolderOpen,
   CreditCard,
@@ -70,6 +67,8 @@ import { PageShell } from '../components/ui/PageShell';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
 import { MetricCard } from '../components/ui/MetricCard';
+import { SplitViewShell } from '../components/ui/SplitViewShell';
+import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
 
 /**
  * Interface Bailleur avec les champs commission et debut_contrat
@@ -275,17 +274,17 @@ function EmptyDrawerState({
   onAction?: () => void;
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-emerald-950/15 bg-[#fffdf7]/85 p-4 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
-      <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50/85 text-emerald-800 ring-1 ring-emerald-100">
-        <FolderOpen className="h-4 w-4" />
+    <div className="rounded-[14px] border border-dashed border-emerald-950/15 bg-[#fffdf7]/85 p-3 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
+      <div className="mx-auto flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50/85 text-emerald-800 ring-1 ring-emerald-100">
+        <FolderOpen className="h-3.5 w-3.5" />
       </div>
-      <p className="mt-3 text-sm font-bold text-slate-950">{title}</p>
-      <p className="mx-auto mt-1.5 max-w-md text-xs leading-5 text-slate-500">{description}</p>
+      <p className="mt-2 text-[0.72rem] font-bold text-slate-950">{title}</p>
+      <p className="mx-auto mt-1 max-w-md text-[0.62rem] leading-snug text-slate-500">{description}</p>
       {actionLabel && onAction && (
         <button
           type="button"
           onClick={onAction}
-          className="mt-3 inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-100"
+          className="mt-2 inline-flex items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[0.65rem] font-bold text-emerald-800 transition hover:bg-emerald-100"
         >
           {actionLabel}
         </button>
@@ -300,20 +299,20 @@ function CompactList({
   rows: Array<{ id: string; title: string; subtitle: ReactNode; value?: ReactNode; badge?: string; onClick?: () => void }>;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8] shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
+    <div className="overflow-hidden rounded-xl border border-emerald-950/10 bg-white/50 shadow-sm">
       {rows.map((row) => {
         const isClickable = !!row.onClick;
         const content = (
           <>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-slate-950">{row.title}</p>
-              <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">{row.subtitle}</p>
+              <p className="truncate text-[0.65rem] font-bold text-slate-800">{row.title}</p>
+              <p className="mt-0.5 line-clamp-1 text-[0.58rem] font-medium text-slate-500">{row.subtitle}</p>
             </div>
             <div className="shrink-0 flex flex-col items-end text-right">
-              {row.value && <p className="text-sm font-bold text-slate-950">{row.value}</p>}
-              <div className="mt-1 flex items-center justify-end gap-1.5">
-                {row.badge && <span className="inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800">{row.badge}</span>}
-                {isClickable && <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />}
+              {row.value && <p className="text-[0.68rem] font-bold text-slate-800">{row.value}</p>}
+              <div className="mt-0.5 flex items-center justify-end gap-1.5">
+                {row.badge && <span className="inline-flex rounded bg-slate-100 px-1.5 py-0.5 text-[8px] font-black uppercase text-slate-600 ring-1 ring-slate-200/50">{row.badge}</span>}
+                {isClickable && <ChevronRight className="h-3.5 w-3.5 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />}
               </div>
             </div>
           </>
@@ -324,7 +323,7 @@ function CompactList({
             key={row.id}
             type="button"
             onClick={row.onClick}
-            className="group flex w-full items-center justify-between gap-3 border-b border-slate-100 px-3.5 py-2.5 text-left transition last:border-b-0 hover:bg-emerald-50/50 focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500"
+            className="group flex w-full items-center justify-between gap-2 border-b border-emerald-950/5 px-2.5 py-1.5 text-left transition last:border-b-0 hover:bg-emerald-50/50 focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500"
             aria-label={`Ouvrir ${row.title}`}
           >
             {content}
@@ -332,7 +331,7 @@ function CompactList({
         ) : (
           <div
             key={row.id}
-            className="flex items-center justify-between gap-3 border-b border-slate-100 px-3.5 py-2.5 last:border-b-0"
+            className="flex items-center justify-between gap-2 border-b border-emerald-950/5 px-2.5 py-1.5 last:border-b-0"
           >
             {content}
           </div>
@@ -1336,48 +1335,48 @@ export function Bailleurs() {
       const paidBase = selectedSummary.loyers + selectedSummary.reliquats;
       const paidRate = paidBase > 0 ? Math.min(100, Math.round((selectedSummary.loyers / paidBase) * 100)) : 100;
       return (
-        <div className="grid gap-3 xl:grid-cols-2">
-          <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
-            <div className="flex items-center justify-between gap-3">
+        <div className="grid gap-2">
+          <section className="rounded-xl border border-emerald-950/10 bg-white/80 p-2 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Résumé paiements</p>
-                <p className="mt-0.5 text-[0.95rem] font-extrabold tabular-nums text-slate-950"><MoneyText value={selectedSummary.loyers} /></p>
+                <p className="text-[8.5px] font-black uppercase tracking-[0.12em] text-slate-400">Résumé paiements</p>
+                <p className="mt-0.5 text-[0.75rem] font-extrabold tabular-nums text-slate-900"><MoneyText value={selectedSummary.loyers} /></p>
               </div>
               <div
-                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-center text-[9px] font-black text-brand-950"
+                className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-center text-[8px] font-black text-brand-950"
                 aria-label={`Taux de recouvrement ${paidRate}%`}
               >
                 <svg viewBox="0 0 36 36" className="absolute inset-0 h-full w-full -rotate-90">
                   <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#d1fae5" strokeWidth="4" />
                   <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#047857" strokeWidth="4" strokeDasharray={`${paidRate} ${100 - paidRate}`} />
                 </svg>
-                <span className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full bg-[#fffdf8]">{paidRate}%</span>
+                <span className="relative z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white">{paidRate}%</span>
               </div>
             </div>
-            <div className="mt-3 space-y-2 text-xs">
-              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Commissions</span><strong className="font-bold"><MoneyText value={selectedSummary.commissions} /></strong></div>
-              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Net à reverser</span><strong className="font-bold text-emerald-800"><MoneyText value={selectedSummary.net} /></strong></div>
-              <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Reliquats</span><strong className={`font-bold ${selectedSummary.reliquats > 0 ? 'text-red-600' : 'text-slate-900'}`}><MoneyText value={selectedSummary.reliquats} /></strong></div>
+            <div className="mt-2 space-y-1 text-[0.6rem]">
+              <div className="flex items-center justify-between gap-2"><span className="font-semibold text-slate-500">Commissions</span><strong className="font-bold text-slate-700"><MoneyText value={selectedSummary.commissions} /></strong></div>
+              <div className="flex items-center justify-between gap-2"><span className="font-semibold text-slate-500">Net à reverser</span><strong className="font-bold text-emerald-800"><MoneyText value={selectedSummary.net} /></strong></div>
+              <div className="flex items-center justify-between gap-2"><span className="font-semibold text-slate-500">Reliquats</span><strong className={`font-bold ${selectedSummary.reliquats > 0 ? 'text-red-600' : 'text-slate-700'}`}><MoneyText value={selectedSummary.reliquats} /></strong></div>
             </div>
           </section>
-          <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
+          <section className="rounded-xl border border-emerald-950/10 bg-white/80 p-2 shadow-sm">
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Activité récente</p>
-              <button type="button" onClick={() => setActiveDrawerTab('paiements')} className="text-xs font-bold text-emerald-800 hover:text-emerald-950">Voir tout</button>
+              <p className="text-[8.5px] font-black uppercase tracking-[0.12em] text-slate-400">Activité récente</p>
+              <button type="button" onClick={() => setActiveDrawerTab('paiements')} className="text-[0.6rem] font-bold text-emerald-800 hover:text-emerald-950">Voir tout</button>
             </div>
-            <div className="mt-3 space-y-2">
+            <div className="mt-2 space-y-1.5">
               {recentActivity.length === 0 ? (
                 <EmptyDrawerState title="Aucune activité récente" description="Les contrats, paiements et documents de ce bailleur apparaîtront ici." />
               ) : recentActivity.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.id} className="flex items-start gap-2.5 rounded-xl bg-slate-50/80 px-2.5 py-1.5 ring-1 ring-slate-100">
-                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#fffdf8] text-emerald-700 shadow-sm"><Icon className="h-3 w-3" /></div>
+                  <div key={item.id} className="flex items-center gap-1.5 rounded-md bg-slate-50/80 px-1.5 py-1 ring-1 ring-emerald-950/5">
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-white text-emerald-700 shadow-sm"><Icon className="h-3 w-3" /></div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[0.7rem] font-semibold text-slate-900">{item.title}</p>
-                      <p className="truncate text-[0.6rem] text-slate-500">{item.detail}</p>
+                      <p className="truncate text-[0.62rem] font-bold text-slate-900">{item.title}</p>
+                      <p className="truncate text-[0.55rem] font-medium text-slate-500">{item.detail}</p>
                     </div>
-                    <span className="text-[9px] font-semibold text-slate-400">{formatDate(item.date)}</span>
+                    <span className="text-[7.5px] font-bold text-slate-400">{formatDate(item.date)}</span>
                   </div>
                 );
               })}
@@ -1391,7 +1390,7 @@ export function Bailleurs() {
       return selectedSummary.immeubles.length === 0 ? (
         <EmptyDrawerState title="Aucun bien rattaché" description="Ajoutez un bien pour commencer à suivre les unités, locataires et loyers de ce bailleur." actionLabel="Ajouter un bien" onAction={() => { window.location.hash = '#/patrimoine'; }} />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8]">
+        <div className="overflow-hidden rounded-xl border border-emerald-950/10 bg-white/50 shadow-sm">
           {selectedSummary.immeubles.map((immeuble) => {
             const units = selectedSummary.unites.filter((unite) => unite.immeuble_id === immeuble.id);
             const occupied = units.filter((unite) => unite.statut === 'loue').length;
@@ -1402,17 +1401,17 @@ export function Bailleurs() {
                 key={immeuble.id}
                 type="button"
                 onClick={() => { window.location.hash = '#/patrimoine'; }}
-                className="group flex w-full flex-col gap-2.5 border-b border-slate-100 px-3.5 py-3 text-left last:border-b-0 hover:bg-emerald-50/50 focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500 sm:flex-row sm:items-center sm:justify-between"
+                className="group flex w-full flex-col gap-1.5 border-b border-emerald-950/5 px-2.5 py-1.5 text-left last:border-b-0 hover:bg-emerald-50/50 focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500 sm:flex-row sm:items-center sm:justify-between"
                 aria-label={`Ouvrir le bien ${immeuble.nom}`}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold text-slate-950">{immeuble.nom}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">{[immeuble.adresse, immeuble.quartier, immeuble.ville].filter(Boolean).join(', ') || 'Adresse non renseignée'}</p>
+                  <p className="text-[0.68rem] font-bold text-slate-800">{immeuble.nom}</p>
+                  <p className="mt-0.5 text-[0.6rem] font-medium text-slate-500">{[immeuble.adresse, immeuble.quartier, immeuble.ville].filter(Boolean).join(', ') || 'Adresse non renseignée'}</p>
                 </div>
-                <div className="flex-shrink-0 text-sm text-slate-600">{units.length} unité{units.length > 1 ? 's' : ''} · {rate}% occupé</div>
-                <div className="flex flex-shrink-0 items-center justify-end gap-2 text-right">
-                  <div className="text-sm font-bold text-slate-950"><MoneyText value={potential} /></div>
-                  <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                <div className="flex-shrink-0 text-[0.62rem] font-medium text-slate-500">{units.length} unité{units.length > 1 ? 's' : ''} · {rate}% occupé</div>
+                <div className="flex flex-shrink-0 items-center justify-end gap-1.5 text-right">
+                  <div className="text-[0.68rem] font-bold text-slate-800"><MoneyText value={potential} /></div>
+                  <ChevronRight className="h-3.5 w-3.5 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
                 </div>
               </button>
             );
@@ -1468,51 +1467,51 @@ export function Bailleurs() {
 
     if (activeDrawerTab === 'rapports') {
       return (
-        <div className="space-y-3">
-          <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8] shadow-[0_16px_42px_rgba(15,23,42,0.055)]">
-            <div className="bg-[linear-gradient(135deg,#fff4d8,#fffdf8)] p-4 text-brand-950">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2.5">
+          <section className="overflow-hidden rounded-xl border border-emerald-950/10 bg-white/80 shadow-sm">
+            <div className="bg-[linear-gradient(135deg,#fff4d8,#fffdf8)] p-2.5 text-brand-950">
+              <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#9a5b17]">Registre financier</p>
-                  <p className="mt-1 text-base font-black">Rapport bailleur</p>
-                  <p className="mt-1 max-w-xs text-xs leading-5 text-slate-600">
+                  <p className="text-[8.5px] font-black uppercase tracking-[0.16em] text-[#9a5b17]">Registre financier</p>
+                  <p className="mt-0.5 text-[0.75rem] font-black">Rapport bailleur</p>
+                  <p className="mt-0.5 max-w-[12rem] text-[0.6rem] leading-snug font-medium text-slate-600">
                     Synthèse propriétaire préparée depuis cette fiche et archivée dans la GED.
                   </p>
                 </div>
-                <label className="min-w-[10rem] text-xs font-semibold text-slate-600">
+                <label className="min-w-[7rem] text-[0.6rem] font-bold text-slate-600">
                   Période
                   <input
                     {...{ type: 'month' }}
                     value={reportMonth}
                     onChange={(event) => setReportMonth(event.target.value || currentMonthInput())}
-                    className="mt-1 w-full rounded-xl border border-amber-200 bg-[#fffdf8] px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-emerald-200 focus:ring-4 focus:ring-emerald-100"
+                    className="mt-1 w-full rounded-md border border-amber-200/60 bg-white px-2 py-1 text-[0.65rem] font-bold text-slate-800 outline-none focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
                   />
                 </label>
               </div>
             </div>
-            <div className="p-4">
-              <div className="rounded-xl border border-emerald-950/10 bg-emerald-50/70 px-3 py-2 text-xs text-emerald-900">
-                Bilan préparé pour <strong className="font-black">{formatMonthLabel(reportMonth)}</strong> · {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {reportPaiements.length} paiement{reportPaiements.length > 1 ? 's' : ''}
+            <div className="p-2.5">
+              <div className="rounded-md border border-emerald-950/5 bg-emerald-50/50 px-2 py-1.5 text-[0.62rem] text-emerald-900 font-medium">
+                Bilan préparé pour <strong className="font-bold">{formatMonthLabel(reportMonth)}</strong> · {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {reportPaiements.length} paiement{reportPaiements.length > 1 ? 's' : ''}
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                <MiniMetric label="Loyers" value={<MoneyText value={reportLoyers} />} tone="emerald" />
-                <MiniMetric label="Reliquats" value={<MoneyText value={reportReliquats} />} tone="red" />
-                <MiniMetric label="Commissions" value={<MoneyText value={reportCommissions} />} tone="amber" />
-                <MiniMetric label="Dépenses" value={<MoneyText value={reportExpenses} />} tone="blue" />
-                <MiniMetric label="Net" value={<MoneyText value={reportNet} />} tone="slate" />
-                <MiniMetric label="Documents" value={String(reportDocuments.length)} tone="slate" />
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                <MicroMetric label="Loyers" value={<MoneyText value={reportLoyers} compact />} tone="emerald" />
+                <MicroMetric label="Reliquats" value={<MoneyText value={reportReliquats} compact />} tone="red" />
+                <MicroMetric label="Commissions" value={<MoneyText value={reportCommissions} compact />} tone="amber" />
+                <MicroMetric label="Dépenses" value={<MoneyText value={reportExpenses} compact />} tone="blue" />
+                <MicroMetric label="Net" value={<MoneyText value={reportNet} compact />} tone="slate" />
+                <MicroMetric label="Documents" value={String(reportDocuments.length)} tone="slate" />
               </div>
               <button
                 type="button"
                 onClick={() => void handleGenerateBailleurReport(selectedBailleur)}
                 disabled={generatingReport}
-                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-3.5 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2.5 inline-flex w-full h-8 items-center justify-center gap-1.5 rounded-md border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-2.5 text-[0.65rem] font-bold text-white shadow-sm shadow-emerald-950/10 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <BarChart3 className="h-4 w-4" />
+                <BarChart3 className="h-3.5 w-3.5" />
                 {generatingReport ? 'Génération...' : 'Générer bilan PDF'}
               </button>
-              <p className="mt-2 text-xs leading-5 text-slate-500">
-                Le PDF est archivé avec le type <strong className="font-bold text-slate-700">rapport_bailleur</strong>, rattaché à cette fiche et vérifiable depuis la GED.
+              <p className="mt-1.5 text-[0.55rem] leading-snug font-medium text-slate-500">
+                Le PDF est archivé avec le type <strong className="font-bold text-slate-600">rapport_bailleur</strong>.
               </p>
             </div>
           </section>
@@ -1565,8 +1564,15 @@ export function Bailleurs() {
         />
       )}
 
-      <div className="flex min-h-full">
-        <div className={`flex-1 min-w-0 transition-all duration-300 ${detailPanelOpen ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
+      <div className="mt-8">
+        <SplitViewShell
+          isDetailOpen={detailPanelOpen}
+          size="compact"
+          desktopAt="lg"
+          detailClassName="lg:sticky lg:top-8 lg:h-[calc(100dvh-4rem)]"
+          mainClassName={detailPanelOpen ? 'hidden lg:block' : ''}
+          main={
+            <div className="flex flex-col gap-4">
           <section className="min-w-0 space-y-4">
             <PremiumPageHeader
               density="compact"
@@ -1794,86 +1800,73 @@ export function Bailleurs() {
           )}
           </PremiumTableSurface>
         </section>
-        </div>
-
-      {detailPanelOpen && (
-        <aside className="fixed inset-y-0 right-0 z-50 flex w-full flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:w-[31.5rem] xl:border-l xl:border-emerald-950/10">
-          <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={() => setDetailOpen(false)} aria-hidden="true" />
-            <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
-              {!selectedBailleur ? (
-                <div className="flex min-h-full items-center justify-center p-6">
-                  <EmptyDrawerState title="Sélectionnez un bailleur" description="Consultez ses biens, paiements, documents et rapports sans quitter le portefeuille." />
-                </div>
-              ) : (
-                <div className="min-h-full bg-[linear-gradient(180deg,#fff5dc,#fffdf8_10.5rem)]">
-                  <div className="border-b border-emerald-950/10 p-3.5 sm:p-4">
-                    <div className="mb-3 flex items-start justify-between gap-3">
-                      <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#9a5b17]">Fiche propriétaire</p>
-                      <button type="button" onClick={() => setDetailOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900" aria-label="Fermer la fiche">
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-black shadow-lg shadow-emerald-900/15 ring-1 ${getAvatarTone(selectedBailleur, true)}`}>
-                        {getInitials(selectedBailleur)}
-                        <span className="absolute -right-0.5 bottom-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-400" />
-                      </div>
-                      <div className="min-w-0 flex-1 space-y-1.5 text-sm text-slate-600">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="min-w-0 flex-1 truncate text-base font-black text-brand-950 sm:text-lg">{displayBailleurName(selectedBailleur)}</h2>
-                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
-                            {getStatusLabel(selectedBailleur)}
-                          </span>
-                        </div>
-                        <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-slate-400" />{selectedBailleur.telephone ? <a href={`tel:${selectedBailleur.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(selectedBailleur.telephone)}</a> : 'Téléphone non renseigné'}</p>
-                        <p className="flex items-center gap-2 truncate"><Mail className="h-4 w-4 text-slate-400" />{selectedBailleur.email ? <a href={`mailto:${selectedBailleur.email}`} className="hover:text-brand-700 hover:underline">{selectedBailleur.email}</a> : 'Email non renseigné'}</p>
-                        <p className="flex items-center gap-2 truncate"><MapPin className="h-4 w-4 text-slate-400" />{selectedBailleur.adresse || 'Adresse non renseignée'}</p>
-                        <p className="mt-2.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-2.5 py-1.5 text-[0.65rem] font-bold leading-5 text-slate-600 shadow-sm">
-                          Portefeuille actif · {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {selectedSummary.activeContracts} location{selectedSummary.activeContracts > 1 ? 's' : ''} · <span className="text-emerald-800"><MoneyText value={selectedSummary.net} compact /></span> net à reverser
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-5 space-y-4">
-                      <div>
-                        <p className="mb-2 text-[0.66rem] font-black uppercase tracking-[0.12em] text-[#9a5b17]">Actions principales</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-3 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"><BarChart3 className="h-4 w-4" />Rapport PDF</button>
-                          <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-3 py-2.5 text-sm font-black text-amber-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-amber-100"><FileText className="h-4 w-4" />Mandat PDF</button>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="mb-2 text-[0.66rem] font-black uppercase tracking-[0.12em] text-slate-400">Gestion</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><FileText className="h-4 w-4" />Modifier</button>
-                          <button type="button" onClick={() => setActiveDrawerTab('paiements')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><Wallet className="h-4 w-4" />Paiements</button>
-                          <button type="button" onClick={() => setActiveDrawerTab('documents')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><FileText className="h-4 w-4" />Documents</button>
-                          <button type="button" onClick={() => setActiveDrawerTab('biens')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900"><Building2 className="h-4 w-4" />Biens</button>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="mb-2 text-[0.66rem] font-black uppercase tracking-[0.12em] text-red-400">Danger</p>
-                        <button type="button" onClick={() => openLifecycleModal(selectedBailleur)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-red-600 shadow-sm transition hover:border-red-200 hover:bg-red-50"><Ban className="h-4 w-4" />Résilier</button>
-                      </div>
-                    </div>
+            </div>
+          }
+          detail={
+            selectedBailleur && (
+              <PremiumDrawerShell
+                open={detailPanelOpen}
+                onClose={() => setDetailOpen(false)}
+                size="compact"
+                desktopMode="floating"
+                desktopAt="lg"
+                density="compact"
+                eyebrow="FICHE PROPRIÉTAIRE"
+                avatar={
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-[0.8rem] font-black text-emerald-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] ring-1 ring-emerald-950/10">
+                    {displayBailleurName(selectedBailleur).slice(0, 2).toUpperCase()}
+                  </div>
+                }
+                title={displayBailleurName(selectedBailleur)}
+                description={
+                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[0.72rem]">
+                    <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                      {getStatusLabel(selectedBailleur)}
+                    </span>
+                    {selectedBailleur.telephone && <span className="flex items-center gap-1 text-slate-500 font-semibold"><Phone className="h-3 w-3" />{formatSenegalPhone(selectedBailleur.telephone)}</span>}
+                    {selectedBailleur.email && <span className="flex items-center gap-1 text-slate-500 font-semibold truncate"><Mail className="h-3 w-3" />{selectedBailleur.email}</span>}
+                  </div>
+                }
+              >
+                <div className="space-y-2.5">
+                  <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-950/10 bg-white px-3 text-[0.72rem] font-bold text-emerald-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:bg-emerald-50 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50">
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    {generatingReport ? 'Génération...' : 'Rapport PDF'}
+                  </button>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <CompactMetric label="Net" value={<MoneyText value={selectedSummary.net} compact />} tone="emerald" />
+                    <CompactMetric label="Reliquats" value={<MoneyText value={selectedSummary.reliquats} compact />} tone="red" />
+                    <CompactMetric label="Biens" value={String(selectedSummary.immeubles.length)} tone="blue" />
+                    <CompactMetric label="Unités" value={String(selectedSummary.unites.length)} tone="amber" />
                   </div>
 
-                  <div className="space-y-2 p-3">
-                    <div className="grid grid-cols-3 gap-2">
-                      <MiniMetric label="Loyers" value={<MoneyText value={selectedSummary.loyers} compact />} tone="emerald" />
-                      <MiniMetric label="Reliquats" value={<MoneyText value={selectedSummary.reliquats} compact />} tone="red" />
-                      <MiniMetric label="Net" value={<MoneyText value={selectedSummary.net} compact />} tone="emerald" />
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <MiniMetric label="Biens" value={String(selectedSummary.immeubles.length)} tone="blue" />
-                      <MiniMetric label="Unités" value={String(selectedSummary.unites.length)} tone="amber" />
-                      <MiniMetric label="Locations" value={String(selectedSummary.activeContracts)} tone="slate" />
-                    </div>
+                  <div className="grid gap-2.5">
+                    {/* Hide empty sections */}
+                    {(selectedBailleur.telephone || selectedBailleur.email || selectedBailleur.adresse) && (
+                      <CompactSection title="Coordonnées">
+                        <div className="flex flex-col gap-1">
+                          <CompactLabelValue label="Téléphone" value={selectedBailleur.telephone ? formatSenegalPhone(selectedBailleur.telephone) : null} />
+                          <CompactLabelValue label="Email" value={selectedBailleur.email} />
+                          <CompactLabelValue label="Adresse" value={selectedBailleur.adresse} />
+                        </div>
+                      </CompactSection>
+                    )}
+                    
+                    <CompactSection title="Gestion & Contrats">
+                      <div className="flex flex-col gap-1">
+                        <CompactLabelValue label="Début de mandat" value={selectedBailleur.debut_contrat ? new Date(selectedBailleur.debut_contrat).toLocaleDateString('fr-FR') : null} />
+                        <CompactLabelValue label="Commission" value={formatCommission(selectedBailleur.commission)} />
+                      </div>
+                      <div className="mt-2.5 grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"><FileText className="h-3.5 w-3.5 text-slate-400" />Modifier</button>
+                        <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"><FileText className="h-3.5 w-3.5 text-slate-400" />Mandat PDF</button>
+                      </div>
+                    </CompactSection>
                   </div>
 
-                  <div className="border-y border-emerald-950/10 bg-[#fffdf8]/85 px-2.5 py-2">
-                    <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none rounded-xl bg-[#fff4df]/80 p-1.5">
+                  <div className="pt-1">
+                    <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none rounded-xl bg-slate-50/80 border border-emerald-950/5 p-1">
                       {[...DRAWER_PRIMARY_TABS, ...DRAWER_MORE_TABS].map((tab) => (
                         <button
                           key={tab.id}
@@ -1882,23 +1875,31 @@ export function Bailleurs() {
                             setActiveDrawerTab(tab.id);
                             e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                           }}
-                          className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold transition ${activeDrawerTab === tab.id
-                              ? 'bg-emerald-900 text-white shadow-sm'
-                              : 'text-slate-500 hover:bg-[#fffdf8] hover:text-emerald-900'
-                            }`}
+                          className={`whitespace-nowrap rounded-lg px-2.5 py-1 text-[0.65rem] font-bold transition ${activeDrawerTab === tab.id ? 'bg-white text-emerald-900 shadow-sm ring-1 ring-emerald-950/5' : 'text-slate-500 hover:text-emerald-900 hover:bg-slate-100'}`}
                         >
                           {tab.label}
                         </button>
                       ))}
                     </div>
+                    <div className="mt-2.5">{renderDrawerTab()}</div>
                   </div>
 
-                  <div className="p-3.5">{renderDrawerTab()}</div>
+                  <div className="pt-4 pb-2">
+                    <p className="mb-1.5 text-[0.6rem] font-black uppercase tracking-wider text-red-800 opacity-60">Archivage</p>
+                    <button
+                      type="button"
+                      onClick={() => openLifecycleModal(selectedBailleur)}
+                      className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-red-50/50 px-3 py-2 text-[0.65rem] font-bold text-red-700 transition hover:bg-red-50 hover:border-red-300"
+                    >
+                      <ShieldAlert className="h-3.5 w-3.5" />
+                      Résilier le bailleur
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
-          </aside>
-        )}
+              </PremiumDrawerShell>
+            )
+          }
+        />
       </div>
 
       {/* Modal de création/édition */}
@@ -2171,6 +2172,57 @@ function TextField({
       />
       {helperText && <p className="mt-1 text-xs text-slate-500">{helperText}</p>}
     </label>
+  );
+}
+
+function CompactMetric({ label, value, tone = 'slate' }: { label: string; value: ReactNode; tone?: 'emerald'|'red'|'blue'|'amber'|'slate' }) {
+  const tones = {
+    emerald: 'text-emerald-700 bg-emerald-50/50 border-emerald-100',
+    red: 'text-red-700 bg-red-50/50 border-red-100',
+    blue: 'text-blue-700 bg-blue-50/50 border-blue-100',
+    amber: 'text-amber-700 bg-amber-50/50 border-amber-100',
+    slate: 'text-slate-700 bg-slate-50/50 border-slate-100',
+  };
+  return (
+    <div className={`rounded-xl border p-2 ${tones[tone]}`}>
+      <p className="text-[0.56rem] font-bold uppercase tracking-wider opacity-80">{label}</p>
+      <p className="mt-0.5 text-[0.8rem] font-extrabold">{value}</p>
+    </div>
+  );
+}
+
+function MicroMetric({ label, value, tone = 'slate' }: { label: string; value: ReactNode; tone?: 'emerald'|'red'|'blue'|'amber'|'slate' }) {
+  const tones = {
+    emerald: 'text-emerald-700 bg-emerald-50/50 border-emerald-100',
+    red: 'text-red-700 bg-red-50/50 border-red-100',
+    blue: 'text-blue-700 bg-blue-50/50 border-blue-100',
+    amber: 'text-amber-700 bg-amber-50/50 border-amber-100',
+    slate: 'text-slate-700 bg-slate-50/50 border-slate-100',
+  };
+  return (
+    <div className={`rounded-lg border px-2 py-1.5 ${tones[tone]}`}>
+      <p className="text-[0.55rem] font-bold uppercase tracking-wider opacity-80">{label}</p>
+      <p className="mt-0.5 text-[0.7rem] font-extrabold">{value}</p>
+    </div>
+  );
+}
+
+function CompactSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-[14px] border border-emerald-950/10 bg-white/80 p-2.5 shadow-sm">
+      <h3 className="mb-2 text-[0.6rem] font-black uppercase tracking-wider text-slate-500">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+function CompactLabelValue({ label, value }: { label: string; value: ReactNode | null | undefined }) {
+  if (!value || value === '—') return null;
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-[0.62rem] font-semibold text-slate-500">{label}</span>
+      <span className="text-[0.72rem] font-bold text-slate-700 text-right truncate">{value}</span>
+    </div>
   );
 }
 

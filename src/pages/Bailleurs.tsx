@@ -26,6 +26,8 @@ import {
   DoorOpen,
   Percent,
   ChevronRight,
+  MapPin,
+  Calendar,
 } from 'lucide-react';
 import {
   addFooter,
@@ -1472,22 +1474,23 @@ export function Bailleurs() {
         <div className="space-y-2.5">
           <section className="overflow-hidden rounded-xl border border-emerald-950/10 bg-white/80 shadow-sm">
             <div className="bg-[linear-gradient(135deg,#fff4d8,#fffdf8)] p-2 sm:p-2.5 text-brand-950">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <p className="text-[8px] font-black uppercase tracking-[0.16em] text-[#9a5b17]">Registre financier</p>
-                  <p className="mt-0.5 text-[0.7rem] font-black leading-tight">Rapport bailleur</p>
-                  <p className="mt-0.5 max-w-[12rem] text-[0.58rem] leading-snug font-medium text-slate-600 hidden sm:block">
-                    Synthèse propriétaire pour la GED.
+                  <p className="mt-0.5 text-[0.7rem] font-black leading-tight truncate">Rapport bailleur</p>
+                  <p className="mt-0.5 max-w-[10rem] sm:max-w-[12rem] text-[0.58rem] leading-snug font-medium text-slate-600">
+                    Synthèse propriétaire archivée dans la GED.
                   </p>
                 </div>
-                <div className="shrink-0 flex items-center justify-end">
+                <div className="shrink-0">
                   <label className="sr-only">Période</label>
                   <div className="relative">
+                    <Calendar className="absolute left-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-emerald-800/70" />
                     <input
                       {...{ type: 'month' }}
                       value={reportMonth}
                       onChange={(event) => setReportMonth(event.target.value || currentMonthInput())}
-                      className="h-[26px] w-[8.5rem] rounded-md border border-amber-200/60 bg-white px-2 py-0 text-xs font-bold text-slate-800 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                      className="h-6 w-[7.5rem] rounded-md border border-amber-200/60 bg-white pl-5 pr-1.5 py-0 text-[10px] sm:text-[11px] font-bold text-slate-800 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
                     />
                   </div>
                 </div>
@@ -1635,13 +1638,13 @@ export function Bailleurs() {
               density="compact"
               search={
                 <div className="relative min-w-0 flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-800" />
+                  <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-800" />
                   <input
                     type="text"
                     placeholder="Propriétaire, téléphone, email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-7 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-8 pr-3 text-[11px] font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                    className="!min-h-8 !h-8 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-8 pr-3 py-0 text-xs font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                   />
                 </div>
               }
@@ -1763,8 +1766,8 @@ export function Bailleurs() {
                           {showBailleurColumn('commission') && <td className="whitespace-nowrap px-2 py-1.5 text-[0.75rem] font-medium text-slate-700">{formatCommission(bailleur.commission)}</td>}
                           {showBailleurColumn('biens') && <td className="px-2 py-1.5 text-[0.78rem] font-medium text-slate-700">{summary.immeubles.length}</td>}
                           {showBailleurColumn('unites') && <td className="px-2 py-1.5 text-[0.78rem] font-medium text-slate-700">{summary.unites.length}</td>}
-                          {showBailleurColumn('reliquats') && <td className="whitespace-nowrap px-2 py-1.5 text-right text-[0.78rem] font-bold tabular-nums text-red-600"><MoneyText value={summary.reliquats} /></td>}
-                          {showBailleurColumn('net') && <td className="whitespace-nowrap px-2 py-1.5 text-right text-[0.78rem] font-bold tabular-nums text-emerald-800"><MoneyText value={summary.net} /></td>}
+                          {showBailleurColumn('reliquats') && <td className="whitespace-nowrap px-2 py-1.5 text-right text-[0.78rem] font-semibold tabular-nums text-red-600"><MoneyText value={summary.reliquats} /></td>}
+                          {showBailleurColumn('net') && <td className="whitespace-nowrap px-2 py-1.5 text-right text-[0.78rem] font-semibold tabular-nums text-emerald-800"><MoneyText value={summary.net} /></td>}
                           {showBailleurColumn('statut') && <td className="px-2 py-1.5">
                             <span className="inline-flex px-1.5 py-0.5 text-[9px] rounded uppercase font-medium bg-slate-100 text-slate-700">{rawStatusLabel}</span>
                           </td>}
@@ -1855,10 +1858,9 @@ export function Bailleurs() {
                   </div>
 
                   <div className="grid gap-2.5">
-                    {/* Hide empty sections */}
                     {(selectedBailleur.telephone || selectedBailleur.email || selectedBailleur.adresse) && (
-                      <CompactSection title="Coordonnées">
-                        <div className="flex flex-col gap-1">
+                      <CompactSection title="Coordonnées" icon={MapPin}>
+                        <div className="flex flex-col divide-y divide-slate-100">
                           <CompactLabelValue label="Téléphone" value={selectedBailleur.telephone ? formatSenegalPhone(selectedBailleur.telephone) : null} />
                           <CompactLabelValue label="Email" value={selectedBailleur.email} />
                           <CompactLabelValue label="Adresse" value={selectedBailleur.adresse} />
@@ -1866,8 +1868,8 @@ export function Bailleurs() {
                       </CompactSection>
                     )}
                     
-                    <CompactSection title="Gestion & Contrats">
-                      <div className="flex flex-col gap-1">
+                    <CompactSection title="Gestion & Contrats" icon={FileText}>
+                      <div className="flex flex-col divide-y divide-slate-100">
                         <CompactLabelValue label="Début de mandat" value={selectedBailleur.debut_contrat ? new Date(selectedBailleur.debut_contrat).toLocaleDateString('fr-FR') : null} />
                         <CompactLabelValue label="Commission" value={formatCommission(selectedBailleur.commission)} />
                       </div>
@@ -2215,15 +2217,18 @@ function MicroMetric({ label, value, tone = 'slate' }: { label: string; value: R
   return (
     <div className={`rounded-md border px-1.5 py-1 ${tones[tone]}`}>
       <p className="text-[0.5rem] font-bold uppercase tracking-wider opacity-80">{label}</p>
-      <p className="mt-0.5 text-[0.65rem] font-extrabold">{value}</p>
+      <p className="mt-0.5 text-[0.65rem] font-bold">{value}</p>
     </div>
   );
 }
 
-function CompactSection({ title, children }: { title: string; children: ReactNode }) {
+function CompactSection({ title, icon: Icon, children }: { title: string; icon?: React.ElementType; children: ReactNode }) {
   return (
     <section className="rounded-[14px] border border-emerald-950/10 bg-white/80 p-2.5 shadow-sm">
-      <h3 className="mb-2 text-[0.6rem] font-black uppercase tracking-wider text-slate-500">{title}</h3>
+      <h3 className="mb-2 flex items-center gap-1.5 text-[0.6rem] font-black uppercase tracking-wider text-slate-500">
+        {Icon && <Icon className="h-3.5 w-3.5 text-slate-400" />}
+        {title}
+      </h3>
       {children}
     </section>
   );
@@ -2232,7 +2237,7 @@ function CompactSection({ title, children }: { title: string; children: ReactNod
 function CompactLabelValue({ label, value }: { label: string; value: ReactNode | null | undefined }) {
   if (!value || value === '—') return null;
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex items-center justify-between gap-2 py-1.5">
       <span className="text-[0.62rem] font-semibold text-slate-500">{label}</span>
       <span className="text-[0.72rem] font-bold text-slate-700 text-right truncate">{value}</span>
     </div>

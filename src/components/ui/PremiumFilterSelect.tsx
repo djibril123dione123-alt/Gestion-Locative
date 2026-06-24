@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, ListFilter } from 'lucide-react';
 
 export type PremiumFilterSelectOption = {
   value: string;
@@ -42,13 +42,16 @@ export function PremiumFilterSelect({
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
-        className="inline-flex h-8 w-full min-w-0 items-center justify-between gap-2 rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-3 pr-2 text-left text-xs font-medium text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.03)] outline-none transition hover:border-emerald-100 hover:bg-emerald-50/60 focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+        className="inline-flex h-8 w-full min-w-0 items-center justify-between gap-2 rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-2.5 pr-2 text-left text-xs font-medium text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.03)] outline-none transition hover:border-emerald-100 hover:bg-emerald-50/60 focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className="min-w-0 truncate">
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
+        <div className="flex min-w-0 items-center gap-1.5 truncate">
+          <ListFilter className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <span className="truncate">
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
+        </div>
         <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition ${open ? 'rotate-180' : ''}`} />
       </button>
 

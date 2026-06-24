@@ -46,7 +46,7 @@ export function PremiumToolbar({
   return (
     <section
       aria-label={ariaLabel ?? "Outils de liste"}
-      className={`@container relative z-20 min-w-0 max-w-full ${density === 'compact' ? 'bg-[#fffdf8]/90 border border-emerald-950/10 shadow-sm ring-1 ring-white/50 rounded-[0.85rem] p-2 sm:p-2.5' : 'sk-premium-panel p-3'} ${className}`}
+      className={`@container relative z-20 min-w-0 max-w-full ${density === 'compact' ? 'bg-[#fffdf8]/90 border border-emerald-950/10 shadow-sm ring-1 ring-white/50 rounded-[0.85rem] px-2 py-1.5 sm:px-2.5 sm:py-2' : 'sk-premium-panel p-3'} ${className}`}
     >
       {/* Top Bar : Search (gauche) & Actions (droite) */}
       <div className={`flex ${density === 'compact' ? 'gap-2 items-center' : 'flex-col gap-3 @3xl:flex-row @3xl:items-center @3xl:justify-between'}`}>

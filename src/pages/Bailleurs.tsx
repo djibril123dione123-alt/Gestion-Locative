@@ -232,15 +232,15 @@ type PdfWithAutoTable = jsPDF & {
 };
 
 const DRAWER_PRIMARY_TABS: Array<{ id: DrawerTab; label: string }> = [
-  { id: 'overview', label: "Vue d'ensemble" },
+  { id: 'overview', label: 'Vue' },
   { id: 'rapports', label: 'Rapports' },
   { id: 'biens', label: 'Biens' },
   { id: 'paiements', label: 'Paiements' },
 ];
 
 const DRAWER_MORE_TABS: Array<{ id: DrawerTab; label: string }> = [
-  { id: 'documents', label: 'Documents' },
-  { id: 'contrats', label: 'Locations liées' },
+  { id: 'documents', label: 'Docs' },
+  { id: 'contrats', label: 'Contrats' },
   { id: 'depenses', label: 'Dépenses' },
 ];
 
@@ -1401,17 +1401,19 @@ export function Bailleurs() {
                 key={immeuble.id}
                 type="button"
                 onClick={() => { window.location.hash = '#/patrimoine'; }}
-                className="group flex w-full flex-col gap-1.5 border-b border-emerald-950/5 px-2.5 py-1.5 text-left last:border-b-0 hover:bg-emerald-50/50 focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500 sm:flex-row sm:items-center sm:justify-between"
+                className="group flex w-full items-center justify-between gap-2 border-b border-emerald-950/5 px-2 py-1.5 text-left last:border-b-0 hover:bg-emerald-50/50 focus-visible:bg-emerald-50"
                 aria-label={`Ouvrir le bien ${immeuble.nom}`}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-[0.68rem] font-bold text-slate-800">{immeuble.nom}</p>
-                  <p className="mt-0.5 text-[0.6rem] font-medium text-slate-500">{[immeuble.adresse, immeuble.quartier, immeuble.ville].filter(Boolean).join(', ') || 'Adresse non renseignée'}</p>
+                  <p className="truncate text-[0.68rem] font-bold text-slate-800">{immeuble.nom}</p>
+                  <p className="truncate text-[0.58rem] font-medium text-slate-500">{[immeuble.adresse, immeuble.quartier, immeuble.ville].filter(Boolean).join(', ') || 'Adresse non renseignée'}</p>
                 </div>
-                <div className="flex-shrink-0 text-[0.62rem] font-medium text-slate-500">{units.length} unité{units.length > 1 ? 's' : ''} · {rate}% occupé</div>
-                <div className="flex flex-shrink-0 items-center justify-end gap-1.5 text-right">
-                  <div className="text-[0.68rem] font-bold text-slate-800"><MoneyText value={potential} /></div>
-                  <ChevronRight className="h-3.5 w-3.5 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className="hidden shrink-0 text-right text-[0.58rem] font-medium text-slate-500 sm:block">
+                    {units.length} u. · {rate}%
+                  </div>
+                  <div className="shrink-0 text-right text-[0.68rem] font-bold text-slate-800"><MoneyText value={potential} /></div>
+                  <ChevronRight className="h-2.5 w-2.5 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
                 </div>
               </button>
             );
@@ -1469,31 +1471,33 @@ export function Bailleurs() {
       return (
         <div className="space-y-2.5">
           <section className="overflow-hidden rounded-xl border border-emerald-950/10 bg-white/80 shadow-sm">
-            <div className="bg-[linear-gradient(135deg,#fff4d8,#fffdf8)] p-2.5 text-brand-950">
-              <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between">
+            <div className="bg-[linear-gradient(135deg,#fff4d8,#fffdf8)] p-2 sm:p-2.5 text-brand-950">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-[8.5px] font-black uppercase tracking-[0.16em] text-[#9a5b17]">Registre financier</p>
-                  <p className="mt-0.5 text-[0.75rem] font-black">Rapport bailleur</p>
-                  <p className="mt-0.5 max-w-[12rem] text-[0.6rem] leading-snug font-medium text-slate-600">
-                    Synthèse propriétaire préparée depuis cette fiche et archivée dans la GED.
+                  <p className="text-[8px] font-black uppercase tracking-[0.16em] text-[#9a5b17]">Registre financier</p>
+                  <p className="mt-0.5 text-[0.7rem] font-black leading-tight">Rapport bailleur</p>
+                  <p className="mt-0.5 max-w-[12rem] text-[0.58rem] leading-snug font-medium text-slate-600 hidden sm:block">
+                    Synthèse propriétaire pour la GED.
                   </p>
                 </div>
-                <label className="min-w-[7rem] text-[0.6rem] font-bold text-slate-600">
-                  Période
-                  <input
-                    {...{ type: 'month' }}
-                    value={reportMonth}
-                    onChange={(event) => setReportMonth(event.target.value || currentMonthInput())}
-                    className="mt-1 w-full rounded-md border border-amber-200/60 bg-white px-2 py-1 text-[0.65rem] font-bold text-slate-800 outline-none focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
-                  />
-                </label>
+                <div className="shrink-0 flex items-center justify-end">
+                  <label className="sr-only">Période</label>
+                  <div className="relative">
+                    <input
+                      {...{ type: 'month' }}
+                      value={reportMonth}
+                      onChange={(event) => setReportMonth(event.target.value || currentMonthInput())}
+                      className="h-[26px] w-[8.5rem] rounded-md border border-amber-200/60 bg-white px-2 py-0 text-xs font-bold text-slate-800 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="p-2.5">
+            <div className="p-2 sm:p-2.5">
               <div className="rounded-md border border-emerald-950/5 bg-emerald-50/50 px-2 py-1.5 text-[0.62rem] text-emerald-900 font-medium">
                 Bilan préparé pour <strong className="font-bold">{formatMonthLabel(reportMonth)}</strong> · {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {reportPaiements.length} paiement{reportPaiements.length > 1 ? 's' : ''}
               </div>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+              <div className="mt-2 grid grid-cols-2 gap-1.5 text-xs">
                 <MicroMetric label="Loyers" value={<MoneyText value={reportLoyers} compact />} tone="emerald" />
                 <MicroMetric label="Reliquats" value={<MoneyText value={reportReliquats} compact />} tone="red" />
                 <MicroMetric label="Commissions" value={<MoneyText value={reportCommissions} compact />} tone="amber" />
@@ -1505,9 +1509,9 @@ export function Bailleurs() {
                 type="button"
                 onClick={() => void handleGenerateBailleurReport(selectedBailleur)}
                 disabled={generatingReport}
-                className="mt-2.5 inline-flex w-full h-8 items-center justify-center gap-1.5 rounded-md border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-2.5 text-[0.65rem] font-bold text-white shadow-sm shadow-emerald-950/10 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-2.5 inline-flex w-full h-7 items-center justify-center gap-1.5 rounded-md border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-2.5 text-[0.65rem] font-bold text-white shadow-sm shadow-emerald-950/10 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <BarChart3 className="h-3.5 w-3.5" />
+                <BarChart3 className="h-3 w-3" />
                 {generatingReport ? 'Génération...' : 'Générer bilan PDF'}
               </button>
               <p className="mt-1.5 text-[0.55rem] leading-snug font-medium text-slate-500">
@@ -1564,12 +1568,12 @@ export function Bailleurs() {
         />
       )}
 
-      <div className="mt-8">
+      <div className="mt-2">
         <SplitViewShell
           isDetailOpen={detailPanelOpen}
           size="compact"
           desktopAt="lg"
-          detailClassName="lg:sticky lg:top-8 lg:h-[calc(100dvh-4rem)]"
+          detailClassName="lg:sticky lg:top-2 lg:h-[calc(100dvh-1rem)]"
           mainClassName={detailPanelOpen ? 'hidden lg:block' : ''}
           main={
             <div className="flex flex-col gap-4">
@@ -1637,7 +1641,7 @@ export function Bailleurs() {
                     placeholder="Propriétaire, téléphone, email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-8 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-8 pr-3 text-xs font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                    className="h-7 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-8 pr-3 text-[11px] font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                   />
                 </div>
               }
@@ -1710,14 +1714,14 @@ export function Bailleurs() {
                 <table className={`w-full border-collapse table-fixed ${detailPanelOpen ? 'min-w-[620px]' : 'min-w-[840px]'}`}>
                   <thead className="bg-[#f8f3e8]/70 text-left">
                     <tr>
-                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[56%]' : 'w-[36%]'} px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><CircleUser className="h-3 w-3 text-slate-400" /> Bailleur</span></th>}
-                      {showBailleurColumn('telephone') && <th className="w-[12%] px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-slate-400" /> Téléphone</span></th>}
-                      {showBailleurColumn('commission') && <th className="w-[8%] px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Percent className="h-3 w-3 text-slate-400" /> Commission</span></th>}
-                      {showBailleurColumn('biens') && <th className="w-[8%] px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Building2 className="h-3 w-3 text-slate-400" /> Biens</span></th>}
-                      {showBailleurColumn('unites') && <th className="w-[8%] px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><DoorOpen className="h-3 w-3 text-slate-400" /> Unités</span></th>}
-                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[20%]' : 'w-[17%]'} px-3.5 py-1.5 text-right text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><AlertCircle className="h-3 w-3 text-slate-400" /> Reliquats</span></th>}
-                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[20%]' : 'w-[17%]'} px-3.5 py-1.5 text-right text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><Wallet className="h-3 w-3 text-slate-400" /> Net</span></th>}
-                      {showBailleurColumn('statut') && <th className="w-[10%] px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5">Statut</span></th>}
+                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[56%]' : 'w-[36%]'} px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><CircleUser className="h-3 w-3 text-slate-400" /> Bailleur</span></th>}
+                      {showBailleurColumn('telephone') && <th className="w-[12%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-slate-400" /> Téléphone</span></th>}
+                      {showBailleurColumn('commission') && <th className="w-[8%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Percent className="h-3 w-3 text-slate-400" /> Commission</span></th>}
+                      {showBailleurColumn('biens') && <th className="w-[8%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Building2 className="h-3 w-3 text-slate-400" /> Biens</span></th>}
+                      {showBailleurColumn('unites') && <th className="w-[8%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><DoorOpen className="h-3 w-3 text-slate-400" /> Unités</span></th>}
+                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[20%]' : 'w-[17%]'} px-2 py-1.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><AlertCircle className="h-3 w-3 text-slate-400" /> Reliquats</span></th>}
+                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[20%]' : 'w-[17%]'} px-2 py-1.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><Wallet className="h-3 w-3 text-slate-400" /> Net</span></th>}
+                      {showBailleurColumn('statut') && <th className="w-[10%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5">Statut</span></th>}
                       <th className="w-[4%] px-2 py-1.5"><span className="sr-only">Ouvrir</span></th>
                     </tr>
                   </thead>
@@ -1746,26 +1750,26 @@ export function Bailleurs() {
                           onClick={() => { setSelectedBailleurId(bailleur.id); setDetailOpen(true); }}
                           className={`cursor-pointer border-b border-slate-100 transition-colors duration-150 outline-none hover:bg-emerald-50/40 focus-visible:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300 ${selected ? 'bg-emerald-50/60 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-1 after:bg-brand-600' : ''}`}
                         >
-                          {showBailleurColumn('bailleur') && <td className="px-3.5 py-1.5">
+                          {showBailleurColumn('bailleur') && <td className="px-2 py-1.5">
                             <div className="flex items-center gap-2">
-                              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[0.68rem] font-black shadow-inner ring-1 ${getAvatarTone(bailleur, selected)}`}>{getInitials(bailleur)}</div>
+                              <div className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg text-[0.62rem] font-black shadow-inner ring-1 ${getAvatarTone(bailleur, selected)}`}>{getInitials(bailleur)}</div>
                               <div className="min-w-0">
-                                <p className="truncate text-[0.82rem] leading-tight font-semibold text-slate-950">{displayBailleurName(bailleur)}</p>
-                                {subtitleText && <p className="truncate text-[0.68rem] leading-snug text-slate-500 mt-0.5">{subtitleText}</p>}
+                                <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">{displayBailleurName(bailleur)}</p>
+                                {subtitleText && <p className="truncate text-[0.64rem] leading-snug text-slate-500 mt-0.5">{subtitleText}</p>}
                               </div>
                             </div>
                           </td>}
-                          {showBailleurColumn('telephone') && <td className="whitespace-nowrap px-3.5 py-1.5 text-[0.75rem] text-slate-700">{bailleur.telephone ? <a href={`tel:${bailleur.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(bailleur.telephone)}</a> : ''}</td>}
-                          {showBailleurColumn('commission') && <td className="whitespace-nowrap px-3.5 py-1.5 text-[0.75rem] font-medium text-slate-700">{formatCommission(bailleur.commission)}</td>}
-                          {showBailleurColumn('biens') && <td className="px-3.5 py-1.5 text-[0.8rem] font-medium text-slate-700">{summary.immeubles.length}</td>}
-                          {showBailleurColumn('unites') && <td className="px-3.5 py-1.5 text-[0.8rem] font-medium text-slate-700">{summary.unites.length}</td>}
-                          {showBailleurColumn('reliquats') && <td className="whitespace-nowrap px-3.5 py-1.5 text-right text-[0.82rem] font-bold tabular-nums text-red-600"><MoneyText value={summary.reliquats} /></td>}
-                          {showBailleurColumn('net') && <td className="whitespace-nowrap px-3.5 py-1.5 text-right text-[0.82rem] font-bold tabular-nums text-emerald-800"><MoneyText value={summary.net} /></td>}
-                          {showBailleurColumn('statut') && <td className="px-3.5 py-1.5">
+                          {showBailleurColumn('telephone') && <td className="whitespace-nowrap px-2 py-1.5 text-[0.75rem] text-slate-700">{bailleur.telephone ? <a href={`tel:${bailleur.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(bailleur.telephone)}</a> : ''}</td>}
+                          {showBailleurColumn('commission') && <td className="whitespace-nowrap px-2 py-1.5 text-[0.75rem] font-medium text-slate-700">{formatCommission(bailleur.commission)}</td>}
+                          {showBailleurColumn('biens') && <td className="px-2 py-1.5 text-[0.78rem] font-medium text-slate-700">{summary.immeubles.length}</td>}
+                          {showBailleurColumn('unites') && <td className="px-2 py-1.5 text-[0.78rem] font-medium text-slate-700">{summary.unites.length}</td>}
+                          {showBailleurColumn('reliquats') && <td className="whitespace-nowrap px-2 py-1.5 text-right text-[0.78rem] font-bold tabular-nums text-red-600"><MoneyText value={summary.reliquats} /></td>}
+                          {showBailleurColumn('net') && <td className="whitespace-nowrap px-2 py-1.5 text-right text-[0.78rem] font-bold tabular-nums text-emerald-800"><MoneyText value={summary.net} /></td>}
+                          {showBailleurColumn('statut') && <td className="px-2 py-1.5">
                             <span className="inline-flex px-1.5 py-0.5 text-[9px] rounded uppercase font-medium bg-slate-100 text-slate-700">{rawStatusLabel}</span>
                           </td>}
                           <td className="px-2 py-1.5 text-right">
-                            <ChevronRight className="h-3 w-3 text-slate-300 inline-block" />
+                            <ChevronRight className="h-[10px] w-[10px] text-slate-300 inline-block" />
                           </td>
                         </tr>
                       );
@@ -1819,22 +1823,31 @@ export function Bailleurs() {
                 }
                 title={displayBailleurName(selectedBailleur)}
                 description={
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[0.72rem]">
-                    <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
-                      {getStatusLabel(selectedBailleur)}
-                    </span>
-                    {selectedBailleur.telephone && <span className="flex items-center gap-1 text-slate-500 font-semibold"><Phone className="h-3 w-3" />{formatSenegalPhone(selectedBailleur.telephone)}</span>}
-                    {selectedBailleur.email && <span className="flex items-center gap-1 text-slate-500 font-semibold truncate"><Mail className="h-3 w-3" />{selectedBailleur.email}</span>}
+                  <div className="mt-1 flex flex-col gap-1 text-[0.72rem]">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                        {getStatusLabel(selectedBailleur)}
+                      </span>
+                      {selectedBailleur.telephone && <span className="flex items-center gap-1 text-slate-500 font-semibold"><Phone className="h-3 w-3" />{formatSenegalPhone(selectedBailleur.telephone)}</span>}
+                      {selectedBailleur.email && <span className="flex items-center gap-1 text-slate-500 font-semibold truncate"><Mail className="h-3 w-3" />{selectedBailleur.email}</span>}
+                    </div>
+                    <div className="text-[0.68rem] text-slate-500 font-medium">
+                      {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {selectedSummary.unites.length} unité{selectedSummary.unites.length > 1 ? 's' : ''}
+                      {selectedSummary.net > 0 && ' · net positif'}
+                      {selectedSummary.reliquats > 0 && ' · reliquats à suivre'}
+                    </div>
                   </div>
                 }
               >
                 <div className="space-y-2.5">
-                  <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-950/10 bg-white px-3 text-[0.72rem] font-bold text-emerald-800 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:bg-emerald-50 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-50">
-                    <BarChart3 className="h-3.5 w-3.5" />
-                    {generatingReport ? 'Génération...' : 'Rapport PDF'}
-                  </button>
+                  <div className="flex items-center justify-start">
+                    <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex h-8 px-4 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-emerald-600 text-[0.72rem] font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+                      <BarChart3 className="h-3.5 w-3.5" />
+                      {generatingReport ? 'Génération...' : 'Rapport PDF'}
+                    </button>
+                  </div>
                   
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1.5">
                     <CompactMetric label="Net" value={<MoneyText value={selectedSummary.net} compact />} tone="emerald" />
                     <CompactMetric label="Reliquats" value={<MoneyText value={selectedSummary.reliquats} compact />} tone="red" />
                     <CompactMetric label="Biens" value={String(selectedSummary.immeubles.length)} tone="blue" />
@@ -1866,7 +1879,7 @@ export function Bailleurs() {
                   </div>
 
                   <div className="pt-1">
-                    <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none rounded-xl bg-slate-50/80 border border-emerald-950/5 p-1">
+                    <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-hide no-scrollbar rounded-xl bg-slate-50/80 border border-emerald-950/5 p-1">
                       {[...DRAWER_PRIMARY_TABS, ...DRAWER_MORE_TABS].map((tab) => (
                         <button
                           key={tab.id}
@@ -1875,7 +1888,7 @@ export function Bailleurs() {
                             setActiveDrawerTab(tab.id);
                             e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                           }}
-                          className={`whitespace-nowrap rounded-lg px-2.5 py-1 text-[0.65rem] font-bold transition ${activeDrawerTab === tab.id ? 'bg-white text-emerald-900 shadow-sm ring-1 ring-emerald-950/5' : 'text-slate-500 hover:text-emerald-900 hover:bg-slate-100'}`}
+                          className={`whitespace-nowrap rounded-lg px-2 py-1 text-[0.68rem] font-bold transition ${activeDrawerTab === tab.id ? 'bg-white text-emerald-900 shadow-sm ring-1 ring-emerald-950/5' : 'text-slate-500 hover:text-emerald-900 hover:bg-slate-100'}`}
                         >
                           {tab.label}
                         </button>
@@ -2177,32 +2190,32 @@ function TextField({
 
 function CompactMetric({ label, value, tone = 'slate' }: { label: string; value: ReactNode; tone?: 'emerald'|'red'|'blue'|'amber'|'slate' }) {
   const tones = {
-    emerald: 'text-emerald-700 bg-emerald-50/50 border-emerald-100',
-    red: 'text-red-700 bg-red-50/50 border-red-100',
-    blue: 'text-blue-700 bg-blue-50/50 border-blue-100',
-    amber: 'text-amber-700 bg-amber-50/50 border-amber-100',
-    slate: 'text-slate-700 bg-slate-50/50 border-slate-100',
+    emerald: 'text-emerald-700 bg-emerald-50/40 border-emerald-100',
+    red: 'text-red-700 bg-red-50/40 border-red-100',
+    blue: 'text-blue-700 bg-blue-50/40 border-blue-100',
+    amber: 'text-amber-700 bg-amber-50/40 border-amber-100',
+    slate: 'text-slate-700 bg-slate-50/40 border-slate-100',
   };
   return (
-    <div className={`rounded-xl border p-2 ${tones[tone]}`}>
-      <p className="text-[0.56rem] font-bold uppercase tracking-wider opacity-80">{label}</p>
-      <p className="mt-0.5 text-[0.8rem] font-extrabold">{value}</p>
+    <div className={`rounded-lg border p-1.5 ${tones[tone]}`}>
+      <p className="text-[0.54rem] font-bold uppercase tracking-wider opacity-80">{label}</p>
+      <p className="mt-0.5 text-[0.76rem] font-extrabold">{value}</p>
     </div>
   );
 }
 
 function MicroMetric({ label, value, tone = 'slate' }: { label: string; value: ReactNode; tone?: 'emerald'|'red'|'blue'|'amber'|'slate' }) {
   const tones = {
-    emerald: 'text-emerald-700 bg-emerald-50/50 border-emerald-100',
-    red: 'text-red-700 bg-red-50/50 border-red-100',
-    blue: 'text-blue-700 bg-blue-50/50 border-blue-100',
-    amber: 'text-amber-700 bg-amber-50/50 border-amber-100',
-    slate: 'text-slate-700 bg-slate-50/50 border-slate-100',
+    emerald: 'text-emerald-700 bg-emerald-50/40 border-emerald-100',
+    red: 'text-red-700 bg-red-50/40 border-red-100',
+    blue: 'text-blue-700 bg-blue-50/40 border-blue-100',
+    amber: 'text-amber-700 bg-amber-50/40 border-amber-100',
+    slate: 'text-slate-700 bg-slate-50/40 border-slate-100',
   };
   return (
-    <div className={`rounded-lg border px-2 py-1.5 ${tones[tone]}`}>
-      <p className="text-[0.55rem] font-bold uppercase tracking-wider opacity-80">{label}</p>
-      <p className="mt-0.5 text-[0.7rem] font-extrabold">{value}</p>
+    <div className={`rounded-md border px-1.5 py-1 ${tones[tone]}`}>
+      <p className="text-[0.5rem] font-bold uppercase tracking-wider opacity-80">{label}</p>
+      <p className="mt-0.5 text-[0.65rem] font-extrabold">{value}</p>
     </div>
   );
 }

@@ -24,13 +24,14 @@ export interface PremiumPageHeaderProps {
   primaryAction?: React.ReactNode;
   /** CTA secondaire (scanner, exporter…). */
   secondaryAction?: React.ReactNode;
-  /**
-   * Contenu latéral discret (ex : jauge de stockage, bloc sécurité).
+  /** Contenu latéral discret (ex : jauge de stockage, bloc sécurité).
    * Repositionné dessous le texte sur mobile.
    */
   sideContent?: React.ReactNode;
   /** Variant visuel officiel. @default "standard" */
   variant?: PremiumPageHeaderVariant;
+  /** Densité de l'en-tête, impacte la taille de la typo et du padding. @default "comfortable" */
+  density?: 'comfortable' | 'compact';
   /** Classe CSS supplémentaire sur le conteneur racine. */
   className?: string;
 
@@ -57,8 +58,8 @@ const VARIANT_STYLES: Record<
   }
 > = {
   standard: {
-    // Fond clair premium avec padding dense et relief
-    shell: 'relative overflow-hidden rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] p-4 sm:p-5 shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70',
+    // Fond clair premium avec padding dense et relief renforcé
+    shell: 'relative overflow-hidden rounded-[1.35rem] border border-slate-900/10 bg-gradient-to-br from-white via-[#fffdf8] to-white shadow-[0_16px_38px_rgba(15,23,42,0.08)] ring-1 ring-black/5',
     eyebrow: 'text-orange-600',
     title: 'text-brand-950',
     description: 'text-slate-600',
@@ -127,6 +128,7 @@ export function PremiumPageHeader({
   secondaryAction,
   sideContent,
   variant = 'standard',
+  density = 'comfortable',
   className = '',
   // ── Anciennes props (rétrocompatibilité) ──
   subtitle,
@@ -157,12 +159,14 @@ export function PremiumPageHeader({
     resolvedPrimaryAction || resolvedSecondaryAction || legacyActions;
   const hasSideContent = !!sideContent;
 
+  const isCompact = density === 'compact';
+
   if (variant === 'standard') {
     return (
-      <header className={`flex flex-col gap-4 rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 sm:p-5 lg:flex-row lg:items-center lg:justify-between ${className}`}>
+      <header className={`flex flex-col ${isCompact ? 'gap-2' : 'gap-3'} rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${isCompact ? 'p-2.5 sm:p-3' : 'p-4 sm:p-5'} lg:flex-row lg:items-center lg:justify-between ${className}`}>
         <div className="min-w-0">
-          <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-orange-600">{eyebrow}</p>
-          <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{title}</h1>
+          <p className={`${isCompact ? 'text-[0.55rem]' : 'text-[0.68rem]'} font-black uppercase tracking-[0.2em] text-orange-600`}>{eyebrow}</p>
+          <h1 className={`mt-0.5 font-serif font-black tracking-tight text-slate-950 ${isCompact ? 'text-[1.42rem]' : 'text-3xl sm:text-4xl'}`}>{title}</h1>
 
           {resolvedDescription && (
             mobileDescription ? (
@@ -171,7 +175,7 @@ export function PremiumPageHeader({
                 <p className="mt-1 hidden max-w-2xl text-sm font-medium leading-6 text-slate-600 lg:block">{resolvedDescription}</p>
               </>
             ) : (
-              <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-slate-600">{resolvedDescription}</p>
+              <p className={`mt-1 max-w-2xl font-medium ${isCompact ? 'text-[0.71rem] leading-tight text-slate-500' : 'text-sm leading-6 text-slate-600'}`}>{resolvedDescription}</p>
             )
           )}
 

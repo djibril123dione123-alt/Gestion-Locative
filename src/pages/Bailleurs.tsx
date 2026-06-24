@@ -25,7 +25,6 @@ import {
   BarChart3,
   FolderOpen,
   CreditCard,
-  MoreHorizontal,
   CircleUser,
   DoorOpen,
   Percent,
@@ -46,6 +45,9 @@ import { useToast } from '../hooks/useToast';
 import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages';
 import { formatDate, formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 import { formatPersonName } from '../lib/people';
+import { PremiumFilterSelect } from '../components/ui/PremiumFilterSelect';
+import { PremiumToolbar } from '../components/ui/PremiumToolbar';
+import { PremiumTableSurface } from '../components/ui/PremiumTableSurface';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { MiniMetric } from '../components/ui/MetricCard';
@@ -213,7 +215,7 @@ interface BailleurSummary {
 }
 
 type DrawerTab = 'overview' | 'biens' | 'contrats' | 'paiements' | 'depenses' | 'rapports' | 'documents';
-type BailleurFilter = 'all' | 'with_reliquats' | 'without_reliquats' | 'with_biens' | 'without_biens' | 'high_commission' | 'active' | 'inactive';
+type BailleurFilter = 'all' | 'with_reliquats' | 'without_reliquats' | 'with_biens' | 'without_biens' | 'high_commission' | 'active' | 'inactive' | 'with_net';
 
 const EMPTY_PAGE_DATA: BailleurPageData = {
   bailleurs: [],
@@ -667,6 +669,8 @@ export function Bailleurs() {
           return bailleur.actif && (bailleur.statut ?? 'actif') === 'actif';
         case 'inactive':
           return !bailleur.actif || (bailleur.statut != null && bailleur.statut !== 'actif');
+        case 'with_net':
+          return summary.net > 0;
         case 'all':
         default:
           return true;
@@ -1252,10 +1256,14 @@ export function Bailleurs() {
   /**
    * Configuration des colonnes du tableau
    */
-  const ALL_COLUMN_KEYS_BAILLEURS = ['bailleur', 'telephone', 'commission', 'biens', 'unites', 'reliquats', 'net', 'actions'] as const;
+  const ALL_COLUMN_KEYS_BAILLEURS = ['bailleur', 'telephone', 'commission', 'biens', 'unites', 'reliquats', 'net', 'statut'] as const;
   type BailleurColumnKey = typeof ALL_COLUMN_KEYS_BAILLEURS[number];
-  const DETAIL_OPEN_HIDDEN_COLUMNS = new Set<BailleurColumnKey>(['telephone', 'commission']);
-  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('bailleurs', [...ALL_COLUMN_KEYS_BAILLEURS]);
+  const DETAIL_OPEN_HIDDEN_COLUMNS = new Set<BailleurColumnKey>(['telephone', 'commission', 'biens', 'unites', 'statut']);
+  const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility(
+    'bailleurs-v3',
+    [...ALL_COLUMN_KEYS_BAILLEURS],
+    { telephone: false, commission: false }
+  );
   const showBailleurColumn = (key: BailleurColumnKey) => colIsVisible(key) && !(detailPanelOpen && DETAIL_OPEN_HIDDEN_COLUMNS.has(key));
 
   const allColumns = [
@@ -1266,21 +1274,32 @@ export function Bailleurs() {
     { key: 'unites', label: 'Unités' },
     { key: 'reliquats', label: 'Reliquats' },
     { key: 'net', label: 'Net' },
-    { key: 'actions', label: 'Actions', required: true },
+    { key: 'statut', label: 'Statut', required: true },
   ];
 
   const filterOptions: Array<{ id: BailleurFilter; label: string; helper: string }> = [
-    { id: 'all', label: 'Tous', helper: 'Toute la base active' },
-    { id: 'with_reliquats', label: 'Avec reliquats', helper: 'Paiements à suivre' },
     { id: 'without_reliquats', label: 'Sans reliquats', helper: 'Dossiers soldés' },
     { id: 'with_biens', label: 'Avec biens', helper: 'Portefeuille rattaché' },
-    { id: 'without_biens', label: 'Sans biens', helper: 'À compléter' },
     { id: 'high_commission', label: 'Commission élevée', helper: '10% et plus' },
     { id: 'active', label: 'Actifs', helper: 'Mandats en cours' },
     { id: 'inactive', label: 'Résiliés / suspendus', helper: 'Hors cycle actif' },
   ];
-  const activeFilterLabel = filterOptions.find((option) => option.id === activeFilter)?.label ?? 'Tous';
-  const activeFilterCount = activeFilter === 'all' ? 0 : 1;
+
+  const quickChipsData = useMemo(() => {
+    return {
+      all: bailleurs.length,
+      with_reliquats: bailleurs.filter(b => (summariesByBailleur[b.id]?.reliquats ?? 0) > 0).length,
+      with_net: bailleurs.filter(b => (summariesByBailleur[b.id]?.net ?? 0) > 0).length,
+      without_biens: bailleurs.filter(b => (summariesByBailleur[b.id]?.immeubles.length ?? 0) === 0).length,
+    };
+  }, [bailleurs, summariesByBailleur]);
+
+  const quickChips = useMemo(() => [
+    { id: 'all', label: 'Tous', count: quickChipsData.all, isActive: activeFilter === 'all', onClick: () => setActiveFilter('all') },
+    { id: 'with_reliquats', label: 'À suivre', count: quickChipsData.with_reliquats, isActive: activeFilter === 'with_reliquats', onClick: () => setActiveFilter('with_reliquats') },
+    { id: 'with_net', label: 'À reverser', count: quickChipsData.with_net, isActive: activeFilter === 'with_net', onClick: () => setActiveFilter('with_net') },
+    { id: 'without_biens', label: 'Sans bien', count: quickChipsData.without_biens, isActive: activeFilter === 'without_biens', onClick: () => setActiveFilter('without_biens') },
+  ], [activeFilter, quickChipsData]);
 
   const renderDrawerTab = () => {
     if (!selectedBailleur) return null;
@@ -1321,21 +1340,21 @@ export function Bailleurs() {
           <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3.5 shadow-[0_14px_34px_rgba(15,23,42,0.045)]">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-slate-400">Résumé paiements</p>
-                <p className="mt-1 text-xl font-extrabold tabular-nums text-slate-950"><MoneyText value={selectedSummary.loyers} /></p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400">Résumé paiements</p>
+                <p className="mt-0.5 text-[0.95rem] font-extrabold tabular-nums text-slate-950"><MoneyText value={selectedSummary.loyers} /></p>
               </div>
               <div
-                className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-center text-[11px] font-black text-brand-950"
+                className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-center text-[9px] font-black text-brand-950"
                 aria-label={`Taux de recouvrement ${paidRate}%`}
               >
                 <svg viewBox="0 0 36 36" className="absolute inset-0 h-full w-full -rotate-90">
                   <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#d1fae5" strokeWidth="4" />
                   <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#047857" strokeWidth="4" strokeDasharray={`${paidRate} ${100 - paidRate}`} />
                 </svg>
-                <span className="relative z-10 flex h-11 w-11 items-center justify-center rounded-full bg-[#fffdf8]">{paidRate}%</span>
+                <span className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full bg-[#fffdf8]">{paidRate}%</span>
               </div>
             </div>
-            <div className="mt-4 space-y-2.5 text-sm">
+            <div className="mt-3 space-y-2 text-xs">
               <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Commissions</span><strong className="font-bold"><MoneyText value={selectedSummary.commissions} /></strong></div>
               <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Net à reverser</span><strong className="font-bold text-emerald-800"><MoneyText value={selectedSummary.net} /></strong></div>
               <div className="flex items-center justify-between gap-3"><span className="text-slate-500">Reliquats</span><strong className={`font-bold ${selectedSummary.reliquats > 0 ? 'text-red-600' : 'text-slate-900'}`}><MoneyText value={selectedSummary.reliquats} /></strong></div>
@@ -1352,13 +1371,13 @@ export function Bailleurs() {
               ) : recentActivity.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.id} className="flex items-start gap-2.5 rounded-xl bg-slate-50/80 px-3 py-2 ring-1 ring-slate-100">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#fffdf8] text-emerald-700 shadow-sm"><Icon className="h-3.5 w-3.5" /></div>
+                  <div key={item.id} className="flex items-start gap-2.5 rounded-xl bg-slate-50/80 px-2.5 py-1.5 ring-1 ring-slate-100">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#fffdf8] text-emerald-700 shadow-sm"><Icon className="h-3 w-3" /></div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900">{item.title}</p>
-                      <p className="truncate text-xs text-slate-500">{item.detail}</p>
+                      <p className="truncate text-[0.7rem] font-semibold text-slate-900">{item.title}</p>
+                      <p className="truncate text-[0.6rem] text-slate-500">{item.detail}</p>
                     </div>
-                    <span className="text-[10px] font-semibold text-slate-400">{formatDate(item.date)}</span>
+                    <span className="text-[9px] font-semibold text-slate-400">{formatDate(item.date)}</span>
                   </div>
                 );
               })}
@@ -1536,7 +1555,7 @@ export function Bailleurs() {
   }
 
   return (
-    <PageShell spacing="standard" variant="dataDense" tone="paper">
+    <PageShell spacing="standard" variant="dataDense" tone="paper" verticalInset="compact">
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
       {cacheTimestamp && (
         <OfflineDataNotice
@@ -1548,18 +1567,19 @@ export function Bailleurs() {
 
       <div className="flex min-h-full">
         <div className={`flex-1 min-w-0 transition-all duration-300 ${detailPanelOpen ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
-          <section className="min-w-0 space-y-6">
+          <section className="min-w-0 space-y-4">
             <PremiumPageHeader
+              density="compact"
               eyebrow="PORTEFEUILLE PROPRIÉTAIRE"
               title="Bailleurs"
-              description="Gérez vos propriétaires, leurs revenus locatifs et tous les documents associés."
+              description="Gérez propriétaires, revenus et documents."
               mobileDescription="Propriétaires et reversements."
               primaryAction={
                 <PremiumButton
                   variant="create"
                   onClick={() => { setBailleurWizardStep('identity'); setIsModalOpen(true); }}
-                  icon={<Plus className="h-5 w-5" />}
-                  className="w-full sm:w-auto"
+                  icon={<Plus className="h-4 w-4" />}
+                  className="w-full sm:w-auto !py-1.5 !px-3 !text-[0.8rem] !h-8"
                 >
                   Nouveau bailleur
                 </PremiumButton>
@@ -1572,7 +1592,7 @@ export function Bailleurs() {
                 title="BAILLEURS ACTIFS"
                 icon={Users}
                 value={globalKpis.activeBailleurs.toString()}
-                helper={`${bailleurs.length} propriétaire${bailleurs.length > 1 ? 's' : ''} dans la base`}
+                helper="Dans la base"
                 tone="emerald"
               />
               <MetricCard
@@ -1580,7 +1600,7 @@ export function Bailleurs() {
                 title="RELIQUATS"
                 icon={AlertCircle}
                 value={<MoneyText value={globalKpis.reliquats} compact />}
-                helper="À suivre sur les paiements partiels"
+                helper="Paiements partiels"
                 tone="danger"
               />
               <MetricCard
@@ -1588,7 +1608,7 @@ export function Bailleurs() {
                 title="NET BAILLEURS"
                 icon={Wallet}
                 value={<MoneyText value={globalKpis.net} compact />}
-                helper="Somme des parts bailleurs"
+                helper="Parts bailleurs"
                 tone="financial"
               />
               <MetricCard
@@ -1596,103 +1616,78 @@ export function Bailleurs() {
                 title="COMMISSIONS"
                 icon={ReceiptText}
                 value={<MoneyText value={globalKpis.commissions} compact />}
-                helper={`${globalKpis.immeubles} biens à ${globalKpis.unites} unités`}
+                helper={`${globalKpis.immeubles} biens · ${globalKpis.unites} unités`}
                 tone="neutral"
               />
             </PremiumKpiGrid>
 
-          <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_22px_60px_rgba(15,23,42,0.07)] ring-1 ring-white/80">
-          <div className="border-b border-emerald-950/10 bg-[linear-gradient(180deg,#fff6df,#fffdf7)] p-3.5 sm:p-4">
-            <div className="flex flex-row gap-2 sm:gap-3 items-center">
-              <div className="relative min-w-0 flex-1">
-                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-emerald-800" />
-                <input
-                  type="text"
-                  placeholder="Nom, téléphone ou email"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowFilters((value) => !value)}
-                  className={`hidden items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-bold shadow-sm transition lg:inline-flex ${showFilters || activeFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Filtres
-                  {activeFilterCount > 0 && (
-                    <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">{activeFilterCount}</span>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowFilters(true)}
-                  className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-bold shadow-sm transition lg:hidden ${activeFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Filtres
-                  {activeFilterCount > 0 && (
-                    <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">{activeFilterCount}</span>
-                  )}
-                </button>
-                <ColumnPicker
-                  columns={allColumns}
-                  visibility={colVis}
-                  onToggle={colToggle}
-                  onSetAll={colSetAll}
-                />
-              </div>
-            </div>
-            <div className="mt-2.5 flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-              <p>
-                {filteredBailleurs.length} résultat{filteredBailleurs.length > 1 ? 's' : ''} · cliquez sur une ligne pour ouvrir la fiche propriétaire.
-              </p>
-              {activeFilterCount > 0 && (
-                <button type="button" onClick={() => setActiveFilter('all')} className="self-start rounded-full bg-[#fffdf8] px-2.5 py-1 font-semibold text-emerald-800 ring-1 ring-emerald-100 hover:bg-emerald-50 sm:self-auto">
-                  {activeFilterLabel} · Réinitialiser
-                </button>
-              )}
-            </div>
-            {showFilters && (
-              <div className="mt-3 hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/90 p-2.5 shadow-sm lg:block">
-                <div className="grid gap-2 lg:grid-cols-4">
-                  {filterOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => setActiveFilter(option.id)}
-                      className={`rounded-xl border px-3 py-2 text-left transition ${activeFilter === option.id ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-100 bg-[#fffdf8] text-slate-600 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
-                    >
-                      <span className="block text-xs font-bold">{option.label}</span>
-                      <span className="mt-0.5 block text-[11px] text-slate-500">{option.helper}</span>
-                    </button>
-                  ))}
+            <PremiumToolbar
+              density="compact"
+              search={
+                <div className="relative min-w-0 flex-1">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-800" />
+                  <input
+                    type="text"
+                    placeholder="Propriétaire, téléphone, email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-8 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-8 pr-3 text-xs font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                  />
                 </div>
-              </div>
-            )}
+              }
+              secondaryActions={
+                <>
+                  <PremiumFilterSelect
+                    value={filterOptions.some(o => o.id === activeFilter) ? activeFilter : ''}
+                    placeholder="Autres filtres"
+                    options={filterOptions.map(o => ({ value: o.id, label: o.label }))}
+                    onChange={(val) => setActiveFilter((val as BailleurFilter) || 'all')}
+                    className="hidden w-[9.5rem] lg:block"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters(true)}
+                    className={`inline-flex h-8 flex-shrink-0 whitespace-nowrap items-center justify-center gap-1.5 rounded-[0.6rem] border px-3 py-1.5 text-xs font-bold shadow-sm transition lg:hidden ${filterOptions.some(o => o.id === activeFilter) ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Filtres
+                    {filterOptions.some(o => o.id === activeFilter) && (
+                      <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">1</span>
+                    )}
+                  </button>
+                  <ColumnPicker
+                    columns={allColumns}
+                    visibility={colVis}
+                    onToggle={colToggle}
+                    onSetAll={colSetAll}
+                    className="!py-1.5 !px-3 !text-xs !rounded-[0.6rem] !h-8 hidden lg:inline-flex"
+                  />
+                </>
+              }
+              quickChips={quickChips}
+            />
+
+          <PremiumTableSurface>
             <MobileFilterSheet
               isOpen={showFilters}
               title="Filtres bailleurs"
               onClose={() => setShowFilters(false)}
               onReset={() => setActiveFilter('all')}
             >
-              <div className="grid gap-2">
+              <div className="grid gap-1.5">
                 {filterOptions.map((option) => (
                   <button
                     key={option.id}
                     type="button"
                     onClick={() => setActiveFilter(option.id)}
-                    className={`rounded-xl border px-3 py-2 text-left transition ${activeFilter === option.id ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-100 bg-[#fffdf8] text-slate-600 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+                    className={`rounded-xl border px-2 py-1.5 text-left transition ${activeFilter === option.id ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-100 bg-[#fffdf8] text-slate-600 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
                   >
-                    <span className="block text-xs font-bold">{option.label}</span>
-                    <span className="mt-0.5 block text-[11px] text-slate-500">{option.helper}</span>
+                    <span className="block text-[11px] font-bold">{option.label}</span>
+                    <span className="mt-0.5 block text-[10px] text-slate-500">{option.helper}</span>
                   </button>
                 ))}
               </div>
             </MobileFilterSheet>
-          </div>
 
           {filteredBailleurs.length === 0 ? (
             <div className="p-8">
@@ -1706,49 +1701,66 @@ export function Bailleurs() {
           ) : (
             <>
               <div className={`hidden lg:block ${detailPanelOpen ? 'overflow-hidden' : 'overflow-x-auto'}`}>
-                <table className={`w-full border-collapse ${detailPanelOpen ? 'min-w-[620px] table-fixed' : 'min-w-[840px]'}`}>
-                  <thead className="bg-[#f8f3e8]/70 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">
+                <table className={`w-full border-collapse table-fixed ${detailPanelOpen ? 'min-w-[620px]' : 'min-w-[840px]'}`}>
+                  <thead className="bg-[#f8f3e8]/70 text-left">
                     <tr>
-                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[34%] px-3' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><CircleUser className="h-3.5 w-3.5" /> Bailleur</span></th>}
-                      {showBailleurColumn('telephone') && <th className="px-3.5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400"><span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Téléphone</span></th>}
-                      {showBailleurColumn('commission') && <th className="px-3.5 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400"><span className="flex items-center gap-1.5"><Percent className="h-3.5 w-3.5" /> Commission</span></th>}
-                      {showBailleurColumn('biens') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> Biens</span></th>}
-                      {showBailleurColumn('unites') && <th className={`${detailPanelOpen ? 'w-[10%] px-2' : 'px-3.5'} py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><DoorOpen className="h-3.5 w-3.5" /> Unités</span></th>}
-                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5" /> Reliquats</span></th>}
-                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[18%] px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5" /> Net</span></th>}
-                      {showBailleurColumn('actions') && <th className={`${detailPanelOpen ? 'w-12 px-2' : 'px-3.5'} py-3 text-right text-[11px] font-bold uppercase tracking-wider text-slate-400`}><span className="flex items-center gap-1.5"><MoreHorizontal className="h-3.5 w-3.5" /> Actions</span></th>}
+                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[56%]' : 'w-[36%]'} px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><CircleUser className="h-3 w-3 text-slate-400" /> Bailleur</span></th>}
+                      {showBailleurColumn('telephone') && <th className="w-[12%] px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-slate-400" /> Téléphone</span></th>}
+                      {showBailleurColumn('commission') && <th className="w-[8%] px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Percent className="h-3 w-3 text-slate-400" /> Commission</span></th>}
+                      {showBailleurColumn('biens') && <th className="w-[8%] px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Building2 className="h-3 w-3 text-slate-400" /> Biens</span></th>}
+                      {showBailleurColumn('unites') && <th className="w-[8%] px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><DoorOpen className="h-3 w-3 text-slate-400" /> Unités</span></th>}
+                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[20%]' : 'w-[17%]'} px-3.5 py-1.5 text-right text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><AlertCircle className="h-3 w-3 text-slate-400" /> Reliquats</span></th>}
+                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[20%]' : 'w-[17%]'} px-3.5 py-1.5 text-right text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><Wallet className="h-3 w-3 text-slate-400" /> Net</span></th>}
+                      {showBailleurColumn('statut') && <th className="w-[10%] px-3.5 py-1.5 text-left text-[0.64rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5">Statut</span></th>}
+                      <th className="w-[4%] px-2 py-1.5"><span className="sr-only">Ouvrir</span></th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredBailleurs.map((bailleur) => {
                       const summary = summariesByBailleur[bailleur.id] ?? emptySummary();
                       const selected = bailleur.id === selectedBailleurId;
+
+                      const isReliquatPositif = summary.reliquats > 0;
+                      const isNetPositif = summary.net > 0;
+                      const rawStatusLabel = getStatusLabel(bailleur);
+
+                      let subtitleText = '';
+                      if (detailPanelOpen) {
+                        subtitleText = `${rawStatusLabel} · ${summary.immeubles.length} bien${summary.immeubles.length > 1 ? 's' : ''} · ${summary.unites.length} unité${summary.unites.length > 1 ? 's' : ''}`;
+                        if (isReliquatPositif) subtitleText += ' · à suivre';
+                        else if (isNetPositif) subtitleText += ' · net positif';
+                      } else {
+                        if (isReliquatPositif) subtitleText = 'À suivre';
+                        else if (isNetPositif) subtitleText = 'Net positif';
+                      }
+
                       return (
                         <tr
                           key={bailleur.id}
                           onClick={() => { setSelectedBailleurId(bailleur.id); setDetailOpen(true); }}
-                          className={`cursor-pointer border-b border-slate-100 transition ${selected ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200' : 'hover:bg-emerald-50/45'}`}
+                          className={`cursor-pointer border-b border-slate-100 transition-colors duration-150 outline-none hover:bg-emerald-50/40 focus-visible:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300 ${selected ? 'bg-emerald-50/60 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-1 after:bg-brand-600' : ''}`}
                         >
-                          {showBailleurColumn('bailleur') && <td className={`${detailPanelOpen ? 'px-3' : 'px-3.5'} py-2.5`}>
-                            <div className="flex items-center gap-3">
-                              <div className={`flex ${detailPanelOpen ? 'h-8 w-8' : 'h-9 w-9'} items-center justify-center rounded-xl text-xs font-black shadow-inner ring-1 ${getAvatarTone(bailleur, selected)}`}>{getInitials(bailleur)}</div>
+                          {showBailleurColumn('bailleur') && <td className="px-3.5 py-1.5">
+                            <div className="flex items-center gap-2">
+                              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[0.68rem] font-black shadow-inner ring-1 ${getAvatarTone(bailleur, selected)}`}>{getInitials(bailleur)}</div>
                               <div className="min-w-0">
-                                <p className="truncate font-semibold text-slate-950">{displayBailleurName(bailleur)}</p>
-                                <p className="text-xs text-slate-500">{getStatusLabel(bailleur)}</p>
+                                <p className="truncate text-[0.82rem] leading-tight font-semibold text-slate-950">{displayBailleurName(bailleur)}</p>
+                                {subtitleText && <p className="truncate text-[0.68rem] leading-snug text-slate-500 mt-0.5">{subtitleText}</p>}
                               </div>
                             </div>
                           </td>}
-                          {showBailleurColumn('telephone') && <td className="whitespace-nowrap px-3.5 py-2.5 text-sm text-slate-700">{bailleur.telephone ? <a href={`tel:${bailleur.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(bailleur.telephone)}</a> : ''}</td>}
-                          {showBailleurColumn('commission') && <td className="whitespace-nowrap px-3.5 py-2.5 text-sm font-semibold text-slate-700">{formatCommission(bailleur.commission)}</td>}
-                          {showBailleurColumn('biens') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-sm font-semibold text-slate-700`}>{summary.immeubles.length}</td>}
-                          {showBailleurColumn('unites') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-sm font-semibold text-slate-700`}>{summary.unites.length}</td>}
-                          {showBailleurColumn('reliquats') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} whitespace-nowrap py-2.5 text-right text-sm font-bold tabular-nums text-red-600`}><MoneyText value={summary.reliquats} /></td>}
-                          {showBailleurColumn('net') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} whitespace-nowrap py-2.5 text-right text-sm font-bold tabular-nums text-emerald-800`}><MoneyText value={summary.net} /></td>}
-                          {showBailleurColumn('actions') && <td className={`${detailPanelOpen ? 'px-2' : 'px-3.5'} py-2.5 text-right`}>
-                            <button aria-label="Action" type="button" onClick={(event) => { event.stopPropagation(); setSelectedBailleurId(bailleur.id); setDetailOpen(true); }} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-950">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </button>
+                          {showBailleurColumn('telephone') && <td className="whitespace-nowrap px-3.5 py-1.5 text-[0.75rem] text-slate-700">{bailleur.telephone ? <a href={`tel:${bailleur.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(bailleur.telephone)}</a> : ''}</td>}
+                          {showBailleurColumn('commission') && <td className="whitespace-nowrap px-3.5 py-1.5 text-[0.75rem] font-medium text-slate-700">{formatCommission(bailleur.commission)}</td>}
+                          {showBailleurColumn('biens') && <td className="px-3.5 py-1.5 text-[0.8rem] font-medium text-slate-700">{summary.immeubles.length}</td>}
+                          {showBailleurColumn('unites') && <td className="px-3.5 py-1.5 text-[0.8rem] font-medium text-slate-700">{summary.unites.length}</td>}
+                          {showBailleurColumn('reliquats') && <td className="whitespace-nowrap px-3.5 py-1.5 text-right text-[0.82rem] font-bold tabular-nums text-red-600"><MoneyText value={summary.reliquats} /></td>}
+                          {showBailleurColumn('net') && <td className="whitespace-nowrap px-3.5 py-1.5 text-right text-[0.82rem] font-bold tabular-nums text-emerald-800"><MoneyText value={summary.net} /></td>}
+                          {showBailleurColumn('statut') && <td className="px-3.5 py-1.5">
+                            <span className="inline-flex px-1.5 py-0.5 text-[9px] rounded uppercase font-medium bg-slate-100 text-slate-700">{rawStatusLabel}</span>
                           </td>}
+                          <td className="px-2 py-1.5 text-right">
+                            <ChevronRight className="h-3 w-3 text-slate-300 inline-block" />
+                          </td>
                         </tr>
                       );
                     })}
@@ -1780,7 +1792,7 @@ export function Bailleurs() {
               </div>
             </>
           )}
-          </section>
+          </PremiumTableSurface>
         </section>
         </div>
 
@@ -1803,21 +1815,21 @@ export function Bailleurs() {
                     </div>
 
                     <div className="flex items-start gap-3">
-                      <div className={`relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl font-black shadow-lg shadow-emerald-900/15 ring-1 ${getAvatarTone(selectedBailleur, true)}`}>
+                      <div className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg font-black shadow-lg shadow-emerald-900/15 ring-1 ${getAvatarTone(selectedBailleur, true)}`}>
                         {getInitials(selectedBailleur)}
-                        <span className="absolute -right-1 bottom-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-400" />
+                        <span className="absolute -right-0.5 bottom-0 h-3 w-3 rounded-full border-2 border-white bg-emerald-400" />
                       </div>
                       <div className="min-w-0 flex-1 space-y-1.5 text-sm text-slate-600">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="min-w-0 flex-1 truncate text-lg font-black text-brand-950 sm:text-xl">{displayBailleurName(selectedBailleur)}</h2>
-                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
+                          <h2 className="min-w-0 flex-1 truncate text-base font-black text-brand-950 sm:text-lg">{displayBailleurName(selectedBailleur)}</h2>
+                          <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
                             {getStatusLabel(selectedBailleur)}
                           </span>
                         </div>
                         <p className="flex items-center gap-2"><Phone className="h-4 w-4 text-slate-400" />{selectedBailleur.telephone ? <a href={`tel:${selectedBailleur.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(selectedBailleur.telephone)}</a> : 'Téléphone non renseigné'}</p>
                         <p className="flex items-center gap-2 truncate"><Mail className="h-4 w-4 text-slate-400" />{selectedBailleur.email ? <a href={`mailto:${selectedBailleur.email}`} className="hover:text-brand-700 hover:underline">{selectedBailleur.email}</a> : 'Email non renseigné'}</p>
                         <p className="flex items-center gap-2 truncate"><MapPin className="h-4 w-4 text-slate-400" />{selectedBailleur.adresse || 'Adresse non renseignée'}</p>
-                        <p className="mt-3 rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-2 text-xs font-bold leading-5 text-slate-600 shadow-sm">
+                        <p className="mt-2.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-2.5 py-1.5 text-[0.65rem] font-bold leading-5 text-slate-600 shadow-sm">
                           Portefeuille actif · {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {selectedSummary.activeContracts} location{selectedSummary.activeContracts > 1 ? 's' : ''} · <span className="text-emerald-800"><MoneyText value={selectedSummary.net} compact /></span> net à reverser
                         </p>
                       </div>

@@ -104,18 +104,18 @@ export function PremiumMobileCard({
       } ${className}`}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.95rem] bg-gradient-to-br from-emerald-50 to-white text-sm font-black text-brand-900 shadow-sm ring-1 ring-emerald-950/10">
-          {Icon ? <Icon className="h-5 w-5" /> : initials}
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-white text-xs font-black text-brand-900 shadow-sm ring-1 ring-emerald-950/10">
+          {Icon ? <Icon className="h-4 w-4" /> : initials}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="min-w-0">
-              {eyebrow && <p className="mb-0.5 truncate text-[0.65rem] font-black uppercase tracking-[0.12em] text-action-600">{eyebrow}</p>}
-              <p className="truncate text-[0.95rem] font-black leading-5 text-slate-950">{title}</p>
-              {subtitle && <p className="mt-1 line-clamp-2 text-xs font-semibold leading-4 text-slate-500">{subtitle}</p>}
+              {eyebrow && <p className="mb-0.5 truncate text-[0.6rem] font-black uppercase tracking-[0.12em] text-action-600">{eyebrow}</p>}
+              <p className="truncate text-[0.8rem] font-black leading-5 text-slate-950">{title}</p>
+              {subtitle && <p className="mt-0.5 line-clamp-2 text-[0.65rem] font-semibold leading-4 text-slate-500">{subtitle}</p>}
             </div>
             {status && (
-              <span className={`shrink-0 whitespace-nowrap rounded-full border px-2 py-0.5 text-[0.64rem] font-black uppercase tracking-[0.06em] ${toneClasses[statusTone]}`}>
+              <span className={`shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[0.55rem] font-black uppercase tracking-[0.06em] ${toneClasses[statusTone]}`}>
                 {status}
               </span>
             )}
@@ -125,14 +125,14 @@ export function PremiumMobileCard({
             <div className={`mt-3 flex items-end justify-between gap-3`}>
               {amount !== undefined ? (
                 <div className="min-w-0">
-                  {amountLabel && <p className="text-[0.65rem] font-bold uppercase tracking-[0.09em] text-slate-400">{amountLabel}</p>}
-                  <MoneyText value={amount} compact={amountCompact} suffix={amountSuffix} className="text-sm font-black text-slate-950" />
+                  {amountLabel && <p className="text-[0.55rem] font-bold uppercase tracking-[0.09em] text-slate-400">{amountLabel}</p>}
+                  <MoneyText value={amount} compact={amountCompact} suffix={amountSuffix} className="text-xs font-black text-slate-950" />
                 </div>
               ) : <span />}
               {meta.length > 0 && (
                 <div className="flex min-w-0 flex-wrap justify-end gap-1.5">
                   {meta.slice(0, 3).map((item) => (
-                    <span key={item.label} className={`rounded-lg border px-2 py-1 text-[0.66rem] font-bold ${toneClasses[item.tone ?? 'slate']}`}>
+                    <span key={item.label} className={`rounded-lg border px-1.5 py-0.5 text-[0.55rem] font-bold ${toneClasses[item.tone ?? 'slate']}`}>
                       <span className="text-current opacity-65">{item.label}</span> <span>{item.value}</span>
                     </span>
                   ))}

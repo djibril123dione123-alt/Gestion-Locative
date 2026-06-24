@@ -182,7 +182,7 @@ export function Sidebar({
   const { profile, accountProfile, signOut } = useAuth();
   const role = getEffectiveRoleForAccount((profile?.role ?? 'agent') as Role, accountProfile) as Role;
   const showExpandedContent = !isCollapsed || isOpen;
-  const desktopWidthClass = isCollapsed ? 'lg:w-20' : 'lg:w-64';
+  const desktopWidthClass = isCollapsed ? 'lg:w-16' : 'lg:w-52';
   const [openGroup, setOpenGroup] = useState<string>(() => getInitialOpenGroup(currentPage));
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -260,18 +260,18 @@ export function Sidebar({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-72 flex-col overflow-hidden border-r border-emerald-300/10 bg-[radial-gradient(circle_at_20%_0%,rgba(16,185,129,0.16),transparent_18rem),linear-gradient(180deg,#031f1a,#062b23_48%,#041b17)] text-white shadow-[18px_0_60px_rgba(2,6,23,0.24)]
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-60 flex-col overflow-hidden border-r border-emerald-300/10 bg-[radial-gradient(circle_at_20%_0%,rgba(16,185,129,0.16),transparent_18rem),linear-gradient(180deg,#031f1a,#062b23_48%,#041b17)] text-white shadow-[18px_0_60px_rgba(2,6,23,0.24)]
           transform transition-[transform,width] duration-300 ease-in-out lg:static ${desktopWidthClass}
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        <div className={`relative flex items-center overflow-hidden border-b border-white/10 px-4 py-5 ${showExpandedContent ? 'justify-between' : 'justify-center'}`}>
+        <div className={`relative flex items-center overflow-hidden border-b border-white/10 px-3 py-4 ${showExpandedContent ? 'justify-between' : 'justify-center'}`}>
           <div className="absolute -left-8 top-0 h-28 w-28 rounded-full bg-emerald-300/15 blur-2xl" />
           <div className="absolute right-0 top-0 h-px w-2/3 bg-gradient-to-r from-transparent via-orange-300/60 to-transparent" />
-          <div className="relative flex min-w-0 items-center gap-3">
-            <BrandMark size="md" tone="dark" animated withTile={false} />
+          <div className="relative flex min-w-0 items-center gap-2.5">
+            <BrandMark size="sm" tone="dark" animated withTile={false} />
             <div className={`min-w-0 ${showExpandedContent ? '' : 'lg:hidden'}`}>
-              <p className="truncate text-sm font-black tracking-widest text-brand-paper">SAMAY KEUR</p>
-              <p className="mt-1 truncate text-xs font-black uppercase tracking-widest text-action-500">Manage. Grow. Prosper.</p>
+              <p className="truncate text-xs font-black tracking-widest text-brand-paper">SAMAY KEUR</p>
+              <p className="mt-0.5 truncate text-[10px] font-black uppercase tracking-widest text-action-500">Manage. Grow. Prosper.</p>
             </div>
           </div>
 
@@ -295,8 +295,8 @@ export function Sidebar({
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-3 xl:py-4">
-          <ul className="space-y-1.5 px-3">
+        <nav className="flex-1 overflow-y-auto py-2 xl:py-3">
+          <ul className="space-y-1 px-2">
             {visibleNav.map((entry) => {
               if (!isGroup(entry)) {
                 const Icon = entry.icon;
@@ -306,13 +306,13 @@ export function Sidebar({
                     <button
                       onClick={() => handleNavigate(entry.id)}
                       title={entry.label}
-                      className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${active ? 'bg-white/[0.09] text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.16)] ring-1 ring-emerald-300/10' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
+                      className={`group relative flex w-full items-center gap-2.5 rounded-xl px-2 py-2 transition-all duration-200 xl:px-3 xl:py-2.5 ${active ? 'bg-white/[0.09] text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.16)] ring-1 ring-emerald-300/10' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
                         } ${showExpandedContent ? '' : 'justify-center px-0'}`}
                     >
-                      {active && <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r bg-emerald-300" />}
-                      <Icon className={`h-5 w-5 flex-shrink-0 ${active ? 'text-emerald-300' : 'text-slate-500 group-hover:text-emerald-200'}`} />
-                      <span className={`text-sm font-bold ${showExpandedContent ? '' : 'lg:hidden'}`}>{entry.label}</span>
-                      {active && <ChevronRight className={`ml-auto h-4 w-4 text-emerald-300 ${showExpandedContent ? '' : 'lg:hidden'}`} />}
+                      {active && <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-emerald-300" />}
+                      <Icon className={`h-4 w-4 flex-shrink-0 ${active ? 'text-emerald-300' : 'text-slate-500 group-hover:text-emerald-200'}`} />
+                      <span className={`text-xs font-bold ${showExpandedContent ? '' : 'lg:hidden'}`}>{entry.label}</span>
+                      {active && <ChevronRight className={`ml-auto h-3.5 w-3.5 text-emerald-300 ${showExpandedContent ? '' : 'lg:hidden'}`} />}
                     </button>
                   </li>
                 );
@@ -327,22 +327,22 @@ export function Sidebar({
                   <button
                     onClick={() => toggleGroup(entry.id)}
                     title={entry.label}
-                    className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 xl:px-4 xl:py-3 ${active ? 'bg-white/[0.09] text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.16)] ring-1 ring-emerald-300/10' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
+                    className={`group relative flex w-full items-center gap-2.5 rounded-xl px-2 py-2 transition-all duration-200 xl:px-3 xl:py-2.5 ${active ? 'bg-white/[0.09] text-emerald-50 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_12px_30px_rgba(0,0,0,0.16)] ring-1 ring-emerald-300/10' : 'text-slate-400 hover:bg-white/[0.055] hover:text-white'
                       } ${showExpandedContent ? '' : 'justify-center px-0'}`}
                   >
-                    {active && <span className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r bg-emerald-300" />}
-                    <Icon className={`h-5 w-5 flex-shrink-0 ${active ? 'text-emerald-300' : 'text-slate-500 group-hover:text-emerald-200'}`} />
+                    {active && <span className="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r bg-emerald-300" />}
+                    <Icon className={`h-4 w-4 flex-shrink-0 ${active ? 'text-emerald-300' : 'text-slate-500 group-hover:text-emerald-200'}`} />
                     <span className={`flex-1 text-left ${showExpandedContent ? '' : 'lg:hidden'}`}>
-                      <span className="block text-sm font-bold">{entry.label}</span>
-                      <span className={`mt-0.5 block text-[11px] font-semibold leading-4 xl:mt-1 xl:text-xs ${active ? 'text-emerald-200/80' : 'text-slate-500'}`}>
+                      <span className="block text-xs font-bold">{entry.label}</span>
+                      <span className={`mt-0.5 block text-[9px] font-semibold leading-3 xl:text-[10px] ${active ? 'text-emerald-200/80' : 'text-slate-500'}`}>
                         {entry.description}
                       </span>
                     </span>
-                    <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showExpandedContent ? '' : 'lg:hidden'} ${open ? 'rotate-0' : '-rotate-90'} ${active ? 'text-emerald-300' : 'text-slate-500'}`} />
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showExpandedContent ? '' : 'lg:hidden'} ${open ? 'rotate-0' : '-rotate-90'} ${active ? 'text-emerald-300' : 'text-slate-500'}`} />
                   </button>
 
                   {open && showExpandedContent && (
-                    <ul className="ml-4 mt-1.5 space-y-1 rounded-2xl border border-white/5 bg-black/10 p-1.5 shadow-inner">
+                    <ul className="ml-4 mt-1 space-y-1 rounded-xl border border-white/5 bg-black/10 p-1.5 shadow-inner">
                       {entry.items.map((leaf) => {
                         const LeafIcon = leaf.icon;
                         const leafActive = isLeafActive(leaf.id);
@@ -350,11 +350,11 @@ export function Sidebar({
                           <li key={leaf.id}>
                             <button
                               onClick={() => handleNavigate(leaf.id)}
-                              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-all duration-200 ${leafActive ? 'bg-emerald-300/14 text-emerald-50 ring-1 ring-emerald-300/10' : 'text-slate-500 hover:bg-white/[0.055] hover:text-slate-200'
+                              className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left transition-all duration-200 ${leafActive ? 'bg-emerald-300/14 text-emerald-50 ring-1 ring-emerald-300/10' : 'text-slate-500 hover:bg-white/[0.055] hover:text-slate-200'
                                 }`}
                             >
-                              <LeafIcon className={`h-4 w-4 flex-shrink-0 ${leafActive ? 'text-emerald-300' : 'text-slate-600'}`} />
-                              <span className="text-sm font-semibold">{leaf.label}</span>
+                              <LeafIcon className={`h-3.5 w-3.5 flex-shrink-0 ${leafActive ? 'text-emerald-300' : 'text-slate-600'}`} />
+                              <span className="text-xs font-semibold">{leaf.label}</span>
                             </button>
                           </li>
                         );
@@ -367,25 +367,25 @@ export function Sidebar({
           </ul>
         </nav>
 
-        <div className="relative border-t border-white/10 bg-black/10 p-4">
+        <div className="relative border-t border-white/10 bg-black/10 p-3">
           <button
             type="button"
             onClick={() => setUserMenuOpen((value) => !value)}
-            className={`w-full rounded-2xl border border-white/10 bg-white/[0.065] px-3 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.095] ${showExpandedContent ? '' : 'lg:flex lg:justify-center lg:px-0'}`}
+            className={`w-full rounded-xl border border-white/10 bg-white/[0.065] px-2.5 py-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.095] ${showExpandedContent ? '' : 'lg:flex lg:justify-center lg:px-0'}`}
             // NOSONAR
             aria-expanded={userMenuOpen}
           >
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-300 to-brand-700 text-sm font-black text-white shadow-lg shadow-emerald-900/20">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[0.6rem] bg-gradient-to-br from-emerald-300 to-brand-700 text-xs font-black text-white shadow-lg shadow-emerald-900/20">
                 {initials}
               </div>
               <div className={`min-w-0 flex-1 ${showExpandedContent ? '' : 'lg:hidden'}`}>
-                <p className="truncate text-sm font-black text-white">
+                <p className="truncate text-xs font-black text-white">
                   {profile?.prenom} {profile?.nom}
                 </p>
-                <p className="text-xs font-bold capitalize text-emerald-200">{profile?.role}</p>
+                <p className="text-[10px] font-bold capitalize text-emerald-200">{profile?.role}</p>
               </div>
-              <ChevronDown className={`h-4 w-4 text-slate-400 transition ${userMenuOpen ? 'rotate-180' : ''} ${showExpandedContent ? '' : 'lg:hidden'}`} />
+              <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition ${userMenuOpen ? 'rotate-180' : ''} ${showExpandedContent ? '' : 'lg:hidden'}`} />
             </div>
           </button>
 

@@ -10,6 +10,7 @@ export interface PageShellProps {
   spacing?: PageShellSpacing;
   variant?: PageShellVariant;
   tone?: PageShellTone;
+  verticalInset?: 'none' | 'compact' | 'standard';
   ariaLabel?: string;
 }
 
@@ -24,6 +25,12 @@ const TONE_MAP: Record<PageShellTone, string> = {
   paper: 'bg-brand-paper/70',
 };
 
+const VERTICAL_INSET_MAP: Record<'none' | 'compact' | 'standard', string> = {
+  none: '',
+  compact: 'pt-3 sm:pt-4',
+  standard: 'pt-4 sm:pt-5',
+};
+
 /**
  * Primitive officielle d'espacement de page.
  * Gère uniquement la structure verticale et potentiellement un fond (tone).
@@ -36,18 +43,20 @@ export function PageShell({
   spacing = 'standard',
   variant = 'standard',
   tone = 'default',
+  verticalInset = 'none',
   ariaLabel,
 }: PageShellProps) {
   const baseClasses = 'flex flex-col w-full min-w-0 max-w-full';
   const spacingClass = SPACING_MAP[spacing];
   const toneClass = TONE_MAP[tone];
+  const insetClass = VERTICAL_INSET_MAP[verticalInset];
 
   // Le variant "dataDense" pourrait servir à annuler certains espacements par défaut
   // ou à préparer le terrain pour des mises en page sans marges internes.
   // Pour l'instant, les deux partagent la même structure de base fluide.
   const variantClass = variant === 'dataDense' ? '' : '';
 
-  const classes = [baseClasses, spacingClass, variantClass, toneClass, className]
+  const classes = [baseClasses, spacingClass, variantClass, toneClass, insetClass, className]
     .filter(Boolean)
     .join(' ');
 

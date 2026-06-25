@@ -372,8 +372,6 @@ export function Sidebar({
             type="button"
             onClick={() => setUserMenuOpen((value) => !value)}
             className={`w-full rounded-xl border border-white/10 bg-white/[0.065] px-2.5 py-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition hover:bg-white/[0.095] ${showExpandedContent ? '' : 'lg:flex lg:justify-center lg:px-0'}`}
-            // NOSONAR
-            aria-expanded={userMenuOpen}
           >
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[0.6rem] bg-gradient-to-br from-emerald-300 to-brand-700 text-xs font-black text-white shadow-lg shadow-emerald-900/20">

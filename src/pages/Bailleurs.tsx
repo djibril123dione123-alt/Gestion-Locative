@@ -261,6 +261,8 @@ const ErrorAlert: React.FC<{ message: string; onClose: () => void }> = ({ messag
     <button
       onClick={onClose}
       className="text-red-600 hover:text-red-900 transition rounded-sm hover:bg-red-100/50 p-0.5"
+      title="Fermer"
+      aria-label="Fermer"
     >
       <X className="w-3.5 h-3.5" />
     </button>
@@ -1958,7 +1960,7 @@ export function Bailleurs() {
       <WizardShell
         open={isModalOpen}
         onClose={handleCloseAttempt}
-        size="simple"
+        size="compact"
         title={editingBailleur ? 'Modifier le bailleur' : 'Nouveau bailleur'}
         description="Créez une fiche propriétaire exploitable."
         steps={BAILLEUR_WIZARD_STEPS}

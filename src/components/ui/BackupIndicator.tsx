@@ -191,7 +191,7 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
         <div className="bg-white border border-action-200 rounded-lg shadow-premium p-4 w-80 space-y-3 animate-slideUp">
           <div className="flex items-start justify-between">
             <p className="text-sm font-semibold text-slate-800">Aperçu de la sauvegarde</p>
-            <button onClick={handleRestoreCancel} className="text-slate-400 hover:text-slate-600 transition">
+            <button onClick={handleRestoreCancel} className="text-slate-400 hover:text-slate-600 transition" title="Annuler" aria-label="Annuler">
               <X className="w-4 h-4" />
             </button>
           </div>

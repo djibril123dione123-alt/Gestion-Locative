@@ -37,7 +37,7 @@ export type WizardShellProps = {
 };
 
 const sizeClasses: Record<WizardSize | 'compact', string> = {
-  compact: 'sm:w-[min(92vw,660px)] sm:max-w-[660px]',
+  compact: 'sm:w-[min(92vw,580px)] sm:max-w-[580px]',
   simple: 'sm:w-[min(92vw,720px)] sm:max-w-[720px]',
   standard: 'sm:w-[min(92vw,860px)] sm:max-w-[860px]',
   rich: 'sm:max-w-[1040px]',
@@ -115,7 +115,7 @@ export function WizardShell({
         <div className="absolute top-3 left-1/2 -translate-x-1/2 h-1.5 w-12 rounded-full bg-slate-300 sm:hidden" />
 
         {/* Header */}
-        <div className="shrink-0 px-4 pt-5 pb-3 sm:px-6 sm:pt-6 sm:pb-4 bg-white border-b border-emerald-950/10">
+        <div className="shrink-0 px-4 pt-5 pb-3 sm:px-6 sm:pt-6 sm:pb-4 bg-[#fcfaf6]/80 border-b border-emerald-950/10">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               {eyebrow && (
@@ -244,14 +244,14 @@ export function WizardShell({
         </div>
 
         {/* Body */}
-        <div className={`flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 ${bodyClassName}`}>
+        <div className={`flex-1 min-h-0 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 bg-white ${bodyClassName}`}>
           {children}
         </div>
 
         {/* Footer */}
         {showFooter && (
           <div
-            className={`shrink-0 border-t border-emerald-950/5 bg-white/95 sm:bg-[#fffdf8]/95 px-4 py-2.5 pb-[max(env(safe-area-inset-bottom,12px),12px)] sm:px-6 sm:py-2.5 ${footerClassName}`}
+            className={`shrink-0 border-t border-emerald-950/5 bg-white/95 px-4 py-2.5 pb-[max(env(safe-area-inset-bottom,12px),12px)] sm:px-6 sm:py-2.5 ${footerClassName}`}
           >
             {footer ? (
               footer

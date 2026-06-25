@@ -30,10 +30,6 @@
   }
 
   html {
-    /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
-    -webkit-text-size-adjust: 100%;
-    /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
-    text-size-adjust: 100%;
     scroll-behavior: smooth;
     touch-action: auto;
     background: var(--sk-paper);
@@ -849,11 +845,11 @@
     background: rgba(31, 59, 46, 0.54);
   }
 
-  .premium-polish {
-    /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
-    scrollbar-color: rgba(31, 59, 46, 0.38) rgba(242, 237, 227, 0.48);
-    /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
-    scrollbar-width: thin;
+  @supports (scrollbar-color: auto) {
+    .premium-polish {
+      scrollbar-color: rgba(31, 59, 46, 0.38) rgba(242, 237, 227, 0.48);
+      scrollbar-width: thin;
+    }
   }
 
   .premium-polish .bg-blue-600 {
@@ -1062,8 +1058,11 @@
 
   .scrollbar-hide {
     -ms-overflow-style: none;
-    /* stylelint-disable-next-line plugin/no-unsupported-browser-features */
-    scrollbar-width: none;
+  }
+  @supports (scrollbar-width: none) {
+    .scrollbar-hide {
+      scrollbar-width: none;
+    }
   }
 
   .scrollbar-hide::-webkit-scrollbar {

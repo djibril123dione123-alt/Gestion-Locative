@@ -109,12 +109,12 @@ export function PremiumDrawerShell({
             )}
             <div className="min-w-0 flex-1">
               {eyebrow && (
-                <p className={`mb-0.5 font-black uppercase tracking-[0.14em] text-[#9a5b17] ${isCompact ? 'text-[0.6rem]' : 'text-[11px]'}`}>
+                <p className={`mb-0.5 uppercase tracking-[0.14em] text-[#9a5b17] ${isCompact ? 'text-[0.6rem] font-bold' : 'text-[11px] font-black'}`}>
                   {eyebrow}
                 </p>
               )}
               {title && (
-                <h2 className={`truncate font-black text-brand-950 ${isCompact ? 'text-[1.05rem]' : 'text-lg sm:text-xl'}`}>
+                <h2 className={`truncate text-brand-950 ${isCompact ? 'text-[0.95rem] font-semibold leading-tight tracking-normal' : 'text-lg sm:text-xl font-black'}`}>
                   {title}
                 </h2>
               )}

@@ -280,11 +280,11 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
 
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="sk-pressable flex min-h-10 items-center gap-1.5 rounded-full border border-emerald-950/10 bg-white/[0.92] px-3 py-1.5 text-xs font-bold text-slate-700 shadow-premium backdrop-blur-xl transition hover:bg-brand-50 hover:text-brand-900"
+        className="sk-pressable flex h-[24px] items-center gap-1 rounded-full border border-emerald-950/10 bg-white/[0.92] px-2 py-0 text-[0.65rem] font-bold text-slate-700 shadow-sm backdrop-blur-xl transition hover:bg-brand-50 hover:text-brand-900"
         title="Gestion des sauvegardes"
       >
         <Icon
-          className={`w-3.5 h-3.5 flex-shrink-0 ${colorClass} ${saving || syncing ? 'animate-spin' : ''}`}
+          className={`w-2.5 h-2.5 flex-shrink-0 ${colorClass} ${saving || syncing ? 'animate-spin' : ''}`}
         />
         <span className="hidden sm:inline">{label}</span>
       </button>

@@ -23,6 +23,11 @@ interface PremiumMobileCardProps {
   initials?: string;
   status?: ReactNode;
   statusTone?: Tone;
+  avatarSize?: 'sm' | 'md';
+  amountTone?: Tone;
+  secondaryAmount?: number | string | null;
+  secondaryAmountLabel?: string;
+  secondaryAmountTone?: Tone;
   amount?: number | string | null;
   amountLabel?: string;
   amountCompact?: boolean;
@@ -36,6 +41,7 @@ interface PremiumMobileCardProps {
   onClick?: () => void;
   ariaLabel?: string;
   density?: PremiumMobileCardDensity;
+  emphasis?: 'default' | 'identity';
   className?: string;
   children?: ReactNode;
 }
@@ -56,6 +62,11 @@ export function PremiumMobileCard({
   initials,
   status,
   statusTone = 'emerald',
+  avatarSize = 'sm',
+  amountTone,
+  secondaryAmount,
+  secondaryAmountLabel,
+  secondaryAmountTone = 'slate',
   amount,
   amountLabel,
   amountCompact = false,
@@ -69,6 +80,7 @@ export function PremiumMobileCard({
   onClick,
   ariaLabel,
   density = 'comfortable',
+  emphasis = 'default',
   className = '',
   children,
 }: PremiumMobileCardProps) {
@@ -104,29 +116,37 @@ export function PremiumMobileCard({
       } ${className}`}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-white text-xs font-black text-brand-900 shadow-sm ring-1 ring-emerald-950/10">
-          {Icon ? <Icon className="h-4 w-4" /> : initials}
+        <div className={`flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-50 to-white ${emphasis === 'identity' ? 'font-bold' : 'font-black'} text-brand-900 shadow-sm ring-1 ring-emerald-950/10 ${avatarSize === 'md' ? 'h-[38px] w-[38px] text-sm' : 'h-8 w-8 text-xs'}`}>
+          {Icon ? <Icon className={avatarSize === 'md' ? 'h-5 w-5' : 'h-4 w-4'} /> : initials}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="min-w-0">
-              {eyebrow && <p className="mb-0.5 truncate text-[0.6rem] font-black uppercase tracking-[0.12em] text-action-600">{eyebrow}</p>}
-              <p className="truncate text-[0.8rem] font-black leading-5 text-slate-950">{title}</p>
+              {eyebrow && <p className={`mb-0.5 truncate text-[0.6rem] ${emphasis === 'identity' ? 'font-bold' : 'font-black'} uppercase tracking-[0.12em] text-action-600`}>{eyebrow}</p>}
+              <p className={`truncate ${emphasis === 'identity' ? 'text-[0.86rem] font-bold leading-tight text-slate-950' : 'text-[0.8rem] font-black leading-5 text-slate-950'}`}>{title}</p>
               {subtitle && <p className="mt-0.5 line-clamp-2 text-[0.65rem] font-semibold leading-4 text-slate-500">{subtitle}</p>}
             </div>
             {status && (
-              <span className={`shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[0.55rem] font-black uppercase tracking-[0.06em] ${toneClasses[statusTone]}`}>
+              <span className={`shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[0.55rem] ${emphasis === 'identity' ? 'font-bold' : 'font-black'} uppercase tracking-[0.06em] ${toneClasses[statusTone]}`}>
                 {status}
               </span>
             )}
           </div>
 
           {(amount !== undefined || meta.length > 0) && (
-            <div className={`mt-3 flex items-end justify-between gap-3`}>
+            <div className={`${emphasis === 'identity' ? 'mt-2' : 'mt-3'} flex items-end justify-between gap-3`}>
               {amount !== undefined ? (
-                <div className="min-w-0">
-                  {amountLabel && <p className="text-[0.55rem] font-bold uppercase tracking-[0.09em] text-slate-400">{amountLabel}</p>}
-                  <MoneyText value={amount} compact={amountCompact} suffix={amountSuffix} className="text-xs font-black text-slate-950" />
+                <div className="min-w-0 flex flex-col gap-0.5">
+                  <div className="flex items-baseline gap-1.5">
+                    {amountLabel && <span className={`text-[0.6rem] ${emphasis === 'identity' ? 'font-medium' : 'font-bold uppercase tracking-[0.09em]'} text-slate-400`}>{amountLabel}</span>}
+                    <MoneyText value={amount} compact={amountCompact} suffix={amountSuffix} className={`${emphasis === 'identity' ? 'text-[0.8rem] font-semibold' : 'text-sm font-black'} ${amountTone ? (amountTone === 'emerald' ? 'text-emerald-700' : amountTone === 'red' ? 'text-red-600' : 'text-slate-800') : 'text-slate-950'}`} />
+                  </div>
+                  {secondaryAmount !== undefined && (
+                    <div className="flex items-baseline gap-1.5">
+                      {secondaryAmountLabel && <span className="text-[0.6rem] font-semibold text-slate-500">{secondaryAmountLabel}</span>}
+                      <MoneyText value={secondaryAmount} compact={amountCompact} className={`text-xs ${emphasis === 'identity' ? 'font-medium' : 'font-bold'} ${secondaryAmountTone === 'red' ? 'text-red-600' : 'text-slate-500'}`} />
+                    </div>
+                  )}
                 </div>
               ) : <span />}
               {meta.length > 0 && (

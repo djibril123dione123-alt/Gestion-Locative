@@ -22,22 +22,22 @@ export function Toast({ message, type, onClose, duration = 5000 }: ToastProps) {
 
   const styles = {
     success: {
-      bg: 'bg-brand-50',
-      border: 'border-brand-200',
-      text: 'text-brand-900',
-      icon: <CheckCircle className="w-5 h-5 text-brand-700" />,
+      bg: 'bg-emerald-50/95',
+      border: 'border-emerald-200/60',
+      text: 'text-emerald-900',
+      icon: <CheckCircle className="w-4 h-4 text-emerald-600" />,
     },
     error: {
-      bg: 'bg-red-50',
-      border: 'border-red-200',
+      bg: 'bg-red-50/95',
+      border: 'border-red-200/60',
       text: 'text-red-800',
-      icon: <XCircle className="w-5 h-5 text-red-600" />,
+      icon: <XCircle className="w-4 h-4 text-red-600" />,
     },
     warning: {
-      bg: 'bg-action-50',
-      border: 'border-action-200',
-      text: 'text-action-700',
-      icon: <AlertCircle className="w-5 h-5 text-action-700" />,
+      bg: 'bg-amber-50/95',
+      border: 'border-amber-200/60',
+      text: 'text-amber-800',
+      icon: <AlertCircle className="w-4 h-4 text-amber-600" />,
     },
   };
 
@@ -45,20 +45,20 @@ export function Toast({ message, type, onClose, duration = 5000 }: ToastProps) {
 
   return (
     <div
-      className={`${style.bg} ${style.border} ${style.text} border p-4 rounded-lg shadow-premium
-                  flex items-start gap-3 min-w-[min(320px,calc(100vw-2rem))] max-w-md animate-slide-in backdrop-blur`}
+      className={`${style.bg} ${style.border} ${style.text} border px-3 py-2.5 rounded-lg shadow-sm
+                  flex items-center gap-2.5 w-auto max-w-sm animate-slide-in backdrop-blur-md`}
       role="status"
     >
       {style.icon}
       <div className="flex-1">
-        <p className="text-sm font-semibold leading-5">{message}</p>
+        <p className="text-[11px] font-semibold leading-tight tracking-wide">{message}</p>
       </div>
       <button
         onClick={onClose}
         className={`${style.text} rounded-md p-1 hover:bg-black/5 transition`}
         aria-label="Fermer la notification"
       >
-        <X className="w-4 h-4" />
+        <X className="w-3.5 h-3.5" />
       </button>
     </div>
   );

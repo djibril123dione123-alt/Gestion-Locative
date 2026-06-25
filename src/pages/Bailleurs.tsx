@@ -3,6 +3,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
+import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
 import {
   Plus,
@@ -28,6 +29,9 @@ import {
   ChevronRight,
   MapPin,
   Calendar,
+  User,
+  Briefcase,
+  X,
 } from 'lucide-react';
 import {
   addFooter,
@@ -42,17 +46,16 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages';
-import { formatDate, formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
+import { formatDate, formatSenegalPhone, normalizeSenegalPhone, isValidSenegalPhone, formatSenegalPhoneInput } from '../lib/formatters';
 import { formatPersonName } from '../lib/people';
 import { PremiumFilterSelect } from '../components/ui/PremiumFilterSelect';
 import { PremiumToolbar } from '../components/ui/PremiumToolbar';
 import { PremiumTableSurface } from '../components/ui/PremiumTableSurface';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
-import { MiniMetric } from '../components/ui/MetricCard';
 import { MoneyText } from '../components/ui/MoneyText';
+import { WizardShell, type WizardStep } from '../components/ui/WizardShell';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
-import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
@@ -117,10 +120,10 @@ interface LifecycleFormData {
 
 type BailleurWizardStep = 'identity' | 'admin' | 'summary';
 
-const BAILLEUR_WIZARD_STEPS: ProductWizardStep<BailleurWizardStep>[] = [
-  { id: 'identity', label: 'Identité', icon: CircleUser },
-  { id: 'admin', label: 'Gestion', icon: Wallet },
-  { id: 'summary', label: 'Validation', icon: ShieldAlert },
+const BAILLEUR_WIZARD_STEPS: WizardStep[] = [
+  { id: 'identity', label: 'Identité', icon: <CircleUser className="h-4 w-4" /> },
+  { id: 'admin', label: 'Gestion', icon: <Wallet className="h-4 w-4" /> },
+  { id: 'summary', label: 'Validation', icon: <ShieldAlert className="h-4 w-4" /> },
 ];
 
 interface DetailImmeuble {
@@ -250,16 +253,16 @@ const DRAWER_MORE_TABS: Array<{ id: DrawerTab; label: string }> = [
  * Composant d'alerte pour les erreurs
  */
 const ErrorAlert: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => (
-  <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+  <div className="mb-3 px-3 py-2.5 bg-red-50/80 border border-red-200/60 rounded-md flex items-center gap-2">
+    <AlertCircle className="w-3.5 h-3.5 text-red-600 flex-shrink-0" />
     <div className="flex-1">
-      <p className="text-sm text-red-800">{message}</p>
+      <p className="text-[11px] font-medium text-red-800">{message}</p>
     </div>
     <button
       onClick={onClose}
-      className="text-red-700 hover:text-red-900 transition"
+      className="text-red-600 hover:text-red-900 transition rounded-sm hover:bg-red-100/50 p-0.5"
     >
-      ×
+      <X className="w-3.5 h-3.5" />
     </button>
   </div>
 );
@@ -483,6 +486,8 @@ export function Bailleurs() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBailleur, setEditingBailleur] = useState<Bailleur | null>(null);
   const [bailleurWizardStep, setBailleurWizardStep] = useState<BailleurWizardStep>('identity');
+  const [isDirty, setIsDirty] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -511,6 +516,29 @@ export function Bailleurs() {
     commission: '',
     debut_contrat: '',
   });
+
+  const resetForm = useCallback(() => {
+    setFormData({
+      nom: '',
+      prenom: '',
+      telephone: '',
+      email: '',
+      adresse: '',
+      piece_identite: '',
+      notes: '',
+      commission: '',
+      debut_contrat: '',
+    });
+    setBailleurWizardStep('identity');
+    setIsDirty(false);
+  }, []);
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingBailleur(null);
+    resetForm();
+    setError(null);
+  };
 
   /**
    * Fonction de chargement des bailleurs
@@ -743,24 +771,30 @@ export function Bailleurs() {
       setIsSubmitting(true);
       setError(null);
 
-      const submitData = {
-        nom: formData.nom,
-        prenom: formData.prenom,
+      // Validate nom/prenom not only digits
+      if (/^\d+$/.test(formData.nom.trim()) || /^\d+$/.test(formData.prenom.trim())) {
+        setError('Le prénom et le nom ne peuvent pas contenir uniquement des chiffres.');
+        return;
+      }
+
+      const commissionNum = typeof formData.commission === 'string' ? parseFloat(formData.commission) : formData.commission;
+      const bailleurData = {
+        nom: formData.nom.trim(),
+        prenom: formData.prenom.trim(),
         telephone: normalizedPhone,
-        email: formData.email || null,
-        adresse: formData.adresse || null,
-        piece_identite: formData.piece_identite || null,
-        notes: formData.notes || null,
-        commission: formData.commission ? parseFloat(formData.commission) : null,
+        email: formData.email.trim() || null,
+        adresse: formData.adresse.trim() || null,
+        piece_identite: formData.piece_identite.trim() || null,
+        notes: formData.notes.trim() || null,
+        commission: commissionNum || 0,
         debut_contrat: formData.debut_contrat,
         updated_at: new Date().toISOString(),
       };
 
       if (editingBailleur) {
-
         const { error: updateError } = await supabase
           .from('bailleurs')
-          .update(submitData)
+          .update(bailleurData)
           .eq('id', editingBailleur.id);
 
         if (updateError) throw updateError;
@@ -770,7 +804,7 @@ export function Bailleurs() {
         const { error: insertError } = await supabase
           .from('bailleurs')
           .insert([{
-            ...submitData,
+            ...bailleurData,
             agency_id: profile?.agency_id,
             created_by: user?.id,
             actif: true
@@ -874,6 +908,25 @@ export function Bailleurs() {
     }
   };
 
+  const handleCloseAttempt = () => {
+    if (isDirty) setShowCloseConfirm(true);
+    else closeModal();
+  };
+
+  const handleConfirmClose = () => {
+    setShowCloseConfirm(false);
+    closeModal();
+  };
+
+  const openModal = (bailleur?: Bailleur) => {
+    if (bailleur) handleEdit(bailleur);
+    else {
+      setEditingBailleur(null);
+      resetForm();
+      setIsModalOpen(true);
+    }
+  };
+
   const openLifecycleModal = (bailleur: Bailleur) => {
     setLifecycleTarget(bailleur);
     setLifecycleForm({
@@ -899,6 +952,7 @@ export function Bailleurs() {
       observations: '',
       acknowledge_impacts: false,
     });
+    setIsDirty(false);
   };
 
   const confirmLifecycle = async () => {
@@ -1225,26 +1279,7 @@ export function Bailleurs() {
     }
   };
 
-  /**
-   * Fermeture du modal
-   */
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingBailleur(null);
-    setError(null);
-    setBailleurWizardStep('identity');
-    setFormData({
-      nom: '',
-      prenom: '',
-      telephone: '',
-      email: '',
-      adresse: '',
-      piece_identite: '',
-      notes: '',
-      commission: '',
-      debut_contrat: '',
-    });
-  };
+
 
   /**
    * Formatage de la commission
@@ -1590,7 +1625,7 @@ export function Bailleurs() {
               primaryAction={
                 <PremiumButton
                   variant="create"
-                  onClick={() => { setBailleurWizardStep('identity'); setIsModalOpen(true); }}
+                  onClick={() => openModal()}
                   icon={<Plus className="h-4 w-4" />}
                   className="w-full sm:w-auto !py-1.5 !px-3 !text-[0.8rem] !h-8"
                 >
@@ -1789,16 +1824,18 @@ export function Bailleurs() {
                       key={bailleur.id}
                       onClick={() => { setSelectedBailleurId(bailleur.id); setDetailOpen(true); }}
                       title={displayBailleurName(bailleur)}
-                      subtitle={bailleur.telephone ? <a href={`tel:${bailleur.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(bailleur.telephone)}</a> : 'Téléphone non renseigné'}
+                      subtitle={`${summary.immeubles.length} bien${summary.immeubles.length > 1 ? 's' : ''} · ${summary.unites.length} unité${summary.unites.length > 1 ? 's' : ''}`}
                       initials={getInitials(bailleur)}
+                      avatarSize="md"
+                      emphasis="identity"
                       status={getStatusLabel(bailleur)}
                       statusTone={bailleur.actif ? 'emerald' : 'slate'}
                       amount={summary.net}
-                      amountLabel="Net"
-                      meta={[
-                        { label: 'Biens', value: summary.immeubles.length },
-                        { label: 'Reliquat', value: <MoneyText value={summary.reliquats} compact />, tone: summary.reliquats > 0 ? 'red' : 'slate' },
-                      ]}
+                      amountLabel="Net bailleur"
+                      amountTone={summary.net > 0 ? 'emerald' : 'slate'}
+                      secondaryAmount={summary.reliquats}
+                      secondaryAmountLabel="Reliquat"
+                      secondaryAmountTone={summary.reliquats > 0 ? 'red' : 'slate'}
                     />
                   );
                 })}
@@ -1820,21 +1857,21 @@ export function Bailleurs() {
                 density="compact"
                 eyebrow="FICHE PROPRIÉTAIRE"
                 avatar={
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-[0.8rem] font-black text-emerald-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] ring-1 ring-emerald-950/10">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-[0.8rem] font-bold text-emerald-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] ring-1 ring-emerald-950/10">
                     {displayBailleurName(selectedBailleur).slice(0, 2).toUpperCase()}
                   </div>
                 }
                 title={displayBailleurName(selectedBailleur)}
                 description={
-                  <div className="mt-1 flex flex-col gap-1 text-[0.72rem]">
+                  <div className="mt-1 flex flex-col gap-1.5 text-[0.72rem]">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
                         {getStatusLabel(selectedBailleur)}
                       </span>
-                      {selectedBailleur.telephone && <span className="flex items-center gap-1 text-slate-500 font-semibold"><Phone className="h-3 w-3" />{formatSenegalPhone(selectedBailleur.telephone)}</span>}
-                      {selectedBailleur.email && <span className="flex items-center gap-1 text-slate-500 font-semibold truncate"><Mail className="h-3 w-3" />{selectedBailleur.email}</span>}
+                      {selectedBailleur.telephone && <span className="flex items-center gap-1 text-slate-500 font-medium"><Phone className="h-3 w-3" />{formatSenegalPhone(selectedBailleur.telephone)}</span>}
+                      {selectedBailleur.email && <span className="flex min-w-0 items-center gap-1 text-slate-500 font-medium"><Mail className="shrink-0 h-3 w-3" /><span className="truncate">{selectedBailleur.email}</span></span>}
                     </div>
-                    <div className="text-[0.68rem] text-slate-500 font-medium">
+                    <div className="pt-1 text-[0.68rem] text-slate-500 font-medium">
                       {selectedSummary.immeubles.length} bien{selectedSummary.immeubles.length > 1 ? 's' : ''} · {selectedSummary.unites.length} unité{selectedSummary.unites.length > 1 ? 's' : ''}
                       {selectedSummary.net > 0 && ' · net positif'}
                       {selectedSummary.reliquats > 0 && ' · reliquats à suivre'}
@@ -1844,12 +1881,12 @@ export function Bailleurs() {
               >
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-start">
-                    <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex h-8 px-4 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-emerald-600 text-[0.72rem] font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+                    <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex h-7 px-3.5 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-emerald-700/90 text-[0.72rem] font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50">
                       <BarChart3 className="h-3.5 w-3.5" />
                       {generatingReport ? 'Génération...' : 'Rapport PDF'}
                     </button>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-1.5">
                     <CompactMetric label="Net" value={<MoneyText value={selectedSummary.net} compact />} tone="emerald" />
                     <CompactMetric label="Reliquats" value={<MoneyText value={selectedSummary.reliquats} compact />} tone="red" />
@@ -1867,7 +1904,7 @@ export function Bailleurs() {
                         </div>
                       </CompactSection>
                     )}
-                    
+
                     <CompactSection title="Gestion & Contrats" icon={FileText}>
                       <div className="flex flex-col divide-y divide-slate-100">
                         <CompactLabelValue label="Début de mandat" value={selectedBailleur.debut_contrat ? new Date(selectedBailleur.debut_contrat).toLocaleDateString('fr-FR') : null} />
@@ -1918,59 +1955,134 @@ export function Bailleurs() {
       </div>
 
       {/* Modal de création/édition */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={closeModal}
+      <WizardShell
+        open={isModalOpen}
+        onClose={handleCloseAttempt}
+        size="simple"
         title={editingBailleur ? 'Modifier le bailleur' : 'Nouveau bailleur'}
-        description="Créez la fiche propriétaire pour lui rattacher des biens, des contrats, et automatiser ses redditions."
+        description="Créez une fiche propriétaire exploitable."
+        steps={BAILLEUR_WIZARD_STEPS}
+        currentStep={BAILLEUR_WIZARD_STEPS.findIndex(s => s.id === bailleurWizardStep)}
+        primaryAction={
+          <button
+            type="button"
+            onClick={() => {
+              if (bailleurWizardStep === 'identity') {
+                if (!formData.prenom.trim()) { setError('Le prénom est obligatoire.'); return; }
+                if (!formData.nom.trim()) { setError('Le nom est obligatoire.'); return; }
+                if (!formData.telephone.trim()) { setError('Le téléphone est obligatoire.'); return; }
+                if (!isValidSenegalPhone(formData.telephone)) { setError('Numéro invalide. Exemple : +221 77 123 45 67'); return; }
+                if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) { setError('Email invalide. Exemple : nom@domaine.com'); return; }
+                setError(null);
+                setBailleurWizardStep('admin');
+              } else if (bailleurWizardStep === 'admin') {
+                if (formData.piece_identite && !/^\d+$/.test(formData.piece_identite)) { setError("La pièce d'identité ne doit contenir que des chiffres."); return; }
+                if (formData.piece_identite && formData.piece_identite.length > 17) { setError("La pièce d'identité doit contenir au maximum 17 chiffres."); return; }
+                if (formData.commission && (parseFloat(formData.commission) < 0 || parseFloat(formData.commission) > 100)) { setError("La commission doit être comprise entre 0 et 100%."); return; }
+                if (!formData.debut_contrat) { setError('Le début de gestion est obligatoire.'); return; }
+                setError(null);
+                setBailleurWizardStep('summary');
+              } else {
+                void handleSubmit();
+              }
+            }}
+            disabled={isSubmitting}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-emerald-950/25 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          >
+            {isSubmitting ? 'Traitement...' : bailleurWizardStep === 'summary' ? (editingBailleur ? 'Enregistrer' : 'Créer le bailleur') : 'Continuer'}
+          </button>
+        }
+        secondaryAction={
+          <button
+            type="button"
+            onClick={() => {
+              if (bailleurWizardStep === 'summary') setBailleurWizardStep('admin');
+              else if (bailleurWizardStep === 'admin') setBailleurWizardStep('identity');
+              else handleCloseAttempt();
+            }}
+            disabled={isSubmitting}
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
+          >
+            {bailleurWizardStep === 'identity' ? 'Annuler' : 'Retour'}
+          </button>
+        }
       >
-        <div className="space-y-4 lg:space-y-6">
+        <div className="space-y-3 lg:space-y-4">
           {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
 
-          <ProductWizard
-            steps={BAILLEUR_WIZARD_STEPS}
-            activeStep={bailleurWizardStep}
-            onStepChange={(step) => setBailleurWizardStep(step)}
-            onCancel={closeModal}
-            onFinalSubmit={() => void handleSubmit()}
-            finalSubmitLabel={editingBailleur ? 'Mettre à jour' : 'Créer le bailleur'}
-            isSubmitting={isSubmitting}
-          >
-          <div className={bailleurWizardStep === 'identity' ? 'space-y-4' : 'hidden'}>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">
+          <div className={bailleurWizardStep === 'identity' ? 'space-y-3' : 'hidden'}>
+            <h3 className="text-[10px] font-semibold uppercase tracking-wide text-slate-900 sm:text-xs">
               Informations principales
             </h3>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-4">
-              <TextField label="Prénom" value={formData.prenom} onChange={(v) => setFormData({ ...formData, prenom: v })} required placeholder="Amadou" />
-              <TextField label="Nom" value={formData.nom} onChange={(v) => setFormData({ ...formData, nom: v })} required placeholder="Diop" />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-3">
+              <TextField label="Prénom" value={formData.prenom} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, prenom: v }); }} required placeholder="Amadou" />
+              <TextField label="Nom" value={formData.nom} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, nom: v }); }} required placeholder="Diop" />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-4">
-              <TextField type="tel" label="Téléphone" value={formData.telephone} onChange={(v) => setFormData({ ...formData, telephone: formatSenegalPhoneInput(v) })} required placeholder="+221 77 123 45 67" />
-              <TextField type="email" label="Email" value={formData.email} onChange={(v) => setFormData({ ...formData, email: v })} placeholder="amadou.diop@example.com" />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-3">
+              <TextField
+                type="tel"
+                label="Téléphone"
+                value={formData.telephone}
+                onChange={(v) => {
+                  const val = formatSenegalPhoneInput(v);
+                  if (val !== formData.telephone) setIsDirty(true);
+                  setFormData({ ...formData, telephone: val });
+                }}
+                required
+                placeholder="77 123 45 67"
+              />
+              <TextField type="email" label="Email" value={formData.email || ''} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, email: v }); }} placeholder="nom@domaine.com" />
             </div>
           </div>
 
           <div className={bailleurWizardStep === 'admin' ? 'space-y-4' : 'hidden'}>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">
+            <h3 className="text-xs font-semibold text-slate-900">
               Informations complémentaires
             </h3>
-            
-            <TextField label="Adresse" value={formData.adresse} onChange={(v) => setFormData({ ...formData, adresse: v })} placeholder="123 Avenue Blaise Diagne, Dakar" />
-            <TextField label="Pièce d'identité" value={formData.piece_identite} onChange={(v) => setFormData({ ...formData, piece_identite: v })} placeholder="CNI N° 1234567890123" />
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-4">
-              <TextField type="number" step="0.1" min="0" max="100" label="Commission (%)" value={formData.commission} onChange={(v) => setFormData({ ...formData, commission: v })} required placeholder="10" helperText="Taux de commission appliqué aux contrats" />
-              <TextField type="date" label="Début du contrat" value={formData.debut_contrat} onChange={(v) => setFormData({ ...formData, debut_contrat: v })} required />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <TextField label="Adresse" value={formData.adresse || ''} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, adresse: v }); }} placeholder="123 Avenue Blaise Diagne, Dakar" />
+              <TextField label="Pièce d'identité" value={formData.piece_identite || ''} onChange={(v) => {
+                const val = v.replace(/\D/g, '').slice(0, 17);
+                setIsDirty(true); setFormData({ ...formData, piece_identite: val });
+              }} placeholder="17 chiffres max" maxLength={17} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <TextField
+                type="text"
+                inputMode="decimal"
+                label="Commission"
+                value={formData.commission}
+                onChange={(v) => {
+                  const val = v.replace(/[^0-9.,]/g, '').replace(',', '.');
+                  if (val.split('.').length > 2) return;
+                  if (val === '') {
+                    setIsDirty(true);
+                    setFormData({ ...formData, commission: '' });
+                    return;
+                  }
+                  const num = parseFloat(val);
+                  if (num >= 0 && num <= 100) {
+                    setIsDirty(true);
+                    setFormData({ ...formData, commission: val });
+                  }
+                }}
+                required
+                placeholder="10"
+                suffix="%"
+              />
+              <TextField type="date" label="Début de gestion" value={formData.debut_contrat || ''} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, debut_contrat: v }); }} required />
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Notes</label>
+              <label className="mb-1.5 block text-[0.72rem] font-medium text-slate-600">Notes</label>
               <textarea
-                value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                rows={3}
-                className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                value={formData.notes || ''}
+                onChange={(e) => { setIsDirty(true); setFormData({ ...formData, notes: e.target.value }); }}
+                rows={2}
+                className="mt-1.5 w-full resize-none rounded-xl border border-emerald-950/10 bg-white/90 px-3 py-2 text-[0.85rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.02)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:border-emerald-500/40 focus:ring-2 focus:ring-emerald-500/15 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white]"
                 placeholder="Notes supplémentaires..."
               />
             </div>
@@ -1978,22 +2090,54 @@ export function Bailleurs() {
 
           {bailleurWizardStep === 'summary' && (
             <div className="space-y-4">
-              <WizardIntro title="Validation finale" description="Vérifiez les informations avant création. Cette action enregistrera définitivement la fiche dans le portefeuille locatif." />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <MiniMetric label="Nom complet" value={titleCaseName(`${formData.prenom || '-'} ${formData.nom || ''}`.trim())} tone="emerald" />
-                <MiniMetric label="Téléphone" value={formData.telephone || 'Non renseigné'} />
-                <MiniMetric label="Email" value={formData.email || 'Non renseigné'} />
-                <MiniMetric label="Commission" value={`${formData.commission || 0}%`} tone="amber" />
-                <MiniMetric label="Début mandat" value={formData.debut_contrat || 'Non renseigné'} />
-                <MiniMetric label="Pièce d'identité" value={formData.piece_identite || 'Non renseignée'} />
-                <MiniMetric label="Adresse" value={formData.adresse || 'Non renseignée'} className="sm:col-span-2" />
-                {formData.notes.trim() && <MiniMetric label="Notes" value={formData.notes.trim()} className="sm:col-span-2" />}
+              <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/40 p-3">
+                <p className="text-sm font-semibold text-slate-950">Validation finale</p>
+                <p className="mt-1 text-xs leading-snug text-slate-600">
+                  Vérifiez les informations avant création. La fiche sera ajoutée au portefeuille locatif.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/90 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                  <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2.5">
+                    <User className="h-3.5 w-3.5 text-slate-400" />
+                    <h4 className="text-[0.76rem] font-semibold text-slate-800">Identité & Contact</h4>
+                  </div>
+                  <div className="divide-y divide-slate-100 px-3">
+                    <CompactLabelValue label="Nom complet" value={formatPersonName({ prenom: formData.prenom, nom: formData.nom })} />
+                    <CompactLabelValue label="Téléphone" value={isValidSenegalPhone(formData.telephone) ? `+221 ${formatSenegalPhone(formData.telephone, formData.telephone)}` : formData.telephone} />
+                    {formData.email && <CompactLabelValue label="Email" value={formData.email} />}
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/90 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                  <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2.5">
+                    <Briefcase className="h-3.5 w-3.5 text-slate-400" />
+                    <h4 className="text-[0.76rem] font-semibold text-slate-800">Gestion</h4>
+                  </div>
+                  <div className="divide-y divide-slate-100 px-3">
+                    {formData.adresse && <CompactLabelValue label="Adresse" value={formData.adresse} />}
+                    {formData.piece_identite && <CompactLabelValue label="Pièce d'identité" value={formData.piece_identite} />}
+                    <CompactLabelValue label="Commission" value={`${formData.commission || 0}%`} />
+                    {formData.debut_contrat && <CompactLabelValue label="Début de gestion" value={formatDate(formData.debut_contrat)} />}
+                  </div>
+                </div>
               </div>
             </div>
           )}
-          </ProductWizard>
         </div>
-      </Modal>
+      </WizardShell>
+
+      <ConfirmModal
+        isOpen={showCloseConfirm}
+        title="Quitter sans enregistrer ?"
+        message="Les informations saisies seront perdues."
+        confirmLabel="Quitter"
+        cancelLabel="Annuler"
+        onConfirm={handleConfirmClose}
+        onClose={() => setShowCloseConfirm(false)}
+        isDestructive
+      />
 
       <Modal
         isOpen={!!lifecycleTarget}
@@ -2155,6 +2299,9 @@ function TextField({
   step,
   min,
   max,
+  maxLength,
+  inputMode,
+  suffix,
   helperText,
 }: {
   label: string;
@@ -2167,25 +2314,32 @@ function TextField({
   step?: string;
   min?: string;
   max?: string;
+  maxLength?: number;
+  inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search';
+  suffix?: string;
   helperText?: string;
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{label} {required && <span className="text-red-500">*</span>}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-        required={required}
-        step={step}
-        min={min}
-        max={max}
-        inputMode={type === 'number' ? 'numeric' : undefined}
-        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:bg-slate-50 disabled:text-slate-500"
-      />
-      {helperText && <p className="mt-1 text-xs text-slate-500">{helperText}</p>}
+      <span className="text-[0.72rem] font-medium text-slate-600">{label} {required && <span className="text-red-500">*</span>}</span>
+      <div className="relative">
+        <input
+          type={type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          required={required}
+          step={step}
+          min={min}
+          max={max}
+          maxLength={maxLength}
+          inputMode={inputMode || (type === 'number' ? 'numeric' : type === 'tel' ? 'tel' : undefined)}
+          className={`mt-1.5 w-full rounded-xl border border-emerald-950/10 bg-white/90 h-[38px] text-[0.85rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.02)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:border-emerald-500/40 focus:ring-2 focus:ring-emerald-500/15 disabled:bg-slate-50 disabled:text-slate-500 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] ${suffix ? 'pl-3 pr-8' : 'px-3'}`}
+        />
+        {suffix && <span className="absolute bottom-2 right-3 text-xs font-semibold text-slate-400">{suffix}</span>}
+      </div>
+      {helperText && <p className="mt-1 text-[10px] text-slate-500">{helperText}</p>}
     </label>
   );
 }
@@ -2237,19 +2391,11 @@ function CompactSection({ title, icon: Icon, children }: { title: string; icon?:
 function CompactLabelValue({ label, value }: { label: string; value: ReactNode | null | undefined }) {
   if (!value || value === '—') return null;
   return (
-    <div className="flex items-center justify-between gap-2 py-1.5">
-      <span className="text-[0.62rem] font-semibold text-slate-500">{label}</span>
-      <span className="text-[0.72rem] font-bold text-slate-700 text-right truncate">{value}</span>
+    <div className="flex items-center justify-between gap-3 py-2">
+      <span className="text-[0.72rem] font-medium text-slate-500">{label}</span>
+      <span className="text-[0.72rem] font-semibold text-slate-800 text-right truncate max-w-[55%]">{value}</span>
     </div>
   );
 }
 
-function WizardIntro({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="rounded-2xl border border-emerald-950/10 bg-gradient-to-br from-[#fffaf1] to-white p-4 shadow-sm">
-      <p className="text-sm font-black text-slate-950">{title}</p>
-      <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">{description}</p>
-    </div>
-  );
-}
 

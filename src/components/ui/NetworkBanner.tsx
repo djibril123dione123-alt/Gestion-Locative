@@ -99,17 +99,17 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
     <button
       type="button"
       onClick={() => setDismissedKey(bannerKey)}
-      className="ml-auto inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-white/12 transition hover:bg-white/20"
+      className="ml-auto inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-white/12 transition hover:bg-white/20"
       aria-label="Masquer le bandeau reseau"
     >
-      <X className="h-4 w-4" />
+      <X className="h-3 w-3" />
     </button>
   ) : null;
 
   if (!isOnline) {
     return (
-      <div className="z-50 flex flex-shrink-0 items-center gap-3 bg-red-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm">
-        <WifiOff className="h-4 w-4 flex-shrink-0" />
+      <div className="z-50 flex flex-shrink-0 items-center gap-2 bg-red-700 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm">
+        <WifiOff className="h-3.5 w-3.5 flex-shrink-0" />
         <span>
           Connexion interrompue.
           {pendingCount > 0
@@ -123,8 +123,8 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
 
   if (errorCount > 0 && !syncing) {
     return (
-      <div className="z-50 flex flex-shrink-0 items-center gap-3 bg-action-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm">
-        <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+      <div className="z-50 flex flex-shrink-0 items-center gap-2 bg-action-700 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm">
+        <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
         <span>
           {errorCount} action{errorCount > 1 ? 's' : ''} n'ont pas encore pu etre synchronisee{errorCount > 1 ? 's' : ''}.
           La file locale est conservee et une nouvelle tentative sera lancee.
@@ -136,8 +136,8 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
 
   if (syncing) {
     return (
-      <div className="z-50 flex flex-shrink-0 items-center gap-3 bg-brand-800 px-4 py-2.5 text-sm font-semibold text-white shadow-sm">
-        <RefreshCw className="h-4 w-4 flex-shrink-0 animate-spin" />
+      <div className="z-50 flex flex-shrink-0 items-center gap-2 bg-brand-800 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm">
+        <RefreshCw className="h-3.5 w-3.5 flex-shrink-0 animate-spin" />
         <span>Connexion retrouvee, synchronisation en cours...</span>
       </div>
     );
@@ -145,8 +145,8 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
 
   if (isSlowConnection) {
     return (
-      <div className="z-50 flex flex-shrink-0 items-center gap-3 bg-amber-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm">
-        <Gauge className="h-4 w-4 flex-shrink-0" />
+      <div className="z-50 flex flex-shrink-0 items-center gap-2 bg-amber-700 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm">
+        <Gauge className="h-3.5 w-3.5 flex-shrink-0" />
         <span>Connexion lente detectee ({connectionLabel}). L'application privilegie le cache local quand c'est possible.</span>
         {dismissButton}
       </div>
@@ -154,8 +154,8 @@ export function NetworkBanner({ onSyncComplete }: NetworkBannerProps = {}) {
   }
 
   return (
-    <div className="z-50 flex flex-shrink-0 items-center gap-3 bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm">
-      <Wifi className="h-4 w-4 flex-shrink-0" />
+    <div className="z-50 flex flex-shrink-0 items-center gap-2 bg-brand-700 px-3 py-1.5 text-[11px] font-medium text-white shadow-sm">
+      <Wifi className="h-3.5 w-3.5 flex-shrink-0" />
       <span>
         Connexion retablie
         {lastResult && lastResult.synced > 0

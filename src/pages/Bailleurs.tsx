@@ -31,6 +31,7 @@ import {
   Calendar,
   User,
   Briefcase,
+  Check,
   X,
 } from 'lucide-react';
 import {
@@ -74,6 +75,7 @@ import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
 import { MetricCard } from '../components/ui/MetricCard';
 import { SplitViewShell } from '../components/ui/SplitViewShell';
 import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
+import { BrandMark } from '../components/brand/BrandLogo';
 
 /**
  * Interface Bailleur avec les champs commission et debut_contrat
@@ -727,6 +729,17 @@ export function Bailleurs() {
   );
   const selectedSummary = selectedBailleur ? summariesByBailleur[selectedBailleur.id] ?? emptySummary() : emptySummary();
   const detailPanelOpen = detailOpen && !!selectedBailleur;
+  const bailleurStepContextShort: Record<BailleurWizardStep, string> = {
+    identity: 'Identifiez le propriétaire avant de lui rattacher des biens, mandats et documents.',
+    admin: 'Cadrez le mandat, la commission et le début de gestion.',
+    summary: 'Après création, vous pourrez rattacher biens, mandats et documents.',
+  };
+  const bailleurWizardStepIndex = Math.max(0, BAILLEUR_WIZARD_STEPS.findIndex((step) => step.id === bailleurWizardStep));
+  const bailleurStepContext: Record<BailleurWizardStep, string> = {
+    identity: 'Identifiez le propriétaire avant de lui rattacher des biens, mandats et documents.',
+    admin: 'Définissez les informations de gestion qui sécurisent la commission, le début de mandat et les documents.',
+    summary: 'Vérifiez les données avant création. La fiche sera ajoutée au portefeuille propriétaire.',
+  };
 
   const globalKpis = useMemo(() => {
     const summaries = Object.values(summariesByBailleur);
@@ -1118,7 +1131,7 @@ export function Bailleurs() {
         `Sur la période ${periodLabel}, ${formatPersonName(bailleur, '')} présente ${formatCurrency(totalLoyers)} de loyers encaissés.`,
         totalReliquats > 0
           ? `Les reliquats ouverts représentent ${formatCurrency(totalReliquats)} et doivent rester prioritaires dans le suivi de gestion.`
-          : 'Aucun reliquat significatif n’est rattaché aux paiements enregistrés sur cette période.',
+          : "Aucun reliquat significatif n'est rattaché aux paiements enregistrés sur cette période.",
         `Le montant ${netLabel.toLowerCase()} ressort à ${formatCurrency(totalNet)}.`,
       ].join(' ');
       doc.setFont('helvetica', 'normal');
@@ -1578,7 +1591,7 @@ export function Bailleurs() {
     }
 
     return selectedSummary.documents.length === 0 ? (
-      <EmptyDrawerState title="Aucun document lié" description="Mandats, contrats, quittances et rapports apparaîtront ici lorsqu’ils seront générés ou uploadés." />
+      <EmptyDrawerState title="Aucun document lié" description="Mandats, contrats, quittances et rapports apparaîtront ici lorsqu'ils seront générés ou uploadés." />
     ) : (
       <CompactList rows={selectedSummary.documents.slice(0, 8).map((document) => ({
         id: document.id,
@@ -1961,10 +1974,25 @@ export function Bailleurs() {
         open={isModalOpen}
         onClose={handleCloseAttempt}
         size="compact"
+        variant="workstation"
+        tone="owner"
         title={editingBailleur ? 'Modifier le bailleur' : 'Nouveau bailleur'}
         description="Créez une fiche propriétaire exploitable."
         steps={BAILLEUR_WIZARD_STEPS}
-        currentStep={BAILLEUR_WIZARD_STEPS.findIndex(s => s.id === bailleurWizardStep)}
+        currentStep={bailleurWizardStepIndex}
+        contentDescription="Créez une fiche propriétaire exploitable."
+        stepContext={
+          <div className="flex items-start gap-2 sm:gap-2.5">
+            <ShieldAlert className="mt-0.5 h-3 w-3 shrink-0 text-emerald-700" />
+            <p className="min-w-0">{bailleurStepContextShort[bailleurWizardStep] ?? bailleurStepContext[bailleurWizardStep]}</p>
+          </div>
+        }
+        rail={
+          <BailleurWizardRail
+            steps={BAILLEUR_WIZARD_STEPS}
+            currentStep={bailleurWizardStepIndex}
+          />
+        }
         primaryAction={
           <button
             type="button"
@@ -1989,7 +2017,7 @@ export function Bailleurs() {
               }
             }}
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-sm shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-emerald-950/25 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {isSubmitting ? 'Traitement...' : bailleurWizardStep === 'summary' ? (editingBailleur ? 'Enregistrer' : 'Créer le bailleur') : 'Continuer'}
           </button>
@@ -2003,25 +2031,25 @@ export function Bailleurs() {
               else handleCloseAttempt();
             }}
             disabled={isSubmitting}
-            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
+            className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm transition hover:bg-white disabled:opacity-50 sm:w-auto"
           >
             {bailleurWizardStep === 'identity' ? 'Annuler' : 'Retour'}
           </button>
         }
       >
-        <div className="space-y-3 lg:space-y-4">
+        <div className="space-y-2.5 sm:space-y-3 lg:space-y-4">
           {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
 
-          <div className={bailleurWizardStep === 'identity' ? 'space-y-3' : 'hidden'}>
-            <h3 className="text-[10px] font-semibold uppercase tracking-wide text-slate-900 sm:text-xs">
+          <div className={bailleurWizardStep === 'identity' ? 'space-y-2.5 sm:space-y-2.5' : 'hidden'}>
+            <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">
               Informations principales
             </h3>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
               <TextField label="Prénom" value={formData.prenom} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, prenom: v }); }} required placeholder="Amadou" />
               <TextField label="Nom" value={formData.nom} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, nom: v }); }} required placeholder="Diop" />
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:gap-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
               <TextField
                 type="tel"
                 label="Téléphone"
@@ -2038,12 +2066,12 @@ export function Bailleurs() {
             </div>
           </div>
 
-          <div className={bailleurWizardStep === 'admin' ? 'space-y-4' : 'hidden'}>
-            <h3 className="text-xs font-semibold text-slate-900">
+          <div className={bailleurWizardStep === 'admin' ? 'space-y-2.5 sm:space-y-3' : 'hidden'}>
+            <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">
               Informations complémentaires
             </h3>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
               <TextField label="Adresse" value={formData.adresse || ''} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, adresse: v }); }} placeholder="123 Avenue Blaise Diagne, Dakar" />
               <TextField label="Pièce d'identité" value={formData.piece_identite || ''} onChange={(v) => {
                 const val = v.replace(/\D/g, '').slice(0, 17);
@@ -2051,7 +2079,7 @@ export function Bailleurs() {
               }} placeholder="17 chiffres max" maxLength={17} />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
               <TextField
                 type="text"
                 inputMode="decimal"
@@ -2079,45 +2107,42 @@ export function Bailleurs() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[0.72rem] font-medium text-slate-600">Notes</label>
+              <label className="mb-1 block text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem]">Notes</label>
               <textarea
                 value={formData.notes || ''}
                 onChange={(e) => { setIsDirty(true); setFormData({ ...formData, notes: e.target.value }); }}
                 rows={2}
-                className="mt-1.5 w-full resize-none rounded-xl border border-emerald-950/10 bg-white/90 px-3 py-2 text-[0.85rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.02)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:border-emerald-500/40 focus:ring-2 focus:ring-emerald-500/15 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white]"
+                className="mt-1 w-full resize-none rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-2 text-[0.92rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.014)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:rounded-[0.7rem] sm:py-[0.5rem] sm:text-[0.8rem]"
                 placeholder="Notes supplémentaires..."
               />
             </div>
           </div>
 
           {bailleurWizardStep === 'summary' && (
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-emerald-950/10 bg-emerald-50/40 p-3">
-                <p className="text-sm font-semibold text-slate-950">Validation finale</p>
-                <p className="mt-1 text-xs leading-snug text-slate-600">
-                  Vérifiez les informations avant création. La fiche sera ajoutée au portefeuille locatif.
-                </p>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/90 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-                  <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2.5">
-                    <User className="h-3.5 w-3.5 text-slate-400" />
-                    <h4 className="text-[0.76rem] font-semibold text-slate-800">Identité & Contact</h4>
+            <div className="space-y-3 sm:space-y-4">
+              <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+                <div className="overflow-hidden rounded-[0.95rem] border border-emerald-950/10 bg-white/76 shadow-[0_8px_22px_rgba(15,23,42,0.028)]">
+                  <div className="flex items-center gap-2 border-b border-slate-100/80 px-3 py-2 sm:py-[0.55rem]">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 sm:h-[22px] sm:w-[22px]">
+                      <User className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+                    </span>
+                    <h4 className="text-[0.76rem] font-semibold text-slate-800 sm:text-[0.7rem]">Identité & contact</h4>
                   </div>
-                  <div className="divide-y divide-slate-100 px-3">
-                    <CompactLabelValue label="Nom complet" value={formatPersonName({ prenom: formData.prenom, nom: formData.nom })} />
+                  <div className="divide-y divide-slate-100/80 px-3">
+                    <CompactLabelValue label="Nom complet" value={titleCaseName(formatPersonName({ prenom: formData.prenom, nom: formData.nom }))} />
                     <CompactLabelValue label="Téléphone" value={isValidSenegalPhone(formData.telephone) ? `+221 ${formatSenegalPhone(formData.telephone, formData.telephone)}` : formData.telephone} />
-                    {formData.email && <CompactLabelValue label="Email" value={formData.email} />}
+                    {formData.email && <CompactLabelValue label="Email" value={<span title={formData.email}>{formData.email}</span>} />}
                   </div>
                 </div>
 
-                <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/90 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
-                  <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2.5">
-                    <Briefcase className="h-3.5 w-3.5 text-slate-400" />
-                    <h4 className="text-[0.76rem] font-semibold text-slate-800">Gestion</h4>
+                <div className="overflow-hidden rounded-[0.95rem] border border-emerald-950/10 bg-white/76 shadow-[0_8px_22px_rgba(15,23,42,0.028)]">
+                  <div className="flex items-center gap-2 border-b border-slate-100/80 px-3 py-2 sm:py-[0.55rem]">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-50 text-amber-700 sm:h-[22px] sm:w-[22px]">
+                      <Briefcase className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+                    </span>
+                    <h4 className="text-[0.76rem] font-semibold text-slate-800 sm:text-[0.7rem]">Gestion</h4>
                   </div>
-                  <div className="divide-y divide-slate-100 px-3">
+                  <div className="divide-y divide-slate-100/80 px-3">
                     {formData.adresse && <CompactLabelValue label="Adresse" value={formData.adresse} />}
                     {formData.piece_identite && <CompactLabelValue label="Pièce d'identité" value={formData.piece_identite} />}
                     <CompactLabelValue label="Commission" value={`${formData.commission || 0}%`} />
@@ -2288,7 +2313,74 @@ export function Bailleurs() {
   );
 }
 
-// ─── Sous-composants Formulaires Premium ─────────────────────────────────────
+function BailleurWizardRail({ steps, currentStep }: { steps: WizardStep[]; currentStep: number }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-2.5">
+        <BrandMark size="sm" tone="dark" animated withTile={false} />
+        <div>
+          <p className="text-[0.52rem] font-bold uppercase tracking-[0.18em] text-amber-200/80">Portefeuille propriétaire</p>
+          <p className="mt-0.5 text-[0.62rem] font-semibold text-white/[0.7]">Fiche propriétaire guidée</p>
+        </div>
+      </div>
+
+      <div className="mt-3.5">
+        <p className="max-w-[11rem] text-[0.8rem] font-semibold leading-tight text-white">
+          Structurez le portefeuille propriétaire.
+        </p>
+        <p className="mt-1.5 max-w-[11rem] text-[0.64rem] font-medium leading-snug text-emerald-50/[0.72]">
+          Une fiche claire pour rattacher biens, mandats et reversements.
+        </p>
+      </div>
+
+      <div className="relative mt-3.5 space-y-1">
+        {steps.map((step, index) => {
+          const isActive = index === currentStep;
+          const isComplete = index < currentStep;
+
+          return (
+            <div
+              key={step.id}
+              className={`relative flex min-h-[2.25rem] items-center gap-2 rounded-lg border px-2 py-1 transition ${
+                isActive
+                  ? 'border-amber-100/20 bg-white/[0.075] text-white shadow-[0_6px_14px_rgba(0,0,0,0.07)]'
+                  : isComplete
+                    ? 'border-white/10 bg-emerald-300/[0.07] text-emerald-50/[0.86]'
+                    : 'border-white/[0.08] bg-white/[0.035] text-emerald-50/[0.82]'
+              }`}
+            >
+              <span
+                className={`relative z-[1] flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[0.5rem] text-[0.58rem] font-semibold ${
+                  isActive
+                    ? 'bg-[#fff3ce] text-emerald-950 ring-1 ring-amber-100/60'
+                    : isComplete
+                      ? 'bg-emerald-300/[0.14] text-emerald-50'
+                      : 'bg-white/[0.12] text-emerald-50/[0.86]'
+                }`}
+              >
+                {isComplete ? <Check className="h-3 w-3" /> : index + 1}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[0.47rem] font-bold uppercase tracking-[0.13em] opacity-75">
+                  Étape {index + 1}
+                </span>
+                <span className="block truncate text-[0.67rem] font-semibold">{step.label}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-auto rounded-xl border border-white/10 bg-white/[0.055] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+        <p className="text-[0.52rem] font-semibold uppercase tracking-[0.16em] text-amber-100/[0.8]">Source de vérité</p>
+        <p className="mt-1 text-[0.62rem] font-medium leading-snug text-emerald-50/[0.7]">
+          Biens, mandats, rapports et reversements partiront de cette fiche.
+        </p>
+      </div>
+    </div>
+  );
+}
+// --- Sous-composants Formulaires Premium -------------------------------------
 
 function TextField({
   label,
@@ -2323,7 +2415,7 @@ function TextField({
 }) {
   return (
     <label className="block">
-      <span className="text-[0.72rem] font-medium text-slate-600">{label} {required && <span className="text-red-500">*</span>}</span>
+      <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem]">{label} {required && <span className="text-red-500">*</span>}</span>
       <div className="relative">
         <input
           type={type}
@@ -2337,11 +2429,11 @@ function TextField({
           max={max}
           maxLength={maxLength}
           inputMode={inputMode || (type === 'number' ? 'numeric' : type === 'tel' ? 'tel' : undefined)}
-          className={`mt-1.5 w-full rounded-xl border border-emerald-950/10 bg-white/90 h-[38px] text-[0.85rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.02)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:bg-white focus:border-emerald-500/40 focus:ring-2 focus:ring-emerald-500/15 disabled:bg-slate-50 disabled:text-slate-500 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] ${suffix ? 'pl-3 pr-8' : 'px-3'}`}
+          className={`mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 text-[0.95rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 disabled:bg-slate-50 disabled:text-slate-500 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.68rem] sm:text-[0.82rem] ${suffix ? 'pl-3 pr-8' : 'px-3'}`}
         />
-        {suffix && <span className="absolute bottom-2 right-3 text-xs font-semibold text-slate-400">{suffix}</span>}
+        {suffix && <span className="absolute bottom-3 right-3 text-[0.72rem] font-semibold text-slate-400 sm:bottom-2 sm:text-[0.68rem]">{suffix}</span>}
       </div>
-      {helperText && <p className="mt-1 text-[10px] text-slate-500">{helperText}</p>}
+      {helperText && <p className="mt-1 text-[0.68rem] text-slate-500 sm:text-[10px]">{helperText}</p>}
     </label>
   );
 }
@@ -2393,11 +2485,14 @@ function CompactSection({ title, icon: Icon, children }: { title: string; icon?:
 function CompactLabelValue({ label, value }: { label: string; value: ReactNode | null | undefined }) {
   if (!value || value === '—') return null;
   return (
-    <div className="flex items-center justify-between gap-3 py-2">
-      <span className="text-[0.72rem] font-medium text-slate-500">{label}</span>
-      <span className="text-[0.72rem] font-semibold text-slate-800 text-right truncate max-w-[55%]">{value}</span>
+    <div className={`flex items-center justify-between gap-3 ${label === 'Nom complet' ? 'py-1.5 sm:py-[0.45rem]' : 'py-1 sm:py-[0.34rem]'}`}>
+      <span className="text-[0.72rem] font-medium text-slate-500 sm:text-[0.66rem]">{label}</span>
+      <span
+        className={`max-w-[60%] truncate text-right font-semibold ${label === 'Nom complet' ? 'text-[0.82rem] text-slate-950 sm:text-[0.74rem]' : 'text-[0.74rem] text-slate-800 sm:text-[0.68rem]'}`}
+        title={typeof value === 'string' ? value : undefined}
+      >
+        {value}
+      </span>
     </div>
   );
 }
-
-

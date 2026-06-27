@@ -2105,17 +2105,22 @@ export function Bailleurs() {
               <TextField type="email" label="Email" value={formData.email || ''} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, email: v }); }} placeholder="nom@domaine.com" />
             </div>
 
-            <div className="hidden grid-cols-3 gap-2 rounded-xl border border-emerald-950/10 bg-white/45 p-2 shadow-[0_5px_14px_rgba(15,23,42,0.018)] sm:grid">
-              {[
-                ['Biens', 'Rattachement clair'],
-                ['Mandats', 'Base documentaire'],
-                ['Reversements', 'Suivi propriétaire'],
-              ].map(([label, detail]) => (
-                <div key={label} className="min-w-0 rounded-lg border border-slate-100/80 bg-[#fffdf8]/70 px-2 py-1.5">
-                  <p className="text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-emerald-800/70">{label}</p>
-                  <p className="mt-0.5 truncate text-[0.66rem] font-medium text-slate-600">{detail}</p>
-                </div>
-              ))}
+            <div className="hidden items-center justify-between gap-3 rounded-xl border border-emerald-950/10 bg-white/42 px-3 py-2 shadow-[0_5px_14px_rgba(15,23,42,0.014)] sm:flex">
+              <div className="min-w-0">
+                <p className="text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-emerald-800/70">
+                  Base de rattachement
+                </p>
+                <p className="mt-0.5 truncate text-[0.68rem] font-medium text-slate-600">
+                  Cette fiche deviendra la base de rattachement pour le portefeuille propriétaire.
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1 text-[0.62rem] font-semibold text-slate-600">
+                {['Biens', 'Mandats', 'Rapports', 'Reversements'].map((item) => (
+                  <span key={item} className="rounded-full border border-emerald-950/10 bg-[#fffdf8]/80 px-2 py-1">
+                    {item}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -2174,7 +2179,7 @@ export function Bailleurs() {
                 value={formData.notes || ''}
                 onChange={(e) => { setIsDirty(true); setFormData({ ...formData, notes: e.target.value }); }}
                 rows={2}
-                className="mt-1 w-full resize-none rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-2 text-[0.92rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.014)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:rounded-[0.7rem] sm:py-[0.5rem] sm:text-[0.8rem]"
+                className="mt-1 min-h-[3rem] w-full resize-none rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-1.5 text-[0.88rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.014)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:min-h-[3.75rem] sm:rounded-[0.7rem] sm:py-[0.5rem] sm:text-[0.8rem]"
                 placeholder="Notes supplémentaires..."
               />
             </div>
@@ -2415,16 +2420,16 @@ function BailleurWizardRail({ steps, currentStep }: { steps: WizardStep[]; curre
       <div className="flex items-center gap-2.5">
         <BrandMark size="sm" tone="dark" animated withTile={false} />
         <div>
-          <p className="text-[0.52rem] font-bold uppercase tracking-[0.18em] text-amber-200/76">Portefeuille propriétaire</p>
-          <p className="mt-0.5 text-[0.62rem] font-semibold text-white/[0.62]">Fiche propriétaire guidée</p>
+          <p className="text-[0.5rem] font-bold uppercase tracking-[0.18em] text-amber-200/68">Portefeuille propriétaire</p>
+          <p className="mt-0.5 text-[0.6rem] font-semibold text-white/[0.56]">Fiche propriétaire guidée</p>
         </div>
       </div>
 
       <div className="mt-3">
-        <p className="max-w-[11rem] text-[0.74rem] font-semibold leading-tight text-white/[0.9]">
+        <p className="max-w-[11rem] text-[0.72rem] font-semibold leading-tight text-white/[0.86]">
           Structurez le portefeuille propriétaire.
         </p>
-        <p className="mt-1 max-w-[11rem] text-[0.61rem] font-medium leading-snug text-emerald-50/[0.6]">
+        <p className="mt-1 max-w-[11rem] text-[0.6rem] font-medium leading-snug text-emerald-50/[0.56]">
           Une fiche claire pour rattacher biens, mandats et reversements.
         </p>
       </div>
@@ -2439,16 +2444,16 @@ function BailleurWizardRail({ steps, currentStep }: { steps: WizardStep[]; curre
               key={step.id}
               className={`flex min-h-[2.05rem] items-center gap-2 rounded-lg border px-2 py-[0.22rem] transition ${
                 isActive
-                  ? 'border-amber-100/18 bg-white/[0.046] text-white shadow-[0_4px_10px_rgba(0,0,0,0.045)]'
+                  ? 'border-amber-100/16 bg-white/[0.038] text-white shadow-[0_3px_8px_rgba(0,0,0,0.036)]'
                   : isComplete
-                    ? 'border-white/10 bg-emerald-300/[0.045] text-emerald-50/[0.82]'
-                    : 'border-white/[0.08] bg-white/[0.024] text-emerald-50/[0.84]'
+                    ? 'border-white/10 bg-emerald-300/[0.038] text-emerald-50/[0.78]'
+                    : 'border-white/[0.075] bg-white/[0.018] text-emerald-50/[0.78]'
               }`}
             >
               <span
                 className={`relative z-[1] flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[0.5rem] text-[0.58rem] font-semibold ${
                   isActive
-                    ? 'bg-[#fff3ce] text-emerald-950 ring-1 ring-amber-100/60'
+                    ? 'bg-[#fff3ce]/94 text-emerald-950 ring-1 ring-amber-100/55'
                     : isComplete
                       ? 'bg-emerald-300/[0.12] text-emerald-50'
                       : 'bg-white/[0.1] text-emerald-50/[0.84]'
@@ -2467,9 +2472,9 @@ function BailleurWizardRail({ steps, currentStep }: { steps: WizardStep[]; curre
         })}
       </div>
 
-      <div className="mt-4 rounded-xl border border-white/[0.065] bg-white/[0.032] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
-        <p className="text-[0.48rem] font-semibold uppercase tracking-[0.16em] text-amber-100/[0.7]">SOURCE DE VÉRITÉ</p>
-        <p className="mt-1 text-[0.59rem] font-medium leading-snug text-emerald-50/[0.6]">
+      <div className="mt-4 rounded-xl border border-white/[0.055] bg-white/[0.026] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
+        <p className="text-[0.47rem] font-semibold uppercase tracking-[0.16em] text-amber-100/[0.66]">SOURCE DE VÉRITÉ</p>
+        <p className="mt-1 text-[0.58rem] font-medium leading-snug text-emerald-50/[0.56]">
           Biens, mandats, rapports et reversements partiront de cette fiche.
         </p>
       </div>
@@ -2581,11 +2586,12 @@ function CompactSection({ title, icon: Icon, children }: { title: string; icon?:
 function CompactLabelValue({ label, value }: { label: string; value: ReactNode | null | undefined }) {
   if (!value || value === '—') return null;
   const isIdentity = label.toLowerCase().includes('identit');
+  const isName = label === 'Nom complet';
   return (
-    <div className={`flex min-w-0 items-center justify-between gap-3 ${label === 'Nom complet' ? 'py-1.5 sm:py-[0.55rem]' : 'py-1.5 sm:py-[0.42rem]'}`}>
+    <div className={`flex min-w-0 items-center justify-between gap-3 ${isName ? 'py-1.5 sm:py-[0.55rem]' : 'py-1.5 sm:py-[0.42rem]'}`}>
       <span className="shrink-0 text-[0.72rem] font-medium text-slate-500 sm:text-[0.66rem]">{label}</span>
       <span
-        className={`min-w-0 max-w-[62%] truncate text-right font-semibold ${isIdentity ? 'tabular-nums tracking-[-0.01em]' : ''} ${label === 'Nom complet' ? 'text-[0.82rem] text-slate-950 sm:text-[0.74rem]' : 'text-[0.74rem] text-slate-800 sm:text-[0.68rem]'}`}
+        className={`min-w-0 max-w-[58%] truncate text-right font-semibold sm:max-w-[62%] ${isIdentity ? 'tabular-nums tracking-[-0.01em] text-slate-700' : ''} ${isName ? 'text-[0.82rem] text-slate-950 sm:text-[0.74rem]' : 'text-[0.74rem] text-slate-800 sm:text-[0.68rem]'}`}
         title={typeof value === 'string' ? value : undefined}
       >
         {value}

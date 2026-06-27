@@ -2105,16 +2105,16 @@ export function Bailleurs() {
               <TextField type="email" label="Email" value={formData.email || ''} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, email: v }); }} placeholder="nom@domaine.com" />
             </div>
 
-            <div className="hidden items-center justify-between gap-3 rounded-xl border border-emerald-950/10 bg-white/42 px-3 py-2 shadow-[0_5px_14px_rgba(15,23,42,0.014)] sm:flex">
+            <div className="hidden rounded-xl border border-emerald-950/10 bg-white/42 px-3 py-2 shadow-[0_5px_14px_rgba(15,23,42,0.014)] sm:block">
               <div className="min-w-0">
                 <p className="text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-emerald-800/70">
                   Base de rattachement
                 </p>
-                <p className="mt-0.5 truncate text-[0.68rem] font-medium text-slate-600">
-                  Cette fiche deviendra la base de rattachement pour le portefeuille propriétaire.
+                <p className="mt-0.5 text-[0.68rem] font-medium leading-snug text-slate-600">
+                  Cette fiche deviendra la base du portefeuille propriétaire.
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-1 text-[0.62rem] font-semibold text-slate-600">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[0.62rem] font-semibold text-slate-600">
                 {['Biens', 'Mandats', 'Rapports', 'Reversements'].map((item) => (
                   <span key={item} className="rounded-full border border-emerald-950/10 bg-[#fffdf8]/80 px-2 py-1">
                     {item}
@@ -2198,7 +2198,7 @@ export function Bailleurs() {
                   <div className="min-w-0 divide-y divide-slate-100/80 px-3">
                     <CompactLabelValue label="Nom complet" value={titleCaseName(formatPersonName({ prenom: formData.prenom, nom: formData.nom }))} />
                     <CompactLabelValue label="Téléphone" value={isValidSenegalPhone(formData.telephone) ? `+221 ${formatSenegalPhone(formData.telephone, formData.telephone)}` : formData.telephone} />
-                    {formData.email && <CompactLabelValue label="Email" value={<span className="block min-w-0 truncate" title={formData.email}>{formData.email}</span>} />}
+                    {formData.email && <CompactLabelValue label="Email" value={formData.email} />}
                   </div>
                 </div>
 
@@ -2406,7 +2406,7 @@ function BailleurWizardStepContext({ step }: { step: BailleurWizardStep }) {
             {current.title}
           </p>
         )}
-        <p className="min-w-0 text-[0.72rem] font-medium leading-snug text-slate-600 line-clamp-2 sm:text-[0.66rem]">
+        <p className="min-w-0 text-[0.72rem] font-medium leading-snug text-slate-600 sm:text-[0.66rem]">
           {current.body}
         </p>
       </div>
@@ -2588,10 +2588,10 @@ function CompactLabelValue({ label, value }: { label: string; value: ReactNode |
   const isIdentity = label.toLowerCase().includes('identit');
   const isName = label === 'Nom complet';
   return (
-    <div className={`flex min-w-0 items-center justify-between gap-3 ${isName ? 'py-1.5 sm:py-[0.55rem]' : 'py-1.5 sm:py-[0.42rem]'}`}>
+    <div className={`flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${isName ? 'py-1.5 sm:py-[0.55rem]' : 'py-1.5 sm:py-[0.42rem]'}`}>
       <span className="shrink-0 text-[0.72rem] font-medium text-slate-500 sm:text-[0.66rem]">{label}</span>
       <span
-        className={`min-w-0 max-w-[58%] truncate text-right font-semibold sm:max-w-[62%] ${isIdentity ? 'tabular-nums tracking-[-0.01em] text-slate-700' : ''} ${isName ? 'text-[0.82rem] text-slate-950 sm:text-[0.74rem]' : 'text-[0.74rem] text-slate-800 sm:text-[0.68rem]'}`}
+        className={`min-w-0 max-w-full break-words text-left font-semibold sm:max-w-[62%] sm:truncate sm:text-right ${isIdentity ? 'tabular-nums tracking-[-0.01em] text-slate-700' : ''} ${isName ? 'text-[0.82rem] text-slate-950 sm:text-[0.74rem]' : 'text-[0.74rem] text-slate-800 sm:text-[0.68rem]'}`}
         title={typeof value === 'string' ? value : undefined}
       >
         {value}

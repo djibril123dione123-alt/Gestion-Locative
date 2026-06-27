@@ -118,7 +118,7 @@ export function WizardShell({
   const panelClasses = isWorkstation
     ? `relative flex w-full flex-col overflow-hidden border border-emerald-950/10 bg-[#f8f3e8]/95 shadow-[0_30px_96px_rgba(6,17,13,0.2)] ring-1 ring-white/60 ${
         isFullscreenMobile ? 'min-h-dvh rounded-none' : 'max-h-[91dvh] rounded-t-[1.35rem]'
-      } sm:max-h-[min(700px,calc(100vh-36px))] sm:w-[min(92vw,920px)] sm:max-w-[920px] sm:rounded-[1.6rem] ${
+      } sm:min-h-[530px] sm:max-h-[min(680px,calc(100vh-36px))] sm:w-[min(92vw,920px)] sm:max-w-[920px] sm:rounded-[1.6rem] ${
         hasRail ? 'sm:grid sm:grid-cols-[minmax(11.75rem,0.53fr)_minmax(0,1.47fr)]' : ''
       } ${panelClassName}`
     : `sk-premium-panel flex w-full flex-col sm:w-[90vw] ${sizeClasses[size] || sizeClasses.standard} rounded-t-[1.5rem] sm:rounded-t-[1.35rem] sm:rounded-[1.35rem] max-h-[94dvh] sm:max-h-[calc(100vh-48px)] ${panelClassName}`;
@@ -143,7 +143,7 @@ export function WizardShell({
         )}
 
         {hasRail && (
-          <aside className="relative hidden min-h-0 overflow-hidden border-r border-white/10 bg-[radial-gradient(circle_at_22%_8%,rgba(251,191,36,0.12),transparent_24%),radial-gradient(circle_at_8%_100%,rgba(16,185,129,0.12),transparent_30%),linear-gradient(180deg,#05261d_0%,#073728_52%,#041812_100%)] p-3.5 text-white shadow-[inset_-1px_0_0_rgba(255,255,255,0.12),inset_-18px_0_36px_rgba(4,24,18,0.18)] sm:flex sm:flex-col">
+          <aside className="relative hidden min-h-0 overflow-hidden border-r border-white/10 bg-[radial-gradient(circle_at_22%_8%,rgba(251,191,36,0.085),transparent_24%),radial-gradient(circle_at_8%_100%,rgba(16,185,129,0.09),transparent_30%),linear-gradient(180deg,#05261d_0%,#073728_52%,#041812_100%)] p-3.5 text-white shadow-[inset_-1px_0_0_rgba(255,255,255,0.11),inset_-14px_0_30px_rgba(4,24,18,0.13)] sm:flex sm:flex-col">
             {rail}
             <span className="pointer-events-none absolute inset-y-3 right-0 w-px bg-gradient-to-b from-white/18 via-emerald-100/22 to-white/10" aria-hidden="true" />
             <span className="pointer-events-none absolute inset-y-0 right-0 w-10 translate-x-8 bg-gradient-to-r from-emerald-950/18 to-transparent" aria-hidden="true" />
@@ -154,7 +154,7 @@ export function WizardShell({
           <div
             className={
               isWorkstation
-                ? 'shrink-0 border-b border-emerald-950/10 bg-[#fffdf8]/92 px-4 pb-2 pt-4 sm:px-4 sm:pb-2.5 sm:pt-3.5'
+                ? 'shrink-0 border-b border-emerald-950/10 bg-[#fffdf8]/94 px-4 pb-1.5 pt-3 sm:px-4 sm:pb-2.5 sm:pt-[0.8125rem]'
                 : 'shrink-0 border-b border-emerald-950/10 bg-[#fcfaf6]/80 px-4 pb-3 pt-5 sm:px-6 sm:pb-4 sm:pt-6'
             }
           >
@@ -195,7 +195,7 @@ export function WizardShell({
                   type="button"
                   onClick={onClose}
                   aria-label={closeLabel}
-                  className={isWorkstation ? 'shrink-0 rounded-lg border border-emerald-950/10 bg-white/68 p-1.5 text-slate-400 shadow-[0_1px_4px_rgba(15,23,42,0.04)] transition-colors hover:bg-white hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:ring-offset-2 sm:p-2' : 'shrink-0 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2'}
+                  className={isWorkstation ? 'shrink-0 rounded-lg border border-emerald-950/10 bg-white/60 p-1.5 text-slate-400 shadow-[0_1px_3px_rgba(15,23,42,0.035)] transition-colors hover:bg-white hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] sm:p-1.5' : 'shrink-0 rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2'}
                 >
                   <X className={isWorkstation ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
                 </button>
@@ -203,7 +203,7 @@ export function WizardShell({
             </div>
 
             {steps.length > 0 && (
-              <div className="mt-2.5 sm:mt-4">
+              <div className={isWorkstation ? 'mt-2 sm:mt-4' : 'mt-2.5 sm:mt-4'}>
                 <div className="sm:hidden">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-[0.56rem] font-bold uppercase tracking-wider text-slate-500">
@@ -286,7 +286,7 @@ export function WizardShell({
 
           <div className={`min-h-0 flex-1 overflow-y-auto px-3.5 py-2.5 sm:px-4 sm:py-3.5 ${isWorkstation ? 'bg-[#fffdf8]' : 'bg-white'} ${bodyClassName}`}>
             {stepContext && (
-              <div className="mb-2 rounded-lg border border-emerald-950/10 bg-gradient-to-br from-emerald-50/40 via-[#fffdf8] to-amber-50/20 px-2.5 py-1.5 text-[0.8rem] font-medium leading-snug text-slate-600 shadow-[0_5px_14px_rgba(15,23,42,0.022)] sm:mb-2.5 sm:rounded-xl sm:py-[0.42rem] sm:text-[0.69rem]">
+              <div className="mb-2 rounded-lg border border-emerald-950/10 bg-white/55 px-2 py-1.5 text-[0.75rem] font-medium leading-snug text-slate-600 shadow-[0_4px_10px_rgba(15,23,42,0.014)] sm:mb-2.5 sm:rounded-xl sm:px-2.5 sm:py-[0.4rem] sm:text-[0.68rem]">
                 {stepContext}
               </div>
             )}

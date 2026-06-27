@@ -373,8 +373,55 @@ const getInitials = (bailleur?: Pick<Bailleur, 'prenom' | 'nom'> | null) => {
 };
 
 const titleCaseName = (value: string) => value
+  .trim()
+  .replace(/\s+/g, ' ')
   .toLocaleLowerCase('fr-FR')
   .replace(/(^|[\s'-])(\p{L})/gu, (_, separator: string, letter: string) => `${separator}${letter.toLocaleUpperCase('fr-FR')}`);
+
+const isValidPersonNamePart = (value: string) => {
+  const cleaned = value.trim().replace(/\s+/g, ' ');
+  if (!cleaned || cleaned.length < 2) return false;
+  return /^[\p{L}]+(?:[ '-][\p{L}]+)*$/u.test(cleaned);
+};
+
+const sanitizeSenegalCni = (value: string) => value.replace(/\D/g, '').slice(0, 17);
+
+const formatSenegalCni = (value: string) => {
+  const digits = sanitizeSenegalCni(value);
+  const groups = [
+    digits.slice(0, 1),
+    digits.slice(1, 3),
+    digits.slice(3, 11),
+    digits.slice(11, 16),
+    digits.slice(16, 17),
+  ].filter(Boolean);
+  return groups.join(' ');
+};
+
+const isValidSenegalCni = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length === 0) return true;
+  if (digits.length !== 17) return false;
+  if (!['1', '2'].includes(digits[0])) return false;
+
+  const birthDate = digits.slice(3, 11);
+  const year = Number(birthDate.slice(0, 4));
+  const month = Number(birthDate.slice(4, 6));
+  const day = Number(birthDate.slice(6, 8));
+  if (year < 1900 || year > new Date().getFullYear()) return false;
+  if (month < 1 || month > 12) return false;
+
+  const parsed = new Date(year, month - 1, day);
+  return parsed.getFullYear() === year && parsed.getMonth() === month - 1 && parsed.getDate() === day;
+};
+
+const getSenegalCniError = (value: string) => {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length === 0) return null;
+  if (digits.length !== 17) return "Le numéro d'identité doit contenir 17 chiffres.";
+  if (!['1', '2'].includes(digits[0])) return "Le numéro d'identité doit commencer par 1 ou 2.";
+  return isValidSenegalCni(value) ? null : "La date de naissance de la pièce d'identité n'est pas valide.";
+};
 
 const displayBailleurName = (bailleur?: Pick<Bailleur, 'prenom' | 'nom'> | null) => {
   if (!bailleur) return 'Bailleur';
@@ -729,17 +776,7 @@ export function Bailleurs() {
   );
   const selectedSummary = selectedBailleur ? summariesByBailleur[selectedBailleur.id] ?? emptySummary() : emptySummary();
   const detailPanelOpen = detailOpen && !!selectedBailleur;
-  const bailleurStepContextShort: Record<BailleurWizardStep, string> = {
-    identity: 'Identifiez le propriétaire avant de lui rattacher des biens, mandats et documents.',
-    admin: 'Cadrez le mandat, la commission et le début de gestion.',
-    summary: 'Après création, vous pourrez rattacher biens, mandats et documents.',
-  };
   const bailleurWizardStepIndex = Math.max(0, BAILLEUR_WIZARD_STEPS.findIndex((step) => step.id === bailleurWizardStep));
-  const bailleurStepContext: Record<BailleurWizardStep, string> = {
-    identity: 'Identifiez le propriétaire avant de lui rattacher des biens, mandats et documents.',
-    admin: 'Définissez les informations de gestion qui sécurisent la commission, le début de mandat et les documents.',
-    summary: 'Vérifiez les données avant création. La fiche sera ajoutée au portefeuille propriétaire.',
-  };
 
   const globalKpis = useMemo(() => {
     const summaries = Object.values(summariesByBailleur);
@@ -782,24 +819,30 @@ export function Bailleurs() {
       return;
     }
 
+    if (!isValidPersonNamePart(formData.prenom) || !isValidPersonNamePart(formData.nom)) {
+      setError("Le prénom et le nom doivent contenir uniquement des lettres, espaces, apostrophes ou tirets.");
+      return;
+    }
+
+    const cniError = getSenegalCniError(formData.piece_identite);
+    if (cniError) {
+      setError(cniError);
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError(null);
 
-      // Validate nom/prenom not only digits
-      if (/^\d+$/.test(formData.nom.trim()) || /^\d+$/.test(formData.prenom.trim())) {
-        setError('Le prénom et le nom ne peuvent pas contenir uniquement des chiffres.');
-        return;
-      }
-
       const commissionNum = typeof formData.commission === 'string' ? parseFloat(formData.commission) : formData.commission;
+      const normalizedIdentityNumber = sanitizeSenegalCni(formData.piece_identite);
       const bailleurData = {
         nom: formData.nom.trim(),
         prenom: formData.prenom.trim(),
         telephone: normalizedPhone,
         email: formData.email.trim() || null,
         adresse: formData.adresse.trim() || null,
-        piece_identite: formData.piece_identite.trim() || null,
+        piece_identite: normalizedIdentityNumber || null,
         notes: formData.notes.trim() || null,
         commission: commissionNum || 0,
         debut_contrat: formData.debut_contrat,
@@ -859,7 +902,7 @@ export function Bailleurs() {
       telephone: formatSenegalPhone(bailleur.telephone, ''),
       email: bailleur.email || '',
       adresse: bailleur.adresse || '',
-      piece_identite: bailleur.piece_identite || '',
+      piece_identite: formatSenegalCni(bailleur.piece_identite || ''),
       notes: bailleur.notes || '',
       commission: bailleur.commission ? bailleur.commission.toString() : '',
       debut_contrat: bailleur.debut_contrat || '',
@@ -1641,8 +1684,8 @@ export function Bailleurs() {
                 <PremiumButton
                   variant="create"
                   onClick={() => openModal()}
-                  icon={<Plus className="h-4 w-4" />}
-                  className="w-full sm:w-auto !py-1.5 !px-3 !text-[0.8rem] !h-8"
+                  icon={<Plus className="h-3.5 w-3.5" />}
+                  className="w-full sm:w-auto !h-[29px] !px-2.5 !py-1 !text-[0.72rem]"
                 >
                   Nouveau bailleur
                 </PremiumButton>
@@ -1976,17 +2019,13 @@ export function Bailleurs() {
         size="compact"
         variant="workstation"
         tone="owner"
+        eyebrow="SAMAY KËUR"
         title={editingBailleur ? 'Modifier le bailleur' : 'Nouveau bailleur'}
         description="Créez une fiche propriétaire exploitable."
         steps={BAILLEUR_WIZARD_STEPS}
         currentStep={bailleurWizardStepIndex}
         contentDescription="Créez une fiche propriétaire exploitable."
-        stepContext={
-          <div className="flex items-start gap-2 sm:gap-2.5">
-            <ShieldAlert className="mt-0.5 h-3 w-3 shrink-0 text-emerald-700" />
-            <p className="min-w-0">{bailleurStepContextShort[bailleurWizardStep] ?? bailleurStepContext[bailleurWizardStep]}</p>
-          </div>
-        }
+        stepContext={<BailleurWizardStepContext step={bailleurWizardStep} />}
         rail={
           <BailleurWizardRail
             steps={BAILLEUR_WIZARD_STEPS}
@@ -2000,14 +2039,15 @@ export function Bailleurs() {
               if (bailleurWizardStep === 'identity') {
                 if (!formData.prenom.trim()) { setError('Le prénom est obligatoire.'); return; }
                 if (!formData.nom.trim()) { setError('Le nom est obligatoire.'); return; }
+                if (!isValidPersonNamePart(formData.prenom) || !isValidPersonNamePart(formData.nom)) { setError("Le prénom et le nom doivent contenir uniquement des lettres, espaces, apostrophes ou tirets."); return; }
                 if (!formData.telephone.trim()) { setError('Le téléphone est obligatoire.'); return; }
                 if (!isValidSenegalPhone(formData.telephone)) { setError('Numéro invalide. Exemple : +221 77 123 45 67'); return; }
                 if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) { setError('Email invalide. Exemple : nom@domaine.com'); return; }
                 setError(null);
                 setBailleurWizardStep('admin');
               } else if (bailleurWizardStep === 'admin') {
-                if (formData.piece_identite && !/^\d+$/.test(formData.piece_identite)) { setError("La pièce d'identité ne doit contenir que des chiffres."); return; }
-                if (formData.piece_identite && formData.piece_identite.length > 17) { setError("La pièce d'identité doit contenir au maximum 17 chiffres."); return; }
+                const cniError = getSenegalCniError(formData.piece_identite);
+                if (cniError) { setError(cniError); return; }
                 if (formData.commission && (parseFloat(formData.commission) < 0 || parseFloat(formData.commission) > 100)) { setError("La commission doit être comprise entre 0 et 100%."); return; }
                 if (!formData.debut_contrat) { setError('Le début de gestion est obligatoire.'); return; }
                 setError(null);
@@ -2017,7 +2057,7 @@ export function Bailleurs() {
               }
             }}
             disabled={isSubmitting}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
             {isSubmitting ? 'Traitement...' : bailleurWizardStep === 'summary' ? (editingBailleur ? 'Enregistrer' : 'Créer le bailleur') : 'Continuer'}
           </button>
@@ -2031,7 +2071,7 @@ export function Bailleurs() {
               else handleCloseAttempt();
             }}
             disabled={isSubmitting}
-            className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm transition hover:bg-white disabled:opacity-50 sm:w-auto"
+            className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
           >
             {bailleurWizardStep === 'identity' ? 'Annuler' : 'Retour'}
           </button>
@@ -2064,6 +2104,19 @@ export function Bailleurs() {
               />
               <TextField type="email" label="Email" value={formData.email || ''} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, email: v }); }} placeholder="nom@domaine.com" />
             </div>
+
+            <div className="hidden grid-cols-3 gap-2 rounded-xl border border-emerald-950/10 bg-white/45 p-2 shadow-[0_5px_14px_rgba(15,23,42,0.018)] sm:grid">
+              {[
+                ['Biens', 'Rattachement clair'],
+                ['Mandats', 'Base documentaire'],
+                ['Reversements', 'Suivi propriétaire'],
+              ].map(([label, detail]) => (
+                <div key={label} className="min-w-0 rounded-lg border border-slate-100/80 bg-[#fffdf8]/70 px-2 py-1.5">
+                  <p className="text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-emerald-800/70">{label}</p>
+                  <p className="mt-0.5 truncate text-[0.66rem] font-medium text-slate-600">{detail}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className={bailleurWizardStep === 'admin' ? 'space-y-2.5 sm:space-y-3' : 'hidden'}>
@@ -2073,10 +2126,19 @@ export function Bailleurs() {
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
               <TextField label="Adresse" value={formData.adresse || ''} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, adresse: v }); }} placeholder="123 Avenue Blaise Diagne, Dakar" />
-              <TextField label="Pièce d'identité" value={formData.piece_identite || ''} onChange={(v) => {
-                const val = v.replace(/\D/g, '').slice(0, 17);
-                setIsDirty(true); setFormData({ ...formData, piece_identite: val });
-              }} placeholder="17 chiffres max" maxLength={17} />
+              <TextField
+                label="Pièce d'identité"
+                value={formData.piece_identite || ''}
+                onChange={(v) => {
+                  const val = formatSenegalCni(v);
+                  setIsDirty(true);
+                  setFormData({ ...formData, piece_identite: val });
+                }}
+                placeholder="1 01 20050927 12345 6"
+                inputMode="numeric"
+                maxLength={21}
+                helperText="17 chiffres · Exemple : 1 45 19990101 12345 6"
+              />
             </div>
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
@@ -2121,30 +2183,30 @@ export function Bailleurs() {
           {bailleurWizardStep === 'summary' && (
             <div className="space-y-3 sm:space-y-4">
               <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
-                <div className="overflow-hidden rounded-[0.95rem] border border-emerald-950/10 bg-white/76 shadow-[0_8px_22px_rgba(15,23,42,0.028)]">
+                <div className="overflow-hidden rounded-[0.95rem] border border-emerald-950/10 bg-[#fffdf8]/86 shadow-[0_8px_22px_rgba(15,23,42,0.024)]">
                   <div className="flex items-center gap-2 border-b border-slate-100/80 px-3 py-2 sm:py-[0.55rem]">
                     <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 sm:h-[22px] sm:w-[22px]">
                       <User className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
                     </span>
                     <h4 className="text-[0.76rem] font-semibold text-slate-800 sm:text-[0.7rem]">Identité & contact</h4>
                   </div>
-                  <div className="divide-y divide-slate-100/80 px-3">
+                  <div className="min-w-0 divide-y divide-slate-100/80 px-3">
                     <CompactLabelValue label="Nom complet" value={titleCaseName(formatPersonName({ prenom: formData.prenom, nom: formData.nom }))} />
                     <CompactLabelValue label="Téléphone" value={isValidSenegalPhone(formData.telephone) ? `+221 ${formatSenegalPhone(formData.telephone, formData.telephone)}` : formData.telephone} />
-                    {formData.email && <CompactLabelValue label="Email" value={<span title={formData.email}>{formData.email}</span>} />}
+                    {formData.email && <CompactLabelValue label="Email" value={<span className="block min-w-0 truncate" title={formData.email}>{formData.email}</span>} />}
                   </div>
                 </div>
 
-                <div className="overflow-hidden rounded-[0.95rem] border border-emerald-950/10 bg-white/76 shadow-[0_8px_22px_rgba(15,23,42,0.028)]">
+                <div className="overflow-hidden rounded-[0.95rem] border border-emerald-950/10 bg-[#fffdf8]/86 shadow-[0_8px_22px_rgba(15,23,42,0.024)]">
                   <div className="flex items-center gap-2 border-b border-slate-100/80 px-3 py-2 sm:py-[0.55rem]">
                     <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-50 text-amber-700 sm:h-[22px] sm:w-[22px]">
                       <Briefcase className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
                     </span>
                     <h4 className="text-[0.76rem] font-semibold text-slate-800 sm:text-[0.7rem]">Gestion</h4>
                   </div>
-                  <div className="divide-y divide-slate-100/80 px-3">
+                  <div className="min-w-0 divide-y divide-slate-100/80 px-3">
                     {formData.adresse && <CompactLabelValue label="Adresse" value={formData.adresse} />}
-                    {formData.piece_identite && <CompactLabelValue label="Pièce d'identité" value={formData.piece_identite} />}
+                    {formData.piece_identite && <CompactLabelValue label="Pièce d'identité" value={formatSenegalCni(formData.piece_identite)} />}
                     <CompactLabelValue label="Commission" value={`${formData.commission || 0}%`} />
                     {formData.debut_contrat && <CompactLabelValue label="Début de gestion" value={formatDate(formData.debut_contrat)} />}
                   </div>
@@ -2313,27 +2375,61 @@ export function Bailleurs() {
   );
 }
 
+function BailleurWizardStepContext({ step }: { step: BailleurWizardStep }) {
+  const copy: Record<BailleurWizardStep, { title?: string; body: string }> = {
+    identity: {
+      body: 'Identifiez le propriétaire avant de lui rattacher des biens, mandats et documents.',
+    },
+    admin: {
+      body: 'Cadrez le mandat, la commission et le début de gestion.',
+    },
+    summary: {
+      title: 'Validation finale',
+      body: 'La fiche sera ajoutée au portefeuille propriétaire. Vous pourrez ensuite rattacher biens, mandats et documents.',
+    },
+  };
+  const current = copy[step];
+
+  return (
+    <div className="flex min-w-0 items-start gap-2">
+      <span className="mt-[0.1rem] flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border border-emerald-950/10 bg-emerald-50/60 text-emerald-700 sm:h-[18px] sm:w-[18px]">
+        <ShieldAlert className="h-2.5 w-2.5" />
+      </span>
+      <div className="min-w-0">
+        {current.title && (
+          <p className="text-[0.68rem] font-semibold leading-tight text-slate-900 sm:text-[0.64rem]">
+            {current.title}
+          </p>
+        )}
+        <p className="min-w-0 text-[0.72rem] font-medium leading-snug text-slate-600 line-clamp-2 sm:text-[0.66rem]">
+          {current.body}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function BailleurWizardRail({ steps, currentStep }: { steps: WizardStep[]; currentStep: number }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-2.5">
         <BrandMark size="sm" tone="dark" animated withTile={false} />
         <div>
-          <p className="text-[0.52rem] font-bold uppercase tracking-[0.18em] text-amber-200/80">Portefeuille propriétaire</p>
-          <p className="mt-0.5 text-[0.62rem] font-semibold text-white/[0.7]">Fiche propriétaire guidée</p>
+          <p className="text-[0.52rem] font-bold uppercase tracking-[0.18em] text-amber-200/76">Portefeuille propriétaire</p>
+          <p className="mt-0.5 text-[0.62rem] font-semibold text-white/[0.62]">Fiche propriétaire guidée</p>
         </div>
       </div>
 
-      <div className="mt-3.5">
-        <p className="max-w-[11rem] text-[0.8rem] font-semibold leading-tight text-white">
+      <div className="mt-3">
+        <p className="max-w-[11rem] text-[0.74rem] font-semibold leading-tight text-white/[0.9]">
           Structurez le portefeuille propriétaire.
         </p>
-        <p className="mt-1.5 max-w-[11rem] text-[0.64rem] font-medium leading-snug text-emerald-50/[0.72]">
+        <p className="mt-1 max-w-[11rem] text-[0.61rem] font-medium leading-snug text-emerald-50/[0.6]">
           Une fiche claire pour rattacher biens, mandats et reversements.
         </p>
       </div>
 
-      <div className="relative mt-3.5 space-y-1">
+      <div className="relative mt-3 space-y-1">
         {steps.map((step, index) => {
           const isActive = index === currentStep;
           const isComplete = index < currentStep;
@@ -2341,12 +2437,12 @@ function BailleurWizardRail({ steps, currentStep }: { steps: WizardStep[]; curre
           return (
             <div
               key={step.id}
-              className={`relative flex min-h-[2.25rem] items-center gap-2 rounded-lg border px-2 py-1 transition ${
+              className={`flex min-h-[2.05rem] items-center gap-2 rounded-lg border px-2 py-[0.22rem] transition ${
                 isActive
-                  ? 'border-amber-100/20 bg-white/[0.075] text-white shadow-[0_6px_14px_rgba(0,0,0,0.07)]'
+                  ? 'border-amber-100/18 bg-white/[0.046] text-white shadow-[0_4px_10px_rgba(0,0,0,0.045)]'
                   : isComplete
-                    ? 'border-white/10 bg-emerald-300/[0.07] text-emerald-50/[0.86]'
-                    : 'border-white/[0.08] bg-white/[0.035] text-emerald-50/[0.82]'
+                    ? 'border-white/10 bg-emerald-300/[0.045] text-emerald-50/[0.82]'
+                    : 'border-white/[0.08] bg-white/[0.024] text-emerald-50/[0.84]'
               }`}
             >
               <span
@@ -2354,8 +2450,8 @@ function BailleurWizardRail({ steps, currentStep }: { steps: WizardStep[]; curre
                   isActive
                     ? 'bg-[#fff3ce] text-emerald-950 ring-1 ring-amber-100/60'
                     : isComplete
-                      ? 'bg-emerald-300/[0.14] text-emerald-50'
-                      : 'bg-white/[0.12] text-emerald-50/[0.86]'
+                      ? 'bg-emerald-300/[0.12] text-emerald-50'
+                      : 'bg-white/[0.1] text-emerald-50/[0.84]'
                 }`}
               >
                 {isComplete ? <Check className="h-3 w-3" /> : index + 1}
@@ -2371,9 +2467,9 @@ function BailleurWizardRail({ steps, currentStep }: { steps: WizardStep[]; curre
         })}
       </div>
 
-      <div className="mt-auto rounded-xl border border-white/10 bg-white/[0.055] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-        <p className="text-[0.52rem] font-semibold uppercase tracking-[0.16em] text-amber-100/[0.8]">Source de vérité</p>
-        <p className="mt-1 text-[0.62rem] font-medium leading-snug text-emerald-50/[0.7]">
+      <div className="mt-4 rounded-xl border border-white/[0.065] bg-white/[0.032] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+        <p className="text-[0.48rem] font-semibold uppercase tracking-[0.16em] text-amber-100/[0.7]">SOURCE DE VÉRITÉ</p>
+        <p className="mt-1 text-[0.59rem] font-medium leading-snug text-emerald-50/[0.6]">
           Biens, mandats, rapports et reversements partiront de cette fiche.
         </p>
       </div>
@@ -2415,7 +2511,7 @@ function TextField({
 }) {
   return (
     <label className="block">
-      <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem]">{label} {required && <span className="text-red-500">*</span>}</span>
+      <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">{label} {required && <span className="text-red-500">*</span>}</span>
       <div className="relative">
         <input
           type={type}
@@ -2429,11 +2525,11 @@ function TextField({
           max={max}
           maxLength={maxLength}
           inputMode={inputMode || (type === 'number' ? 'numeric' : type === 'tel' ? 'tel' : undefined)}
-          className={`mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 text-[0.95rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 disabled:bg-slate-50 disabled:text-slate-500 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.68rem] sm:text-[0.82rem] ${suffix ? 'pl-3 pr-8' : 'px-3'}`}
+          className={`mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 disabled:bg-slate-50 disabled:text-slate-500 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem] ${suffix ? 'pl-3 pr-8' : 'px-3'}`}
         />
         {suffix && <span className="absolute bottom-3 right-3 text-[0.72rem] font-semibold text-slate-400 sm:bottom-2 sm:text-[0.68rem]">{suffix}</span>}
       </div>
-      {helperText && <p className="mt-1 text-[0.68rem] text-slate-500 sm:text-[10px]">{helperText}</p>}
+      {helperText && <p className="mt-1 text-[0.66rem] text-slate-500 sm:text-[10px]">{helperText}</p>}
     </label>
   );
 }
@@ -2484,11 +2580,12 @@ function CompactSection({ title, icon: Icon, children }: { title: string; icon?:
 
 function CompactLabelValue({ label, value }: { label: string; value: ReactNode | null | undefined }) {
   if (!value || value === '—') return null;
+  const isIdentity = label.toLowerCase().includes('identit');
   return (
-    <div className={`flex items-center justify-between gap-3 ${label === 'Nom complet' ? 'py-1.5 sm:py-[0.45rem]' : 'py-1 sm:py-[0.34rem]'}`}>
-      <span className="text-[0.72rem] font-medium text-slate-500 sm:text-[0.66rem]">{label}</span>
+    <div className={`flex min-w-0 items-center justify-between gap-3 ${label === 'Nom complet' ? 'py-1.5 sm:py-[0.55rem]' : 'py-1.5 sm:py-[0.42rem]'}`}>
+      <span className="shrink-0 text-[0.72rem] font-medium text-slate-500 sm:text-[0.66rem]">{label}</span>
       <span
-        className={`max-w-[60%] truncate text-right font-semibold ${label === 'Nom complet' ? 'text-[0.82rem] text-slate-950 sm:text-[0.74rem]' : 'text-[0.74rem] text-slate-800 sm:text-[0.68rem]'}`}
+        className={`min-w-0 max-w-[62%] truncate text-right font-semibold ${isIdentity ? 'tabular-nums tracking-[-0.01em]' : ''} ${label === 'Nom complet' ? 'text-[0.82rem] text-slate-950 sm:text-[0.74rem]' : 'text-[0.74rem] text-slate-800 sm:text-[0.68rem]'}`}
         title={typeof value === 'string' ? value : undefined}
       >
         {value}

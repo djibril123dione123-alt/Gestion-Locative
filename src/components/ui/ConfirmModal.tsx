@@ -62,7 +62,7 @@ export function ConfirmModal({
   const Icon = styles.Icon;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end sm:items-center sm:justify-center sm:p-4">
+    <div className="fixed inset-0 z-[120] flex flex-col justify-end sm:items-center sm:justify-center sm:p-4">
       <div
         className="fixed inset-0 bg-brand-950/65 backdrop-blur-md transition-opacity"
         onClick={isLoading ? undefined : onClose}

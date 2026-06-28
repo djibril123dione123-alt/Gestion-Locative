@@ -242,10 +242,12 @@ export function SmartCombobox({
             {searchPlaceholder || 'Choisir dans la liste'}
           </div>
           <div
+            id="smart-combobox-listbox"
             ref={listboxRef}
             className={`overflow-y-auto overscroll-contain touch-pan-y ${isDense ? 'p-0.5' : isCompact ? 'p-1' : 'p-1.5'}`}
             style={{ maxHeight: Math.max(isCompact ? 128 : 160, menuPlacement.maxHeight - (isCompact ? 32 : 42)) }}
             role="listbox"
+            aria-label={placeholder || 'Options'}
           >
           {filteredOptions.length === 0 ? (
             <div className={`${isCompact ? 'px-2 py-3 text-xs' : 'px-3 py-4 text-sm'} text-center font-medium text-slate-500`}>
@@ -270,17 +272,18 @@ export function SmartCombobox({
               const isDisabled = option.disabled;
 
               return (
-                <button
+                <div
                   key={option.value}
-                  type="button"
                   role="option"
-                  aria-selected={isSelected}
-                  disabled={isDisabled}
-                  onClick={() => selectOption(option)}
+                  aria-selected={isSelected ? 'true' : 'false'}
+                  aria-disabled={isDisabled ? 'true' : 'false'}
+                  onClick={() => {
+                    if (!isDisabled) selectOption(option);
+                  }}
                   onMouseEnter={() => {
                     if (!isDisabled) setActiveIndex(index);
                   }}
-                  className={`flex w-full items-center text-left transition ${
+                  className={`flex w-full items-center text-left transition cursor-pointer ${
                     isDense ? 'min-h-7 gap-1.5 rounded-[0.4rem] px-1.5 py-1 text-[0.68rem]' : isCompact ? 'min-h-8 gap-2 rounded-lg px-2 py-1.5 text-[0.72rem]' : 'min-h-12 gap-3 rounded-xl px-3 py-3 text-sm'
                   } ${
                     isActive && !isDisabled ? 'bg-emerald-100/45' : ''
@@ -329,7 +332,7 @@ export function SmartCombobox({
                       {option.rightLabel && <span className={`${isDense ? 'text-[0.58rem]' : isCompact ? 'text-[0.62rem]' : 'text-xs'} font-black text-slate-700`}>{option.rightLabel}</span>}
                     </span>
                   )}
-                </button>
+                </div>
               );
             })
           )}
@@ -367,7 +370,8 @@ export function SmartCombobox({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           role="combobox"
-          aria-expanded={open}
+          aria-expanded={open ? 'true' : 'false'}
+          aria-controls="smart-combobox-listbox"
           aria-autocomplete="list"
           className={`${isDense ? '!h-7 !min-h-7 py-0 rounded-[0.45rem] pl-6 pr-6 text-[0.68rem] leading-4 shadow-sm focus:ring-1' : isCompact ? 'h-8 rounded-[0.55rem] pl-7 pr-7 text-[0.72rem] leading-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_4px_10px_rgba(15,23,42,0.025)] focus:ring-2' : 'h-12 rounded-2xl pl-10 pr-11 text-sm leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] focus:ring-4'} w-full min-w-0 border border-emerald-950/10 bg-[#fffdf8]/95 font-semibold text-slate-700 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200`}
         />

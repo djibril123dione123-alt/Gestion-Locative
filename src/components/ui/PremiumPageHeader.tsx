@@ -32,6 +32,8 @@ export interface PremiumPageHeaderProps {
   variant?: PremiumPageHeaderVariant;
   /** Densité de l'en-tête, impacte la taille de la typo et du padding. @default "comfortable" */
   density?: 'comfortable' | 'compact' | 'ultraCompact';
+  /** Mode drawer ouvert, pour cacher/réduire la description et compacter l'en-tête */
+  isSplitOpen?: boolean;
   /** Classe CSS supplémentaire sur le conteneur racine. */
   className?: string;
 
@@ -129,6 +131,7 @@ export function PremiumPageHeader({
   sideContent,
   variant = 'standard',
   density = 'comfortable',
+  isSplitOpen = false,
   className = '',
   // ── Anciennes props (rétrocompatibilité) ──
   subtitle,
@@ -169,7 +172,7 @@ export function PremiumPageHeader({
           <p className={`${isCompact ? `${isUltraCompact ? 'text-[0.5rem]' : 'text-[0.55rem]'}` : 'text-[0.68rem]'} font-black uppercase tracking-[0.2em] text-orange-600`}>{eyebrow}</p>
           <h1 className={`${isUltraCompact ? 'mt-0' : 'mt-0.5'} font-serif font-black tracking-tight text-slate-950 ${isCompact ? `${isUltraCompact ? 'text-[1.24rem]' : 'text-[1.42rem]'}` : 'text-3xl sm:text-4xl'}`}>{title}</h1>
 
-          {resolvedDescription && (
+          {resolvedDescription && !isSplitOpen && (
             mobileDescription ? (
               <>
                 <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium text-slate-600 lg:hidden`}>{mobileDescription}</p>
@@ -214,7 +217,7 @@ export function PremiumPageHeader({
           <h1 className={titleClass}>{title}</h1>
 
           {/* Description responsive */}
-          {resolvedDescription && (
+          {resolvedDescription && !isSplitOpen && (
             <>
               {mobileDescription ? (
                 <>

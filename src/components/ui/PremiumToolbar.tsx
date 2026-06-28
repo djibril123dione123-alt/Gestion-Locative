@@ -57,24 +57,24 @@ export function PremiumToolbar({
         aria-label={ariaLabel ?? "Outils de liste"}
         className={`@container relative z-20 min-w-0 max-w-full ${isCompact ? `bg-[#fffdf8]/90 border border-emerald-950/10 shadow-sm ring-1 ring-white/50 ${isUltraCompact ? 'rounded-[0.7rem] px-1.5 py-1 sm:px-2 sm:py-1.5' : 'rounded-[0.85rem] px-2 py-1.5 sm:px-2.5 sm:py-2'}` : 'sk-premium-panel p-3'} ${className}`}
       >
-        <div className={`flex min-w-0 flex-wrap items-center ${isUltraCompact ? 'gap-1.5' : 'gap-2'}`}>
+        <div className={`flex min-w-0 items-center ${isUltraCompact ? 'gap-1.5' : 'gap-2'} ${isSplitOpen ? 'flex-nowrap' : 'flex-wrap @xl:flex-nowrap'}`}>
           {tabs && (
-            <div className="min-w-fit flex-none">
+            <div className="shrink-0 flex-none">
               {tabs}
             </div>
           )}
 
           {(search ?? children) && (
-            <div className={`min-w-[8rem] flex-1 ${isSplitOpen ? 'basis-28 @2xl:basis-36' : 'basis-56 @3xl:basis-72'}`}>
+            <div className={`flex-1 shrink min-w-0 ${isSplitOpen ? 'basis-auto min-w-[5rem]' : 'basis-32 min-w-[8rem]'}`}>
               {search ?? children}
             </div>
           )}
 
           {(filters || secondaryActions || actions || primaryAction) && (
-            <div className={`flex min-w-0 flex-none flex-wrap items-center ${isUltraCompact ? 'gap-1.5' : 'gap-2'}`}>
+            <div className={`flex shrink-0 items-center ${isUltraCompact ? 'gap-1.5' : 'gap-2'} ${isSplitOpen ? 'flex-nowrap' : 'flex-wrap'}`}>
               {filters}
               {secondaryActions ?? actions}
-              {primaryAction && <div className="flex-shrink-0">{primaryAction}</div>}
+              {primaryAction && <div className="shrink-0">{primaryAction}</div>}
             </div>
           )}
         </div>

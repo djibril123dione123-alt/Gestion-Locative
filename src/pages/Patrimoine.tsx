@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
   AlertCircle,
-  Banknote,
   Briefcase,
   Building2,
   ChevronRight,
@@ -11,9 +10,7 @@ import {
   ClipboardList,
   DoorOpen,
   FileText,
-  FolderOpen,
   Home,
-  KeyRound,
   Map as MapIcon,
   MapPin,
   Pencil,
@@ -23,7 +20,6 @@ import {
   SlidersHorizontal,
   Store,
   Trash2,
-  Users,
   Wallet,
   Warehouse,
   type LucideIcon,
@@ -36,7 +32,7 @@ import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { EmptyState } from '../components/ui/EmptyState';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
-import { MetricCard, MiniMetric } from '../components/ui/MetricCard';
+import { MetricCard } from '../components/ui/MetricCard';
 import { PageShell } from '../components/ui/PageShell';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
@@ -65,8 +61,8 @@ type DrawerState = { type: 'bien'; id: string } | { type: 'unite'; id: string } 
 type PropertyFilter = 'all' | 'with_reliquats' | 'without_units' | 'complete' | 'incomplete';
 type UnitFilter = 'all' | 'libre' | 'loue' | 'maintenance' | 'late' | 'without_contract';
 type DangerTarget = { type: 'bien'; id: string; name: string } | { type: 'unite'; id: string; name: string } | null;
-type PropertyColumnKey = 'bien' | 'type' | 'adresse' | 'bailleur' | 'unites' | 'occupation' | 'loyer' | 'reliquats' | 'statut';
-type UnitColumnKey = 'unite' | 'type' | 'bien' | 'locataire' | 'loyer' | 'statut' | 'reliquat' | 'bail';
+type PropertyColumnKey = 'bien' | 'bailleur' | 'unites' | 'occupation' | 'loyer' | 'reliquats' | 'statut';
+type UnitColumnKey = 'unite' | 'bien' | 'locataire' | 'loyer' | 'statut' | 'reliquat';
 type PropertyWizardStep = 'main' | 'address' | 'summary';
 type UnitWizardStep = 'main' | 'rent' | 'summary';
 
@@ -231,8 +227,8 @@ const EMPTY_DATA: PatrimoineData = {
   documents: [],
 };
 
-const PROPERTY_COLUMN_KEYS: PropertyColumnKey[] = ['bien', 'type', 'adresse', 'bailleur', 'unites', 'occupation', 'loyer', 'reliquats', 'statut'];
-const UNIT_COLUMN_KEYS: UnitColumnKey[] = ['unite', 'type', 'bien', 'locataire', 'loyer', 'statut', 'reliquat', 'bail'];
+const PROPERTY_COLUMN_KEYS: PropertyColumnKey[] = ['bien', 'bailleur', 'unites', 'occupation', 'loyer', 'statut', 'reliquats'];
+const UNIT_COLUMN_KEYS: UnitColumnKey[] = ['unite', 'bien', 'locataire', 'loyer', 'statut', 'reliquat'];
 
 const PROPERTY_TYPES = ['Immeuble', 'Maison', 'Villa', 'Appartement', 'Boutique', 'Bureau', 'Terrain', 'Local commercial', 'Depot', 'Mixte'];
 const UNIT_TYPES = ['Appartement', 'Studio', 'Chambre', 'Boutique', 'Bureau', 'Depot', 'Local commercial', 'Autre'];
@@ -943,8 +939,8 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           isDetailOpen={detailPanelOpen}
           size="compact"
           desktopAt="lg"
-          className="gap-3"
-          detailClassName="xl:sticky xl:top-3 xl:h-[calc(100dvh-1.5rem)]"
+          mainClassName={detailPanelOpen ? 'hidden lg:block' : ''}
+          detailClassName="lg:sticky lg:top-2 lg:h-[calc(100dvh-1rem)]"
           main={
           <div className="min-w-0 space-y-2.5">
             <PremiumPageHeader
@@ -1064,7 +1060,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     visibility={propertyColumns.visibility}
                     onToggle={propertyColumns.toggle}
                     onSetAll={propertyColumns.setAll}
-                    className="!h-7 !rounded-[0.55rem] !px-2 !py-1 !text-[0.7rem] [&_svg]:!h-3 [&_svg]:!w-3"
+                    className={`!h-7 !rounded-[0.55rem] !px-2 !py-1 !text-[0.7rem] [&_svg]:!h-3 [&_svg]:!w-3 ${detailPanelOpen ? 'hidden' : ''}`}
                   />
                 </>
               ) : (
@@ -1083,7 +1079,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     visibility={unitColumns.visibility}
                     onToggle={unitColumns.toggle}
                     onSetAll={unitColumns.setAll}
-                    className="!h-7 !rounded-[0.55rem] !px-2 !py-1 !text-[0.7rem] [&_svg]:!h-3 [&_svg]:!w-3"
+                    className={`!h-7 !rounded-[0.55rem] !px-2 !py-1 !text-[0.7rem] [&_svg]:!h-3 [&_svg]:!w-3 ${detailPanelOpen ? 'hidden' : ''}`}
                   />
                 </>
               )}
@@ -1199,7 +1195,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                       ? `${inferUnitType(selectedUnit)} · ${selectedUnit.immeubles?.nom ?? 'Bien parent à choisir'}`
                       : undefined
                 }
-                bodyClassName="space-y-0"
+                bodyClassName="space-y-2.5 pb-20"
               >
                 {selectedProperty && selectedPropertySummary && (
                   <PropertyDrawer
@@ -1278,8 +1274,6 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
 function getPropertyColumnLabel(key: PropertyColumnKey) {
   const labels: Record<PropertyColumnKey, string> = {
     bien: 'Bien',
-    type: 'Type',
-    adresse: 'Adresse',
     bailleur: 'Bailleur',
     unites: 'Unités',
     occupation: 'Occupation',
@@ -1293,13 +1287,11 @@ function getPropertyColumnLabel(key: PropertyColumnKey) {
 function getUnitColumnLabel(key: UnitColumnKey) {
   const labels: Record<UnitColumnKey, string> = {
     unite: 'Unité',
-    type: 'Type',
     bien: 'Bien parent',
     locataire: 'Locataire',
     loyer: 'Loyer',
     statut: 'Statut',
     reliquat: 'Reliquat',
-    bail: 'Bail actif',
   };
   return labels[key];
 }
@@ -1367,19 +1359,18 @@ function PropertiesTable({
   }
 
   return (
-    <PremiumTableSurface density="dense" withHorizontalScroll>
-      <div className="hidden lg:block overflow-x-auto">
-        <table className={`w-full border-collapse table-fixed ${isSplitOpen ? 'min-w-[480px]' : 'min-w-[840px]'}`}>
+    <PremiumTableSurface density="dense">
+        <table className={`hidden lg:table w-full border-collapse table-fixed ${isSplitOpen ? 'min-w-[480px]' : 'min-w-[840px]'}`}>
           <thead className="bg-[#f8f3e8]/70 text-left">
             <tr>
-              {showColumn('bien') && <th className={`${isSplitOpen ? 'w-[45%] px-3' : 'w-[30%] px-3'} py-2.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Building2 className="h-3 w-3 text-slate-400" /> Bien</span></th>}
-              {!isIndividualOwner && showColumn('bailleur') && <th className="w-[15%] px-3 py-2.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><CircleUser className="h-3 w-3 text-slate-400" /> Bailleur</span></th>}
-              {showColumn('unites') && <th className="w-[10%] px-3 py-2.5 text-center text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center justify-center gap-1.5"><DoorOpen className="h-3 w-3 text-slate-400" /> Unités</span></th>}
-              {showColumn('occupation') && <th className={`${isSplitOpen ? 'w-[25%] px-3' : 'w-[12%] px-3'} py-2.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Activity className="h-3 w-3 text-slate-400" /> Occupation</span></th>}
-              {showColumn('loyer') && <th className="w-[12%] px-3 py-2.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500">Loyer attendu</th>}
-              {showColumn('reliquats') && <th className={`${isSplitOpen ? 'w-[15%] px-3' : 'w-[12%] px-3'} py-2.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5"><AlertCircle className="h-3 w-3 text-slate-400" /> Reliquats</span></th>}
-              {showColumn('statut') && <th className={`${isSplitOpen ? 'w-[15%] px-3' : 'w-[9%] px-3'} py-2.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}>Statut</th>}
-              {showActions && <th className="w-[4%] px-2 py-2.5"><span className="sr-only">Actions</span></th>}
+              {showColumn('bien') && <th className={`${isSplitOpen ? 'w-[45%] px-3' : 'w-[30%] px-3'} py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> Bien</span></th>}
+              {!isIndividualOwner && showColumn('bailleur') && <th className="w-[15%] px-3 py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><CircleUser className="h-3.5 w-3.5 text-slate-400" /> Bailleur</span></th>}
+              {showColumn('unites') && <th className="w-[10%] px-3 py-3 text-center text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500">Unités</th>}
+              {showColumn('occupation') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5 text-slate-400" /> Occupation</span></th>}
+              {showColumn('loyer') && <th className="w-[12%] px-3 py-3 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500">Loyer attendu</th>}
+              {showColumn('statut') && <th className={`${isSplitOpen ? 'w-[15%] px-3' : 'w-[9%] px-3'} py-3 text-center text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}>Statut</th>}
+              {showColumn('reliquats') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-3 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5"><AlertCircle className="h-3.5 w-3.5 text-slate-400" /> Reliquats</span></th>}
+              {showActions && <th className="w-[4%] px-2 py-3"><span className="sr-only">Actions</span></th>}
             </tr>
           </thead>
           <tbody>
@@ -1391,17 +1382,18 @@ function PropertiesTable({
               const selected = property.id === selectedId;
               const reliquatAmount = summary?.reliquats ?? 0;
               return (
-                <tr key={property.id} className={`cursor-pointer border-b border-slate-100 transition-colors duration-150 outline-none hover:bg-emerald-50/40 focus-visible:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300 ${selected ? 'bg-emerald-50/60 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-1 after:bg-brand-600' : ''}`} onClick={() => onSelect(property)}>
+                <tr key={property.id} className={`cursor-pointer border-b border-slate-100 transition-colors duration-150 outline-none hover:bg-[#f8fbf9] ${selected ? 'bg-emerald-50/50 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-[3px] after:bg-brand-500' : ''}`} onClick={() => onSelect(property)}>
                   {showColumn('bien') && (
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2.5">
-                        <div className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
-                          <Icon className="h-[12px] w-[12px]" />
+                        <div className={`flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-lg ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
+                          <Icon className="h-3.5 w-3.5" />
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">{property.nom}</p>
-                          <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-0.5">
-                            {property.quartier || property.ville || 'Localisation à compléter'} · {inferPropertyType(property)} · {summary?.units.length ?? 0} unité{(summary?.units.length ?? 0) > 1 ? 's' : ''}
+                          <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-[1px]">
+                            {property.quartier || property.ville || 'Localisation à compléter'} · {inferPropertyType(property)}
+                            {isSplitOpen && ` · ${summary?.units.length ?? 0} unité${(summary?.units.length ?? 0) > 1 ? 's' : ''}`}
                             {isSplitOpen && !isIndividualOwner && owner ? ` · ${ownerName(owner)}` : ''}
                           </p>
                         </div>
@@ -1409,22 +1401,22 @@ function PropertiesTable({
                     </td>
                   )}
                   {!isIndividualOwner && showColumn('bailleur') && <td className="py-3 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{ownerName(owner)}</p></td>}
-                  {showColumn('unites') && <td className="py-3 px-3 text-center text-[0.75rem] font-semibold text-slate-700">{summary?.units.length ?? 0}</td>}
+                  {showColumn('unites') && <td className="py-3 px-3 text-center text-[0.75rem] font-medium text-slate-700">{summary?.units.length ?? 0}</td>}
                   {showColumn('occupation') && (
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2">
-                        <div className={`${isSplitOpen ? 'w-10' : 'w-12'} h-1.5 overflow-hidden rounded-full bg-slate-100`}>
+                        <div className={`${isSplitOpen ? 'w-8' : 'w-10'} h-1.5 overflow-hidden rounded-full bg-slate-100`}>
                           <div className="h-full rounded-full bg-brand-800" style={{ width: `${summary?.occupancyRate ?? 0}%` }} />
                         </div>
                         <span className="text-[0.64rem] font-semibold text-slate-600">{summary?.occupancyRate ?? 0}%</span>
                       </div>
                     </td>
                   )}
-                  {showColumn('loyer') && <td className="whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums font-semibold text-slate-700"><MoneyText value={summary?.expectedRent ?? 0} /></td>}
-                  {showColumn('reliquats') && <td className={`whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums font-semibold ${reliquatAmount > 0 ? 'text-red-600' : 'text-slate-500'}`}><MoneyText value={reliquatAmount} /></td>}
-                  {showColumn('statut') && <td className="py-3 px-3">
-                    <span className="inline-flex px-1.5 py-0.5 text-[9px] rounded uppercase font-medium bg-slate-100 text-slate-700">{(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unité'}</span>
+                  {showColumn('loyer') && <td className={`whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums ${isSplitOpen ? 'font-medium' : 'font-semibold'} text-slate-700`}><MoneyText value={summary?.expectedRent ?? 0} /></td>}
+                  {showColumn('statut') && <td className="py-3 px-3 text-center">
+                    <StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unité'} />
                   </td>}
+                  {showColumn('reliquats') && <td className={`whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums ${isSplitOpen ? 'font-medium' : 'font-semibold'} ${reliquatAmount > 0 ? 'text-red-600' : 'text-slate-500'}`}><MoneyText value={reliquatAmount} /></td>}
                   {showActions && <td className="py-3 px-3 text-right">
                     <ChevronRight className="h-[10px] w-[10px] text-slate-300 inline-block" />
                   </td>}
@@ -1433,7 +1425,6 @@ function PropertiesTable({
             })}
           </tbody>
         </table>
-      </div>
     </PremiumTableSurface>
   );
 }
@@ -1477,19 +1468,17 @@ function UnitsTable({
   }
 
   return (
-    <PremiumTableSurface density="dense" withHorizontalScroll>
-      <div className="hidden lg:block overflow-x-auto">
-        <table className={`w-full border-collapse table-fixed ${isSplitOpen ? 'min-w-[480px]' : 'min-w-[840px]'}`}>
+    <PremiumTableSurface density="dense">
+        <table className={`hidden lg:table w-full border-collapse table-fixed ${isSplitOpen ? 'min-w-[480px]' : 'min-w-[840px]'}`}>
           <thead className="bg-[#f8f3e8]/70 text-left">
             <tr>
-              {showColumn('unite') && <th className={`${isSplitOpen ? 'w-[45%] px-3' : 'w-[25%] px-3'} py-2.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><DoorOpen className="h-3 w-3 text-slate-400" /> Unité</span></th>}
-              {showColumn('bien') && <th className="w-[15%] px-3 py-2.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Building2 className="h-3 w-3 text-slate-400" /> Bien parent</span></th>}
-              {showColumn('locataire') && <th className="w-[16%] px-3 py-2.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><CircleUser className="h-3 w-3 text-slate-400" /> Locataire</span></th>}
-              {showColumn('loyer') && <th className={`${isSplitOpen ? 'w-[15%] px-3' : 'w-[12%] px-3'} py-2.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5">Loyer</span></th>}
-              {showColumn('statut') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[10%] px-3'} py-2.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}>Statut</th>}
-              {showColumn('reliquat') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-2.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5"><AlertCircle className="h-3 w-3 text-slate-400" /> Reliquat</span></th>}
-              {showColumn('bail') && <th className="w-[8%] px-3 py-2.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500">Bail actif</th>}
-              {showActions && <th className="w-[4%] px-2 py-2.5"><span className="sr-only">Actions</span></th>}
+              {showColumn('unite') && <th className={`${isSplitOpen ? 'w-[40%] px-3' : 'w-[25%] px-3'} py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><DoorOpen className="h-3.5 w-3.5 text-slate-400" /> Unité</span></th>}
+              {showColumn('bien') && <th className="w-[15%] px-3 py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> Bien parent</span></th>}
+              {showColumn('locataire') && <th className="w-[16%] px-3 py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><CircleUser className="h-3.5 w-3.5 text-slate-400" /> Locataire</span></th>}
+              {showColumn('loyer') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-3 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5">Loyer</span></th>}
+              {showColumn('statut') && <th className={`${isSplitOpen ? 'w-[20%] px-3 text-center' : 'w-[10%] px-3 text-left'} py-3 text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}>Statut</th>}
+              {showColumn('reliquat') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-3 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5"><AlertCircle className="h-3.5 w-3.5 text-slate-400" /> Reliquat</span></th>}
+              {showActions && <th className="w-[4%] px-2 py-3"><span className="sr-only">Actions</span></th>}
             </tr>
           </thead>
           <tbody>
@@ -1502,17 +1491,17 @@ function UnitsTable({
               const selected = unit.id === selectedId;
               const reliquatAmount = summary?.reliquat ?? 0;
               return (
-                <tr key={unit.id} className={`cursor-pointer border-b border-slate-100 transition-colors duration-150 outline-none hover:bg-emerald-50/40 focus-visible:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-300 ${selected ? 'bg-emerald-50/60 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-1 after:bg-brand-600' : ''}`} onClick={() => onSelect(unit)}>
+                <tr key={unit.id} className={`cursor-pointer border-b border-slate-100 transition-colors duration-150 outline-none hover:bg-[#f8fbf9] ${selected ? 'bg-emerald-50/50 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-[3px] after:bg-brand-500' : ''}`} onClick={() => onSelect(unit)}>
                   {showColumn('unite') && (
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-2.5">
-                        <div className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
-                          <Icon className="h-[12px] w-[12px]" />
+                        <div className={`flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-lg ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
+                          <Icon className="h-3.5 w-3.5" />
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">{unit.nom}</p>
-                          <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-0.5">
-                            {inferUnitType(unit)} · {unit.numero || unit.etage || 'Référence à compléter'}
+                          <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-[1px]">
+                            {inferUnitType(unit)} · {unit.numero || unit.etage || 'A1'}
                             {isSplitOpen && property ? ` · ${property.nom}` : ''}
                             {isSplitOpen && summary?.tenantLabel ? ` · ${summary.tenantLabel}` : ''}
                           </p>
@@ -1522,10 +1511,9 @@ function UnitsTable({
                   )}
                   {showColumn('bien') && <td className="py-3 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{property?.nom ?? unit.immeubles?.nom ?? '-'}</p></td>}
                   {showColumn('locataire') && <td className="py-3 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{summary?.tenantLabel ?? 'Aucun locataire'}</p></td>}
-                  {showColumn('loyer') && <td className="whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums font-semibold text-slate-700"><MoneyText value={unit.loyer_base ?? 0} /></td>}
-                  {showColumn('statut') && <td className="py-3 px-3"><StatusBadge label={status} /></td>}
-                  {showColumn('reliquat') && <td className={`whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums font-semibold ${reliquatAmount > 0 ? 'text-red-600' : 'text-slate-500'}`}><MoneyText value={reliquatAmount} /></td>}
-                  {showColumn('bail') && <td className="py-3 px-3 text-[0.75rem] text-slate-700 font-medium">{summary?.contract ? 'Oui' : 'Non'}</td>}
+                  {showColumn('loyer') && <td className={`whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums ${isSplitOpen ? 'font-medium' : 'font-semibold'} text-slate-700`}><MoneyText value={unit.loyer_base ?? 0} /></td>}
+                  {showColumn('statut') && <td className={`py-3 px-3 ${isSplitOpen ? 'text-center' : 'text-left'}`}><StatusBadge label={status} /></td>}
+                  {showColumn('reliquat') && <td className={`whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums ${isSplitOpen ? 'font-medium' : 'font-semibold'} ${reliquatAmount > 0 ? 'text-red-600' : 'text-slate-500'}`}><MoneyText value={reliquatAmount} /></td>}
                   {showActions && <td className="py-3 px-3 text-right">
                     <ChevronRight className="h-[10px] w-[10px] text-slate-300 inline-block" />
                   </td>}
@@ -1534,7 +1522,6 @@ function UnitsTable({
             })}
           </tbody>
         </table>
-      </div>
     </PremiumTableSurface>
   );
 }
@@ -1560,60 +1547,55 @@ function PropertyDrawer({
   onNavigate: (to: string) => void;
   onSelectUnit: (unit: UnitRow) => void;
 }) {
+  const hasReliquat = summary.reliquats > 0;
   return (
     <>
-      <div className="space-y-2.5">
+      {/* KPI compact grid */}
+      <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm">
+        <CompactMetric label="Unités" value={String(summary.units.length)} tone="slate" />
+        <CompactMetric label="Occupées" value={String(summary.occupiedUnits)} tone="emerald" />
+        <CompactMetric label="Libres" value={String(summary.freeUnits)} tone="slate" />
+        <div className="col-span-3 my-0.5 h-px bg-emerald-950/5" />
+        <CompactMetric label="Occupation" value={`${summary.occupancyRate}%`} tone={summary.occupancyRate === 100 ? 'emerald' : 'slate'} />
+        <CompactMetric label="Loyers/mois" value={<MoneyText value={summary.expectedRent} compact />} tone="slate" />
+        <CompactMetric label="Reliquats" value={<MoneyText value={summary.reliquats} compact />} tone={hasReliquat ? 'red' : 'slate'} />
+      </div>
+
+      {/* Informations */}
+      <CompactSection title="Informations" icon={MapPin}>
+        <div className="flex flex-col divide-y divide-slate-100">
+          <CompactLabelValue label="Adresse" value={property.adresse || 'À compléter'} />
+          <CompactLabelValue label="Ville" value={property.ville || 'À compléter'} />
+          {!isIndividualOwner && <CompactLabelValue label="Bailleur" value={ownerName(owner)} />}
+        </div>
+      </CompactSection>
+
+      {/* Actions */}
+      <CompactSection title="Actions & Gestion" icon={Pencil}>
         <div className="grid grid-cols-2 gap-1.5">
-          <MiniMetric density="compact" label="Unités" value={summary.units.length} />
-          <MiniMetric density="compact" label="Occupées" value={summary.occupiedUnits} />
-          <MiniMetric density="compact" label="Libres" value={summary.freeUnits} />
-          <MiniMetric density="compact" label="Occupation" value={`${summary.occupancyRate}%`} />
-          <MiniMetric density="compact" label="Loyers" value={<MoneyText value={summary.expectedRent} />} />
-          <MiniMetric density="compact" label="Reliquats" value={<MoneyText value={summary.reliquats} />} />
+          <button type="button" onClick={onAddUnit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100 col-span-2">
+            <Plus className="h-3.5 w-3.5 text-brand-700" />
+            Ajouter une unité
+          </button>
+          <button type="button" onClick={onEdit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <Pencil className="h-3.5 w-3.5 text-slate-400" />
+            Modifier
+          </button>
+          <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <Wallet className="h-3.5 w-3.5 text-slate-400" />
+            Paiements
+          </button>
         </div>
+      </CompactSection>
 
-        <InfoBlock title="Informations">
-          <InfoLine icon={MapPin} label="Adresse" value={property.adresse || 'Adresse à compléter'} />
-          <InfoLine icon={MapPin} label="Ville" value={property.ville || 'Ville à compléter'} />
-          {!isIndividualOwner && <InfoLine icon={Users} label="Bailleur" value={ownerName(owner)} />}
-        </InfoBlock>
-
-        <div className="mt-3 space-y-3">
-          <div>
-            <p className="mb-2 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-slate-400">Actions principales</p>
-            <div className="flex flex-col gap-1.5">
-              <button type="button" onClick={onEdit} className="flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white p-2.5 text-left text-xs font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-700 hover:text-brand-900 hover:shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
-                <Pencil className="h-3.5 w-3.5 text-brand-700" />
-                Modifier le bien
-              </button>
-              <button type="button" onClick={onAddUnit} className="flex items-center gap-2 rounded-xl border border-emerald-700/20 bg-gradient-to-br from-emerald-50 to-white p-2.5 text-left text-xs font-bold text-brand-950 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-700 hover:shadow-[0_10px_24px_rgba(6,78,59,0.09)]">
-                <Plus className="h-3.5 w-3.5 text-brand-700" />
-                Ajouter une unité
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-2 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-slate-400">Gestion</p>
-            <div className="flex flex-col gap-1.5">
-              <button type="button" onClick={() => onNavigate('/paiements')} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                <Wallet className="h-3.5 w-3.5 text-slate-500" />
-                Paiements liés
-              </button>
-              <button type="button" onClick={() => onNavigate('/documents')} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                <FolderOpen className="h-3.5 w-3.5 text-slate-500" />
-                Documents associés
-              </button>
-            </div>
-          </div>
-        </div>
-
+      {/* Onglets liés */}
+      <div className="overflow-hidden rounded-xl border border-emerald-950/10 bg-white shadow-sm">
         <DrawerTabs
           tabs={[
             {
               label: 'Unités',
               content: summary.units.length === 0 ? (
-                <SoftEmpty text="Aucune unité enregistrée pour ce bien." />
+                <SoftEmpty text="Aucune unité enregistrée." />
               ) : (
                 <CompactList rows={summary.units.slice(0, 6).map((unit) => ({
                   icon: DoorOpen,
@@ -1626,7 +1608,7 @@ function PropertyDrawer({
             {
               label: 'Locations',
               content: summary.contracts.length === 0 ? (
-                <SoftEmpty text="Les locations liées à ce bien apparaîtront ici." />
+                <SoftEmpty text="Aucune location." />
               ) : (
                 <CompactList rows={summary.contracts.slice(0, 6).map((contract) => ({
                   icon: ClipboardList,
@@ -1639,7 +1621,7 @@ function PropertyDrawer({
             {
               label: 'Documents',
               content: summary.documents.length === 0 ? (
-                <SoftEmpty text="Les documents liés à ce bien apparaîtront ici." />
+                <SoftEmpty text="Aucun document." />
               ) : (
                 <CompactList rows={summary.documents.slice(0, 6).map((document) => ({
                   icon: FileText,
@@ -1651,8 +1633,16 @@ function PropertyDrawer({
             },
           ]}
         />
+      </div>
 
-        <button type="button" onClick={onArchive} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-[#fffdf8] px-3 py-2 text-xs font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50">
+      {/* Zone sensible */}
+      <div className="pt-1 pb-2">
+        <p className="mb-1.5 text-[0.6rem] font-black uppercase tracking-wider text-red-800 opacity-60">Archivage</p>
+        <button
+          type="button"
+          onClick={onArchive}
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-red-50/50 px-3 py-2 text-[0.65rem] font-bold text-red-700 transition hover:bg-red-50 hover:border-red-300"
+        >
           <Trash2 className="h-3.5 w-3.5" />
           Archiver ce bien
         </button>
@@ -1677,84 +1667,60 @@ function UnitDrawer({
   onNavigate: (to: string) => void;
 }) {
   const status = getUnitStatusLabel(unit, summary);
+  const hasReliquat = summary.reliquat > 0;
   return (
     <>
-      <div className="space-y-2.5">
+      {/* KPI compact grid */}
+      <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm">
+        <CompactMetric label="Loyer mensuel" value={<MoneyText value={unit.loyer_base ?? 0} compact />} tone="slate" />
+        <CompactMetric label="Statut" value={<StatusBadge label={status} />} tone="slate" />
+        <div className="col-span-2 my-0.5 h-px bg-emerald-950/5" />
+        <CompactMetric label="Reliquat" value={<MoneyText value={summary.reliquat} compact />} tone={hasReliquat ? 'red' : 'slate'} />
+        <CompactMetric label="En cours" value={summary.contract ? 'Oui' : 'Non'} tone={summary.contract ? 'emerald' : 'slate'} />
+      </div>
+
+      {/* Occupation */}
+      <CompactSection title="Occupation" icon={CircleUser}>
+        <div className="flex flex-col divide-y divide-slate-100">
+          <CompactLabelValue label="Locataire" value={summary.tenantLabel || 'Aucun locataire'} />
+          <CompactLabelValue label="Bien parent" value={property?.nom || unit.immeubles?.nom || 'Aucun bien'} />
+          {summary.latestPayment && (
+            <CompactLabelValue
+              label="Dernier paiement"
+              value={formatDate(summary.latestPayment.date_paiement)}
+            />
+          )}
+        </div>
+      </CompactSection>
+
+      {/* Actions */}
+      <CompactSection title="Actions & Gestion" icon={Pencil}>
         <div className="grid grid-cols-2 gap-1.5">
-          <MiniMetric density="compact" label="Loyer mensuel" value={<MoneyText value={unit.loyer_base ?? 0} />} />
-          <MiniMetric density="compact" label="Statut" value={status} />
-          <MiniMetric density="compact" label="Reliquat" value={<MoneyText value={summary.reliquat} />} />
-          <MiniMetric density="compact" label="Location en cours" value={summary.contract ? 'Oui' : 'Non'} />
+          <button type="button" onClick={onEdit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <Pencil className="h-3.5 w-3.5 text-slate-400" />
+            Modifier
+          </button>
+          <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <Wallet className="h-3.5 w-3.5 text-slate-400" />
+            Paiements
+          </button>
+          {summary.contract && (
+            <button type="button" onClick={() => onNavigate('/occupants-baux')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+              <ClipboardList className="h-3.5 w-3.5 text-brand-700" />
+              Voir la location
+            </button>
+          )}
         </div>
+      </CompactSection>
 
-        <InfoBlock title="Occupation">
-          <InfoLine icon={Users} label="Locataire" value={summary.tenantLabel} />
-          <InfoLine icon={Building2} label="Bien parent" value={property?.nom ?? unit.immeubles?.nom ?? 'Non rattaché'} />
-          <InfoLine icon={Banknote} label="Dernier paiement" value={summary.latestPayment ? formatDate(summary.latestPayment.date_paiement) : 'Aucun paiement'} />
-        </InfoBlock>
-
-        <div className="mt-3 space-y-3">
-          <div>
-            <p className="mb-2 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-slate-400">Actions principales</p>
-            <div className="flex flex-col gap-1.5">
-              <button type="button" onClick={onEdit} className="flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white p-2.5 text-left text-xs font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-700 hover:text-brand-900 hover:shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
-                <Pencil className="h-3.5 w-3.5 text-brand-700" />
-                Modifier l'unité
-              </button>
-            </div>
-          </div>
-  
-          <div>
-            <p className="mb-2 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-slate-400">Gestion</p>
-            <div className="flex flex-col gap-1.5">
-              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                <Users className="h-3.5 w-3.5 text-slate-500" />
-                {summary.contract ? 'Voir location' : 'Nouvelle location'}
-              </button>
-              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                <KeyRound className="h-3.5 w-3.5 text-slate-500" />
-                {summary.contract ? 'Voir bail' : 'Créer une location'}
-              </button>
-              <button type="button" onClick={() => onNavigate('/paiements')} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                <Wallet className="h-3.5 w-3.5 text-slate-500" />
-                Paiements
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <DrawerTabs
-          tabs={[
-            {
-              label: 'Paiements',
-              content: summary.payments.length === 0 ? (
-                <SoftEmpty text="Les paiements de cette unité apparaîtront ici." />
-              ) : (
-                <CompactList rows={summary.payments.slice(0, 6).map((payment) => ({
-                  icon: Wallet,
-                  title: <MoneyText value={payment.montant_total ?? 0} />,
-                  subtitle: `${payment.mois_concerne ?? 'Mois'} - ${formatDate(payment.date_paiement)}`,
-                  onClick: () => { window.location.hash = '#/paiements'; },
-                }))} />
-              ),
-            },
-            {
-              label: 'Documents',
-              content: summary.documents.length === 0 ? (
-                <SoftEmpty text="Les documents liés à cette unité apparaîtront ici." />
-              ) : (
-                <CompactList rows={summary.documents.slice(0, 6).map((document) => ({
-                  icon: FileText,
-                  title: document.name || document.document_category || 'Document',
-                  subtitle: formatDate(document.created_at),
-                  onClick: () => { window.location.hash = '#/documents'; },
-                }))} />
-              ),
-            },
-          ]}
-        />
-
-        <button type="button" onClick={onArchive} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-[#fffdf8] px-3 py-2 text-xs font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50">
+      {/* Zone sensible */}
+      <div className="pt-1 pb-2">
+        <p className="mb-1.5 text-[0.6rem] font-black uppercase tracking-wider text-red-800 opacity-60">Archivage</p>
+        <button
+          type="button"
+          onClick={onArchive}
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-red-50/50 px-3 py-2 text-[0.65rem] font-bold text-red-700 transition hover:bg-red-50 hover:border-red-300"
+        >
           <Trash2 className="h-3.5 w-3.5" />
           Archiver cette unité
         </button>
@@ -1763,23 +1729,44 @@ function UnitDrawer({
   );
 }
 
-function InfoBlock({ title, children }: { title: string; children: ReactNode }) {
+
+
+function CompactMetric({ label, value, tone = 'slate' }: { label: string; value: ReactNode; tone?: 'emerald' | 'red' | 'blue' | 'amber' | 'slate' }) {
+  const tones = {
+    emerald: 'text-emerald-700 bg-emerald-50/40 border-emerald-100',
+    red: 'text-red-700 bg-red-50/40 border-red-100',
+    blue: 'text-blue-700 bg-blue-50/40 border-blue-100',
+    amber: 'text-amber-700 bg-amber-50/40 border-amber-100',
+    slate: 'text-slate-700 bg-slate-50/40 border-slate-100',
+  };
   return (
-    <div className="rounded-xl border border-emerald-950/10 bg-white p-2.5 shadow-[0_8px_20px_rgba(15,23,42,0.03)]">
-      <p className="text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-slate-400">{title}</p>
-      <div className="mt-2 space-y-1.5">{children}</div>
+    <div className={`rounded-lg border p-1.5 ${tones[tone]}`}>
+      <p className="text-[0.54rem] font-bold uppercase tracking-wider opacity-80">{label}</p>
+      <p className="mt-0.5 text-[0.76rem] font-extrabold">{value}</p>
     </div>
   );
 }
 
-function InfoLine({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: ReactNode }) {
+function CompactSection({ title, icon: Icon, children }: { title: string; icon?: React.ElementType; children: ReactNode }) {
   return (
-    <div className="flex items-start gap-1.5 text-xs">
-      <Icon className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-700/55" />
-      <div className="min-w-0">
-        <p className="text-[0.58rem] font-medium uppercase tracking-[0.06em] text-slate-400">{label}</p>
-        <p className="break-words font-medium text-slate-700">{value}</p>
-      </div>
+    <section className="rounded-[14px] border border-emerald-950/10 bg-white/80 p-2.5 shadow-sm">
+      <h3 className="mb-2 flex items-center gap-1.5 text-[0.6rem] font-black uppercase tracking-wider text-slate-500">
+        {Icon && <Icon className="h-3.5 w-3.5 text-slate-400" />}
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function CompactLabelValue({ label, value }: { label: string; value: ReactNode | null | undefined }) {
+  if (!value || value === '-') return null;
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5 py-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:py-[0.42rem]">
+      <span className="shrink-0 text-[0.72rem] font-medium text-slate-500 sm:text-[0.66rem]">{label}</span>
+      <span className="min-w-0 max-w-full break-words text-left text-[0.74rem] font-semibold text-slate-800 sm:max-w-[62%] sm:truncate sm:text-right sm:text-[0.68rem]">
+        {value}
+      </span>
     </div>
   );
 }

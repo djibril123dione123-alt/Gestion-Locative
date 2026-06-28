@@ -26,7 +26,7 @@ export function PremiumTableSurface({
 
   const densitySurface =
     density === 'dense'
-      ? 'rounded-xl border border-emerald-950/10 bg-[#fffdf7]/96 shadow-[0_12px_30px_rgba(15,23,42,0.045)] ring-1 ring-white/80'
+      ? 'rounded-xl border border-emerald-950/15 bg-[#fffdf8]/98 shadow-[0_12px_30px_rgba(15,23,42,0.06)] ring-1 ring-white/80'
       : density === 'compact'
         ? 'rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_16px_42px_rgba(15,23,42,0.05)] ring-1 ring-white/80'
         : premiumTokens.surface;

@@ -14,7 +14,7 @@ interface MetricCardProps {
   valueA11yLabel?: string;
   icon: LucideIcon | React.ElementType;
   tone?: MetricTone;
-  density?: 'comfortable' | 'compact';
+  density?: 'comfortable' | 'compact' | 'ultraCompact';
   wide?: boolean;
   className?: string;
 
@@ -94,16 +94,17 @@ export function MetricCard({
 
   const computedAriaLabel = ariaLabel ?? (valueA11yLabel ? `${resolvedTitle} : ${valueA11yLabel}` : resolvedTitle);
 
-  const isCompact = density === 'compact';
+  const isUltraCompact = density === 'ultraCompact';
+  const isCompact = density === 'compact' || isUltraCompact;
 
   const containerClasses = [
     '@container group min-w-0 rounded-[1.05rem] border bg-gradient-to-br',
     tones.gradient,
-    isCompact ? 'p-3 sm:p-2.5' : 'p-2.5 sm:p-3',
-    isCompact ? 'shadow-[0_9px_24px_rgba(15,23,42,0.045)]' : 'shadow-[0_8px_22px_rgba(15,23,42,0.05)]',
+    isCompact ? `${isUltraCompact ? 'p-2 sm:p-2' : 'p-3 sm:p-2.5'}` : 'p-2.5 sm:p-3',
+    isCompact ? `${isUltraCompact ? 'shadow-[0_7px_18px_rgba(15,23,42,0.04)]' : 'shadow-[0_9px_24px_rgba(15,23,42,0.045)]'}` : 'shadow-[0_8px_22px_rgba(15,23,42,0.05)]',
     'transition-all duration-200 ease-out',
     // Animation hover subtile même si pas cliquable (sauf si actif)
-    !finalActive ? `hover:-translate-y-0.5 ${isCompact ? 'hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)]' : 'hover:shadow-[0_14px_32px_rgba(15,23,42,0.075)]'}` : '',
+    !finalActive ? `hover:-translate-y-0.5 ${isCompact ? `${isUltraCompact ? 'hover:shadow-[0_10px_24px_rgba(15,23,42,0.065)]' : 'hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)]'}` : 'hover:shadow-[0_14px_32px_rgba(15,23,42,0.075)]'}` : '',
     wide ? 'sm:col-span-2' : '',
     isClickable ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-100' : '',
     finalActive
@@ -131,30 +132,30 @@ export function MetricCard({
       className={containerClasses}
       {...a11yProps}
     >
-      <div className={`flex items-start justify-between ${isCompact ? 'gap-2 sm:gap-1.5' : 'gap-3'}`}>
+      <div className={`flex items-start justify-between ${isCompact ? `${isUltraCompact ? 'gap-1.5' : 'gap-2 sm:gap-1.5'}` : 'gap-3'}`}>
         <div className="min-w-0 flex-1">
-          <h3 className={`font-black uppercase tracking-[0.12em] text-slate-600 ${isCompact ? 'text-[0.6rem] sm:text-[0.55rem] leading-none line-clamp-1' : 'text-[0.68rem] min-h-[2.5em] line-clamp-2'} ${mobileTitle ? 'hidden sm:block' : 'block'}`}>
+          <h3 className={`font-black uppercase tracking-[0.12em] text-slate-600 ${isCompact ? `${isUltraCompact ? 'text-[0.5rem]' : 'text-[0.6rem] sm:text-[0.55rem]'} leading-none line-clamp-1` : 'text-[0.68rem] min-h-[2.5em] line-clamp-2'} ${mobileTitle ? 'hidden sm:block' : 'block'}`}>
             {resolvedTitle}
           </h3>
           {mobileTitle && (
-            <h3 className={`font-black uppercase tracking-[0.12em] text-slate-600 sm:hidden ${isCompact ? 'text-[0.6rem] sm:text-[0.55rem] leading-none line-clamp-1' : 'text-[0.68rem] min-h-[2.5em] line-clamp-2'}`}>
+            <h3 className={`font-black uppercase tracking-[0.12em] text-slate-600 sm:hidden ${isCompact ? `${isUltraCompact ? 'text-[0.5rem]' : 'text-[0.6rem] sm:text-[0.55rem]'} leading-none line-clamp-1` : 'text-[0.68rem] min-h-[2.5em] line-clamp-2'}`}>
               {mobileTitle}
             </h3>
           )}
 
-          <div className={isCompact ? 'mt-1 sm:mt-0.5' : 'mt-1.5'} {...(valueA11yLabel ? { 'aria-hidden': true } : {})}>
-            <div className={`w-full max-w-full whitespace-nowrap font-black tracking-tight ${isCompact ? 'text-[0.85rem] sm:text-[0.75rem]' : 'text-sm sm:text-base'} ${tones.text}`}>
+          <div className={isCompact ? `${isUltraCompact ? 'mt-0.5' : 'mt-1 sm:mt-0.5'}` : 'mt-1.5'} {...(valueA11yLabel ? { 'aria-hidden': true } : {})}>
+            <div className={`w-full max-w-full whitespace-nowrap font-black tracking-tight ${isCompact ? `${isUltraCompact ? 'text-[0.72rem] sm:text-[0.68rem]' : 'text-[0.85rem] sm:text-[0.75rem]'}` : 'text-sm sm:text-base'} ${tones.text}`}>
               {value}
             </div>
           </div>
 
           {helper && (
-            <p className={`${isCompact ? 'mt-1 text-[0.65rem] sm:mt-0.5 sm:text-[0.6rem] leading-tight line-clamp-1' : 'mt-0.5 text-xs'} hidden text-slate-500 sm:block`}>{helper}</p>
+            <p className={`${isCompact ? `${isUltraCompact ? 'mt-0.5 text-[0.55rem]' : 'mt-1 text-[0.65rem] sm:mt-0.5 sm:text-[0.6rem]'} leading-tight line-clamp-1` : 'mt-0.5 text-xs'} hidden text-slate-500 sm:block`}>{helper}</p>
           )}
         </div>
 
-        <div className={`flex shrink-0 items-center justify-center rounded-lg border border-current/10 ${tones.icon} shadow-sm transition-transform duration-300 group-hover:scale-110 ${isCompact ? 'h-6 w-6 mt-0.5' : 'h-8 w-8'}`}>
-          <Icon className={isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4'} />
+        <div className={`flex shrink-0 items-center justify-center rounded-lg border border-current/10 ${tones.icon} shadow-sm transition-transform duration-300 group-hover:scale-110 ${isCompact ? `${isUltraCompact ? 'h-5 w-5' : 'h-6 w-6 mt-0.5'}` : 'h-8 w-8'}`}>
+          <Icon className={isCompact ? `${isUltraCompact ? 'h-3 w-3' : 'h-3.5 w-3.5'}` : 'h-4 w-4'} />
         </div>
       </div>
     </div>
@@ -165,10 +166,12 @@ interface MiniMetricProps {
   label: string;
   value: ReactNode;
   tone?: 'emerald' | 'amber' | 'red' | 'blue' | 'slate';
+  density?: 'comfortable' | 'compact';
   className?: string;
 }
 
-export function MiniMetric({ label, value, tone = 'slate', className = '' }: MiniMetricProps) {
+export function MiniMetric({ label, value, tone = 'slate', density = 'comfortable', className = '' }: MiniMetricProps) {
+  const isCompact = density === 'compact';
   const toneClass = {
     emerald: 'border-emerald-200 bg-emerald-50 text-emerald-900',
     amber: 'border-amber-200 bg-amber-50 text-amber-900',
@@ -178,9 +181,9 @@ export function MiniMetric({ label, value, tone = 'slate', className = '' }: Min
   }[tone];
 
   return (
-    <div className={`@container flex w-full flex-col rounded-xl border px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] ${toneClass} ${className}`}>
-      <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-current opacity-60 line-clamp-2 min-h-[2.5em]">{label}</p>
-      <p className="mt-0.5 w-full whitespace-nowrap text-xs font-black tracking-tight text-current">{value}</p>
+    <div className={`@container flex w-full flex-col rounded-xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] ${isCompact ? 'px-2 py-1.5' : 'px-2.5 py-2'} ${toneClass} ${className}`}>
+      <p className={`${isCompact ? 'text-[8px] leading-tight min-h-[2.2em]' : 'text-[9px] min-h-[2.5em]'} font-bold uppercase tracking-[0.12em] text-current opacity-60 line-clamp-2`}>{label}</p>
+      <p className={`${isCompact ? 'text-[0.68rem]' : 'text-xs'} mt-0.5 w-full whitespace-nowrap font-black tracking-tight text-current`}>{value}</p>
     </div>
   );
 }

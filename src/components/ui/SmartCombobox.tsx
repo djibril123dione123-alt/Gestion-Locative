@@ -33,6 +33,7 @@ interface SmartComboboxProps {
   onEmptyAction?: () => void;
   className?: string;
   disabled?: boolean;
+  density?: 'comfortable' | 'compact';
 }
 
 type MenuPlacement = {
@@ -55,7 +56,9 @@ export function SmartCombobox({
   onEmptyAction,
   className = '',
   disabled = false,
+  density = 'comfortable',
 }: SmartComboboxProps) {
+  const isCompact = density === 'compact';
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState<number>(-1);
@@ -81,18 +84,20 @@ export function SmartCombobox({
         left: 0,
         width: viewportWidth,
         bottom: 0,
-        maxHeight: Math.min(viewportHeight * 0.85, 500),
+        maxHeight: Math.min(viewportHeight * (isCompact ? 0.68 : 0.85), isCompact ? 380 : 500),
       });
       return;
     }
 
-    const width = Math.min(Math.max(rect.width, 260), viewportWidth - 24);
+    const minWidth = isCompact ? 220 : 260;
+    const maxWidth = isCompact ? 300 : viewportWidth - 24;
+    const width = Math.min(Math.max(rect.width, minWidth), Math.min(maxWidth, viewportWidth - 24));
     const left = Math.min(Math.max(12, rect.left), viewportWidth - width - 12);
     const spaceBelow = viewportHeight - rect.bottom - gap;
     const spaceAbove = rect.top - gap;
-    const shouldOpenAbove = spaceBelow < 240 && spaceAbove > spaceBelow;
+    const shouldOpenAbove = spaceBelow < (isCompact ? 190 : 240) && spaceAbove > spaceBelow;
     const availableSpace = shouldOpenAbove ? spaceAbove : spaceBelow;
-    const maxHeight = Math.max(180, Math.min(340, availableSpace - 8));
+    const maxHeight = Math.max(isCompact ? 140 : 180, Math.min(isCompact ? 260 : 340, availableSpace - 8));
 
     setMenuPlacement({
       mobile: false,
@@ -101,7 +106,7 @@ export function SmartCombobox({
       maxHeight,
       top: shouldOpenAbove ? Math.max(12, rect.top - gap - maxHeight) : rect.bottom + gap,
     });
-  }, []);
+  }, [isCompact]);
 
   useEffect(() => {
     if (!open) {
@@ -229,20 +234,20 @@ export function SmartCombobox({
           ref={menuRef}
           style={menuPlacement.mobile ? { bottom: 0, left: 0, right: 0, maxHeight: menuPlacement.maxHeight } : menuStyle}
           className={`fixed z-[10000] overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.18)] ${
-            menuPlacement.mobile ? 'w-full rounded-t-3xl border-t border-emerald-950/10 pb-4' : 'rounded-2xl border border-emerald-950/10 ring-1 ring-white/80'
+            menuPlacement.mobile ? `${isCompact ? 'w-full rounded-t-2xl border-t border-emerald-950/10 pb-3' : 'w-full rounded-t-3xl border-t border-emerald-950/10 pb-4'}` : `${isCompact ? 'rounded-xl border border-emerald-950/10 ring-1 ring-white/80' : 'rounded-2xl border border-emerald-950/10 ring-1 ring-white/80'}`
           }`}
         >
-          <div className="border-b border-emerald-950/10 bg-[#fff6df]/75 px-3 py-2 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-500">
+          <div className={`border-b border-emerald-950/10 bg-[#fff6df]/75 font-bold uppercase tracking-[0.12em] text-slate-500 ${isCompact ? 'px-2.5 py-1.5 text-[0.56rem]' : 'px-3 py-2 text-[0.68rem]'}`}>
             {searchPlaceholder || 'Choisir dans la liste'}
           </div>
           <div
             ref={listboxRef}
-            className="overflow-y-auto overscroll-contain touch-pan-y p-1.5"
-            style={{ maxHeight: Math.max(160, menuPlacement.maxHeight - 42) }}
+            className={`overflow-y-auto overscroll-contain touch-pan-y ${isCompact ? 'p-1' : 'p-1.5'}`}
+            style={{ maxHeight: Math.max(isCompact ? 128 : 160, menuPlacement.maxHeight - (isCompact ? 32 : 42)) }}
             role="listbox"
           >
           {filteredOptions.length === 0 ? (
-            <div className="px-3 py-4 text-center text-sm font-medium text-slate-500">
+            <div className={`${isCompact ? 'px-2 py-3 text-xs' : 'px-3 py-4 text-sm'} text-center font-medium text-slate-500`}>
               <p>{emptyLabel}</p>
               {emptyActionLabel && onEmptyAction && (
                 <button
@@ -274,7 +279,9 @@ export function SmartCombobox({
                   onMouseEnter={() => {
                     if (!isDisabled) setActiveIndex(index);
                   }}
-                  className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm transition ${
+                  className={`flex w-full items-center text-left transition ${
+                    isCompact ? 'min-h-8 gap-2 rounded-lg px-2 py-1.5 text-[0.72rem]' : 'min-h-12 gap-3 rounded-xl px-3 py-3 text-sm'
+                  } ${
                     isActive && !isDisabled ? 'bg-emerald-100/45' : ''
                   } ${
                     isDisabled
@@ -285,7 +292,7 @@ export function SmartCombobox({
                   }`}
                 >
                   {option.initials ? (
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-black ring-1 ${
+                    <span className={`flex shrink-0 items-center justify-center font-black ring-1 ${isCompact ? 'h-6 w-6 rounded-lg text-[0.58rem]' : 'h-9 w-9 rounded-xl text-xs'} ${
                       isSelected
                         ? 'bg-brand-800 text-white ring-brand-800'
                         : 'bg-emerald-50 text-brand-800 ring-emerald-100'
@@ -294,31 +301,31 @@ export function SmartCombobox({
                     </span>
                   ) : (
                     <span
-                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                      className={`flex shrink-0 items-center justify-center rounded-full border ${isCompact ? 'h-4 w-4' : 'h-5 w-5'} ${
                         isSelected
                           ? 'border-brand-700 bg-brand-700 text-white'
                           : 'border-slate-200 text-transparent'
                       }`}
                     >
-                      <Check className="h-3.5 w-3.5" />
+                      <Check className={isCompact ? 'h-3 w-3' : 'h-3.5 w-3.5'} />
                     </span>
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-bold">{option.label}</span>
                     {option.subtitle && (
-                      <span className="mt-0.5 block truncate text-xs font-medium text-slate-500">
+                      <span className={`${isCompact ? 'text-[0.62rem]' : 'text-xs'} mt-0.5 block truncate font-medium text-slate-500`}>
                         {option.subtitle}
                       </span>
                     )}
                   </span>
                   {(option.badge || option.rightLabel) && (
-                    <span className="ml-2 flex shrink-0 flex-col items-end gap-1 text-right">
+                    <span className={`${isCompact ? 'ml-1.5 gap-0.5' : 'ml-2 gap-1'} flex shrink-0 flex-col items-end text-right`}>
                       {option.badge && (
-                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.65rem] font-black uppercase tracking-[0.08em] text-emerald-700 ring-1 ring-emerald-100">
+                        <span className={`rounded-full bg-emerald-50 font-black uppercase tracking-[0.08em] text-emerald-700 ring-1 ring-emerald-100 ${isCompact ? 'px-1.5 py-0 text-[0.55rem]' : 'px-2 py-0.5 text-[0.65rem]'}`}>
                           {option.badge}
                         </span>
                       )}
-                      {option.rightLabel && <span className="text-xs font-black text-slate-700">{option.rightLabel}</span>}
+                      {option.rightLabel && <span className={`${isCompact ? 'text-[0.62rem]' : 'text-xs'} font-black text-slate-700`}>{option.rightLabel}</span>}
                     </span>
                   )}
                 </button>
@@ -335,7 +342,7 @@ export function SmartCombobox({
   return (
     <div ref={wrapperRef} className={`relative min-w-0 ${className}`}>
       <div className="relative flex items-center">
-        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-800/55" />
+        <Search className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-emerald-800/55 ${isCompact ? 'left-2.5 h-3.5 w-3.5' : 'left-3.5 h-4 w-4'}`} />
         <input
           ref={inputRef}
           type="text"
@@ -361,7 +368,7 @@ export function SmartCombobox({
           role="combobox"
           aria-expanded={open}
           aria-autocomplete="list"
-          className="h-12 w-full min-w-0 rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/95 pl-10 pr-11 text-sm font-semibold leading-5 text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200"
+          className={`${isCompact ? 'h-7 rounded-[0.55rem] pl-7 pr-7 text-[0.7rem] leading-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_4px_10px_rgba(15,23,42,0.025)] focus:ring-2' : 'h-12 rounded-2xl pl-10 pr-11 text-sm leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] focus:ring-4'} w-full min-w-0 border border-emerald-950/10 bg-[#fffdf8]/95 font-semibold text-slate-700 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200`}
         />
         <button
           type="button"
@@ -372,9 +379,9 @@ export function SmartCombobox({
             if (!open) inputRef.current?.focus();
           }}
           aria-label={open ? 'Fermer la liste' : 'Ouvrir la liste'}
-          className="absolute right-0 top-0 flex h-12 w-11 items-center justify-center rounded-r-2xl text-slate-400 transition hover:bg-[#fff6df] hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className={`absolute right-0 top-0 flex items-center justify-center text-slate-400 transition hover:bg-[#fff6df] hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 ${isCompact ? 'h-7 w-7 rounded-r-[0.55rem]' : 'h-12 w-11 rounded-r-2xl'}`}
         >
-          <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`${isCompact ? 'h-3 w-3' : 'h-4 w-4'} transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         </button>
       </div>
       {menu}

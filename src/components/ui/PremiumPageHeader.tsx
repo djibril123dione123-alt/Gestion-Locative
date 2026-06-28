@@ -31,7 +31,7 @@ export interface PremiumPageHeaderProps {
   /** Variant visuel officiel. @default "standard" */
   variant?: PremiumPageHeaderVariant;
   /** Densité de l'en-tête, impacte la taille de la typo et du padding. @default "comfortable" */
-  density?: 'comfortable' | 'compact';
+  density?: 'comfortable' | 'compact' | 'ultraCompact';
   /** Classe CSS supplémentaire sur le conteneur racine. */
   className?: string;
 
@@ -159,23 +159,24 @@ export function PremiumPageHeader({
     resolvedPrimaryAction || resolvedSecondaryAction || legacyActions;
   const hasSideContent = !!sideContent;
 
-  const isCompact = density === 'compact';
+  const isUltraCompact = density === 'ultraCompact';
+  const isCompact = density === 'compact' || isUltraCompact;
 
   if (variant === 'standard') {
     return (
-      <header className={`flex flex-col ${isCompact ? 'gap-2' : 'gap-3'} rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${isCompact ? 'px-3 py-1.5 sm:px-4 sm:py-2' : 'px-4 py-3 sm:px-5 sm:py-3.5'} lg:flex-row lg:items-center lg:justify-between ${className}`}>
+      <header className={`flex flex-col ${isCompact ? `${isUltraCompact ? 'gap-1.5' : 'gap-2'}` : 'gap-3'} rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${isCompact ? `${isUltraCompact ? 'px-3 py-1.5 sm:px-3.5 sm:py-1.5' : 'px-3 py-1.5 sm:px-4 sm:py-2'}` : 'px-4 py-3 sm:px-5 sm:py-3.5'} lg:flex-row lg:items-center lg:justify-between ${className}`}>
         <div className="min-w-0">
-          <p className={`${isCompact ? 'text-[0.55rem]' : 'text-[0.68rem]'} font-black uppercase tracking-[0.2em] text-orange-600`}>{eyebrow}</p>
-          <h1 className={`mt-0.5 font-serif font-black tracking-tight text-slate-950 ${isCompact ? 'text-[1.42rem]' : 'text-3xl sm:text-4xl'}`}>{title}</h1>
+          <p className={`${isCompact ? `${isUltraCompact ? 'text-[0.5rem]' : 'text-[0.55rem]'}` : 'text-[0.68rem]'} font-black uppercase tracking-[0.2em] text-orange-600`}>{eyebrow}</p>
+          <h1 className={`${isUltraCompact ? 'mt-0' : 'mt-0.5'} font-serif font-black tracking-tight text-slate-950 ${isCompact ? `${isUltraCompact ? 'text-[1.24rem]' : 'text-[1.42rem]'}` : 'text-3xl sm:text-4xl'}`}>{title}</h1>
 
           {resolvedDescription && (
             mobileDescription ? (
               <>
-                <p className="mt-1 max-w-2xl text-[0.7rem] font-medium leading-relaxed text-slate-600 lg:hidden">{mobileDescription}</p>
-                <p className="mt-1 hidden max-w-2xl text-[0.7rem] font-medium leading-relaxed text-slate-600 lg:block">{resolvedDescription}</p>
+                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium text-slate-600 lg:hidden`}>{mobileDescription}</p>
+                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium text-slate-600 lg:block`}>{resolvedDescription}</p>
               </>
             ) : (
-              <p className={`mt-1 max-w-2xl font-medium ${isCompact ? 'text-[0.58rem] leading-snug text-slate-500' : 'text-[0.7rem] leading-relaxed text-slate-600'}`}>{resolvedDescription}</p>
+              <p className={`${isUltraCompact ? 'mt-0.5' : 'mt-1'} max-w-2xl font-medium ${isCompact ? `${isUltraCompact ? 'text-[0.55rem]' : 'text-[0.58rem]'} leading-snug text-slate-500` : 'text-[0.7rem] leading-relaxed text-slate-600'}`}>{resolvedDescription}</p>
             )
           )}
 

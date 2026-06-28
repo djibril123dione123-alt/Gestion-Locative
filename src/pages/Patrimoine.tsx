@@ -27,7 +27,6 @@ import {
   Users,
   Wallet,
   Warehouse,
-  X,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -39,6 +38,14 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { MetricCard, MiniMetric } from '../components/ui/MetricCard';
+import { PageShell } from '../components/ui/PageShell';
+import { PremiumButton } from '../components/ui/PremiumButton';
+import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumTableSurface } from '../components/ui/PremiumTableSurface';
+import { PremiumToolbar } from '../components/ui/PremiumToolbar';
+import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
+import { SplitViewShell } from '../components/ui/SplitViewShell';
 import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
@@ -926,69 +933,73 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   }
 
   return (
-    <div className="min-h-full overflow-x-hidden bg-[radial-gradient(circle_at_top_left,rgba(255,247,230,0.95),transparent_28rem),linear-gradient(180deg,#fffaf1,#f8f4ea_48%,#f7faf8)] px-4 py-4 sm:px-6 lg:px-7">
+    <PageShell spacing="compact" variant="dataDense" tone="paper" verticalInset="compact" className="overflow-x-hidden">
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
-      <div className="mx-auto max-w-[118rem] space-y-4">
+      <div className="space-y-2.5">
         <OfflineDataNotice
           cachedAt={cacheTimestamp}
           onRetry={loadData}
           message="Le patrimoine affiche le dernier état connu. La création et les modifications restent bloquées hors ligne pour protéger les rattachements."
         />
 
-        <div className={`grid items-start gap-5 ${detailPanelOpen ? 'xl:grid-cols-[minmax(0,1fr)_31.5rem]' : 'grid-cols-1'}`}>
-          <div className="min-w-0 space-y-4">
-            <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-action-600">Portefeuille locatif</p>
-            <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">Biens & patrimoine</h1>
-            <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-600">{pageSubtitle}</p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('biens');
-                void openPropertyModal();
-              }}
-              className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition hover:-translate-y-0.5 ${
-                activeTab === 'biens'
-                  ? 'border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] text-white shadow-lg shadow-emerald-950/18 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-emerald-950/25'
-                  : 'border-emerald-950/10 bg-[#fffdf8] text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] hover:border-emerald-200 hover:bg-emerald-50'
-              }`}
-            >
-              <Plus className={`h-4 w-4 ${activeTab !== 'biens' ? 'text-brand-800' : ''}`} />
-              {isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('unites');
-                openUnitModal(null, selectedProperty?.id ?? '');
-              }}
-              className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold transition hover:-translate-y-0.5 ${
-                activeTab === 'unites'
-                  ? 'border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] text-white shadow-lg shadow-emerald-950/18 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-emerald-950/25'
-                  : 'border-emerald-950/10 bg-[#fffdf8] text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.04)] hover:border-emerald-200 hover:bg-emerald-50'
-              }`}
-            >
-              <DoorOpen className={`h-4 w-4 ${activeTab !== 'unites' ? 'text-brand-800' : ''}`} />
-              Nouvelle unité
-            </button>
-          </div>
-        </header>
+        <SplitViewShell
+          isDetailOpen={detailPanelOpen}
+          size="compact"
+          desktopAt="xl"
+          className="gap-3"
+          detailClassName="xl:sticky xl:top-3 xl:h-[calc(100dvh-1.5rem)]"
+          main={
+          <div className="min-w-0 space-y-2.5">
+            <PremiumPageHeader
+              density="ultraCompact"
+              eyebrow="PORTEFEUILLE LOCATIF"
+              title="Biens & patrimoine"
+              description={detailPanelOpen ? 'Biens, unités et occupation.' : pageSubtitle}
+              mobileDescription={isIndividualOwner ? 'Vos biens et unités.' : 'Biens, unités et occupation.'}
+              primaryAction={
+                <PremiumButton
+                  variant={activeTab === 'biens' ? 'create' : 'secondary'}
+                  onClick={() => {
+                    setActiveTab('biens');
+                    void openPropertyModal();
+                  }}
+                  icon={<Plus className="h-3 w-3" />}
+                  className="w-full sm:w-auto !h-7 !min-h-7 !px-2.5 !py-1 !text-[0.7rem]"
+                >
+                  {isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'}
+                </PremiumButton>
+              }
+              secondaryAction={
+                <PremiumButton
+                  variant={activeTab === 'unites' ? 'create' : 'secondary'}
+                  onClick={() => {
+                    setActiveTab('unites');
+                    openUnitModal(null, selectedProperty?.id ?? '');
+                  }}
+                  icon={<DoorOpen className="h-3 w-3" />}
+                  className="w-full sm:w-auto !h-7 !min-h-7 !px-2.5 !py-1 !text-[0.7rem]"
+                >
+                  Nouvelle unité
+                </PremiumButton>
+              }
+            />
 
-        <section className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6">
-          <MetricCard label={isIndividualOwner ? 'Biens' : 'Biens'} value={pageStats.properties} icon={Building2} tone="emerald" />
-          <MetricCard label="Unités" value={pageStats.units} icon={DoorOpen} tone="blue" />
-          <MetricCard label="Occupées" value={pageStats.occupied} icon={Home} tone="emerald" />
-          <MetricCard label="Occupation" value={`${pageStats.occupancyRate}%`} icon={Percent} tone="amber" />
-          <MetricCard label="Loyers" value={<MoneyText value={pageStats.expectedRent} compact />} icon={Wallet} tone="green" />
-          <MetricCard label="Reliquats" value={<MoneyText value={pageStats.reliquats} compact />} icon={AlertCircle} tone="red" />
-        </section>
+        <PremiumKpiGrid variant="dashboard" maxItems={6} density="ultraCompact" ariaLabel="Indicateurs patrimoine">
+          <MetricCard density="ultraCompact" label={isIndividualOwner ? 'Biens' : 'Biens'} value={pageStats.properties} icon={Building2} tone="emerald" />
+          <MetricCard density="ultraCompact" label="Unités" value={pageStats.units} icon={DoorOpen} tone="blue" />
+          <MetricCard density="ultraCompact" label="Occupées" value={pageStats.occupied} icon={Home} tone="emerald" />
+          <MetricCard density="ultraCompact" label="Occupation" value={`${pageStats.occupancyRate}%`} icon={Percent} tone="amber" />
+          <MetricCard density="ultraCompact" label="Loyers" value={<MoneyText value={pageStats.expectedRent} compact />} icon={Wallet} tone="green" />
+          <MetricCard density="ultraCompact" label="Reliquats" value={<MoneyText value={pageStats.reliquats} compact />} icon={AlertCircle} tone="red" />
+        </PremiumKpiGrid>
 
-        <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/95 p-3 shadow-[0_14px_40px_rgba(15,23,42,0.055)] ring-1 ring-white/80">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex gap-1.5 overflow-x-auto rounded-xl bg-[#f7f1e7]/75 p-1">
+        <PremiumToolbar
+          layout="list"
+          density="ultraCompact"
+          isSplitOpen={detailPanelOpen}
+          ariaLabel="Filtres patrimoine"
+          tabs={
+            <div className="flex gap-0.5 overflow-x-auto rounded-[0.6rem] bg-[#f7f1e7]/75 p-0.5">
               {[
                 { id: 'biens' as const, label: 'Biens' },
                 { id: 'unites' as const, label: 'Unités locatives' },
@@ -997,7 +1008,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`h-9 whitespace-nowrap rounded-lg px-3.5 text-sm font-semibold transition ${activeTab === tab.id
+                  className={`h-7 whitespace-nowrap rounded-[0.45rem] px-2.5 text-[0.7rem] font-semibold transition ${activeTab === tab.id
                       ? 'bg-brand-950 text-white shadow-sm'
                       : 'text-slate-600 hover:bg-emerald-50 hover:text-brand-900'
                     }`}
@@ -1006,22 +1017,26 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 </button>
               ))}
             </div>
-            <div className="flex min-w-0 flex-row gap-2 items-center lg:max-w-4xl lg:flex-1 lg:justify-end">
-              <div className="relative min-w-0 flex-1 lg:max-w-md">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder={activeTab === 'biens' ? 'Nom, adresse ou bailleur' : 'Unité, bien ou locataire'}
-                  className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                />
-              </div>
+          }
+          search={
+            <div className={`relative min-w-0 w-full ${detailPanelOpen ? 'sm:w-36 lg:w-40' : 'sm:w-56 lg:w-48'}`}>
+              <Search className="absolute left-2.5 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-400" />
+              <input
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder={activeTab === 'biens' ? 'Nom, adresse ou bailleur' : 'Unité, bien ou locataire'}
+                className="h-7 w-full rounded-[0.55rem] border border-emerald-950/10 bg-white/95 pl-7 pr-2.5 text-[0.7rem] font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-2 focus:ring-emerald-100"
+              />
+            </div>
+          }
+          filters={
+            <>
               <button
                 type="button"
                 onClick={() => setMobileFiltersOpen(true)}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
+                className={`inline-flex h-7 items-center justify-center gap-1 rounded-[0.55rem] border border-slate-200 bg-[#fffdf8] px-2 text-[0.7rem] font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 ${detailPanelOpen ? 'lg:inline-flex' : 'lg:hidden'}`}
               >
-                <SlidersHorizontal className="h-4 w-4" />
+                <SlidersHorizontal className="h-3 w-3" />
                 Filtres
               </button>
               {activeTab === 'biens' ? (
@@ -1033,7 +1048,8 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                       onChange={setOwnerFilter}
                       placeholder="Tous les bailleurs"
                       searchPlaceholder="Rechercher un bailleur..."
-                      className="hidden lg:block lg:w-56"
+                      className={`${detailPanelOpen ? 'hidden 2xl:block 2xl:w-36' : 'hidden lg:block lg:w-44'}`}
+                      density="compact"
                     />
                   )}
                   <SmartCombobox
@@ -1042,13 +1058,15 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     onChange={(next) => setPropertyFilter(next as PropertyFilter)}
                     placeholder="Tous les biens"
                     searchPlaceholder="Rechercher un filtre..."
-                    className="hidden lg:block lg:w-52"
+                    className={`${detailPanelOpen ? 'hidden 2xl:block 2xl:w-[8.5rem]' : 'hidden lg:block lg:w-40'}`}
+                    density="compact"
                   />
                   <ColumnPicker
                     columns={PROPERTY_COLUMN_KEYS.filter((key) => !isIndividualOwner || key !== 'bailleur').map((key) => ({ key, label: getPropertyColumnLabel(key), required: key === 'bien' }))}
                     visibility={propertyColumns.visibility}
                     onToggle={propertyColumns.toggle}
                     onSetAll={propertyColumns.setAll}
+                    className="!h-7 !rounded-[0.55rem] !px-2 !py-1 !text-[0.7rem] [&_svg]:!h-3 [&_svg]:!w-3"
                   />
                 </>
               ) : (
@@ -1059,18 +1077,21 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     onChange={(next) => setUnitFilter(next as UnitFilter)}
                     placeholder="Toutes les unités"
                     searchPlaceholder="Rechercher un filtre..."
-                    className="hidden lg:block lg:w-56"
+                    className={`${detailPanelOpen ? 'hidden 2xl:block 2xl:w-36' : 'hidden lg:block lg:w-44'}`}
+                    density="compact"
                   />
                   <ColumnPicker
                     columns={UNIT_COLUMN_KEYS.map((key) => ({ key, label: getUnitColumnLabel(key), required: key === 'unite' }))}
                     visibility={unitColumns.visibility}
                     onToggle={unitColumns.toggle}
                     onSetAll={unitColumns.setAll}
+                    className="!h-7 !rounded-[0.55rem] !px-2 !py-1 !text-[0.7rem] [&_svg]:!h-3 [&_svg]:!w-3"
                   />
                 </>
               )}
-            </div>
-          </div>
+            </>
+          }
+        />
           <MobileFilterSheet
             isOpen={mobileFiltersOpen}
             title={activeTab === 'biens' ? 'Filtres biens' : 'Filtres unités'}
@@ -1082,7 +1103,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
             }}
           >
             {activeTab === 'biens' ? (
-              <div className="grid gap-3">
+              <div className="grid gap-2.5">
                 {!isIndividualOwner && (
                   <SmartCombobox
                     value={ownerFilter}
@@ -1110,7 +1131,6 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
               />
             )}
           </MobileFilterSheet>
-        </section>
 
         <main className="min-w-0">
             {activeTab === 'biens' ? (
@@ -1139,18 +1159,56 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
             )}
           </main>
           </div>
-
-          {drawer && (
-            <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:sticky xl:top-4 xl:inset-auto xl:z-auto xl:h-[calc(100vh-2rem)] xl:w-full xl:rounded-3xl xl:border xl:border-emerald-950/10">
-              <div className="absolute inset-0 -z-10 bg-slate-900/30 xl:hidden" onClick={() => setDrawer(null)} aria-hidden="true" />
-              <div className="relative z-10 flex h-full flex-col overflow-y-auto bg-[#fffdf8]">
+          }
+          detail={
+            drawer ? (
+              <PremiumDrawerShell
+                open={detailPanelOpen}
+                onClose={() => setDrawer(null)}
+                size="compact"
+                desktopMode="floating"
+                desktopAt="xl"
+                density="compact"
+                eyebrow={selectedProperty ? 'FICHE BIEN' : 'FICHE UNITÉ'}
+                avatar={
+                  selectedProperty ? (
+                    (() => {
+                      const visual = getPropertyVisual(selectedProperty);
+                      const Icon = visual.icon;
+                      return (
+                        <div className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-inner ring-1 ring-emerald-950/10 ${visual.bg} ${visual.color}`}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                      );
+                    })()
+                  ) : selectedUnit ? (
+                    (() => {
+                      const visual = getUnitVisual(selectedUnit);
+                      const Icon = visual.icon;
+                      return (
+                        <div className={`flex h-9 w-9 items-center justify-center rounded-xl shadow-inner ring-1 ring-emerald-950/10 ${visual.bg} ${visual.color}`}>
+                          <Icon className="h-4 w-4" />
+                        </div>
+                      );
+                    })()
+                  ) : undefined
+                }
+                title={selectedProperty?.nom ?? selectedUnit?.nom ?? 'Détail patrimoine'}
+                description={
+                  selectedProperty
+                    ? `${inferPropertyType(selectedProperty)} · ${selectedProperty.quartier || selectedProperty.ville || 'Localisation à compléter'}`
+                    : selectedUnit
+                      ? `${inferUnitType(selectedUnit)} · ${selectedUnit.immeubles?.nom ?? 'Bien parent à choisir'}`
+                      : undefined
+                }
+                bodyClassName="space-y-0"
+              >
                 {selectedProperty && selectedPropertySummary && (
                   <PropertyDrawer
                     property={selectedProperty}
                     summary={selectedPropertySummary}
                     owner={selectedProperty.bailleur_id ? ownerById.get(selectedProperty.bailleur_id) ?? selectedProperty.bailleurs : selectedProperty.bailleurs}
                     isIndividualOwner={isIndividualOwner}
-                    onClose={() => setDrawer(null)}
                     onEdit={() => void openPropertyModal(selectedProperty)}
                     onAddUnit={() => {
                       setActiveTab('unites');
@@ -1166,16 +1224,15 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     unit={selectedUnit}
                     summary={selectedUnitSummary}
                     property={selectedUnit.immeuble_id ? propertyById.get(selectedUnit.immeuble_id) ?? null : null}
-                    onClose={() => setDrawer(null)}
                     onEdit={() => openUnitModal(selectedUnit)}
                     onArchive={() => setDangerTarget({ type: 'unite', id: selectedUnit.id, name: selectedUnit.nom })}
                     onNavigate={navigate}
                   />
                 )}
-              </div>
-            </aside>
-          )}
-        </div>
+              </PremiumDrawerShell>
+            ) : undefined
+          }
+        />
       </div>
 
       <PropertyModal
@@ -1216,7 +1273,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
         isDestructive
         isLoading={deleting}
       />
-    </div>
+    </PageShell>
   );
 }
 
@@ -1268,7 +1325,7 @@ function buildDangerMessage(
 }
 
 function StatusBadge({ label }: { label: string }) {
-  return <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[0.67rem] font-semibold ${statusBadgeClass(label)}`}>{label}</span>;
+  return <span className={`inline-flex whitespace-nowrap rounded-full border px-1 py-0 text-[0.52rem] font-semibold leading-4 ${statusBadgeClass(label)}`}>{label}</span>;
 }
 
 function PropertiesTable({
@@ -1306,21 +1363,21 @@ function PropertiesTable({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_18px_48px_rgba(15,23,42,0.06)] ring-1 ring-white/80">
-      <div className={`hidden md:block ${compact ? 'overflow-hidden' : 'overflow-x-auto'}`}>
-        <table className={`${compact ? 'w-full table-fixed' : 'min-w-[920px]'} divide-y divide-slate-100`}>
-          <thead className="bg-[#f8f3e8]/70 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">
+    <PremiumTableSurface density="dense" withHorizontalScroll>
+      <div className="hidden md:block">
+        <table className={`w-full table-fixed ${compact ? 'min-w-[520px]' : 'min-w-[720px]'} divide-y divide-slate-100`}>
+          <thead className="bg-[#f8f3e8]/70 text-left text-[0.52rem] font-semibold uppercase tracking-wider text-slate-500">
             <tr>
-              {showColumn('bien') && <th className={`${compact ? 'w-[32%] px-3' : 'px-4'} py-3`}><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> Bien</span></th>}
-              {showColumn('type') && <th className="px-4 py-3">Type</th>}
-              {showColumn('adresse') && <th className="px-4 py-3">Adresse</th>}
-              {!isIndividualOwner && showColumn('bailleur') && <th className={`${compact ? 'w-[19%] px-3' : 'px-4'} py-3`}><span className="flex items-center gap-1.5"><CircleUser className="h-3.5 w-3.5" /> Bailleur</span></th>}
-              {showColumn('unites') && <th className={`${compact ? 'w-[10%] px-2' : 'px-4'} py-3 text-center`}><span className="flex items-center gap-1.5"><DoorOpen className="h-3.5 w-3.5" /> Unités</span></th>}
-              {showColumn('occupation') && <th className={`${compact ? 'w-[18%] px-3' : 'px-4'} py-3`}><span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Occupation</span></th>}
-              {showColumn('loyer') && <th className="px-4 py-3 text-right">Loyer attendu</th>}
-              {showColumn('reliquats') && <th className={`${compact ? 'w-[15%] px-3' : 'px-4'} py-3 text-right`}><span className="flex items-center gap-1.5"><AlertCircle className="h-3.5 w-3.5" /> Reliquats</span></th>}
-              {showColumn('statut') && <th className="px-4 py-3">Statut</th>}
-              <th className={`${compact ? 'w-12 px-2' : 'px-4'} py-3 text-right`}><span className="flex items-center gap-1.5"><MoreHorizontal className="h-3.5 w-3.5" /> Actions</span></th>
+              {showColumn('bien') && <th className={`${compact ? 'w-[34%] px-1.5' : 'w-[24%] px-1.5'} py-1`}><span className="flex items-center gap-0.5"><Building2 className="h-2.5 w-2.5" /> Bien</span></th>}
+              {showColumn('type') && <th className="w-[7%] px-1.5 py-1">Type</th>}
+              {showColumn('adresse') && <th className="w-[12%] px-1.5 py-1">Adresse</th>}
+              {!isIndividualOwner && showColumn('bailleur') && <th className={`${compact ? 'w-[19%] px-1.5' : 'w-[13%] px-1.5'} py-1`}><span className="flex items-center gap-0.5"><CircleUser className="h-2.5 w-2.5" /> Bailleur</span></th>}
+              {showColumn('unites') && <th className={`${compact ? 'w-[8%] px-1' : 'w-[6%] px-1'} py-1 text-center`}><span className="flex items-center justify-center gap-0.5"><DoorOpen className="h-2.5 w-2.5" /> {compact ? 'Un.' : 'Unités'}</span></th>}
+              {showColumn('occupation') && <th className={`${compact ? 'w-[16%] px-1.5' : 'w-[11%] px-1.5'} py-1`}><span className="flex items-center gap-0.5"><Activity className="h-2.5 w-2.5" /> {compact ? 'Occ.' : 'Occupation'}</span></th>}
+              {showColumn('loyer') && <th className="w-[10%] px-1.5 py-1 text-right">Loyer</th>}
+              {showColumn('reliquats') && <th className={`${compact ? 'w-[14%] px-1.5' : 'w-[10%] px-1.5'} py-1 text-right`}><span className="flex items-center justify-end gap-0.5"><AlertCircle className="h-2.5 w-2.5" /> {compact ? 'Rel.' : 'Reliquats'}</span></th>}
+              {showColumn('statut') && <th className="w-[8%] px-1.5 py-1">Statut</th>}
+              <th className="w-7 px-1 py-1 text-right"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1333,38 +1390,38 @@ function PropertiesTable({
               return (
                 <tr key={property.id} className={`cursor-pointer transition ${selected ? 'bg-emerald-50/85 ring-1 ring-inset ring-emerald-200' : 'hover:bg-emerald-50/45'}`} onClick={() => onSelect(property)}>
                   {showColumn('bien') && (
-                    <td className={`${compact ? 'px-3' : 'px-4'} py-2.5`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`flex ${compact ? 'h-8 w-8 rounded-xl' : 'h-9 w-9 rounded-xl'} items-center justify-center ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
-                          <Icon className="h-4 w-4" />
+                    <td className="px-1.5 py-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
+                          <Icon className="h-2.5 w-2.5" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-slate-950">{property.nom}</p>
-                          <p className="truncate text-xs font-medium text-slate-500">{property.quartier || property.ville || 'Localisation à compléter'}</p>
+                          <p className="truncate text-[0.68rem] font-semibold text-slate-950">{property.nom}</p>
+                          <p className="truncate text-[0.58rem] font-medium text-slate-500">{property.quartier || property.ville || 'Localisation à compléter'}</p>
                         </div>
                       </div>
                     </td>
                   )}
-                  {showColumn('type') && <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{inferPropertyType(property)}</td>}
-                  {showColumn('adresse') && <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{property.adresse || '-'}</td>}
-                  {!isIndividualOwner && showColumn('bailleur') && <td className={`${compact ? 'px-3' : 'px-4'} py-2.5 text-sm font-medium text-slate-700`}><p className="truncate">{ownerName(owner)}</p></td>}
-                  {showColumn('unites') && <td className={`${compact ? 'px-2' : 'px-4'} py-2.5 text-center text-sm font-semibold text-slate-900`}>{summary?.units.length ?? 0}</td>}
+                  {showColumn('type') && <td className="px-1.5 py-1 text-[0.66rem] font-medium text-slate-600"><p className="truncate">{inferPropertyType(property)}</p></td>}
+                  {showColumn('adresse') && <td className="px-1.5 py-1 text-[0.66rem] font-medium text-slate-600"><p className="truncate">{property.adresse || '-'}</p></td>}
+                  {!isIndividualOwner && showColumn('bailleur') && <td className="px-1.5 py-1 text-[0.66rem] font-medium text-slate-700"><p className="truncate">{ownerName(owner)}</p></td>}
+                  {showColumn('unites') && <td className="px-1 py-1 text-center text-[0.68rem] font-semibold text-slate-900">{summary?.units.length ?? 0}</td>}
                   {showColumn('occupation') && (
-                    <td className={`${compact ? 'px-3' : 'px-4'} py-2.5`}>
-                      <div className="flex items-center gap-2">
-                        <div className={`${compact ? 'w-14' : 'w-20'} h-2 overflow-hidden rounded-full bg-slate-100`}>
+                    <td className="px-1.5 py-1">
+                      <div className="flex items-center gap-1">
+                        <div className={`${compact ? 'w-10' : 'w-12'} h-1 overflow-hidden rounded-full bg-slate-100`}>
                           <div className="h-full rounded-full bg-brand-800" style={{ width: `${summary?.occupancyRate ?? 0}%` }} />
                         </div>
-                        <span className="text-xs font-bold text-slate-600">{summary?.occupancyRate ?? 0}%</span>
+                        <span className="text-[0.6rem] font-semibold text-slate-600">{summary?.occupancyRate ?? 0}%</span>
                       </div>
                     </td>
                   )}
-                  {showColumn('loyer') && <td className="whitespace-nowrap px-4 py-2.5 text-right text-sm font-semibold tabular-nums text-slate-900"><MoneyText value={summary?.expectedRent ?? 0} /></td>}
-                  {showColumn('reliquats') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-red-600`}><MoneyText value={summary?.reliquats ?? 0} /></td>}
-                  {showColumn('statut') && <td className="px-4 py-2.5"><StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unité'} /></td>}
-                  <td className={`${compact ? 'px-2' : 'px-4'} py-2.5 text-right`}>
-                    <button aria-label="Action" type="button" onClick={(event) => { event.stopPropagation(); onSelect(property); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
-                      <MoreHorizontal className="h-5 w-5" />
+                  {showColumn('loyer') && <td className="whitespace-nowrap px-1.5 py-1 text-right text-[0.66rem] font-semibold tabular-nums text-slate-900"><MoneyText value={summary?.expectedRent ?? 0} /></td>}
+                  {showColumn('reliquats') && <td className="whitespace-nowrap px-1.5 py-1 text-right text-[0.66rem] font-semibold tabular-nums text-red-600"><MoneyText value={summary?.reliquats ?? 0} /></td>}
+                  {showColumn('statut') && <td className="px-1.5 py-1"><StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unité'} /></td>}
+                  <td className="px-1 py-1 text-right">
+                    <button aria-label="Action" type="button" onClick={(event) => { event.stopPropagation(); onSelect(property); }} className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
+                      <MoreHorizontal className="h-2.5 w-2.5" />
                     </button>
                   </td>
                 </tr>
@@ -1374,7 +1431,7 @@ function PropertiesTable({
         </table>
       </div>
 
-      <div className="grid gap-3 p-3 md:hidden">
+      <div className="grid gap-2.5 p-3 md:hidden">
         {properties.map((property) => {
           const summary = summaries.get(property.id);
           const visual = getPropertyVisual(property);
@@ -1399,7 +1456,7 @@ function PropertiesTable({
           );
         })}
       </div>
-    </section>
+    </PremiumTableSurface>
   );
 }
 
@@ -1436,20 +1493,20 @@ function UnitsTable({
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_18px_48px_rgba(15,23,42,0.06)] ring-1 ring-white/80">
-      <div className={`hidden md:block ${compact ? 'overflow-hidden' : 'overflow-x-auto'}`}>
-        <table className={`${compact ? 'w-full table-fixed' : 'min-w-[900px]'} divide-y divide-slate-100`}>
-          <thead className="bg-[#f8f3e8]/70 text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">
+    <PremiumTableSurface density="dense" withHorizontalScroll>
+      <div className="hidden md:block">
+        <table className={`w-full table-fixed ${compact ? 'min-w-[520px]' : 'min-w-[700px]'} divide-y divide-slate-100`}>
+          <thead className="bg-[#f8f3e8]/70 text-left text-[0.52rem] font-semibold uppercase tracking-wider text-slate-500">
             <tr>
-              {showColumn('unite') && <th className={`${compact ? 'w-[23%] px-3' : 'px-4'} py-3`}>Unité</th>}
-              {showColumn('type') && <th className="px-4 py-3">Type</th>}
-              {showColumn('bien') && <th className={`${compact ? 'w-[20%] px-3' : 'px-4'} py-3`}>Bien parent</th>}
-              {showColumn('locataire') && <th className={`${compact ? 'w-[19%] px-3' : 'px-4'} py-3`}>Locataire</th>}
-              {showColumn('loyer') && <th className={`${compact ? 'w-[14%] px-3' : 'px-4'} py-3 text-right`}>Loyer</th>}
-              {showColumn('statut') && <th className={`${compact ? 'w-[14%] px-3' : 'px-4'} py-3`}>Statut</th>}
-              {showColumn('reliquat') && <th className={`${compact ? 'w-[14%] px-3' : 'px-4'} py-3 text-right`}>Reliquat</th>}
-              {showColumn('bail') && <th className="px-4 py-3">Bail actif</th>}
-              <th className={`${compact ? 'w-12 px-2' : 'px-4'} py-3 text-right`}><span className="flex items-center gap-1.5"><MoreHorizontal className="h-3.5 w-3.5" /> Actions</span></th>
+              {showColumn('unite') && <th className={`${compact ? 'w-[26%] px-1.5' : 'w-[22%] px-1.5'} py-1`}>Unité</th>}
+              {showColumn('type') && <th className="w-[8%] px-1.5 py-1">Type</th>}
+              {showColumn('bien') && <th className={`${compact ? 'w-[21%] px-1.5' : 'w-[15%] px-1.5'} py-1`}>Bien</th>}
+              {showColumn('locataire') && <th className={`${compact ? 'w-[20%] px-1.5' : 'w-[14%] px-1.5'} py-1`}>Locataire</th>}
+              {showColumn('loyer') && <th className={`${compact ? 'w-[13%] px-1.5' : 'w-[11%] px-1.5'} py-1 text-right`}>Loyer</th>}
+              {showColumn('statut') && <th className={`${compact ? 'w-[13%] px-1.5' : 'w-[10%] px-1.5'} py-1`}>Statut</th>}
+              {showColumn('reliquat') && <th className={`${compact ? 'w-[13%] px-1.5' : 'w-[11%] px-1.5'} py-1 text-right`}>Reliquat</th>}
+              {showColumn('bail') && <th className="w-[7%] px-1.5 py-1">Bail</th>}
+              <th className="w-7 px-1 py-1 text-right"><span className="sr-only">Actions</span></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -1463,28 +1520,28 @@ function UnitsTable({
               return (
                 <tr key={unit.id} className={`cursor-pointer transition ${selected ? 'bg-emerald-50/85 ring-1 ring-inset ring-emerald-200' : 'hover:bg-emerald-50/45'}`} onClick={() => onSelect(unit)}>
                   {showColumn('unite') && (
-                    <td className={`${compact ? 'px-3' : 'px-4'} py-2.5`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`flex ${compact ? 'h-8 w-8 rounded-xl' : 'h-9 w-9 rounded-xl'} items-center justify-center ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
-                          <Icon className="h-4 w-4" />
+                    <td className="px-1.5 py-1">
+                      <div className="flex items-center gap-1.5">
+                        <div className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
+                          <Icon className="h-2.5 w-2.5" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-slate-950">{unit.nom}</p>
-                          <p className="truncate text-xs font-medium text-slate-500">{unit.numero || unit.etage || 'Référence à compléter'}</p>
+                          <p className="truncate text-[0.68rem] font-semibold text-slate-950">{unit.nom}</p>
+                          <p className="truncate text-[0.58rem] font-medium text-slate-500">{unit.numero || unit.etage || 'Référence à compléter'}</p>
                         </div>
                       </div>
                     </td>
                   )}
-                  {showColumn('type') && <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{inferUnitType(unit)}</td>}
-                  {showColumn('bien') && <td className={`${compact ? 'px-3' : 'px-4'} py-2.5 text-sm font-medium text-slate-700`}><p className="truncate">{property?.nom ?? unit.immeubles?.nom ?? '-'}</p></td>}
-                  {showColumn('locataire') && <td className={`${compact ? 'px-3' : 'px-4'} py-2.5 text-sm font-medium text-slate-600`}><p className="truncate">{summary?.tenantLabel ?? 'Aucun locataire'}</p></td>}
-                  {showColumn('loyer') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-slate-900`}><MoneyText value={unit.loyer_base ?? 0} /></td>}
-                  {showColumn('statut') && <td className={`${compact ? 'px-3' : 'px-4'} py-2.5`}><StatusBadge label={status} /></td>}
-                  {showColumn('reliquat') && <td className={`${compact ? 'px-3' : 'px-4'} whitespace-nowrap py-2.5 text-right text-sm font-semibold tabular-nums text-red-600`}><MoneyText value={summary?.reliquat ?? 0} /></td>}
-                  {showColumn('bail') && <td className="px-4 py-2.5 text-sm font-medium text-slate-600">{summary?.contract ? 'Oui' : 'Non'}</td>}
-                  <td className={`${compact ? 'px-2' : 'px-4'} py-2.5 text-right`}>
-                    <button aria-label="Action" type="button" onClick={(event) => { event.stopPropagation(); onSelect(unit); }} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
-                      <MoreHorizontal className="h-5 w-5" />
+                  {showColumn('type') && <td className="px-1.5 py-1 text-[0.66rem] font-medium text-slate-600"><p className="truncate">{inferUnitType(unit)}</p></td>}
+                  {showColumn('bien') && <td className="px-1.5 py-1 text-[0.66rem] font-medium text-slate-700"><p className="truncate">{property?.nom ?? unit.immeubles?.nom ?? '-'}</p></td>}
+                  {showColumn('locataire') && <td className="px-1.5 py-1 text-[0.66rem] font-medium text-slate-600"><p className="truncate">{summary?.tenantLabel ?? 'Aucun locataire'}</p></td>}
+                  {showColumn('loyer') && <td className="whitespace-nowrap px-1.5 py-1 text-right text-[0.66rem] font-semibold tabular-nums text-slate-900"><MoneyText value={unit.loyer_base ?? 0} /></td>}
+                  {showColumn('statut') && <td className="px-1.5 py-1"><StatusBadge label={status} /></td>}
+                  {showColumn('reliquat') && <td className="whitespace-nowrap px-1.5 py-1 text-right text-[0.66rem] font-semibold tabular-nums text-red-600"><MoneyText value={summary?.reliquat ?? 0} /></td>}
+                  {showColumn('bail') && <td className="px-1.5 py-1 text-[0.66rem] font-medium text-slate-600">{summary?.contract ? 'Oui' : 'Non'}</td>}
+                  <td className="px-1 py-1 text-right">
+                    <button aria-label="Action" type="button" onClick={(event) => { event.stopPropagation(); onSelect(unit); }} className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 hover:bg-emerald-50 hover:text-brand-900">
+                      <MoreHorizontal className="h-2.5 w-2.5" />
                     </button>
                   </td>
                 </tr>
@@ -1494,7 +1551,7 @@ function UnitsTable({
         </table>
       </div>
 
-      <div className="grid gap-3 p-3 md:hidden">
+      <div className="grid gap-2.5 p-3 md:hidden">
         {units.map((unit) => {
           const summary = summaries.get(unit.id);
           const property = unit.immeuble_id ? propertyById.get(unit.immeuble_id) : null;
@@ -1520,38 +1577,7 @@ function UnitsTable({
           );
         })}
       </div>
-    </section>
-  );
-}
-
-function DrawerShell({ children }: { children: ReactNode }) {
-  return (
-      <section className="h-full max-h-[100dvh] overflow-hidden bg-[#fffdf8]/98 shadow-[0_24px_70px_rgba(15,23,42,0.09)] xl:sticky xl:top-4 xl:max-h-[calc(100vh-2rem)] xl:rounded-3xl xl:border xl:border-emerald-950/10 xl:ring-1 xl:ring-white/80">
-      <div className="h-full max-h-[100dvh] overflow-y-auto xl:max-h-[calc(100vh-2rem)]">
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function DrawerHeader({ icon: Icon, iconClass, title, subtitle, onClose }: { icon: LucideIcon; iconClass: string; title: string; subtitle: string; onClose: () => void }) {
-  return (
-    <div className="border-b border-emerald-950/10 bg-gradient-to-br from-[#fffaf1] via-white to-emerald-50/40 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl ring-1 ring-black/5 ${iconClass}`}>
-            <Icon className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="truncate font-serif text-xl font-bold tracking-tight text-brand-950">{title}</h2>
-            <p className="mt-1 line-clamp-2 text-sm font-medium text-slate-500">{subtitle}</p>
-          </div>
-        </div>
-        <button aria-label="Action" type="button" onClick={onClose} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-white hover:text-slate-900 hover:shadow-sm">
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-    </div>
+    </PremiumTableSurface>
   );
 }
 
@@ -1560,7 +1586,6 @@ function PropertyDrawer({
   summary,
   owner,
   isIndividualOwner,
-  onClose,
   onEdit,
   onAddUnit,
   onArchive,
@@ -1571,31 +1596,22 @@ function PropertyDrawer({
   summary: PropertySummary;
   owner?: BailleurRow | PropertyRow['bailleurs'] | null;
   isIndividualOwner: boolean;
-  onClose: () => void;
   onEdit: () => void;
   onAddUnit: () => void;
   onArchive: () => void;
   onNavigate: (to: string) => void;
   onSelectUnit: (unit: UnitRow) => void;
 }) {
-  const visual = getPropertyVisual(property);
   return (
-    <DrawerShell>
-      <DrawerHeader
-        icon={visual.icon}
-        iconClass={`${visual.bg} ${visual.color}`}
-        title={property.nom}
-        subtitle={`${inferPropertyType(property)} - ${property.quartier || property.ville || 'Localisation à compléter'}`}
-        onClose={onClose}
-      />
-      <div className="space-y-3.5 p-3.5 sm:p-4">
-        <div className="grid grid-cols-2 gap-2">
-          <MiniMetric label="Unités" value={summary.units.length} />
-          <MiniMetric label="Occupées" value={summary.occupiedUnits} />
-          <MiniMetric label="Libres" value={summary.freeUnits} />
-          <MiniMetric label="Occupation" value={`${summary.occupancyRate}%`} />
-          <MiniMetric label="Loyers" value={<MoneyText value={summary.expectedRent} />} />
-          <MiniMetric label="Reliquats" value={<MoneyText value={summary.reliquats} />} />
+    <>
+      <div className="space-y-2.5">
+        <div className="grid grid-cols-2 gap-1.5">
+          <MiniMetric density="compact" label="Unités" value={summary.units.length} />
+          <MiniMetric density="compact" label="Occupées" value={summary.occupiedUnits} />
+          <MiniMetric density="compact" label="Libres" value={summary.freeUnits} />
+          <MiniMetric density="compact" label="Occupation" value={`${summary.occupancyRate}%`} />
+          <MiniMetric density="compact" label="Loyers" value={<MoneyText value={summary.expectedRent} />} />
+          <MiniMetric density="compact" label="Reliquats" value={<MoneyText value={summary.reliquats} />} />
         </div>
 
         <InfoBlock title="Informations">
@@ -1604,30 +1620,30 @@ function PropertyDrawer({
           {!isIndividualOwner && <InfoLine icon={Users} label="Bailleur" value={ownerName(owner)} />}
         </InfoBlock>
 
-        <div className="mt-8 space-y-6">
+        <div className="mt-3 space-y-3">
           <div>
-            <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Actions principales</p>
-            <div className="flex flex-col gap-2">
-              <button type="button" onClick={onEdit} className="flex items-center gap-3 rounded-2xl border border-emerald-950/10 bg-white p-3.5 text-left text-sm font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-700 hover:text-brand-900 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)]">
-                <Pencil className="h-5 w-5 text-brand-700" />
+            <p className="mb-2 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-slate-400">Actions principales</p>
+            <div className="flex flex-col gap-1.5">
+              <button type="button" onClick={onEdit} className="flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white p-2.5 text-left text-xs font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-700 hover:text-brand-900 hover:shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
+                <Pencil className="h-3.5 w-3.5 text-brand-700" />
                 Modifier le bien
               </button>
-              <button type="button" onClick={onAddUnit} className="flex items-center gap-3 rounded-2xl border border-emerald-700/20 bg-gradient-to-br from-emerald-50 to-white p-3.5 text-left text-sm font-bold text-brand-950 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-700 hover:shadow-[0_14px_32px_rgba(6,78,59,0.1)]">
-                <Plus className="h-5 w-5 text-brand-700" />
+              <button type="button" onClick={onAddUnit} className="flex items-center gap-2 rounded-xl border border-emerald-700/20 bg-gradient-to-br from-emerald-50 to-white p-2.5 text-left text-xs font-bold text-brand-950 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-700 hover:shadow-[0_10px_24px_rgba(6,78,59,0.09)]">
+                <Plus className="h-3.5 w-3.5 text-brand-700" />
                 Ajouter une unité
               </button>
             </div>
           </div>
 
           <div>
-            <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Gestion</p>
-            <div className="flex flex-col gap-2">
-              <button type="button" onClick={() => onNavigate('/paiements')} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                <Wallet className="h-4 w-4 text-slate-500" />
+            <p className="mb-2 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-slate-400">Gestion</p>
+            <div className="flex flex-col gap-1.5">
+              <button type="button" onClick={() => onNavigate('/paiements')} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
+                <Wallet className="h-3.5 w-3.5 text-slate-500" />
                 Paiements liés
               </button>
-              <button type="button" onClick={() => onNavigate('/documents')} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                <FolderOpen className="h-4 w-4 text-slate-500" />
+              <button type="button" onClick={() => onNavigate('/documents')} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
+                <FolderOpen className="h-3.5 w-3.5 text-slate-500" />
                 Documents associés
               </button>
             </div>
@@ -1678,12 +1694,12 @@ function PropertyDrawer({
           ]}
         />
 
-        <button type="button" onClick={onArchive} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-[#fffdf8] px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50">
-          <Trash2 className="h-4 w-4" />
+        <button type="button" onClick={onArchive} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-[#fffdf8] px-3 py-2 text-xs font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50">
+          <Trash2 className="h-3.5 w-3.5" />
           Archiver ce bien
         </button>
       </div>
-    </DrawerShell>
+    </>
   );
 }
 
@@ -1691,7 +1707,6 @@ function UnitDrawer({
   unit,
   summary,
   property,
-  onClose,
   onEdit,
   onArchive,
   onNavigate,
@@ -1699,22 +1714,19 @@ function UnitDrawer({
   unit: UnitRow;
   summary: UnitSummary;
   property: PropertyRow | null;
-  onClose: () => void;
   onEdit: () => void;
   onArchive: () => void;
   onNavigate: (to: string) => void;
 }) {
-  const visual = getUnitVisual(unit);
   const status = getUnitStatusLabel(unit, summary);
   return (
-    <DrawerShell>
-      <DrawerHeader icon={visual.icon} iconClass={`${visual.bg} ${visual.color}`} title={unit.nom} subtitle={`${inferUnitType(unit)} - ${property?.nom ?? unit.immeubles?.nom ?? 'Bien parent à choisir'}`} onClose={onClose} />
-      <div className="space-y-3.5 p-3.5 sm:p-4">
-        <div className="grid grid-cols-2 gap-2">
-          <MiniMetric label="Loyer mensuel" value={<MoneyText value={unit.loyer_base ?? 0} />} />
-          <MiniMetric label="Statut" value={status} />
-          <MiniMetric label="Reliquat" value={<MoneyText value={summary.reliquat} />} />
-          <MiniMetric label="Location en cours" value={summary.contract ? 'Oui' : 'Non'} />
+    <>
+      <div className="space-y-2.5">
+        <div className="grid grid-cols-2 gap-1.5">
+          <MiniMetric density="compact" label="Loyer mensuel" value={<MoneyText value={unit.loyer_base ?? 0} />} />
+          <MiniMetric density="compact" label="Statut" value={status} />
+          <MiniMetric density="compact" label="Reliquat" value={<MoneyText value={summary.reliquat} />} />
+          <MiniMetric density="compact" label="Location en cours" value={summary.contract ? 'Oui' : 'Non'} />
         </div>
 
         <InfoBlock title="Occupation">
@@ -1723,30 +1735,30 @@ function UnitDrawer({
           <InfoLine icon={Banknote} label="Dernier paiement" value={summary.latestPayment ? formatDate(summary.latestPayment.date_paiement) : 'Aucun paiement'} />
         </InfoBlock>
 
-        <div className="mt-8 space-y-6">
+        <div className="mt-3 space-y-3">
           <div>
-            <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Actions principales</p>
-            <div className="flex flex-col gap-2">
-              <button type="button" onClick={onEdit} className="flex items-center gap-3 rounded-2xl border border-emerald-950/10 bg-white p-3.5 text-left text-sm font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-700 hover:text-brand-900 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)]">
-                <Pencil className="h-5 w-5 text-brand-700" />
+            <p className="mb-2 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-slate-400">Actions principales</p>
+            <div className="flex flex-col gap-1.5">
+              <button type="button" onClick={onEdit} className="flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white p-2.5 text-left text-xs font-bold text-slate-800 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-700 hover:text-brand-900 hover:shadow-[0_10px_24px_rgba(15,23,42,0.07)]">
+                <Pencil className="h-3.5 w-3.5 text-brand-700" />
                 Modifier l'unité
               </button>
             </div>
           </div>
   
           <div>
-            <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Gestion</p>
-            <div className="flex flex-col gap-2">
-              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                <Users className="h-4 w-4 text-slate-500" />
+            <p className="mb-2 text-[0.58rem] font-bold uppercase tracking-[0.12em] text-slate-400">Gestion</p>
+            <div className="flex flex-col gap-1.5">
+              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
+                <Users className="h-3.5 w-3.5 text-slate-500" />
                 {summary.contract ? 'Voir location' : 'Nouvelle location'}
               </button>
-              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                <KeyRound className="h-4 w-4 text-slate-500" />
+              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
+                <KeyRound className="h-3.5 w-3.5 text-slate-500" />
                 {summary.contract ? 'Voir bail' : 'Créer une location'}
               </button>
-              <button type="button" onClick={() => onNavigate('/paiements')} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                <Wallet className="h-4 w-4 text-slate-500" />
+              <button type="button" onClick={() => onNavigate('/paiements')} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 text-left text-xs font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
+                <Wallet className="h-3.5 w-3.5 text-slate-500" />
                 Paiements
               </button>
             </div>
@@ -1784,30 +1796,30 @@ function UnitDrawer({
           ]}
         />
 
-        <button type="button" onClick={onArchive} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 bg-[#fffdf8] px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50">
-          <Trash2 className="h-4 w-4" />
+        <button type="button" onClick={onArchive} className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-[#fffdf8] px-3 py-2 text-xs font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50">
+          <Trash2 className="h-3.5 w-3.5" />
           Archiver cette unité
         </button>
       </div>
-    </DrawerShell>
+    </>
   );
 }
 
 function InfoBlock({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-emerald-950/10 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
-      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-slate-400">{title}</p>
-      <div className="mt-3 space-y-2">{children}</div>
+    <div className="rounded-xl border border-emerald-950/10 bg-white p-2.5 shadow-[0_8px_20px_rgba(15,23,42,0.03)]">
+      <p className="text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-slate-400">{title}</p>
+      <div className="mt-2 space-y-1.5">{children}</div>
     </div>
   );
 }
 
 function InfoLine({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: ReactNode }) {
   return (
-    <div className="flex items-start gap-2 text-sm">
-      <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-700/55" />
+    <div className="flex items-start gap-1.5 text-xs">
+      <Icon className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-700/55" />
       <div className="min-w-0">
-        <p className="text-[0.7rem] font-medium uppercase tracking-[0.06em] text-slate-400">{label}</p>
+        <p className="text-[0.58rem] font-medium uppercase tracking-[0.06em] text-slate-400">{label}</p>
         <p className="break-words font-medium text-slate-700">{value}</p>
       </div>
     </div>
@@ -1817,8 +1829,8 @@ function InfoLine({ icon: Icon, label, value }: { icon: LucideIcon; label: strin
 function DrawerTabs({ tabs }: { tabs: Array<{ label: string; content: ReactNode }> }) {
   const [active, setActive] = useState(0);
   return (
-    <div className="rounded-2xl border border-emerald-950/10 bg-white p-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
-      <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none rounded-xl bg-slate-50 p-1.5">
+    <div className="rounded-xl border border-emerald-950/10 bg-white p-2 shadow-[0_8px_20px_rgba(15,23,42,0.03)]">
+      <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none rounded-lg bg-slate-50 p-1">
         {tabs.map((tab, index) => (
           <button
             key={tab.label}
@@ -1827,20 +1839,20 @@ function DrawerTabs({ tabs }: { tabs: Array<{ label: string; content: ReactNode 
               setActive(index);
               e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }}
-            className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold transition ${active === index ? 'bg-white text-brand-900 shadow-sm ring-1 ring-emerald-950/10' : 'text-slate-500 hover:bg-white/80 hover:text-slate-800'}`}
+            className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[0.68rem] font-semibold transition ${active === index ? 'bg-white text-brand-900 shadow-sm ring-1 ring-emerald-950/10' : 'text-slate-500 hover:bg-white/80 hover:text-slate-800'}`}
           >
             {tab.label}
           </button>
         ))}
       </div>
-      <div className="mt-3">{tabs[active]?.content}</div>
+      <div className="mt-2">{tabs[active]?.content}</div>
     </div>
   );
 }
 
 function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: ReactNode; subtitle: ReactNode; onClick?: () => void }> }) {
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {rows.map((row, index) => {
         const Icon = row.icon;
         const isClickable = !!row.onClick;
@@ -1849,26 +1861,26 @@ function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: ReactNod
           ? {
               type: 'button',
               onClick: row.onClick,
-              className: 'group flex w-full items-center justify-between gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 text-left shadow-[0_6px_16px_rgba(15,23,42,0.025)] transition hover:bg-emerald-50/50 cursor-pointer focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500',
+              className: 'group flex w-full items-center justify-between gap-1.5 rounded-lg border border-emerald-950/10 bg-[#fffdf8] p-1.5 text-left shadow-[0_5px_12px_rgba(15,23,42,0.025)] transition hover:bg-emerald-50/50 cursor-pointer focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500',
               'aria-label': `Ouvrir ${typeof row.title === 'string' ? row.title : 'les détails'}`,
             }
           : {
-              className: 'flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-[0_6px_16px_rgba(15,23,42,0.025)]',
+              className: 'flex items-center gap-1.5 rounded-lg border border-emerald-950/10 bg-[#fffdf8] p-1.5 shadow-[0_5px_12px_rgba(15,23,42,0.025)]',
             };
 
         return (
           <Wrapper key={`${typeof row.title === 'string' ? row.title : index}-${index}`} {...(wrapperProps as React.HTMLAttributes<HTMLElement> & { type?: 'button'; onClick?: () => void })}>
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-white text-brand-800 shadow-sm ring-1 ring-black/5">
-                <Icon className="h-4 w-4" />
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-white text-brand-800 shadow-sm ring-1 ring-black/5">
+                <Icon className="h-3 w-3" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-900">{row.title}</p>
-                <p className="line-clamp-2 text-xs font-medium text-slate-500">{row.subtitle}</p>
+                <p className="truncate text-[0.72rem] font-semibold text-slate-900">{row.title}</p>
+                <p className="line-clamp-1 text-[0.62rem] font-medium text-slate-500">{row.subtitle}</p>
               </div>
             </div>
             {isClickable && (
-              <ChevronRight className="flex-shrink-0 h-4 w-4 mr-1 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+              <ChevronRight className="mr-0.5 h-3.5 w-3.5 flex-shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
             )}
           </Wrapper>
         );
@@ -1878,7 +1890,7 @@ function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: ReactNod
 }
 
 function SoftEmpty({ text }: { text: string }) {
-  return <p className="rounded-xl border border-dashed border-emerald-950/15 bg-[#fffaf1] px-4 py-4 text-xs font-medium leading-5 text-slate-500">{text}</p>;
+  return <p className="rounded-lg border border-dashed border-emerald-950/15 bg-[#fffaf1] px-3 py-2.5 text-[0.7rem] font-medium leading-4 text-slate-500">{text}</p>;
 }
 
 function PropertyModal({

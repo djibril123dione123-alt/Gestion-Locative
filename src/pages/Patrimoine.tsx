@@ -1465,14 +1465,15 @@ function PropertiesTable({
                 amount={summary?.expectedRent ?? 0}
                 amountLabel="Attendu"
                 amountTone={(summary?.expectedRent ?? 0) === 0 ? 'slate' : 'emerald'}
+                secondaryAmount={reliquatAmount > 0 ? reliquatAmount : undefined}
+                secondaryAmountLabel={reliquatAmount > 0 ? "Reliquats" : undefined}
+                secondaryAmountTone="red"
                 emphasis="identity"
                 topMeta={[
                   { label: 'Unités', value: String(summary?.units.length ?? 0) },
+                  { label: 'Occ.', value: `${summary?.occupancyRate ?? 0}%` },
                 ]}
-                meta={[
-                  { label: 'Occupation', value: `${summary?.occupancyRate ?? 0}%` },
-                  ...(reliquatAmount > 0 ? [{ label: 'Reliquats', value: String(reliquatAmount), tone: 'red' as const }] : []),
-                ]}
+                meta={[]}
               />
             );
           })}
@@ -1599,10 +1600,11 @@ function UnitsTable({
                 amount={unit.loyer_base ?? 0}
                 amountLabel="Loyer"
                 amountTone={(unit.loyer_base ?? 0) === 0 ? 'slate' : 'slate'}
+                secondaryAmount={reliquatAmount > 0 ? reliquatAmount : undefined}
+                secondaryAmountLabel={reliquatAmount > 0 ? "Reliquat" : undefined}
+                secondaryAmountTone="red"
                 emphasis="identity"
-                meta={[
-                  ...(reliquatAmount > 0 ? [{ label: 'Reliquat', value: String(reliquatAmount), tone: 'red' as const }] : []),
-                ]}
+                meta={[]}
               />
             );
           })}

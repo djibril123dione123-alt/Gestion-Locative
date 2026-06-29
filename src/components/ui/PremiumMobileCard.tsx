@@ -134,11 +134,15 @@ export function PremiumMobileCard({
                   {status}
                 </span>
               )}
-              {topMeta.length > 0 && topMeta.map((item) => (
-                <span key={item.label} className={`rounded-lg border px-1.5 py-0.5 text-[0.55rem] font-bold ${toneClasses[item.tone ?? 'slate']}`}>
-                  <span className="text-current opacity-65">{item.label}</span> <span>{item.value}</span>
-                </span>
-              ))}
+              {topMeta.length > 0 && (
+                <div className="flex justify-end gap-1.5">
+                  {topMeta.map((item) => (
+                    <span key={item.label} className={`whitespace-nowrap rounded-lg border px-1.5 py-0.5 text-[0.55rem] font-bold ${toneClasses[item.tone ?? 'slate']}`}>
+                      <span className="text-current opacity-65">{item.label}</span> <span>{item.value}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -161,7 +165,7 @@ export function PremiumMobileCard({
               {meta.length > 0 && (
                 <div className="flex min-w-0 flex-wrap justify-end gap-1.5">
                   {meta.slice(0, 3).map((item) => (
-                    <span key={item.label} className={`rounded-lg border px-1.5 py-0.5 text-[0.55rem] font-bold ${toneClasses[item.tone ?? 'slate']}`}>
+                    <span key={item.label} className={`whitespace-nowrap rounded-lg border px-1.5 py-0.5 text-[0.55rem] font-bold ${toneClasses[item.tone ?? 'slate']}`}>
                       <span className="text-current opacity-65">{item.label}</span> <span>{item.value}</span>
                     </span>
                   ))}

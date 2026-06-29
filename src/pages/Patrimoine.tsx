@@ -310,12 +310,13 @@ function getUnitVisual(unit: UnitRow): { icon: LucideIcon; bg: string; color: st
 
 function statusBadgeClass(status: string) {
   const normalized = normalizeText(status);
-  if (normalized.includes('retard')) return 'bg-red-50 text-red-700 border-red-100';
-  if (normalized.includes('lou')) return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-  if (normalized.includes('maintenance')) return 'bg-amber-50 text-amber-700 border-amber-100';
-  if (normalized.includes('libre')) return 'bg-sky-50 text-sky-700 border-sky-100';
-  if (normalized.includes('reserv')) return 'bg-violet-50 text-violet-700 border-violet-100';
-  return 'bg-slate-50 text-slate-700 border-slate-100';
+  if (normalized.includes('retard')) return 'bg-red-50 text-red-700 border-red-200';
+  if (normalized.includes('lou') || normalized.includes('actif')) return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  if (normalized.includes('sans')) return 'bg-slate-100 text-slate-600 border-slate-200';
+  if (normalized.includes('maintenance')) return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (normalized.includes('libre')) return 'bg-sky-50 text-sky-700 border-sky-200';
+  if (normalized.includes('reserv')) return 'bg-violet-50 text-violet-700 border-violet-200';
+  return 'bg-slate-50 text-slate-700 border-slate-200';
 }
 
 function getUnitStatusLabel(unit: UnitRow, summary?: UnitSummary) {
@@ -926,8 +927,12 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   }
 
   return (
-    <PageShell spacing="compact" variant="dataDense" tone="paper" verticalInset="compact" className="overflow-x-hidden">
-      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+    <PageShell spacing="compact" variant="dataDense" tone="paper" verticalInset="compact">
+      <ToastContainer
+        toasts={toast.toasts}
+        onRemove={toast.removeToast}
+        className={`left-4 right-4 top-4 items-end sm:left-auto ${detailPanelOpen ? 'lg:right-[clamp(24.5rem,36vw,32.5rem)]' : ''}`}
+      />
       <div className="space-y-2.5">
         <OfflineDataNotice
           cachedAt={cacheTimestamp}
@@ -939,8 +944,8 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           isDetailOpen={detailPanelOpen}
           size="compact"
           desktopAt="lg"
-          mainClassName={detailPanelOpen ? 'hidden lg:block' : ''}
           detailClassName="lg:sticky lg:top-2 lg:h-[calc(100dvh-1rem)]"
+          mainClassName={detailPanelOpen ? 'hidden lg:block' : ''}
           main={
           <div className="min-w-0 space-y-2.5">
             <PremiumPageHeader
@@ -1042,7 +1047,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                       onChange={setOwnerFilter}
                       placeholder="Tous les bailleurs"
                       searchPlaceholder="Rechercher un bailleur..."
-                      className={`${detailPanelOpen ? 'hidden lg:block lg:w-28' : 'hidden sm:block sm:w-32 lg:w-36'}`}
+                      className={`${detailPanelOpen ? 'hidden xl:block xl:w-28' : 'hidden sm:block sm:w-32 lg:w-36'}`}
                       density="dense"
                     />
                   )}
@@ -1052,7 +1057,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     onChange={(next) => setPropertyFilter(next as PropertyFilter)}
                     placeholder="Tous les biens"
                     searchPlaceholder="Rechercher un filtre..."
-                    className={`${detailPanelOpen ? 'hidden lg:block lg:w-28' : 'hidden sm:block sm:w-32 lg:w-36'}`}
+                    className={`${detailPanelOpen ? 'hidden xl:block xl:w-28' : 'hidden sm:block sm:w-32 lg:w-36'}`}
                     density="dense"
                   />
                   <ColumnPicker
@@ -1071,7 +1076,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     onChange={(next) => setUnitFilter(next as UnitFilter)}
                     placeholder="Toutes les unités"
                     searchPlaceholder="Rechercher un filtre..."
-                    className={`${detailPanelOpen ? 'hidden lg:block lg:w-32' : 'hidden sm:block sm:w-32 lg:w-36'}`}
+                    className={`${detailPanelOpen ? 'hidden xl:block xl:w-32' : 'hidden sm:block sm:w-32 lg:w-36'}`}
                     density="dense"
                   />
                   <ColumnPicker
@@ -1157,6 +1162,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           detail={
             drawer ? (
               <PremiumDrawerShell
+                key={selectedProperty?.id || selectedUnit?.id || activeTab}
                 open={detailPanelOpen}
                 onClose={() => setDrawer(null)}
                 size="compact"
@@ -1315,7 +1321,7 @@ function buildDangerMessage(
 }
 
 function StatusBadge({ label }: { label: string }) {
-  return <span className={`inline-flex whitespace-nowrap rounded-full border px-1 py-0 text-[0.52rem] font-semibold leading-4 ${statusBadgeClass(label)}`}>{label}</span>;
+  return <span className={`inline-flex whitespace-nowrap rounded-full border px-1.5 py-[2px] text-[0.6rem] font-semibold leading-none ${statusBadgeClass(label)}`}>{label}</span>;
 }
 
 function PropertiesTable({
@@ -1359,18 +1365,18 @@ function PropertiesTable({
   }
 
   return (
-    <PremiumTableSurface density="dense">
+    <PremiumTableSurface density="dense" className="bg-white">
         <table className={`hidden lg:table w-full border-collapse table-fixed ${isSplitOpen ? 'min-w-[480px]' : 'min-w-[840px]'}`}>
-          <thead className="bg-[#f8f3e8]/70 text-left">
+          <thead className="bg-[#f2efe8]/80 text-left border-b border-emerald-950/10">
             <tr>
-              {showColumn('bien') && <th className={`${isSplitOpen ? 'w-[45%] px-3' : 'w-[30%] px-3'} py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> Bien</span></th>}
-              {!isIndividualOwner && showColumn('bailleur') && <th className="w-[15%] px-3 py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><CircleUser className="h-3.5 w-3.5 text-slate-400" /> Bailleur</span></th>}
-              {showColumn('unites') && <th className="w-[10%] px-3 py-3 text-center text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500">Unités</th>}
-              {showColumn('occupation') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5 text-slate-400" /> Occupation</span></th>}
-              {showColumn('loyer') && <th className="w-[12%] px-3 py-3 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500">Loyer attendu</th>}
-              {showColumn('statut') && <th className={`${isSplitOpen ? 'w-[15%] px-3' : 'w-[9%] px-3'} py-3 text-center text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}>Statut</th>}
-              {showColumn('reliquats') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-3 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5"><AlertCircle className="h-3.5 w-3.5 text-slate-400" /> Reliquats</span></th>}
-              {showActions && <th className="w-[4%] px-2 py-3"><span className="sr-only">Actions</span></th>}
+              {showColumn('bien') && <th className={`${isSplitOpen ? 'w-[45%] px-3' : 'w-[30%] px-3'} py-2.5 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> Bien</span></th>}
+              {!isIndividualOwner && showColumn('bailleur') && <th className="w-[15%] px-3 py-2.5 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><CircleUser className="h-3.5 w-3.5 text-slate-400" /> Bailleur</span></th>}
+              {showColumn('unites') && <th className="w-[10%] px-3 py-2.5 text-center text-[0.62rem] font-bold uppercase tracking-wider text-slate-500">Unités</th>}
+              {showColumn('occupation') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-2.5 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5 text-slate-400" /> Occupation</span></th>}
+              {showColumn('loyer') && <th className="w-[12%] px-3 py-2.5 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500">Loyer attendu</th>}
+              {showColumn('statut') && <th className={`${isSplitOpen ? 'w-[15%] px-3' : 'w-[9%] px-3'} py-2.5 text-center text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>Statut</th>}
+              {showColumn('reliquats') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-2.5 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5"><AlertCircle className="h-3.5 w-3.5 text-slate-400" /> Reliquats</span></th>}
+              {showActions && <th className="w-[4%] px-2 py-2.5"><span className="sr-only">Actions</span></th>}
             </tr>
           </thead>
           <tbody>
@@ -1384,40 +1390,43 @@ function PropertiesTable({
               return (
                 <tr key={property.id} className={`cursor-pointer border-b border-slate-100 transition-colors duration-150 outline-none hover:bg-[#f8fbf9] ${selected ? 'bg-emerald-50/50 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-[3px] after:bg-brand-500' : ''}`} onClick={() => onSelect(property)}>
                   {showColumn('bien') && (
-                    <td className="py-3 px-3">
+                    <td className="py-2.5 px-3">
                       <div className="flex items-center gap-2.5">
                         <div className={`flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-lg ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
                           <Icon className="h-3.5 w-3.5" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">{property.nom}</p>
+                          <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">
+                            {property.nom}
+                          </p>
                           <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-[1px]">
-                            {property.quartier || property.ville || 'Localisation à compléter'} · {inferPropertyType(property)}
-                            {isSplitOpen && ` · ${summary?.units.length ?? 0} unité${(summary?.units.length ?? 0) > 1 ? 's' : ''}`}
+                            {property.quartier || property.ville || 'Localisation à compléter'}
+                            {!isSplitOpen && ` · ${summary?.units.length ?? 0} unité${(summary?.units.length ?? 0) > 1 ? 's' : ''}`}
                             {isSplitOpen && !isIndividualOwner && owner ? ` · ${ownerName(owner)}` : ''}
                           </p>
                         </div>
                       </div>
                     </td>
                   )}
-                  {!isIndividualOwner && showColumn('bailleur') && <td className="py-3 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{ownerName(owner)}</p></td>}
-                  {showColumn('unites') && <td className="py-3 px-3 text-center text-[0.75rem] font-medium text-slate-700">{summary?.units.length ?? 0}</td>}
+                  {!isIndividualOwner && showColumn('bailleur') && <td className="py-2.5 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{owner ? ownerName(owner) : 'Aucun bailleur'}</p></td>}
+                  {showColumn('unites') && <td className="py-2.5 px-3 text-center text-[0.75rem] font-semibold text-slate-700">{summary?.units.length ?? 0}</td>}
                   {showColumn('occupation') && (
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-2">
-                        <div className={`${isSplitOpen ? 'w-8' : 'w-10'} h-1.5 overflow-hidden rounded-full bg-slate-100`}>
-                          <div className="h-full rounded-full bg-brand-800" style={{ width: `${summary?.occupancyRate ?? 0}%` }} />
+                    <td className="py-2.5 px-3">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-between text-[0.65rem]">
+                          <span className="font-semibold text-slate-700">{summary?.occupancyRate ?? 0}%</span>
+                          <span className="text-slate-500">{summary?.occupiedUnits ?? 0}/{summary?.units.length ?? 0}</span>
                         </div>
-                        <span className="text-[0.64rem] font-semibold text-slate-600">{summary?.occupancyRate ?? 0}%</span>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                          <div className="h-full bg-emerald-500 transition-all" style={{ width: `${summary?.occupancyRate ?? 0}%` }} />
+                        </div>
                       </div>
                     </td>
                   )}
-                  {showColumn('loyer') && <td className={`whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums ${isSplitOpen ? 'font-medium' : 'font-semibold'} text-slate-700`}><MoneyText value={summary?.expectedRent ?? 0} /></td>}
-                  {showColumn('statut') && <td className="py-3 px-3 text-center">
-                    <StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unité'} />
-                  </td>}
-                  {showColumn('reliquats') && <td className={`whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums ${isSplitOpen ? 'font-medium' : 'font-semibold'} ${reliquatAmount > 0 ? 'text-red-600' : 'text-slate-500'}`}><MoneyText value={reliquatAmount} /></td>}
-                  {showActions && <td className="py-3 px-3 text-right">
+                  {showColumn('loyer') && <td className="py-2.5 px-3 text-right text-[0.75rem] font-semibold text-slate-700"><MoneyText value={summary?.expectedRent ?? 0} compact={false} /></td>}
+                  {showColumn('statut') && <td className="py-2.5 px-3 text-center"><StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unité'} /></td>}
+                  {showColumn('reliquats') && <td className={`py-2.5 px-3 text-right text-[0.75rem] ${reliquatAmount > 0 ? 'font-semibold text-red-600' : 'font-medium text-slate-400'}`}><MoneyText value={reliquatAmount} compact={false} /></td>}
+                  {showActions && <td className="py-2.5 px-3 text-right">
                     <ChevronRight className="h-[10px] w-[10px] text-slate-300 inline-block" />
                   </td>}
                 </tr>
@@ -1468,17 +1477,17 @@ function UnitsTable({
   }
 
   return (
-    <PremiumTableSurface density="dense">
+    <PremiumTableSurface density="dense" className="bg-white">
         <table className={`hidden lg:table w-full border-collapse table-fixed ${isSplitOpen ? 'min-w-[480px]' : 'min-w-[840px]'}`}>
-          <thead className="bg-[#f8f3e8]/70 text-left">
+          <thead className="bg-[#f2efe8]/80 text-left border-b border-emerald-950/10">
             <tr>
-              {showColumn('unite') && <th className={`${isSplitOpen ? 'w-[40%] px-3' : 'w-[25%] px-3'} py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><DoorOpen className="h-3.5 w-3.5 text-slate-400" /> Unité</span></th>}
-              {showColumn('bien') && <th className="w-[15%] px-3 py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> Bien parent</span></th>}
-              {showColumn('locataire') && <th className="w-[16%] px-3 py-3 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><CircleUser className="h-3.5 w-3.5 text-slate-400" /> Locataire</span></th>}
-              {showColumn('loyer') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-3 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5">Loyer</span></th>}
-              {showColumn('statut') && <th className={`${isSplitOpen ? 'w-[20%] px-3 text-center' : 'w-[10%] px-3 text-left'} py-3 text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}>Statut</th>}
-              {showColumn('reliquat') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-3 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5"><AlertCircle className="h-3.5 w-3.5 text-slate-400" /> Reliquat</span></th>}
-              {showActions && <th className="w-[4%] px-2 py-3"><span className="sr-only">Actions</span></th>}
+              {showColumn('unite') && <th className={`${isSplitOpen ? 'w-[40%] px-3' : 'w-[25%] px-3'} py-2.5 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><DoorOpen className="h-3.5 w-3.5 text-slate-400" /> Unité</span></th>}
+              {showColumn('bien') && <th className="w-[15%] px-3 py-2.5 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> Bien parent</span></th>}
+              {showColumn('locataire') && <th className="w-[16%] px-3 py-2.5 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><CircleUser className="h-3.5 w-3.5 text-slate-400" /> Locataire</span></th>}
+              {showColumn('loyer') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-2.5 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5">Loyer</span></th>}
+              {showColumn('statut') && <th className={`${isSplitOpen ? 'w-[20%] px-3 text-center' : 'w-[10%] px-3 text-left'} py-2.5 text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>Statut</th>}
+              {showColumn('reliquat') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-2.5 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5"><AlertCircle className="h-3.5 w-3.5 text-slate-400" /> Reliquat</span></th>}
+              {showActions && <th className="w-[4%] px-2 py-2.5"><span className="sr-only">Actions</span></th>}
             </tr>
           </thead>
           <tbody>
@@ -1487,34 +1496,37 @@ function UnitsTable({
               const property = unit.immeuble_id ? propertyById.get(unit.immeuble_id) : null;
               const visual = getUnitVisual(unit);
               const Icon = visual.icon;
-              const status = getUnitStatusLabel(unit, summary);
               const selected = unit.id === selectedId;
               const reliquatAmount = summary?.reliquat ?? 0;
               return (
                 <tr key={unit.id} className={`cursor-pointer border-b border-slate-100 transition-colors duration-150 outline-none hover:bg-[#f8fbf9] ${selected ? 'bg-emerald-50/50 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-[3px] after:bg-brand-500' : ''}`} onClick={() => onSelect(unit)}>
                   {showColumn('unite') && (
-                    <td className="py-3 px-3">
+                    <td className="py-2.5 px-3">
                       <div className="flex items-center gap-2.5">
                         <div className={`flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-lg ring-1 ring-black/5 ${visual.bg} ${visual.color}`}>
                           <Icon className="h-3.5 w-3.5" />
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">{unit.nom}</p>
+                          <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">
+                            {(() => {
+                              const t = inferUnitType(unit);
+                              const n = unit.nom || unit.numero || 'A1';
+                              return normalizeText(n).includes(normalizeText(t)) ? n : `${t} ${n}`;
+                            })()}
+                          </p>
                           <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-[1px]">
-                            {inferUnitType(unit)} · {unit.numero || unit.etage || 'A1'}
-                            {isSplitOpen && property ? ` · ${property.nom}` : ''}
-                            {isSplitOpen && summary?.tenantLabel ? ` · ${summary.tenantLabel}` : ''}
+                            {property?.nom ?? 'Aucun bien'} · {summary?.tenantLabel ?? 'Libre'}
                           </p>
                         </div>
                       </div>
                     </td>
                   )}
-                  {showColumn('bien') && <td className="py-3 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{property?.nom ?? unit.immeubles?.nom ?? '-'}</p></td>}
-                  {showColumn('locataire') && <td className="py-3 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{summary?.tenantLabel ?? 'Aucun locataire'}</p></td>}
-                  {showColumn('loyer') && <td className={`whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums ${isSplitOpen ? 'font-medium' : 'font-semibold'} text-slate-700`}><MoneyText value={unit.loyer_base ?? 0} /></td>}
-                  {showColumn('statut') && <td className={`py-3 px-3 ${isSplitOpen ? 'text-center' : 'text-left'}`}><StatusBadge label={status} /></td>}
-                  {showColumn('reliquat') && <td className={`whitespace-nowrap py-3 px-3 text-right text-[0.78rem] tabular-nums ${isSplitOpen ? 'font-medium' : 'font-semibold'} ${reliquatAmount > 0 ? 'text-red-600' : 'text-slate-500'}`}><MoneyText value={reliquatAmount} /></td>}
-                  {showActions && <td className="py-3 px-3 text-right">
+                  {showColumn('bien') && <td className="py-2.5 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{property?.nom ?? unit.immeubles?.nom ?? '-'}</p></td>}
+                  {showColumn('locataire') && <td className="py-2.5 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{summary?.tenantLabel ?? 'Aucun locataire'}</p></td>}
+                  {showColumn('loyer') && <td className="py-2.5 px-3 text-right text-[0.75rem] font-semibold text-slate-700"><MoneyText value={unit.loyer_base ?? 0} compact={false} /></td>}
+                  {showColumn('statut') && <td className="py-2.5 px-3 text-center"><StatusBadge label={getUnitStatusLabel(unit, summary)} /></td>}
+                  {showColumn('reliquat') && <td className={`py-2.5 px-3 text-right text-[0.75rem] ${reliquatAmount > 0 ? 'font-semibold text-red-600' : 'font-medium text-slate-400'}`}><MoneyText value={reliquatAmount} compact={false} /></td>}
+                  {showActions && <td className="py-2.5 px-3 text-right">
                     <ChevronRight className="h-[10px] w-[10px] text-slate-300 inline-block" />
                   </td>}
                 </tr>
@@ -1550,57 +1562,78 @@ function PropertyDrawer({
   const hasReliquat = summary.reliquats > 0;
   return (
     <>
-      {/* KPI compact grid */}
-      <div className="grid grid-cols-3 gap-1.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm">
+      {/* Action principale */}
+      <button type="button" onClick={onAddUnit} className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-50 border border-brand-200/60 p-2.5 text-[0.7rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+        <Plus className="h-4 w-4" />
+        Ajouter une unité
+      </button>
+
+
+      <div className="mb-3 grid grid-cols-3 gap-1.5 rounded-xl border border-emerald-950/10 bg-white p-2 shadow-sm">
         <CompactMetric label="Unités" value={String(summary.units.length)} tone="slate" />
-        <CompactMetric label="Occupées" value={String(summary.occupiedUnits)} tone="emerald" />
-        <CompactMetric label="Libres" value={String(summary.freeUnits)} tone="slate" />
+        <CompactMetric label="Occupées" value={String(summary.occupiedUnits)} tone="slate" />
+        <CompactMetric label="Libres" value={String(summary.units.length - summary.occupiedUnits)} tone="slate" />
         <div className="col-span-3 my-0.5 h-px bg-emerald-950/5" />
         <CompactMetric label="Occupation" value={`${summary.occupancyRate}%`} tone={summary.occupancyRate === 100 ? 'emerald' : 'slate'} />
-        <CompactMetric label="Loyers/mois" value={<MoneyText value={summary.expectedRent} compact />} tone="slate" />
-        <CompactMetric label="Reliquats" value={<MoneyText value={summary.reliquats} compact />} tone={hasReliquat ? 'red' : 'slate'} />
+        <CompactMetric label="Loyers" value={<MoneyText value={summary.expectedRent} compact={true} />} tone="slate" />
+        <CompactMetric label="Reliquats" value={<MoneyText value={summary.reliquats} compact={true} />} tone={hasReliquat ? 'red' : 'slate'} />
       </div>
 
       {/* Informations */}
-      <CompactSection title="Informations" icon={MapPin}>
-        <div className="flex flex-col divide-y divide-slate-100">
-          <CompactLabelValue label="Adresse" value={property.adresse || 'À compléter'} />
-          <CompactLabelValue label="Ville" value={property.ville || 'À compléter'} />
-          {!isIndividualOwner && <CompactLabelValue label="Bailleur" value={ownerName(owner)} />}
-        </div>
-      </CompactSection>
+      <div className="mb-3">
+        <CompactSection title="Informations" icon={MapPin}>
+          <div className="flex flex-col divide-y divide-slate-100">
+            <CompactLabelValue label="Adresse" value={property.adresse || 'À compléter'} />
+            <CompactLabelValue label="Ville" value={property.ville || 'À compléter'} />
+            {!isIndividualOwner && (
+              <div className="flex items-center justify-between py-1.5">
+                <span className="text-[0.7rem] font-semibold text-slate-500">Bailleur</span>
+                <button type="button" onClick={() => onNavigate('/bailleurs')} className="flex items-center gap-1 text-[0.7rem] font-bold text-brand-700 hover:text-brand-900 transition">
+                  {ownerName(owner)}
+                  <span className="text-[0.6rem]">&rarr;</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </CompactSection>
+      </div>
 
-      {/* Actions */}
-      <CompactSection title="Actions & Gestion" icon={Pencil}>
-        <div className="grid grid-cols-2 gap-1.5">
-          <button type="button" onClick={onAddUnit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100 col-span-2">
-            <Plus className="h-3.5 w-3.5 text-brand-700" />
-            Ajouter une unité
-          </button>
-          <button type="button" onClick={onEdit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
-            <Pencil className="h-3.5 w-3.5 text-slate-400" />
-            Modifier
-          </button>
-          <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
-            <Wallet className="h-3.5 w-3.5 text-slate-400" />
-            Paiements
-          </button>
-        </div>
-      </CompactSection>
+      {/* Actions secondaires */}
+      <div className="mb-3">
+        <CompactSection title="Actions & Gestion" icon={Pencil}>
+          <div className="grid grid-cols-2 gap-1.5">
+            <button type="button" onClick={onEdit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+              <Pencil className="h-3.5 w-3.5 text-slate-400" />
+              Modifier le bien
+            </button>
+            <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+              <Wallet className="h-3.5 w-3.5 text-slate-400" />
+              Paiements liés
+            </button>
+            <button type="button" onClick={() => onNavigate('/documents')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 col-span-2">
+              <FileText className="h-3.5 w-3.5 text-slate-400" />
+              Documents associés
+            </button>
+          </div>
+        </CompactSection>
+      </div>
 
       {/* Onglets liés */}
-      <div className="overflow-hidden rounded-xl border border-emerald-950/10 bg-white shadow-sm">
+      <div className="mb-4 overflow-hidden rounded-xl border border-emerald-950/10 bg-white shadow-sm">
         <DrawerTabs
           tabs={[
             {
               label: 'Unités',
               content: summary.units.length === 0 ? (
-                <SoftEmpty text="Aucune unité enregistrée." />
+                <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+                  <p className="text-[0.75rem] font-medium text-slate-600 mb-3">Aucune unité enregistrée.</p>
+                  <button type="button" onClick={onAddUnit} className="inline-flex h-7 items-center justify-center gap-1.5 rounded border border-brand-200 bg-brand-50 px-3 text-[0.65rem] font-bold text-brand-900 transition hover:bg-brand-100">Ajouter une unité</button>
+                </div>
               ) : (
                 <CompactList rows={summary.units.slice(0, 6).map((unit) => ({
                   icon: DoorOpen,
                   title: unit.nom,
-                  subtitle: <><MoneyText value={unit.loyer_base ?? 0} /> - {getUnitStatusLabel(unit)}</>,
+                  subtitle: <span className="font-medium text-slate-500"><MoneyText value={unit.loyer_base ?? 0} compact={false} /> · {getUnitStatusLabel(unit)}</span>,
                   onClick: () => onSelectUnit(unit),
                 }))} />
               ),
@@ -1610,12 +1643,15 @@ function PropertyDrawer({
               content: summary.contracts.length === 0 ? (
                 <SoftEmpty text="Aucune location." />
               ) : (
-                <CompactList rows={summary.contracts.slice(0, 6).map((contract) => ({
-                  icon: ClipboardList,
-                  title: formatPersonName(contract.locataires, 'Locataire'),
-                  subtitle: <><MoneyText value={contract.loyer_mensuel ?? 0} /> - {contract.statut ?? 'Bail'}</>,
-                  onClick: () => { window.location.hash = '#/occupants-baux'; },
-                }))} />
+                <CompactList rows={summary.contracts.slice(0, 6).map((contract) => {
+                  const unitOfContract = summary.units.find((u) => u.id === contract.unite_id);
+                  return {
+                    icon: ClipboardList,
+                    title: formatPersonName(contract.locataires, 'Locataire'),
+                    subtitle: <span className="font-medium text-slate-500">{unitOfContract?.nom || 'Unité'} · <MoneyText value={contract.loyer_mensuel ?? 0} compact={false} /> · {contract.statut === 'actif' ? 'Actif' : 'Historique'}</span>,
+                    onClick: () => { window.location.hash = '#/occupants-baux'; },
+                  };
+                })} />
               ),
             },
             {
@@ -1626,7 +1662,7 @@ function PropertyDrawer({
                 <CompactList rows={summary.documents.slice(0, 6).map((document) => ({
                   icon: FileText,
                   title: document.name || document.document_category || 'Document',
-                  subtitle: formatDate(document.created_at),
+                  subtitle: <span className="font-medium text-slate-500">PDF · {formatDate(document.created_at)}</span>,
                   onClick: () => { window.location.hash = '#/documents'; },
                 }))} />
               ),
@@ -1670,48 +1706,133 @@ function UnitDrawer({
   const hasReliquat = summary.reliquat > 0;
   return (
     <>
-      {/* KPI compact grid */}
-      <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm">
-        <CompactMetric label="Loyer mensuel" value={<MoneyText value={unit.loyer_base ?? 0} compact />} tone="slate" />
-        <CompactMetric label="Statut" value={<StatusBadge label={status} />} tone="slate" />
-        <div className="col-span-2 my-0.5 h-px bg-emerald-950/5" />
-        <CompactMetric label="Reliquat" value={<MoneyText value={summary.reliquat} compact />} tone={hasReliquat ? 'red' : 'slate'} />
-        <CompactMetric label="En cours" value={summary.contract ? 'Oui' : 'Non'} tone={summary.contract ? 'emerald' : 'slate'} />
+      {/* Résumé financier */}
+      <div className="mb-3 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-3 shadow-sm">
+        <h4 className="mb-1.5 text-[0.62rem] font-black uppercase tracking-[0.14em] text-slate-400">Résumé financier</h4>
+        <div className="flex flex-col gap-1.5 text-[0.74rem] font-medium text-slate-800">
+          <div className="flex justify-between">
+            <span className="text-slate-500">Loyer mensuel</span>
+            <MoneyText value={unit.loyer_base ?? 0} compact={false} />
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">Reliquat</span>
+            <span className={hasReliquat ? 'text-red-600 font-semibold' : ''}>
+              <MoneyText value={summary.reliquat} compact={false} />
+            </span>
+          </div>
+          {summary.latestPayment && (
+            <div className="flex justify-between">
+              <span className="text-slate-500">Dernier paiement</span>
+              <span>{formatDate(summary.latestPayment.date_paiement)}</span>
+            </div>
+          )}
+          <div className="flex justify-between pt-1 border-t border-emerald-950/5 mt-0.5">
+            <span className="text-slate-500">Situation</span>
+            <span className={summary.isLate ? 'text-red-600 font-semibold' : 'text-emerald-700 font-semibold'}>{status}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Occupation */}
-      <CompactSection title="Occupation" icon={CircleUser}>
-        <div className="flex flex-col divide-y divide-slate-100">
-          <CompactLabelValue label="Locataire" value={summary.tenantLabel || 'Aucun locataire'} />
-          <CompactLabelValue label="Bien parent" value={property?.nom || unit.immeubles?.nom || 'Aucun bien'} />
-          {summary.latestPayment && (
-            <CompactLabelValue
-              label="Dernier paiement"
-              value={formatDate(summary.latestPayment.date_paiement)}
-            />
-          )}
-        </div>
-      </CompactSection>
+      {/* Occupation actuelle */}
+      <div className="mb-3">
+        <CompactSection title="Occupation actuelle" icon={CircleUser}>
+          <div className="flex flex-col divide-y divide-slate-100">
+            {summary.contract ? (
+              <>
+                <CompactLabelValue label="Locataire" value={formatPersonName(summary.contract.locataires, 'Locataire')} />
+                {(() => {
+                  const lData = summary.contract.locataires as unknown as Array<{ telephone?: string }> | { telephone?: string };
+                  const phone = Array.isArray(lData) ? lData[0]?.telephone : lData?.telephone;
+                  return phone ? <CompactLabelValue label="Téléphone" value={phone} /> : null;
+                })()}
+                <CompactLabelValue label="Bien parent" value={property?.nom || unit.immeubles?.nom || 'Aucun bien'} />
+                <CompactLabelValue label="Bail" value={summary.contract.statut === 'actif' ? 'Location active' : 'Historique'} />
+                {summary.contract.date_debut && (
+                  <CompactLabelValue label="Entrée" value={formatDate(summary.contract.date_debut)} />
+                )}
+              </>
+            ) : (
+              <>
+                <CompactLabelValue label="Bien parent" value={property?.nom || unit.immeubles?.nom || 'Aucun bien'} />
+                <div className="py-2.5">
+                  <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[0.65rem] font-medium text-slate-600">Unité libre</span>
+                </div>
+              </>
+            )}
+          </div>
+        </CompactSection>
+      </div>
+
+      {/* Paiements récents */}
+      <div className="mb-3 overflow-hidden rounded-xl border border-emerald-950/10 bg-white shadow-sm">
+        <DrawerTabs
+          tabs={[
+            {
+              label: 'Paiements',
+              content: summary.payments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+                  <p className="text-[0.75rem] font-medium text-slate-600 mb-3">Aucun paiement enregistré.</p>
+                  <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-7 items-center justify-center gap-1.5 rounded border border-brand-200 bg-brand-50 px-3 text-[0.65rem] font-bold text-brand-900 transition hover:bg-brand-100">Encaisser un paiement</button>
+                </div>
+              ) : (
+                <CompactList rows={summary.payments.slice(0, 4).map((payment) => ({
+                  icon: Wallet,
+                  title: <MoneyText value={payment.montant_total ?? 0} compact={false} />,
+                  subtitle: <span className="font-medium text-slate-500">{formatDate(payment.date_paiement)} · {(payment.reliquat ?? 0) > 0 ? 'Partiel' : 'Payé'}</span>,
+                  onClick: () => { window.location.hash = '#/paiements'; },
+                }))} />
+              ),
+            },
+            {
+              label: 'Documents',
+              content: summary.documents.length === 0 ? (
+                <SoftEmpty text="Aucun document." />
+              ) : (
+                <CompactList rows={summary.documents.slice(0, 4).map((document) => ({
+                  icon: FileText,
+                  title: document.name || document.document_category || 'Document',
+                  subtitle: <span className="font-medium text-slate-500">PDF · {formatDate(document.created_at)}</span>,
+                  onClick: () => { window.location.hash = '#/documents'; },
+                }))} />
+              ),
+            },
+          ]}
+        />
+      </div>
 
       {/* Actions */}
-      <CompactSection title="Actions & Gestion" icon={Pencil}>
-        <div className="grid grid-cols-2 gap-1.5">
-          <button type="button" onClick={onEdit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
-            <Pencil className="h-3.5 w-3.5 text-slate-400" />
-            Modifier
-          </button>
-          <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
-            <Wallet className="h-3.5 w-3.5 text-slate-400" />
-            Paiements
-          </button>
-          {summary.contract && (
-            <button type="button" onClick={() => onNavigate('/occupants-baux')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
-              <ClipboardList className="h-3.5 w-3.5 text-brand-700" />
-              Voir la location
+      <div className="mb-4">
+        <CompactSection title="Actions & Gestion" icon={Pencil}>
+          <div className="grid grid-cols-2 gap-1.5">
+            {summary.contract ? (
+              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+                <ClipboardList className="h-3.5 w-3.5 text-brand-700" />
+                Voir la location
+              </button>
+            ) : (
+              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+                <Plus className="h-3.5 w-3.5 text-brand-700" />
+                Créer une location
+              </button>
+            )}
+            
+            <button type="button" onClick={onEdit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+              <Pencil className="h-3.5 w-3.5 text-slate-400" />
+              Modifier l'unité
             </button>
-          )}
-        </div>
-      </CompactSection>
+            <button type="button" onClick={() => onNavigate('/documents')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+              <FileText className="h-3.5 w-3.5 text-slate-400" />
+              Documents associés
+            </button>
+            {hasReliquat && (
+              <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200/60 px-2 text-[0.65rem] font-bold text-emerald-900 shadow-sm transition hover:bg-emerald-100">
+                <Wallet className="h-3.5 w-3.5 text-emerald-700" />
+                Encaisser le reliquat
+              </button>
+            )}
+          </div>
+        </CompactSection>
+      </div>
 
       {/* Zone sensible */}
       <div className="pt-1 pb-2">

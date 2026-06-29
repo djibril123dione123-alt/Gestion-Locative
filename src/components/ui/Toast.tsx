@@ -67,11 +67,12 @@ export function Toast({ message, type, onClose, duration = 5000 }: ToastProps) {
 interface ToastContainerProps {
   toasts: Array<{ id: string; message: string; type: ToastType }>;
   onRemove: (id: string) => void;
+  className?: string;
 }
 
-export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
+export function ToastContainer({ toasts, onRemove, className }: ToastContainerProps) {
   return (
-    <div className="fixed left-4 right-4 top-4 z-50 flex flex-col items-end gap-2 sm:left-auto">
+    <div className={`fixed z-50 flex flex-col gap-2 ${className || 'left-4 right-4 top-4 items-end sm:left-auto'}`}>
       {toasts.map((toast) => (
         <Toast
           key={toast.id}

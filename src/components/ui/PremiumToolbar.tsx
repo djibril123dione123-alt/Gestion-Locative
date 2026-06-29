@@ -59,19 +59,19 @@ export function PremiumToolbar({
       >
         <div className={`flex min-w-0 items-center ${isUltraCompact ? 'gap-1.5' : 'gap-2'} ${isSplitOpen ? 'flex-nowrap' : 'flex-wrap @xl:flex-nowrap'}`}>
           {tabs && (
-            <div className="shrink-0 flex-none">
+            <div className="order-1 shrink-0 flex-none">
               {tabs}
             </div>
           )}
 
           {(search ?? children) && (
-            <div className={`flex-1 shrink min-w-0 ${isSplitOpen ? 'basis-auto min-w-[5rem]' : 'basis-32 min-w-[8rem]'}`}>
+            <div className={`order-3 @xl:order-2 flex-1 shrink min-w-0 ${isSplitOpen ? 'basis-auto min-w-[5rem]' : 'basis-full @xl:basis-32 min-w-[8rem]'}`}>
               {search ?? children}
             </div>
           )}
 
           {(filters || secondaryActions || actions || primaryAction) && (
-            <div className={`flex shrink-0 items-center ${isUltraCompact ? 'gap-1.5' : 'gap-2'} ${isSplitOpen ? 'flex-nowrap' : 'flex-wrap'}`}>
+            <div className={`order-2 @xl:order-3 ml-auto flex shrink-0 items-center ${isUltraCompact ? 'gap-1.5' : 'gap-2'} ${isSplitOpen ? 'flex-nowrap' : 'flex-wrap'}`}>
               {filters}
               {secondaryActions ?? actions}
               {primaryAction && <div className="shrink-0">{primaryAction}</div>}

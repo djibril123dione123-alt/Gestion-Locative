@@ -601,6 +601,66 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
     };
   }, [contractsByUnitId, data.payments, data.properties, data.units, summaries.unit]);
 
+
+  const propertyQuickChipsData = useMemo(() => {
+    const baseProperties = data.properties.filter((property) => {
+      const search = normalizeText(searchTerm);
+      const owner = property.bailleur_id ? ownerById.get(property.bailleur_id) ?? property.bailleurs : property.bailleurs;
+      const searchable = normalizeText(`${property.nom} ${property.adresse ?? ''} ${property.quartier ?? ''} ${property.ville ?? ''} ${ownerName(owner)} ${inferPropertyType(property)}`);
+      if (search && !searchable.includes(search)) return false;
+      if (!isIndividualOwner && ownerFilter !== 'all' && property.bailleur_id !== ownerFilter) return false;
+      return true;
+    });
+
+    return {
+      all: baseProperties.length,
+      with_reliquats: baseProperties.filter((property) => (summaries.property.get(property.id)?.reliquats ?? 0) > 0).length,
+      without_units: baseProperties.filter((property) => (summaries.property.get(property.id)?.units.length ?? 0) === 0).length,
+      complete: baseProperties.filter((property) => property.adresse && property.ville && (summaries.property.get(property.id)?.units.length ?? 0) > 0).length,
+      incomplete: baseProperties.filter((property) => !property.adresse || !property.ville || (summaries.property.get(property.id)?.units.length ?? 0) === 0).length,
+    };
+  }, [data.properties, isIndividualOwner, ownerById, ownerFilter, searchTerm, summaries.property]);
+
+  const propertyQuickChips = useMemo(
+    () => [
+      { id: 'all', label: 'Tous', count: propertyQuickChipsData.all, isActive: propertyFilter === 'all', onClick: () => setPropertyFilter('all') },
+      { id: 'incomplete', label: 'Incomplets', count: propertyQuickChipsData.incomplete, isActive: propertyFilter === 'incomplete', onClick: () => setPropertyFilter('incomplete') },
+      { id: 'complete', label: 'Complets', count: propertyQuickChipsData.complete, isActive: propertyFilter === 'complete', onClick: () => setPropertyFilter('complete') },
+      { id: 'with_reliquats', label: 'Reliquats', count: propertyQuickChipsData.with_reliquats, isActive: propertyFilter === 'with_reliquats', onClick: () => setPropertyFilter('with_reliquats') },
+      { id: 'without_units', label: 'Sans unité', count: propertyQuickChipsData.without_units, isActive: propertyFilter === 'without_units', onClick: () => setPropertyFilter('without_units') },
+    ],
+    [propertyFilter, propertyQuickChipsData]
+  );
+
+  const unitQuickChipsData = useMemo(() => {
+    const baseUnits = data.units.filter((unit) => {
+      const search = normalizeText(searchTerm);
+      const summary = summaries.unit.get(unit.id);
+      const property = unit.immeuble_id ? propertyById.get(unit.immeuble_id) : null;
+      const searchable = normalizeText(`${unit.nom} ${unit.numero ?? ''} ${unit.etage ?? ''} ${property?.nom ?? ''} ${summary?.tenantLabel ?? ''} ${inferUnitType(unit)}`);
+      if (search && !searchable.includes(search)) return false;
+      return true;
+    });
+
+    return {
+      all: baseUnits.length,
+      libre: baseUnits.filter((unit) => getUnitStatusLabel(unit, summaries.unit.get(unit.id)) === 'Libre').length,
+      loue: baseUnits.filter((unit) => getUnitStatusLabel(unit, summaries.unit.get(unit.id)) === 'Louée').length,
+      late: baseUnits.filter((unit) => summaries.unit.get(unit.id)?.isLate).length,
+      without_contract: baseUnits.filter((unit) => !summaries.unit.get(unit.id)?.contract).length,
+    };
+  }, [data.units, propertyById, searchTerm, summaries.unit]);
+
+  const unitQuickChips = useMemo(
+    () => [
+      { id: 'all', label: 'Toutes', count: unitQuickChipsData.all, isActive: unitFilter === 'all', onClick: () => setUnitFilter('all') },
+      { id: 'libre', label: 'Libres', count: unitQuickChipsData.libre, isActive: unitFilter === 'libre', onClick: () => setUnitFilter('libre') },
+      { id: 'loue', label: 'Louées', count: unitQuickChipsData.loue, isActive: unitFilter === 'loue', onClick: () => setUnitFilter('loue') },
+      { id: 'late', label: 'Retard', count: unitQuickChipsData.late, isActive: unitFilter === 'late', onClick: () => setUnitFilter('late') },
+      { id: 'without_contract', label: 'Sans bail', count: unitQuickChipsData.without_contract, isActive: unitFilter === 'without_contract', onClick: () => setUnitFilter('without_contract') },
+    ],
+    [unitFilter, unitQuickChipsData]
+  );
   const filteredProperties = useMemo(() => {
     const search = normalizeText(searchTerm);
     return data.properties.filter((property) => {
@@ -650,27 +710,8 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
     ],
     [data.bailleurs],
   );
-  const propertyFilterOptions = useMemo(
-    () => [
-      { value: 'all', label: 'Tous les biens', subtitle: 'Aucun filtre métier' },
-      { value: 'with_reliquats', label: 'Avec reliquats', subtitle: 'Biens avec reste à recouvrer' },
-      { value: 'without_units', label: 'Sans unité', subtitle: 'Biens à structurer' },
-      { value: 'complete', label: 'Complets', subtitle: 'Adresse, ville et unités renseignées' },
-      { value: 'incomplete', label: 'À compléter', subtitle: 'Informations manquantes' },
-    ],
-    [],
-  );
-  const unitFilterOptions = useMemo(
-    () => [
-      { value: 'all', label: 'Toutes les unités', subtitle: 'Aucun filtre métier' },
-      { value: 'libre', label: 'Libres', subtitle: 'Disponibles pour une location' },
-      { value: 'loue', label: 'Louées', subtitle: 'Avec bail actif ou occupation' },
-      { value: 'maintenance', label: 'Maintenance', subtitle: 'Indisponibles temporairement' },
-      { value: 'late', label: 'Avec reliquat', subtitle: 'Paiement incomplet détecté' },
-      { value: 'without_contract', label: 'Sans bail', subtitle: 'À rattacher à une location' },
-    ],
-    [],
-  );
+  
+  
 
   const openPropertyModal = useCallback(
     async (property?: PropertyRow | null) => {
@@ -997,11 +1038,12 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           density="ultraCompact"
           isSplitOpen={detailPanelOpen}
           ariaLabel="Filtres patrimoine"
+          quickChips={activeTab === 'biens' ? propertyQuickChips : unitQuickChips}
           tabs={
             <div className="flex gap-0.5 overflow-x-auto rounded-[0.6rem] bg-[#f7f1e7]/75 p-0.5">
               {[
                 { id: 'biens' as const, label: 'Biens' },
-                { id: 'unites' as const, label: 'Unités locatives' },
+                { id: 'unites' as const, label: 'Unités' },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1051,15 +1093,6 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                       density="dense"
                     />
                   )}
-                  <SmartCombobox
-                    value={propertyFilter}
-                    options={propertyFilterOptions}
-                    onChange={(next) => setPropertyFilter(next as PropertyFilter)}
-                    placeholder="Tous les biens"
-                    searchPlaceholder="Rechercher un filtre..."
-                    className={`${detailPanelOpen ? 'hidden xl:block xl:w-28' : 'hidden sm:block sm:w-32 lg:w-36'}`}
-                    density="dense"
-                  />
                   <ColumnPicker
                     columns={PROPERTY_COLUMN_KEYS.filter((key) => !isIndividualOwner || key !== 'bailleur').map((key) => ({ key, label: getPropertyColumnLabel(key), required: key === 'bien' }))}
                     visibility={propertyColumns.visibility}
@@ -1070,15 +1103,6 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                 </>
               ) : (
                 <>
-                  <SmartCombobox
-                    value={unitFilter}
-                    options={unitFilterOptions}
-                    onChange={(next) => setUnitFilter(next as UnitFilter)}
-                    placeholder="Toutes les unités"
-                    searchPlaceholder="Rechercher un filtre..."
-                    className={`${detailPanelOpen ? 'hidden xl:block xl:w-32' : 'hidden sm:block sm:w-32 lg:w-36'}`}
-                    density="dense"
-                  />
                   <ColumnPicker
                     columns={UNIT_COLUMN_KEYS.map((key) => ({ key, label: getUnitColumnLabel(key), required: key === 'unite' }))}
                     visibility={unitColumns.visibility}
@@ -1112,22 +1136,11 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     searchPlaceholder="Rechercher un bailleur..."
                   />
                 )}
-                <SmartCombobox
-                  value={propertyFilter}
-                  options={propertyFilterOptions}
-                  onChange={(next) => setPropertyFilter(next as PropertyFilter)}
-                  placeholder="Tous les biens"
-                  searchPlaceholder="Rechercher un filtre..."
-                />
               </div>
             ) : (
-              <SmartCombobox
-                value={unitFilter}
-                options={unitFilterOptions}
-                onChange={(next) => setUnitFilter(next as UnitFilter)}
-                placeholder="Toutes les unités"
-                searchPlaceholder="Rechercher un filtre..."
-              />
+              <div className="grid gap-2.5">
+                {/* Plus de filtres mobiles ici pour les unités */}
+              </div>
             )}
           </MobileFilterSheet>
 
@@ -1434,6 +1447,37 @@ function PropertiesTable({
             })}
           </tbody>
         </table>
+
+        <div className="grid gap-2 p-2 lg:hidden">
+          {properties.map((property) => {
+            const summary = summaries.get(property.id);
+            const visual = getPropertyVisual(property);
+            const reliquatAmount = summary?.reliquats ?? 0;
+            return (
+              <PremiumMobileCard
+                key={property.id}
+                onClick={() => onSelect(property)}
+                title={property.nom}
+                subtitle={property.adresse && property.ville ? `${property.adresse}, ${property.ville}` : 'Adresse non renseignée'}
+                icon={visual.icon}
+                status={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unité'}
+                statusTone={(summary?.units.length ?? 0) > 0 ? 'emerald' : 'slate'}
+                amount={summary?.expectedRent ?? 0}
+                amountLabel="Attendu"
+                amountTone={(summary?.expectedRent ?? 0) === 0 ? 'slate' : 'emerald'}
+                emphasis="identity"
+                topMeta={[
+                  { label: 'Unités', value: String(summary?.units.length ?? 0) },
+                ]}
+                meta={[
+                  { label: 'Occupation', value: `${summary?.occupancyRate ?? 0}%` },
+                  ...(reliquatAmount > 0 ? [{ label: 'Reliquats', value: String(reliquatAmount), tone: 'red' as const }] : []),
+                ]}
+              />
+            );
+          })}
+        </div>
+
     </PremiumTableSurface>
   );
 }
@@ -1534,6 +1578,35 @@ function UnitsTable({
             })}
           </tbody>
         </table>
+        <div className="grid gap-2 p-2 lg:hidden">
+          {units.map((unit) => {
+            const summary = summaries.get(unit.id);
+            const property = unit.immeuble_id ? propertyById.get(unit.immeuble_id) : null;
+            const visual = getUnitVisual(unit);
+            const statusLabel = getUnitStatusLabel(unit, summary);
+            const reliquatAmount = summary?.reliquat ?? 0;
+            
+            return (
+              <PremiumMobileCard
+                key={unit.id}
+                onClick={() => onSelect(unit)}
+                eyebrow={property?.nom ?? 'Sans bien'}
+                title={unit.nom}
+                subtitle={summary?.tenantLabel ?? 'Aucun locataire'}
+                icon={visual.icon}
+                status={statusLabel}
+                statusTone={statusLabel === 'Libre' ? 'emerald' : statusLabel === 'Louée' ? 'blue' : 'slate'}
+                amount={unit.loyer_base ?? 0}
+                amountLabel="Loyer"
+                amountTone={(unit.loyer_base ?? 0) === 0 ? 'slate' : 'slate'}
+                emphasis="identity"
+                meta={[
+                  ...(reliquatAmount > 0 ? [{ label: 'Reliquat', value: String(reliquatAmount), tone: 'red' as const }] : []),
+                ]}
+              />
+            );
+          })}
+        </div>
     </PremiumTableSurface>
   );
 }

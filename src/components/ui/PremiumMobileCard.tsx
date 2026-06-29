@@ -33,6 +33,7 @@ interface PremiumMobileCardProps {
   amountCompact?: boolean;
   amountSuffix?: string;
   meta?: Array<{ label: string; value: ReactNode; tone?: Tone }>;
+  topMeta?: Array<{ label: string; value: ReactNode; tone?: Tone }>;
   rows?: PremiumMobileCardRow[];
   actions?: ReactNode;
   footer?: ReactNode;
@@ -72,6 +73,7 @@ export function PremiumMobileCard({
   amountCompact = false,
   amountSuffix,
   meta = [],
+  topMeta = [],
   rows = [],
   actions,
   footer,
@@ -126,11 +128,18 @@ export function PremiumMobileCard({
               <p className={`truncate ${emphasis === 'identity' ? 'text-[0.86rem] font-bold leading-tight text-slate-950' : 'text-[0.8rem] font-black leading-5 text-slate-950'}`}>{title}</p>
               {subtitle && <p className="mt-0.5 line-clamp-2 text-[0.65rem] font-semibold leading-4 text-slate-500">{subtitle}</p>}
             </div>
-            {status && (
-              <span className={`shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[0.55rem] ${emphasis === 'identity' ? 'font-bold' : 'font-black'} uppercase tracking-[0.06em] ${toneClasses[statusTone]}`}>
-                {status}
-              </span>
-            )}
+            <div className="flex flex-col items-end gap-1.5 shrink-0">
+              {status && (
+                <span className={`shrink-0 whitespace-nowrap rounded-full border px-1.5 py-0.5 text-[0.55rem] ${emphasis === 'identity' ? 'font-bold' : 'font-black'} uppercase tracking-[0.06em] ${toneClasses[statusTone]}`}>
+                  {status}
+                </span>
+              )}
+              {topMeta.length > 0 && topMeta.map((item) => (
+                <span key={item.label} className={`rounded-lg border px-1.5 py-0.5 text-[0.55rem] font-bold ${toneClasses[item.tone ?? 'slate']}`}>
+                  <span className="text-current opacity-65">{item.label}</span> <span>{item.value}</span>
+                </span>
+              ))}
+            </div>
           </div>
 
           {(amount !== undefined || meta.length > 0) && (

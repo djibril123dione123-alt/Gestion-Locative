@@ -76,7 +76,7 @@ const PROPERTY_WIZARD_STEPS: WizardStep[] = [
 
 const UNIT_WIZARD_STEPS: WizardStep[] = [
   { id: 'main', label: 'Unité', icon: <DoorOpen className="h-4 w-4" /> },
-  { id: 'rent', label: 'Loyer', icon: <Wallet className="h-4 w-4" /> },
+  { id: 'rent', label: 'Exploitation', icon: <Wallet className="h-4 w-4" /> },
   { id: 'summary', label: 'Validation', icon: <ClipboardList className="h-4 w-4" /> },
 ];
 
@@ -2330,21 +2330,41 @@ function PropertyModal({
 
         {wizardStep === 'summary' && (
           <div className="space-y-4">
-            <PremiumMobileCard
-              title={form.nom || 'Bien sans nom'}
-              subtitle={[form.adresse, form.quartier, form.ville].filter(Boolean).join(', ') || 'Adresse non renseignée'}
-              icon={Building2}
-              status={isIndividualOwner ? 'Profil propriétaire' : 'Bailleur rattaché'}
-              amount={0}
-              amountLabel="Loyer à venir"
-              meta={[
-                { label: 'Ville', value: form.ville || '-' },
-                { label: 'Type', value: form.type_bien || 'Autre' },
-                { label: 'Bailleur', value: isIndividualOwner ? 'Moi' : ownerName(owners.find((owner) => owner.id === form.bailleur_id) ?? null) },
-              ]}
-            />
+            <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+              <div className="overflow-hidden rounded-[0.95rem] border border-emerald-950/10 bg-[#fffdf8]/86 shadow-[0_8px_22px_rgba(15,23,42,0.024)]">
+                <div className="flex items-center gap-2 border-b border-slate-100/80 px-3 py-2 sm:py-[0.55rem]">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 sm:h-[22px] sm:w-[22px]">
+                    <Building2 className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+                  </span>
+                  <h4 className="text-[0.76rem] font-semibold text-slate-800 sm:text-[0.7rem]">Identité & rattachement</h4>
+                </div>
+                <div className="min-w-0 divide-y divide-slate-100/80 px-3">
+                  <CompactLabelValue label="Nom du bien" value={form.nom || 'Non défini'} />
+                  <CompactLabelValue label="Type" value={form.type_bien || 'Autre'} />
+                  <CompactLabelValue label="Bailleur rattaché" value={isIndividualOwner ? 'Moi' : ownerName(owners.find((owner) => owner.id === form.bailleur_id) ?? null)} />
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-[0.95rem] border border-emerald-950/10 bg-[#fffdf8]/86 shadow-[0_8px_22px_rgba(15,23,42,0.024)]">
+                <div className="flex items-center gap-2 border-b border-slate-100/80 px-3 py-2 sm:py-[0.55rem]">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-50 text-amber-700 sm:h-[22px] sm:w-[22px]">
+                    <MapPin className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+                  </span>
+                  <h4 className="text-[0.76rem] font-semibold text-slate-800 sm:text-[0.7rem]">Adresse & exploitation</h4>
+                </div>
+                <div className="min-w-0 divide-y divide-slate-100/80 px-3">
+                  <CompactLabelValue label="Adresse" value={form.adresse || 'Non définie'} />
+                  {form.quartier && <CompactLabelValue label="Quartier" value={form.quartier} />}
+                  <CompactLabelValue label="Ville" value={form.ville || 'Non définie'} />
+                  <div className="flex items-center justify-between py-2 sm:py-1.5">
+                    <span className="text-[0.78rem] font-medium text-slate-500 sm:text-[0.72rem]">Loyer</span>
+                    <span className="text-right text-[0.78rem] font-bold text-slate-900 sm:text-[0.72rem]">Issu des unités</span>
+                  </div>
+                </div>
+              </div>
+            </div>
             {form.description.trim() && (
-              <div className="rounded-2xl border border-emerald-950/10 bg-white p-3 text-sm font-semibold leading-6 text-slate-600">
+              <div className="rounded-xl border border-slate-200/60 bg-slate-50/50 p-3 text-[0.82rem] font-medium leading-relaxed text-slate-600 sm:rounded-2xl sm:p-4">
                 {form.description.trim()}
               </div>
             )}
@@ -2501,47 +2521,84 @@ function UnitModal({
         </div>
 
         <div className={wizardStep === 'rent' ? 'space-y-2.5 sm:space-y-2.5' : 'hidden'}>
-        <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">Loyer et occupation</h3>
+        <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">Exploitation locative</h3>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Étage">
-            <input value={form.etage} onChange={(event) => onChange((current) => ({ ...current, etage: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]" placeholder="RDC, 1er..." />
-          </Field>
           <Field label="Loyer mensuel *">
             <input required type="number" min="0" value={form.loyer_base} onChange={(event) => onChange((current) => ({ ...current, loyer_base: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]" placeholder="150000" />
           </Field>
+          <Field label="Statut">
+            <SmartCombobox density="compact"
+              value={form.statut}
+              options={UNIT_STATUSES.map((status) => ({ value: status.value, label: status.label }))}
+              onChange={(next) => onChange((current) => ({ ...current, statut: next }))}
+              placeholder="Statut de l'unité"
+              searchPlaceholder="Libre, louée, maintenance..."
+            />
+          </Field>
         </div>
-        <Field label="Statut">
-          <SmartCombobox density="compact"
-            value={form.statut}
-            options={UNIT_STATUSES.map((status) => ({ value: status.value, label: status.label }))}
-            onChange={(next) => onChange((current) => ({ ...current, statut: next }))}
-            placeholder="Statut de l'unité"
-            searchPlaceholder="Libre, louée, maintenance..."
-          />
+        <Field label="Étage (optionnel)">
+          <input value={form.etage} onChange={(event) => onChange((current) => ({ ...current, etage: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]" placeholder="RDC, 1er..." />
         </Field>
         <Field label="Description optionnelle">
-          <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 min-h-[3rem] w-full resize-none rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-1.5 text-[0.88rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.014)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:min-h-[3.75rem] sm:rounded-[0.7rem] sm:py-[0.5rem] sm:text-[0.8rem]" placeholder="Détails de l'unité..." />
+          <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={2} className="mt-1 min-h-[3rem] w-full resize-none rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-1.5 text-[0.88rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.014)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:min-h-[2.5rem] sm:rounded-[0.7rem] sm:py-[0.5rem] sm:text-[0.8rem]" placeholder="Détails de l'unité..." />
         </Field>
+
+        <div className="hidden rounded-xl border border-emerald-950/10 bg-white/42 px-3 py-2 shadow-[0_5px_14px_rgba(15,23,42,0.014)] sm:block">
+          <div className="min-w-0">
+            <p className="text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-emerald-800/70">
+              Exploitation locative
+            </p>
+            <p className="mt-0.5 text-[0.68rem] font-medium leading-snug text-slate-600">
+              Ces informations permettront de préparer les locations, paiements et documents associés.
+            </p>
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[0.62rem] font-semibold text-slate-600">
+            {['Bail', 'Paiements', 'Documents', 'Suivi'].map((item) => (
+              <span key={item} className="rounded-full border border-emerald-950/10 bg-[#fffdf8]/80 px-2 py-1">
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
         </div>
 
         {wizardStep === 'summary' && (
           <div className="space-y-4">
-            <PremiumMobileCard
-              title={form.numero ? `${form.nom || 'Unité'} - ${form.numero}` : form.nom || 'Unité sans nom'}
-              subtitle={properties.find((property) => property.id === form.immeuble_id)?.nom ?? 'Bien parent non sélectionné'}
-              icon={DoorOpen}
-              status={UNIT_STATUSES.find((status) => status.value === form.statut)?.label ?? form.statut}
-              amount={Number(form.loyer_base || 0)}
-              amountLabel="Loyer mensuel"
-              amountSuffix="/ mois"
-              meta={[
-                { label: 'Code', value: form.numero || '-' },
-                { label: 'Étage', value: form.etage || '-' },
-                { label: 'Statut', value: UNIT_STATUSES.find((status) => status.value === form.statut)?.label ?? form.statut },
-              ]}
-            />
+            <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+              <div className="overflow-hidden rounded-[0.95rem] border border-emerald-950/10 bg-[#fffdf8]/86 shadow-[0_8px_22px_rgba(15,23,42,0.024)]">
+                <div className="flex items-center gap-2 border-b border-slate-100/80 px-3 py-2 sm:py-[0.55rem]">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 sm:h-[22px] sm:w-[22px]">
+                    <DoorOpen className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+                  </span>
+                  <h4 className="text-[0.76rem] font-semibold text-slate-800 sm:text-[0.7rem]">Identité & rattachement</h4>
+                </div>
+                <div className="min-w-0 divide-y divide-slate-100/80 px-3">
+                  <CompactLabelValue label="Nom" value={form.numero ? `${form.nom || 'Unité'} - ${form.numero}` : form.nom || 'Unité sans nom'} />
+                  <CompactLabelValue label="Type" value={form.nom || 'Non défini'} />
+                  <CompactLabelValue label="Code" value={form.numero || 'Généré automatiquement'} />
+                  {form.etage && <CompactLabelValue label="Étage" value={form.etage} />}
+                  <CompactLabelValue label="Bien parent" value={properties.find((property) => property.id === form.immeuble_id)?.nom ?? 'Non sélectionné'} />
+                </div>
+              </div>
+
+              <div className="overflow-hidden rounded-[0.95rem] border border-emerald-950/10 bg-[#fffdf8]/86 shadow-[0_8px_22px_rgba(15,23,42,0.024)]">
+                <div className="flex items-center gap-2 border-b border-slate-100/80 px-3 py-2 sm:py-[0.55rem]">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-50 text-amber-700 sm:h-[22px] sm:w-[22px]">
+                    <Wallet className="h-3.5 w-3.5 sm:h-3 sm:w-3" />
+                  </span>
+                  <h4 className="text-[0.76rem] font-semibold text-slate-800 sm:text-[0.7rem]">Exploitation locative</h4>
+                </div>
+                <div className="min-w-0 divide-y divide-slate-100/80 px-3">
+                  <div className="flex items-center justify-between py-2 sm:py-1.5">
+                    <span className="text-[0.78rem] font-medium text-slate-500 sm:text-[0.72rem]">Loyer</span>
+                    <span className="text-right text-[0.78rem] font-bold text-slate-900 sm:text-[0.72rem]">{Number(form.loyer_base || 0).toLocaleString('fr-FR')} F CFA / mois</span>
+                  </div>
+                  <CompactLabelValue label="Statut" value={UNIT_STATUSES.find((status) => status.value === form.statut)?.label ?? form.statut} />
+                </div>
+              </div>
+            </div>
             {form.description.trim() && (
-              <div className="rounded-2xl border border-emerald-950/10 bg-white p-3 text-sm font-semibold leading-6 text-slate-600">
+              <div className="rounded-xl border border-slate-200/60 bg-slate-50/50 p-3 text-[0.82rem] font-medium leading-relaxed text-slate-600 sm:rounded-2xl sm:p-4">
                 {form.description.trim()}
               </div>
             )}

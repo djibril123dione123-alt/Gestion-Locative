@@ -236,7 +236,7 @@ const PROPERTY_TYPES = ['Immeuble', 'Maison', 'Villa', 'Appartement', 'Boutique'
 const UNIT_TYPES = ['Appartement', 'Studio', 'Chambre', 'Boutique', 'Bureau', 'Depot', 'Local commercial', 'Autre'];
 const UNIT_STATUSES = [
   { value: 'libre', label: 'Libre' },
-  { value: 'loue', label: 'Louee' },
+  { value: 'loue', label: 'Louée' },
   { value: 'maintenance', label: 'Maintenance' },
 ];
 
@@ -2037,10 +2037,10 @@ function SoftEmpty({ text }: { text: string }) {
 }
 
 
-function PropertyWizardStepContext({ step }: { step: PropertyWizardStep }) {
+function PropertyWizardStepContext({ step, isEditing }: { step: PropertyWizardStep; isEditing?: boolean }) {
   const copy: Record<PropertyWizardStep, { title?: string; body: string }> = {
-    main: { body: 'Structurez un bien rattaché à un bailleur, ses unités et son potentiel locatif.' },
-    address: { body: "L'adresse permettra de générer des baux précis et de situer le bien." },
+    main: { body: isEditing ? 'Mettez à jour le rattachement, l’adresse et les informations de ce bien.' : 'Structurez un bien rattaché à un bailleur, ses unités et son potentiel locatif.' },
+    address: { body: isEditing ? "Mettez à jour l’adresse utilisée pour les documents, baux et rapports." : "L'adresse permettra de générer des baux précis et de situer le bien." },
     summary: { title: 'Validation finale', body: 'Cette fiche deviendra la base des unités, loyers, documents et rapports.' },
   };
   const current = copy[step];
@@ -2095,10 +2095,10 @@ function PropertyWizardRail({ steps, currentStep }: { steps: WizardStep[]; curre
   );
 }
 
-function UnitWizardStepContext({ step }: { step: UnitWizardStep }) {
+function UnitWizardStepContext({ step, isEditing }: { step: UnitWizardStep; isEditing?: boolean }) {
   const copy: Record<UnitWizardStep, { title?: string; body: string }> = {
-    main: { body: "Ajoutez une unité exploitable à un bien existant. L'identité de l'unité doit être claire." },
-    rent: { body: "Définissez le loyer cible et le statut actuel de l'unité." },
+    main: { body: isEditing ? "Ajustez l’identité, le loyer et la situation de cette unité." : "Ajoutez une unité exploitable à un bien existant." },
+    rent: { body: isEditing ? "Mettez à jour les informations locatives de cette unité." : "Définissez le loyer cible et le statut actuel de l'unité." },
     summary: { title: 'Validation finale', body: "Cette fiche d'unité vous permettra d'initier des locations, des facturations et des quittances." },
   };
   const current = copy[step];
@@ -2190,11 +2190,11 @@ function PropertyModal({
       tone="owner"
       eyebrow="SAMAY KËUR"
       title={editingProperty ? 'Modifier le bien' : isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'}
-      description="Créez une fiche bien exploitable pour le portefeuille locatif."
+      description={editingProperty ? "Mettez à jour les informations essentielles de ce bien." : "Créez une fiche bien exploitable pour le portefeuille locatif."}
       steps={PROPERTY_WIZARD_STEPS}
       currentStep={propertyWizardStepIndex}
-      contentDescription="Créez une fiche bien exploitable pour le portefeuille locatif."
-      stepContext={<PropertyWizardStepContext step={wizardStep} />}
+      contentDescription={editingProperty ? "Mettez à jour les informations essentielles de ce bien." : "Créez une fiche bien exploitable pour le portefeuille locatif."}
+      stepContext={<PropertyWizardStepContext step={wizardStep} isEditing={!!editingProperty} />}
       rail={
         <PropertyWizardRail
           steps={PROPERTY_WIZARD_STEPS}
@@ -2220,7 +2220,7 @@ function PropertyModal({
           disabled={saving}
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-          {saving ? 'Traitement...' : wizardStep === 'summary' ? (editingProperty ? 'Mettre à jour' : 'Créer le bien') : 'Continuer'}
+          {saving ? (editingProperty ? 'Mise à jour...' : 'Création...') : wizardStep === 'summary' ? (editingProperty ? 'Mettre à jour' : 'Créer le bien') : 'Continuer'}
         </button>
       }
       secondaryAction={
@@ -2324,7 +2324,7 @@ function PropertyModal({
             </Field>
           </div>
           <Field label="Description optionnelle">
-            <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 min-h-[3rem] w-full resize-none rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-1.5 text-[0.88rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.014)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:min-h-[3.75rem] sm:rounded-[0.7rem] sm:py-[0.5rem] sm:text-[0.8rem]" placeholder="Description du bien..." />
+            <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={2} className="mt-1 min-h-[3rem] w-full resize-none rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-1.5 text-[0.88rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.014)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:min-h-[2.5rem] sm:rounded-[0.7rem] sm:py-[0.5rem] sm:text-[0.8rem]" placeholder="Description du bien..." />
           </Field>
         </div>
 
@@ -2358,7 +2358,7 @@ function PropertyModal({
                   <CompactLabelValue label="Ville" value={form.ville || 'Non définie'} />
                   <div className="flex items-center justify-between py-2 sm:py-1.5">
                     <span className="text-[0.78rem] font-medium text-slate-500 sm:text-[0.72rem]">Loyer</span>
-                    <span className="text-right text-[0.78rem] font-bold text-slate-900 sm:text-[0.72rem]">Issu des unités</span>
+                    <span className="text-right text-[0.78rem] font-bold text-slate-900 sm:text-[0.72rem]">Calculés via les unités</span>
                   </div>
                 </div>
               </div>
@@ -2410,11 +2410,11 @@ function UnitModal({
       tone="owner"
       eyebrow="SAMAY KËUR"
       title={editingUnit ? "Modifier l'unité" : 'Nouvelle unité locative'}
-      description="Définissez les détails de cet espace pour pouvoir y associer un contrat de location."
+      description={editingUnit ? "Mettez à jour les informations locatives de cette unité." : "Définissez les détails de cet espace pour pouvoir l'associer à une location."}
       steps={UNIT_WIZARD_STEPS}
       currentStep={unitWizardStepIndex}
-      contentDescription="Définissez les détails de cet espace pour pouvoir y associer un contrat de location."
-      stepContext={<UnitWizardStepContext step={wizardStep} />}
+      contentDescription={editingUnit ? "Mettez à jour les informations locatives de cette unité." : "Définissez les détails de cet espace pour pouvoir l'associer à une location."}
+      stepContext={<UnitWizardStepContext step={wizardStep} isEditing={!!editingUnit} />}
       rail={
         <UnitWizardRail
           steps={UNIT_WIZARD_STEPS}
@@ -2439,7 +2439,7 @@ function UnitModal({
           disabled={saving}
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-          {saving ? 'Traitement...' : wizardStep === 'summary' ? (editingUnit ? 'Mettre à jour' : 'Créer l\'unité') : 'Continuer'}
+          {saving ? (editingUnit ? 'Mise à jour...' : 'Création...') : wizardStep === 'summary' ? (editingUnit ? 'Mettre à jour' : 'Créer l\'unité') : 'Continuer'}
         </button>
       }
       secondaryAction={
@@ -2507,7 +2507,7 @@ function UnitModal({
                 Espace locatif
               </p>
               <p className="mt-0.5 text-[0.68rem] font-medium leading-snug text-slate-600">
-                Cette unité sera rattachée à un bien et pourra être louée.
+                Cette unité alimente les locations, loyers, quittances et documents.
               </p>
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[0.62rem] font-semibold text-slate-600">
@@ -2555,7 +2555,7 @@ function UnitModal({
                   <h4 className="text-[0.76rem] font-semibold text-slate-800 sm:text-[0.7rem]">Identité & rattachement</h4>
                 </div>
                 <div className="min-w-0 divide-y divide-slate-100/80 px-3">
-                  <CompactLabelValue label="Nom" value={form.numero ? `${form.nom || 'Unité'} - ${form.numero}` : form.nom || 'Unité sans nom'} />
+                  <CompactLabelValue label="Nom" value={form.numero ? `${form.nom || 'Unité'} ${form.numero}` : form.nom || 'Unité sans nom'} />
                   <CompactLabelValue label="Type" value={form.nom || 'Non défini'} />
                   <CompactLabelValue label="Code" value={form.numero || 'Généré automatiquement'} />
                   {form.etage && <CompactLabelValue label="Étage" value={form.etage} />}

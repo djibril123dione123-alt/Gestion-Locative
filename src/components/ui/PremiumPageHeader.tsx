@@ -172,14 +172,14 @@ export function PremiumPageHeader({
           <p className={`${isCompact ? `${isUltraCompact ? 'text-[0.5rem]' : 'text-[0.55rem]'}` : 'text-[0.68rem]'} font-black uppercase tracking-[0.2em] text-orange-600`}>{eyebrow}</p>
           <h1 className={`${isUltraCompact ? 'mt-0' : 'mt-0.5'} font-serif font-black tracking-tight text-slate-950 ${isCompact ? `${isUltraCompact ? 'text-[1.24rem]' : 'text-[1.42rem]'}` : 'text-3xl sm:text-4xl'}`}>{title}</h1>
 
-          {resolvedDescription && !isSplitOpen && (
+          {resolvedDescription && (
             mobileDescription ? (
               <>
-                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium text-slate-600 lg:hidden`}>{mobileDescription}</p>
-                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium text-slate-600 lg:block`}>{resolvedDescription}</p>
+                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium text-slate-600 lg:hidden ${isSplitOpen ? 'truncate opacity-80' : ''}`}>{mobileDescription}</p>
+                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium text-slate-600 lg:block ${isSplitOpen ? 'truncate opacity-80' : ''}`}>{resolvedDescription}</p>
               </>
             ) : (
-              <p className={`${isUltraCompact ? 'mt-0.5' : 'mt-1'} max-w-2xl font-medium ${isCompact ? `${isUltraCompact ? 'text-[0.55rem]' : 'text-[0.58rem]'} leading-snug text-slate-500` : 'text-[0.7rem] leading-relaxed text-slate-600'}`}>{resolvedDescription}</p>
+              <p className={`${isUltraCompact ? 'mt-0.5' : 'mt-1'} max-w-2xl font-medium ${isCompact ? `${isUltraCompact ? 'text-[0.55rem]' : 'text-[0.58rem]'} leading-snug text-slate-500` : 'text-[0.7rem] leading-relaxed text-slate-600'} ${isSplitOpen ? 'truncate opacity-80' : ''}`}>{resolvedDescription}</p>
             )
           )}
 
@@ -217,24 +217,24 @@ export function PremiumPageHeader({
           <h1 className={titleClass}>{title}</h1>
 
           {/* Description responsive */}
-          {resolvedDescription && !isSplitOpen && (
+          {resolvedDescription && (
             <>
               {mobileDescription ? (
                 <>
                   <p
-                    className={`mt-1 max-w-2xl text-[0.7rem] font-medium leading-relaxed @md:hidden ${styles.description}`}
+                    className={`mt-1 max-w-2xl text-[0.7rem] font-medium leading-relaxed @md:hidden ${styles.description} ${isSplitOpen ? 'truncate opacity-80' : ''}`}
                   >
                     {mobileDescription}
                   </p>
                   <p
-                    className={`mt-1 hidden max-w-2xl text-[0.7rem] font-medium leading-relaxed @md:block ${styles.description}`}
+                    className={`mt-1 hidden max-w-2xl text-[0.7rem] font-medium leading-relaxed @md:block ${styles.description} ${isSplitOpen ? 'truncate opacity-80' : ''}`}
                   >
                     {resolvedDescription}
                   </p>
                 </>
               ) : (
                 <p
-                  className={`mt-1 max-w-2xl text-[0.7rem] font-medium leading-relaxed line-clamp-2 ${styles.description}`}
+                  className={`mt-1 max-w-2xl text-[0.7rem] font-medium leading-relaxed ${isSplitOpen ? 'truncate opacity-80' : 'line-clamp-2'} ${styles.description}`}
                 >
                   {resolvedDescription}
                 </p>

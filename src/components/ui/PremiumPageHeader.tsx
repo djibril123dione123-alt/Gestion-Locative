@@ -175,11 +175,11 @@ export function PremiumPageHeader({
           {resolvedDescription && (
             mobileDescription ? (
               <>
-                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium text-slate-600 lg:hidden ${isSplitOpen ? 'truncate opacity-80' : ''}`}>{mobileDescription}</p>
-                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium text-slate-600 lg:block ${isSplitOpen ? 'truncate opacity-80' : ''}`}>{resolvedDescription}</p>
+                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium text-slate-600 lg:hidden`}>{mobileDescription}</p>
+                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium text-slate-600 lg:block ${isSplitOpen ? 'opacity-90' : ''}`}>{isSplitOpen ? mobileDescription : resolvedDescription}</p>
               </>
             ) : (
-              <p className={`${isUltraCompact ? 'mt-0.5' : 'mt-1'} max-w-2xl font-medium ${isCompact ? `${isUltraCompact ? 'text-[0.55rem]' : 'text-[0.58rem]'} leading-snug text-slate-500` : 'text-[0.7rem] leading-relaxed text-slate-600'} ${isSplitOpen ? 'truncate opacity-80' : ''}`}>{resolvedDescription}</p>
+              <p className={`${isUltraCompact ? 'mt-0.5' : 'mt-1'} max-w-2xl font-medium ${isCompact ? `${isUltraCompact ? 'text-[0.55rem]' : 'text-[0.58rem]'} leading-snug text-slate-500` : 'text-[0.7rem] leading-relaxed text-slate-600'}`}>{resolvedDescription}</p>
             )
           )}
 
@@ -222,19 +222,19 @@ export function PremiumPageHeader({
               {mobileDescription ? (
                 <>
                   <p
-                    className={`mt-1 max-w-2xl text-[0.7rem] font-medium leading-relaxed @md:hidden ${styles.description} ${isSplitOpen ? 'truncate opacity-80' : ''}`}
+                    className={`mt-1 max-w-2xl text-[0.7rem] font-medium leading-relaxed @md:hidden ${styles.description}`}
                   >
                     {mobileDescription}
                   </p>
                   <p
-                    className={`mt-1 hidden max-w-2xl text-[0.7rem] font-medium leading-relaxed @md:block ${styles.description} ${isSplitOpen ? 'truncate opacity-80' : ''}`}
+                    className={`mt-1 hidden max-w-2xl text-[0.7rem] font-medium leading-relaxed @md:block ${styles.description} ${isSplitOpen ? 'opacity-90' : ''}`}
                   >
-                    {resolvedDescription}
+                    {isSplitOpen ? mobileDescription : resolvedDescription}
                   </p>
                 </>
               ) : (
                 <p
-                  className={`mt-1 max-w-2xl text-[0.7rem] font-medium leading-relaxed ${isSplitOpen ? 'truncate opacity-80' : 'line-clamp-2'} ${styles.description}`}
+                  className={`mt-1 max-w-2xl text-[0.7rem] font-medium leading-relaxed line-clamp-2 ${styles.description}`}
                 >
                   {resolvedDescription}
                 </p>

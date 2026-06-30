@@ -2242,11 +2242,11 @@ function PropertyModal({
         <div className={wizardStep === 'main' ? 'space-y-2.5 sm:space-y-2.5' : 'hidden'}>
           <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">Informations principales</h3>
           <Field label="Nom du bien *">
-            <input required value={form.nom} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Residence Keur Amitie" />
+            <input required value={form.nom} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]" placeholder="Residence Keur Amitie" />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Type">
-              <SmartCombobox
+              <SmartCombobox density="compact"
                 value={form.type_bien}
                 options={[
                   { value: '', label: 'Choisir un type' },
@@ -2260,7 +2260,7 @@ function PropertyModal({
             </Field>
             {!isIndividualOwner && (
             <Field label="Bailleur rattaché *">
-              <SmartCombobox
+              <SmartCombobox density="compact"
                 value={form.bailleur_id}
                 options={[
                   { value: '', label: 'Sélectionner un bailleur' },
@@ -2295,18 +2295,18 @@ function PropertyModal({
         <div className={wizardStep === 'address' ? 'space-y-2.5 sm:space-y-2.5' : 'hidden'}>
           <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">Adresse et description</h3>
           <Field label="Adresse *">
-            <input required value={form.adresse} onChange={(event) => onChange((current) => ({ ...current, adresse: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Rue, avenue, adresse principale" />
+            <input required value={form.adresse} onChange={(event) => onChange((current) => ({ ...current, adresse: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]" placeholder="Rue, avenue, adresse principale" />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Quartier">
-              <input value={form.quartier} onChange={(event) => onChange((current) => ({ ...current, quartier: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Ouakam, Medina..." />
+              <input value={form.quartier} onChange={(event) => onChange((current) => ({ ...current, quartier: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]" placeholder="Ouakam, Medina..." />
             </Field>
             <Field label="Ville *">
-              <input required value={form.ville} onChange={(event) => onChange((current) => ({ ...current, ville: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Dakar" />
+              <input required value={form.ville} onChange={(event) => onChange((current) => ({ ...current, ville: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]" placeholder="Dakar" />
             </Field>
           </div>
           <Field label="Description optionnelle">
-            <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Description du bien..." />
+            <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 min-h-[3rem] w-full resize-none rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-1.5 text-[0.88rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.014)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:min-h-[3.75rem] sm:rounded-[0.7rem] sm:py-[0.5rem] sm:text-[0.8rem]" placeholder="Description du bien..." />
           </Field>
         </div>
 
@@ -2423,7 +2423,7 @@ function UnitModal({
         <div className={wizardStep === 'main' ? 'space-y-2.5 sm:space-y-2.5' : 'hidden'}>
           <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">Caractéristiques de l'unité</h3>
           <Field label="Bien parent *">
-            <SmartCombobox
+            <SmartCombobox density="compact"
               value={form.immeuble_id}
               options={[
                 { value: '', label: 'Sélectionner un bien' },
@@ -2447,7 +2447,7 @@ function UnitModal({
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Type d'unité *">
-              <SmartCombobox
+              <SmartCombobox density="compact"
                 value={form.nom}
                 options={[
                   { value: '', label: 'Sélectionner un type' },
@@ -2459,7 +2459,7 @@ function UnitModal({
               />
           </Field>
           <Field label="Numéro / code">
-            <input value={form.numero} onChange={(event) => onChange((current) => ({ ...current, numero: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="A1, Boutique 3..." />
+            <input value={form.numero} onChange={(event) => onChange((current) => ({ ...current, numero: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]" placeholder="A1, Boutique 3..." />
           </Field>
         </div>
         </div>
@@ -2468,14 +2468,14 @@ function UnitModal({
         <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">Loyer et occupation</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Étage">
-            <input value={form.etage} onChange={(event) => onChange((current) => ({ ...current, etage: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="RDC, 1er..." />
+            <input value={form.etage} onChange={(event) => onChange((current) => ({ ...current, etage: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]" placeholder="RDC, 1er..." />
           </Field>
           <Field label="Loyer mensuel *">
-            <input required type="number" min="0" value={form.loyer_base} onChange={(event) => onChange((current) => ({ ...current, loyer_base: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="150000" />
+            <input required type="number" min="0" value={form.loyer_base} onChange={(event) => onChange((current) => ({ ...current, loyer_base: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]" placeholder="150000" />
           </Field>
         </div>
         <Field label="Statut">
-          <SmartCombobox
+          <SmartCombobox density="compact"
             value={form.statut}
             options={UNIT_STATUSES.map((status) => ({ value: status.value, label: status.label }))}
             onChange={(next) => onChange((current) => ({ ...current, statut: next }))}
@@ -2484,7 +2484,7 @@ function UnitModal({
           />
         </Field>
         <Field label="Description optionnelle">
-          <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Détails de l'unité..." />
+          <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 min-h-[3rem] w-full resize-none rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-1.5 text-[0.88rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.014)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:min-h-[3.75rem] sm:rounded-[0.7rem] sm:py-[0.5rem] sm:text-[0.8rem]" placeholder="Détails de l'unité..." />
         </Field>
         </div>
 
@@ -2521,7 +2521,7 @@ function UnitModal({
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{label}</span>
+      <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">{label}</span>
       {children}
     </label>
   );

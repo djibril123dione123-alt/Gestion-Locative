@@ -1840,8 +1840,42 @@ function UnitDrawer({
         </CompactSection>
       </div>
 
+      {/* Actions */}
+      <div className="mb-3">
+        <CompactSection title="Actions & Gestion" icon={Pencil}>
+          <div className="grid grid-cols-2 gap-1.5">
+            {summary.contract ? (
+              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+                <ClipboardList className="h-3.5 w-3.5 text-brand-700" />
+                Voir la location
+              </button>
+            ) : (
+              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+                <Plus className="h-3.5 w-3.5 text-brand-700" />
+                Créer une location
+              </button>
+            )}
+            
+            <button type="button" onClick={onEdit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+              <Pencil className="h-3.5 w-3.5 text-slate-400" />
+              Modifier l'unité
+            </button>
+            <button type="button" onClick={() => onNavigate('/documents')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+              <FileText className="h-3.5 w-3.5 text-slate-400" />
+              Documents associés
+            </button>
+            {hasReliquat && (
+              <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200/60 px-2 text-[0.65rem] font-bold text-emerald-900 shadow-sm transition hover:bg-emerald-100">
+                <Wallet className="h-3.5 w-3.5 text-emerald-700" />
+                Encaisser le reliquat
+              </button>
+            )}
+          </div>
+        </CompactSection>
+      </div>
+
       {/* Paiements récents */}
-      <div className="mb-3 overflow-hidden rounded-xl border border-emerald-950/10 bg-white shadow-sm">
+      <div className="mb-4 overflow-hidden rounded-xl border border-emerald-950/10 bg-white shadow-sm">
         <DrawerTabs
           tabs={[
             {
@@ -1875,40 +1909,6 @@ function UnitDrawer({
             },
           ]}
         />
-      </div>
-
-      {/* Actions */}
-      <div className="mb-4">
-        <CompactSection title="Actions & Gestion" icon={Pencil}>
-          <div className="grid grid-cols-2 gap-1.5">
-            {summary.contract ? (
-              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
-                <ClipboardList className="h-3.5 w-3.5 text-brand-700" />
-                Voir la location
-              </button>
-            ) : (
-              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
-                <Plus className="h-3.5 w-3.5 text-brand-700" />
-                Créer une location
-              </button>
-            )}
-            
-            <button type="button" onClick={onEdit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
-              <Pencil className="h-3.5 w-3.5 text-slate-400" />
-              Modifier l'unité
-            </button>
-            <button type="button" onClick={() => onNavigate('/documents')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
-              <FileText className="h-3.5 w-3.5 text-slate-400" />
-              Documents associés
-            </button>
-            {hasReliquat && (
-              <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200/60 px-2 text-[0.65rem] font-bold text-emerald-900 shadow-sm transition hover:bg-emerald-100">
-                <Wallet className="h-3.5 w-3.5 text-emerald-700" />
-                Encaisser le reliquat
-              </button>
-            )}
-          </div>
-        </CompactSection>
       </div>
 
       {/* Zone sensible */}

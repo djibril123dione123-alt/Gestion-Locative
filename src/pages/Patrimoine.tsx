@@ -2284,6 +2284,24 @@ function PropertyModal({
             </Field>
             )}
           </div>
+
+          <div className="hidden rounded-xl border border-emerald-950/10 bg-white/42 px-3 py-2 shadow-[0_5px_14px_rgba(15,23,42,0.014)] sm:block">
+            <div className="min-w-0">
+              <p className="text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-emerald-800/70">
+                Structure immobilière
+              </p>
+              <p className="mt-0.5 text-[0.68rem] font-medium leading-snug text-slate-600">
+                Ce bien servira de conteneur pour vos unités locatives.
+              </p>
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[0.62rem] font-semibold text-slate-600">
+              {['Unités', 'Contrats', 'Dépenses', 'Bilan'].map((item) => (
+                <span key={item} className="rounded-full border border-emerald-950/10 bg-[#fffdf8]/80 px-2 py-1">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
 
         {isIndividualOwner && wizardStep === 'main' && (
@@ -2462,6 +2480,24 @@ function UnitModal({
             <input value={form.numero} onChange={(event) => onChange((current) => ({ ...current, numero: event.target.value }))} className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]" placeholder="A1, Boutique 3..." />
           </Field>
         </div>
+
+          <div className="hidden rounded-xl border border-emerald-950/10 bg-white/42 px-3 py-2 shadow-[0_5px_14px_rgba(15,23,42,0.014)] sm:block">
+            <div className="min-w-0">
+              <p className="text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-emerald-800/70">
+                Espace locatif
+              </p>
+              <p className="mt-0.5 text-[0.68rem] font-medium leading-snug text-slate-600">
+                Cette unité sera rattachée à un bien et pourra être louée.
+              </p>
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[0.62rem] font-semibold text-slate-600">
+              {['Locataires', 'Loyers', 'Quittances', 'États des lieux'].map((item) => (
+                <span key={item} className="rounded-full border border-emerald-950/10 bg-[#fffdf8]/80 px-2 py-1">
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
 
         <div className={wizardStep === 'rent' ? 'space-y-2.5 sm:space-y-2.5' : 'hidden'}>

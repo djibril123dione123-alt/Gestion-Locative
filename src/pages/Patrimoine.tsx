@@ -2542,24 +2542,6 @@ function UnitModal({
         <Field label="Description optionnelle">
           <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={2} className="mt-1 min-h-[3rem] w-full resize-none rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-1.5 text-[0.88rem] font-medium text-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.014)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:min-h-[2.5rem] sm:rounded-[0.7rem] sm:py-[0.5rem] sm:text-[0.8rem]" placeholder="Détails de l'unité..." />
         </Field>
-
-        <div className="hidden rounded-xl border border-emerald-950/10 bg-white/42 px-3 py-2 shadow-[0_5px_14px_rgba(15,23,42,0.014)] sm:block">
-          <div className="min-w-0">
-            <p className="text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-emerald-800/70">
-              Exploitation locative
-            </p>
-            <p className="mt-0.5 text-[0.68rem] font-medium leading-snug text-slate-600">
-              Ces informations permettront de préparer les locations, paiements et documents associés.
-            </p>
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[0.62rem] font-semibold text-slate-600">
-            {['Bail', 'Paiements', 'Documents', 'Suivi'].map((item) => (
-              <span key={item} className="rounded-full border border-emerald-950/10 bg-[#fffdf8]/80 px-2 py-1">
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
         </div>
 
         {wizardStep === 'summary' && (

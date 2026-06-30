@@ -147,17 +147,17 @@ export function PremiumMobileCard({
           </div>
 
           {(amount !== undefined || meta.length > 0) && (
-            <div className={`${emphasis === 'identity' ? 'mt-2' : 'mt-3'} flex items-end justify-between gap-3`}>
+            <div className={`${emphasis === 'identity' ? 'mt-2' : 'mt-3'} flex flex-wrap items-start justify-between gap-3`}>
               {amount !== undefined ? (
                 <div className="min-w-0 flex flex-col gap-0.5">
                   <div className="flex items-baseline gap-1.5">
-                    {amountLabel && <span className={`text-[0.6rem] ${emphasis === 'identity' ? 'font-medium' : 'font-bold uppercase tracking-[0.09em]'} text-slate-400`}>{amountLabel}</span>}
-                    <MoneyText value={amount} compact={amountCompact} suffix={amountSuffix} className={`${emphasis === 'identity' ? 'text-[0.8rem] font-semibold' : 'text-sm font-black'} ${amountTone ? (amountTone === 'emerald' ? 'text-emerald-700' : amountTone === 'red' ? 'text-red-600' : 'text-slate-800') : 'text-slate-950'}`} />
+                    {amountLabel && <span className={`text-[0.55rem] ${emphasis === 'identity' ? 'font-medium' : 'font-bold uppercase tracking-[0.09em]'} text-slate-400`}>{amountLabel}</span>}
+                    <MoneyText value={amount} compact={amountCompact} suffix={amountSuffix} className={`${emphasis === 'identity' ? 'text-[0.75rem] font-semibold' : 'text-[0.8rem] font-black'} ${amountTone ? (amountTone === 'emerald' ? 'text-emerald-700' : amountTone === 'red' ? 'text-red-600' : 'text-slate-800') : 'text-slate-950'}`} />
                   </div>
                   {secondaryAmount !== undefined && (
                     <div className="flex items-baseline gap-1.5">
-                      {secondaryAmountLabel && <span className="text-[0.6rem] font-semibold text-slate-500">{secondaryAmountLabel}</span>}
-                      <MoneyText value={secondaryAmount} compact={amountCompact} className={`text-xs ${emphasis === 'identity' ? 'font-medium' : 'font-bold'} ${secondaryAmountTone === 'red' ? 'text-red-600' : 'text-slate-500'}`} />
+                      {secondaryAmountLabel && <span className="text-[0.55rem] font-semibold text-slate-500">{secondaryAmountLabel}</span>}
+                      <MoneyText value={secondaryAmount} compact={amountCompact} className={`text-[0.68rem] ${emphasis === 'identity' ? 'font-medium' : 'font-bold'} ${secondaryAmountTone === 'red' ? 'text-red-600' : 'text-slate-500'}`} />
                     </div>
                   )}
                 </div>

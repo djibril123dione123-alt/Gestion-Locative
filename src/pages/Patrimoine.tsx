@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
+import { Check,
   Activity,
   AlertCircle,
   Briefcase,
@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 import { ConfirmModal } from '../components/ui/ConfirmModal';
-import { Modal } from '../components/ui/Modal';
+// import { Modal } from '../components/ui/Modal';
 import { ToastContainer } from '../components/ui/Toast';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -43,7 +43,9 @@ import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
 import { SplitViewShell } from '../components/ui/SplitViewShell';
 import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
-import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
+
+import { WizardShell, type WizardStep } from '../components/ui/WizardShell';
+import { BrandMark } from '../components/brand/BrandLogo';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { useAuth } from '../contexts/AuthContext';
@@ -66,16 +68,16 @@ type UnitColumnKey = 'unite' | 'bien' | 'locataire' | 'loyer' | 'statut' | 'reli
 type PropertyWizardStep = 'main' | 'address' | 'summary';
 type UnitWizardStep = 'main' | 'rent' | 'summary';
 
-const PROPERTY_WIZARD_STEPS: ProductWizardStep<PropertyWizardStep>[] = [
-  { id: 'main', label: 'Bien', icon: Building2 },
-  { id: 'address', label: 'Adresse', icon: MapPin },
-  { id: 'summary', label: 'Validation', icon: ClipboardList },
+const PROPERTY_WIZARD_STEPS: WizardStep[] = [
+  { id: 'main', label: 'Bien', icon: <Building2 className="h-4 w-4" /> },
+  { id: 'address', label: 'Adresse', icon: <MapPin className="h-4 w-4" /> },
+  { id: 'summary', label: 'Validation', icon: <ClipboardList className="h-4 w-4" /> },
 ];
 
-const UNIT_WIZARD_STEPS: ProductWizardStep<UnitWizardStep>[] = [
-  { id: 'main', label: 'Unité', icon: DoorOpen },
-  { id: 'rent', label: 'Loyer', icon: Wallet },
-  { id: 'summary', label: 'Validation', icon: ClipboardList },
+const UNIT_WIZARD_STEPS: WizardStep[] = [
+  { id: 'main', label: 'Unité', icon: <DoorOpen className="h-4 w-4" /> },
+  { id: 'rent', label: 'Loyer', icon: <Wallet className="h-4 w-4" /> },
+  { id: 'summary', label: 'Validation', icon: <ClipboardList className="h-4 w-4" /> },
 ];
 
 interface PatrimoineProps {
@@ -2034,6 +2036,123 @@ function SoftEmpty({ text }: { text: string }) {
   return <p className="rounded-lg border border-dashed border-emerald-950/15 bg-[#fffaf1] px-3 py-2.5 text-[0.7rem] font-medium leading-4 text-slate-500">{text}</p>;
 }
 
+
+function PropertyWizardStepContext({ step }: { step: PropertyWizardStep }) {
+  const copy: Record<PropertyWizardStep, { title?: string; body: string }> = {
+    main: { body: 'Structurez un bien rattaché à un bailleur, ses unités et son potentiel locatif.' },
+    address: { body: "L'adresse permettra de générer des baux précis et de situer le bien." },
+    summary: { title: 'Validation finale', body: 'Cette fiche deviendra la base des unités, loyers, documents et rapports.' },
+  };
+  const current = copy[step];
+  return (
+    <div className="flex min-w-0 items-start gap-2">
+      <span className="mt-[0.1rem] flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border border-emerald-950/10 bg-emerald-50/60 text-emerald-700 sm:h-[18px] sm:w-[18px]">
+        <Building2 className="h-2.5 w-2.5" />
+      </span>
+      <div className="min-w-0">
+        {current.title && <p className="text-[0.68rem] font-semibold leading-tight text-slate-900 sm:text-[0.64rem]">{current.title}</p>}
+        <p className={`text-[0.68rem] font-medium leading-snug text-slate-600 sm:text-[0.62rem] ${current.title ? 'mt-0.5' : ''}`}>{current.body}</p>
+      </div>
+    </div>
+  );
+}
+
+function PropertyWizardRail({ steps, currentStep }: { steps: WizardStep[]; currentStep: number }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-2.5">
+        <BrandMark size="sm" tone="dark" animated withTile={false} />
+        <div>
+          <p className="text-[0.5rem] font-bold uppercase tracking-[0.18em] text-amber-200/68">Portefeuille locatif</p>
+          <p className="mt-0.5 text-[0.6rem] font-semibold text-white/[0.56]">Fiche bien guidée</p>
+        </div>
+      </div>
+      <div className="mt-3">
+        <p className="max-w-[11rem] text-[0.72rem] font-semibold leading-tight text-white/[0.86]">Structurez un bien rattaché à un bailleur, ses unités et son potentiel locatif.</p>
+      </div>
+      <div className="relative mt-3 space-y-1">
+        {steps.map((step, index) => {
+          const isActive = index === currentStep;
+          const isComplete = index < currentStep;
+          return (
+            <div key={step.id} className={`flex min-h-[2.05rem] items-center gap-2 rounded-lg border px-2 py-[0.22rem] transition ${isActive ? 'border-amber-100/16 bg-white/[0.038] text-white shadow-[0_3px_8px_rgba(0,0,0,0.036)]' : isComplete ? 'border-white/10 bg-emerald-300/[0.038] text-emerald-50/[0.78]' : 'border-white/[0.075] bg-white/[0.018] text-emerald-50/[0.78]'}`}>
+              <span className={`relative z-[1] flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[0.5rem] text-[0.58rem] font-semibold ${isActive ? 'bg-[#fff3ce]/94 text-emerald-950 ring-1 ring-amber-100/55' : isComplete ? 'bg-emerald-300/[0.12] text-emerald-50' : 'bg-white/[0.1] text-emerald-50/[0.84]'}`}>
+                {isComplete ? <Check className="h-3 w-3" /> : index + 1}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[0.47rem] font-bold uppercase tracking-[0.13em] opacity-75">Étape {index + 1}</span>
+                <span className="block truncate text-[0.67rem] font-semibold">{step.label}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-4 rounded-xl border border-white/[0.055] bg-white/[0.026] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
+        <p className="text-[0.47rem] font-semibold uppercase tracking-[0.16em] text-amber-100/[0.66]">SOURCE DE VÉRITÉ</p>
+        <p className="mt-1 text-[0.58rem] font-medium leading-snug text-emerald-50/[0.56]">Bailleurs, unités, loyers, documents et rapports partiront de cette fiche.</p>
+      </div>
+    </div>
+  );
+}
+
+function UnitWizardStepContext({ step }: { step: UnitWizardStep }) {
+  const copy: Record<UnitWizardStep, { title?: string; body: string }> = {
+    main: { body: "Ajoutez une unité exploitable à un bien existant. L'identité de l'unité doit être claire." },
+    rent: { body: "Définissez le loyer cible et le statut actuel de l'unité." },
+    summary: { title: 'Validation finale', body: "Cette fiche d'unité vous permettra d'initier des locations, des facturations et des quittances." },
+  };
+  const current = copy[step];
+  return (
+    <div className="flex min-w-0 items-start gap-2">
+      <span className="mt-[0.1rem] flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border border-emerald-950/10 bg-emerald-50/60 text-emerald-700 sm:h-[18px] sm:w-[18px]">
+        <DoorOpen className="h-2.5 w-2.5" />
+      </span>
+      <div className="min-w-0">
+        {current.title && <p className="text-[0.68rem] font-semibold leading-tight text-slate-900 sm:text-[0.64rem]">{current.title}</p>}
+        <p className={`text-[0.68rem] font-medium leading-snug text-slate-600 sm:text-[0.62rem] ${current.title ? 'mt-0.5' : ''}`}>{current.body}</p>
+      </div>
+    </div>
+  );
+}
+
+function UnitWizardRail({ steps, currentStep }: { steps: WizardStep[]; currentStep: number }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-2.5">
+        <BrandMark size="sm" tone="dark" animated withTile={false} />
+        <div>
+          <p className="text-[0.5rem] font-bold uppercase tracking-[0.18em] text-amber-200/68">Portefeuille locatif</p>
+          <p className="mt-0.5 text-[0.6rem] font-semibold text-white/[0.56]">Fiche unité guidée</p>
+        </div>
+      </div>
+      <div className="mt-3">
+        <p className="max-w-[11rem] text-[0.72rem] font-semibold leading-tight text-white/[0.86]">Ajoutez une unité exploitable à un bien existant.</p>
+      </div>
+      <div className="relative mt-3 space-y-1">
+        {steps.map((step, index) => {
+          const isActive = index === currentStep;
+          const isComplete = index < currentStep;
+          return (
+            <div key={step.id} className={`flex min-h-[2.05rem] items-center gap-2 rounded-lg border px-2 py-[0.22rem] transition ${isActive ? 'border-amber-100/16 bg-white/[0.038] text-white shadow-[0_3px_8px_rgba(0,0,0,0.036)]' : isComplete ? 'border-white/10 bg-emerald-300/[0.038] text-emerald-50/[0.78]' : 'border-white/[0.075] bg-white/[0.018] text-emerald-50/[0.78]'}`}>
+              <span className={`relative z-[1] flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[0.5rem] text-[0.58rem] font-semibold ${isActive ? 'bg-[#fff3ce]/94 text-emerald-950 ring-1 ring-amber-100/55' : isComplete ? 'bg-emerald-300/[0.12] text-emerald-50' : 'bg-white/[0.1] text-emerald-50/[0.84]'}`}>
+                {isComplete ? <Check className="h-3 w-3" /> : index + 1}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[0.47rem] font-bold uppercase tracking-[0.13em] opacity-75">Étape {index + 1}</span>
+                <span className="block truncate text-[0.67rem] font-semibold">{step.label}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-4 rounded-xl border border-white/[0.055] bg-white/[0.026] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
+        <p className="text-[0.47rem] font-semibold uppercase tracking-[0.16em] text-amber-100/[0.66]">SOURCE DE VÉRITÉ</p>
+        <p className="mt-1 text-[0.58rem] font-medium leading-snug text-emerald-50/[0.56]">L'unité alimente les locations, paiements, documents et rapports.</p>
+      </div>
+    </div>
+  );
+}
+
 function PropertyModal({
   isOpen,
   isIndividualOwner,
@@ -2059,20 +2178,69 @@ function PropertyModal({
   onSubmit: (event?: React.FormEvent) => void;
   onChange: React.Dispatch<React.SetStateAction<PropertyFormState>>;
 }) {
+  const toast = useToast();
+  const propertyWizardStepIndex = Math.max(0, PROPERTY_WIZARD_STEPS.findIndex((step) => step.id === wizardStep));
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingProperty ? 'Modifier le bien' : isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'} description="Renseignez les informations essentielles du bien pour commencer le suivi de votre patrimoine locatif.">
-      <div className="space-y-3.5">
-        <ProductWizard
+    <WizardShell
+      open={isOpen}
+      onClose={onClose}
+      size="compact"
+      variant="workstation"
+      tone="owner"
+      eyebrow="SAMAY KËUR"
+      title={editingProperty ? 'Modifier le bien' : isIndividualOwner ? 'Ajouter mon bien' : 'Nouveau bien'}
+      description="Créez une fiche bien exploitable pour le portefeuille locatif."
+      steps={PROPERTY_WIZARD_STEPS}
+      currentStep={propertyWizardStepIndex}
+      contentDescription="Créez une fiche bien exploitable pour le portefeuille locatif."
+      stepContext={<PropertyWizardStepContext step={wizardStep} />}
+      rail={
+        <PropertyWizardRail
           steps={PROPERTY_WIZARD_STEPS}
-          activeStep={wizardStep}
-          onStepChange={(step) => onStepChange(step)}
-          onCancel={onClose}
-          onFinalSubmit={() => void onSubmit()}
-          finalSubmitLabel={editingProperty ? 'Mettre à jour' : 'Créer le bien'}
-          isSubmitting={saving}
+          currentStep={propertyWizardStepIndex}
+        />
+      }
+      primaryAction={
+        <button
+          type="button"
+          onClick={() => {
+            if (wizardStep === 'main') {
+              if (!form.nom.trim()) { toast.error('Le nom du bien est requis.'); return; }
+              if (!isIndividualOwner && !form.bailleur_id) { toast.error('Veuillez rattacher un bailleur.'); return; }
+              onStepChange('address');
+            } else if (wizardStep === 'address') {
+              if (!form.adresse?.trim()) { toast.error('L\'adresse est requise.'); return; }
+              if (!form.ville?.trim()) { toast.error('La ville est requise.'); return; }
+              onStepChange('summary');
+            } else {
+              void onSubmit();
+            }
+          }}
+          disabled={saving}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-        <div className={wizardStep === 'main' ? 'space-y-4' : 'hidden'}>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Informations principales</h3>
+          {saving ? 'Traitement...' : wizardStep === 'summary' ? (editingProperty ? 'Mettre à jour' : 'Créer le bien') : 'Continuer'}
+        </button>
+      }
+      secondaryAction={
+        <button
+          type="button"
+          onClick={() => {
+            if (wizardStep === 'summary') onStepChange('address');
+            else if (wizardStep === 'address') onStepChange('main');
+            else onClose();
+          }}
+          disabled={saving}
+          className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
+        >
+          {wizardStep === 'main' ? 'Annuler' : 'Retour'}
+        </button>
+      }
+    >
+      <div className="space-y-2.5 sm:space-y-3 lg:space-y-4">
+        <div className={wizardStep === 'main' ? 'space-y-2.5 sm:space-y-2.5' : 'hidden'}>
+          <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">Informations principales</h3>
           <Field label="Nom du bien *">
             <input required value={form.nom} onChange={(event) => onChange((current) => ({ ...current, nom: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Residence Keur Amitie" />
           </Field>
@@ -2118,13 +2286,14 @@ function PropertyModal({
           </div>
         </div>
 
-        {isIndividualOwner && (
+        {isIndividualOwner && wizardStep === 'main' && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900">
             Votre profil propriétaire sera rattaché automatiquement à ce bien.
           </div>
         )}
-        <div className={wizardStep === 'address' ? 'space-y-4' : 'hidden'}>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Adresse et description</h3>
+
+        <div className={wizardStep === 'address' ? 'space-y-2.5 sm:space-y-2.5' : 'hidden'}>
+          <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">Adresse et description</h3>
           <Field label="Adresse *">
             <input required value={form.adresse} onChange={(event) => onChange((current) => ({ ...current, adresse: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Rue, avenue, adresse principale" />
           </Field>
@@ -2140,9 +2309,9 @@ function PropertyModal({
             <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Description du bien..." />
           </Field>
         </div>
+
         {wizardStep === 'summary' && (
           <div className="space-y-4">
-            <WizardIntro title="Validation finale" description="Vérifiez les informations avant création. Cette action enregistrera définitivement la fiche dans le portefeuille locatif." />
             <PremiumMobileCard
               title={form.nom || 'Bien sans nom'}
               subtitle={[form.adresse, form.quartier, form.ville].filter(Boolean).join(', ') || 'Adresse non renseignée'}
@@ -2163,9 +2332,8 @@ function PropertyModal({
             )}
           </div>
         )}
-        </ProductWizard>
       </div>
-    </Modal>
+    </WizardShell>
   );
 }
 
@@ -2192,20 +2360,68 @@ function UnitModal({
   onSubmit: (event?: React.FormEvent) => void;
   onChange: React.Dispatch<React.SetStateAction<UnitFormState>>;
 }) {
+  const toast = useToast();
+  const unitWizardStepIndex = Math.max(0, UNIT_WIZARD_STEPS.findIndex((step) => step.id === wizardStep));
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={editingUnit ? "Modifier l'unité" : 'Nouvelle unité locative'} description="Définissez les détails de cet espace pour pouvoir y associer un contrat de location.">
-      <div className="space-y-3.5">
-        <ProductWizard
+    <WizardShell
+      open={isOpen}
+      onClose={onClose}
+      size="compact"
+      variant="workstation"
+      tone="owner"
+      eyebrow="SAMAY KËUR"
+      title={editingUnit ? "Modifier l'unité" : 'Nouvelle unité locative'}
+      description="Définissez les détails de cet espace pour pouvoir y associer un contrat de location."
+      steps={UNIT_WIZARD_STEPS}
+      currentStep={unitWizardStepIndex}
+      contentDescription="Définissez les détails de cet espace pour pouvoir y associer un contrat de location."
+      stepContext={<UnitWizardStepContext step={wizardStep} />}
+      rail={
+        <UnitWizardRail
           steps={UNIT_WIZARD_STEPS}
-          activeStep={wizardStep}
-          onStepChange={(step) => onStepChange(step)}
-          onCancel={onClose}
-          onFinalSubmit={() => void onSubmit()}
-          finalSubmitLabel={editingUnit ? 'Mettre à jour' : 'Créer l\'unité'}
-          isSubmitting={saving}
+          currentStep={unitWizardStepIndex}
+        />
+      }
+      primaryAction={
+        <button
+          type="button"
+          onClick={() => {
+            if (wizardStep === 'main') {
+              if (!form.immeuble_id) { toast.error('Le bien parent est requis.'); return; }
+              if (!form.nom.trim()) { toast.error('Le type d\'unité est requis.'); return; }
+              onStepChange('rent');
+            } else if (wizardStep === 'rent') {
+              if (!form.loyer_base.trim() || Number(form.loyer_base) < 0) { toast.error('Le loyer mensuel est invalide.'); return; }
+              onStepChange('summary');
+            } else {
+              void onSubmit();
+            }
+          }}
+          disabled={saving}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-        <div className={wizardStep === 'main' ? 'space-y-4' : 'hidden'}>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-900 sm:text-sm">Caractéristiques de l'unité</h3>
+          {saving ? 'Traitement...' : wizardStep === 'summary' ? (editingUnit ? 'Mettre à jour' : 'Créer l\'unité') : 'Continuer'}
+        </button>
+      }
+      secondaryAction={
+        <button
+          type="button"
+          onClick={() => {
+            if (wizardStep === 'summary') onStepChange('rent');
+            else if (wizardStep === 'rent') onStepChange('main');
+            else onClose();
+          }}
+          disabled={saving}
+          className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
+        >
+          {wizardStep === 'main' ? 'Annuler' : 'Retour'}
+        </button>
+      }
+    >
+      <div className="space-y-2.5 sm:space-y-3 lg:space-y-4">
+        <div className={wizardStep === 'main' ? 'space-y-2.5 sm:space-y-2.5' : 'hidden'}>
+          <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">Caractéristiques de l'unité</h3>
           <Field label="Bien parent *">
             <SmartCombobox
               value={form.immeuble_id}
@@ -2247,7 +2463,9 @@ function UnitModal({
           </Field>
         </div>
         </div>
-        <div className={wizardStep === 'rent' ? 'space-y-4' : 'hidden'}>
+
+        <div className={wizardStep === 'rent' ? 'space-y-2.5 sm:space-y-2.5' : 'hidden'}>
+        <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">Loyer et occupation</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Étage">
             <input value={form.etage} onChange={(event) => onChange((current) => ({ ...current, etage: event.target.value }))} className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="RDC, 1er..." />
@@ -2269,11 +2487,11 @@ function UnitModal({
           <textarea value={form.description} onChange={(event) => onChange((current) => ({ ...current, description: event.target.value }))} rows={3} className="mt-1 w-full resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100" placeholder="Détails de l'unité..." />
         </Field>
         </div>
+
         {wizardStep === 'summary' && (
           <div className="space-y-4">
-            <WizardIntro title="Validation finale" description="Vérifiez les informations avant création. Cette action enregistrera définitivement l'unité dans le portefeuille locatif." />
             <PremiumMobileCard
-              title={form.numero ? `${form.nom || 'Unité'} · ${form.numero}` : form.nom || 'Unité sans nom'}
+              title={form.numero ? `${form.nom || 'Unité'} - ${form.numero}` : form.nom || 'Unité sans nom'}
               subtitle={properties.find((property) => property.id === form.immeuble_id)?.nom ?? 'Bien parent non sélectionné'}
               icon={DoorOpen}
               status={UNIT_STATUSES.find((status) => status.value === form.statut)?.label ?? form.statut}
@@ -2293,11 +2511,12 @@ function UnitModal({
             )}
           </div>
         )}
-        </ProductWizard>
       </div>
-    </Modal>
+    </WizardShell>
   );
 }
+
+
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -2308,11 +2527,3 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function WizardIntro({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="rounded-2xl border border-emerald-950/10 bg-gradient-to-br from-[#fffaf1] to-white p-4 shadow-sm">
-      <p className="text-sm font-black text-slate-950">{title}</p>
-      <p className="mt-1 text-sm font-semibold leading-6 text-slate-500">{description}</p>
-    </div>
-  );
-}

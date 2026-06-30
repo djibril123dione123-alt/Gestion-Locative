@@ -1891,9 +1891,9 @@ export function Bailleurs() {
                       amount={summary.net}
                       amountLabel="Net bailleur"
                       amountTone={summary.net > 0 ? 'emerald' : 'slate'}
-                      secondaryAmount={summary.reliquats}
-                      secondaryAmountLabel="Reliquat"
-                      secondaryAmountTone={summary.reliquats > 0 ? 'red' : 'slate'}
+                      secondaryAmount={summary.reliquats > 0 ? summary.reliquats : undefined}
+                      secondaryAmountLabel={summary.reliquats > 0 ? "Reliquat" : undefined}
+                      secondaryAmountTone="red"
                     />
                   );
                 })}
@@ -2588,10 +2588,10 @@ function CompactLabelValue({ label, value }: { label: string; value: ReactNode |
   const isIdentity = label.toLowerCase().includes('identit');
   const isName = label === 'Nom complet';
   return (
-    <div className={`flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 ${isName ? 'py-1.5 sm:py-[0.55rem]' : 'py-1.5 sm:py-[0.42rem]'}`}>
+    <div className={`flex min-w-0 items-center justify-between gap-3 ${isName ? 'py-1.5 sm:py-[0.55rem]' : 'py-1.5 sm:py-[0.42rem]'}`}>
       <span className="shrink-0 text-[0.72rem] font-medium text-slate-500 sm:text-[0.66rem]">{label}</span>
       <span
-        className={`min-w-0 max-w-full break-words text-left font-semibold sm:max-w-[62%] sm:truncate sm:text-right ${isIdentity ? 'tabular-nums tracking-[-0.01em] text-slate-700' : ''} ${isName ? 'text-[0.82rem] text-slate-950 sm:text-[0.74rem]' : 'text-[0.74rem] text-slate-800 sm:text-[0.68rem]'}`}
+        className={`min-w-0 max-w-[70%] truncate text-right font-semibold sm:max-w-[62%] ${isIdentity ? 'tabular-nums tracking-[-0.01em] text-slate-700' : ''} ${isName ? 'text-[0.82rem] text-slate-950 sm:text-[0.74rem]' : 'text-[0.74rem] text-slate-800 sm:text-[0.68rem]'}`}
         title={typeof value === 'string' ? value : undefined}
       >
         {value}
@@ -2599,3 +2599,4 @@ function CompactLabelValue({ label, value }: { label: string; value: ReactNode |
     </div>
   );
 }
+

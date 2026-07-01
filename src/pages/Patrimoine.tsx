@@ -1702,9 +1702,9 @@ function PropertyDrawer({
             {
               label: 'Unités',
               content: summary.units.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
-                  <p className="text-[0.75rem] font-medium text-slate-600 mb-3">Aucune unité enregistrée.</p>
-                  <button type="button" onClick={onAddUnit} className="inline-flex h-7 items-center justify-center gap-1.5 rounded border border-brand-200 bg-brand-50 px-3 text-[0.65rem] font-bold text-brand-900 transition hover:bg-brand-100">Ajouter une unité</button>
+                <div className="flex flex-col items-center justify-center py-3.5 px-3 text-center">
+                  <p className="text-[0.7rem] font-medium text-slate-600 mb-2">Aucune unité enregistrée.</p>
+                  <button type="button" onClick={onAddUnit} className="inline-flex h-6 items-center justify-center gap-1 rounded border border-brand-200 bg-brand-50 px-2.5 text-[0.62rem] font-bold text-brand-900 transition hover:bg-brand-100">Ajouter une unité</button>
                 </div>
               ) : (
                 <CompactList rows={summary.units.slice(0, 6).map((unit) => ({
@@ -1881,9 +1881,9 @@ function UnitDrawer({
             {
               label: 'Paiements',
               content: summary.payments.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
-                  <p className="text-[0.75rem] font-medium text-slate-600 mb-3">Aucun paiement enregistré.</p>
-                  <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-7 items-center justify-center gap-1.5 rounded border border-brand-200 bg-brand-50 px-3 text-[0.65rem] font-bold text-brand-900 transition hover:bg-brand-100">Encaisser un paiement</button>
+                <div className="flex flex-col items-center justify-center py-3.5 px-3 text-center">
+                  <p className="text-[0.7rem] font-medium text-slate-600 mb-2">Aucun paiement enregistré.</p>
+                  <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-6 items-center justify-center gap-1 rounded border border-brand-200 bg-brand-50 px-2.5 text-[0.62rem] font-bold text-brand-900 transition hover:bg-brand-100">Encaisser un paiement</button>
                 </div>
               ) : (
                 <CompactList rows={summary.payments.slice(0, 4).map((payment) => ({
@@ -1972,8 +1972,8 @@ function CompactLabelValue({ label, value }: { label: string; value: ReactNode |
 function DrawerTabs({ tabs }: { tabs: Array<{ label: string; content: ReactNode }> }) {
   const [active, setActive] = useState(0);
   return (
-    <div className="rounded-xl border border-emerald-950/10 bg-white p-2 shadow-[0_8px_20px_rgba(15,23,42,0.03)]">
-      <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none rounded-lg bg-slate-50 p-1">
+    <div className="rounded-xl border border-emerald-950/10 bg-white p-1.5 shadow-[0_8px_20px_rgba(15,23,42,0.03)]">
+      <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none rounded-lg bg-slate-50 p-0.5">
         {tabs.map((tab, index) => (
           <button
             key={tab.label}
@@ -1982,20 +1982,20 @@ function DrawerTabs({ tabs }: { tabs: Array<{ label: string; content: ReactNode 
               setActive(index);
               e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }}
-            className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-[0.68rem] font-semibold transition ${active === index ? 'bg-white text-brand-900 shadow-sm ring-1 ring-emerald-950/10' : 'text-slate-500 hover:bg-white/80 hover:text-slate-800'}`}
+            className={`whitespace-nowrap rounded-md px-2 py-1 text-[0.65rem] font-semibold transition ${active === index ? 'bg-white text-brand-900 shadow-sm ring-1 ring-emerald-950/10' : 'text-slate-500 hover:bg-white/80 hover:text-slate-800'}`}
           >
             {tab.label}
           </button>
         ))}
       </div>
-      <div className="mt-2">{tabs[active]?.content}</div>
+      <div className="mt-1.5">{tabs[active]?.content}</div>
     </div>
   );
 }
 
 function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: ReactNode; subtitle: ReactNode; onClick?: () => void }> }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       {rows.map((row, index) => {
         const Icon = row.icon;
         const isClickable = !!row.onClick;
@@ -2004,26 +2004,26 @@ function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: ReactNod
           ? {
               type: 'button',
               onClick: row.onClick,
-              className: 'group flex w-full items-center justify-between gap-1.5 rounded-lg border border-emerald-950/10 bg-[#fffdf8] p-1.5 text-left shadow-[0_5px_12px_rgba(15,23,42,0.025)] transition hover:bg-emerald-50/50 cursor-pointer focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500',
+              className: 'group flex w-full items-center justify-between gap-1.5 rounded-lg border border-emerald-950/10 bg-[#fffdf8] px-2 py-1 text-left shadow-[0_2px_6px_rgba(15,23,42,0.015)] transition hover:bg-emerald-50/50 cursor-pointer focus-visible:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500',
               'aria-label': `Ouvrir ${typeof row.title === 'string' ? row.title : 'les détails'}`,
             }
           : {
-              className: 'flex items-center gap-1.5 rounded-lg border border-emerald-950/10 bg-[#fffdf8] p-1.5 shadow-[0_5px_12px_rgba(15,23,42,0.025)]',
+              className: 'flex items-center gap-1.5 rounded-lg border border-emerald-950/10 bg-[#fffdf8] px-2 py-1 shadow-[0_2px_6px_rgba(15,23,42,0.015)]',
             };
 
         return (
           <Wrapper key={`${typeof row.title === 'string' ? row.title : index}-${index}`} {...(wrapperProps as React.HTMLAttributes<HTMLElement> & { type?: 'button'; onClick?: () => void })}>
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-lg bg-white text-brand-800 shadow-sm ring-1 ring-black/5">
-                <Icon className="h-3 w-3" />
+              <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md bg-white text-brand-800 shadow-sm ring-1 ring-black/5">
+                <Icon className="h-2.5 w-2.5" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[0.72rem] font-semibold text-slate-900">{row.title}</p>
-                <p className="line-clamp-1 text-[0.62rem] font-medium text-slate-500">{row.subtitle}</p>
+                <p className="truncate text-[0.66rem] font-bold leading-tight text-slate-800">{row.title}</p>
+                <p className="mt-0.5 line-clamp-1 text-[0.58rem] font-medium leading-tight text-slate-500">{row.subtitle}</p>
               </div>
             </div>
             {isClickable && (
-              <ChevronRight className="mr-0.5 h-3.5 w-3.5 flex-shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+              <ChevronRight className="mr-0.5 h-3 w-3 flex-shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
             )}
           </Wrapper>
         );
@@ -2033,7 +2033,7 @@ function CompactList({ rows }: { rows: Array<{ icon: LucideIcon; title: ReactNod
 }
 
 function SoftEmpty({ text }: { text: string }) {
-  return <p className="rounded-lg border border-dashed border-emerald-950/15 bg-[#fffaf1] px-3 py-2.5 text-[0.7rem] font-medium leading-4 text-slate-500">{text}</p>;
+  return <p className="rounded-lg border border-dashed border-emerald-950/15 bg-[#fffaf1] px-2.5 py-1.5 text-[0.65rem] font-medium leading-4 text-slate-500">{text}</p>;
 }
 
 

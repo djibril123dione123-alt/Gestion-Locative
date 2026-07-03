@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import {
   Camera,
   CameraOff,
@@ -164,25 +165,19 @@ export function DocumentScanner() {
 
   return (
     <div className="sk-mobile-page min-w-0 space-y-3.5 pb-24 sm:space-y-5 lg:pb-2">
-      <div className="relative max-w-full overflow-hidden rounded-[1.25rem] border border-emerald-950/10 bg-white p-3.5 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:rounded-[1.7rem] sm:p-5">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-800 via-emerald-500 to-amber-400" />
-        <div className="relative flex min-w-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.13em] text-emerald-800 sm:text-xs">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Registre documentaire
-            </div>
-            <h1 className="mt-2.5 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Scanner un document</h1>
-            <p className="mt-1.5 max-w-2xl text-sm font-semibold leading-5 text-slate-500 sm:text-base sm:leading-6">
-              Scannez le QR d’une quittance, d’un contrat ou d’un rapport pour confirmer son authenticité.
-            </p>
-          </div>
+      <PremiumPageHeader
+        variant="registry"
+        eyebrow="REGISTRE DOCUMENTAIRE"
+        title="Scanner un document"
+        description="Scannez le QR d'une quittance, d'un contrat ou d'un rapport pour confirmer son authenticité."
+        mobileDescription="Vérification QR."
+        sideContent={
           <div className="hidden max-w-xs items-start gap-2.5 rounded-2xl border border-slate-200 bg-slate-50/80 px-3.5 py-3 text-xs font-semibold leading-5 text-slate-600 lg:flex">
             <ShieldCheck className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-700" />
             Seules les informations publiques nécessaires au contrôle sont affichées.
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid min-w-0 max-w-full gap-3.5 sm:gap-5 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
         <section className="min-w-0 max-w-full space-y-3 sm:space-y-4">

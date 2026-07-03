@@ -48,8 +48,15 @@ import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
-import { FinanceDrawer, FinanceInfoCard, FinanceKpiGrid, FinanceLine, FinancePageHeader, FinanceStatusTabs } from '../components/finance/FinancePrimitives';
+import { PageShell } from '../components/ui/PageShell';
+import { CompactFinanceKpiGrid } from '../components/finance/FinancePrimitives';
 import { FinanceReasonModal } from '../components/finance/FinanceReasonModal';
+import { SplitViewShell } from '../components/ui/SplitViewShell';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumToolbar } from '../components/ui/PremiumToolbar';
+import { PremiumTableSurface } from '../components/ui/PremiumTableSurface';
+import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
+import { CompactSection, CompactLabelValue } from '../components/ui/CompactSection';
 import { getAgencyFinancialSummary, type AgencyFinancialSummary } from '../services/api/financeApi';
 import {
   STATUS_LABELS,
@@ -67,8 +74,7 @@ interface PaiementsProps {
   embedded?: boolean;
 }
 
-// eslint-disable-next-line no-empty-pattern
-export function Paiements({ }: PaiementsProps) {
+export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const { profile, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const { success, error: showError, toasts, removeToast } = useToast();
@@ -633,8 +639,16 @@ export function Paiements({ }: PaiementsProps) {
     {
       key: 'locataire',
       label: 'Locataire',
-      render: (p: PaiementRow) =>
-        formatPersonName(p.contrats?.locataires),
+      render: (p: PaiementRow) => (
+        <div className="min-w-0">
+          <p className="truncate font-bold text-slate-900">{formatPersonName(p.contrats?.locataires)}</p>
+          {selectedPaiement && (
+            <p className="truncate text-[11px] font-medium text-slate-500">
+              {p.contrats?.unites?.immeubles?.nom || '-'} · {p.contrats?.unites?.nom || '-'}
+            </p>
+          )}
+        </div>
+      ),
     },
     {
       key: 'unite',
@@ -701,17 +715,17 @@ export function Paiements({ }: PaiementsProps) {
 
   const columns = allColumns.filter((c) => {
     if (!isVisible(c.key)) return false;
-    if (selectedPaiement && (c.key === 'mode' || c.key === 'mois_concerne')) return false;
+    if (selectedPaiement && (c.key === 'unite' || c.key === 'mode' || c.key === 'mois_concerne')) return false;
     return true;
   });
 
-  const statusFilters: { id: StatusFilter; label: string; count: number }[] = [
-    { id: 'tous', label: 'Tous', count: counts.tous },
-    { id: 'paye', label: 'Soldés', count: counts.paye },
-    { id: 'partiel', label: 'Partiels', count: counts.partiel },
-    { id: 'avance', label: 'Avances', count: counts.avance },
-    { id: 'annule', label: 'Annulés', count: counts.annule },
-  ];
+  const quickChips = useMemo(() => [
+    { id: 'tous', label: 'Tous', count: counts.tous, isActive: statusFilter === 'tous', onClick: () => setStatusFilter('tous') },
+    { id: 'paye', label: 'Soldés', count: counts.paye, isActive: statusFilter === 'paye', onClick: () => setStatusFilter('paye') },
+    { id: 'partiel', label: 'Partiels', count: counts.partiel, isActive: statusFilter === 'partiel', onClick: () => setStatusFilter('partiel') },
+    { id: 'avance', label: 'Avances', count: counts.avance, isActive: statusFilter === 'avance', onClick: () => setStatusFilter('avance') },
+    { id: 'annule', label: 'Annulés', count: counts.annule, isActive: statusFilter === 'annule', onClick: () => setStatusFilter('annule') },
+  ], [counts, statusFilter]);
 
   const getPaiementStatusMeta = (p: PaiementRow) => {
     if (p.statut === 'annule' || p.deleted_at) return STATUS_LABELS.annule;
@@ -732,52 +746,57 @@ export function Paiements({ }: PaiementsProps) {
   const summaryRecoveryRate = summaryBase > 0
     ? Math.round((Number(financeSummary?.loyers_encaisses ?? kpis.encaisseMois) / summaryBase) * 100)
     : kpis.tauxRecouvrement;
-  const financeMetrics = [
+  const financeMetrics = useMemo(() => [
     {
-      label: 'Encaissements du mois',
+      label: 'Encaissements',
       value: <MoneyText value={financeSummary?.loyers_encaisses ?? kpis.encaisseMois} />,
       helper: `${financeSummary?.paiements_count ?? kpis.nbPaiementsMois} paiement${(financeSummary?.paiements_count ?? kpis.nbPaiementsMois) > 1 ? 's' : ''}`,
       icon: Wallet,
       tone: 'emerald' as const,
     },
     {
-      label: 'Paiements reçus',
+      label: 'Paiements',
       value: financeSummary?.paiements_count ?? kpis.nbPaiementsMois,
       helper: 'Ce mois',
       icon: CreditCard,
       tone: 'slate' as const,
     },
     {
-      label: 'Paiements partiels',
+      label: 'Partiels',
       value: kpis.partiels,
       helper: 'À suivre',
       icon: Clock,
       tone: 'amber' as const,
     },
     {
-      label: 'Avances / trop-perçus',
+      label: 'Avances',
       value: kpis.avances,
-      helper: 'Ce mois',
+      helper: 'Trop-perçus',
       icon: TrendingUp,
       tone: 'blue' as const,
     },
     {
-      label: 'Commissions agence',
+      label: 'Commissions',
       value: <MoneyText value={financeSummary?.commissions_agence ?? 0} />,
-      helper: 'Revenus agence',
+      helper: 'Revenus',
       icon: Percent,
       tone: 'green' as const,
     },
     {
-      label: 'Taux de recouvrement',
+      label: 'Recouvrement',
       value: `${summaryRecoveryRate}%`,
-      helper: <span className="truncate" title={`${formatCurrency(financeSummary?.loyers_encaisses ?? kpis.encaisseMois)} / ${formatCurrency(summaryBase)}`}>
-        Sur {formatCompactCurrency(summaryBase)} attendus
-      </span>,
+      helper: `Sur ${formatCompactCurrency(summaryBase)}`,
       icon: FileCheck2,
       tone: summaryRecoveryRate >= 80 ? 'emerald' as const : 'amber' as const,
     },
-  ];
+  ], [financeSummary, kpis, summaryRecoveryRate, summaryBase]);
+
+  const displayedMetrics = useMemo(() => {
+    if (selectedPaiement) {
+      return financeMetrics.filter((m) => m.label !== 'Paiements' && m.label !== 'Avances');
+    }
+    return financeMetrics;
+  }, [financeMetrics, selectedPaiement]);
 
   const selectedStatus = selectedPaiement ? getPaiementStatusMeta(selectedPaiement) : null;
   const selectedLoyerAttendu = selectedPaiement
@@ -789,87 +808,93 @@ export function Paiements({ }: PaiementsProps) {
   const selectedReliquat = selectedPaiement ? Number(selectedPaiement.reliquat ?? 0) : 0;
 
   return (
-    <>
+    <PageShell spacing="compact" variant="dataDense" tone="paper" verticalInset="compact">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      <div className="flex min-h-full">
-        <div className={`flex-1 min-w-0 transition-all duration-300 ${selectedPaiement && selectedStatus ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
-          <section className="sk-page-shell space-y-6">
-            <FinancePageHeader
-              eyebrow="Encaissement & finance"
-              title={isIndividualOwner ? 'Mes loyers reçus' : 'Paiements reçus'}
-              description="Encaissements validés et quittances."
-              primaryLabel="Nouveau paiement"
-              primaryIcon={<Plus className="h-4 w-4" />}
-              onPrimary={openCreateModal}
-            />
-
-            <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-emerald-950/10">
-              <Tabs
-                tabs={[
-                  { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
-                  { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
-                ]}
-                activeId="paiements"
-                onChange={(id) => { window.location.hash = `#/${id}`; }}
-              />
-            </div>
-
+      <SplitViewShell
+        size="compact"
+        desktopAt="lg"
+        detailClassName="lg:sticky lg:top-2 lg:h-[calc(100dvh-1rem)]"
+        isDetailOpen={Boolean(selectedPaiement && selectedStatus)}
+        main={
+          <div className="space-y-4">
             {cacheTimestamp && (
               <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
+            )}
+
+            {!embedded && (
+              <>
+                <PremiumPageHeader
+                  density="compact"
+                  eyebrow="ENCAISSEMENT & FINANCE"
+                  title={isIndividualOwner ? 'Mes loyers reçus' : 'Paiements reçus'}
+                  description="Encaissements validés et quittances."
+                  mobileDescription="Suivi des encaissements."
+                  primaryAction={
+                    <PremiumButton variant="primary" icon={<Plus className="h-4 w-4" />} onClick={openCreateModal}>
+                      Nouveau paiement
+                    </PremiumButton>
+                  }
+                />
+                <div className="flex items-center justify-start pt-1 pb-2">
+                  <Tabs
+                    size="compact"
+                    tabs={[
+                      { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
+                      { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
+                    ]}
+                    activeId="paiements"
+                    onChange={(id) => { window.location.hash = `#/${id}`; }}
+                  />
+                </div>
+              </>
             )}
 
             {loading ? (
               <SkeletonCards count={6} />
             ) : (
-              <FinanceKpiGrid metrics={financeMetrics} />
+              <CompactFinanceKpiGrid metrics={displayedMetrics} />
             )}
 
-            <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div className="flex items-center gap-2 relative min-w-0 flex-1">
+            <PremiumToolbar
+              density="compact"
+              layout="list"
+              ariaLabel="Filtres des paiements"
+              isSplitOpen={Boolean(selectedPaiement && selectedStatus)}
+              quickChips={quickChips}
+              search={
+                <div className="flex min-w-0 flex-1 items-center gap-2">
                   <div className="relative min-w-0 flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                     <input
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Rechercher..."
-                      className="lg:hidden h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                    />
-                    <input
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      type="text"
                       placeholder="Rechercher un locataire, contrat, référence..."
-                      className="hidden lg:block h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="!min-h-8 !h-8 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-8 pr-2.5 py-0 text-xs font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none transition focus:border-emerald-700/30 focus:ring-2 focus:ring-emerald-700/10"
                     />
                   </div>
-                  <div className="flex shrink-0 gap-2 items-center lg:hidden">
-                    <button
-                      type="button"
-                      onClick={() => setMobileFiltersOpen(true)}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60"
-                    >
-                      <SlidersHorizontal className="h-4 w-4" />
-                      Filtres
-                    </button>
-                    <ColumnPicker
-                      columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
-                      visibility={visibility}
-                      onToggle={toggle}
-                      onSetAll={setAll}
-                    />
-                  </div>
-                </div>
 
-                <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
+                  <button
+                    type="button"
+                    onClick={() => setMobileFiltersOpen(true)}
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[0.6rem] border border-slate-200 bg-[#fffdf8] px-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Filtres
+                  </button>
+                </div>
+              }
+              filters={
+                <>
                   <SmartCombobox
                     value={monthFilter}
                     options={monthOptions}
                     onChange={setMonthFilter}
                     placeholder="Période"
                     searchPlaceholder="Rechercher une période..."
-                    className="w-48"
+                    className={`shrink-0 ${selectedPaiement ? 'w-32' : 'w-40'}`}
+                    density="compact"
                   />
-
                   {!isIndividualOwner && (
                     <SmartCombobox
                       value={bailleurFilter}
@@ -877,23 +902,20 @@ export function Paiements({ }: PaiementsProps) {
                       onChange={setBailleurFilter}
                       placeholder="Tous Bailleurs"
                       searchPlaceholder="Rechercher un bailleur..."
-                      className="w-44"
+                      className={`shrink-0 ${selectedPaiement ? 'hidden xl:block xl:w-32' : 'w-40'}`}
+                      density="compact"
                     />
                   )}
-
                   <ColumnPicker
                     columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
                     visibility={visibility}
                     onToggle={toggle}
                     onSetAll={setAll}
+                    className={`!h-8 !rounded-[0.6rem] !px-2.5 !py-1 !text-xs ${selectedPaiement ? 'hidden' : ''}`}
                   />
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <FinanceStatusTabs tabs={statusFilters} active={statusFilter} onChange={setStatusFilter} />
-              </div>
-            </div>
+                </>
+              }
+            />
 
             <MobileFilterSheet
               isOpen={mobileFiltersOpen}
@@ -925,157 +947,150 @@ export function Paiements({ }: PaiementsProps) {
             </MobileFilterSheet>
 
             {loading ? (
-              <div className="sk-premium-panel p-4 sm:p-6">
-                <SkeletonTable rows={6} cols={6} />
-              </div>
+              <PremiumTableSurface density="compact" ariaLabel="Chargement des paiements">
+                <div className="p-4 sm:p-6">
+                  <SkeletonTable rows={6} cols={6} />
+                </div>
+              </PremiumTableSurface>
             ) : filtered.length === 0 ? (
-              <div className="sk-card">
-                <EmptyState
-                  icon={CreditCard}
-                  title={
-                    statusFilter === 'tous' && !searchTerm
-                      ? 'Aucun paiement enregistré'
-                      : 'Aucun résultat'
-                  }
-                  description={
-                    statusFilter === 'tous' && !searchTerm
-                      ? 'Commencez par enregistrer un premier encaissement de loyer.'
-                      : 'Essayez un autre filtre ou élargissez votre recherche.'
-                  }
-                  action={
-                    statusFilter === 'tous' && !searchTerm
-                      ? { label: 'Nouveau paiement', onClick: openCreateModal }
-                      : undefined
-                  }
-                />
-              </div>
-            ) : (
-              <div className="sk-card overflow-hidden mb-28 lg:mb-0">
-                <div className="overflow-x-auto">
-                  <Table
-                    columns={columns}
-                    data={filtered}
-                    onRowClick={(p) => setSelectedPaiement(p)}
-                    selectedId={selectedPaiement?.id}
-                    mobileRender={(p) => {
-                      const status = getPaiementStatusMeta(p);
-                      const StatusIcon = status.icon;
-                      return (
-                        <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
-                          <div className="flex items-start justify-between gap-3">
-                            <span className="font-black text-slate-900 truncate">{formatPersonName(p.contrats?.locataires, 'Locataire inconnu')}</span>
-                            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black tracking-wider ${status.classes}`}>
-                              <StatusIcon className="h-3 w-3" />
-                              <span className="capitalize">{status.label.toLowerCase()}</span>
-                            </span>
-                          </div>
-
-                          <div className="text-xs font-semibold text-slate-500 truncate">
-                            {p.contrats?.unites?.immeubles?.nom || '—'} · {p.contrats?.unites?.nom || '—'}
-                          </div>
-
-                          <div className="flex items-center justify-between mt-1">
-                            <span className="text-base font-black text-emerald-800"><MoneyText value={p.montant_total} /></span>
-                            <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(p.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
-                          </div>
-
-                          <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
-                            <span>{getPaymentModeLabel(p)} · {new Date(p.date_paiement).toLocaleDateString('fr-FR')}</span>
-                            {Number(p.reliquat) > 0 && (
-                              <span className="text-orange-600">Reste: <MoneyText value={p.reliquat} /></span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    }}
+              <PremiumTableSurface density="compact" ariaLabel="Aucun paiement">
+                <div className="p-6">
+                  <EmptyState
+                    icon={CreditCard}
+                    title={
+                      statusFilter === 'tous' && !searchTerm
+                        ? 'Aucun paiement enregistré'
+                        : 'Aucun résultat'
+                    }
+                    description={
+                      statusFilter === 'tous' && !searchTerm
+                        ? 'Commencez par enregistrer un premier encaissement de loyer.'
+                        : 'Essayez un autre filtre ou élargissez votre recherche.'
+                    }
+                    action={
+                      statusFilter === 'tous' && !searchTerm
+                        ? { label: 'Nouveau paiement', onClick: openCreateModal }
+                        : undefined
+                    }
                   />
                 </div>
-              </div>
-            )}
+              </PremiumTableSurface>
+            ) : (
+              <PremiumTableSurface density="compact" ariaLabel="Table des paiements">
+                <Table
+                  compact
+                  columns={columns}
+                  data={filtered}
+                  onRowClick={(p) => setSelectedPaiement(p)}
+                  selectedId={selectedPaiement?.id}
+                  mobileRender={(p) => {
+                    const status = getPaiementStatusMeta(p);
+                    const StatusIcon = status.icon;
+                    return (
+                      <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-black text-slate-900 truncate">{formatPersonName(p.contrats?.locataires, 'Locataire inconnu')}</span>
+                          <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black tracking-wider ${status.classes}`}>
+                            <StatusIcon className="h-3 w-3" />
+                            <span className="capitalize">{status.label.toLowerCase()}</span>
+                          </span>
+                        </div>
 
-          </section>
-        </div>
+                        <div className="text-xs font-semibold text-slate-500 truncate">
+                          {p.contrats?.unites?.immeubles?.nom || '—'} · {p.contrats?.unites?.nom || '—'}
+                        </div>
 
-        <PaiementFormModal
-          isOpen={isModalOpen}
-          onClose={closeModal}
-          editingPaiement={editingPaiement}
-          formData={formData}
-          setFormData={setFormData}
-          contrats={contrats}
-          paiements={paiements}
-          isSaving={isSaving}
-          onSubmit={handleSubmit}
-          isOnline={isOnline}
-        />
+                        <div className="flex items-center justify-between mt-1">
+                          <span className="text-base font-black text-emerald-800"><MoneyText value={p.montant_total} /></span>
+                          <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(p.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
+                        </div>
 
-        {selectedPaiement && selectedStatus && (
-          <FinanceDrawer
-            title={selectedPaiement.reference
-              ? `Paiement ${selectedPaiement.reference}`
-              : `Paiement du ${new Date(selectedPaiement.date_paiement).toLocaleDateString('fr-FR')}`}
-            amount={<MoneyText value={selectedPaiement.montant_total} />}
-            details={[
-              formatPersonName(selectedPaiement.contrats?.locataires, 'Locataire'),
-              `${selectedPaiement.contrats?.unites?.immeubles?.nom || '•'} • ${selectedPaiement.contrats?.unites?.nom || '•'}`,
-              new Date(selectedPaiement.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
-            ]}
-            subtitle={`Enregistré le ${new Date(selectedPaiement.date_paiement).toLocaleDateString('fr-FR')} • ${getPaymentModeLabel(selectedPaiement)}`}
-            onClose={() => setSelectedPaiement(null)}
-            badge={(() => {
-              const Icon = selectedStatus.icon;
-              return (
-                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-black ${selectedStatus.classes}`}>
-                  <Icon className="h-3.5 w-3.5" />
-                  {selectedStatus.label}
-                </span>
-              );
-            })()}
-            actions={
-              <PremiumButton
-                variant="primary"
-                size="sm"
-                icon={<ReceiptText className="h-4 w-4" />}
-                onClick={() => exportFacture(selectedPaiement.id)}
-                disabled={exportingId === selectedPaiement.id}
-              >
-                Voir quittance
-              </PremiumButton>
-            }
-          >
-            <div className="space-y-4">
-              <FinanceInfoCard title="Résumé paiement">
-                <FinanceLine label="Montant reçu" value={<MoneyText value={selectedPaiement.montant_total} className="font-black text-emerald-800" />} strong />
-                <FinanceLine
-                  label="Période"
-                  value={new Date(selectedPaiement.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                        <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
+                          <span>{getPaymentModeLabel(p)} · {new Date(p.date_paiement).toLocaleDateString('fr-FR')}</span>
+                          {Number(p.reliquat) > 0 && (
+                            <span className="text-orange-600">Reste: <MoneyText value={p.reliquat} /></span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }}
                 />
-                <FinanceLine label="Date paiement" value={new Date(selectedPaiement.date_paiement).toLocaleDateString('fr-FR')} />
-                <FinanceLine label="Mode paiement" value={getPaymentModeLabel(selectedPaiement)} />
-                <FinanceLine label="Référence" value={selectedPaiement.reference || '—'} />
-              </FinanceInfoCard>
+              </PremiumTableSurface>
+            )}
+          </div>
+        }
+        detail={
+          selectedPaiement && selectedStatus ? (
+            <PremiumDrawerShell
+              open
+              size="compact"
+              desktopMode="floating"
+              desktopAt="lg"
+              density="compact"
+              eyebrow="DÉTAIL DU PAIEMENT"
+              title={selectedPaiement.reference
+                ? `Paiement ${selectedPaiement.reference}`
+                : `Paiement du ${new Date(selectedPaiement.date_paiement).toLocaleDateString('fr-FR')}`}
+              description={
+                <div className="space-y-1">
+                  <p className="text-base font-black tracking-tight text-slate-950">
+                    <MoneyText value={selectedPaiement.montant_total} />
+                  </p>
+                  <p className="truncate text-[0.72rem] font-semibold text-slate-500">
+                    {formatPersonName(selectedPaiement.contrats?.locataires, 'Locataire')} · {selectedPaiement.contrats?.unites?.immeubles?.nom || '•'} · {selectedPaiement.contrats?.unites?.nom || '•'}
+                  </p>
+                  <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-emerald-700">
+                    {selectedStatus.label} · {new Date(selectedPaiement.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                  </p>
+                </div>
+              }
+              onClose={() => setSelectedPaiement(null)}
+              actions={
+                <PremiumButton
+                  variant="primary"
+                  size="sm"
+                  icon={<ReceiptText className="h-3.5 w-3.5" />}
+                  onClick={() => exportFacture(selectedPaiement.id)}
+                  disabled={exportingId === selectedPaiement.id}
+                  className="!h-8 !text-[0.72rem]"
+                  fullWidth
+                >
+                  Voir quittance
+                </PremiumButton>
+              }
+              bodyClassName="space-y-2"
+            >
+              <CompactSection title="Résumé paiement">
+                <CompactLabelValue label="Montant reçu" value={<MoneyText value={selectedPaiement.montant_total} className="font-black text-emerald-800" />} />
+                <CompactLabelValue label="Période" value={new Date(selectedPaiement.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })} />
+                <CompactLabelValue label="Date paiement" value={new Date(selectedPaiement.date_paiement).toLocaleDateString('fr-FR')} />
+                <CompactLabelValue label="Mode paiement" value={getPaymentModeLabel(selectedPaiement)} />
+                <CompactLabelValue label="Référence" value={selectedPaiement.reference || '—'} />
+              </CompactSection>
 
-              <FinanceInfoCard title="Affectation">
-                <FinanceLine label="Locataire" value={formatPersonName(selectedPaiement.contrats?.locataires, '—')} />
-                <FinanceLine label="Bien / unité" value={`${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`} />
-                <FinanceLine label={isIndividualOwner ? 'Propriétaire' : 'Bailleur'} value={formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')} />
-                <FinanceLine label="Bail" value="Bail associé à cette occupation" />
-              </FinanceInfoCard>
+              <CompactSection title="Affectation">
+                <CompactLabelValue label="Locataire" value={formatPersonName(selectedPaiement.contrats?.locataires, '—')} />
+                <CompactLabelValue label="Bien / unité" value={`${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`} />
+                <CompactLabelValue label={isIndividualOwner ? 'Propriétaire' : 'Bailleur'} value={formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')} />
+                <CompactLabelValue label="Bail" value="Bail associé à cette occupation" />
+              </CompactSection>
 
-              <FinanceInfoCard title="Impact financier">
-                <FinanceLine label="Loyer attendu" value={<MoneyText value={selectedLoyerAttendu} />} />
-                <FinanceLine label="Total déjà encaissé" value={<MoneyText value={selectedTotalEncaisse} />} />
-                <FinanceLine label="Reliquat" value={<MoneyText value={selectedReliquat} className={selectedReliquat > 3 ? 'text-orange-700' : 'text-emerald-700'} />} />
-                <FinanceLine label="Commission agence" value={<MoneyText value={selectedPaiement.part_agence ?? 0} />} />
-                <FinanceLine label="Net bailleur" value={<MoneyText value={selectedPaiement.part_bailleur ?? Math.max(selectedTotalEncaisse - Number(selectedPaiement.part_agence ?? 0), 0)} className="font-black text-emerald-800" />} strong />
-              </FinanceInfoCard>
+              <CompactSection title="Impact financier">
+                <CompactLabelValue label="Loyer attendu" value={<MoneyText value={selectedLoyerAttendu} />} />
+                <CompactLabelValue label="Total déjà encaissé" value={<MoneyText value={selectedTotalEncaisse} />} />
+                <CompactLabelValue label="Reliquat" value={<MoneyText value={selectedReliquat} className={selectedReliquat > 3 ? 'text-orange-700 font-black' : 'text-emerald-700 font-black'} />} />
+                <CompactLabelValue label="Commission agence" value={<MoneyText value={selectedPaiement.part_agence ?? 0} />} />
+                <CompactLabelValue label="Net bailleur" value={<MoneyText value={selectedPaiement.part_bailleur ?? Math.max(selectedTotalEncaisse - Number(selectedPaiement.part_agence ?? 0), 0)} className="font-black text-emerald-800" />} />
+              </CompactSection>
 
-              <FinanceInfoCard title="Documents liés">
-                <div className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${selectedPaiement.statut === 'annule' ? 'border-red-100 bg-red-50/70 text-red-600' : 'border-emerald-950/5 bg-[#fffdf8] text-brand-950'
-                  }`}>
+              <CompactSection title="Documents liés">
+                <div className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${
+                  selectedPaiement.statut === 'annule' ? 'border-red-100 bg-red-50/70 text-red-600' : 'border-emerald-950/5 bg-[#fffdf8] text-brand-950'
+                }`}>
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg shadow-sm bg-white ${selectedPaiement.statut === 'annule' ? 'text-red-600' : 'text-emerald-700'
-                      }`}>
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-lg shadow-sm bg-white ${
+                      selectedPaiement.statut === 'annule' ? 'text-red-600' : 'text-emerald-700'
+                    }`}>
                       <FileCheck2 className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
@@ -1091,92 +1106,106 @@ export function Paiements({ }: PaiementsProps) {
                       size="sm"
                       icon={<FileDown className="h-4 w-4" />}
                       onClick={() => exportFacture(selectedPaiement.id)}
+                      className="!h-8 !text-[0.72rem]"
                     >
                       PDF
                     </PremiumButton>
                   )}
                 </div>
-              </FinanceInfoCard>
+              </CompactSection>
 
-              <FinanceInfoCard title="Historique">
-                {[
-                  { label: 'Paiement enregistré', detail: selectedPaiement.created_at || selectedPaiement.date_paiement, isDate: true },
-                  { label: 'Écriture financière créée', detail: 'Traçabilité certifiée', isDate: false },
-                  { label: 'Quittance générée', detail: 'Document prêt', isDate: false },
-                  { label: 'Document archivé GED', detail: 'Registre des quittances', isDate: false },
-                  ...(selectedPaiement.statut === 'annule' ? [{ label: 'Paiement annulé', detail: selectedPaiement.deleted_at || 'Date inconnue', isDate: true }] : []),
-                ].map((item, idx, arr) => (
-                  <div key={item.label} className="relative flex gap-3 pb-3 last:pb-0">
-                    {idx !== arr.length - 1 && (
-                      <div className="absolute left-[5px] top-4 -bottom-2 w-0.5 bg-slate-100" />
-                    )}
-                    <div className="relative mt-1 flex h-3 w-3 shrink-0 items-center justify-center rounded-full bg-emerald-700 ring-4 ring-[#fffdf8]" />
-                    <div>
-                      <p className="text-sm font-black text-slate-900">{item.label}</p>
-                      <p className="text-xs font-semibold text-slate-500">
+              <CompactSection title="Historique & Traçabilité">
+                <div className="text-[0.72rem] text-slate-500 space-y-2 pt-1">
+                  {[
+                    { label: 'Paiement enregistré', detail: selectedPaiement.created_at || selectedPaiement.date_paiement, isDate: true },
+                    { label: 'Écriture financière créée', detail: 'Traçabilité certifiée', isDate: false },
+                    { label: 'Quittance générée', detail: 'Document prêt', isDate: false },
+                    { label: 'Document archivé GED', detail: 'Registre des quittances', isDate: false },
+                    ...(selectedPaiement.statut === 'annule' ? [{ label: 'Paiement annulé', detail: selectedPaiement.deleted_at || 'Date inconnue', isDate: true }] : []),
+                  ].map((item) => (
+                    <div key={item.label} className="flex justify-between items-center border-b border-slate-100 pb-1.5 last:border-b-0 last:pb-0">
+                      <span className="font-bold text-slate-700">{item.label}</span>
+                      <span className="font-semibold text-slate-500">
                         {item.isDate && item.detail ? new Date(item.detail).toLocaleString('fr-FR') : item.detail || '—'}
-                      </p>
+                      </span>
                     </div>
-                  </div>
-                ))}
-              </FinanceInfoCard>
+                  ))}
+                </div>
+              </CompactSection>
 
-              <FinanceInfoCard title="Actions contrôlées">
-                <div className="grid grid-cols-1 gap-2">
+              <CompactSection title="Actions contrôlées">
+                <div className="grid grid-cols-2 gap-2 pt-1">
                   <PremiumButton
                     variant="secondary"
-                    icon={<Pencil className="h-4 w-4" />}
+                    size="sm"
+                    icon={<Pencil className="h-3.5 w-3.5" />}
                     onClick={() => {
                       handleEdit(selectedPaiement);
                       setSelectedPaiement(null);
                     }}
+                    className="!h-8 !text-[0.72rem]"
                     fullWidth
                   >
-                    Corriger / réconcilier
+                    Corriger
                   </PremiumButton>
                   <PremiumButton
                     variant="danger"
-                    icon={<XCircle className="h-4 w-4" />}
+                    size="sm"
+                    icon={<XCircle className="h-3.5 w-3.5" />}
                     onClick={() => {
                       handleDelete(selectedPaiement);
                       setSelectedPaiement(null);
                     }}
+                    className="!h-8 !text-[0.72rem]"
                     fullWidth
                   >
-                    Annuler le paiement
+                    Annuler
                   </PremiumButton>
                 </div>
-              </FinanceInfoCard>
-            </div>
-          </FinanceDrawer>
-        )}
+              </CompactSection>
+            </PremiumDrawerShell>
+          ) : null
+        }
+      />
 
-        <FinanceReasonModal
-          isOpen={!!deleteTarget}
-          onClose={() => setDeleteTarget(null)}
-          onConfirm={confirmDelete}
-          title="Annuler le paiement"
-          description="Cette action corrige l’historique sans effacer l’opération."
-          warning="Le paiement sera marqué annulé et restera visible dans l’historique sécurisé."
-          confirmLabel="Confirmer l’annulation"
-          isLoading={isDeleting}
-        >
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Montant</p>
-              <p className="mt-1 text-base font-black text-slate-950"><MoneyText value={deleteTarget?.montant_total ?? 0} /></p>
-            </div>
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Période</p>
-              <p className="mt-1 text-sm font-black text-slate-950">
-                {deleteTarget?.mois_concerne
-                  ? new Date(deleteTarget.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
-                  : '—'}
-              </p>
-            </div>
+      <PaiementFormModal
+        isOpen={isModalOpen}
+        onClose={closeModal}
+        editingPaiement={editingPaiement}
+        formData={formData}
+        setFormData={setFormData}
+        contrats={contrats}
+        paiements={paiements}
+        isSaving={isSaving}
+        onSubmit={handleSubmit}
+        isOnline={isOnline}
+      />
+
+      <FinanceReasonModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Annuler le paiement"
+        description="Cette action corrige l’historique sans effacer l’opération."
+        warning="Le paiement sera marqué annulé et restera visible dans l’historique sécurisé."
+        confirmLabel="Confirmer l’annulation"
+        isLoading={isDeleting}
+      >
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Montant</p>
+            <p className="mt-1 text-base font-black text-slate-950"><MoneyText value={deleteTarget?.montant_total ?? 0} /></p>
           </div>
-        </FinanceReasonModal>
-      </div>
-    </>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Période</p>
+            <p className="mt-1 text-sm font-black text-slate-950">
+              {deleteTarget?.mois_concerne
+                ? new Date(deleteTarget.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+                : '—'}
+            </p>
+          </div>
+        </div>
+      </FinanceReasonModal>
+    </PageShell>
   );
 }

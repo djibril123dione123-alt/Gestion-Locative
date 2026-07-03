@@ -16,6 +16,7 @@ import {
   saveGeneratedPdf,
 } from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { FinancePageHeader } from '../components/finance/FinancePrimitives';
 
 interface CommissionRow {
   id: string;
@@ -243,26 +244,19 @@ export function Commissions() {
 
   return (
     <div className="sk-page-shell space-y-6 lg:space-y-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-950 mb-2">Gestion des Commissions</h1>
-          <p className="text-sm sm:text-base text-slate-600">Suivi des revenus d'agence</p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <button onClick={() => void exportPDF()} className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-brand-700 text-white rounded-lg hover:bg-brand-800 text-sm sm:text-base font-bold whitespace-nowrap shadow-premium">
-            <Download className="w-5 h-5" />
-            Export PDF
-          </button>
-          <button
-            onClick={exportSignedLedger}
-            disabled={exportingLedger}
-            className="flex items-center gap-2 px-4 py-2 sm:px-6 sm:py-3 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-60 text-sm sm:text-base whitespace-nowrap"
-          >
-            <Download className="w-5 h-5" />
-            {exportingLedger ? 'Signature...' : 'Livre signé CSV'}
-          </button>
-        </div>
-      </div>
+      <FinancePageHeader
+        eyebrow="ENCAISSEMENT & FINANCE"
+        title="Commissions agence"
+        description="Suivez les revenus d'agence et les exports comptables du mois."
+        mobileDescription="Commissions agence."
+        primaryLabel="Export PDF"
+        primaryIcon={<Download className="h-4 w-4" />}
+        onPrimary={() => void exportPDF()}
+        secondaryLabel={exportingLedger ? 'Signature...' : 'Livre signé CSV'}
+        secondaryIcon={<Download className="h-4 w-4" />}
+        onSecondary={exportSignedLedger}
+        secondaryDisabled={exportingLedger}
+      />
 
       <div className="sk-card p-4 sm:p-6">
         <label className="block text-sm font-medium text-slate-700 mb-2">Période</label>

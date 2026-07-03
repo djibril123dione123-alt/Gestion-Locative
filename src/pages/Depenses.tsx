@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
 // import { Button } from '../components/ui/Button';
 import { Plus, Search, XCircle, Pencil, SlidersHorizontal, TrendingDown, ReceiptText, Wallet, Building2 } from 'lucide-react';
-import { FinanceDrawer, FinanceInfoCard, FinanceLine, FinancePageHeader, FinanceKpiGrid } from '../components/finance/FinancePrimitives';
+import { CompactFinanceKpiGrid } from '../components/finance/FinancePrimitives';
+import { CompactSection, CompactLabelValue } from '../components/ui/CompactSection';
 import { DepenseFormModal, type DepenseFormData, type DepenseImmeubleOption } from '../components/finance/DepenseFormModal';
 import { FinanceReasonModal } from '../components/finance/FinanceReasonModal';
 import { MoneyText } from '../components/ui/MoneyText';
@@ -15,7 +16,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
-import { PageSkeleton } from '../components/ui/Skeleton';
+import { SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
+import { SplitViewShell } from '../components/ui/SplitViewShell';
+import { PageShell } from '../components/ui/PageShell';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumToolbar } from '../components/ui/PremiumToolbar';
+import { PremiumTableSurface } from '../components/ui/PremiumTableSurface';
+import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
+import { EmptyState } from '../components/ui/EmptyState';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { cancelDepenseViaRpc, createDepenseViaRpc, updateDepenseViaRpc } from '../services/api/financeApi';
@@ -299,8 +307,21 @@ export function Depenses() {
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('depenses', [...ALL_COLUMN_KEYS_DEPENSES]);
 
   const allColumns = [
+    {
+      key: 'categorie',
+      label: 'Catégorie',
+      render: (d: Depense) => (
+        <div className="min-w-0">
+          <p className="truncate font-bold text-slate-900">{d.categorie}</p>
+          {selectedDepense && (
+            <p className="truncate text-[11px] font-medium text-slate-500">
+              {d.beneficiaire || d.description || '—'} · {d.immeubles?.nom || 'Général'}
+            </p>
+          )}
+        </div>
+      ),
+    },
     { key: 'date_depense', label: 'Date', render: (d: Depense) => <span className="whitespace-nowrap">{new Date(d.date_depense).toLocaleDateString('fr-FR')}</span> },
-    { key: 'categorie', label: 'Catégorie', render: (d: Depense) => <span className="whitespace-nowrap font-medium text-slate-800">{d.categorie}</span> },
     { key: 'montant', label: 'Montant', render: (d: Depense) => <span className="whitespace-nowrap font-black text-emerald-800"><MoneyText value={d.montant} /></span> },
     { key: 'immeuble', label: 'Affectation', render: (d: Depense) => <span className="truncate max-w-[150px] inline-block">{d.immeubles?.nom || 'Général'}</span> },
     { key: 'beneficiaire', label: 'Bénéficiaire / Desc.', render: (d: Depense) => <div className="truncate max-w-[180px] text-slate-600 font-medium">{d.beneficiaire || d.description || '—'}</div> },
@@ -308,7 +329,7 @@ export function Depenses() {
   ];
   const columns = allColumns.filter((c) => {
     if (!colIsVisible(c.key)) return false;
-    if (selectedDepense && (c.key === 'categorie' || c.key === 'beneficiaire')) return false;
+    if (selectedDepense && (c.key === 'beneficiaire' || c.key === 'immeuble' || c.key === 'date_depense')) return false;
     return true;
   });
   const kpis = useMemo(() => {
@@ -335,105 +356,194 @@ export function Depenses() {
     };
   }, [filtered]);
 
+  const quickChips = useMemo(() => [
+    { id: 'toutes', label: 'Toutes', count: depenses.length, isActive: !selectedCategorie && !selectedImmeuble, onClick: () => { setSelectedCategorie(''); setSelectedImmeuble(''); } },
+    { id: 'maint', label: 'Maintenance', count: depenses.filter(d => d.categorie === 'Maintenance').length, isActive: selectedCategorie === 'Maintenance', onClick: () => setSelectedCategorie(selectedCategorie === 'Maintenance' ? '' : 'Maintenance') },
+    { id: 'elec', label: 'Électricité / Eau', count: depenses.filter(d => d.categorie === 'Électricité' || d.categorie === 'Eau').length, isActive: selectedCategorie === 'Électricité' || selectedCategorie === 'Eau', onClick: () => setSelectedCategorie(selectedCategorie === 'Électricité' ? '' : 'Électricité') },
+    { id: 'salaires', label: 'Salaires', count: depenses.filter(d => d.categorie === 'Salaires').length, isActive: selectedCategorie === 'Salaires', onClick: () => setSelectedCategorie(selectedCategorie === 'Salaires' ? '' : 'Salaires') },
+  ], [depenses, selectedCategorie, selectedImmeuble]);
+
   const financeMetrics = useMemo(() => [
     {
-      label: 'Dépenses du mois',
+      label: 'Dépenses',
       value: <MoneyText value={kpis.depensesMois} />,
-      helper: 'Mois en cours',
+      helper: 'Période active',
       icon: TrendingDown,
       tone: 'red' as const,
     },
     {
-      label: 'Dépenses actives',
+      label: 'Écritures',
       value: kpis.depensesActives,
-      helper: 'Écritures',
+      helper: 'Nombre total',
       icon: ReceiptText,
       tone: 'slate' as const,
     },
     {
-      label: 'Dépenses agence',
+      label: 'Agence',
       value: <MoneyText value={kpis.depensesAgence} />,
-      helper: 'Sur fonds propres',
+      helper: 'Fonds propres',
       icon: Wallet,
       tone: 'amber' as const,
     },
     {
-      label: 'Dépenses bailleurs',
+      label: 'Bailleurs',
       value: <MoneyText value={kpis.depensesBailleurs} />,
-      helper: 'Imputables aux biens',
+      helper: 'Imputables',
       icon: Building2,
       tone: 'emerald' as const,
     },
     {
-      label: 'Biens concernés',
+      label: 'Biens',
       value: kpis.biensConcernes,
-      helper: 'Immeubles / Unités',
+      helper: 'Concernés',
       icon: Building2,
       tone: 'blue' as const,
     },
     {
-      label: 'Net après dépenses',
+      label: 'Net',
       value: <MoneyText value={kpis.netApresDepenses} />,
-      helper: 'Calcul global',
+      helper: 'Après dépenses',
       icon: TrendingDown,
       tone: 'slate' as const,
     },
   ], [kpis]);
 
-  if (loading) return <PageSkeleton title="Dépenses" variant="table" />;
+  const displayedMetrics = useMemo(() => {
+    if (selectedDepense) {
+      return financeMetrics.filter((m) => m.label !== 'Biens' && m.label !== 'Net');
+    }
+    return financeMetrics;
+  }, [financeMetrics, selectedDepense]);
 
   return (
-    <div className="flex min-h-full">
-      <div className={`flex-1 min-w-0 transition-all duration-300 ${selectedDepense ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
-        <section className="sk-page-shell space-y-6">
-          <OfflineDataNotice
-            cachedAt={cacheTimestamp}
-            onRetry={loadData}
-            message="Les dépenses affichées viennent du dernier chargement réussi. Les écritures financières restent bloquées hors ligne."
-          />
-          <FinancePageHeader
-            eyebrow="CHARGES & EXPLOITATION"
-            title="Dépenses"
-            description="Charges et corrections contrôlées."
-            primaryLabel="Nouvelle dépense"
-            primaryIcon={<Plus className="h-4 w-4" />}
-            onPrimary={openCreateModal}
-          />
+    <PageShell spacing="compact" variant="dataDense" tone="paper" verticalInset="compact">
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+      <SplitViewShell
+        size="compact"
+        desktopAt="lg"
+        detailClassName="lg:sticky lg:top-2 lg:h-[calc(100dvh-1rem)]"
+        isDetailOpen={Boolean(selectedDepense)}
+        main={
+          <div className="space-y-4">
+            {cacheTimestamp && (
+              <OfflineDataNotice
+                cachedAt={cacheTimestamp}
+                onRetry={loadData}
+                message="Les dépenses affichées viennent du dernier chargement réussi. Les écritures financières restent bloquées hors ligne."
+              />
+            )}
 
-          <FinanceKpiGrid metrics={financeMetrics} />
+            <PremiumPageHeader
+              density="compact"
+              eyebrow="CHARGES & EXPLOITATION"
+              title="Dépenses"
+              description="Charges et corrections contrôlées."
+              mobileDescription="Suivi des charges."
+              primaryAction={
+                <PremiumButton variant="primary" icon={<Plus className="h-4 w-4" />} onClick={openCreateModal}>
+                  Nouvelle dépense
+                </PremiumButton>
+              }
+            />
 
-          <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex items-center gap-3 relative min-w-0 flex-1">
-                <div className="relative min-w-0 flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Rechercher..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                  />
+            {loading ? (
+              <SkeletonCards count={6} />
+            ) : (
+              <CompactFinanceKpiGrid metrics={displayedMetrics} />
+            )}
+
+            <PremiumToolbar
+              density="compact"
+              layout="list"
+              ariaLabel="Filtres des dépenses"
+              isSplitOpen={Boolean(selectedDepense)}
+              quickChips={quickChips}
+              search={
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <div className="relative min-w-0 flex-1">
+                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Rechercher une charge, un bénéficiaire..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="!min-h-8 !h-8 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-8 pr-2.5 py-0 text-xs font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none transition focus:border-emerald-700/30 focus:ring-2 focus:ring-emerald-700/10"
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setMobileFiltersOpen(true)}
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[0.6rem] border border-slate-200 bg-[#fffdf8] px-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Filtres
+                  </button>
                 </div>
+              }
+              filters={
+                <>
+                  <SmartCombobox
+                    value={selectedMois}
+                    options={monthOptions}
+                    onChange={setSelectedMois}
+                    placeholder="Période"
+                    searchPlaceholder="Rechercher un mois"
+                    className={`shrink-0 ${selectedDepense ? 'w-32' : 'w-40'}`}
+                    density="compact"
+                  />
+                  <SmartCombobox
+                    value={selectedCategorie}
+                    options={[
+                      { value: '', label: 'Catégories' },
+                      ...filterCategories.map((category) => ({ value: category, label: category }))
+                    ]}
+                    onChange={setSelectedCategorie}
+                    placeholder="Catégories"
+                    searchPlaceholder="Rechercher..."
+                    className={`shrink-0 ${selectedDepense ? 'hidden xl:block xl:w-32' : 'w-44'}`}
+                    density="compact"
+                  />
+                  <SmartCombobox
+                    value={selectedImmeuble}
+                    options={[
+                      { value: '', label: 'Affectations' },
+                      ...immeubles.map((i) => ({ value: i.id, label: i.nom }))
+                    ]}
+                    onChange={setSelectedImmeuble}
+                    placeholder="Affectations"
+                    searchPlaceholder="Rechercher..."
+                    className={`shrink-0 ${selectedDepense ? 'hidden xl:block xl:w-32' : 'w-44'}`}
+                    density="compact"
+                  />
+                  <ColumnPicker
+                    columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
+                    visibility={colVis}
+                    onToggle={colToggle}
+                    onSetAll={colSetAll}
+                    className={`!h-8 !rounded-[0.6rem] !px-2.5 !py-1 !text-xs ${selectedDepense ? 'hidden' : ''}`}
+                  />
+                </>
+              }
+            />
 
-                <button
-                  type="button"
-                  onClick={() => setMobileFiltersOpen(true)}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Filtres
-                </button>
-              </div>
-
-              <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
+            <MobileFilterSheet
+              isOpen={mobileFiltersOpen}
+              title="Filtres Dépenses"
+              onClose={() => setMobileFiltersOpen(false)}
+              onReset={() => {
+                setSelectedMois('current');
+                setSelectedCategorie('');
+                setSelectedImmeuble('');
+              }}
+            >
+              <div className="grid gap-3">
                 <SmartCombobox
                   value={selectedMois}
                   options={monthOptions}
                   onChange={setSelectedMois}
                   placeholder="Période"
                   searchPlaceholder="Rechercher un mois"
-                  className="w-48 shrink-0"
                 />
                 <SmartCombobox
                   value={selectedCategorie}
@@ -444,7 +554,6 @@ export function Depenses() {
                   onChange={setSelectedCategorie}
                   placeholder="Catégories"
                   searchPlaceholder="Rechercher..."
-                  className="w-56 shrink-0"
                 />
                 <SmartCombobox
                   value={selectedImmeuble}
@@ -455,98 +564,197 @@ export function Depenses() {
                   onChange={setSelectedImmeuble}
                   placeholder="Affectations"
                   searchPlaceholder="Rechercher..."
-                  className="w-56 shrink-0"
-                />
-
-                <ColumnPicker
-                  columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: false }))}
-                  visibility={colVis}
-                  onToggle={colToggle}
-                  onSetAll={colSetAll}
                 />
               </div>
-            </div>
+            </MobileFilterSheet>
+
+            {loading ? (
+              <PremiumTableSurface density="compact" ariaLabel="Chargement des dépenses">
+                <div className="p-4 sm:p-6">
+                  <SkeletonTable rows={6} cols={6} />
+                </div>
+              </PremiumTableSurface>
+            ) : filtered.length === 0 ? (
+              <PremiumTableSurface density="compact" ariaLabel="Aucune dépense">
+                <div className="p-6">
+                  <EmptyState
+                    icon={ReceiptText}
+                    title={
+                      !selectedCategorie && !selectedImmeuble && !searchTerm
+                        ? 'Aucune dépense enregistrée'
+                        : 'Aucun résultat'
+                    }
+                    description={
+                      !selectedCategorie && !selectedImmeuble && !searchTerm
+                        ? 'Commencez par enregistrer votre première charge ou dépense.'
+                        : 'Essayez un autre filtre ou élargissez votre recherche.'
+                    }
+                    action={
+                      !selectedCategorie && !selectedImmeuble && !searchTerm
+                        ? { label: 'Nouvelle dépense', onClick: openCreateModal }
+                        : undefined
+                    }
+                  />
+                </div>
+              </PremiumTableSurface>
+            ) : (
+              <PremiumTableSurface density="compact" ariaLabel="Table des dépenses">
+                <Table
+                  compact
+                  columns={columns}
+                  data={filtered}
+                  onRowClick={(d) => setSelectedDepense(d)}
+                  selectedId={selectedDepense?.id}
+                  mobileRender={(d) => {
+                    const status = { icon: ReceiptText, classes: 'bg-emerald-100 text-emerald-700 border-emerald-200', label: 'Enregistrée' };
+                    return (
+                      <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="font-black text-slate-900 truncate">
+                            {d.categorie}
+                          </span>
+                          <span className="font-black tracking-tight text-slate-900 whitespace-nowrap">
+                            <MoneyText value={d.montant} />
+                          </span>
+                        </div>
+
+                        <div className="text-sm font-semibold text-slate-600 truncate">
+                          {d.description || 'Dépense'}
+                        </div>
+
+                        <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
+                          <span className="truncate pr-2">
+                            {new Date(d.date_depense).toLocaleDateString('fr-FR')} · {d.immeubles?.nom || 'Général'} · {status.label}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
+              </PremiumTableSurface>
+            )}
           </div>
+        }
+        detail={
+          selectedDepense ? (
+            <PremiumDrawerShell
+              open
+              size="compact"
+              desktopMode="floating"
+              desktopAt="lg"
+              density="compact"
+              eyebrow="CHARGES & EXPLOITATION"
+              title="DÉPENSE ENREGISTRÉE"
+              description={
+                <div className="space-y-1">
+                  <p className="text-base font-black tracking-tight text-slate-950">
+                    <MoneyText value={selectedDepense.montant} />
+                  </p>
+                  <p className="truncate text-[0.72rem] font-semibold text-slate-500">
+                    {selectedDepense.categorie} · {selectedDepense.immeubles?.nom || 'Général'}
+                  </p>
+                  <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-emerald-700">
+                    Enregistrée · {new Date(selectedDepense.date_depense).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+              }
+              onClose={() => setSelectedDepense(null)}
+              actions={
+                selectedDepense.piece_justificative ? (
+                  <a
+                    href={selectedDepense.piece_justificative}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex h-8 w-full items-center justify-center gap-1.5 rounded-[0.6rem] bg-emerald-700 px-3 text-[0.72rem] font-bold text-white shadow-sm transition hover:bg-emerald-800"
+                  >
+                    <ReceiptText className="h-3.5 w-3.5" /> Voir justificatif
+                  </a>
+                ) : (
+                  <PremiumButton variant="secondary" size="sm" icon={<ReceiptText className="h-3.5 w-3.5" />} disabled className="!h-8 !text-[0.72rem]" fullWidth>
+                    Aucun justificatif
+                  </PremiumButton>
+                )
+              }
+              bodyClassName="space-y-2"
+            >
+              <CompactSection title="Résumé">
+                <CompactLabelValue label="Montant" value={<MoneyText value={selectedDepense.montant} className="font-black text-emerald-800" />} />
+                <CompactLabelValue label="Date" value={new Date(selectedDepense.date_depense).toLocaleDateString('fr-FR')} />
+                <CompactLabelValue label="Catégorie" value={selectedDepense.categorie} />
+              </CompactSection>
 
-          <MobileFilterSheet
-            isOpen={mobileFiltersOpen}
-            title="Filtres Dépenses"
-            onClose={() => setMobileFiltersOpen(false)}
-            onReset={() => {
-              setSelectedMois('current');
-              setSelectedCategorie('');
-              setSelectedImmeuble('');
-            }}
-          >
-            <div className="grid gap-3">
-              <SmartCombobox
-                value={selectedMois}
-                options={monthOptions}
-                onChange={setSelectedMois}
-                placeholder="Période"
-                searchPlaceholder="Rechercher un mois"
-              />
-              <SmartCombobox
-                value={selectedCategorie}
-                options={[
-                  { value: '', label: 'Catégories' },
-                  ...filterCategories.map((category) => ({ value: category, label: category }))
-                ]}
-                onChange={setSelectedCategorie}
-                placeholder="Catégories"
-                searchPlaceholder="Rechercher..."
-              />
-              <SmartCombobox
-                value={selectedImmeuble}
-                options={[
-                  { value: '', label: 'Affectations' },
-                  ...immeubles.map((i) => ({ value: i.id, label: i.nom }))
-                ]}
-                onChange={setSelectedImmeuble}
-                placeholder="Affectations"
-                searchPlaceholder="Rechercher..."
-              />
-            </div>
-          </MobileFilterSheet>
+              <CompactSection title="Affectation & description">
+                <CompactLabelValue label="Bien / Immeuble" value={selectedDepense.immeubles?.nom || 'Général (non affecté)'} />
+                <CompactLabelValue label="Bénéficiaire" value={selectedDepense.beneficiaire || '—'} />
+                <CompactLabelValue label="Description" value={selectedDepense.description || '—'} />
+              </CompactSection>
 
-          <div className="sk-card overflow-hidden">
-            <div className="overflow-x-auto">
-              <Table
-                columns={columns}
-                data={filtered}
-                onRowClick={(d) => setSelectedDepense(d)}
-                selectedId={selectedDepense?.id}
-                mobileRender={(d) => {
-                  const status = { icon: ReceiptText, classes: 'bg-emerald-100 text-emerald-700 border-emerald-200', label: 'Enregistrée' };
-                  return (
-                    <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="font-black text-slate-900 truncate">
-                          {d.categorie}
-                        </span>
-                        <span className="font-black tracking-tight text-slate-900 whitespace-nowrap">
-                          <MoneyText value={d.montant} />
-                        </span>
-                      </div>
+              <CompactSection title="Justificatif">
+                {selectedDepense.piece_justificative ? (
+                  <a
+                    href={selectedDepense.piece_justificative}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs font-bold text-emerald-900 transition hover:bg-emerald-100/80"
+                  >
+                    <span className="flex items-center gap-2">
+                      <ReceiptText className="h-4 w-4 text-emerald-700" />
+                      <span>Document justificatif attaché</span>
+                    </span>
+                    <span className="underline font-black">Ouvrir</span>
+                  </a>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs font-semibold text-slate-500">
+                    <ReceiptText className="h-4 w-4" /> Aucun justificatif référencé
+                  </div>
+                )}
+              </CompactSection>
 
-                      <div className="text-sm font-semibold text-slate-600 truncate">
-                        {d.description || 'Dépense'}
-                      </div>
+              <CompactSection title="Impact financier">
+                <CompactLabelValue label="Déduction loyer" value="Non applicable" />
+                <CompactLabelValue label="À la charge de" value={selectedDepense.immeuble_id ? 'Bailleur' : 'Agence'} />
+              </CompactSection>
 
-                      <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
-                        <span className="truncate pr-2">
-                          {new Date(d.date_depense).toLocaleDateString('fr-FR')} · {d.immeubles?.nom || 'Général'} · {status.label}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }}
-              />
-            </div>
-          </div>
+              <CompactSection title="Historique">
+                <div className="text-[0.72rem] text-slate-500 space-y-2 pt-1">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-1.5 last:border-b-0 last:pb-0">
+                    <span className="font-bold text-slate-700">Écriture financière créée</span>
+                    <span className="font-semibold text-slate-500">{new Date(selectedDepense.date_depense).toLocaleString('fr-FR')}</span>
+                  </div>
+                </div>
+              </CompactSection>
 
-        </section>
-      </div>
+              <CompactSection title="Actions contrôlées">
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <PremiumButton
+                    variant="secondary"
+                    size="sm"
+                    icon={<Pencil className="h-3.5 w-3.5" />}
+                    onClick={() => handleEdit(selectedDepense)}
+                    className="!h-8 !text-[0.72rem]"
+                    fullWidth
+                  >
+                    Modifier
+                  </PremiumButton>
+                  <PremiumButton
+                    variant="danger"
+                    size="sm"
+                    icon={<XCircle className="h-3.5 w-3.5" />}
+                    onClick={() => {
+                      handleDelete(selectedDepense);
+                      setSelectedDepense(null);
+                    }}
+                    className="!h-8 !text-[0.72rem]"
+                    fullWidth
+                  >
+                    Annuler
+                  </PremiumButton>
+                </div>
+              </CompactSection>
+            </PremiumDrawerShell>
+          ) : null
+        }
+      />
 
       <DepenseFormModal
         isOpen={isModalOpen}
@@ -559,94 +767,6 @@ export function Depenses() {
         onClose={closeModal}
         onSubmit={handleSubmit}
       />
-
-      {/* Drawer */}
-      {selectedDepense && (
-        <FinanceDrawer
-          title="DÉPENSE ENREGISTRÉE"
-          amount={<MoneyText value={selectedDepense.montant} />}
-          details={[
-            selectedDepense.categorie,
-            new Date(selectedDepense.date_depense).toLocaleDateString('fr-FR')
-          ]}
-          subtitle="Enregistrée"
-          onClose={() => setSelectedDepense(null)}
-        >
-          <div className="space-y-4">
-            <FinanceInfoCard title="Résumé">
-              <FinanceLine label="Montant" value={<MoneyText value={selectedDepense.montant} className="font-black text-emerald-800" />} strong />
-              <FinanceLine label="Date" value={new Date(selectedDepense.date_depense).toLocaleDateString('fr-FR')} />
-              <FinanceLine label="Catégorie" value={selectedDepense.categorie} />
-            </FinanceInfoCard>
-
-            <FinanceInfoCard title="Affectation & description">
-              <FinanceLine label="Bien / Immeuble" value={selectedDepense.immeubles?.nom || 'Général (non affecté)'} />
-              <FinanceLine label="Bénéficiaire" value={selectedDepense.beneficiaire || '—'} />
-              <FinanceLine label="Description" value={selectedDepense.description || '—'} />
-            </FinanceInfoCard>
-
-            <FinanceInfoCard title="Justificatif">
-              {selectedDepense.piece_justificative ? (
-                <a
-                  href={selectedDepense.piece_justificative}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-black text-emerald-800 transition hover:bg-emerald-100"
-                >
-                  <ReceiptText className="h-4 w-4" /> Ouvrir le justificatif
-                </a>
-              ) : (
-                <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 p-3 text-sm font-semibold text-slate-500">
-                  <ReceiptText className="h-4 w-4" /> Aucun justificatif référencé
-                </div>
-              )}
-            </FinanceInfoCard>
-
-            <FinanceInfoCard title="Impact financier">
-              <FinanceLine label="Déduction loyer" value="Non applicable" />
-              <FinanceLine label="À la charge de" value={selectedDepense.immeuble_id ? 'Bailleur' : 'Agence'} />
-            </FinanceInfoCard>
-
-            <FinanceInfoCard title="Historique">
-              <div className="relative flex gap-3">
-                <div className="relative flex h-3 w-3 mt-1 shrink-0 items-center justify-center rounded-full bg-emerald-700 ring-4 ring-[#fffdf8]" />
-                <div>
-                  <p className="text-sm font-black text-slate-900">Écriture financière créée</p>
-                  <p className="text-xs font-semibold text-slate-500">{new Date(selectedDepense.date_depense).toLocaleString('fr-FR')}</p>
-                </div>
-              </div>
-            </FinanceInfoCard>
-
-            <FinanceInfoCard title="Actions contrôlées">
-              <div className="grid grid-cols-1 gap-2">
-                <PremiumButton
-                  variant="secondary"
-                  icon={<Pencil className="h-4 w-4" />}
-                  onClick={() => handleEdit(selectedDepense)}
-                  fullWidth
-                >
-                  Modifier
-                </PremiumButton>
-                <PremiumButton
-                  variant="danger"
-                  icon={<XCircle className="h-4 w-4" />}
-                  onClick={() => {
-                    handleDelete(selectedDepense);
-                    setSelectedDepense(null);
-                  }}
-                  fullWidth
-                >
-                  Annuler
-                </PremiumButton>
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  <PremiumButton variant="secondary" size="sm" icon={<ReceiptText className="h-4 w-4" />} disabled>Justificatif</PremiumButton>
-                  <PremiumButton variant="secondary" size="sm" icon={<Building2 className="h-4 w-4" />} disabled>Documents</PremiumButton>
-                </div>
-              </div>
-            </FinanceInfoCard>
-          </div>
-        </FinanceDrawer>
-      )}
 
       <FinanceReasonModal
         isOpen={!!deleteTarget}
@@ -669,7 +789,6 @@ export function Depenses() {
           </div>
         </div>
       </FinanceReasonModal>
-      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
-    </div>
+    </PageShell>
   );
 }

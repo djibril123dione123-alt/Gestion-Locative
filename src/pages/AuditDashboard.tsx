@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Activity, AlertTriangle, CheckCircle2, Clock, Cpu, Database,
   RefreshCw, TrendingUp, XCircle, BarChart3, ShieldCheck,
-  Radio, Users, Layers, Bell,
+  Radio, Users, Bell,
 } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
 import { ToastContainer } from '../components/ui/Toast';
@@ -300,43 +301,46 @@ export function AuditDashboard() {
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Layers className="w-7 h-7 text-orange-500" />
-            Control Tower
-            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${isLive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-              <Radio className={`w-3 h-3 ${isLive ? 'animate-pulse' : ''}`} />
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="MONITORING INTERNE"
+        title="Control Tower"
+        description={isLive ? 'Surveillance live des jobs, finances et états système.' : 'Surveillance statique des jobs, finances et états système.'}
+        mobileDescription={isLive ? 'Monitoring live.' : 'Monitoring.'}
+        sideContent={
+          <div className="flex flex-col gap-1 text-right">
+            <span className={(isLive ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500') + ' inline-flex items-center justify-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold'}>
+              <Radio className={(isLive ? 'animate-pulse ' : '') + 'h-3 w-3'} />
               {isLive ? 'LIVE' : 'Statique'}
             </span>
-          </h1>
-          <p className="text-xs text-slate-400 mt-0.5">Synchro : {lastRefresh.toLocaleTimeString('fr-FR')}</p>
-        </div>
+            <span className="text-[0.65rem] font-semibold text-slate-500">Synchro : {lastRefresh.toLocaleTimeString('fr-FR')}</span>
+          </div>
+        }
+      />
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => runWorker('finance')} disabled={runningWorker !== null}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 transition">
-            {runningWorker === 'finance' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
-            Finance
-          </button>
-          <button onClick={() => runWorker('analytics')} disabled={runningWorker !== null}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition">
-            {runningWorker === 'analytics' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
-            Analytics
-          </button>
-          <button onClick={() => runWorker('notification')} disabled={runningWorker !== null}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition">
-            {runningWorker === 'notification' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
-            Notifs
-          </button>
-          <button onClick={loadData} disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition">
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <button onClick={() => runWorker('finance')} disabled={runningWorker !== null}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-50 transition">
+          {runningWorker === 'finance' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Database className="w-4 h-4" />}
+          Finance
+        </button>
+        <button onClick={() => runWorker('analytics')} disabled={runningWorker !== null}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition">
+          {runningWorker === 'analytics' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
+          Analytics
+        </button>
+        <button onClick={() => runWorker('notification')} disabled={runningWorker !== null}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition">
+          {runningWorker === 'notification' ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+          Notifs
+        </button>
+        <button onClick={loadData} disabled={loading}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition">
+          <RefreshCw className={(loading ? 'animate-spin ' : '') + 'w-4 h-4'} />
+        </button>
       </div>
 
-      {/* ── Alertes rapides ── */}
+      {/* Alertes rapides */}
       {hasAlerts && (
         <div className="flex flex-wrap gap-2">
           {jobStats.failed > 0 && (

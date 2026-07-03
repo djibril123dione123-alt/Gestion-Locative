@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
-import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, CreditCard, Wallet, Building2, CalendarDays, ReceiptText, SlidersHorizontal } from 'lucide-react';
+import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, CreditCard, Wallet, Building2, CalendarDays, SlidersHorizontal } from 'lucide-react';
 import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -16,11 +16,17 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { getOpenReceivables, type OpenReceivableStatus } from '../services/api/financeApi';
-import { FinanceDrawer, FinanceInfoCard, FinanceKpiGrid, FinanceLine, FinancePageHeader } from '../components/finance/FinancePrimitives';
-import { PremiumButton } from '../components/ui/PremiumButton';
 import { HandCoins } from 'lucide-react';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
-import { FinanceStatusTabs } from '../components/finance/FinancePrimitives';
+import { SplitViewShell } from '../components/ui/SplitViewShell';
+import { PageShell } from '../components/ui/PageShell';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumToolbar } from '../components/ui/PremiumToolbar';
+import { PremiumTableSurface } from '../components/ui/PremiumTableSurface';
+import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
+import { CompactSection, CompactLabelValue } from '../components/ui/CompactSection';
+import { Modal } from '../components/ui/Modal';
+import { PremiumButton } from '../components/ui/PremiumButton';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { MoneyText } from '../components/ui/MoneyText';
 import { buildMonthFilterOptions, resolveMonthFilter } from '../lib/monthFilters';
@@ -76,11 +82,14 @@ function monthKey(date: Date): string {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`;
 }
 
+import { CompactFinanceKpiGrid } from '../components/finance/FinancePrimitives';
+
 const STATUS_META: Record<LoyerStatut, { label: string; classes: string }> = {
     a_venir: { label: 'À venir', classes: 'bg-slate-100 text-slate-700 border-slate-200' },
     en_retard: { label: 'En retard', classes: 'bg-red-100 text-red-700 border-red-200' },
     partiel: { label: 'Partiel', classes: 'bg-orange-100 text-orange-700 border-orange-200' },
 };
+
 
 export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     const { embedded = false } = _props;
@@ -308,21 +317,18 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
 
 
-    const statusTabs = [
-        { id: 'tous', label: 'Toutes', count: impayes.length },
-        { id: 'retard', label: 'En retard', count: impayes.filter(i => i.statut === 'en_retard').length },
-        { id: 'partiel', label: 'Partiels', count: impayes.filter(i => i.statut === 'partiel').length },
-        { id: 'a_venir', label: 'À venir', count: impayes.filter(i => i.statut === 'a_venir').length },
-    ];
+    const quickChips = useMemo(() => [
+        { id: 'tous', label: 'Toutes', count: impayes.length, isActive: statusFilter === 'tous', onClick: () => setStatusFilter('tous') },
+        { id: 'retard', label: 'En retard', count: impayes.filter(i => i.statut === 'en_retard').length, isActive: statusFilter === 'retard', onClick: () => setStatusFilter('retard') },
+        { id: 'partiel', label: 'Partiels', count: impayes.filter(i => i.statut === 'partiel').length, isActive: statusFilter === 'partiel', onClick: () => setStatusFilter('partiel') },
+        { id: 'a_venir', label: 'À venir', count: impayes.filter(i => i.statut === 'a_venir').length, isActive: statusFilter === 'a_venir', onClick: () => setStatusFilter('a_venir') },
+    ], [impayes, statusFilter]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
     const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
     const paymentAmount = Number(paymentForm.montant || 0);
     const remainingAfterPayment = selectedLoyer
         ? Math.max(selectedLoyer.montant_du - paymentAmount, 0)
-        : 0;
-    const advanceAfterPayment = selectedLoyer
-        ? Math.max(paymentAmount - selectedLoyer.montant_du, 0)
         : 0;
 
     const ALL_COLUMN_KEYS_LOYERS = ['locataire', 'unite_nom', 'immeuble_nom', 'bailleur', 'mois_concerne', 'statut', 'montant_encaisse', 'montant_du', 'telephone_locataire'] as const;
@@ -332,7 +338,16 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         {
             key: 'locataire',
             label: 'Locataire',
-            render: (i: LoyerImpaye) => `${i.locataire_prenom} ${i.locataire_nom}`,
+            render: (i: LoyerImpaye) => (
+                <div className="min-w-0">
+                    <p className="truncate font-bold text-slate-900">{`${i.locataire_prenom} ${i.locataire_nom}`}</p>
+                    {drawerLoyer && (
+                        <p className="truncate text-[11px] font-medium text-slate-500">
+                            {i.immeuble_nom} · {i.unite_nom}
+                        </p>
+                    )}
+                </div>
+            ),
         },
         { key: 'unite_nom', label: 'Produit' },
         { key: 'immeuble_nom', label: 'Immeuble' },
@@ -388,7 +403,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     const columns = allColumns.filter((c) => {
         if (isIndividualOwner && c.key === 'bailleur') return false;
         if (!colIsVisible(c.key)) return false;
-        if (drawerLoyer && (c.key === 'immeuble_nom' || c.key === 'bailleur' || c.key === 'telephone_locataire')) return false;
+        if (drawerLoyer && (c.key === 'immeuble_nom' || c.key === 'bailleur' || c.key === 'telephone_locataire' || c.key === 'unite_nom')) return false;
         return true;
     });
 
@@ -403,37 +418,37 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         };
     }, [filtered]);
 
-    const financeMetrics = [
+    const financeMetrics = useMemo(() => [
         {
-            label: 'Créances ouvertes',
+            label: 'Ouvertes',
             value: kpis.ouvertes,
-            helper: 'Échéances non soldées',
+            helper: 'Non soldées',
             icon: AlertCircle,
             tone: 'amber' as const,
         },
         {
-            label: 'Retards et reliquats',
+            label: 'Retards',
             value: <MoneyText value={kpis.retardsReliquats} />,
             helper: 'À recouvrer',
             icon: Wallet,
             tone: 'red' as const,
         },
         {
-            label: 'Déjà encaissé',
+            label: 'Encaissé',
             value: <MoneyText value={kpis.dejaEncaisse} />,
-            helper: 'Sur ces créances',
+            helper: 'Sur créances',
             icon: HandCoins,
             tone: 'emerald' as const,
         },
         {
-            label: 'Loyers attendus',
+            label: 'Attendus',
             value: <MoneyText value={kpis.attendus} />,
-            helper: 'Total théorique',
+            helper: 'Théorique',
             icon: Building2,
             tone: 'slate' as const,
         },
         {
-            label: 'Échéances à venir',
+            label: 'À venir',
             value: kpis.aVenir,
             helper: 'Mois futurs',
             icon: CalendarDays,
@@ -442,11 +457,18 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         {
             label: 'Partiels',
             value: kpis.partiels,
-            helper: 'En cours de paiement',
+            helper: 'En cours',
             icon: CreditCard,
             tone: 'amber' as const,
         },
-    ];
+    ], [kpis]);
+
+    const displayedMetrics = useMemo(() => {
+        if (drawerLoyer) {
+            return financeMetrics.filter((m) => m.label !== 'Attendus' && m.label !== 'À venir');
+        }
+        return financeMetrics;
+    }, [financeMetrics, drawerLoyer]);
 
     if (loading) {
         return (
@@ -481,101 +503,114 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     }
 
     return (
-        <div className="flex min-h-full">
-            <div className={`flex-1 min-w-0 transition-all duration-300 ${drawerLoyer ? 'hidden xl:block xl:pr-[31.5rem]' : ''}`}>
-                <section className="sk-page-shell space-y-6">
-                    {cacheTimestamp && (
-                        <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
-                    )}
+        <PageShell spacing="compact" variant="dataDense" tone="paper" verticalInset="compact">
+            <SplitViewShell
+                size="compact"
+                desktopAt="lg"
+                detailClassName="lg:sticky lg:top-2 lg:h-[calc(100dvh-1rem)]"
+                isDetailOpen={Boolean(drawerLoyer)}
+                main={
+                    <div className="space-y-4">
+                        {cacheTimestamp && (
+                            <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
+                        )}
 
-                    {!embedded && (
-                        <>
-                            <FinancePageHeader
-                                eyebrow="Encaissement & finance"
-                                title={isIndividualOwner ? 'Mes créances à recouvrer' : 'Créances à recouvrer'}
-                                description="Retards, partiels et restes dus."
-                            />
-                            <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 border-b border-emerald-950/10">
-                                <Tabs
-                                    tabs={[
-                                        { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
-                                        { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
-                                    ]}
-                                    activeId="loyers-impayes"
-                                    onChange={(id) => { window.location.hash = `#/${id}`; }}
+                        {!embedded && (
+                            <>
+                                <PremiumPageHeader
+                                    density="compact"
+                                    eyebrow="ENCAISSEMENT & FINANCE"
+                                    title={isIndividualOwner ? 'Mes créances à recouvrer' : 'Créances à recouvrer'}
+                                    description="Retards, partiels et restes dus."
+                                    mobileDescription="Suivi des impayés."
                                 />
-                            </div>
-                        </>
-                    )}
-
-                    {/* Statistiques */}
-                    <FinanceKpiGrid metrics={financeMetrics} />
-
-                    {/* Filtres + Table */}
-                    <div className="sk-premium-panel relative z-20 overflow-visible p-4 sm:p-5 space-y-4">
-                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                            <div className="flex items-center gap-3 relative min-w-0 flex-1">
-                                <div className="relative min-w-0 flex-1">
-                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Rechercher..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="h-10 w-full rounded-xl border border-emerald-950/10 bg-white/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                                <div className="flex items-center justify-start pt-1 pb-2">
+                                    <Tabs
+                                        size="compact"
+                                        tabs={[
+                                            { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
+                                            { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
+                                        ]}
+                                        activeId="loyers-impayes"
+                                        onChange={(id) => { window.location.hash = `#/${id}`; }}
                                     />
                                 </div>
+                            </>
+                        )}
 
-                                <button
-                                    type="button"
-                                    onClick={() => setMobileFiltersOpen(true)}
-                                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
-                                >
-                                    <SlidersHorizontal className="h-4 w-4" />
-                                    Filtres
-                                </button>
-                            </div>
+                        {/* Statistiques */}
+                        <CompactFinanceKpiGrid metrics={displayedMetrics} />
 
-                            <div className="hidden lg:flex min-w-0 flex-row gap-2 items-center">
-                                <SmartCombobox
-                                    value={selectedMois}
-                                    options={monthOptions}
-                                    onChange={setSelectedMois}
-                                    placeholder="Période"
-                                    searchPlaceholder="Rechercher un mois"
-                                    className="w-48 shrink-0"
-                                />
-                                {!isIndividualOwner && (
+                        {/* Filtres + Table */}
+                        <PremiumToolbar
+                            density="compact"
+                            layout="list"
+                            ariaLabel="Filtres des créances à recouvrer"
+                            isSplitOpen={Boolean(drawerLoyer)}
+                            quickChips={quickChips}
+                            search={
+                                <div className="flex min-w-0 flex-1 items-center gap-2">
+                                    <div className="relative min-w-0 flex-1">
+                                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Rechercher..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="!min-h-8 !h-8 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-8 pr-2.5 py-0 text-xs font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none transition focus:border-emerald-700/30 focus:ring-2 focus:ring-emerald-700/10"
+                                        />
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setMobileFiltersOpen(true)}
+                                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[0.6rem] border border-slate-200 bg-[#fffdf8] px-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:border-emerald-100 hover:bg-emerald-50/60 lg:hidden"
+                                    >
+                                        <SlidersHorizontal className="h-3.5 w-3.5" />
+                                        Filtres
+                                    </button>
+                                </div>
+                            }
+                            filters={
+                                <>
                                     <SmartCombobox
-                                        value={selectedBailleur}
-                                        options={[
-                                            { value: '', label: 'Tous Bailleurs' },
-                                            ...bailleurs.map((b) => ({ value: b.label, label: b.label }))
-                                        ]}
-                                        onChange={setSelectedBailleur}
-                                        placeholder="Tous Bailleurs"
-                                        searchPlaceholder="Rechercher un bailleur..."
-                                        className="w-44"
+                                        value={selectedMois}
+                                        options={monthOptions}
+                                        onChange={setSelectedMois}
+                                        placeholder="Période"
+                                        searchPlaceholder="Rechercher un mois"
+                                        className={`shrink-0 ${drawerLoyer ? 'w-32' : 'w-40'}`}
+                                        density="compact"
                                     />
-                                )}
+                                    {!isIndividualOwner && (
+                                        <SmartCombobox
+                                            value={selectedBailleur}
+                                            options={[
+                                                { value: '', label: 'Tous Bailleurs' },
+                                                ...bailleurs.map((b) => ({ value: b.label, label: b.label }))
+                                            ]}
+                                            onChange={setSelectedBailleur}
+                                            placeholder="Tous Bailleurs"
+                                            searchPlaceholder="Rechercher un bailleur..."
+                                            className={`shrink-0 ${drawerLoyer ? 'hidden xl:block xl:w-32' : 'w-44'}`}
+                                            density="compact"
+                                        />
+                                    )}
 
-                                <ColumnPicker
-                                    columns={allColumns
-                                        .filter((c) => !(isIndividualOwner && c.key === 'bailleur'))
-                                        .map((c) => ({ key: c.key, label: c.label, required: false }))}
-                                    visibility={colVis}
-                                    onToggle={colToggle}
-                                    onSetAll={colSetAll}
-                                />
-                            </div>
-                        </div>
+                                    <ColumnPicker
+                                        columns={allColumns
+                                            .filter((c) => !(isIndividualOwner && c.key === 'bailleur'))
+                                            .map((c) => ({ key: c.key, label: c.label, required: false }))}
+                                        visibility={colVis}
+                                        onToggle={colToggle}
+                                        onSetAll={colSetAll}
+                                        className={`!h-8 !rounded-[0.6rem] !px-2.5 !py-1 !text-xs ${drawerLoyer ? 'hidden' : ''}`}
+                                    />
+                                </>
+                            }
+                        />
 
-                        <div className="flex items-center px-4 py-2 lg:px-5">
-                            <FinanceStatusTabs tabs={statusTabs} active={statusFilter} onChange={setStatusFilter} />
-                        </div>
-                    </div>
-
-                    <MobileFilterSheet
+                        <MobileFilterSheet
                         isOpen={mobileFiltersOpen}
                         title="Filtres Créances"
                         onClose={() => setMobileFiltersOpen(false)}
@@ -607,54 +642,52 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                         </div>
                     </MobileFilterSheet>
 
-                    <div className="sk-card overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <Table
-                                columns={columns}
-                                data={paginated}
-                                onRowClick={(i) => setDrawerLoyer(i)}
-                                selectedId={drawerLoyer?.id}
-                                mobileRender={(i) => {
-                                    const status = STATUS_META[i.statut] || STATUS_META['en_retard'];
-                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                    const StatusIcon = (status as any).icon || AlertCircle;
-                                    return (
-                                        <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
-                                            <div className="flex items-start justify-between gap-3">
-                                                <span className="font-black text-slate-900 truncate">{i.locataire_prenom} {i.locataire_nom}</span>
-                                                <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${status.classes}`}>
-                                                    <StatusIcon className="h-3 w-3" />
-                                                    {status.label}
-                                                </span>
-                                            </div>
-
-                                            <div className="text-xs font-semibold text-slate-500 truncate">
-                                                {i.immeuble_nom || '—'} · {i.unite_nom || '—'}
-                                            </div>
-
-                                            <div className="flex items-center justify-between mt-1">
-                                                <span className="text-base font-black text-red-600"><MoneyText value={i.montant_du} /></span>
-                                                <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(i.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
-                                            </div>
-
-                                            {i.montant_encaisse > 0 && (
-                                                <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
-                                                    <span>Déjà encaissé: <MoneyText value={i.montant_encaisse} /></span>
-                                                </div>
-                                            )}
+                    <PremiumTableSurface density="compact" ariaLabel="Table des créances à recouvrer">
+                        <Table
+                            compact
+                            columns={columns}
+                            data={paginated}
+                            onRowClick={(i) => setDrawerLoyer(i)}
+                            selectedId={drawerLoyer?.id}
+                            mobileRender={(i) => {
+                                const status = STATUS_META[i.statut] || STATUS_META['en_retard'];
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                const StatusIcon = (status as any).icon || AlertCircle;
+                                return (
+                                    <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <span className="font-black text-slate-900 truncate">{i.locataire_prenom} {i.locataire_nom}</span>
+                                            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${status.classes}`}>
+                                                <StatusIcon className="h-3 w-3" />
+                                                {status.label}
+                                            </span>
                                         </div>
-                                    );
-                                }}
-                            />
-                        </div>
 
-                        {/* Pagination */}
+                                        <div className="text-xs font-semibold text-slate-500 truncate">
+                                            {i.immeuble_nom || '—'} · {i.unite_nom || '—'}
+                                        </div>
+
+                                        <div className="flex items-center justify-between mt-1">
+                                            <span className="text-base font-black text-red-600"><MoneyText value={i.montant_du} /></span>
+                                            <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(i.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
+                                        </div>
+
+                                        {i.montant_encaisse > 0 && (
+                                            <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
+                                                <span>Déjà encaissé: <MoneyText value={i.montant_encaisse} /></span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            }}
+                        />
+
                         {totalPages > 1 && (
-                            <div className="mt-4 flex flex-col gap-3 border-t border-emerald-950/10 pt-4 sm:flex-row sm:items-center sm:justify-between">
-                                <p className="text-sm text-slate-500">
-                                    {filtered.length} résultat{filtered.length > 1 ? 's' : ''} — page {page} / {totalPages}
-                                </p>
-                                <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-4 py-3 sm:px-6">
+                                <span className="text-xs font-semibold text-slate-500">
+                                    Page {page} sur {totalPages} ({filtered.length} résultats)
+                                </span>
+                                <div className="flex items-center gap-1">
                                     <button aria-label="Action"
                                         onClick={() => setPage(p => Math.max(1, p - 1))}
                                         disabled={page === 1}
@@ -663,9 +696,14 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                         <ChevronLeft className="w-4 h-4 text-slate-600" />
                                     </button>
                                     {Array.from({ length: totalPages }, (_, i) => i + 1)
-                                        .filter(p => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                                        .reduce<(number | '...')[]>((acc, p, idx, arr) => {
-                                            if (idx > 0 && typeof arr[idx - 1] === 'number' && (p as number) - (arr[idx - 1] as number) > 1) {
+                                        .filter(p => {
+                                            if (totalPages <= 7) return true;
+                                            if (p === 1 || p === totalPages) return true;
+                                            if (Math.abs(p - page) <= 1) return true;
+                                            return false;
+                                        })
+                                        .reduce((acc: (number | string)[], p, i, arr) => {
+                                            if (i > 0 && typeof arr[i - 1] === 'number' && (p as number) - (arr[i - 1] as number) > 1) {
                                                 acc.push('...');
                                             }
                                             acc.push(p);
@@ -692,223 +730,177 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 </div>
                             </div>
                         )}
-                    </div>
+                    </PremiumTableSurface>
 
-                </section>
-            </div>
-
-            {/* Drawer */}
-            {drawerLoyer && (
-                <FinanceDrawer
-                    title="CRÉANCE À RECOUVRER"
-                    amount={<MoneyText value={drawerLoyer.montant_du} />}
-                    details={[
-                        `${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`,
-                        `${drawerLoyer.immeuble_nom || '—'} · ${drawerLoyer.unite_nom || '—'}`
-                    ]}
-                    subtitle={`${STATUS_META[drawerLoyer.statut].label} · ${new Date(drawerLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}`}
-                    onClose={() => setDrawerLoyer(null)}
-                    actions={
-                        <>
-                            {drawerLoyer.montant_du > 0 && (
-                                <PremiumButton
-                                    variant="create"
-                                    size="sm"
-                                    icon={<HandCoins className="h-4 w-4" />}
-                                    onClick={() => handlePayerClick(drawerLoyer)}
-                                    fullWidth
-                                >
-                                    Encaisser ce loyer
-                                </PremiumButton>
-                            )}
-                        </>
-                    }
-                >
-                    <div className="space-y-4">
-                        <FinanceInfoCard title="Résumé créance">
-                            <FinanceLine label="Loyer attendu" value={<MoneyText value={drawerLoyer.montant_attendu} />} />
-                            <FinanceLine label="Déjà encaissé" value={<MoneyText value={drawerLoyer.montant_encaisse} className="font-semibold text-emerald-800" />} />
-                            <FinanceLine label="Reste dû" value={<MoneyText value={drawerLoyer.montant_du} className={drawerLoyer.montant_du > 3 ? 'font-black text-red-700' : 'font-black text-emerald-800'} />} strong />
-                        </FinanceInfoCard>
-                        <FinanceInfoCard title="Affectation">
-                            <FinanceLine label="Bien" value={`${drawerLoyer.immeuble_nom} · ${drawerLoyer.unite_nom}`} />
-                            <FinanceLine label={isIndividualOwner ? 'Propriétaire' : 'Bailleur'} value={`${drawerLoyer.bailleur_prenom} ${drawerLoyer.bailleur_nom}`} />
-                            <FinanceLine label="Période" value={new Date(drawerLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })} />
-                        </FinanceInfoCard>
-                        <FinanceInfoCard title="Contact">
-                            <FinanceLine label="Locataire" value={`${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`} />
-                            <FinanceLine label="Téléphone" value={drawerLoyer.telephone_locataire || '—'} />
-                        </FinanceInfoCard>
-                        <FinanceInfoCard title="Traçabilité certifiée">
-                            <div className="text-xs text-slate-500">
-                                <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Échéance issue de l’historique financier sécurisé</p>
-                                <p className="mt-1.5 flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Montants confirmés par le traitement financier</p>
-                            </div>
-                        </FinanceInfoCard>
-                    </div>
-                </FinanceDrawer>
-            )}
-
-            {/* Workflow de paiement */}
-            {showModal && selectedLoyer && (
-                <div className="fixed inset-0 z-50 flex flex-col justify-end bg-brand-950/68 p-0 backdrop-blur-md sm:items-center sm:justify-center sm:p-4">
-                    <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-t-[1.75rem] border border-white/70 bg-white shadow-2xl shadow-emerald-950/20 sm:rounded-[1.75rem]">
-                        <div className="relative overflow-hidden rounded-t-[1.75rem] bg-[radial-gradient(circle_at_100%_0%,rgba(255,138,0,0.22),transparent_14rem),linear-gradient(135deg,#08110e,#0d1b16_55%,#14251e)] px-5 py-5 text-white sm:px-7">
-                            <div className="absolute right-0 top-0 h-28 w-28 rounded-full bg-orange-400/20 blur-3xl" />
-                            <div className="relative flex items-start justify-between gap-4">
-                                <div>
-                                    <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-200">
-                                        Encaissement sécurisé
-                                    </p>
-                                    <h2 className="mt-2 text-2xl font-black">Payer ce loyer</h2>
-                                    <p className="mt-1 text-sm text-emerald-100">
-                                        Paiement partiel, complet ou avance avec mise a jour automatique du reliquat.
-                                    </p>
-                                </div>
-                                <div className="rounded-2xl bg-white/10 p-3">
-                                    <CreditCard className="h-6 w-6 text-orange-200" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-5 p-5 sm:p-7">
-                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                <div className="sk-metric-tile">
-                                    <Wallet className="h-5 w-5 text-brand-700" />
-                                    <p className="mt-3 text-xs font-black uppercase text-slate-500">Montant dû</p>
-                                    <p className="mt-1 text-xl font-black text-slate-950">{formatCurrency(selectedLoyer.montant_du)}</p>
-                                </div>
-                                <div className="sk-metric-tile">
-                                    <ReceiptText className="h-5 w-5 text-brand-700" />
-                                    <p className="mt-3 text-xs font-black uppercase text-slate-500">Deja encaisse</p>
-                                    <p className="mt-1 text-xl font-black text-slate-950">{formatCurrency(selectedLoyer.montant_encaisse)}</p>
-                                </div>
-                                <div className="sk-metric-tile">
-                                    <CalendarDays className="h-5 w-5 text-brand-700" />
-                                    <p className="mt-3 text-xs font-black uppercase text-slate-500">Échéance</p>
-                                    <p className="mt-1 text-xl font-black text-slate-950">
-                                        {new Date(selectedLoyer.date_echeance).toLocaleDateString('fr-FR')}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="sk-card-premium p-4">
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    <div>
-                                        <p className="text-xs font-black uppercase text-slate-500">Locataire</p>
-                                        <p className="mt-1 text-lg font-black text-slate-950">
-                                            {selectedLoyer.locataire_prenom} {selectedLoyer.locataire_nom}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black uppercase text-slate-500">Période</p>
-                                        <p className="mt-1 text-lg font-black text-slate-950">
-                                            {new Date(selectedLoyer.mois_concerne).toLocaleDateString('fr-FR', {
-                                                month: 'long',
-                                                year: 'numeric',
-                                            })}
-                                        </p>
-                                    </div>
-                                    <div className="sm:col-span-2">
-                                        <p className="text-xs font-black uppercase text-slate-500">Bien concerné</p>
-                                        <p className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-700">
-                                            <Building2 className="h-4 w-4 text-brand-700" />
-                                            {selectedLoyer.immeuble_nom} · {selectedLoyer.unite_nom}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label className="mb-2 block text-sm font-bold text-slate-700">Montant encaissé</label>
-                                    <input aria-label="Champ de saisie"
-                                        type="number"
-                                        min="1"
-                                        step="1"
-                                        value={paymentForm.montant}
-                                        onChange={(e) => setPaymentForm({ ...paymentForm, montant: e.target.value })}
-                                        className="sk-input"
-                                    />
-                                    <p className="mt-1 text-xs text-slate-500">
-                                        Un montant inférieur au solde créera un paiement partiel.
-                                    </p>
-                                </div>
-                                <div>
-                                    <label className="mb-2 block text-sm font-bold text-slate-700">Date paiement</label>
-                                    <input aria-label="Champ de saisie"
-                                        type="date"
-                                        value={paymentForm.date_paiement}
-                                        onChange={(e) => setPaymentForm({ ...paymentForm, date_paiement: e.target.value })}
-                                        className="sk-input"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="mb-2 block text-sm font-bold text-slate-700">Mode paiement</label>
-                                    <select aria-label="Sélection"
-                                        value={paymentForm.mode_paiement}
-                                        onChange={(e) => setPaymentForm({ ...paymentForm, mode_paiement: e.target.value })}
-                                        className="sk-input"
-                                    >
-                                        <option value="especes">Espèces</option>
-                                        <option value="mobile_money">Mobile money</option>
-                                        <option value="virement">Virement</option>
-                                        <option value="cheque">Chèque</option>
-                                        <option value="autre">Autre</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="mb-2 block text-sm font-bold text-slate-700">Référence transaction</label>
-                                    <input
-                                        value={paymentForm.reference}
-                                        onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
-                                        className="sk-input"
-                                        placeholder="Wave, Orange Money, reçu caisse..."
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="sk-premium-panel p-4">
-                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                                    <div>
-                                        <p className="text-xs font-black uppercase text-slate-500">Statut après paiement</p>
-                                        <p className={`mt-1 font-black ${remainingAfterPayment > 0 ? 'text-orange-700' : 'text-emerald-700'}`}>
-                                            {remainingAfterPayment > 0 ? 'Partiel' : 'Soldé'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black uppercase text-slate-500">Reliquat restant</p>
-                                        <p className="mt-1 font-black text-slate-950">{formatCurrency(remainingAfterPayment)}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black uppercase text-slate-500">Avance / trop-perçu</p>
-                                        <p className="mt-1 font-black text-slate-950">{formatCurrency(advanceAfterPayment)}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">
-                                <button
-                                    onClick={() => setShowModal(false)}
-                                    disabled={submitting}
-                                    className="sk-action sk-action-secondary justify-center disabled:opacity-50"
-                                >
-                                    Annuler
-                                </button>
-                                <button
-                                    onClick={handleConfirmPaiement}
-                                    disabled={submitting || paymentAmount <= 0}
-                                    className="sk-action sk-action-financial justify-center disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    {submitting ? 'Enregistrement...' : 'Enregistrer le paiement'}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
+            }
+            detail={
+                drawerLoyer && (
+                    <PremiumDrawerShell
+                        open
+                        size="compact"
+                        desktopMode="floating"
+                        desktopAt="lg"
+                        density="compact"
+                        eyebrow="CRÉANCE À RECOUVRER"
+                        title={`${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`}
+                        description={
+                            <div className="space-y-1">
+                                <p className="text-base font-black tracking-tight text-slate-950">
+                                    <MoneyText value={drawerLoyer.montant_du} />
+                                </p>
+                                <p className="truncate text-[0.72rem] font-semibold text-slate-500">
+                                    {drawerLoyer.immeuble_nom || '—'} · {drawerLoyer.unite_nom || '—'}
+                                </p>
+                                <p className="text-[0.68rem] font-black uppercase tracking-[0.12em] text-emerald-700">
+                                    {STATUS_META[drawerLoyer.statut].label} · {new Date(drawerLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                                </p>
+                            </div>
+                        }
+                        onClose={() => setDrawerLoyer(null)}
+                        actions={
+                            <>
+                                {drawerLoyer.montant_du > 0 && (
+                                    <PremiumButton
+                                        variant="create"
+                                        size="sm"
+                                        icon={<HandCoins className="h-3.5 w-3.5" />}
+                                        onClick={() => handlePayerClick(drawerLoyer)}
+                                        className="!h-8 !text-[0.72rem]"
+                                        fullWidth
+                                    >
+                                        Encaisser ce loyer
+                                    </PremiumButton>
+                                )}
+                            </>
+                        }
+                        bodyClassName="space-y-2"
+                    >
+                        <CompactSection title="Résumé créance">
+                            <CompactLabelValue label="Loyer attendu" value={<MoneyText value={drawerLoyer.montant_attendu} />} />
+                            <CompactLabelValue label="Déjà encaissé" value={<MoneyText value={drawerLoyer.montant_encaisse} className="font-semibold text-emerald-800" />} />
+                            <CompactLabelValue label="Reste dû" value={<MoneyText value={drawerLoyer.montant_du} className={drawerLoyer.montant_du > 3 ? 'font-black text-red-700' : 'font-black text-emerald-800'} />} />
+                        </CompactSection>
+                        <CompactSection title="Affectation">
+                            <CompactLabelValue label="Bien" value={`${drawerLoyer.immeuble_nom} · ${drawerLoyer.unite_nom}`} />
+                            <CompactLabelValue label={isIndividualOwner ? 'Propriétaire' : 'Bailleur'} value={`${drawerLoyer.bailleur_prenom} ${drawerLoyer.bailleur_nom}`} />
+                            <CompactLabelValue label="Période" value={new Date(drawerLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })} />
+                        </CompactSection>
+                        <CompactSection title="Contact">
+                            <CompactLabelValue label="Locataire" value={`${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`} />
+                            <CompactLabelValue label="Téléphone" value={drawerLoyer.telephone_locataire || '—'} />
+                        </CompactSection>
+                        <CompactSection title="Traçabilité certifiée">
+                            <div className="text-[0.72rem] text-slate-500 space-y-1">
+                                <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Échéance issue de l’historique financier sécurisé</p>
+                                <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Montants confirmés par le traitement financier</p>
+                            </div>
+                        </CompactSection>
+                    </PremiumDrawerShell>
+                )
+            }
+        />
+
+        {/* Workflow de paiement */}
+            {showModal && selectedLoyer && (
+                <Modal
+                    isOpen={showModal && Boolean(selectedLoyer)}
+                    onClose={() => setShowModal(false)}
+                    title="Payer ce loyer"
+                    description="Enregistrement d'un paiement partiel ou complet"
+                >
+                    <div className="space-y-4 pt-1">
+                        <CompactSection title="Détails créance">
+                            <CompactLabelValue label="Locataire" value={`${selectedLoyer.locataire_prenom} ${selectedLoyer.locataire_nom}`} />
+                            <CompactLabelValue label="Bien" value={`${selectedLoyer.immeuble_nom} · ${selectedLoyer.unite_nom}`} />
+                            <CompactLabelValue label="Période" value={new Date(selectedLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })} />
+                            <CompactLabelValue label="Reste dû" value={<span className="font-black text-red-600">{formatCurrency(selectedLoyer.montant_du)}</span>} />
+                        </CompactSection>
+
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-1">
+                            <div>
+                                <label className="mb-1 block text-xs font-bold text-slate-700">Montant encaissé</label>
+                                <input aria-label="Champ de saisie"
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value={paymentForm.montant}
+                                    onChange={(e) => setPaymentForm({ ...paymentForm, montant: e.target.value })}
+                                    className="sk-input !h-8 !text-xs"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-xs font-bold text-slate-700">Date paiement</label>
+                                <input aria-label="Champ de saisie"
+                                    type="date"
+                                    value={paymentForm.date_paiement}
+                                    onChange={(e) => setPaymentForm({ ...paymentForm, date_paiement: e.target.value })}
+                                    className="sk-input !h-8 !text-xs"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-xs font-bold text-slate-700">Mode paiement</label>
+                                <select aria-label="Sélection"
+                                    value={paymentForm.mode_paiement}
+                                    onChange={(e) => setPaymentForm({ ...paymentForm, mode_paiement: e.target.value })}
+                                    className="sk-input !h-8 !text-xs"
+                                >
+                                    <option value="especes">Espèces</option>
+                                    <option value="mobile_money">Mobile money</option>
+                                    <option value="virement">Virement</option>
+                                    <option value="cheque">Chèque</option>
+                                    <option value="autre">Autre</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-xs font-bold text-slate-700">Référence</label>
+                                <input
+                                    value={paymentForm.reference}
+                                    onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+                                    className="sk-input !h-8 !text-xs"
+                                    placeholder="Optionnel..."
+                                />
+                            </div>
+                        </div>
+
+                        <div className="rounded-lg bg-slate-100/80 p-2.5 text-xs grid grid-cols-2 gap-2 border border-slate-200/60">
+                            <div>
+                                <span className="text-[10px] uppercase font-bold text-slate-500">Nouveau statut:</span>{' '}
+                                <span className={`font-black ${remainingAfterPayment > 0 ? 'text-orange-700' : 'text-emerald-700'}`}>
+                                    {remainingAfterPayment > 0 ? 'Partiel' : 'Soldé'}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-[10px] uppercase font-bold text-slate-500">Reliquat:</span>{' '}
+                                <span className="font-black text-slate-900">{formatCurrency(remainingAfterPayment)}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                            <PremiumButton
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setShowModal(false)}
+                                disabled={submitting}
+                                className="!h-8 !text-xs"
+                            >
+                                Annuler
+                            </PremiumButton>
+                            <PremiumButton
+                                variant="create"
+                                size="sm"
+                                onClick={handleConfirmPaiement}
+                                disabled={submitting || paymentAmount <= 0}
+                                className="!h-8 !text-xs"
+                            >
+                                {submitting ? 'Enregistrement...' : 'Enregistrer'}
+                            </PremiumButton>
+                        </div>
+                    </div>
+                </Modal>
             )}
             <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
-        </div>
+        </PageShell>
     );
 }
 

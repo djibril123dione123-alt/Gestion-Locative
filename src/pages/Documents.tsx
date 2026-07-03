@@ -43,6 +43,8 @@ import {
 } from '../services/documentStorage';
 import { readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumButton } from '../components/ui/PremiumButton';
 import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
 import { MetricCard } from '../components/ui/MetricCard';
 import { DocumentProofDrawer } from '../components/documents/DocumentProofDrawer';
@@ -540,69 +542,56 @@ export function Documents() {
     <div className={`sk-mobile-page min-w-0 ${drawerOpen ? 'xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(380px,440px)] xl:items-start xl:gap-5' : ''}`}>
       <div className="flex min-w-0 flex-col gap-3.5 sm:gap-5">
         {/* ── HERO ── */}
-      <div className="sk-mobile-hero max-w-full bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-3.5 text-white shadow-2xl shadow-emerald-950/15 sm:p-5">
-        <div className="absolute -right-20 -top-20 hidden h-56 w-56 rounded-full bg-orange-300/15 blur-3xl sm:block" />
-        <div className="relative flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-5">
-
-          {/* Left: title + CTA */}
-          <div className="min-w-0 flex-1">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-100">
-              <LockKeyhole className="h-3 w-3 text-orange-200" />
-              Coffre documentaire
-            </div>
-            <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">
-              Documents
-            </h1>
-            <p className="mt-1 text-sm font-medium leading-5 text-emerald-50/70 sm:text-sm max-w-lg">
-              {isIndividualOwner
-                ? 'Centralisez, retrouvez et vérifiez vos preuves.'
-                : 'Centralisez, retrouvez et vérifiez vos preuves.'}
-            </p>
-            <div className="mt-3 flex min-w-0 flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => navigate('/documents/scan')}
-                className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-3 py-2 text-xs font-black text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F]"
-              >
-                <ShieldCheck className="h-3.5 w-3.5 flex-shrink-0" />
-                Scanner un document
-              </button>
-              <button
-                type="button"
-                onClick={() => setUploadOpen(true)}
-                data-testid="button-upload-document"
-                className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-white/18 bg-white/[0.1] px-3 py-2 text-xs font-black text-white transition hover:-translate-y-0.5 hover:bg-white/[0.16]"
-              >
-                <Upload className="h-3.5 w-3.5 flex-shrink-0" />
-                Ajouter au coffre
-              </button>
-            </div>
-          </div>
-
-          {/* Right: storage — compact/secondary */}
-          <div className="min-w-0 w-full sm:w-auto sm:min-w-[200px] sm:max-w-[220px] rounded-xl border border-white/10 bg-white/[0.07] p-2.5 backdrop-blur">
+      <PremiumPageHeader
+        variant="darkVault"
+        eyebrow="COFFRE DOCUMENTAIRE"
+        title="Documents"
+        description="Centralisez, retrouvez et vérifiez vos preuves."
+        mobileDescription="Preuves vérifiables."
+        secondaryAction={
+          <PremiumButton
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/documents/scan')}
+            icon={<ShieldCheck className="h-4 w-4" />}
+            className="border-white/15 bg-white/10 text-white hover:bg-white/15"
+          >
+            Scanner
+          </PremiumButton>
+        }
+        primaryAction={
+          <PremiumButton
+            variant="create"
+            size="sm"
+            onClick={() => setUploadOpen(true)}
+            data-testid="button-upload-document"
+            icon={<Upload className="h-4 w-4" />}
+          >
+            Ajouter au coffre
+          </PremiumButton>
+        }
+        sideContent={
+          <div className="min-w-0 w-full rounded-xl border border-white/10 bg-white/[0.07] p-2.5 backdrop-blur sm:w-auto sm:min-w-[200px] sm:max-w-[220px]">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-100/55">Espace sécurisé</p>
-                <p className="mt-0.5 text-sm font-extrabold">
+                <p className="mt-0.5 text-sm font-extrabold text-white">
                   {formatStorageSize(usage?.used_bytes)}{' '}
                   <span className="text-xs font-semibold text-emerald-100/45">/ {formatStorageSize(usage?.limit_bytes)}</span>
                 </p>
               </div>
-              <HardDrive className="h-4 w-4 text-emerald-200/60 flex-shrink-0" />
+              <HardDrive className="h-4 w-4 flex-shrink-0 text-emerald-200/60" />
             </div>
             <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
               <div
-                className={`h-full rounded-full ${usageTone(usedPercent)} transition-all duration-700`}
-                {...({ style: { width: `${usedPercent}%` } } as React.HTMLAttributes<HTMLDivElement>)}
+                className={'h-full rounded-full transition-all duration-700 ' + usageTone(usedPercent)}
+                {...({ style: { width: usedPercent + '%' } } as React.HTMLAttributes<HTMLDivElement>)}
               />
             </div>
           </div>
+        }
+      />
 
-        </div>
-      </div>
-
-      {/* ── USAGE WARNING ── */}
       {currentUsageMessage && (
         <div className={`flex flex-col gap-3 rounded-2xl border p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between ${currentUsageMessage.tone}`}>
           <div className="flex items-start gap-3">

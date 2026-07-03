@@ -11,6 +11,7 @@ dist
 dist-marketing
 dist-ssr
 *.local
+*.local
 
 .vscode/*
 !.vscode/extensions.json
@@ -23,3 +24,4 @@ dist-ssr
 *.sw?
 .env
 .vercel
+*.tsbuildinfo

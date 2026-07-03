@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { PremiumButton } from '../components/ui/PremiumButton';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
-import { Building2, Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
@@ -331,22 +333,18 @@ export default function Agences() {
 
   return (
     <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-            <Building2 className="w-8 h-8 mr-3 text-blue-600" />
-            Gestion des Agences
-          </h1>
-          <p className="text-gray-600 mt-2">Gérez les agences immobilières du système</p>
-        </div>
-        <button
-          onClick={openCreateModal}
-          className="sk-create-cta"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Nouvelle Agence
-        </button>
-      </div>
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="PARAMÈTRES AGENCE"
+        title="Agences"
+        description="Gérez les agences immobilières du système."
+        mobileDescription="Gestion agences."
+        primaryAction={
+          <PremiumButton variant="create" size="sm" onClick={openCreateModal} icon={<Plus className="h-4 w-4" />}>
+            Nouvelle agence
+          </PremiumButton>
+        }
+      />
 
       {loading ? (
         <div className="text-center py-12">

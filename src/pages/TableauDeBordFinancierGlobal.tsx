@@ -16,6 +16,7 @@ import {
     saveGeneratedPdf,
 } from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { FinancePageHeader } from '../components/finance/FinancePrimitives';
 import { AnimatedCounter } from '../components/ui/AnimatedCounter';
 import { Sparkline } from '../components/ui/Sparkline';
 import type { AgencySettings } from '../types/agency';
@@ -664,13 +665,12 @@ export function TableauDeBordFinancierGlobal() {
             </div>
 
             <div className="relative z-10 space-y-6 p-4 sm:p-6 lg:space-y-10 lg:p-8">
-                <div>
-                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Vue propriétaire</p>
-                    <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">Rapports financiers</h1>
-                    <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
-                        Suivez vos revenus locatifs, vos impayés et la performance globale de votre portefeuille.
-                    </p>
-                </div>
+                <FinancePageHeader
+                    eyebrow="ENCAISSEMENT & FINANCE"
+                    title="Rapports financiers"
+                    description="Suivez les revenus locatifs, impayés et performances de portefeuille."
+                    mobileDescription="Performance financière."
+                />
 
             <div className={`grid grid-cols-1 gap-1.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] sm:gap-2 ${accountProfile.isIndividualOwner ? '' : 'sm:grid-cols-2'}`}>
                 <button

@@ -246,7 +246,7 @@ export function SmartCombobox({
             ref={listboxRef}
             className={`overflow-y-auto overscroll-contain touch-pan-y ${isDense ? 'p-0.5' : isCompact ? 'p-1' : 'p-1.5'}`}
             style={{ maxHeight: Math.max(isCompact ? 128 : 160, menuPlacement.maxHeight - (isCompact ? 32 : 42)) }}
-            role={filteredOptions.length > 0 ? "listbox" : undefined}
+            role="listbox"
             aria-label={placeholder || 'Options'}
           >
           {filteredOptions.length === 0 ? (
@@ -275,8 +275,8 @@ export function SmartCombobox({
                 <div
                   key={option.value}
                   role="option"
-                  aria-selected={isSelected}
-                  aria-disabled={isDisabled}
+                  aria-selected={isSelected ? "true" : "false"}
+                  aria-disabled={isDisabled ? "true" : "false"}
                   onClick={() => {
                     if (!isDisabled) selectOption(option);
                   }}
@@ -370,7 +370,7 @@ export function SmartCombobox({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           role="combobox"
-          aria-expanded={open}
+          aria-expanded={open ? "true" : "false"}
           aria-controls="smart-combobox-listbox"
           aria-autocomplete="list"
           className={`${isDense ? '!h-7 !min-h-7 py-0 rounded-[0.45rem] pl-6 pr-6 text-[0.68rem] leading-4 shadow-sm focus:ring-1' : isCompact ? '!h-8 !min-h-8 py-0 rounded-[0.55rem] pl-7 pr-7 text-[0.72rem] leading-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_4px_10px_rgba(15,23,42,0.025)] focus:ring-2' : 'h-12 rounded-2xl pl-10 pr-11 text-sm leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] focus:ring-4'} w-full min-w-0 border border-emerald-950/10 bg-[#fffdf8]/95 font-semibold text-slate-700 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200`}

@@ -10,7 +10,7 @@ export type WizardMobileMode = "sheet" | "fullscreen";
 export type WizardStepStatus = "active" | "complete" | "future";
 
 export type WizardStep = {
-  id: string;
+  id: string | number;
   label: string;
   shortLabel?: string;
   description?: string;

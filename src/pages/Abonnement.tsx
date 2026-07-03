@@ -4,10 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 import { CheckoutModal } from '../components/billing/CheckoutModal';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import {
   CreditCard, CheckCircle2, Clock, Zap, Building2, Crown,
   BarChart3, TrendingUp, AlertTriangle, Calendar, Users,
-  Home, DoorOpen, ChevronRight, ArrowUpRight, ShieldCheck, HardDrive,
+  Home, DoorOpen, ChevronRight, ArrowUpRight, HardDrive,
 } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
 import { SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
@@ -236,36 +237,29 @@ export function Abonnement() {
   return (
     <div className="sk-mobile-page sk-page-narrow space-y-5 sm:space-y-6">
 
-      <div className="sk-mobile-hero bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-4 text-white shadow-2xl shadow-emerald-950/15 sm:p-7">
-        <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-orange-400/20 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 h-24 w-80 rounded-full bg-emerald-300/10 blur-3xl" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-emerald-100">
-              <ShieldCheck className="h-3.5 w-3.5 text-orange-200" />
-              Facturation SaaS
-            </div>
-            <h1 className="mt-4 text-2xl sm:text-4xl font-black tracking-tight">Abonnement</h1>
-            <p className="mt-2 text-sm sm:text-base leading-6 text-emerald-50/75">
-              {isIndividualOwner
-                ? 'Gérez votre plan, vos limites et vos documents avec une lecture claire de votre capacité patrimoniale.'
-                : 'Gérez votre plan, vos limites et vos paiements avec une lecture claire de votre capacité opérationnelle.'}
-            </p>
-          </div>
-          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.08] p-2 backdrop-blur">
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="PARAMÈTRES AGENCE"
+        title="Abonnement"
+        description={isIndividualOwner
+          ? 'Gérez votre plan, vos limites et votre capacité patrimoniale.'
+          : 'Gérez votre plan, vos limites et votre capacité opérationnelle.'}
+        mobileDescription="Plan et limites."
+        sideContent={
+          <div className="grid grid-cols-3 gap-2 rounded-2xl border border-emerald-950/10 bg-white/85 p-2 shadow-sm">
             {[
               ['Plan', displayedPlanName],
               ['Statut', statusCfg.label],
-              ['Usage', `${usage.unites} ${isIndividualOwner ? 'unités suivies' : 'unités'}`],
+              ['Usage', String(usage.unites) + (isIndividualOwner ? ' unités suivies' : ' unités')],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-xl bg-black/15 px-3 py-2">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-100/60">{label}</p>
-                <p className="mt-1 truncate text-sm font-black text-white">{value}</p>
+              <div key={label} className="min-w-0 rounded-xl bg-[#fff8ed] px-3 py-2">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+                <p className="mt-1 truncate text-sm font-black text-slate-950">{value}</p>
               </div>
             ))}
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Bannière urgente essai ── */}
       {isTrial && trialDaysLeft !== null && (

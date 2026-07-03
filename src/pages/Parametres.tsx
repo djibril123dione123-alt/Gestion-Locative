@@ -14,6 +14,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { AgencySettings, DEFAULT_AGENCY_SETTINGS } from '../types/agency';
 import { ToastContainer } from '../components/ui/Toast';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumButton } from '../components/ui/PremiumButton';
 import { invalidateAgencySettingsCache } from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
@@ -475,55 +477,26 @@ export function Parametres() {
     <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-0 sm:py-0">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      <div className="sticky top-0 z-30 -mx-4 border-b border-emerald-950/10 bg-brand-paper/95 px-4 py-2 backdrop-blur sm:mx-0 sm:rounded-xl sm:border sm:bg-white/85 sm:px-4 sm:shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-black text-slate-950">
-            {hasUnsavedChanges ? 'Modifications non enregistrées' : 'Paramètres à jour'}
-          </p>
-          <p className="hidden text-xs font-semibold text-slate-500 sm:block">
-            {isIndividualOwner ? 'Espace propriétaire' : 'Identité, documents et modules'}
-          </p>
-        </div>
-        <div className="hidden">
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-orange-100 sm:h-14 sm:w-14">
-            <span />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-xl font-black text-slate-900 sm:text-2xl">
-              {isIndividualOwner ? 'Paramètres du compte' : "Paramètres de l'agence"}
-            </h1>
-            <p className="text-sm leading-6 text-slate-600 sm:text-base">
-              {isIndividualOwner
-                ? 'Personnalisez vos documents et votre identité propriétaire'
-                : "Personnalisez vos documents et l'identité de votre agence"}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleSave}
-          disabled={saving || !hasUnsavedChanges}
-          className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-3.5 py-2 text-sm font-black text-white shadow-lg shadow-emerald-950/18 transition-colors hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-none disabled:bg-slate-300 disabled:shadow-none sm:px-5"
-        >
-          {saving ? (
-            <>
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              Enregistrement...
-            </>
-          ) : !hasUnsavedChanges ? (
-            <>
-              <Save className="w-5 h-5" />
-              A jour
-            </>
-          ) : (
-            <>
-              <Save className="w-5 h-5" />
-              Sauvegarder
-            </>
-          )}
-        </button>
-      </div>
-      </div>
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="PARAMÈTRES AGENCE"
+        title={isIndividualOwner ? 'Paramètres du compte' : 'Paramètres'}
+        description={isIndividualOwner
+          ? 'Personnalisez vos documents et votre identité propriétaire.'
+          : "Personnalisez vos documents et l'identité de votre agence."}
+        mobileDescription={hasUnsavedChanges ? 'Modifications en attente.' : 'Paramètres à jour.'}
+        primaryAction={
+          <PremiumButton
+            variant="create"
+            size="sm"
+            onClick={handleSave}
+            disabled={saving || !hasUnsavedChanges}
+            icon={saving ? <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" /> : <Save className="h-4 w-4" />}
+          >
+            {saving ? 'Enregistrement...' : !hasUnsavedChanges ? 'À jour' : 'Sauvegarder'}
+          </PremiumButton>
+        }
+      />
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200">

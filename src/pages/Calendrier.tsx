@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { PremiumButton } from '../components/ui/PremiumButton';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -173,21 +175,18 @@ export function Calendrier() {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Calendrier</h1>
-          <p className="text-sm text-slate-600 mt-1">{items.length} événement{items.length > 1 ? 's' : ''} ce mois</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          data-testid="button-new-event"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white font-semibold transition hover:opacity-90"
-          style={{ backgroundColor: '#F58220' }}
-        >
-          <Plus className="w-5 h-5" /> Ajouter événement
-        </button>
-      </div>
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="OPÉRATIONS TERRAIN"
+        title="Calendrier"
+        description="Visualisez les échéances, visites et événements à venir."
+        mobileDescription="Planning terrain."
+        primaryAction={
+          <PremiumButton variant="create" size="sm" onClick={() => setIsOpen(true)} data-testid="button-new-event" icon={<Plus className="h-4 w-4" />}>
+            Ajouter événement
+          </PremiumButton>
+        }
+      />
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4">
         <div className="flex items-center justify-between mb-4">

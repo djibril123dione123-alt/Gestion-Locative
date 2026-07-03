@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { PremiumButton } from '../components/ui/PremiumButton';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
@@ -350,20 +352,19 @@ export function Inventaires() {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">États des lieux</h1>
-          <p className="text-sm text-slate-600 mt-1">{items.length} inventaire{items.length > 1 ? 's' : ''}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          data-testid="button-new-inventaire"
-          className="sk-create-cta w-full sm:w-auto"
-        >
-          <Plus className="w-5 h-5" /> Nouvel inventaire
-        </button>
-      </div>
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="OPÉRATIONS TERRAIN"
+        title="États des lieux"
+        description="Préparez, suivez et archivez les inventaires de location."
+        mobileDescription="États des lieux."
+        primaryAction={
+          <PremiumButton variant="create" size="sm" onClick={() => setIsOpen(true)} data-testid="button-new-inventaire" icon={<Plus className="h-4 w-4" />}>
+            Nouvel inventaire
+          </PremiumButton>
+        }
+      />
+
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <select aria-label="Sélection" value={filterType} onChange={(e) => setFilterType(e.target.value as InventaireTypeFilter)} data-testid="filter-type" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">

@@ -23,6 +23,7 @@ import {
   Activity,
   Archive,
   Ban,
+  Check,
   ClipboardList,
   Clock3,
   Download,
@@ -46,7 +47,8 @@ import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { SmartCombobox, type SmartComboboxOption } from '../components/ui/SmartCombobox';
 import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
-import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
+import { BrandMark } from '../components/brand/BrandLogo';
+import { WizardShell, type WizardStep } from '../components/ui/WizardShell';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
@@ -144,11 +146,11 @@ const DRAWER_TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: 'historique', label: 'Historique' },
 ];
 
-const LOCATION_WIZARD_STEPS: ProductWizardStep<LocationWizardStep>[] = [
-  { id: 'occupant', label: 'Locataire', icon: Users },
-  { id: 'unite', label: 'Unité', icon: Building2 },
-  { id: 'conditions', label: 'Conditions', icon: ClipboardList },
-  { id: 'resume', label: 'Validation', icon: FileCheck2 },
+const LOCATION_WIZARD_STEPS: WizardStep[] = [
+  { id: 'occupant', label: 'Locataire' },
+  { id: 'unite', label: 'Unité' },
+  { id: 'conditions', label: 'Conditions' },
+  { id: 'resume', label: 'Validation' },
 ];
 
 const DESTINATION_OPTIONS: SmartComboboxOption[] = [
@@ -1488,7 +1490,7 @@ function OccupantBailDrawer({
           </div>
           <div className="pt-1 text-[0.68rem] text-slate-500 font-medium">
             {row.immeuble_nom ?? 'Bien non renseigné'} · {row.unite_nom}
-            {row.proprietaire ? ` · ${ownerName(row)}` : ''}
+            {row.bailleur_prenom || row.bailleur_nom ? ` · ${ownerName(row)}` : ''}
             {row.contrat_ref ? ` · Réf. ${row.contrat_ref}` : ''}
           </div>
         </div>
@@ -2291,6 +2293,97 @@ function OccupantFormModal({
   );
 }
 
+function LocationWizardStepContext({ step }: { step: LocationWizardStep }) {
+  const copy: Record<LocationWizardStep, { title?: string; body: string }> = {
+    occupant: { body: 'Sélectionnez un locataire existant ou créez une nouvelle fiche sans quitter le workflow.' },
+    unite: { body: 'Rattachez le locataire à une unité disponible du portefeuille locatif.' },
+    conditions: { body: 'Définissez la durée du bail, le montant du loyer, la caution et la commission.' },
+    resume: { title: 'Validation finale', body: 'Vérifiez les informations avant d’enregistrer définitivement le bail.' },
+  };
+  const current = copy[step];
+  return (
+    <div className="flex min-w-0 items-start gap-2">
+      <span className="mt-[0.1rem] flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border border-emerald-950/10 bg-emerald-50/60 text-emerald-700 sm:h-[18px] sm:w-[18px]">
+        <Users className="h-2.5 w-2.5" />
+      </span>
+      <div className="min-w-0">
+        {current.title && <p className="text-[0.68rem] font-semibold leading-tight text-slate-900 sm:text-[0.64rem]">{current.title}</p>}
+        <p className={`text-[0.68rem] font-medium leading-snug text-slate-600 sm:text-[0.62rem] ${current.title ? 'mt-0.5' : ''}`}>{current.body}</p>
+      </div>
+    </div>
+  );
+}
+
+function LocationWizardRail({ steps, currentStep }: { steps: WizardStep[]; currentStep: number }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-2.5">
+        <BrandMark size="sm" tone="dark" animated withTile={false} />
+        <div>
+          <p className="text-[0.5rem] font-bold uppercase tracking-[0.18em] text-amber-200/68">Portefeuille locatif</p>
+          <p className="mt-0.5 text-[0.6rem] font-semibold text-white/[0.56]">Contrat de location guidé</p>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <p className="max-w-[11rem] text-[0.72rem] font-semibold leading-tight text-white/[0.86]">
+          Structurez une location et ses conditions de bail.
+        </p>
+        <p className="mt-1 max-w-[11rem] text-[0.6rem] font-medium leading-snug text-emerald-50/[0.56]">
+          Un bail clair pour lier le locataire, l'unité et générer les échéances.
+        </p>
+      </div>
+
+      <div className="relative mt-3 space-y-1">
+        {steps.map((step, index) => {
+          const isActive = index === currentStep;
+          const isComplete = index < currentStep;
+
+          return (
+            <div
+              key={step.id}
+              className={`flex min-h-[2.05rem] items-center gap-2 rounded-lg border px-2 py-[0.22rem] transition ${
+                isActive
+                  ? 'border-amber-100/16 bg-white/[0.038] text-white shadow-[0_3px_8px_rgba(0,0,0,0.036)]'
+                  : isComplete
+                    ? 'border-white/10 bg-emerald-300/[0.038] text-emerald-50/[0.78]'
+                    : 'border-white/[0.075] bg-white/[0.018] text-emerald-50/[0.78]'
+              }`}
+            >
+              <span
+                className={`relative z-[1] flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[0.5rem] text-[0.58rem] font-semibold ${
+                  isActive
+                    ? 'bg-[#fff3ce]/94 text-emerald-950 ring-1 ring-amber-100/55'
+                    : isComplete
+                      ? 'bg-emerald-300/[0.12] text-emerald-50'
+                      : 'bg-white/[0.1] text-emerald-50/[0.84]'
+                }`}
+              >
+                {isComplete ? <Check className="h-3 w-3" /> : index + 1}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[0.47rem] font-bold uppercase tracking-[0.13em] opacity-75">
+                  Étape {index + 1}
+                </span>
+                <span className="block truncate text-[0.67rem] font-semibold">{step.label}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 rounded-xl border border-white/[0.055] bg-white/[0.026] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
+        <p className="text-[0.47rem] font-semibold uppercase tracking-[0.16em] text-amber-100/[0.66]">
+          SOURCE DE VÉRITÉ
+        </p>
+        <p className="mt-1 text-[0.58rem] font-medium leading-snug text-emerald-50/[0.56]">
+          Cette location activera automatiquement les quittances et le suivi des loyers.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function OccupationFormModal({
   mode,
   form,
@@ -2434,178 +2527,201 @@ function OccupationFormModal({
     });
   };
 
+  const locationWizardStepIndex = Math.max(0, LOCATION_WIZARD_STEPS.findIndex((s) => s.id === wizardStep));
+
   return (
-    <Modal isOpen onClose={onClose} title="Nouvelle location">
-      <div className="space-y-4">
-        <ProductWizard
+    <WizardShell
+      open={true}
+      onClose={onClose}
+      size="compact"
+      variant="workstation"
+      tone="agency"
+      eyebrow="SAMAY KËUR"
+      title="Nouvelle location"
+      description="Créez un contrat de location rattachant un locataire à une unité."
+      steps={LOCATION_WIZARD_STEPS}
+      currentStep={locationWizardStepIndex}
+      contentDescription="Créez un contrat de location rattachant un locataire à une unité."
+      stepContext={<LocationWizardStepContext step={wizardStep} />}
+      rail={
+        <LocationWizardRail
           steps={LOCATION_WIZARD_STEPS}
-          activeStep={wizardStep}
-          onStepChange={onStepChange}
-          onCancel={onClose}
-          onFinalSubmit={() => void onSubmit()}
-          finalSubmitLabel="Créer la location"
-          isSubmitting={submitting || workflowLoading}
-          onNextStep={handleNextStep}
+          currentStep={locationWizardStepIndex}
+        />
+      }
+      primaryAction={
+        <button
+          type="button"
+          onClick={() => {
+            if (wizardStep === 'occupant') {
+              if (!handleNextStep('occupant')) return;
+              onStepChange('unite');
+            } else if (wizardStep === 'unite') {
+              if (!handleNextStep('unite')) return;
+              onStepChange('conditions');
+            } else if (wizardStep === 'conditions') {
+              if (!handleNextStep('conditions')) return;
+              onStepChange('resume');
+            } else {
+              void onSubmit();
+            }
+          }}
+          disabled={submitting || workflowLoading}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
-        {wizardStep === 'occupant' && (
-          <div className="space-y-4">
-            <LifecycleIntro
-              icon={Users}
-              title="Choisir le locataire"
-              description="Sélectionnez un locataire existant ou créez-le sans quitter le module."
-            />
-            <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-1">
-              <button
-                type="button"
-                onClick={() => update({ occupantMode: 'existing' })}
-                className={`rounded-xl px-3 py-2 text-sm font-bold transition ${form.occupantMode === 'existing' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500'}`}
-              >
-                Existant
-              </button>
-              <button
-                type="button"
-                onClick={() => update({ occupantMode: 'new', locataire_id: '' })}
-                className={`rounded-xl px-3 py-2 text-sm font-bold transition ${form.occupantMode === 'new' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500'}`}
-              >
-                Nouveau
-              </button>
-            </div>
-            {form.occupantMode === 'existing' ? (
-              <div className="space-y-3">
-                <label className="block">
-                  <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Locataire</span>
-                  <SmartCombobox
-                    value={form.locataire_id}
-                    options={occupantComboboxOptions}
-                    onChange={(value) => update({ locataire_id: value, occupantSearch: '' })}
-                    placeholder={workflowLoading ? 'Chargement des locataires...' : 'Rechercher ou choisir un locataire'}
-                    searchPlaceholder="Nom, téléphone ou email"
-                    emptyLabel="Aucun locataire trouvé"
-                    emptyActionLabel="Créer un nouveau locataire"
-                    onEmptyAction={() => update({ occupantMode: 'new', locataire_id: '' })}
-                    disabled={workflowLoading}
-                    className="mt-1"
-                  />
-                </label>
-                {selectedOccupant ? (
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
-                    <p className="text-sm font-black text-emerald-950">{selectedOccupant.prenom} {selectedOccupant.nom}</p>
-                    <p className="mt-1 text-xs font-semibold text-emerald-800/80">
-                      {selectedOccupant.telephone ? <a href={`tel:${selectedOccupant.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(selectedOccupant.telephone)}</a> : 'Téléphone non renseigné'} · {selectedOccupant.email ? <a href={`mailto:${selectedOccupant.email}`} className="hover:text-brand-700 hover:underline">{selectedOccupant.email}</a> : 'Email non renseigné'}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="rounded-2xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-3 text-xs font-semibold leading-5 text-slate-500">
-                    Choisissez un locataire existant ou basculez sur “Nouveau” pour créer une fiche locataire.
+          {submitting || workflowLoading ? 'Création...' : wizardStep === 'resume' ? 'Créer la location' : 'Continuer'}
+        </button>
+      }
+      secondaryAction={
+        <button
+          type="button"
+          onClick={() => {
+            if (wizardStep === 'resume') onStepChange('conditions');
+            else if (wizardStep === 'conditions') onStepChange('unite');
+            else if (wizardStep === 'unite') onStepChange('occupant');
+            else onClose();
+          }}
+          disabled={submitting || workflowLoading}
+          className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
+        >
+          {wizardStep === 'occupant' ? 'Annuler' : 'Retour'}
+        </button>
+      }
+    >
+      <div className="space-y-4">
+        <div className={wizardStep === 'occupant' ? 'space-y-4' : 'hidden'}>
+          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() => update({ occupantMode: 'existing' })}
+              className={`rounded-xl px-3 py-2 text-sm font-bold transition ${form.occupantMode === 'existing' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500'}`}
+            >
+              Existant
+            </button>
+            <button
+              type="button"
+              onClick={() => update({ occupantMode: 'new', locataire_id: '' })}
+              className={`rounded-xl px-3 py-2 text-sm font-bold transition ${form.occupantMode === 'new' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500'}`}
+            >
+              Nouveau
+            </button>
+          </div>
+          {form.occupantMode === 'existing' ? (
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Locataire</span>
+                <SmartCombobox
+                  value={form.locataire_id}
+                  options={occupantComboboxOptions}
+                  onChange={(value) => update({ locataire_id: value, occupantSearch: '' })}
+                  placeholder={workflowLoading ? 'Chargement des locataires...' : 'Rechercher ou choisir un locataire'}
+                  searchPlaceholder="Nom, téléphone ou email"
+                  emptyLabel="Aucun locataire trouvé"
+                  emptyActionLabel="Créer un nouveau locataire"
+                  onEmptyAction={() => update({ occupantMode: 'new', locataire_id: '' })}
+                  disabled={workflowLoading}
+                  className="mt-1"
+                />
+              </label>
+              {selectedOccupant ? (
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
+                  <p className="text-sm font-black text-emerald-950">{selectedOccupant.prenom} {selectedOccupant.nom}</p>
+                  <p className="mt-1 text-xs font-semibold text-emerald-800/80">
+                    {selectedOccupant.telephone ? <a href={`tel:${selectedOccupant.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(selectedOccupant.telephone)}</a> : 'Téléphone non renseigné'} · {selectedOccupant.email ? <a href={`mailto:${selectedOccupant.email}`} className="hover:text-brand-700 hover:underline">{selectedOccupant.email}</a> : 'Email non renseigné'}
                   </p>
-                )}
-              </div>
-            ) : (
-              <div className="grid gap-3">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <TextField label="Prénom" value={form.newOccupant.prenom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, prenom: value } })} />
-                  <TextField label="Nom" value={form.newOccupant.nom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, nom: value } })} />
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <TextField label="Téléphone" value={form.newOccupant.telephone} onChange={(value) => update({ newOccupant: { ...form.newOccupant, telephone: value } })} placeholder="77 123 45 67" />
-                  <TextField label="Email" value={form.newOccupant.email} onChange={(value) => update({ newOccupant: { ...form.newOccupant, email: value } })} />
-                </div>
-                <TextField label="Adresse" value={form.newOccupant.adresse_personnelle} onChange={(value) => update({ newOccupant: { ...form.newOccupant, adresse_personnelle: value } })} />
-                <TextField label="Pièce d'identité" value={form.newOccupant.piece_identite} onChange={(value) => update({ newOccupant: { ...form.newOccupant, piece_identite: value } })} />
+              ) : (
+                <p className="rounded-2xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-3 text-xs font-semibold leading-5 text-slate-500">
+                  Choisissez un locataire existant ou basculez sur “Nouveau” pour créer une fiche locataire.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextField label="Prénom" value={form.newOccupant.prenom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, prenom: value } })} />
+                <TextField label="Nom" value={form.newOccupant.nom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, nom: value } })} />
               </div>
-            )}
-          </div>
-        )}
-
-        {wizardStep === 'unite' && (
-          <div className="space-y-4">
-            <LifecycleIntro
-              icon={Building2}
-              title="Sélectionner l'unité libre"
-              description="La création de la location occupera automatiquement l'unité sélectionnée."
-            />
-            <label className="block">
-              <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Unité disponible</span>
-              <SmartCombobox
-                value={form.unite_id}
-                options={unitComboboxOptions}
-                onChange={(value) => {
-                  const nextUnit = availableUnits.find((unit) => unit.id === value);
-                  if (nextUnit) chooseUnit(nextUnit);
-                  else update({ unite_id: value, unitSearch: '' });
-                }}
-                placeholder={workflowLoading ? 'Chargement des unités libres...' : 'Rechercher bien, unité ou numéro'}
-                searchPlaceholder="Bien, unité, numéro ou étage"
-                emptyLabel="Aucune unité libre trouvée"
-                emptyActionLabel="Créer une unité"
-                onEmptyAction={() => {
-                  onClose();
-                  window.location.hash = '#/patrimoine?tab=unites&action=new-unit';
-                }}
-                disabled={workflowLoading}
-                className="mt-1"
-              />
-            </label>
-            {selectedUnit ? (
-              <div className="grid gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3 sm:grid-cols-2">
-                <MiniMetric label="Bien" value={selectedUnit.immeuble_nom ?? 'Bien non renseigné'} />
-                <MiniMetric label="Unité" value={selectedUnit.nom} />
-                <MiniMetric label="Propriétaire" value={`${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || 'Non renseigné'} />
-              <MiniMetric label="Loyer conseillé" value={<MoneyText value={selectedUnit.loyer_base ?? 0} />} />
-                <MiniMetric label="Statut" value="Libre" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <TextField label="Téléphone" value={form.newOccupant.telephone} onChange={(value) => update({ newOccupant: { ...form.newOccupant, telephone: value } })} placeholder="77 123 45 67" />
+                <TextField label="Email" value={form.newOccupant.email} onChange={(value) => update({ newOccupant: { ...form.newOccupant, email: value } })} />
               </div>
-            ) : (
-              <p className="rounded-2xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-3 text-xs font-semibold leading-5 text-slate-500">
-                Sélectionnez une unité libre pour préremplir le loyer, la caution et la commission agence si elle existe.
-              </p>
-            )}
-          </div>
-        )}
+              <TextField label="Adresse" value={form.newOccupant.adresse_personnelle} onChange={(value) => update({ newOccupant: { ...form.newOccupant, adresse_personnelle: value } })} />
+              <TextField label="Pièce d'identité" value={form.newOccupant.piece_identite} onChange={(value) => update({ newOccupant: { ...form.newOccupant, piece_identite: value } })} />
+            </div>
+          )}
+        </div>
 
-        {wizardStep === 'conditions' && (
-          <div className="space-y-4">
-            <LifecycleIntro
-              icon={FileText}
-              title="Conditions du bail"
-              description={isIndividualOwner ? 'Mode bailleur individuel : aucune commission agence n’est demandée.' : 'Renseignez les conditions principales sans toucher aux paiements.'}
+        <div className={wizardStep === 'unite' ? 'space-y-4' : 'hidden'}>
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Unité disponible</span>
+            <SmartCombobox
+              value={form.unite_id}
+              options={unitComboboxOptions}
+              onChange={(value) => {
+                const nextUnit = availableUnits.find((unit) => unit.id === value);
+                if (nextUnit) chooseUnit(nextUnit);
+                else update({ unite_id: value, unitSearch: '' });
+              }}
+              placeholder={workflowLoading ? 'Chargement des unités libres...' : 'Rechercher bien, unité ou numéro'}
+              searchPlaceholder="Bien, unité, numéro ou étage"
+              emptyLabel="Aucune unité libre trouvée"
+              emptyActionLabel="Créer une unité"
+              onEmptyAction={() => {
+                onClose();
+                window.location.hash = '#/patrimoine?tab=unites&action=new-unit';
+              }}
+              disabled={workflowLoading}
+              className="mt-1"
             />
-            <div className="grid gap-3 sm:grid-cols-2">
-              <TextField label="Date de début" value={form.date_debut} onChange={(value) => update({ date_debut: value })} type="date" />
-              <TextField label="Date de fin" value={form.date_fin} onChange={(value) => update({ date_fin: value })} type="date" />
+          </label>
+          {selectedUnit ? (
+            <div className="grid gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3 sm:grid-cols-2">
+              <MiniMetric label="Bien" value={selectedUnit.immeuble_nom ?? 'Bien non renseigné'} />
+              <MiniMetric label="Unité" value={selectedUnit.nom} />
+              <MiniMetric label="Propriétaire" value={`${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || 'Non renseigné'} />
+            <MiniMetric label="Loyer conseillé" value={<MoneyText value={selectedUnit.loyer_base ?? 0} />} />
+              <MiniMetric label="Statut" value="Libre" />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <TextField label="Loyer mensuel" value={form.loyer_mensuel} onChange={(value) => update({ loyer_mensuel: value })} type="number" />
-              <TextField label="Caution" value={form.caution} onChange={(value) => update({ caution: value })} type="number" />
-            </div>
-            {!isIndividualOwner && (
-              <TextField label="Commission agence" value={form.commission} onChange={(value) => update({ commission: value })} type="number" />
-            )}
-            <label className="block">
-              <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Destination</span>
-              <SmartCombobox
-                value={form.destination}
-                options={DESTINATION_OPTIONS}
-                onChange={(value) => update({ destination: value })}
-                placeholder="Choisir une destination"
-                searchPlaceholder="Habitation, commerce, bureau..."
-                className="mt-1"
-              />
-            </label>
-            <div className="grid gap-2 rounded-2xl border border-emerald-950/10 bg-white p-3 text-xs font-semibold text-slate-500 sm:grid-cols-3">
-              <span>Loyer : <strong className="text-slate-900">{form.loyer_mensuel ? <MoneyText value={Number(form.loyer_mensuel)} /> : 'Non renseigné'}</strong></span>
-              <span>Caution : <strong className="text-slate-900">{form.caution ? <MoneyText value={Number(form.caution)} /> : '0 F CFA'}</strong></span>
-              <span>Commission : <strong className="text-slate-900">{isIndividualOwner ? '0%' : `${form.commission || 0}%`}</strong></span>
-            </div>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-3 text-xs font-semibold leading-5 text-slate-500">
+              Sélectionnez une unité libre pour préremplir le loyer, la caution et la commission agence si elle existe.
+            </p>
+          )}
+        </div>
+
+        <div className={wizardStep === 'conditions' ? 'space-y-4' : 'hidden'}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField label="Date de début" value={form.date_debut} onChange={(value) => update({ date_debut: value })} type="date" />
+            <TextField label="Date de fin" value={form.date_fin} onChange={(value) => update({ date_fin: value })} type="date" />
           </div>
-        )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <TextField label="Loyer mensuel" value={form.loyer_mensuel} onChange={(value) => update({ loyer_mensuel: value })} type="number" />
+            <TextField label="Caution" value={form.caution} onChange={(value) => update({ caution: value })} type="number" />
+          </div>
+          {!isIndividualOwner && (
+            <TextField label="Commission agence" value={form.commission} onChange={(value) => update({ commission: value })} type="number" />
+          )}
+          <label className="block">
+            <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Destination</span>
+            <SmartCombobox
+              value={form.destination}
+              options={DESTINATION_OPTIONS}
+              onChange={(value) => update({ destination: value })}
+              placeholder="Choisir une destination"
+              searchPlaceholder="Habitation, commerce, bureau..."
+              className="mt-1"
+            />
+          </label>
+          <div className="grid gap-2 rounded-2xl border border-emerald-950/10 bg-white p-3 text-xs font-semibold text-slate-500 sm:grid-cols-3">
+            <span>Loyer : <strong className="text-slate-900">{form.loyer_mensuel ? <MoneyText value={Number(form.loyer_mensuel)} /> : 'Non renseigné'}</strong></span>
+            <span>Caution : <strong className="text-slate-900">{form.caution ? <MoneyText value={Number(form.caution)} /> : '0 F CFA'}</strong></span>
+            <span>Commission : <strong className="text-slate-900">{isIndividualOwner ? '0%' : `${form.commission || 0}%`}</strong></span>
+          </div>
+        </div>
 
         {wizardStep === 'resume' && (
           <div className="space-y-4">
-            <LifecycleIntro
-              icon={FileCheck2}
-              title="Validation finale"
-              description="Vérifiez les informations avant création. Cette action enregistrera définitivement la location dans le portefeuille locatif."
-            />
             <div className="grid gap-3 sm:grid-cols-2">
               <MiniMetric label="Locataire" value={form.occupantMode === 'new' ? `${form.newOccupant.prenom} ${form.newOccupant.nom}` : selectedOccupant ? `${selectedOccupant.prenom} ${selectedOccupant.nom}` : 'Non sélectionné'} />
               <MiniMetric label="Propriétaire" value={selectedUnit ? `${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || 'Non renseigné' : 'Non sélectionné'} />
@@ -2624,10 +2740,8 @@ function OccupationFormModal({
             </div>
           </div>
         )}
-
-        </ProductWizard>
       </div>
-    </Modal>
+    </WizardShell>
   );
 }
 

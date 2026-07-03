@@ -4,7 +4,6 @@ import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
-import { Button } from '../components/ui/Button';
 import { ToastContainer } from '../components/ui/Toast';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +15,8 @@ import { PageSkeleton } from '../components/ui/Skeleton';
 import { getOrCreateIndividualOwnerBailleur } from '../services/individualOwner';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumButton } from '../components/ui/PremiumButton';
 
 interface Immeuble {
   id: string;
@@ -354,15 +355,18 @@ export function Immeubles() {
         onRetry={loadData}
         message="Les biens affichés viennent du dernier chargement réussi. Les modifications restent bloquées hors ligne pour protéger les relations bailleur/bien."
       />
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
-        <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2">{pageTitle}</h1>
-          <p className="text-slate-600 text-sm lg:text-base">{pageDescription}</p>
-        </div>
-        <Button onClick={openCreateModal} icon={Plus} className="w-full sm:w-auto">
-          {isIndividualOwner ? 'Nouveau bien' : 'Nouvel immeuble'}
-        </Button>
-      </div>
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="DOMAINE PATRIMOINE"
+        title={pageTitle}
+        description={pageDescription}
+        mobileDescription={isIndividualOwner ? 'Vos biens.' : 'Biens rattachés.'}
+        primaryAction={
+          <PremiumButton variant="create" size="sm" onClick={openCreateModal} icon={<Plus className="h-4 w-4" />}>
+            {isIndividualOwner ? 'Nouveau bien' : 'Nouvel immeuble'}
+          </PremiumButton>
+        }
+      />
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
         <div className="mb-6">

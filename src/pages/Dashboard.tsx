@@ -44,6 +44,7 @@ import { readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { DemoDataLoader } from '../components/billing/DemoDataLoader';
 import { OwnerWorkspace } from '../components/owner/OwnerWorkspace';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { PremiumPageShell } from '../components/ui/PremiumPageShell';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { MoneyText } from '../components/ui/MoneyText';
@@ -922,9 +923,9 @@ function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: Dashbo
             <Sparkles className="h-8 w-8" />
           </div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-action-600">Cockpit Samay Këur</p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+          <h2 className="mt-2 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
             Votre agence est prête à être structurée.
-          </h1>
+          </h2>
           <p className="mx-auto mt-4 max-w-2xl text-base font-medium leading-8 text-slate-600 sm:text-lg">
             Commencez par créer votre premier bailleur, puis rattachez ses biens, ses locations et ses paiements.
           </p>
@@ -1004,54 +1005,35 @@ function DashboardHeader({
   onNavigate?: (page: string) => void;
 }) {
   return (
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="flex w-full items-start justify-between gap-3 sm:w-auto">
-        <div className="min-w-0">
-          <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-action-600">Pilotage agence</p>
-          <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">Tableau de bord</h1>
-          <p className="mt-1 hidden max-w-3xl text-sm leading-6 text-slate-600 sm:block">
-            Vue unifiée de votre portefeuille locatif, vos encaissements et vos priorités.
-          </p>
-        </div>
-
-        {/* Sélecteur de mois - En haut à droite sur mobile */}
-        <label className="mt-1 flex shrink-0 flex-col items-center justify-center rounded-xl border border-emerald-950/10 bg-white/95 p-1.5 shadow-sm transition hover:border-emerald-200 sm:hidden">
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(event) => onMonthChange(event.target.value || CURRENT_MONTH)}
-            className="w-[110px] bg-transparent text-center text-[0.8rem] font-black text-slate-900 outline-none"
-            aria-label="Période du tableau de bord"
-          />
-        </label>
-      </div>
-      
-      <p className="max-w-3xl text-sm leading-6 text-slate-600 sm:hidden">
-        Vue unifiée de votre portefeuille locatif, vos encaissements et vos priorités.
-      </p>
-
-      <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
-        {/* Sélecteur de mois - Position classique sur desktop */}
-        <label className="hidden h-10 items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/95 px-3 text-left text-sm font-bold text-slate-800 shadow-[0_2px_8px_rgba(15,23,42,0.03)] transition hover:border-emerald-200 sm:flex">
+    <PremiumPageHeader
+      density="compact"
+      eyebrow="PILOTAGE AGENCE"
+      title="Tableau de bord"
+      description="Vue d'ensemble de vos performances locatives et financières."
+      mobileDescription="Performances locatives."
+      sideContent={
+        <label className="flex h-9 shrink-0 items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/95 px-2.5 text-left text-xs font-bold text-slate-800 shadow-[0_2px_8px_rgba(15,23,42,0.03)] transition hover:border-emerald-200">
           <CalendarDays className="h-4 w-4 text-emerald-700" />
           <input
             type="month"
             value={selectedMonth}
             onChange={(event) => onMonthChange(event.target.value || CURRENT_MONTH)}
-            className="w-32 bg-transparent text-sm font-black text-slate-900 outline-none"
-            aria-label="Période du tableau de bord"
+            className="w-[7.1rem] bg-transparent text-xs font-black text-slate-900 outline-none"
+            aria-label="PÃ©riode du tableau de bord"
           />
         </label>
-
+      }
+      primaryAction={
         <PremiumButton
-          variant="primary"
+          variant="create"
+          size="sm"
           icon={<Wallet className="h-4 w-4" />}
           onClick={() => onNavigate?.('paiements')}
         >
           Enregistrer un paiement
         </PremiumButton>
-      </div>
-    </header>
+      }
+    />
   );
 }
 

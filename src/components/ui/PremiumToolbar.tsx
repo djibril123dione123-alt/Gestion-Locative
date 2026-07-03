@@ -55,23 +55,24 @@ export function PremiumToolbar({
     return (
       <section
         aria-label={ariaLabel ?? "Outils de liste"}
+        data-split-open={isSplitOpen}
         className={`@container relative z-20 min-w-0 max-w-full ${isCompact ? `bg-[#fffdf8]/90 border border-emerald-950/10 shadow-sm ring-1 ring-white/50 ${isUltraCompact ? 'rounded-[0.7rem] px-1.5 py-1 sm:px-2 sm:py-1.5' : 'rounded-[0.85rem] px-2 py-1.5 sm:px-2.5 sm:py-2'}` : 'sk-premium-panel p-3'} ${className}`}
       >
-        <div className={`flex min-w-0 items-center ${isUltraCompact ? 'gap-1.5' : 'gap-2'} ${isSplitOpen ? 'flex-nowrap' : 'flex-wrap @xl:flex-nowrap'}`}>
+        <div className={`flex min-w-0 items-center ${isUltraCompact ? 'gap-1.5' : 'gap-2'} flex-wrap sm:flex-nowrap`}>
           {tabs && (
-            <div className="order-1 shrink-0 flex-none">
+            <div className="shrink-0 flex-none">
               {tabs}
             </div>
           )}
 
           {(search ?? children) && (
-            <div className={`order-3 @xl:order-2 flex-1 shrink min-w-0 ${isSplitOpen ? 'basis-auto min-w-[5rem]' : 'basis-full @xl:basis-32 min-w-[8rem]'}`}>
+            <div className="flex-1 shrink min-w-[8rem]">
               {search ?? children}
             </div>
           )}
 
           {(filters || secondaryActions || actions || primaryAction) && (
-            <div className={`order-2 @xl:order-3 ml-auto flex shrink-0 items-center ${isUltraCompact ? 'gap-1.5' : 'gap-2'} ${isSplitOpen ? 'flex-nowrap' : 'flex-wrap'}`}>
+            <div className={`flex shrink-0 items-center ${isUltraCompact ? 'gap-1.5' : 'gap-2'} flex-wrap sm:flex-nowrap`}>
               {filters}
               {secondaryActions ?? actions}
               {primaryAction && <div className="shrink-0">{primaryAction}</div>}
@@ -119,6 +120,7 @@ export function PremiumToolbar({
   return (
     <section
       aria-label={ariaLabel ?? "Outils de liste"}
+      data-split-open={isSplitOpen}
       className={`@container relative z-20 min-w-0 max-w-full ${isCompact ? `bg-[#fffdf8]/90 border border-emerald-950/10 shadow-sm ring-1 ring-white/50 ${isUltraCompact ? 'rounded-[0.7rem] px-1.5 py-1 sm:px-2 sm:py-1.5' : 'rounded-[0.85rem] px-2 py-1.5 sm:px-2.5 sm:py-2'}` : 'sk-premium-panel p-3'} ${className}`}
     >
       {/* Top Bar : Search (gauche) & Actions (droite) */}

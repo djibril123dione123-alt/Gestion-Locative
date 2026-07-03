@@ -1,13 +1,15 @@
 import React, { type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { X } from 'lucide-react';
-import { type MetricTone } from '../ui/MetricCard';
+import { type MetricTone, MetricCard } from '../ui/MetricCard';
 import { PremiumButton } from '../ui/PremiumButton';
+import { PremiumKpiGrid } from '../ui/PremiumKpiGrid';
 
 interface FinancePageHeaderProps {
   eyebrow: string;
   title: string;
   description: string;
+  mobileDescription?: string;
   primaryLabel?: string;
   secondaryLabel?: string;
   primaryIcon?: ReactNode;
@@ -22,6 +24,7 @@ export function FinancePageHeader({
   eyebrow,
   title,
   description,
+  mobileDescription,
   primaryLabel,
   secondaryLabel,
   primaryIcon,
@@ -36,7 +39,8 @@ export function FinancePageHeader({
       <div className="min-w-0">
         <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-orange-600">{eyebrow}</p>
         <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{title}</h1>
-        <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-slate-600">{description}</p>
+        <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-slate-600 lg:hidden">{mobileDescription ?? description}</p>
+        <p className="mt-1 hidden max-w-2xl text-sm font-medium leading-6 text-slate-600 lg:block">{description}</p>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
         {secondaryLabel && (
@@ -46,7 +50,7 @@ export function FinancePageHeader({
             onClick={onSecondary}
             disabled={secondaryDisabled}
             fullWidth
-            className="sm:w-auto"
+            className="sm:w-auto !h-[29px] !px-2.5 !py-1 !text-[0.72rem]"
           >
             {secondaryLabel}
           </PremiumButton>
@@ -58,7 +62,7 @@ export function FinancePageHeader({
             onClick={onPrimary}
             disabled={primaryDisabled}
             fullWidth
-            className="sm:w-auto"
+            className="sm:w-auto !h-[29px] !px-2.5 !py-1 !text-[0.72rem]"
           >
             {primaryLabel}
           </PremiumButton>
@@ -234,5 +238,30 @@ export function FinanceLine({ label, value, strong = false }: { label: string; v
       <span className="text-xs font-bold uppercase tracking-[0.08em] text-slate-500">{label}</span>
       <span className={`text-right text-sm ${strong ? 'font-black text-slate-950' : 'font-semibold text-slate-700'}`}>{value}</span>
     </div>
+  );
+}
+
+function normalizeMetricTone(tone?: string): 'success' | 'warning' | 'danger' | 'info' | 'neutral' {
+  if (tone === 'red' || tone === 'amber') return 'warning';
+  if (tone === 'green' || tone === 'emerald') return 'success';
+  if (tone === 'blue' || tone === 'sky' || tone === 'brand') return 'info';
+  return 'neutral';
+}
+
+export function CompactFinanceKpiGrid({ metrics }: { metrics: Array<{ label: string; value: React.ReactNode; icon: React.ElementType; tone?: string; helper?: React.ReactNode }> }) {
+  return (
+    <PremiumKpiGrid density="compact" variant="dashboard" maxItems={metrics.length} ariaLabel="Indicateurs financiers">
+      {metrics.map((metric) => (
+        <MetricCard
+          key={metric.label}
+          density="compact"
+          title={metric.label}
+          value={metric.value}
+          icon={metric.icon}
+          tone={normalizeMetricTone(metric.tone)}
+          helper={typeof metric.helper === 'string' ? metric.helper : undefined}
+        />
+      ))}
+    </PremiumKpiGrid>
   );
 }

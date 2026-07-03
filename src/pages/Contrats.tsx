@@ -4,16 +4,17 @@ import { createContratViaEdge, updateContratViaEdge, ContratApiError } from '../
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
-import { Plus, Search, Download, AlertCircle, TrendingUp, Sheet, Ban, CalendarDays } from 'lucide-react';
+import { Plus, Search, Download, AlertCircle, TrendingUp, Ban, CalendarDays } from 'lucide-react';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { generateContratPDF } from '../lib/pdf';
 import { formatCurrency } from '../lib/formatters';
 import { useToast } from '../hooks/useToast';
-import { useExport } from '../hooks/useExport';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumButton } from '../components/ui/PremiumButton';
 
 // =========================
 //  PALETTE CONFORT IMMO ARCHI
@@ -152,7 +153,6 @@ export function Contrats() {
     observations: '',
   });
   const toast = useToast();
-  const { exportContrats, exporting: exportingXlsx } = useExport();
   const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
 
   // Garde anti-race : si l'utilisateur change d'agence ou navigue
@@ -765,42 +765,18 @@ export function Contrats() {
       )}
 
       {/*  En-tête et statistiques */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black mb-2 text-slate-950">
-            Contrats
-          </h1>
-          <p className="text-slate-600">Gestion des contrats de location</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => exportContrats(contrats.map((c) => ({
-              locataire_nom: `${c.locataires?.prenom ?? ''} ${c.locataires?.nom ?? ''}`.trim(),
-              unite_nom: c.unites?.nom ?? '',
-              immeuble_nom: c.unites?.immeubles?.nom ?? '',
-              date_debut: c.date_debut,
-              date_fin: c.date_fin,
-              loyer_mensuel: c.loyer_mensuel,
-              statut: c.statut,
-              destination: c.destination,
-            })))}
-            disabled={exportingXlsx || contrats.length === 0}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 text-sm font-medium transition disabled:opacity-50"
-            title="Exporter en Excel"
-          >
-            <Sheet className="w-4 h-4" />
-            Exporter Excel
-          </button>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="sk-create-cta w-full sm:w-auto"
-          >
-            <Plus className="w-5 h-5" />
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="PORTAIL LOCATIF"
+        title="Contrats"
+        description="Suivez les baux, échéances et statuts contractuels."
+        mobileDescription="Gestion des baux."
+        primaryAction={
+          <PremiumButton variant="create" size="sm" onClick={() => setIsModalOpen(true)} icon={<Plus className="h-4 w-4" />}>
             Nouveau contrat
-          </button>
-        </div>
-      </div>
+          </PremiumButton>
+        }
+      />
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">

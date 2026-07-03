@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency } from '../lib/formatters';
 import { useToast } from '../hooks/useToast';
 import { LoadingState } from '../components/ui/LoadingState';
+import { FinancePageHeader } from '../components/finance/FinancePrimitives';
 import {
   TrendingUp,
   TrendingDown,
@@ -187,42 +188,34 @@ export function DashboardFinancier() {
 
   return (
     <div className="sk-page-shell space-y-6 lg:space-y-8 animate-fadeIn">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="animate-slideInLeft">
-          <h1 className="text-3xl lg:text-4xl font-black text-slate-950 mb-2">
-            Tableau de bord financier
-          </h1>
-          <p className="text-slate-600">Analyse complète des revenus, commissions et conformité DGID</p>
-        </div>
+      <FinancePageHeader
+        eyebrow="ENCAISSEMENT & FINANCE"
+        title="Rapports financiers"
+        description="Analysez les revenus, commissions et indicateurs de conformité."
+        mobileDescription="Rapports financiers."
+        primaryLabel={exportLoading ? 'Export...' : 'Exporter certifié'}
+        primaryIcon={<Download className="h-4 w-4" />}
+        onPrimary={handleExportCertified}
+        primaryDisabled={exportLoading}
+      />
 
-        {/* Month & Export */}
-        <div className="flex gap-3">
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="sk-input font-bold text-slate-950"
-          >
-            {Array.from({ length: 12 }, (_, i) => {
-              const date = new Date();
-              date.setMonth(date.getMonth() - i);
-              const month = date.toISOString().slice(0, 7);
-              return (
-                <option key={month} value={month}>
-                  {date.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })}
-                </option>
-              );
-            })}
-          </select>
-          <button
-            onClick={handleExportCertified}
-            disabled={exportLoading}
-            className="px-6 py-2 bg-brand-700 text-white rounded-lg hover:bg-brand-800 font-bold flex items-center gap-2 disabled:opacity-50 transition shadow-premium"
-          >
-            <Download className="w-4 h-4" />
-            {exportLoading ? 'Export...' : 'Exporter certifié'}
-          </button>
-        </div>
+      <div className="max-w-xs">
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="sk-input font-bold text-slate-950"
+        >
+          {Array.from({ length: 12 }, (_, i) => {
+            const date = new Date();
+            date.setMonth(date.getMonth() - i);
+            const month = date.toISOString().slice(0, 7);
+            return (
+              <option key={month} value={month}>
+                {date.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })}
+              </option>
+            );
+          })}
+        </select>
       </div>
 
       {/* Top KPIs */}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import {
@@ -91,13 +92,13 @@ export function SuperAdminDashboard() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 animate-fadeIn bg-slate-50 min-h-screen">
-      {/* Header */}
-      <div className="animate-slideInLeft">
-        <h1 className="text-3xl lg:text-4xl font-bold bg-gradient-to-r from-orange-600 to-orange-800 bg-clip-text text-transparent mb-2">
-          Tableau de bord super-admin
-        </h1>
-        <p className="text-slate-600">Vue d'ensemble pour les investisseurs et propriétaires</p>
-      </div>
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="SUPER ADMIN"
+        title="Tableau de bord super-admin"
+        description="Pilotez les indicateurs globaux, agences et signaux critiques."
+        mobileDescription="Pilotage global."
+      />
 
       {/* Top KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

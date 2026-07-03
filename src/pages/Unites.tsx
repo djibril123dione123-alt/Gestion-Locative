@@ -3,7 +3,6 @@ import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
-import { Button } from '../components/ui/Button';
 import { ToastContainer } from '../components/ui/Toast';
 import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,6 +14,8 @@ import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumButton } from '../components/ui/PremiumButton';
 
 interface Unite {
   id: string;
@@ -261,15 +262,18 @@ export function Unites() {
         onRetry={loadData}
         message="Les unités affichées viennent du dernier chargement réussi. Les modifications sont bloquées hors ligne pour éviter une incohérence locative."
       />
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 lg:mb-8">
-        <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-2">Unités locatives</h1>
-          <p className="text-slate-600 text-sm lg:text-base">Gestion des appartements et locaux</p>
-        </div>
-        <Button onClick={() => setIsModalOpen(true)} icon={Plus} className="w-full sm:w-auto">
-          Nouvelle unité
-        </Button>
-      </div>
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="DOMAINE PATRIMOINE"
+        title="Unités locatives"
+        description="Gérez les appartements, locaux et unités rattachés aux biens."
+        mobileDescription="Unités locatives."
+        primaryAction={
+          <PremiumButton variant="create" size="sm" onClick={() => setIsModalOpen(true)} icon={<Plus className="h-4 w-4" />}>
+            Nouvelle unité
+          </PremiumButton>
+        }
+      />
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
         <div className="mb-6">

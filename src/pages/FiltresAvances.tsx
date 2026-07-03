@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { supabase } from '../lib/supabase';
 import { Search, Filter, X, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
@@ -318,10 +319,13 @@ export function FiltresAvances() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="mb-6 lg:mb-8">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-slate-900 mb-2">Filtres Avancés</h1>
-        <p className="text-sm sm:text-base text-slate-600">Recherche multicritères dans toutes les données</p>
-      </div>
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="PILOTAGE AGENCE"
+        title="Filtres avancés"
+        description="Recherchez rapidement dans les données locatives et financières."
+        mobileDescription="Recherche avancée."
+      />
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">

@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { PremiumButton } from '../components/ui/PremiumButton';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -172,20 +174,19 @@ export function Interventions() {
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Maintenance</h1>
-          <p className="text-sm text-slate-600 mt-1">{items.length} intervention{items.length > 1 ? 's' : ''}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          data-testid="button-new-intervention"
-          className="sk-create-cta w-full sm:w-auto"
-        >
-          <Plus className="w-5 h-5" /> Nouvelle intervention
-        </button>
-      </div>
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="OPÉRATIONS TERRAIN"
+        title="Maintenance"
+        description="Pilotez les interventions, priorités et statuts terrain."
+        mobileDescription="Maintenance terrain."
+        primaryAction={
+          <PremiumButton variant="create" size="sm" onClick={() => setIsOpen(true)} data-testid="button-new-intervention" icon={<Plus className="h-4 w-4" />}>
+            Nouvelle intervention
+          </PremiumButton>
+        }
+      />
+
 
       <div className="flex flex-wrap gap-3 mb-4">
         <select aria-label="Sélection" value={filterUrgence} onChange={(e) => setFilterUrgence(e.target.value as UrgenceFilter)} data-testid="filter-urgence" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">

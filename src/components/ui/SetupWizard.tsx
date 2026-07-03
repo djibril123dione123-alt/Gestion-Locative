@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect } from 'react';
 import { formatCurrency, formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
@@ -17,9 +17,11 @@ import {
   DollarSign,
   Sparkles,
   ArrowRight,
-  ArrowLeft,
-  X
+  ArrowLeft
 } from 'lucide-react';
+import { WizardShell, type WizardStep } from './WizardShell';
+import { Modal } from './Modal';
+import { BrandMark } from '../brand/BrandLogo';
 
 interface SetupWizardProps {
   onClose: () => void;
@@ -41,14 +43,53 @@ interface WizardData {
   paiement?: WizardRecord;
 }
 
-const steps = [
-  { id: 1, name: 'Bailleur', icon: Users, description: 'Propriétaire du bien' },
-  { id: 2, name: 'Immeuble', icon: Building2, description: 'Bâtiment principal' },
-  { id: 3, name: 'Unité', icon: Home, description: 'Appartement ou local' },
-  { id: 4, name: 'Locataire', icon: Users, description: 'Personne qui loue' },
-  { id: 5, name: 'Contrat', icon: FileText, description: 'Accord de location' },
-  { id: 6, name: 'Paiement', icon: DollarSign, description: 'Premier loyer' }
+const steps: (WizardStep & { name: string; iconComponent: React.ElementType })[] = [
+  { id: 1, label: 'Bailleur', name: 'Bailleur', shortLabel: 'Bailleur', iconComponent: Users, description: 'Propriétaire du bien', icon: <Users className="h-3.5 w-3.5" /> },
+  { id: 2, label: 'Immeuble', name: 'Immeuble', shortLabel: 'Immeuble', iconComponent: Building2, description: 'Bâtiment principal', icon: <Building2 className="h-3.5 w-3.5" /> },
+  { id: 3, label: 'Unité', name: 'Unité', shortLabel: 'Unité', iconComponent: Home, description: 'Appartement ou local', icon: <Home className="h-3.5 w-3.5" /> },
+  { id: 4, label: 'Locataire', name: 'Locataire', shortLabel: 'Locataire', iconComponent: Users, description: 'Personne qui loue', icon: <Users className="h-3.5 w-3.5" /> },
+  { id: 5, label: 'Contrat', name: 'Contrat', shortLabel: 'Contrat', iconComponent: FileText, description: 'Accord de location', icon: <FileText className="h-3.5 w-3.5" /> },
+  { id: 6, label: 'Paiement', name: 'Paiement', shortLabel: 'Paiement', iconComponent: DollarSign, description: 'Premier loyer', icon: <DollarSign className="h-3.5 w-3.5" /> }
 ];
+
+function SetupWizardRail({ stepsList, currentStepIdx }: { stepsList: (WizardStep & { iconComponent: React.ElementType })[]; currentStepIdx: number }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="flex items-center gap-2.5">
+        <BrandMark size="sm" tone="dark" animated withTile={false} />
+        <div>
+          <p className="text-[0.5rem] font-bold uppercase tracking-[0.18em] text-amber-200/68">Configuration guidée</p>
+          <p className="mt-0.5 text-[0.6rem] font-semibold text-white/[0.56]">Démarrage rapide</p>
+        </div>
+      </div>
+      <div className="mt-3">
+        <p className="max-w-[11rem] text-[0.72rem] font-semibold leading-tight text-white/[0.86]">Configurez votre premier bailleur, immeuble, unité, locataire et contrat.</p>
+      </div>
+      <div className="relative mt-3 space-y-1">
+        {stepsList.map((step, index) => {
+          const isActive = index === currentStepIdx;
+          const isComplete = index < currentStepIdx;
+          const IconComp = step.iconComponent;
+          return (
+            <div key={step.id} className={`flex min-h-[2.05rem] items-center gap-2 rounded-lg border px-2 py-[0.22rem] transition ${isActive ? 'border-amber-100/16 bg-white/[0.038] text-white shadow-[0_3px_8px_rgba(0,0,0,0.036)]' : isComplete ? 'border-white/10 bg-emerald-300/[0.038] text-emerald-50/[0.78]' : 'border-white/[0.075] bg-white/[0.018] text-emerald-50/[0.78]'}`}>
+              <span className={`relative z-[1] flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[0.5rem] text-[0.58rem] font-semibold ${isActive ? 'bg-[#fff3ce]/94 text-emerald-950 ring-1 ring-amber-100/55' : isComplete ? 'bg-emerald-300/[0.12] text-emerald-50' : 'bg-white/[0.1] text-emerald-50/[0.84]'}`}>
+                {isComplete ? <CheckCircle2 className="h-3 w-3" /> : <IconComp className="h-3 w-3" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[0.47rem] font-bold uppercase tracking-[0.13em] opacity-75">Étape {index + 1}</span>
+                <span className="block truncate text-[0.67rem] font-semibold">{step.label}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-auto pt-4 rounded-xl border border-white/[0.055] bg-white/[0.026] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
+        <p className="text-[0.47rem] font-semibold uppercase tracking-[0.16em] text-amber-100/[0.66]">SAMAY KËUR</p>
+        <p className="mt-1 text-[0.58rem] font-medium leading-snug text-emerald-50/[0.56]">Le parcours guidé prépare l&apos;environnement pour votre premier encaissement de loyer.</p>
+      </div>
+    </div>
+  );
+}
 
 export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
   const { profile, agency, accountProfile } = useAuth();
@@ -510,6 +551,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
               <input
                 type="date"
                 required
+                aria-label="Date de début"
                 value={formData.contrat.date_debut}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -529,6 +571,7 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
               <input
                 type="date"
                 required
+                aria-label="Date du paiement"
                 value={formData.paiement.date_paiement}
                 onChange={(e) => setFormData({
                   ...formData,
@@ -670,110 +713,90 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
     return (
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              {renderStepContent()}
-            </div>
+        <Modal
+          isOpen={true}
+          onClose={onClose}
+          title="Configuration terminée"
+          description="Félicitations, votre espace est prêt !"
+        >
+          <div className="p-2">
+            {renderStepContent()}
           </div>
-        </div>
+        </Modal>
       </>
     );
   }
 
+  const currentStepObj = steps[currentStep - 1] || steps[0];
+
   return (
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-          <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 rounded-t-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-slate-900">Configuration guidée</h2>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between mb-2">
-              {steps.map((step, idx) => (
-                <Fragment key={step.id}>
-                  <div className="flex flex-col items-center">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                      currentStep > step.id
-                        ? 'bg-green-500 text-white'
-                        : currentStep === step.id
-                        ? 'bg-[#072F24] text-white'
-                        : 'bg-slate-200 text-slate-500'
-                    }`}>
-                      {currentStep > step.id ? (
-                        <CheckCircle2 className="w-6 h-6" />
-                      ) : (
-                        <step.icon className="w-5 h-5" />
-                      )}
-                    </div>
-                    <p className={`text-xs mt-1 font-medium ${
-                      currentStep === step.id ? 'text-orange-600' : 'text-slate-500'
-                    }`}>
-                      {step.name}
-                    </p>
-                  </div>
-                  {idx < steps.length - 1 && (
-                    <div className={`flex-1 h-1 mx-2 rounded transition-all ${
-                      currentStep > step.id ? 'bg-green-500' : 'bg-slate-200'
-                    }`} />
-                  )}
-                </Fragment>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-6">
-            <div className="mb-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-2">
-                {steps[currentStep - 1]?.name}
-              </h3>
-              <p className="text-slate-600">
-                {steps[currentStep - 1]?.description}
-              </p>
-            </div>
-
-            {renderStepContent()}
-
-            <div className="flex gap-4 mt-8">
-              {currentStep > 1 && (
-                <button
-                  onClick={() => setCurrentStep(currentStep - 1)}
-                  disabled={loading}
-                  className="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50 font-semibold flex items-center justify-center"
-                >
-                  <ArrowLeft className="w-5 h-5 mr-2" />
-                  Retour
-                </button>
-              )}
-              <button
-                onClick={() => handleStepSubmit(currentStep)}
-                disabled={!isStepValid() || loading}
-                className="flex flex-1 items-center justify-center rounded-xl border border-[#0A3F30]/70 bg-gradient-to-r from-[#072F24] to-[#041812] px-6 py-3 font-semibold text-white transition-all hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                    En cours...
-                  </>
-                ) : (
-                  <>
-                    {currentStep === 6 ? 'Terminer' : 'Continuer'}
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
+      <WizardShell
+        open={true}
+        onClose={onClose}
+        size="standard"
+        variant="workstation"
+        tone="owner"
+        eyebrow="CONFIGURATION GUIDÉE"
+        title={currentStepObj.label}
+        description={currentStepObj.description}
+        steps={steps}
+        currentStep={currentStep - 1}
+        contentDescription={currentStepObj.description}
+        rail={
+          <SetupWizardRail
+            stepsList={steps}
+            currentStepIdx={currentStep - 1}
+          />
+        }
+        primaryAction={
+          <button
+            type="button"
+            onClick={() => handleStepSubmit(currentStep)}
+            disabled={!isStepValid() || loading}
+            className="flex items-center justify-center rounded-xl border border-[#0A3F30]/70 bg-gradient-to-r from-[#072F24] to-[#041812] px-6 py-2.5 font-semibold text-white transition-all hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50 text-xs shadow-md"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                En cours...
+              </>
+            ) : (
+              <>
+                {currentStep === 6 ? 'Terminer' : 'Continuer'}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </>
+            )}
+          </button>
+        }
+        secondaryAction={
+          currentStep > 1 ? (
+            <button
+              type="button"
+              onClick={() => setCurrentStep(currentStep - 1)}
+              disabled={loading}
+              className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50 font-semibold text-xs flex items-center justify-center"
+            >
+              <ArrowLeft className="w-4 h-4 mr-1.5" />
+              Retour
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50 font-semibold text-xs"
+            >
+              Annuler
+            </button>
+          )
+        }
+      >
+        <div className="py-2">
+          {renderStepContent()}
         </div>
-      </div>
+      </WizardShell>
     </>
   );
 }

@@ -182,13 +182,13 @@ export function Table<T extends { id: string }>({
 
       <div className="@container sk-table-shell hidden sm:block">
         <div className="sk-table-scroll">
-          <table className="w-full min-w-[860px] border-collapse">
+          <table className={`w-full ${compact ? 'min-w-[500px]' : 'min-w-[860px]'} border-collapse`}>
             <thead className="sticky top-0 z-10 border-b border-emerald-950/10 bg-[linear-gradient(180deg,rgba(248,244,236,0.98),rgba(255,255,255,0.94))] backdrop-blur">
               <tr>
                 {columns.map((column) => {
                   const alignClass = getAlignmentClass(column.align);
                   const visibilityClass = getVisibilityClass(column.visibility);
-                  const baseClasses = `px-4 text-xs font-black uppercase text-slate-500 xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`;
+                  const baseClasses = `${compact ? 'px-3 py-2 text-[0.68rem]' : 'px-4 xl:px-5 py-3.5 xl:py-4 text-xs'} font-black uppercase text-slate-500`;
                   const customClasses = `${column.className || ''} ${column.headerClassName || ''}`.trim();
 
                   return (
@@ -201,7 +201,7 @@ export function Table<T extends { id: string }>({
                   );
                 })}
                 {(onEdit || onDelete) && (
-                  <th className={`px-4 text-right text-xs font-black uppercase text-slate-500 xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`}>
+                  <th className={`${compact ? 'px-3 py-2 text-[0.68rem]' : 'px-4 xl:px-5 py-3.5 xl:py-4 text-xs'} text-right font-black uppercase text-slate-500`}>
                     Actions
                   </th>
                 )}
@@ -236,7 +236,7 @@ export function Table<T extends { id: string }>({
                   {columns.map((column) => {
                     const alignClass = getAlignmentClass(column.align);
                     const visibilityClass = getVisibilityClass(column.visibility);
-                    const baseClasses = `px-4 text-sm font-medium text-slate-700 xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`;
+                    const baseClasses = `${compact ? 'px-3 py-2 text-[0.78rem]' : 'px-4 xl:px-5 py-3.5 xl:py-4 text-sm'} font-medium text-slate-700`;
                     const customClasses = `${column.className || ''} ${column.cellClassName || ''}`.trim();
 
                     return (
@@ -247,7 +247,7 @@ export function Table<T extends { id: string }>({
                   })}
 
                   {(onEdit || onDelete) && (
-                    <td className={`px-4 text-right xl:px-5 ${compact ? 'py-2.5' : 'py-3.5 xl:py-4'}`}>
+                    <td className={`${compact ? 'px-3 py-2' : 'px-4 xl:px-5 py-3.5 xl:py-4'} text-right`}>
                       <div className="sk-action-group-right">
                         {onEdit && (
                           <button

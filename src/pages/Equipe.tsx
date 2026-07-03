@@ -19,6 +19,8 @@ import {
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumButton } from '../components/ui/PremiumButton';
 import { SkeletonTable } from '../components/ui/Skeleton';
 import { ToastContainer } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -397,30 +399,24 @@ export function Equipe() {
 
   return (
     <div className="sk-page-shell space-y-5 sm:space-y-6">
-      <section className="sk-premium-panel p-5 sm:p-6">
-        <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-emerald-200/30 blur-3xl" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-900/10 bg-emerald-50 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-brand-800">
-              <Shield className="h-4 w-4" />
-              RBAC enterprise
-            </div>
-            <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">Équipe & permissions</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Gérez précisément les pages, les modes lecture seule et les actions sensibles pour chaque membre de votre agence.
-            </p>
-          </div>
-          <button
-            type="button"
+      <PremiumPageHeader
+        density="compact"
+        eyebrow="ADMINISTRATION & SÉCURITÉ"
+        title="Équipe & permissions"
+        description="Gérez les collaborateurs et leurs droits d'accès à l'agence."
+        mobileDescription="Équipe et droits."
+        primaryAction={
+          <PremiumButton
+            variant="create"
+            size="sm"
             onClick={() => setIsInviteOpen(true)}
             data-testid="button-invite-member"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F]"
+            icon={<UserPlus className="h-4 w-4" />}
           >
-            <UserPlus className="h-5 w-5" />
-            Inviter un collaborateur
-          </button>
-        </div>
-      </section>
+            Inviter
+          </PremiumButton>
+        }
+      />
 
       <section className="grid gap-3 sm:grid-cols-3">
         <MetricCard label="Membres actifs" value={stats.activeMembers} icon={UsersIcon} />

@@ -49,6 +49,7 @@ import {
   type UserRow,
 } from '../components/console/ConsoleModals';
 import { LoadingState } from '../components/ui/LoadingState';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../lib/formatters';
 import { supabase } from '../lib/supabase';
@@ -757,7 +758,7 @@ export function Console() {
       <div className="flex min-h-screen items-center justify-center bg-slate-950 p-6 text-white">
         <div className="max-w-lg rounded-3xl border border-red-400/20 bg-red-400/10 p-8 text-center">
           <ShieldAlert className="mx-auto h-10 w-10 text-red-200" />
-          <h1 className="mt-4 text-2xl font-black">Accès super-admin requis</h1>
+          <h2 className="mt-4 text-2xl font-black">Accès super-admin requis</h2>
           <p className="mt-3 text-sm leading-6 text-red-100/80">
             La console propriétaire est isolée de l’espace client et réservée aux comptes super-admin.
           </p>
@@ -820,61 +821,25 @@ export function Console() {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/72 px-4 py-4 backdrop-blur-2xl sm:px-6">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-orange-300">
-                  <Command className="h-4 w-4" />
-                  Control Tower
+            <PremiumPageHeader
+              density="ultraCompact"
+              eyebrow="SUPER ADMIN"
+              title={activeItem?.label ?? 'Console'}
+              description={activeItem?.description ?? 'Console de pilotage système.'}
+              mobileDescription="Console admin."
+              sideContent={
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <div className="relative min-w-0 sm:w-72">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Recherche globale..." className="h-9 w-full rounded-xl border border-emerald-950/10 bg-white py-2 pl-10 pr-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-500" />
+                  </div>
+                  <button type="button" onClick={() => void loadAll()} disabled={refreshing} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-white px-3 text-xs font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"><RefreshCw className={classNames('h-4 w-4', refreshing && 'animate-spin')} />Actualiser</button>
+                  <button type="button" onClick={() => setShowCreateAgency(true)} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-800/15 bg-emerald-50 px-3 text-xs font-black text-emerald-900 transition hover:bg-emerald-100"><Plus className="h-4 w-4" />Organisation</button>
+                  <button type="button" onClick={() => setShowInviteUser(true)} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 text-xs font-black text-orange-800 transition hover:bg-orange-100"><UserPlus className="h-4 w-4" />Invitation</button>
+                  <button type="button" onClick={signOut} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 px-3 text-xs font-black text-red-700 transition hover:bg-red-100"><LogOut className="h-4 w-4" />Sortir</button>
                 </div>
-                <h1 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">{activeItem?.label ?? 'Console'}</h1>
-                <p className="mt-1 text-sm font-medium text-slate-400">{activeItem?.description}</p>
-              </div>
-
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="relative min-w-0 sm:w-80">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                  <input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Recherche globale..."
-                    className="w-full rounded-2xl border border-white/10 bg-white/8 py-3 pl-10 pr-4 text-sm font-semibold text-white outline-none placeholder:text-slate-500 focus:border-emerald-300/40"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void loadAll()}
-                  disabled={refreshing}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black text-white transition hover:bg-white/12 disabled:opacity-60"
-                >
-                  <RefreshCw className={classNames('h-4 w-4', refreshing && 'animate-spin')} />
-                  Actualiser
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateAgency(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/12 px-4 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-300/18"
-                >
-                  <Plus className="h-4 w-4" />
-                  Organisation
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowInviteUser(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-orange-300/20 bg-orange-300/12 px-4 py-3 text-sm font-black text-orange-100 transition hover:bg-orange-300/18"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Invitation
-                </button>
-                <button
-                  type="button"
-                  onClick={signOut}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm font-black text-red-100 transition hover:bg-red-400/16"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sortir
-                </button>
-              </div>
-            </div>
+              }
+            />
 
             <div className="mt-4 flex gap-2 overflow-x-auto xl:hidden">
               {NAV_GROUPS.flatMap((group) => group.items).map(({ id, label, icon: Icon }) => (

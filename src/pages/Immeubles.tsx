@@ -180,6 +180,11 @@ export function Immeubles() {
         return;
       }
 
+      const existingTypeMatch = editingImmeuble?.description?.match(/\[Type:\s*([^\]]+)\]/i);
+      const typeTag = existingTypeMatch ? existingTypeMatch[0] : '';
+      const rawDesc = formData.description.trim();
+      const descWithTag = typeTag ? `${typeTag}${rawDesc ? `\n${rawDesc}` : ''}` : (rawDesc || null);
+
       const submitData = {
         ...formData,
         bailleur_id: bailleurId,
@@ -187,7 +192,7 @@ export function Immeubles() {
         adresse,
         ville,
         quartier: formData.quartier.trim() || null,
-        description: formData.description.trim() || null,
+        description: descWithTag,
       };
 
       if (editingImmeuble) {
@@ -229,7 +234,7 @@ export function Immeubles() {
       quartier: immeuble.quartier || '',
       ville: immeuble.ville,
       bailleur_id: immeuble.bailleur_id,
-      description: immeuble.description || '',
+      description: (immeuble.description || '').replace(/\[Type:\s*[^\]]+\]\s*\n?/i, '').trim(),
     });
     setIsModalOpen(true);
   };

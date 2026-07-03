@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Building2,
   CalendarDays,
@@ -28,12 +29,10 @@ import {
   FileCheck2,
   Home,
   Mail,
-  MapPin,
   Pencil,
   Plus,
   SlidersHorizontal,
   UserPlus,
-  X,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -50,6 +49,14 @@ import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { ProductWizard, type ProductWizardStep } from '../components/ui/ProductWizard';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { PremiumButton } from '../components/ui/PremiumButton';
+import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PageShell } from '../components/ui/PageShell';
+import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
+import { MetricCard } from '../components/ui/MetricCard';
+import { PremiumToolbar } from '../components/ui/PremiumToolbar';
+import { PremiumTableSurface } from '../components/ui/PremiumTableSurface';
+import { SplitViewShell } from '../components/ui/SplitViewShell';
+import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 
 import {
@@ -82,6 +89,8 @@ type OccupantsBauxColumnKey = typeof OCCUPANTS_BAUX_COLUMN_KEYS[number];
 interface TabDef {
   id: FilterTab;
   label: string;
+  title: string;
+  helper: string;
   icon: LucideIcon;
   tone: 'emerald' | 'blue' | 'amber' | 'red';
 }
@@ -111,10 +120,10 @@ interface OccupationFormState {
 }
 
 const TABS: TabDef[] = [
-  { id: 'tous', label: 'Tous', icon: ClipboardList, tone: 'blue' },
-  { id: 'actif', label: 'Actifs', icon: Activity, tone: 'emerald' },
-  { id: 'expire', label: 'Expirés', icon: Clock3, tone: 'amber' },
-  { id: 'resilie', label: 'Résiliés', icon: Ban, tone: 'red' },
+  { id: 'tous', label: 'Tous', title: 'LOCATIONS SUIVIES', helper: 'Tous les dossiers', icon: ClipboardList, tone: 'blue' },
+  { id: 'actif', label: 'Actifs', title: 'BAUX ACTIFS', helper: 'En cours', icon: Activity, tone: 'emerald' },
+  { id: 'expire', label: 'Expirés', title: 'EXPIRÉS', helper: 'À surveiller', icon: Clock3, tone: 'amber' },
+  { id: 'resilie', label: 'Résiliés', title: 'RÉSILIÉS', helper: 'Hors cycle actif', icon: Ban, tone: 'red' },
 ];
 
 const STATUT_BADGE: Record<ContratStatut, { label: string; cls: string }> = {
@@ -140,13 +149,6 @@ const LOCATION_WIZARD_STEPS: ProductWizardStep<LocationWizardStep>[] = [
   { id: 'unite', label: 'Unité', icon: Building2 },
   { id: 'conditions', label: 'Conditions', icon: ClipboardList },
   { id: 'resume', label: 'Validation', icon: FileCheck2 },
-];
-
-const PERIOD_FILTERS: Array<{ id: PeriodFilter; label: string }> = [
-  { id: 'all', label: 'Toute période' },
-  { id: 'starts_this_month', label: 'Débute ce mois' },
-  { id: 'ending_soon', label: 'Fin proche' },
-  { id: 'open_ended', label: 'Sans date fin' },
 ];
 
 const DESTINATION_OPTIONS: SmartComboboxOption[] = [
@@ -296,18 +298,11 @@ function getOccupantsBauxColumnLabel(key: OccupantsBauxColumnKey): string {
   return labels[key];
 }
 
-function getStatusKpiTone(tone: TabDef['tone']): string {
-  return {
-    emerald: 'bg-emerald-50 text-emerald-800',
-    blue: 'bg-stone-50 text-slate-700',
-    amber: 'bg-amber-50 text-amber-800',
-    red: 'bg-red-50 text-red-700',
-  }[tone];
-}
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export function OccupantsBaux() {
+  const navigate = useNavigate();
   const { profile, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const { success: notifySuccess, error: notifyError, toasts, removeToast } = useToast();
@@ -813,7 +808,7 @@ export function OccupantsBaux() {
 
   const ownerSelectOptions = useMemo(
     () => [
-      { value: 'all', label: 'Tous les propriétaires', subtitle: 'Toutes les locations' },
+      { value: 'all', label: 'Tous Bailleurs', subtitle: 'Toutes les locations' },
       ...ownerOptions.map(([id, label]) => ({ value: id, label, subtitle: 'Portefeuille propriétaire' })),
     ],
     [ownerOptions],
@@ -821,15 +816,10 @@ export function OccupantsBaux() {
 
   const propertySelectOptions = useMemo(
     () => [
-      { value: 'all', label: 'Tous les biens', subtitle: 'Toutes les locations' },
+      { value: 'all', label: 'Tous Biens', subtitle: 'Toutes les locations' },
       ...propertyOptions.map(([id, label]) => ({ value: id, label, subtitle: 'Bien locatif' })),
     ],
     [propertyOptions],
-  );
-
-  const periodSelectOptions = useMemo(
-    () => PERIOD_FILTERS.map((filter) => ({ value: filter.id, label: filter.label })),
-    [],
   );
 
   const filtered = useMemo(() => {
@@ -879,7 +869,7 @@ export function OccupantsBaux() {
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  // ── Compteurs par statut ──────────────────────────────────────────────────
+  // ── Compteurs par statut et période ───────────────────────────────────────
 
   const counts = useMemo(() => {
     const map: Record<string, number> = { tous: rows.length };
@@ -887,6 +877,20 @@ export function OccupantsBaux() {
       map[r.statut] = (map[r.statut] ?? 0) + 1;
     }
     return map;
+  }, [rows]);
+
+  const periodCounts = useMemo(() => {
+    const currentMonth = todayIso().slice(0, 7);
+    let startsThisMonth = 0;
+    let endingSoon = 0;
+    let openEnded = 0;
+    for (const r of rows) {
+      if (String(r.date_debut ?? '').startsWith(currentMonth)) startsThisMonth++;
+      const remaining = daysUntil(r.date_fin);
+      if (remaining !== null && remaining >= 0 && remaining <= 45) endingSoon++;
+      if (!r.date_fin) openEnded++;
+    }
+    return { starts_this_month: startsThisMonth, ending_soon: endingSoon, open_ended: openEnded };
   }, [rows]);
 
   const activeFilterCount = (ownerFilter !== 'all' ? 1 : 0)
@@ -902,6 +906,13 @@ export function OccupantsBaux() {
     setPeriodFilter('all');
   }, []);
 
+  const quickChips = useMemo(() => [
+    { id: 'all', label: 'Tous', count: counts.tous, isActive: periodFilter === 'all', onClick: () => setPeriodFilter('all') },
+    { id: 'starts_this_month', label: 'Débute ce mois', count: periodCounts.starts_this_month, isActive: periodFilter === 'starts_this_month', onClick: () => setPeriodFilter(periodFilter === 'starts_this_month' ? 'all' : 'starts_this_month') },
+    { id: 'ending_soon', label: 'Fin proche', count: periodCounts.ending_soon, isActive: periodFilter === 'ending_soon', onClick: () => setPeriodFilter(periodFilter === 'ending_soon' ? 'all' : 'ending_soon') },
+    { id: 'open_ended', label: 'Sans date fin', count: periodCounts.open_ended, isActive: periodFilter === 'open_ended', onClick: () => setPeriodFilter(periodFilter === 'open_ended' ? 'all' : 'open_ended') },
+  ], [counts.tous, periodFilter, periodCounts]);
+
   // ─── Skeleton ─────────────────────────────────────────────────────────────
 
   if (loading) return <PageSkeleton title="Locations" variant="table" />;
@@ -909,7 +920,7 @@ export function OccupantsBaux() {
   // ─── Rendu ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
+    <PageShell spacing="standard" variant="dataDense" tone="paper" verticalInset="compact">
       {/* Notice hors-ligne */}
       <OfflineDataNotice
         cachedAt={cacheTimestamp}
@@ -917,184 +928,154 @@ export function OccupantsBaux() {
         message="Les données affichées viennent du dernier chargement réussi."
       />
 
-      <div className={`grid items-start gap-5 ${selectedRow ? 'xl:grid-cols-[minmax(0,1fr)_31.5rem]' : 'grid-cols-1'}`}>
-        <section className="min-w-0 space-y-6">
+      <div className="mt-2">
+        <SplitViewShell
+          isDetailOpen={Boolean(selectedRow)}
+          size="compact"
+          desktopAt="lg"
+          detailClassName="lg:sticky lg:top-2 lg:h-[calc(100dvh-1rem)]"
+          mainClassName={selectedRow ? 'hidden lg:block' : ''}
+          main={
+            <div className="flex flex-col gap-4">
+              <section className="min-w-0 space-y-3">
           {/* En-tête */}
-          <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="text-[11px] font-black uppercase tracking-[0.18em] text-action-600">Domaine locatif</p>
-              <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-brand-950 sm:text-4xl">
-                Locations
-              </h1>
-              <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-600">
-                Vue unifiée locataire → location → unité ·{' '}
-                <span className="font-semibold text-emerald-700">{rows.length}</span> location
-                {rows.length !== 1 ? 's' : ''} suivie{rows.length !== 1 ? 's' : ''}
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2 sm:flex-row">
+          <PremiumPageHeader
+            density="compact"
+            isSplitOpen={Boolean(selectedRow)}
+            eyebrow="DOMAINE LOCATIF"
+            title="Locations"
+            description="Suivez les occupants, baux actifs et unités louées."
+            mobileDescription="Occupants, baux et unités."
+            primaryAction={
               <PremiumButton
                 variant="create"
                 type="button"
                 onClick={openCreateOccupation}
-                icon={<Plus className="h-4 w-4" />}
+                icon={<Plus className="h-3.5 w-3.5" />}
+                className="w-full sm:w-auto !h-[29px] !px-2.5 !py-1 !text-[0.72rem]"
               >
                 Nouvelle location
               </PremiumButton>
-            </div>
-          </header>
+            }
+          />
 
-          {/* KPI cards */}
-          <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              return (
+          {/* KPI cards / filtres */}
+          <PremiumKpiGrid density="compact">
+            {TABS.map((tab) => (
+              <MetricCard
+                key={tab.id}
+                density="compact"
+                title={tab.title}
+                value={counts[tab.id] ?? 0}
+                helper={tab.helper}
+                icon={tab.icon}
+                tone={tab.tone}
+                onClick={() => setActiveTab(tab.id)}
+                isActive={activeTab === tab.id}
+                ariaLabel={`${tab.title} : ${counts[tab.id] ?? 0} (${tab.helper})`}
+              />
+            ))}
+          </PremiumKpiGrid>
+
+          {/* Toolbar */}
+          <PremiumToolbar
+            density="compact"
+            search={
+              <div className="relative min-w-0 flex-1">
+                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-800" />
+                <input
+                  type="text"
+                  placeholder="Rechercher locataire, bien, référence..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="!min-h-8 !h-8 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-8 pr-3 py-0 text-xs font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
+                />
+              </div>
+            }
+            secondaryActions={
+              <>
+                <SmartCombobox
+                  value={ownerFilter}
+                  options={ownerSelectOptions}
+                  onChange={setOwnerFilter}
+                  placeholder="Tous Bailleurs"
+                  searchPlaceholder="Rechercher un bailleur..."
+                  className="hidden lg:block lg:w-40 !h-8 !min-h-8"
+                  density="compact"
+                />
+                <SmartCombobox
+                  value={propertyFilter}
+                  options={propertySelectOptions}
+                  onChange={setPropertyFilter}
+                  placeholder="Tous Biens"
+                  searchPlaceholder="Rechercher un bien..."
+                  className="hidden lg:block lg:w-32 !h-8 !min-h-8"
+                  density="compact"
+                />
                 <button
-                  key={tab.id}
                   type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`group flex items-center justify-between gap-3 rounded-[1.05rem] border px-3 py-2.5 text-left shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 ${
-                    activeTab === tab.id
-                      ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-300/35 shadow-emerald-100 -translate-y-0.5'
-                      : `border-emerald-950/10 bg-gradient-to-br hover:-translate-y-0.5 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)] ${
-                          tab.tone === 'emerald' ? 'from-white to-emerald-50/70 hover:border-emerald-200' :
-                          tab.tone === 'blue' ? 'from-white to-slate-50/75 hover:border-slate-200' :
-                          tab.tone === 'amber' ? 'from-white to-amber-50/70 hover:border-amber-200' :
-                          'from-white to-rose-50/70 hover:border-red-200'
-                        }`
-                  }`}
+                  onClick={() => setMobileFiltersOpen(true)}
+                  className={`inline-flex !h-8 !min-h-8 !py-0 flex-shrink-0 whitespace-nowrap items-center justify-center gap-1.5 rounded-[0.6rem] border px-3 text-xs font-bold shadow-sm transition lg:hidden ${activeFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
                 >
-                  <span>
-                    <span className={`block text-xl font-black ${activeTab === tab.id ? 'text-emerald-700' : 'text-slate-900'}`}>
-                      {counts[tab.id] ?? 0}
-                    </span>
-                    <span className={`mt-1 block text-xs font-bold uppercase tracking-wide ${activeTab === tab.id ? 'text-emerald-600' : 'text-slate-500'}`}>
-                      {tab.label}
-                    </span>
-                  </span>
-                  <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${getStatusKpiTone(tab.tone)}`}>
-                    <Icon className="h-5 w-5" />
-                  </span>
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Filtres
+                  {activeFilterCount > 0 && (
+                    <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">{activeFilterCount}</span>
+                  )}
                 </button>
-              );
-            })}
-          </div>
-
-          {/* Tableau principal */}
-          <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-[#fffdf7]/95 shadow-[0_20px_54px_rgba(15,23,42,0.055)] ring-1 ring-white/80">
-            {/* Toolbar */}
-            <div className="border-b border-slate-100 px-4 py-4 sm:px-6">
-              <div className="flex flex-row gap-2 sm:gap-3 items-center">
-                <div className="relative min-w-0 flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Rechercher..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100 sm:hidden"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Nom, téléphone ou bien"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="hidden sm:block h-10 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/95 pl-9 pr-3 text-sm font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <ColumnPicker
+                  columns={OCCUPANTS_BAUX_COLUMN_KEYS.map((key) => ({
+                    key,
+                    label: getOccupantsBauxColumnLabel(key),
+                  }))}
+                  visibility={occupantColumns.visibility}
+                  onToggle={(key) => occupantColumns.toggle(key as OccupantsBauxColumnKey)}
+                  onSetAll={occupantColumns.setAll}
+                  className="!py-1.5 !px-3 !text-xs !rounded-[0.6rem] !h-8 hidden lg:inline-flex"
+                />
+                {activeFilterCount > 0 && (
                   <button
                     type="button"
-                    onClick={() => setMobileFiltersOpen(true)}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-[#fffdf8] px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-white lg:hidden"
+                    onClick={resetFilters}
+                    className="inline-flex !h-8 !min-h-8 !py-0 items-center gap-1.5 rounded-[0.6rem] border border-slate-200 bg-slate-50 px-2.5 text-xs font-bold text-slate-600 transition hover:bg-white"
                   >
-                    <SlidersHorizontal className="h-4 w-4" />
-                    Filtres
-                    {activeFilterCount > 0 && <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">{activeFilterCount}</span>}
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Réinitialiser
                   </button>
-                  <SmartCombobox
-                    value={ownerFilter}
-                    options={ownerSelectOptions}
-                    onChange={setOwnerFilter}
-                    placeholder="Tous les propriétaires"
-                    searchPlaceholder="Rechercher un propriétaire..."
-                    className="hidden lg:block lg:w-56"
-                  />
-                  <SmartCombobox
-                    value={propertyFilter}
-                    options={propertySelectOptions}
-                    onChange={setPropertyFilter}
-                    placeholder="Tous les biens"
-                    searchPlaceholder="Rechercher un bien..."
-                    className="hidden lg:block lg:w-52"
-                  />
-                  <SmartCombobox
-                    value={periodFilter}
-                    options={periodSelectOptions}
-                    onChange={(next) => setPeriodFilter(next as PeriodFilter)}
-                    placeholder="Période"
-                    searchPlaceholder="Rechercher une période..."
-                    className="hidden lg:block lg:w-48"
-                  />
-                  <ColumnPicker
-                    columns={OCCUPANTS_BAUX_COLUMN_KEYS.map((key) => ({
-                      key,
-                      label: getOccupantsBauxColumnLabel(key),
-                    }))}
-                    visibility={occupantColumns.visibility}
-                    onToggle={(key) => occupantColumns.toggle(key as OccupantsBauxColumnKey)}
-                    onSetAll={occupantColumns.setAll}
-                  />
-                  {activeFilterCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={resetFilters}
-                      className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-600 transition hover:bg-white"
-                    >
-                      <SlidersHorizontal className="h-4 w-4" />
-                      Réinitialiser
-                    </button>
-                  )}
-                </div>
-              </div>
-              {(searchTerm || activeFilterCount > 0) && (
-                <p className="mt-2 text-xs font-medium text-slate-500">
-                  {filtered.length} résultat{filtered.length !== 1 ? 's' : ''} affiché{filtered.length !== 1 ? 's' : ''}
-                </p>
-              )}
-              <MobileFilterSheet
-                isOpen={mobileFiltersOpen}
-                title="Filtres locations"
-                onClose={() => setMobileFiltersOpen(false)}
-                onReset={resetFilters}
-              >
-                <div className="grid gap-3">
-                  <SmartCombobox
-                    value={ownerFilter}
-                    options={ownerSelectOptions}
-                    onChange={setOwnerFilter}
-                    placeholder="Tous les propriétaires"
-                    searchPlaceholder="Rechercher un propriétaire..."
-                  />
-                  <SmartCombobox
-                    value={propertyFilter}
-                    options={propertySelectOptions}
-                    onChange={setPropertyFilter}
-                    placeholder="Tous les biens"
-                    searchPlaceholder="Rechercher un bien..."
-                  />
-                  <SmartCombobox
-                    value={periodFilter}
-                    options={periodSelectOptions}
-                    onChange={(next) => setPeriodFilter(next as PeriodFilter)}
-                    placeholder="Période"
-                    searchPlaceholder="Rechercher une période..."
-                  />
-                </div>
-              </MobileFilterSheet>
-            </div>
+                )}
+              </>
+            }
+            quickChips={quickChips}
+            meta={(searchTerm || activeFilterCount > 0) ? `${filtered.length} résultat${filtered.length !== 1 ? 's' : ''} affiché${filtered.length !== 1 ? 's' : ''}` : undefined}
+          />
 
+          {/* Filtres mobiles */}
+          <MobileFilterSheet
+            isOpen={mobileFiltersOpen}
+            title="Filtres locations"
+            onClose={() => setMobileFiltersOpen(false)}
+            onReset={resetFilters}
+          >
+            <div className="grid gap-3">
+              <SmartCombobox
+                value={ownerFilter}
+                options={ownerSelectOptions}
+                onChange={setOwnerFilter}
+                placeholder="Tous Bailleurs"
+                searchPlaceholder="Rechercher un bailleur..."
+              />
+              <SmartCombobox
+                value={propertyFilter}
+                options={propertySelectOptions}
+                onChange={setPropertyFilter}
+                placeholder="Tous Biens"
+                searchPlaceholder="Rechercher un bien..."
+              />
+            </div>
+          </MobileFilterSheet>
+
+          {/* Tableau principal */}
+          <PremiumTableSurface density="dense" className="bg-white">
             {/* Table desktop / Cards mobile */}
             {paginated.length === 0 ? (
               <EmptyState
@@ -1103,53 +1084,54 @@ export function OccupantsBaux() {
               />
             ) : (
               <>
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full text-sm">
-                    <thead className="sticky top-0 z-10 bg-[#f8f3e8]/70 shadow-[0_1px_2px_rgba(0,0,0,0.05)] backdrop-blur-md text-left text-[0.66rem] font-bold uppercase tracking-wider text-slate-400">
-                      <tr className="border-b border-slate-100 bg-[#f8f3e8]/70">
+                <div className={`hidden md:block ${selectedRow ? 'overflow-hidden' : 'overflow-x-auto'}`}>
+                  <table className={`w-full border-collapse table-fixed ${selectedRow ? 'min-w-[620px]' : 'min-w-[840px]'}`}>
+                    <thead className="bg-[#f8f3e8]/70 text-left border-b border-slate-100">
+                      <tr>
                         {occupantColumns.isVisible('occupant') && (
-                          <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400">
-                            <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" /> Locataire</span>
+                          <th className={`${selectedRow ? 'w-[40%]' : 'w-[20%]'} py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>
+                            <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-slate-400" /> Locataire</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('telephone') && (
-                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
-                            <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Téléphone</span>
+                          <th className={`w-[11%] py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
+                            <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-slate-400" /> Téléphone</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('bien') && (
-                          <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400">
-                            <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5" /> Bien / Unité</span>
+                          <th className={`w-[17%] py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500 ${selectedRow ? 'hidden' : ''}`}>
+                            <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> Bien / Unité</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('proprietaire') && (
-                          <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 hidden lg:table-cell">
-                            <span className="flex items-center gap-1.5"><Home className="h-3.5 w-3.5" /> Propriétaire</span>
+                          <th className={`w-[13%] py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
+                            <span className="flex items-center gap-1.5"><Home className="h-3.5 w-3.5 text-slate-400" /> Propriétaire</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('reference') && (
-                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
-                            <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5" /> Référence</span>
+                          <th className={`w-[9%] py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
+                            <span className="flex items-center gap-1.5"><FileText className="h-3.5 w-3.5 text-slate-400" /> Référence</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('loyer') && (
-                          <th className="px-5 py-3 text-right text-xs font-bold uppercase tracking-wide text-slate-400">
-                            <span className="flex items-center justify-end gap-1.5"><Wallet className="h-3.5 w-3.5" /> Loyer</span>
+                          <th className={`${selectedRow ? 'w-[22%]' : 'w-[11%]'} py-2.5 px-3 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>
+                            <span className="flex items-center justify-end gap-1.5"><Wallet className="h-3.5 w-3.5 text-slate-400" /> Loyer</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('periode') && (
-                          <th className={`px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-slate-400 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
-                            <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5" /> Période</span>
+                          <th className={`${selectedRow ? 'w-[20%]' : 'w-[9%]'} py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500 hidden lg:table-cell`}>
+                            <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-slate-400" /> Période</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('statut') && (
-                          <th className="px-5 py-3 text-center text-xs font-bold uppercase tracking-wide text-slate-400">
-                            <span className="flex items-center justify-center gap-1.5"><Activity className="h-3.5 w-3.5" /> Statut</span>
+                          <th className={`${selectedRow ? 'w-[14%]' : 'w-[6%]'} py-2.5 px-3 text-center text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>
+                            <span className="flex items-center justify-center gap-1.5"><Activity className="h-3.5 w-3.5 text-slate-400" /> Statut</span>
                           </th>
                         )}
+                        <th className="w-[4%] px-2 py-2.5"><span className="sr-only">Actions</span></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-emerald-950/5 bg-[#fffdf8]/60">
+                    <tbody className="divide-y divide-slate-100/60">
                       {paginated.map((row) => (
                         <DesktopRow
                           key={row.contrat_id}
@@ -1214,25 +1196,32 @@ export function OccupantsBaux() {
                 </div>
               </div>
             )}
-          </div>
-        </section>
-
-        <OccupantBailDrawer
-          row={selectedRow}
-          details={details}
-          detailsLoading={detailsLoading}
-          detailsError={detailsError}
-          isIndividualOwner={isIndividualOwner}
-          activeTab={activeDrawerTab}
-          onTabChange={setActiveDrawerTab}
-          onClose={() => setSelectedRow(null)}
-          onEditOccupant={openEditOccupant}
-          onEditBail={openEditBail}
-          onGeneratePdf={(row) => void generateContractPdf(row)}
-          pdfGenerating={pdfGeneratingId === selectedRow?.contrat_id}
-          onResiliate={openResiliation}
-          onArchive={setArchiveTarget}
-          onRenew={openRenewal}
+          </PremiumTableSurface>
+              </section>
+            </div>
+          }
+          detail={
+            selectedRow ? (
+              <OccupantBailDrawer
+                row={selectedRow}
+                details={details}
+                detailsLoading={detailsLoading}
+                detailsError={detailsError}
+                isIndividualOwner={isIndividualOwner}
+                activeTab={activeDrawerTab}
+                onTabChange={setActiveDrawerTab}
+                onClose={() => setSelectedRow(null)}
+                onEditOccupant={openEditOccupant}
+                onEditBail={openEditBail}
+                onGeneratePdf={(row) => void generateContractPdf(row)}
+                pdfGenerating={pdfGeneratingId === selectedRow?.contrat_id}
+                onResiliate={openResiliation}
+                onArchive={setArchiveTarget}
+                onRenew={openRenewal}
+                onNavigate={navigate}
+              />
+            ) : undefined
+          }
         />
       </div>
 
@@ -1279,7 +1268,7 @@ export function OccupantsBaux() {
       />
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-    </div>
+    </PageShell>
   );
 }
 
@@ -1288,7 +1277,7 @@ export function OccupantsBaux() {
 function StatutBadge({ statut }: { statut: ContratStatut }) {
   const { label, cls } = STATUT_BADGE[statut] ?? STATUT_BADGE.en_attente;
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${cls}`}>
+    <span className={`inline-flex whitespace-nowrap rounded-full border px-1.5 py-[2px] text-[0.6rem] font-semibold leading-none ${cls}`}>
       {label}
     </span>
   );
@@ -1310,22 +1299,31 @@ function DesktopRow({
   return (
     <tr
       onClick={onSelect}
-      className={`group cursor-pointer border-b border-emerald-950/5 transition-colors ${selected ? 'bg-emerald-50/90 ring-1 ring-inset ring-emerald-200' : 'bg-[#fffdf8]/70 hover:bg-emerald-50/50'}`}
+      className={`cursor-pointer border-b border-slate-100 transition-colors duration-150 outline-none hover:bg-[#f8fbf9] ${selected ? 'bg-emerald-50/50 relative z-0 after:absolute after:inset-y-0 after:left-0 after:w-[3px] after:bg-brand-500' : ''}`}
     >
       {/* Occupant */}
       {isVisible('occupant') && (
-        <td className="px-5 py-3.5">
-          <p className="font-semibold text-slate-900">{fullName(row)}</p>
-          {row.email && <a href={`mailto:${row.email}`} className="mt-0.5 block max-w-[160px] truncate text-xs text-slate-400 hover:text-emerald-700 hover:underline">{row.email}</a>}
+        <td className="py-2.5 px-3">
+          <div className="min-w-0">
+            <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">{fullName(row)}</p>
+            {compact ? (
+              <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-[1px]">
+                {row.immeuble_nom ?? '—'} · {row.unite_nom} · {ownerName(row)}
+              </p>
+            ) : (
+              row.email && <a href={`mailto:${row.email}`} onClick={(e) => e.stopPropagation()} className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-[1px] block hover:text-brand-700 hover:underline">{row.email}</a>
+            )}
+          </div>
         </td>
       )}
       {/* Téléphone */}
       {isVisible('telephone') && (
-        <td className={`px-5 py-3.5 ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
+        <td className={`py-2.5 px-3 whitespace-nowrap text-[0.75rem] text-slate-700 font-medium ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
           {row.telephone ? (
             <a
               href={`tel:${row.telephone}`}
-              className="font-medium text-emerald-700 hover:underline"
+              onClick={(e) => e.stopPropagation()}
+              className="hover:text-brand-700 hover:underline"
             >
               {formatSenegalPhone(row.telephone)}
             </a>
@@ -1336,58 +1334,62 @@ function DesktopRow({
       )}
       {/* Bien / Unité */}
       {isVisible('bien') && (
-        <td className="px-5 py-3.5">
-          <p className="font-medium text-slate-800">{row.immeuble_nom ?? '—'}</p>
-          <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
-            <ChevronRight className="h-3 w-3 text-slate-300" />
-            {row.unite_nom}
-          </p>
+        <td className={`py-2.5 px-3 ${compact ? 'hidden' : ''}`}>
+          <div className="min-w-0">
+            <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">{row.immeuble_nom ?? '—'}</p>
+            <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-[1px] flex items-center gap-1">
+              <ChevronRight className="h-3 w-3 text-slate-300 inline shrink-0" />
+              <span className="truncate">{row.unite_nom}</span>
+            </p>
+          </div>
         </td>
       )}
       {/* Propriétaire */}
       {isVisible('proprietaire') && (
-        <td className={`px-5 py-3.5 ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
-          <p className="max-w-[150px] truncate text-sm font-medium text-slate-700">{ownerName(row)}</p>
+        <td className={`py-2.5 px-3 text-[0.75rem] text-slate-700 font-medium ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
+          <p className="truncate">{ownerName(row)}</p>
         </td>
       )}
       {/* Référence */}
       {isVisible('reference') && (
-        <td className={`px-5 py-3.5 ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
-          <span className="rounded bg-[#fff4df] px-1.5 py-0.5 font-mono text-xs text-slate-600">
+        <td className={`py-2.5 px-3 ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[0.7rem] font-medium text-slate-700">
             {row.contrat_ref}
           </span>
         </td>
       )}
       {/* Loyer */}
       {isVisible('loyer') && (
-        <td className="px-5 py-3.5 text-right">
-          <MoneyText value={row.loyer_mensuel} className="font-bold text-slate-900" />
-          <span className="ml-1 text-xs text-slate-400"> / mois</span>
+        <td className="py-2.5 px-3 text-right text-[0.75rem] font-semibold text-slate-700">
+          <MoneyText value={row.loyer_mensuel} compact={false} />
+          <span className="ml-1 text-[0.65rem] font-normal text-slate-400">/ mois</span>
         </td>
       )}
       {/* Période */}
       {isVisible('periode') && (
-        <td className={`px-5 py-3.5 ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
-          <p className="text-xs text-slate-600">
+        <td className="py-2.5 px-3 text-[0.75rem] text-slate-700 font-medium hidden lg:table-cell">
+          <p className="truncate">
             {formatDate(row.date_debut)}
-            {row.date_fin && <> → {formatDate(row.date_fin)}</>}
-            {!row.date_fin && <span className="text-slate-400"> → ouvert</span>}
+            {row.date_fin ? ` → ${formatDate(row.date_fin)}` : <span className="text-slate-400"> → ouvert</span>}
           </p>
         </td>
       )}
       {/* Statut */}
       {isVisible('statut') && (
-        <td className="px-5 py-3.5 text-center">
-          <div className="flex flex-col items-center justify-center gap-1.5">
+        <td className="py-2.5 px-3 text-center">
+          <div className="flex flex-col items-center justify-center gap-1">
             <StatutBadge statut={row.statut} />
             {row.statut === 'actif' && canRenew(row) && (
-              <span className="inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-inset ring-amber-200">
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-1.5 py-0.2 text-[0.6rem] font-bold uppercase tracking-wider text-amber-700 ring-1 ring-inset ring-amber-200">
                 Fin proche
               </span>
             )}
           </div>
         </td>
       )}
+      <td className="py-2.5 px-3 text-right">
+        <ChevronRight className="h-[10px] w-[10px] text-slate-300 inline-block" />
+      </td>
     </tr>
   );
 }
@@ -1397,7 +1399,7 @@ function LocationMobileCard({ row, onSelect }: { row: OccupantBailRow; onSelect:
     <div className="px-3 py-2">
       <PremiumMobileCard
         title={fullName(row)}
-        subtitle={<>{row.telephone ? <a href={`tel:${row.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(row.telephone)}</a> : 'Téléphone non renseigné'} · {row.immeuble_nom ?? 'Bien non renseigné'} · {row.unite_nom}</>}
+        subtitle={<>{row.immeuble_nom ?? 'Bien non renseigné'} · {row.unite_nom} · {ownerName(row)}{row.telephone ? <> · <a href={`tel:${row.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(row.telephone)}</a></> : ''}</>}
         initials={`${row.prenom?.[0] ?? ''}${row.nom?.[0] ?? ''}`.toUpperCase() || 'OB'}
         status={STATUT_BADGE[row.statut]?.label ?? row.statut}
         statusTone={row.statut === 'actif' ? 'emerald' : row.statut === 'expire' ? 'amber' : row.statut === 'resilie' ? 'red' : 'slate'}
@@ -1427,6 +1429,7 @@ function OccupantBailDrawer({
   onResiliate,
   onArchive,
   onRenew,
+  onNavigate,
 }: {
   row: OccupantBailRow | null;
   details: OccupantBailDetails | null;
@@ -1443,132 +1446,105 @@ function OccupantBailDrawer({
   onResiliate: (row: OccupantBailRow) => void;
   onArchive: (row: OccupantBailRow) => void;
   onRenew: (row: OccupantBailRow) => void;
+  onNavigate: (path: string) => void;
 }) {
   if (!row) return null;
 
   const activeStatus = row.statut === 'actif';
   const canArchive = row.statut === 'resilie' || row.statut === 'expire';
+  const reliquatContrat = details?.payments.reduce((sum, payment) => sum + Math.max(0, Number(payment.reliquat ?? 0)), 0) ?? 0;
 
   return (
-    <aside className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.16)] xl:sticky xl:top-4 xl:inset-auto xl:z-auto xl:h-[calc(100vh-2rem)] xl:w-full xl:rounded-3xl xl:border xl:border-emerald-950/10">
-      <div className="flex h-full flex-col overflow-y-auto bg-[linear-gradient(180deg,#fff4d9,#fffdf8_11rem)]">
-        <div className="border-b border-emerald-950/10 p-4">
-          <div className="mb-3 flex items-start justify-between gap-3">
-        <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#9a5b17]">
-              Fiche location
-            </p>
+    <PremiumDrawerShell
+      open={Boolean(row)}
+      onClose={onClose}
+      size="compact"
+      desktopMode="floating"
+      desktopAt="lg"
+      density="compact"
+      eyebrow="FICHE LOCATION"
+      avatar={
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-emerald-50 text-[0.8rem] font-bold text-emerald-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] ring-1 ring-emerald-950/10">
+          {initialsFromName(row.prenom, row.nom)}
+        </div>
+      }
+      title={fullName(row)}
+      description={
+        <div className="mt-1 flex flex-col gap-1.5 text-[0.72rem]">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatutBadge statut={row.statut} />
+            {row.telephone && (
+              <span className="flex items-center gap-1 text-slate-500 font-medium">
+                <Phone className="h-3 w-3 text-slate-400" />
+                <a href={`tel:${row.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(row.telephone)}</a>
+              </span>
+            )}
+            {row.email && (
+              <span className="flex min-w-0 items-center gap-1 text-slate-500 font-medium">
+                <Mail className="shrink-0 h-3 w-3 text-slate-400" />
+                <a href={`mailto:${row.email}`} className="truncate hover:text-brand-700 hover:underline">{row.email}</a>
+              </span>
+            )}
+          </div>
+          <div className="pt-1 text-[0.68rem] text-slate-500 font-medium">
+            {row.immeuble_nom ?? 'Bien non renseigné'} · {row.unite_nom}
+            {row.proprietaire ? ` · ${ownerName(row)}` : ''}
+            {row.contrat_ref ? ` · Réf. ${row.contrat_ref}` : ''}
+          </div>
+        </div>
+      }
+      bodyClassName="space-y-2.5 pb-20"
+    >
+      {/* 1. Action principale */}
+      <div className="flex items-center justify-start">
+        <button
+          type="button"
+          onClick={() => onGeneratePdf(row)}
+          disabled={pdfGenerating}
+          className="inline-flex h-7 px-3.5 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-emerald-700/90 text-[0.72rem] font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Download className="h-3.5 w-3.5" />
+          {pdfGenerating ? 'Génération...' : 'Contrat PDF'}
+        </button>
+      </div>
+
+      {/* 2. KPI essentiels au niveau supérieur (Règle des 4 KPI) */}
+      <div className="grid grid-cols-2 gap-1.5">
+        <CompactMetric label="Loyer" value={<MoneyText value={row.loyer_mensuel} compact />} tone="slate" />
+        <CompactMetric label="Reliquats" value={<MoneyText value={reliquatContrat} compact />} tone={reliquatContrat > 0 ? 'red' : 'emerald'} />
+        <CompactMetric label="Statut" value={STATUT_BADGE[row.statut]?.label ?? row.statut} tone={row.statut === 'actif' ? 'emerald' : 'slate'} />
+        <CompactMetric label="Fin de bail" value={row.date_fin ? formatDate(row.date_fin) : 'Ouvert'} tone="slate" />
+      </div>
+
+      {/* 3. Onglets de navigation */}
+      <div className="pt-1">
+        <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-hide no-scrollbar rounded-xl bg-slate-50/80 border border-emerald-950/5 p-1">
+          {DRAWER_TABS.map((tab) => (
             <button
+              key={tab.id}
               type="button"
-              onClick={onClose}
-              className="rounded-xl p-2 text-slate-400 transition hover:bg-white hover:text-slate-900 hover:shadow-sm"
-              aria-label="Fermer la fiche"
+              onClick={(e) => {
+                onTabChange(tab.id);
+                e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+              }}
+              className={`whitespace-nowrap rounded-lg px-2 py-1 text-[0.68rem] font-bold transition ${activeTab === tab.id ? 'bg-white text-emerald-900 shadow-sm ring-1 ring-emerald-950/5' : 'text-slate-500 hover:text-emerald-900 hover:bg-slate-100'}`}
             >
-              <X className="h-5 w-5" />
+              {tab.label}
             </button>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-900 text-xl font-black text-white shadow-lg shadow-emerald-900/15 ring-1 ring-emerald-950/10">
-              {`${row.prenom?.[0] ?? ''}${row.nom?.[0] ?? ''}`.toUpperCase() || 'OB'}
-            </div>
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <h2 className="min-w-0 flex-1 truncate text-lg font-black text-brand-950 sm:text-xl">{fullName(row)}</h2>
-                <StatutBadge statut={row.statut} />
-              </div>
-              <p className="flex items-center gap-2 text-sm font-medium text-slate-600">
-                <Phone className="h-4 w-4 text-slate-400" />
-                {row.telephone ? <a href={`tel:${row.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(row.telephone)}</a> : 'Téléphone non renseigné'}
-              </p>
-              <p className="flex items-center gap-2 truncate text-sm font-medium text-slate-600">
-                <Building2 className="h-4 w-4 text-slate-400" />
-                {row.immeuble_nom ?? 'Bien non renseigné'} · {row.unite_nom}
-              </p>
-              <p className="flex items-center gap-2 text-sm font-mono text-slate-500">
-                <FileText className="h-4 w-4 text-slate-400" />
-                {row.contrat_ref}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-8 space-y-6">
-            <div>
-              <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Documents principaux</p>
-              <div className="flex flex-col gap-2">
-                <button type="button" onClick={() => onGeneratePdf(row)} disabled={pdfGenerating} className="flex items-center justify-between gap-3 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] p-3 text-left text-sm font-black text-white shadow-[0_10px_24px_rgba(4,24,18,0.18)] transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:translate-y-0 disabled:opacity-60">
-                  <span className="flex items-center gap-3">
-                    <Download className="h-4 w-4" />
-                    <span className="truncate">{pdfGenerating ? 'Génération en cours...' : 'Contrat PDF'}</span>
-                  </span>
-                  <span className="truncate text-[0.68rem] font-semibold text-emerald-50/70">{row.contrat_ref}</span>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-slate-400">Gestion</p>
-              <div className="flex flex-col gap-2">
-                <button type="button" onClick={() => onEditBail(row)} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                  <Pencil className="h-4 w-4 text-slate-500" />
-                  Modifier la location
-                </button>
-                <button type="button" onClick={() => onEditOccupant(row)} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left text-sm font-semibold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-brand-900">
-                  <UserPlus className="h-4 w-4 text-slate-500" />
-                  Fiche locataire
-                </button>
-                {canRenew(row) && (
-                  <button type="button" onClick={() => onRenew(row)} className="flex items-center gap-3 rounded-xl border border-amber-100 bg-amber-50/80 p-3 text-left text-sm font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100">
-                    <RefreshCw className="h-4 w-4 text-slate-500" />
-                    Renouveler la location
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <p className="mb-3 text-[0.68rem] font-bold uppercase tracking-[0.12em] text-red-400">Danger</p>
-              <div className="flex flex-col gap-2">
-                {activeStatus && (
-                  <button type="button" onClick={() => onResiliate(row)} className="flex items-center gap-3 rounded-xl border border-red-100 bg-red-50 p-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-100">
-                    <Ban className="h-4 w-4" />
-                    Résilier la location
-                  </button>
-                )}
-                {canArchive && (
-                  <button type="button" onClick={() => onArchive(row)} className="flex items-center gap-3 rounded-xl border border-red-100 bg-red-50 p-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-100">
-                    <Archive className="h-4 w-4" />
-                    Archiver
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
-
-        <div className="border-b border-emerald-950/10 bg-[#fffdf8]/85 px-3 py-2">
-          <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-none rounded-xl bg-slate-50/80 p-1.5">
-            {DRAWER_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={(e) => {
-                  onTabChange(tab.id);
-                  e.currentTarget.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-                }}
-                className={`whitespace-nowrap rounded-lg px-4 py-2 text-xs sm:text-sm font-semibold transition ${
-                  activeTab === tab.id
-                    ? 'bg-emerald-900 text-white shadow-sm'
-                    : 'text-slate-500 hover:bg-white hover:text-emerald-900'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-3.5 p-3.5 sm:p-4">
-          {activeTab === 'resume' && <DrawerResume row={row} details={details} isIndividualOwner={isIndividualOwner} />}
+        <div className="mt-2.5">
+          {activeTab === 'resume' && (
+            <DrawerResume
+              row={row}
+              details={details}
+              isIndividualOwner={isIndividualOwner}
+              onEditOccupant={() => onEditOccupant(row)}
+              onEditBail={() => onEditBail(row)}
+              onRenew={() => onRenew(row)}
+              onNavigate={onNavigate}
+            />
+          )}
           {activeTab === 'paiements' && <DrawerPayments details={details} loading={detailsLoading} error={detailsError} />}
           {activeTab === 'documents' && (
             <DrawerDocuments
@@ -1583,54 +1559,173 @@ function OccupantBailDrawer({
           {activeTab === 'historique' && <DrawerHistory details={details} loading={detailsLoading} error={detailsError} />}
         </div>
       </div>
-    </aside>
+
+      {/* 4. Danger (tout en bas) */}
+      <div className="pt-4 pb-2">
+        <p className="mb-1.5 text-[0.6rem] font-black uppercase tracking-wider text-red-800 opacity-60">Résiliation & Archivage</p>
+        <div className="flex flex-col gap-1.5">
+          {activeStatus && (
+            <button
+              type="button"
+              onClick={() => onResiliate(row)}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-red-50/50 px-3 py-2 text-[0.65rem] font-bold text-red-700 transition hover:bg-red-50 hover:border-red-300"
+            >
+              <Ban className="h-3.5 w-3.5" />
+              Résilier la location
+            </button>
+          )}
+          {canArchive && (
+            <button
+              type="button"
+              onClick={() => onArchive(row)}
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-red-50/50 px-3 py-2 text-[0.65rem] font-bold text-red-700 transition hover:bg-red-50 hover:border-red-300"
+            >
+              <Archive className="h-3.5 w-3.5" />
+              Archiver
+            </button>
+          )}
+        </div>
+      </div>
+    </PremiumDrawerShell>
   );
 }
 
-function DrawerResume({ row, details, isIndividualOwner }: { row: OccupantBailRow; details: OccupantBailDetails | null; isIndividualOwner: boolean }) {
-  const reliquatContrat = details?.payments.reduce((sum, payment) => sum + Math.max(0, Number(payment.reliquat ?? 0)), 0) ?? 0;
+function DrawerResume({
+  row,
+  details,
+  isIndividualOwner,
+  onEditOccupant,
+  onEditBail,
+  onRenew,
+  onNavigate,
+}: {
+  row: OccupantBailRow;
+  details: OccupantBailDetails | null;
+  isIndividualOwner: boolean;
+  onEditOccupant: () => void;
+  onEditBail: () => void;
+  onRenew: () => void;
+  onNavigate: (path: string) => void;
+}) {
   const latestPayment = details?.payments[0] ?? null;
   const nextExpectedLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date());
+
   return (
-    <>
-      <div className="grid grid-cols-2 gap-2">
-        <MiniMetric label="Loyer mensuel" value={<MoneyText value={row.loyer_mensuel} />} />
-        <MiniMetric label="Statut" value={STATUT_BADGE[row.statut]?.label ?? row.statut} />
-        <MiniMetric label="Début" value={formatDate(row.date_debut)} />
-        <MiniMetric label="Fin" value={row.date_fin ? formatDate(row.date_fin) : 'Ouvert'} />
-        <MiniMetric label="Prochain paiement" value={nextExpectedLabel} tone="amber" />
-        <MiniMetric label="Reliquat location" value={<MoneyText value={reliquatContrat} />} tone={reliquatContrat > 0 ? 'red' : 'emerald'} />
+    <div className="space-y-2">
+      {/* Barre d'actions compacte */}
+      <div className="flex flex-wrap items-center gap-1.5 pb-0.5">
+        <button
+          type="button"
+          onClick={onEditBail}
+          className="inline-flex h-7 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[0.68rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+        >
+          <Pencil className="h-3 w-3 text-slate-400" />
+          Modifier bail
+        </button>
+        <button
+          type="button"
+          onClick={onEditOccupant}
+          className="inline-flex h-7 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[0.68rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
+        >
+          <UserPlus className="h-3 w-3 text-slate-400" />
+          Fiche locataire
+        </button>
+        {canRenew(row) && (
+          <button
+            type="button"
+            onClick={onRenew}
+            className="inline-flex h-7 items-center justify-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2.5 text-[0.68rem] font-bold text-amber-800 shadow-sm transition hover:bg-amber-100"
+          >
+            <RefreshCw className="h-3 w-3 text-amber-600" />
+            Renouveler le bail
+          </button>
+        )}
       </div>
 
-      <InfoBlock title="Synthèse opérationnelle">
-        <InfoLine icon={Users} label="Propriétaire" value={ownerName(row)} />
-        {!isIndividualOwner && <InfoLine icon={Wallet} label="Commission agence" value={row.commission !== null ? `${row.commission}%` : 'Non renseignée'} />}
-        <InfoLine icon={Clock3} label="Dernier paiement" value={latestPayment ? <>{formatDate(latestPayment.date_paiement)} · <MoneyText value={latestPayment.montant_total} /></> : 'Aucun paiement récent'} />
-      </InfoBlock>
+      <CompactSection title="Objet de la location" icon={Building2}>
+        <div className="flex flex-col divide-y divide-slate-100">
+          <div className="flex items-center justify-between py-1">
+            <span className="text-[0.68rem] font-semibold text-slate-500">Bien immobilier</span>
+            <button
+              type="button"
+              onClick={() => onNavigate('/patrimoine')}
+              className="flex items-center gap-1 text-[0.7rem] font-bold text-brand-700 hover:text-brand-900 transition"
+            >
+              <span>{row.immeuble_nom || 'Bien non renseigné'}</span>
+              <span className="text-[0.65rem]">&rarr;</span>
+            </button>
+          </div>
+          <div className="flex items-center justify-between py-1">
+            <span className="text-[0.68rem] font-semibold text-slate-500">Unité / Lot</span>
+            <button
+              type="button"
+              onClick={() => onNavigate('/patrimoine')}
+              className="flex items-center gap-1 text-[0.7rem] font-bold text-brand-700 hover:text-brand-900 transition"
+            >
+              <span>{row.unite_nom || 'Unité non renseignée'}</span>
+              <span className="text-[0.65rem]">&rarr;</span>
+            </button>
+          </div>
+          <CompactLabelValue label="Adresse" value={row.immeuble_adresse || 'Non renseignée'} />
+          {!isIndividualOwner && (
+            <div className="flex items-center justify-between py-1">
+              <span className="text-[0.68rem] font-semibold text-slate-500">Propriétaire</span>
+              <button
+                type="button"
+                onClick={() => onNavigate('/bailleurs')}
+                className="flex items-center gap-1 text-[0.7rem] font-bold text-brand-700 hover:text-brand-900 transition"
+              >
+                <span>{ownerName(row)}</span>
+                <span className="text-[0.65rem]">&rarr;</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </CompactSection>
 
-      <InfoBlock title="Locataire">
-        <InfoLine icon={Users} label="Nom" value={fullName(row)} />
-        <InfoLine icon={Phone} label="Téléphone" value={row.telephone ? <a href={`tel:${row.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(row.telephone)}</a> : 'Non renseigné'} />
-        <InfoLine icon={Mail} label="Email" value={row.email ? <a href={`mailto:${row.email}`} className="hover:text-brand-700 hover:underline">{row.email}</a> : 'Non renseigné'} />
-        <InfoLine icon={MapPin} label="Adresse" value={row.adresse_personnelle || 'Non renseignée'} />
-      </InfoBlock>
+      <CompactSection title="Locataire" icon={Users}>
+        <div className="flex flex-col divide-y divide-slate-100">
+          <CompactLabelValue label="Nom" value={fullName(row)} />
+          <CompactLabelValue
+            label="Téléphone"
+            value={
+              row.telephone ? (
+                <a href={`tel:${row.telephone}`} className="hover:text-brand-700 hover:underline">
+                  {formatSenegalPhone(row.telephone)}
+                </a>
+              ) : (
+                'Non renseigné'
+              )
+            }
+          />
+          <CompactLabelValue
+            label="Email"
+            value={
+              row.email ? (
+                <a href={`mailto:${row.email}`} className="hover:text-brand-700 hover:underline">
+                  {row.email}
+                </a>
+              ) : (
+                'Non renseigné'
+              )
+            }
+          />
+          <CompactLabelValue label="Adresse" value={row.adresse_personnelle || 'Non renseignée'} />
+        </div>
+      </CompactSection>
 
-      <InfoBlock title="Bail">
-        <InfoLine icon={FileText} label="Référence" value={row.contrat_ref} />
-        <InfoLine icon={ClipboardList} label="Destination" value={row.destination || 'Non renseignée'} />
-        <InfoLine icon={CalendarDays} label="Période" value={`${formatDate(row.date_debut)} → ${row.date_fin ? formatDate(row.date_fin) : 'ouvert'}`} />
-        <InfoLine icon={Wallet} label="Loyer" value={<MoneyText value={row.loyer_mensuel} />} />
-        {row.caution !== null && <InfoLine icon={Wallet} label="Caution" value={<MoneyText value={row.caution} />} />}
-        {!isIndividualOwner && row.commission !== null && <InfoLine icon={Wallet} label="Commission agence" value={`${row.commission}%`} />}
-      </InfoBlock>
-
-      <InfoBlock title="Occupation">
-        <InfoLine icon={Building2} label="Bien" value={row.immeuble_nom || 'Bien non renseigné'} />
-        <InfoLine icon={Home} label="Unité" value={row.unite_nom || 'Unité non renseignée'} />
-        <InfoLine icon={MapPin} label="Adresse du bien" value={row.immeuble_adresse || 'Adresse non renseignée'} />
-        <InfoLine icon={Users} label="Propriétaire" value={ownerName(row)} />
-      </InfoBlock>
-    </>
+      <CompactSection title="Conditions du bail" icon={FileText}>
+        <div className="flex flex-col divide-y divide-slate-100">
+          <CompactLabelValue label="Référence" value={row.contrat_ref} />
+          <CompactLabelValue label="Destination" value={row.destination || 'Non renseignée'} />
+          <CompactLabelValue label="Période" value={`${formatDate(row.date_debut)} → ${row.date_fin ? formatDate(row.date_fin) : 'ouvert'}`} />
+          {row.caution !== null && <CompactLabelValue label="Caution" value={<MoneyText value={row.caution} />} />}
+          <CompactLabelValue label="Prochain terme" value={nextExpectedLabel} />
+          {!isIndividualOwner && row.commission !== null && <CompactLabelValue label="Commission" value={`${row.commission}%`} />}
+          <CompactLabelValue label="Dernier paiement" value={latestPayment ? <>{formatDate(latestPayment.date_paiement)} · <MoneyText value={latestPayment.montant_total} /></> : 'Aucun'} />
+        </div>
+      </CompactSection>
+    </div>
   );
 }
 
@@ -1662,35 +1757,36 @@ function DrawerPayments({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1">
       {payments.map((payment) => (
         <button
           key={payment.id}
           type="button"
           onClick={() => { window.location.hash = '#/paiements'; }}
-          className="group w-full rounded-2xl border border-emerald-950/10 bg-white p-3 text-left shadow-[0_10px_26px_rgba(15,23,42,0.035)] transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500"
+          className="group flex w-full items-center justify-between gap-2 rounded-lg border border-emerald-950/10 bg-white px-2 py-1.5 text-left shadow-sm transition hover:bg-slate-50 hover:border-emerald-200"
           aria-label={`Ouvrir le paiement de ${payment.mois_concerne}`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="font-bold text-slate-900 group-hover:text-emerald-900"><MoneyText value={payment.montant_total} /></p>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">
-                {payment.mois_concerne} · {formatDate(payment.date_paiement)}
-              </p>
-              {payment.reference && <p className="mt-1 font-mono text-[0.7rem] text-slate-400">{payment.reference}</p>}
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 font-bold text-[0.68rem] ring-1 ring-emerald-100">
+              <Wallet className="h-3 w-3" />
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
-                {payment.statut}
-              </span>
-              <ChevronRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-[0.72rem] text-slate-900"><MoneyText value={payment.montant_total} /></span>
+                <span className="rounded px-1 py-0.5 text-[0.56rem] font-bold uppercase bg-emerald-50 text-emerald-700">{payment.statut}</span>
+              </div>
+              <p className="truncate text-[0.62rem] font-medium text-slate-500">
+                {payment.mois_concerne} · {formatDate(payment.date_paiement)}
+                {payment.reference ? ` · ${payment.reference}` : ''}
+              </p>
             </div>
           </div>
-          {payment.reliquat !== null && payment.reliquat > 0 && (
-            <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
-              Reliquat restant : <MoneyText value={payment.reliquat} />
-            </p>
-          )}
+          <div className="flex flex-col items-end shrink-0 text-right">
+            {payment.reliquat !== null && payment.reliquat > 0 && (
+              <span className="text-[0.6rem] font-bold text-red-600">Reliquat: <MoneyText value={payment.reliquat} compact /></span>
+            )}
+            <ChevronRight className="h-3 w-3 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+          </div>
         </button>
       ))}
     </div>
@@ -1715,27 +1811,30 @@ function DrawerDocuments({
   const documents = details?.documents ?? [];
 
   return (
-    <div className="space-y-3">
-      <div className="rounded-2xl border border-emerald-950/10 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
-            <FileCheck2 className="h-5 w-5" />
+    <div className="space-y-1.5">
+      <div className="rounded-lg border border-emerald-950/10 bg-white px-2 py-1.5 shadow-sm">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100">
+              <FileCheck2 className="h-3 w-3" />
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold text-[0.72rem] text-slate-900">Contrat de location</p>
+              <p className="text-[0.62rem] font-medium text-slate-500 truncate">{row.contrat_ref} · Génération directe</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="font-bold text-slate-900">Contrat de location</p>
-            <p className="text-xs font-medium text-slate-500">{row.contrat_ref} · Génération directe depuis Locations</p>
-          </div>
+          <button
+            type="button"
+            onClick={() => onGeneratePdf(row)}
+            disabled={pdfGenerating}
+            className="inline-flex h-6 px-2 items-center justify-center gap-1 rounded-md border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] text-[0.64rem] font-bold text-white shadow transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:opacity-60"
+          >
+            <Download className="h-3 w-3" />
+            {pdfGenerating ? 'Génération...' : 'PDF'}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => onGeneratePdf(row)}
-          disabled={pdfGenerating}
-          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] via-[#06281F] to-[#041812] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-emerald-950/18 transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F]"
-        >
-          <Download className="h-4 w-4" />
-          {pdfGenerating ? 'Génération...' : 'Générer le contrat PDF'}
-        </button>
       </div>
+
       {loading && <DrawerEmpty icon={FileText} title="Documents liés" description="Chargement des documents rattachés à ce bail..." />}
       {error && <DrawerEmpty icon={FileText} title="Documents indisponibles" description={error} />}
       {!loading && !error && documents.length === 0 && (
@@ -1750,26 +1849,21 @@ function DrawerDocuments({
           key={`${document.source}-${document.id}`}
           type="button"
           onClick={() => { window.location.hash = '#/documents'; }}
-          className="group w-full rounded-2xl border border-emerald-950/10 bg-white p-3 text-left shadow-[0_10px_26px_rgba(15,23,42,0.035)] transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/50 hover:shadow-[0_14px_32px_rgba(15,23,42,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500"
+          className="group flex w-full items-center justify-between gap-2 rounded-lg border border-emerald-950/10 bg-white px-2 py-1.5 text-left shadow-sm transition hover:bg-slate-50 hover:border-emerald-200"
           aria-label={`Ouvrir le document ${document.title}`}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 min-w-0 flex-1">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-700 ring-1 ring-slate-100 transition group-hover:bg-white group-hover:text-emerald-700 group-hover:ring-emerald-200">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-bold text-slate-900 transition group-hover:text-emerald-900">{document.title}</p>
-                <p className="mt-0.5 text-xs font-medium text-slate-500">{document.subtitle}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-[0.68rem] font-bold uppercase tracking-[0.08em] text-slate-400">
-                  <span>{document.source === 'registry' ? 'Registre' : document.source === 'profile' ? 'Profil' : 'GED'}</span>
-                  {document.status && <span>· {document.status}</span>}
-                  {document.created_at && <span>· {formatDate(document.created_at)}</span>}
-                </div>
-              </div>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-50 text-slate-700 ring-1 ring-slate-100 transition group-hover:bg-white group-hover:text-emerald-700 group-hover:ring-emerald-200">
+              <FileText className="h-3 w-3" />
             </div>
-            <ChevronRight className="mt-2.5 h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
+            <div className="min-w-0">
+              <p className="font-bold text-[0.72rem] text-slate-900 transition group-hover:text-emerald-900">{document.title}</p>
+              <p className="truncate text-[0.62rem] font-medium text-slate-500">
+                {document.subtitle} · <span className="uppercase text-[0.56rem] font-bold text-slate-400">{document.source === 'registry' ? 'Registre' : document.source === 'profile' ? 'Profil' : 'GED'}</span>
+              </p>
+            </div>
           </div>
+          <ChevronRight className="h-3 w-3 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-600" />
         </button>
       ))}
     </div>
@@ -1804,19 +1898,21 @@ function DrawerHistory({
   }
 
   return (
-    <div className="rounded-2xl border border-emerald-950/10 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
+    <div className="rounded-xl border border-emerald-950/10 bg-white p-2.5 shadow-sm">
       <div className="space-y-0">
         {events.map((event, index) => (
-          <div key={event.id} className="relative flex gap-3 pb-5 last:pb-0">
-            {index < events.length - 1 && <div className="absolute left-[0.82rem] top-7 h-[calc(100%-1.3rem)] w-px bg-emerald-100" />}
-            <div className="relative z-10 mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-4 ring-white">
-              <Activity className="h-3.5 w-3.5" />
+          <div key={event.id} className="relative flex gap-2 pb-2.5 last:pb-0">
+            {index < events.length - 1 && <div className="absolute left-[0.56rem] top-5 h-[calc(100%-0.75rem)] w-px bg-emerald-100" />}
+            <div className="relative z-10 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-2 ring-white">
+              <Activity className="h-2.5 w-2.5" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="font-bold text-slate-900">{eventLabel(event.event_type)}</p>
-              <p className="mt-0.5 text-xs font-semibold text-slate-500">{formatDate(event.created_at)}</p>
+              <div className="flex items-center justify-between gap-1.5">
+                <p className="font-bold text-[0.72rem] text-slate-900">{eventLabel(event.event_type)}</p>
+                <span className="text-[0.6rem] font-semibold text-slate-400">{formatDate(event.created_at)}</span>
+              </div>
               {eventDescription(event.payload) && (
-                <p className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium leading-5 text-slate-600">
+                <p className="mt-0.5 rounded-md bg-slate-50 px-2 py-1 text-[0.65rem] font-medium leading-3.5 text-slate-600">
                   {eventDescription(event.payload)}
                 </p>
               )}
@@ -2074,6 +2170,46 @@ function ModalActions({
   );
 }
 
+function CompactMetric({ label, value, tone = 'slate' }: { label: string; value: ReactNode; tone?: 'emerald' | 'amber' | 'red' | 'blue' | 'slate' }) {
+  const tones = {
+    emerald: 'text-emerald-700 bg-emerald-50/40 border-emerald-100',
+    amber: 'text-amber-700 bg-amber-50/40 border-amber-100',
+    red: 'text-red-700 bg-red-50/40 border-red-100',
+    blue: 'text-blue-700 bg-blue-50/40 border-blue-100',
+    slate: 'text-slate-700 bg-slate-50/40 border-slate-100',
+  };
+  return (
+    <div className={`rounded-lg border p-1.5 ${tones[tone]}`}>
+      <p className="text-[0.54rem] font-bold uppercase tracking-wider opacity-80">{label}</p>
+      <p className="mt-0.5 text-[0.76rem] font-extrabold">{value}</p>
+    </div>
+  );
+}
+
+function CompactSection({ title, icon: Icon, children }: { title: string; icon?: LucideIcon; children: ReactNode }) {
+  return (
+    <section className="rounded-xl border border-emerald-950/10 bg-white/80 p-2 shadow-sm">
+      <h3 className="mb-1 flex items-center gap-1.5 text-[0.58rem] font-black uppercase tracking-wider text-slate-500">
+        {Icon && <Icon className="h-3 w-3 text-slate-400" />}
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function CompactLabelValue({ label, value }: { label: string; value: ReactNode | null | undefined }) {
+  if (!value || value === '-') return null;
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5 py-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:py-0.5">
+      <span className="shrink-0 text-[0.68rem] font-medium text-slate-500 sm:text-[0.64rem]">{label}</span>
+      <span className="min-w-0 max-w-full break-words text-left text-[0.72rem] font-semibold text-slate-800 sm:max-w-[65%] sm:truncate sm:text-right sm:text-[0.66rem]">
+        {value}
+      </span>
+    </div>
+  );
+}
+
 function MiniMetric({ label, value, tone = 'slate' }: { label: string; value: ReactNode; tone?: 'emerald' | 'amber' | 'red' | 'slate' }) {
   const toneClass = {
     emerald: 'border-emerald-200 bg-emerald-50 text-emerald-900',
@@ -2089,28 +2225,6 @@ function MiniMetric({ label, value, tone = 'slate' }: { label: string; value: Re
     </div>
   );
 }
-
-function InfoBlock({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-emerald-950/10 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)]">
-      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-slate-400">{title}</p>
-      <div className="mt-3 space-y-2">{children}</div>
-    </div>
-  );
-}
-
-function InfoLine({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: ReactNode }) {
-  return (
-    <div className="flex items-start gap-2 text-sm">
-      <Icon className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-700/55" />
-      <div className="min-w-0">
-        <p className="text-[0.7rem] font-medium uppercase tracking-[0.06em] text-slate-400">{label}</p>
-        <p className="break-words font-medium text-slate-700">{value}</p>
-      </div>
-    </div>
-  );
-}
-
 function DrawerEmpty({
   icon: Icon,
   title,

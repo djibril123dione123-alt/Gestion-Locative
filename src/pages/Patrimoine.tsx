@@ -266,8 +266,18 @@ function ownerName(owner?: BailleurRow | PropertyRow['bailleurs'] | null) {
   return formatPersonName(owner, 'Bailleur');
 }
 
+function cleanPropertyDescription(desc?: string | null) {
+  return desc ? desc.replace(/\[Type:\s*[^\]]+\]\s*\n?/i, '').trim() : '';
+}
+
 function inferPropertyType(property: PropertyRow) {
-  const source = normalizeText(`${property.nom} ${property.description ?? ''}`);
+  const desc = property.description ?? '';
+  const match = desc.match(/\[Type:\s*([^\]]+)\]/i);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  const source = normalizeText(`${property.nom} ${desc}`);
+  if (source.includes('immeuble') || source.includes('residence') || source.includes('building') || source.includes('keur') || source.includes('cite') || source.includes('batiment') || source.includes('tour')) return 'Immeuble';
   if (source.includes('villa')) return 'Villa';
   if (source.includes('maison')) return 'Maison';
   if (source.includes('appartement')) return 'Appartement';
@@ -276,7 +286,8 @@ function inferPropertyType(property: PropertyRow) {
   if (source.includes('terrain')) return 'Terrain';
   if (source.includes('depot')) return 'Depot';
   if (source.includes('local')) return 'Local commercial';
-  return 'Bien locatif';
+  if (source.includes('mixte')) return 'Mixte';
+  return 'Immeuble';
 }
 
 function inferUnitType(unit: UnitRow) {
@@ -702,7 +713,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   const detailPanelOpen = drawer !== null;
   const ownerFilterOptions = useMemo(
     () => [
-      { value: 'all', label: 'Tous les bailleurs', subtitle: 'Portefeuille complet' },
+      { value: 'all', label: 'Tous Bailleurs', subtitle: 'Portefeuille complet' },
       ...data.bailleurs.map((owner) => ({
         value: owner.id,
         label: ownerName(owner),
@@ -727,7 +738,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           quartier: property.quartier ?? '',
           ville: property.ville ?? '',
           bailleur_id: property.bailleur_id ?? '',
-          description: property.description ?? '',
+          description: cleanPropertyDescription(property.description),
         });
       } else {
         setEditingProperty(null);
@@ -856,13 +867,17 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
         return;
       }
 
+      const rawDesc = propertyForm.description.trim();
+      const typeTag = propertyForm.type_bien && propertyForm.type_bien !== 'Autre' ? `[Type: ${propertyForm.type_bien}]` : '';
+      const descWithMetadata = typeTag ? `${typeTag}${rawDesc ? `\n${rawDesc}` : ''}` : (rawDesc || null);
+
       const payload = {
         nom,
         adresse,
         ville,
         quartier: propertyForm.quartier.trim() || null,
         bailleur_id: bailleurId,
-        description: propertyForm.description.trim() || null,
+        description: descWithMetadata,
       };
 
       if (editingProperty) {
@@ -1089,7 +1104,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                       value={ownerFilter}
                       options={ownerFilterOptions}
                       onChange={setOwnerFilter}
-                      placeholder="Tous les bailleurs"
+                      placeholder="Tous Bailleurs"
                       searchPlaceholder="Rechercher un bailleur..."
                       className={`${detailPanelOpen ? 'hidden xl:block xl:w-28' : 'hidden sm:block sm:w-32 lg:w-36'}`}
                       density="dense"
@@ -1134,7 +1149,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     value={ownerFilter}
                     options={ownerFilterOptions}
                     onChange={setOwnerFilter}
-                    placeholder="Tous les bailleurs"
+                    placeholder="Tous Bailleurs"
                     searchPlaceholder="Rechercher un bailleur..."
                   />
                 )}

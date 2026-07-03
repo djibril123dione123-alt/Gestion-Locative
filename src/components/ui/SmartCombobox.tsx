@@ -373,7 +373,7 @@ export function SmartCombobox({
           aria-expanded={open}
           aria-controls="smart-combobox-listbox"
           aria-autocomplete="list"
-          className={`${isDense ? '!h-7 !min-h-7 py-0 rounded-[0.45rem] pl-6 pr-6 text-[0.68rem] leading-4 shadow-sm focus:ring-1' : isCompact ? 'h-8 rounded-[0.55rem] pl-7 pr-7 text-[0.72rem] leading-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_4px_10px_rgba(15,23,42,0.025)] focus:ring-2' : 'h-12 rounded-2xl pl-10 pr-11 text-sm leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] focus:ring-4'} w-full min-w-0 border border-emerald-950/10 bg-[#fffdf8]/95 font-semibold text-slate-700 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200`}
+          className={`${isDense ? '!h-7 !min-h-7 py-0 rounded-[0.45rem] pl-6 pr-6 text-[0.68rem] leading-4 shadow-sm focus:ring-1' : isCompact ? '!h-8 !min-h-8 py-0 rounded-[0.55rem] pl-7 pr-7 text-[0.72rem] leading-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_4px_10px_rgba(15,23,42,0.025)] focus:ring-2' : 'h-12 rounded-2xl pl-10 pr-11 text-sm leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] focus:ring-4'} w-full min-w-0 border border-emerald-950/10 bg-[#fffdf8]/95 font-semibold text-slate-700 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200`}
         />
         <button
           type="button"
@@ -384,7 +384,7 @@ export function SmartCombobox({
             if (!open) inputRef.current?.focus();
           }}
           aria-label={open ? 'Fermer la liste' : 'Ouvrir la liste'}
-          className={`absolute right-0 top-0 flex items-center justify-center text-slate-400 transition hover:bg-[#fff6df] hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 ${isDense ? 'h-7 w-6 rounded-r-[0.45rem]' : isCompact ? 'h-8 w-7 rounded-r-[0.55rem]' : 'h-12 w-11 rounded-r-2xl'}`}
+          className={`absolute right-0 top-0 flex items-center justify-center text-slate-400 transition hover:bg-[#fff6df] hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 ${isDense ? 'h-7 w-6 rounded-r-[0.45rem]' : isCompact ? '!h-8 !min-h-8 w-7 rounded-r-[0.55rem]' : 'h-12 w-11 rounded-r-2xl'}`}
         >
           <ChevronDown className={`${isDense ? 'h-3 w-3' : isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4'} transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         </button>

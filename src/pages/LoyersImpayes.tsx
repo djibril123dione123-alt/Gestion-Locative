@@ -549,13 +549,13 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                     <SmartCombobox
                                         value={selectedBailleur}
                                         options={[
-                                            { value: '', label: 'Tous les bailleurs' },
+                                            { value: '', label: 'Tous Bailleurs' },
                                             ...bailleurs.map((b) => ({ value: b.label, label: b.label }))
                                         ]}
                                         onChange={setSelectedBailleur}
-                                        placeholder="Tous les bailleurs"
+                                        placeholder="Tous Bailleurs"
                                         searchPlaceholder="Rechercher un bailleur..."
-                                        className="w-56"
+                                        className="w-44"
                                     />
                                 )}
 
@@ -596,11 +596,11 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 <SmartCombobox
                                     value={selectedBailleur}
                                     options={[
-                                        { value: '', label: 'Tous les bailleurs' },
+                                        { value: '', label: 'Tous Bailleurs' },
                                         ...bailleurs.map((b) => ({ value: b.label, label: b.label }))
                                     ]}
                                     onChange={setSelectedBailleur}
-                                    placeholder="Tous les bailleurs"
+                                    placeholder="Tous Bailleurs"
                                     searchPlaceholder="Rechercher un bailleur..."
                                 />
                             )}

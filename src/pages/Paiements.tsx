@@ -261,7 +261,7 @@ export function Paiements({ }: PaiementsProps) {
 
   const bailleurOptionsFilter = useMemo(() => {
     return [
-      { value: 'all', label: 'Tous les bailleurs' },
+      { value: 'all', label: 'Tous Bailleurs' },
       ...bailleurOptions.map(b => ({ value: b.id, label: b.label })),
     ];
   }, [bailleurOptions]);
@@ -875,9 +875,9 @@ export function Paiements({ }: PaiementsProps) {
                       value={bailleurFilter}
                       options={bailleurOptionsFilter}
                       onChange={setBailleurFilter}
-                      placeholder="Tous les bailleurs"
+                      placeholder="Tous Bailleurs"
                       searchPlaceholder="Rechercher un bailleur..."
-                      className="w-56"
+                      className="w-44"
                     />
                   )}
 
@@ -917,7 +917,7 @@ export function Paiements({ }: PaiementsProps) {
                     value={bailleurFilter}
                     options={bailleurOptionsFilter}
                     onChange={setBailleurFilter}
-                    placeholder="Tous les bailleurs"
+                    placeholder="Tous Bailleurs"
                     searchPlaceholder="Rechercher un bailleur..."
                   />
                 )}

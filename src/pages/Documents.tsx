@@ -43,6 +43,8 @@ import {
 } from '../services/documentStorage';
 import { readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
+import { MetricCard } from '../components/ui/MetricCard';
 import { DocumentProofDrawer } from '../components/documents/DocumentProofDrawer';
 import { DocumentUploadWizard, type DocumentUploadValue } from '../components/documents/DocumentUploadWizard';
 import { supportsPublicVerification, getDocumentProofState } from '../components/documents/documentProofState';
@@ -90,51 +92,6 @@ const CATEGORY_ICONS: Record<UserDocumentCategory, typeof FileText> = {
   autre: FolderOpen,
 };
 
-function KpiTile({
-  icon: Icon,
-  label,
-  value,
-  helper,
-  tone,
-  isActive,
-  onClick
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: React.ReactNode;
-  helper: string;
-  tone: 'emerald' | 'amber' | 'red' | 'blue' | 'stone';
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  const tones = {
-    emerald: { gradient: 'from-white to-emerald-50/70', text: 'text-brand-800', icon: 'bg-emerald-50 text-brand-800 ring-emerald-100', activeRing: 'ring-emerald-700/25 border-emerald-700/30' },
-    blue: { gradient: 'from-white to-sky-50/75', text: 'text-sky-800', icon: 'bg-sky-50 text-sky-700 ring-sky-100', activeRing: 'ring-sky-700/25 border-sky-700/30' },
-    amber: { gradient: 'from-white to-amber-50/70', text: 'text-amber-800', icon: 'bg-amber-50 text-amber-800 ring-amber-100', activeRing: 'ring-amber-700/25 border-amber-700/30' },
-    red: { gradient: 'from-white to-rose-50/70', text: 'text-red-700', icon: 'bg-red-50 text-red-700 ring-red-100', activeRing: 'ring-red-700/25 border-red-700/30' },
-    stone: { gradient: 'from-white to-stone-50/70', text: 'text-slate-700', icon: 'bg-stone-50 text-slate-700 ring-stone-100', activeRing: 'ring-slate-700/25 border-slate-700/30' },
-  }[tone];
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      {...(isActive ? { 'aria-pressed': true } : {})}
-      className={`@container text-left group min-w-0 rounded-[1.05rem] border bg-gradient-to-br ${tones.gradient} p-2.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_13px_30px_rgba(15,23,42,0.075)] ${isActive ? `${tones.activeRing} shadow-inner` : 'border-emerald-950/10 hover:border-emerald-200'}`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className={`line-clamp-2 min-h-[2.5em] text-[0.68rem] font-bold uppercase tracking-[0.12em] ${tones.text}`}>{label}</p>
-          <p className="mt-1.5 whitespace-nowrap text-[1.02rem] font-extrabold tracking-tight text-slate-950 sm:text-[1.1rem]">{value}</p>
-          {helper && <p className="mt-0.5 hidden text-xs text-slate-500 sm:block">{helper}</p>}
-        </div>
-        <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl ring-1 transition-colors ${tones.icon} group-hover:scale-105`}>
-          <Icon className="h-3.5 w-3.5" />
-        </div>
-      </div>
-    </button>
-  );
-}
 
 export function Documents() {
   const { profile, user, accountProfile } = useAuth();
@@ -674,7 +631,7 @@ export function Documents() {
       />
 
       {/* ── KPI MÉTIER — actionnables ── */}
-      <div className="grid min-w-0 grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+      <PremiumKpiGrid density="compact">
             {[
               {
                 id: 'active' as const,
@@ -710,13 +667,14 @@ export function Documents() {
                 helper: 'Conservés hors vue active',
                 icon: Archive,
                 isActive: statusFilter === 'archived',
-                tone: 'stone' as const,
+                tone: 'slate' as const,
               },
             ].map((metric) => (
-              <KpiTile
+              <MetricCard
                 key={metric.id}
+                density="compact"
                 icon={metric.icon}
-                label={metric.label}
+                title={metric.label}
                 value={metric.value}
                 helper={metric.helper}
                 tone={metric.tone}
@@ -724,7 +682,7 @@ export function Documents() {
                 onClick={() => handleKpiClick(metric.id)}
               />
             ))}
-          </div>
+      </PremiumKpiGrid>
 
           {/* LIST SECTION */}
           <section className="min-w-0 max-w-full space-y-3 pb-24 sm:space-y-4 sm:pb-0">

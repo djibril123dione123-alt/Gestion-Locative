@@ -241,42 +241,47 @@ export function SmartCombobox({
           <div className={`border-b border-emerald-950/10 bg-[#fff6df]/75 font-bold uppercase tracking-[0.12em] text-slate-500 ${isDense ? 'px-2 py-1 text-[0.5rem]' : isCompact ? 'px-2.5 py-1.5 text-[0.56rem]' : 'px-3 py-2 text-[0.68rem]'}`}>
             {searchPlaceholder || 'Choisir dans la liste'}
           </div>
-          <div
-            id="smart-combobox-listbox"
-            ref={listboxRef}
-            className={`overflow-y-auto overscroll-contain touch-pan-y ${isDense ? 'p-0.5' : isCompact ? 'p-1' : 'p-1.5'}`}
-            style={{ maxHeight: Math.max(isCompact ? 128 : 160, menuPlacement.maxHeight - (isCompact ? 32 : 42)) }}
-            role="listbox"
-            aria-label={placeholder || 'Options'}
-          >
           {filteredOptions.length === 0 ? (
-            <div className={`${isCompact ? 'px-2 py-3 text-xs' : 'px-3 py-4 text-sm'} text-center font-medium text-slate-500`}>
-              <p>{emptyLabel}</p>
-              {emptyActionLabel && onEmptyAction && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpen(false);
-                    onEmptyAction();
-                  }}
-                  className="mt-3 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-800 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50"
-                >
-                  {emptyActionLabel}
-                </button>
-              )}
+            <div
+              className={`overflow-y-auto overscroll-contain touch-pan-y ${isDense ? 'p-0.5' : isCompact ? 'p-1' : 'p-1.5'}`}
+              style={{ maxHeight: Math.max(isCompact ? 128 : 160, menuPlacement.maxHeight - (isCompact ? 32 : 42)) }}
+            >
+              <div className={`${isCompact ? 'px-2 py-3 text-xs' : 'px-3 py-4 text-sm'} text-center font-medium text-slate-500`}>
+                <p>{emptyLabel}</p>
+                {emptyActionLabel && onEmptyAction && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOpen(false);
+                      onEmptyAction();
+                    }}
+                    className="mt-3 rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-800 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50"
+                  >
+                    {emptyActionLabel}
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
-            filteredOptions.map((option, index) => {
-              const isSelected = option.value === value;
-              const isActive = index === activeIndex;
-              const isDisabled = option.disabled;
+            <div
+              id="smart-combobox-listbox"
+              ref={listboxRef}
+              className={`overflow-y-auto overscroll-contain touch-pan-y ${isDense ? 'p-0.5' : isCompact ? 'p-1' : 'p-1.5'}`}
+              style={{ maxHeight: Math.max(isCompact ? 128 : 160, menuPlacement.maxHeight - (isCompact ? 32 : 42)) }}
+              role="listbox"
+              aria-label={placeholder || 'Options'}
+            >
+              {filteredOptions.map((option, index) => {
+                const isSelected = option.value === value;
+                const isActive = index === activeIndex;
+                const isDisabled = option.disabled;
 
-              return (
-                <div
-                  key={option.value}
-                  role="option"
-                  aria-selected={isSelected ? "true" : "false"}
-                  aria-disabled={isDisabled ? "true" : "false"}
+                return (
+                  <div
+                    key={option.value}
+                    role="option"
+                    aria-selected={isSelected}
+                    aria-disabled={isDisabled}
                   onClick={() => {
                     if (!isDisabled) selectOption(option);
                   }}
@@ -334,10 +339,10 @@ export function SmartCombobox({
                   )}
                 </div>
               );
-            })
+            })}
+            </div>
           )}
         </div>
-      </div>
       </>,
       document.body,
     )
@@ -370,7 +375,7 @@ export function SmartCombobox({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           role="combobox"
-          aria-expanded={open ? "true" : "false"}
+          aria-expanded={open}
           aria-controls="smart-combobox-listbox"
           aria-autocomplete="list"
           className={`${isDense ? '!h-7 !min-h-7 py-0 rounded-[0.45rem] pl-6 pr-6 text-[0.68rem] leading-4 shadow-sm focus:ring-1' : isCompact ? '!h-8 !min-h-8 py-0 rounded-[0.55rem] pl-7 pr-7 text-[0.72rem] leading-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_4px_10px_rgba(15,23,42,0.025)] focus:ring-2' : 'h-12 rounded-2xl pl-10 pr-11 text-sm leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] focus:ring-4'} w-full min-w-0 border border-emerald-950/10 bg-[#fffdf8]/95 font-semibold text-slate-700 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-brand-700 focus:bg-white focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-200`}

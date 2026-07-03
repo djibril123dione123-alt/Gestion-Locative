@@ -7,7 +7,6 @@ import {
   ChevronRight,
   FileText,
   Landmark,
-  ReceiptText,
   ShieldAlert,
   ShieldCheck,
   UserRound,

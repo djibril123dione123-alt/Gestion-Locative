@@ -9,7 +9,6 @@ import {
   Info,
   ShieldAlert,
   ShieldCheck,
-  Wallet,
   WifiOff,
 } from 'lucide-react';
 import { WizardShell, type WizardStep } from '../ui/WizardShell';

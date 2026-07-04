@@ -112,7 +112,7 @@ export function DepenseFormModal({
       onClose={() => {
         if (!isSaving) onClose();
       }}
-      size="standard"
+      size="compact"
       variant="workstation"
       tone="finance"
       eyebrow="CHARGES & EXPLOITATION"
@@ -160,7 +160,7 @@ export function DepenseFormModal({
           <div className="space-y-3">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label htmlFor="depense-montant" className="mb-1.5 block text-[0.75rem] font-bold uppercase tracking-wider text-slate-700">Montant <span className="text-red-600">*</span></label>
+                <label htmlFor="depense-montant" className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Montant <span className="text-red-600">*</span></label>
                 <input
                   id="depense-montant"
                   title="Montant de la dépense"
@@ -172,11 +172,11 @@ export function DepenseFormModal({
                   required
                   value={formData.montant}
                   onChange={(event) => setFormData((previous) => ({ ...previous, montant: event.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-extrabold tabular-nums text-slate-950 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+                  className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-base font-extrabold tabular-nums text-slate-950 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
                 />
               </div>
               <div>
-                <label htmlFor="depense-date" className="mb-1.5 block text-[0.75rem] font-bold uppercase tracking-wider text-slate-700">Date <span className="text-red-600">*</span></label>
+                <label htmlFor="depense-date" className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Date <span className="text-red-600">*</span></label>
                 <input
                   id="depense-date"
                   title="Date de la dépense"
@@ -184,30 +184,31 @@ export function DepenseFormModal({
                   required
                   value={formData.date_depense}
                   onChange={(event) => setFormData((previous) => ({ ...previous, date_depense: event.target.value }))}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+                  className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
                 />
               </div>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[0.75rem] font-bold uppercase tracking-wider text-slate-700">Catégorie <span className="text-red-600">*</span></label>
+              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Catégorie <span className="text-red-600">*</span></label>
               <SmartCombobox
                 value={formData.categorie}
                 options={categoryOptions}
                 onChange={(value) => setFormData((previous) => ({ ...previous, categorie: value }))}
                 placeholder="Sélectionner une catégorie"
                 searchPlaceholder="Maintenance, eau, transport…"
+                density="compact"
               />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[0.75rem] font-bold uppercase tracking-wider text-slate-700">Description</label>
+              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Description</label>
               <textarea
                 value={formData.description}
                 onChange={(event) => setFormData((previous) => ({ ...previous, description: event.target.value }))}
                 placeholder="Objet de la dépense, intervention ou période concernée"
                 rows={2}
-                className="min-h-[3.5rem] w-full rounded-xl border border-slate-200 bg-white p-2.5 text-sm text-slate-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+                className="h-14 w-full rounded-xl border border-slate-200 bg-white p-2 text-sm text-slate-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
               />
             </div>
             {!stepOneValid && (
@@ -221,12 +222,12 @@ export function DepenseFormModal({
         {currentStep === 2 && (
           <div className="space-y-3">
             <div>
-              <p className="mb-1.5 text-[0.75rem] font-bold uppercase tracking-wider text-slate-700">À qui cette dépense est-elle affectée ?</p>
+              <p className="mb-1 text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">À qui cette dépense est-elle affectée ?</p>
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setFormData((previous) => ({ ...previous, affectation: 'agence', immeuble_id: '' }))}
-                  className={`flex min-h-16 items-start gap-2.5 rounded-xl border p-2.5 text-left transition ${
+                  className={`flex min-h-14 items-start gap-2 rounded-xl border p-2 text-left transition ${
                     formData.affectation === 'agence'
                       ? 'border-emerald-700 bg-emerald-50 ring-2 ring-emerald-700/10'
                       : 'border-slate-200 bg-white hover:border-emerald-200'
@@ -241,7 +242,7 @@ export function DepenseFormModal({
                 <button
                   type="button"
                   onClick={() => setFormData((previous) => ({ ...previous, affectation: 'bien' }))}
-                  className={`flex min-h-16 items-start gap-2.5 rounded-xl border p-2.5 text-left transition ${
+                  className={`flex min-h-14 items-start gap-2 rounded-xl border p-2 text-left transition ${
                     formData.affectation === 'bien'
                       ? 'border-emerald-700 bg-emerald-50 ring-2 ring-emerald-700/10'
                       : 'border-slate-200 bg-white hover:border-emerald-200'
@@ -258,7 +259,7 @@ export function DepenseFormModal({
 
             {formData.affectation === 'bien' && (
               <div>
-                <label className="mb-1.5 block text-[0.75rem] font-bold uppercase tracking-wider text-slate-700">Bien concerné <span className="text-red-600">*</span></label>
+                <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Bien concerné <span className="text-red-600">*</span></label>
                 <SmartCombobox
                   value={formData.immeuble_id}
                   options={propertyOptions}
@@ -266,6 +267,7 @@ export function DepenseFormModal({
                   placeholder="Sélectionner un bien"
                   searchPlaceholder="Bien ou bailleur"
                   emptyLabel="Aucun bien actif disponible."
+                  density="compact"
                 />
                 {selectedImmeuble && (
                   <div className="mt-2 flex items-center gap-2.5 rounded-xl border border-emerald-100 bg-emerald-50 p-2.5">
@@ -280,13 +282,13 @@ export function DepenseFormModal({
             )}
 
             <div>
-              <label className="mb-1.5 block text-[0.75rem] font-bold uppercase tracking-wider text-slate-700">Bénéficiaire</label>
+              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Bénéficiaire</label>
               <input
                 type="text"
                 value={formData.beneficiaire}
                 onChange={(event) => setFormData((previous) => ({ ...previous, beneficiaire: event.target.value }))}
                 placeholder="Prestataire, fournisseur ou collaborateur"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+                className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
               />
             </div>
           </div>
@@ -311,13 +313,13 @@ export function DepenseFormModal({
             )}
 
             <div>
-              <label className="mb-1.5 block text-[0.75rem] font-bold uppercase tracking-wider text-slate-700">Lien du justificatif</label>
+              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Lien du justificatif</label>
               <input
                 type="url"
                 value={formData.piece_justificative}
                 onChange={(event) => setFormData((previous) => ({ ...previous, piece_justificative: event.target.value }))}
                 placeholder="https://… (facultatif)"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+                className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
               />
               <p className="mt-1 text-[11px] font-medium text-slate-500">Ajoutez un lien sécurisé existant. Aucun fichier n’est téléversé silencieusement.</p>
             </div>

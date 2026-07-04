@@ -24,7 +24,6 @@ import {
   FolderOpen,
   CreditCard,
   CircleUser,
-  DoorOpen,
   Percent,
   ChevronRight,
   MapPin,
@@ -1350,9 +1349,9 @@ export function Bailleurs() {
   /**
    * Configuration des colonnes du tableau
    */
-  const ALL_COLUMN_KEYS_BAILLEURS = ['bailleur', 'telephone', 'commission', 'biens', 'unites', 'reliquats', 'net', 'statut'] as const;
+  const ALL_COLUMN_KEYS_BAILLEURS = ['bailleur', 'telephone', 'commission', 'reliquats', 'net'] as const;
   type BailleurColumnKey = typeof ALL_COLUMN_KEYS_BAILLEURS[number];
-  const DETAIL_OPEN_HIDDEN_COLUMNS = new Set<BailleurColumnKey>(['telephone', 'commission', 'biens', 'unites', 'statut']);
+  const DETAIL_OPEN_HIDDEN_COLUMNS = new Set<BailleurColumnKey>(['telephone', 'commission']);
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility(
     'bailleurs-v3',
     [...ALL_COLUMN_KEYS_BAILLEURS],
@@ -1364,11 +1363,8 @@ export function Bailleurs() {
     { key: 'bailleur', label: 'Bailleur', required: true },
     { key: 'telephone', label: 'Téléphone' },
     { key: 'commission', label: 'Commission' },
-    { key: 'biens', label: 'Biens' },
-    { key: 'unites', label: 'Unités' },
     { key: 'reliquats', label: 'Reliquats' },
     { key: 'net', label: 'Net' },
-    { key: 'statut', label: 'Statut', required: true },
   ];
 
   const filterOptions: Array<{ id: BailleurFilter; label: string; helper: string }> = [
@@ -1810,14 +1806,11 @@ export function Bailleurs() {
                 <table className={`w-full border-collapse table-fixed ${detailPanelOpen ? 'min-w-[620px]' : 'min-w-[840px]'}`}>
                   <thead className="bg-[#f8f3e8]/70 text-left">
                     <tr>
-                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[56%]' : 'w-[36%]'} px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><CircleUser className="h-3 w-3 text-slate-400" /> Bailleur</span></th>}
-                      {showBailleurColumn('telephone') && <th className="w-[12%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-slate-400" /> Téléphone</span></th>}
-                      {showBailleurColumn('commission') && <th className="w-[8%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Percent className="h-3 w-3 text-slate-400" /> Commission</span></th>}
-                      {showBailleurColumn('biens') && <th className="w-[8%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Building2 className="h-3 w-3 text-slate-400" /> Biens</span></th>}
-                      {showBailleurColumn('unites') && <th className="w-[8%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><DoorOpen className="h-3 w-3 text-slate-400" /> Unités</span></th>}
-                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[20%]' : 'w-[17%]'} px-2 py-1.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><AlertCircle className="h-3 w-3 text-slate-400" /> Reliquats</span></th>}
-                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[20%]' : 'w-[17%]'} px-2 py-1.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><Wallet className="h-3 w-3 text-slate-400" /> Net</span></th>}
-                      {showBailleurColumn('statut') && <th className="w-[10%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5">Statut</span></th>}
+                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[60%]' : 'w-[50%]'} px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><CircleUser className="h-3 w-3 text-slate-400" /> Bailleur</span></th>}
+                      {showBailleurColumn('telephone') && <th className="w-[14%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-slate-400" /> Téléphone</span></th>}
+                      {showBailleurColumn('commission') && <th className="w-[10%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Percent className="h-3 w-3 text-slate-400" /> Commission</span></th>}
+                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[20%]' : 'w-[18%]'} px-2 py-1.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><AlertCircle className="h-3 w-3 text-slate-400" /> Reliquats</span></th>}
+                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[20%]' : 'w-[18%]'} px-2 py-1.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><Wallet className="h-3 w-3 text-slate-400" /> Net</span></th>}
                       <th className="w-[4%] px-2 py-1.5"><span className="sr-only">Ouvrir</span></th>
                     </tr>
                   </thead>
@@ -1830,15 +1823,9 @@ export function Bailleurs() {
                       const isNetPositif = summary.net > 0;
                       const rawStatusLabel = getStatusLabel(bailleur);
 
-                      let subtitleText = '';
-                      if (detailPanelOpen) {
-                        subtitleText = `${rawStatusLabel} · ${summary.immeubles.length} bien${summary.immeubles.length > 1 ? 's' : ''} · ${summary.unites.length} unité${summary.unites.length > 1 ? 's' : ''}`;
-                        if (isReliquatPositif) subtitleText += ' · à suivre';
-                        else if (isNetPositif) subtitleText += ' · net positif';
-                      } else {
-                        if (isReliquatPositif) subtitleText = 'À suivre';
-                        else if (isNetPositif) subtitleText = 'Net positif';
-                      }
+                      let subtitleText = `${rawStatusLabel} · ${summary.immeubles.length} bien${summary.immeubles.length > 1 ? 's' : ''} · ${summary.unites.length} unité${summary.unites.length > 1 ? 's' : ''}`;
+                      if (isReliquatPositif) subtitleText += ' · à suivre';
+                      else if (isNetPositif) subtitleText += ' · net positif';
 
                       return (
                         <tr
@@ -1855,15 +1842,10 @@ export function Bailleurs() {
                               </div>
                             </div>
                           </td>}
-                          {showBailleurColumn('telephone') && <td className="whitespace-nowrap px-2 py-1.5 text-[0.75rem] text-slate-700">{bailleur.telephone ? <a href={`tel:${bailleur.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(bailleur.telephone)}</a> : ''}</td>}
-                          {showBailleurColumn('commission') && <td className="whitespace-nowrap px-2 py-1.5 text-[0.75rem] font-medium text-slate-700">{formatCommission(bailleur.commission)}</td>}
-                          {showBailleurColumn('biens') && <td className="px-2 py-1.5 text-[0.78rem] font-medium text-slate-700">{summary.immeubles.length}</td>}
-                          {showBailleurColumn('unites') && <td className="px-2 py-1.5 text-[0.78rem] font-medium text-slate-700">{summary.unites.length}</td>}
-                          {showBailleurColumn('reliquats') && <td className="whitespace-nowrap px-2 py-1.5 text-right text-[0.78rem] font-semibold tabular-nums text-red-600"><MoneyText value={summary.reliquats} /></td>}
-                          {showBailleurColumn('net') && <td className="whitespace-nowrap px-2 py-1.5 text-right text-[0.78rem] font-semibold tabular-nums text-emerald-800"><MoneyText value={summary.net} /></td>}
-                          {showBailleurColumn('statut') && <td className="px-2 py-1.5">
-                            <span className="inline-flex px-1.5 py-0.5 text-[9px] rounded uppercase font-medium bg-slate-100 text-slate-700">{rawStatusLabel}</span>
-                          </td>}
+                          {showBailleurColumn('telephone') && <td className="whitespace-nowrap px-2 py-1.5 text-[0.68rem] font-medium text-slate-600">{bailleur.telephone ? <a href={`tel:${bailleur.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(bailleur.telephone)}</a> : ''}</td>}
+                          {showBailleurColumn('commission') && <td className="whitespace-nowrap px-2 py-1.5 text-[0.68rem] font-medium text-slate-600">{formatCommission(bailleur.commission)}</td>}
+                          {showBailleurColumn('reliquats') && <td className={`whitespace-nowrap px-2 py-1.5 text-right text-[0.72rem] font-semibold tabular-nums ${summary.reliquats > 0 ? 'text-red-600' : 'text-slate-400 font-medium'}`}><MoneyText value={summary.reliquats} /></td>}
+                          {showBailleurColumn('net') && <td className={`whitespace-nowrap px-2 py-1.5 text-right text-[0.72rem] font-semibold tabular-nums ${summary.net > 0 ? 'text-emerald-800' : 'text-slate-400 font-medium'}`}><MoneyText value={summary.net} /></td>}
                           <td className="px-2 py-1.5 text-right">
                             <ChevronRight className="h-[10px] w-[10px] text-slate-300 inline-block" />
                           </td>

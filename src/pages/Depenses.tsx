@@ -303,7 +303,7 @@ export function Depenses() {
     setIsModalOpen(true);
   };
 
-  const ALL_COLUMN_KEYS_DEPENSES = ['date_depense', 'categorie', 'montant', 'immeuble', 'beneficiaire', 'statut'] as const;
+  const ALL_COLUMN_KEYS_DEPENSES = ['date_depense', 'categorie', 'montant', 'statut'] as const;
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('depenses', [...ALL_COLUMN_KEYS_DEPENSES]);
 
   const allColumns = [
@@ -312,24 +312,20 @@ export function Depenses() {
       label: 'Catégorie',
       render: (d: Depense) => (
         <div className="min-w-0">
-          <p className="truncate font-bold text-slate-900">{d.categorie}</p>
-          {selectedDepense && (
-            <p className="truncate text-[11px] font-medium text-slate-500">
-              {d.beneficiaire || d.description || '—'} · {d.immeubles?.nom || 'Général'}
-            </p>
-          )}
+          <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">{d.categorie}</p>
+          <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-0.5">
+            {d.beneficiaire || d.description || '—'} · {d.immeubles?.nom || 'Général'}
+          </p>
         </div>
       ),
     },
-    { key: 'date_depense', label: 'Date', render: (d: Depense) => <span className="whitespace-nowrap">{new Date(d.date_depense).toLocaleDateString('fr-FR')}</span> },
-    { key: 'montant', label: 'Montant', render: (d: Depense) => <span className="whitespace-nowrap font-black text-emerald-800"><MoneyText value={d.montant} /></span> },
-    { key: 'immeuble', label: 'Affectation', render: (d: Depense) => <span className="truncate max-w-[150px] inline-block">{d.immeubles?.nom || 'Général'}</span> },
-    { key: 'beneficiaire', label: 'Bénéficiaire / Desc.', render: (d: Depense) => <div className="truncate max-w-[180px] text-slate-600 font-medium">{d.beneficiaire || d.description || '—'}</div> },
-    { key: 'statut', label: 'Statut', render: () => <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-700 whitespace-nowrap"><ReceiptText className="h-3 w-3" /> Enregistrée</span> },
+    { key: 'date_depense', label: 'Date', render: (d: Depense) => <span className="whitespace-nowrap text-[0.7rem] font-medium text-slate-600">{new Date(d.date_depense).toLocaleDateString('fr-FR')}</span> },
+    { key: 'montant', label: 'Montant', render: (d: Depense) => <span className="whitespace-nowrap text-[0.72rem] font-semibold tabular-nums"><MoneyText value={d.montant} className={`font-semibold ${Number(d.montant || 0) > 0 ? 'text-emerald-800' : 'text-slate-400'}`} /></span> },
+    { key: 'statut', label: 'Statut', render: () => <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-100 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-emerald-700 whitespace-nowrap"><ReceiptText className="h-3 w-3" /> Enregistrée</span> },
   ];
   const columns = allColumns.filter((c) => {
     if (!colIsVisible(c.key)) return false;
-    if (selectedDepense && (c.key === 'beneficiaire' || c.key === 'immeuble' || c.key === 'date_depense')) return false;
+    if (selectedDepense && c.key === 'date_depense') return false;
     return true;
   });
   const kpis = useMemo(() => {

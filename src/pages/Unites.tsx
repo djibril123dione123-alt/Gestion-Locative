@@ -8,7 +8,6 @@ import { Plus, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { usePlanLimits } from '../hooks/usePlanLimits';
-import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
@@ -16,6 +15,7 @@ import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '.
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { PremiumButton } from '../components/ui/PremiumButton';
+import { MoneyText } from '../components/ui/MoneyText';
 
 interface Unite {
   id: string;
@@ -235,18 +235,18 @@ export function Unites() {
       loue: 'bg-blue-100 text-blue-700',
       maintenance: 'bg-orange-100 text-orange-700',
     };
-    return <span className={`px-2 py-1 rounded-full text-xs font-medium ${badges[statut as keyof typeof badges]}`}>{statut}</span>;
+    return <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${badges[statut as keyof typeof badges]}`}>{statut}</span>;
   };
 
   const ALL_COLUMN_KEYS_UNITES = ['nom', 'numero', 'etage', 'immeuble', 'loyer_base', 'statut'] as const;
   const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('unites', [...ALL_COLUMN_KEYS_UNITES]);
 
   const allColumns = [
-    { key: 'nom', label: 'Type' },
-    { key: 'numero', label: 'Numéro', render: (u: Unite) => u.numero || '-' },
-    { key: 'etage', label: 'Étage', render: (u: Unite) => u.etage || '-' },
-    { key: 'immeuble', label: 'Immeuble', render: (u: Unite) => u.immeubles?.nom || '-' },
-    { key: 'loyer_base', label: 'Loyer', render: (u: Unite) => formatCurrency(u.loyer_base) },
+    { key: 'nom', label: 'Type', render: (u: Unite) => <span className="font-bold text-slate-900 text-[0.78rem]">{u.nom}</span> },
+    { key: 'numero', label: 'Numéro', render: (u: Unite) => <span className="text-[0.7rem] font-medium text-slate-600">{u.numero || '-'}</span> },
+    { key: 'etage', label: 'Étage', render: (u: Unite) => <span className="text-[0.7rem] font-medium text-slate-600">{u.etage || '-'}</span> },
+    { key: 'immeuble', label: 'Immeuble', render: (u: Unite) => <span className="text-[0.7rem] font-medium text-slate-600">{u.immeubles?.nom || '-'}</span> },
+    { key: 'loyer_base', label: 'Loyer', render: (u: Unite) => <span className="text-[0.72rem] font-semibold text-slate-700 tabular-nums"><MoneyText value={u.loyer_base} /></span> },
     { key: 'statut', label: 'Statut', render: (u: Unite) => getStatutBadge(u.statut) },
   ];
   const columns = allColumns.filter((c) => colIsVisible(c.key));

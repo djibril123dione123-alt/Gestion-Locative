@@ -632,7 +632,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     }
   };
 
-  const ALL_COLUMN_KEYS = ['locataire', 'unite', 'mois_concerne', 'montant_total', 'reliquat', 'date_paiement', 'mode', 'statut'];
+  const ALL_COLUMN_KEYS = ['locataire', 'mois_concerne', 'montant_total', 'reliquat', 'date_paiement', 'mode', 'statut'];
   const { visibility, toggle, setAll, isVisible } = useColumnVisibility('paiements', ALL_COLUMN_KEYS, {});
 
   const allColumns = [
@@ -641,22 +641,10 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       label: 'Locataire',
       render: (p: PaiementRow) => (
         <div className="min-w-0">
-          <p className="truncate font-bold text-slate-900">{formatPersonName(p.contrats?.locataires)}</p>
-          {selectedPaiement && (
-            <p className="truncate text-[11px] font-medium text-slate-500">
-              {p.contrats?.unites?.immeubles?.nom || '-'} · {p.contrats?.unites?.nom || '-'}
-            </p>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'unite',
-      label: 'Bien / unité',
-      render: (p: PaiementRow) => (
-        <div className="min-w-0">
-          <p className="truncate font-semibold text-slate-800">{p.contrats?.unites?.immeubles?.nom || '-'}</p>
-          <p className="truncate text-xs font-medium text-slate-500">{p.contrats?.unites?.nom || '-'}</p>
+          <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">{formatPersonName(p.contrats?.locataires)}</p>
+          <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-0.5">
+            {p.contrats?.unites?.immeubles?.nom || '-'} · {p.contrats?.unites?.nom || '-'}
+          </p>
         </div>
       ),
     },
@@ -664,21 +652,21 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       key: 'mois_concerne',
       label: 'Période',
       render: (p: PaiementRow) => (
-        <span className="whitespace-nowrap">{new Date(p.mois_concerne).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}</span>
+        <span className="whitespace-nowrap text-[0.7rem] font-medium text-slate-600">{new Date(p.mois_concerne).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' })}</span>
       ),
     },
     {
       key: 'montant_total',
       label: 'Montant reçu',
       render: (p: PaiementRow) => (
-        <span className="whitespace-nowrap"><MoneyText value={p.montant_total} className="font-black text-emerald-800" /></span>
+        <span className="whitespace-nowrap text-[0.72rem] font-semibold tabular-nums"><MoneyText value={p.montant_total} className={`font-semibold ${Number(p.montant_total || 0) > 0 ? 'text-emerald-800' : 'text-slate-400'}`} /></span>
       ),
     },
     {
       key: 'reliquat',
       label: 'Reliquat',
       render: (p: PaiementRow) => (
-        <span className={`whitespace-nowrap font-semibold tabular-nums ${Number(p.reliquat || 0) > 0 ? 'text-orange-700' : 'text-emerald-700'}`}>
+        <span className={`whitespace-nowrap text-[0.72rem] font-semibold tabular-nums ${Number(p.reliquat || 0) > 0 ? 'text-red-600' : 'text-slate-400 font-medium'}`}>
           <MoneyText value={Number(p.reliquat || 0)} />
         </span>
       ),
@@ -687,14 +675,14 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       key: 'date_paiement',
       label: 'Date',
       render: (p: PaiementRow) => (
-        <span className="whitespace-nowrap">{new Date(p.date_paiement).toLocaleDateString('fr-FR')}</span>
+        <span className="whitespace-nowrap text-[0.7rem] font-medium text-slate-600">{new Date(p.date_paiement).toLocaleDateString('fr-FR')}</span>
       ),
     },
     {
       key: 'mode',
       label: 'Mode',
       render: (p: PaiementRow) => (
-        <span className="whitespace-nowrap text-slate-500">{getPaymentModeLabel(p)}</span>
+        <span className="whitespace-nowrap text-[0.7rem] font-medium text-slate-600">{getPaymentModeLabel(p)}</span>
       ),
     },
     {
@@ -704,7 +692,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         const meta = getPaiementStatusMeta(p);
         const Icon = meta.icon;
         return (
-          <span className={`whitespace-nowrap inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${meta.classes}`}>
+          <span className={`whitespace-nowrap inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider ${meta.classes}`}>
             <Icon className="w-3.5 h-3.5" />
             {meta.label}
           </span>
@@ -715,7 +703,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
 
   const columns = allColumns.filter((c) => {
     if (!isVisible(c.key)) return false;
-    if (selectedPaiement && (c.key === 'unite' || c.key === 'mode' || c.key === 'mois_concerne')) return false;
+    if (selectedPaiement && (c.key === 'mode' || c.key === 'mois_concerne')) return false;
     return true;
   });
 

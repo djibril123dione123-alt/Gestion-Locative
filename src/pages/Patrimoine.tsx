@@ -63,7 +63,7 @@ type DrawerState = { type: 'bien'; id: string } | { type: 'unite'; id: string } 
 type PropertyFilter = 'all' | 'with_reliquats' | 'without_units' | 'complete' | 'incomplete';
 type UnitFilter = 'all' | 'libre' | 'loue' | 'maintenance' | 'late' | 'without_contract';
 type DangerTarget = { type: 'bien'; id: string; name: string } | { type: 'unite'; id: string; name: string } | null;
-type PropertyColumnKey = 'bien' | 'bailleur' | 'unites' | 'occupation' | 'loyer' | 'reliquats' | 'statut';
+type PropertyColumnKey = 'bien' | 'occupation' | 'loyer' | 'reliquats';
 type UnitColumnKey = 'unite' | 'bien' | 'locataire' | 'loyer' | 'statut' | 'reliquat';
 type PropertyWizardStep = 'main' | 'address' | 'summary';
 type UnitWizardStep = 'main' | 'rent' | 'summary';
@@ -229,7 +229,7 @@ const EMPTY_DATA: PatrimoineData = {
   documents: [],
 };
 
-const PROPERTY_COLUMN_KEYS: PropertyColumnKey[] = ['bien', 'bailleur', 'unites', 'occupation', 'loyer', 'statut', 'reliquats'];
+const PROPERTY_COLUMN_KEYS: PropertyColumnKey[] = ['bien', 'occupation', 'loyer', 'reliquats'];
 const UNIT_COLUMN_KEYS: UnitColumnKey[] = ['unite', 'bien', 'locataire', 'loyer', 'statut', 'reliquat'];
 
 const PROPERTY_TYPES = ['Immeuble', 'Maison', 'Villa', 'Appartement', 'Boutique', 'Bureau', 'Terrain', 'Local commercial', 'Depot', 'Mixte'];
@@ -398,9 +398,9 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   const propertyColumns = useColumnVisibility(
     'patrimoine-biens',
     PROPERTY_COLUMN_KEYS,
-    isIndividualOwner ? { bailleur: false } : {},
+    {},
   );
-  const unitColumns = useColumnVisibility('patrimoine-unites', UNIT_COLUMN_KEYS);
+  const unitColumns = useColumnVisibility('patrimoine-unites', UNIT_COLUMN_KEYS, { bien: false, locataire: false });
 
   const loadData = useCallback(async () => {
     if (!profile?.agency_id) {
@@ -1111,7 +1111,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
                     />
                   )}
                   <ColumnPicker
-                    columns={PROPERTY_COLUMN_KEYS.filter((key) => !isIndividualOwner || key !== 'bailleur').map((key) => ({ key, label: getPropertyColumnLabel(key), required: key === 'bien' }))}
+                    columns={PROPERTY_COLUMN_KEYS.map((key) => ({ key, label: getPropertyColumnLabel(key), required: key === 'bien' }))}
                     visibility={propertyColumns.visibility}
                     onToggle={propertyColumns.toggle}
                     onSetAll={propertyColumns.setAll}
@@ -1310,12 +1310,9 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
 function getPropertyColumnLabel(key: PropertyColumnKey) {
   const labels: Record<PropertyColumnKey, string> = {
     bien: 'Bien',
-    bailleur: 'Bailleur',
-    unites: 'Unités',
     occupation: 'Occupation',
     loyer: 'Loyer attendu',
     reliquats: 'Reliquats',
-    statut: 'Statut',
   };
   return labels[key];
 }
@@ -1377,7 +1374,7 @@ function PropertiesTable({
 }) {
   const showColumn = (key: PropertyColumnKey) => {
     if (isSplitOpen) {
-      return ['bien', 'occupation', 'reliquats', 'statut'].includes(key);
+      return ['bien', 'occupation', 'reliquats'].includes(key);
     }
     return isVisible(key);
   };
@@ -1399,13 +1396,10 @@ function PropertiesTable({
         <table className={`hidden lg:table w-full border-collapse table-fixed ${isSplitOpen ? 'min-w-[480px]' : 'min-w-[840px]'}`}>
           <thead className="bg-[#f2efe8]/80 text-left border-b border-emerald-950/10">
             <tr>
-              {showColumn('bien') && <th className={`${isSplitOpen ? 'w-[45%] px-3' : 'w-[30%] px-3'} py-2.5 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> Bien</span></th>}
-              {!isIndividualOwner && showColumn('bailleur') && <th className="w-[15%] px-3 py-2.5 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><CircleUser className="h-3.5 w-3.5 text-slate-400" /> Bailleur</span></th>}
-              {showColumn('unites') && <th className="w-[10%] px-3 py-2.5 text-center text-[0.62rem] font-bold uppercase tracking-wider text-slate-500">Unités</th>}
-              {showColumn('occupation') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-2.5 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5 text-slate-400" /> Occupation</span></th>}
-              {showColumn('loyer') && <th className="w-[12%] px-3 py-2.5 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500">Loyer attendu</th>}
-              {showColumn('statut') && <th className={`${isSplitOpen ? 'w-[15%] px-3' : 'w-[9%] px-3'} py-2.5 text-center text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>Statut</th>}
-              {showColumn('reliquats') && <th className={`${isSplitOpen ? 'w-[20%] px-3' : 'w-[12%] px-3'} py-2.5 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5"><AlertCircle className="h-3.5 w-3.5 text-slate-400" /> Reliquats</span></th>}
+              {showColumn('bien') && <th className={`${isSplitOpen ? 'w-[50%] px-3' : 'w-[54%] px-3'} py-2.5 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> Bien</span></th>}
+              {showColumn('occupation') && <th className={`${isSplitOpen ? 'w-[25%] px-3' : 'w-[18%] px-3'} py-2.5 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Activity className="h-3.5 w-3.5 text-slate-400" /> Occupation</span></th>}
+              {showColumn('loyer') && <th className="w-[14%] px-3 py-2.5 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500">Loyer attendu</th>}
+              {showColumn('reliquats') && <th className={`${isSplitOpen ? 'w-[25%] px-3' : 'w-[14%] px-3'} py-2.5 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}><span className="flex items-center justify-end gap-1.5"><AlertCircle className="h-3.5 w-3.5 text-slate-400" /> Reliquats</span></th>}
               {showActions && <th className="w-[4%] px-2 py-2.5"><span className="sr-only">Actions</span></th>}
             </tr>
           </thead>
@@ -1431,15 +1425,13 @@ function PropertiesTable({
                           </p>
                           <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-[1px]">
                             {property.quartier || property.ville || 'Localisation à compléter'}
-                            {!isSplitOpen && ` · ${summary?.units.length ?? 0} unité${(summary?.units.length ?? 0) > 1 ? 's' : ''}`}
-                            {isSplitOpen && !isIndividualOwner && owner ? ` · ${ownerName(owner)}` : ''}
+                            {` · ${summary?.units.length ?? 0} unité${(summary?.units.length ?? 0) > 1 ? 's' : ''}`}
+                            {!isIndividualOwner && owner ? ` · ${ownerName(owner)}` : ''}
                           </p>
                         </div>
                       </div>
                     </td>
                   )}
-                  {!isIndividualOwner && showColumn('bailleur') && <td className="py-2.5 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{owner ? ownerName(owner) : 'Aucun bailleur'}</p></td>}
-                  {showColumn('unites') && <td className="py-2.5 px-3 text-center text-[0.75rem] font-semibold text-slate-700">{summary?.units.length ?? 0}</td>}
                   {showColumn('occupation') && (
                     <td className="py-2.5 px-3">
                       <div className="flex flex-col gap-1">
@@ -1453,9 +1445,8 @@ function PropertiesTable({
                       </div>
                     </td>
                   )}
-                  {showColumn('loyer') && <td className="py-2.5 px-3 text-right text-[0.75rem] font-semibold text-slate-700"><MoneyText value={summary?.expectedRent ?? 0} compact={false} /></td>}
-                  {showColumn('statut') && <td className="py-2.5 px-3 text-center"><StatusBadge label={(summary?.units.length ?? 0) > 0 ? 'Actif' : 'Sans unité'} /></td>}
-                  {showColumn('reliquats') && <td className={`py-2.5 px-3 text-right text-[0.75rem] ${reliquatAmount > 0 ? 'font-semibold text-red-600' : 'font-medium text-slate-400'}`}><MoneyText value={reliquatAmount} compact={false} /></td>}
+                  {showColumn('loyer') && <td className="py-2.5 px-3 text-right text-[0.72rem] font-semibold text-slate-700"><MoneyText value={summary?.expectedRent ?? 0} compact={false} /></td>}
+                  {showColumn('reliquats') && <td className={`py-2.5 px-3 text-right text-[0.72rem] ${reliquatAmount > 0 ? 'font-semibold text-red-600' : 'font-medium text-slate-400'}`}><MoneyText value={reliquatAmount} compact={false} /></td>}
                   {showActions && <td className="py-2.5 px-3 text-right">
                     <ChevronRight className="h-[10px] w-[10px] text-slate-300 inline-block" />
                   </td>}
@@ -1583,11 +1574,11 @@ function UnitsTable({
                       </div>
                     </td>
                   )}
-                  {showColumn('bien') && <td className="py-2.5 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{property?.nom ?? unit.immeubles?.nom ?? '-'}</p></td>}
-                  {showColumn('locataire') && <td className="py-2.5 px-3 text-[0.75rem] text-slate-700 font-medium"><p className="truncate">{summary?.tenantLabel ?? 'Aucun locataire'}</p></td>}
-                  {showColumn('loyer') && <td className="py-2.5 px-3 text-right text-[0.75rem] font-semibold text-slate-700"><MoneyText value={unit.loyer_base ?? 0} compact={false} /></td>}
+                  {showColumn('bien') && <td className="py-2.5 px-3 text-[0.68rem] text-slate-600 font-medium"><p className="truncate">{property?.nom ?? unit.immeubles?.nom ?? '-'}</p></td>}
+                  {showColumn('locataire') && <td className="py-2.5 px-3 text-[0.68rem] text-slate-600 font-medium"><p className="truncate">{summary?.tenantLabel ?? 'Aucun locataire'}</p></td>}
+                  {showColumn('loyer') && <td className="py-2.5 px-3 text-right text-[0.72rem] font-semibold text-slate-700"><MoneyText value={unit.loyer_base ?? 0} compact={false} /></td>}
                   {showColumn('statut') && <td className="py-2.5 px-3 text-center"><StatusBadge label={getUnitStatusLabel(unit, summary)} /></td>}
-                  {showColumn('reliquat') && <td className={`py-2.5 px-3 text-right text-[0.75rem] ${reliquatAmount > 0 ? 'font-semibold text-red-600' : 'font-medium text-slate-400'}`}><MoneyText value={reliquatAmount} compact={false} /></td>}
+                  {showColumn('reliquat') && <td className={`py-2.5 px-3 text-right text-[0.72rem] ${reliquatAmount > 0 ? 'font-semibold text-red-600' : 'font-medium text-slate-400'}`}><MoneyText value={reliquatAmount} compact={false} /></td>}
                   {showActions && <td className="py-2.5 px-3 text-right">
                     <ChevronRight className="h-[10px] w-[10px] text-slate-300 inline-block" />
                   </td>}

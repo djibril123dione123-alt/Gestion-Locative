@@ -331,7 +331,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         ? Math.max(selectedLoyer.montant_du - paymentAmount, 0)
         : 0;
 
-    const ALL_COLUMN_KEYS_LOYERS = ['locataire', 'unite_nom', 'immeuble_nom', 'bailleur', 'mois_concerne', 'statut', 'montant_encaisse', 'montant_du', 'telephone_locataire'] as const;
+    const ALL_COLUMN_KEYS_LOYERS = ['locataire', 'bailleur', 'mois_concerne', 'statut', 'montant_encaisse', 'montant_du', 'telephone_locataire'] as const;
     const { visibility: colVis, toggle: colToggle, setAll: colSetAll, isVisible: colIsVisible } = useColumnVisibility('loyersImpayes', [...ALL_COLUMN_KEYS_LOYERS]);
 
     const allColumns = [
@@ -340,30 +340,29 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
             label: 'Locataire',
             render: (i: LoyerImpaye) => (
                 <div className="min-w-0">
-                    <p className="truncate font-bold text-slate-900">{`${i.locataire_prenom} ${i.locataire_nom}`}</p>
-                    {drawerLoyer && (
-                        <p className="truncate text-[11px] font-medium text-slate-500">
-                            {i.immeuble_nom} · {i.unite_nom}
-                        </p>
-                    )}
+                    <p className="truncate text-[0.78rem] leading-tight font-semibold text-slate-950">{`${i.locataire_prenom} ${i.locataire_nom}`}</p>
+                    <p className="truncate text-[0.64rem] leading-snug font-medium text-slate-500 mt-0.5">
+                        {i.immeuble_nom} · {i.unite_nom}
+                    </p>
                 </div>
             ),
         },
-        { key: 'unite_nom', label: 'Produit' },
-        { key: 'immeuble_nom', label: 'Immeuble' },
         {
             key: 'bailleur',
             label: 'Bailleur',
-            render: (i: LoyerImpaye) => `${i.bailleur_prenom} ${i.bailleur_nom}`,
+            render: (i: LoyerImpaye) => <span className="text-[0.7rem] font-medium text-slate-600">{`${i.bailleur_prenom} ${i.bailleur_nom}`}</span>,
         },
         {
             key: 'mois_concerne',
             label: 'Mois',
-            render: (i: LoyerImpaye) =>
-                new Date(i.mois_concerne).toLocaleDateString('fr-FR', {
-                    year: 'numeric',
-                    month: 'long',
-                }),
+            render: (i: LoyerImpaye) => (
+                <span className="whitespace-nowrap text-[0.7rem] font-medium text-slate-600">
+                    {new Date(i.mois_concerne).toLocaleDateString('fr-FR', {
+                        year: 'numeric',
+                        month: 'long',
+                    })}
+                </span>
+            ),
         },
         {
             key: 'statut',
@@ -371,7 +370,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
             render: (i: LoyerImpaye) => {
                 const meta = STATUS_META[i.statut];
                 return (
-                    <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold whitespace-nowrap ${meta.classes}`}>
+                    <span className={`inline-flex rounded-full border px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider whitespace-nowrap ${meta.classes}`}>
                         {meta.label}
                     </span>
                 );
@@ -380,30 +379,30 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         {
             key: 'montant_encaisse',
             label: 'Encaissé',
-            render: (i: LoyerImpaye) => <MoneyText value={i.montant_encaisse} />,
+            render: (i: LoyerImpaye) => <span className="whitespace-nowrap text-[0.72rem] font-semibold tabular-nums"><MoneyText value={i.montant_encaisse} className="text-slate-700" /></span>,
         },
         {
             key: 'montant_du',
             label: 'Montant dû',
-            render: (i: LoyerImpaye) => <span className="text-red-600 font-bold"><MoneyText value={i.montant_du} /></span>,
+            render: (i: LoyerImpaye) => <span className={`whitespace-nowrap text-[0.72rem] font-semibold tabular-nums ${Number(i.montant_du || 0) > 0 ? 'text-red-600' : 'text-slate-400 font-medium'}`}><MoneyText value={i.montant_du} /></span>,
         },
         {
             key: 'telephone_locataire',
             label: 'Téléphone',
             render: (i: LoyerImpaye) => {
-                if (!i.telephone_locataire) return '—';
+                if (!i.telephone_locataire) return <span className="text-[0.68rem] font-medium text-slate-400">—</span>;
                 const cleaned = i.telephone_locataire.replace(/\D/g, '');
                 const formatted = cleaned.length === 9
                     ? `${cleaned.slice(0, 2)} ${cleaned.slice(2, 5)} ${cleaned.slice(5, 7)} ${cleaned.slice(7, 9)}`
                     : i.telephone_locataire;
-                return <a href={`tel:${cleaned}`} className="text-brand-600 hover:underline hover:text-brand-800" onClick={(e) => e.stopPropagation()}>{formatted}</a>;
+                return <a href={`tel:${cleaned}`} className="text-[0.68rem] font-medium text-brand-600 hover:underline hover:text-brand-800" onClick={(e) => e.stopPropagation()}>{formatted}</a>;
             }
         },
     ];
     const columns = allColumns.filter((c) => {
         if (isIndividualOwner && c.key === 'bailleur') return false;
         if (!colIsVisible(c.key)) return false;
-        if (drawerLoyer && (c.key === 'immeuble_nom' || c.key === 'bailleur' || c.key === 'telephone_locataire' || c.key === 'unite_nom')) return false;
+        if (drawerLoyer && (c.key === 'bailleur' || c.key === 'telephone_locataire')) return false;
         return true;
     });
 

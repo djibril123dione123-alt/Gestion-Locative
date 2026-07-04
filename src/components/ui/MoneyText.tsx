@@ -39,13 +39,20 @@ export function MoneyText({ value, className = '', compact = false, suffix }: Mo
   const display = Number.isFinite(numericValue) && compact ? formatCompactCfa(numericValue) : label;
   const visible = suffix ? `${display} ${suffix}` : display;
 
+  let finalClassName = className;
+  if (numericValue === 0 && /text-(red|emerald|orange|amber|blue|green|rose|indigo|violet|purple|brand)-\d+/.test(finalClassName)) {
+    finalClassName = finalClassName
+      .replace(/font-(black|extrabold|bold|semibold)/g, 'font-medium')
+      .replace(/text-(red|emerald|orange|amber|blue|green|rose|indigo|violet|purple|brand)-\d+/g, 'text-slate-400');
+  }
+
   if (Number.isFinite(numericValue) && compact) {
     const compactDisplay = formatCompactCfa(numericValue);
     const compactVisible = suffix ? `${compactDisplay} ${suffix}` : compactDisplay;
     const fullVisible = suffix ? `${label} ${suffix}` : label;
 
     return (
-      <span className={`@container flex w-full max-w-full items-baseline whitespace-nowrap tabular-nums ${className}`} title={fullVisible}>
+      <span className={`@container flex w-full max-w-full items-baseline whitespace-nowrap tabular-nums ${finalClassName}`} title={fullVisible}>
         <span className="@tiny:hidden">{compactVisible}</span>
         <span className="hidden @tiny:inline">{fullVisible}</span>
       </span>
@@ -53,7 +60,7 @@ export function MoneyText({ value, className = '', compact = false, suffix }: Mo
   }
 
   return (
-    <span className={`inline-flex max-w-full items-baseline whitespace-nowrap tabular-nums ${className}`} title={visible}>
+    <span className={`inline-flex max-w-full items-baseline whitespace-nowrap tabular-nums ${finalClassName}`} title={visible}>
       {visible}
     </span>
   );

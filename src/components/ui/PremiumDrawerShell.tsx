@@ -25,6 +25,7 @@ export interface PremiumDrawerShellProps {
   ariaLabel?: string;
   ariaDescribedBy?: string;
   className?: string;
+  headerClassName?: string;
   bodyClassName?: string;
   footerClassName?: string;
 }
@@ -48,6 +49,7 @@ export function PremiumDrawerShell({
   ariaLabel,
   ariaDescribedBy,
   className = '',
+  headerClassName = '',
   bodyClassName = '',
   footerClassName = ''
 }: PremiumDrawerShellProps) {
@@ -98,7 +100,7 @@ export function PremiumDrawerShell({
 
   // Construction du Header par défaut si non substitué
   const defaultHeader = (
-    <div className={`shrink-0 border-b border-emerald-950/10 bg-gradient-to-br from-[#fffaf1] via-white to-emerald-50/40 ${isCompact ? 'px-3 py-1' : 'p-4'}`}>
+    <div className={`shrink-0 border-b border-emerald-950/10 bg-gradient-to-br from-[#fffaf1] via-white to-emerald-50/40 ${isCompact ? 'px-3 py-1' : 'p-4'} ${headerClassName}`}>
       <div className={`flex flex-col ${isCompact ? 'gap-1' : 'gap-3'}`}>
         <div className={`flex items-start justify-between ${isCompact ? 'gap-2' : 'gap-3'}`}>
           <div className="min-w-0 flex-1 flex items-center gap-2.5">

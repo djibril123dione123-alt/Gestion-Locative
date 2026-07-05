@@ -249,19 +249,39 @@ function normalizeMetricTone(tone?: string): 'success' | 'warning' | 'danger' | 
 }
 
 export function CompactFinanceKpiGrid({ metrics }: { metrics: Array<{ label: string; value: React.ReactNode; icon: React.ElementType; tone?: string; helper?: React.ReactNode }> }) {
+  const renderCards = (items: typeof metrics) => items.map((metric) => (
+    <MetricCard
+      key={metric.label}
+      density="compact"
+      title={metric.label}
+      mobileTitle={metric.label}
+      value={metric.value}
+      icon={metric.icon}
+      tone={normalizeMetricTone(metric.tone)}
+      helper={typeof metric.helper === 'string' ? metric.helper : undefined}
+    />
+  ));
+
   return (
-    <PremiumKpiGrid density="compact" variant="dashboard" maxItems={metrics.length} ariaLabel="Indicateurs financiers">
-      {metrics.map((metric) => (
-        <MetricCard
-          key={metric.label}
-          density="compact"
-          title={metric.label}
-          value={metric.value}
-          icon={metric.icon}
-          tone={normalizeMetricTone(metric.tone)}
-          helper={typeof metric.helper === 'string' ? metric.helper : undefined}
-        />
-      ))}
-    </PremiumKpiGrid>
+    <>
+      <PremiumKpiGrid
+        density="compact"
+        variant="dashboard"
+        maxItems={4}
+        ariaLabel="Indicateurs financiers principaux"
+        className="sm:hidden"
+      >
+        {renderCards(metrics.slice(0, 4))}
+      </PremiumKpiGrid>
+      <PremiumKpiGrid
+        density="compact"
+        variant="dashboard"
+        maxItems={metrics.length}
+        ariaLabel="Indicateurs financiers"
+        className="hidden sm:block"
+      >
+        {renderCards(metrics)}
+      </PremiumKpiGrid>
+    </>
   );
 }

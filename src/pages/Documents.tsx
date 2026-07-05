@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkles,
   Upload,
   UserRound,
@@ -43,10 +44,18 @@ import {
 } from '../services/documentStorage';
 import { readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { PageShell } from '../components/ui/PageShell';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
 import { MetricCard } from '../components/ui/MetricCard';
+import { PremiumToolbar } from '../components/ui/PremiumToolbar';
+import { PremiumTableSurface } from '../components/ui/PremiumTableSurface';
+import { ColumnPicker } from '../components/ui/ColumnPicker';
+import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
+import { PremiumFilterSelect } from '../components/ui/PremiumFilterSelect';
+import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { DocumentProofDrawer } from '../components/documents/DocumentProofDrawer';
 import { DocumentUploadWizard, type DocumentUploadValue } from '../components/documents/DocumentUploadWizard';
 import { supportsPublicVerification, getDocumentProofState } from '../components/documents/documentProofState';
@@ -94,6 +103,14 @@ const CATEGORY_ICONS: Record<UserDocumentCategory, typeof FileText> = {
   autre: FolderOpen,
 };
 
+const DOCUMENT_TABLE_COLUMNS = [
+  { key: 'document', label: 'Document', required: true },
+  { key: 'context', label: 'Contexte' },
+  { key: 'period', label: 'Période' },
+  { key: 'status', label: 'Statut' },
+  { key: 'proof', label: 'Preuve' },
+  { key: 'date', label: 'Date' },
+];
 
 export function Documents() {
   const { profile, user, accountProfile } = useAuth();
@@ -114,6 +131,7 @@ export function Documents() {
   const [sourceFilter, setSourceFilter] = useState<DocumentSourceFilter>('all');
   const [statusFilter, setStatusFilter] = useState<DocumentStatusFilter>('all');
   const [typeFilter, setTypeFilter] = useState<DocumentTypeFilter>('all');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [entityOptions, setEntityOptions] = useState<Record<UserDocumentEntityType, EntityOption[]>>({
     agency: [],
     bailleur: [],
@@ -536,14 +554,38 @@ export function Documents() {
   };
 
   const drawerOpen = !!selectedDocument;
+  const documentColumnKeys = DOCUMENT_TABLE_COLUMNS.map((column) => column.key);
+  const {
+    visibility: documentColumnVisibility,
+    toggle: toggleDocumentColumn,
+    setAll: setAllDocumentColumns,
+    isVisible: isDocumentColumnVisible,
+  } = useColumnVisibility('documents', documentColumnKeys);
+  const sourceFilterOptions = [
+    { value: 'all', label: 'Tous les documents' },
+    { value: 'uploaded', label: 'Ajoutés manuellement' },
+    { value: 'generated', label: 'Générés automatiquement' },
+    { value: 'qr', label: 'Vérifiables QR' },
+  ];
+  const statusFilterOptions = [
+    { value: 'all', label: 'Tous les statuts' },
+    { value: 'active', label: 'Actifs' },
+    { value: 'unclassified', label: 'À classer' },
+    { value: 'review', label: 'À revoir' },
+    { value: 'archived', label: 'Archivés' },
+  ];
+  const activeMobileFilterCount = Number(sourceFilter !== 'all') + Number(statusFilter !== 'all');
 
   return (
     <>
-    <div className={`sk-mobile-page min-w-0 ${drawerOpen ? 'xl:grid xl:grid-cols-[minmax(0,1fr)_minmax(380px,440px)] xl:items-start xl:gap-5' : ''}`}>
+    <PageShell spacing="standard" variant="dataDense" tone="paper" verticalInset="standard" ariaLabel="Coffre documentaire">
+    <div className={`min-w-0 ${drawerOpen ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_clamp(23rem,28vw,26rem)] lg:items-start lg:gap-3' : ''}`}>
       <div className="flex min-w-0 flex-col gap-3.5 sm:gap-5">
         {/* ── HERO ── */}
       <PremiumPageHeader
         variant="darkVault"
+        density="compact"
+        className="!gap-2 !p-3 sm:!p-3.5 lg:!flex-row lg:!items-center lg:!justify-between lg:!p-4"
         eyebrow="COFFRE DOCUMENTAIRE"
         title="Documents"
         description="Centralisez, retrouvez et vérifiez vos preuves."
@@ -553,8 +595,8 @@ export function Documents() {
             variant="secondary"
             size="sm"
             onClick={() => navigate('/documents/scan')}
-            icon={<ShieldCheck className="h-4 w-4" />}
-            className="border-white/15 bg-white/10 text-white hover:bg-white/15"
+            icon={<ShieldCheck className="h-3.5 w-3.5" />}
+            className="!h-8 w-full border-white/15 bg-white/10 !px-3 !text-xs text-white hover:bg-white/15 sm:w-auto"
           >
             Scanner
           </PremiumButton>
@@ -565,24 +607,25 @@ export function Documents() {
             size="sm"
             onClick={() => setUploadOpen(true)}
             data-testid="button-upload-document"
-            icon={<Upload className="h-4 w-4" />}
+            icon={<Upload className="h-3.5 w-3.5" />}
+            className="!h-8 w-full !px-3 !text-xs sm:w-auto"
           >
             Ajouter au coffre
           </PremiumButton>
         }
         sideContent={
-          <div className="min-w-0 w-full rounded-xl border border-white/10 bg-white/[0.07] p-2.5 backdrop-blur sm:w-auto sm:min-w-[200px] sm:max-w-[220px]">
-            <div className="flex items-center justify-between gap-2">
+          <div className="hidden min-w-0 rounded-lg border border-white/10 bg-white/[0.07] p-1.5 backdrop-blur sm:block sm:w-auto sm:min-w-[132px] sm:max-w-[150px]">
+            <div className="flex items-center justify-between gap-1.5">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-100/55">Espace sécurisé</p>
-                <p className="mt-0.5 text-sm font-extrabold text-white">
+                <p className="truncate text-[0.52rem] font-semibold uppercase tracking-[0.12em] text-emerald-100/50">Espace sécurisé</p>
+                <p className="mt-0.5 whitespace-nowrap text-[0.68rem] font-bold text-white">
                   {formatStorageSize(usage?.used_bytes)}{' '}
-                  <span className="text-xs font-semibold text-emerald-100/45">/ {formatStorageSize(usage?.limit_bytes)}</span>
+                  <span className="text-[0.56rem] font-semibold text-emerald-100/45">/ {formatStorageSize(usage?.limit_bytes)}</span>
                 </p>
               </div>
-              <HardDrive className="h-4 w-4 flex-shrink-0 text-emerald-200/60" />
+              <HardDrive className="h-3 w-3 flex-shrink-0 text-emerald-200/60" />
             </div>
-            <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
+            <div className="mt-1 h-0.5 overflow-hidden rounded-full bg-white/10">
               <div
                 className={'h-full rounded-full transition-all duration-700 ' + usageTone(usedPercent)}
                 {...({ style: { width: usedPercent + '%' } } as React.HTMLAttributes<HTMLDivElement>)}
@@ -626,7 +669,7 @@ export function Documents() {
                 id: 'active' as const,
                 label: 'Preuves actives',
                 value: activeCount,
-                helper: 'Documents disponibles',
+                helper: 'Disponibles',
                 icon: FileCheck2,
                 isActive: statusFilter === 'active',
                 tone: 'emerald' as const,
@@ -635,7 +678,7 @@ export function Documents() {
                 id: 'qr' as const,
                 label: 'Vérifiables QR',
                 value: verifiableCount,
-                helper: 'Contrôlables publiquement',
+                helper: 'QR public',
                 icon: ShieldCheck,
                 isActive: sourceFilter === 'qr',
                 tone: 'blue' as const,
@@ -644,7 +687,7 @@ export function Documents() {
                 id: 'unclassified' as const,
                 label: 'À classer',
                 value: toClassifyCount,
-                helper: 'Sans lien métier',
+                helper: 'Sans lien',
                 icon: FolderOpen,
                 isActive: statusFilter === 'unclassified',
                 tone: 'amber' as const,
@@ -653,7 +696,7 @@ export function Documents() {
                 id: 'archived' as const,
                 label: 'Archivés',
                 value: archivedCount,
-                helper: 'Conservés hors vue active',
+                helper: 'Hors vue',
                 icon: Archive,
                 isActive: statusFilter === 'archived',
                 tone: 'slate' as const,
@@ -677,63 +720,113 @@ export function Documents() {
           <section className="min-w-0 max-w-full space-y-3 pb-24 sm:space-y-4 sm:pb-0">
 
           {/* TOOLBAR */}
-          <div className="sk-premium-panel min-w-0 max-w-full p-3">
-            {/* Line 1: search + selects */}
-            <div className="grid min-w-0 grid-cols-2 gap-2.5 lg:flex lg:items-center">
-              <label className="relative col-span-2 min-w-0 flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <PremiumToolbar
+            density="compact"
+            layout="list"
+            ariaLabel="Filtres du coffre documentaire"
+            isSplitOpen={drawerOpen}
+            search={
+              <label className="relative block h-8 min-w-0">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
                 <input
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Rechercher un document, une référence, un locataire..."
-                  className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10"
+                  className="!min-h-8 !h-8 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 py-0 pl-8 pr-3 text-xs font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none transition focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
                 />
               </label>
-              <select aria-label="Sélection"
-                value={sourceFilter}
-                onChange={(event) => setSourceFilter(event.target.value as DocumentSourceFilter)}
-                className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 lg:w-[190px]"
-              >
-                <option value="all">Tous les documents</option>
-                <option value="uploaded">Ajoutés manuellement</option>
-                <option value="generated">Générés automatiquement</option>
-                <option value="qr">Vérifiables QR</option>
-              </select>
-              <select aria-label="Sélection"
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as DocumentStatusFilter)}
-                className="min-h-11 min-w-0 rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-xs font-bold text-slate-700 outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-900/10 lg:w-[155px]"
-              >
-                <option value="all">Tous les statuts</option>
-                <option value="active">Actifs</option>
-                <option value="unclassified">À classer</option>
-                <option value="review">À revoir</option>
-                <option value="archived">Archivés</option>
-              </select>
-            </div>
-
-            {/* Line 2: type chips */}
-            <div className="scrollbar-hide -mx-1 mt-2.5 flex max-w-[calc(100%+0.5rem)] gap-1.5 overflow-x-auto px-1 pb-1">
-              {visibleTypeFilters.map((filter) => (
+            }
+            filters={
+              <div className="hidden items-center gap-2 lg:flex">
+                <PremiumFilterSelect
+                  value={sourceFilter === 'all' ? '' : sourceFilter}
+                  placeholder="Source"
+                  options={sourceFilterOptions.filter((option) => option.value !== 'all')}
+                  onChange={(value) => setSourceFilter((value || 'all') as DocumentSourceFilter)}
+                  className="w-[10.25rem]"
+                />
+                <PremiumFilterSelect
+                  value={statusFilter === 'all' ? '' : statusFilter}
+                  placeholder="Statut"
+                  options={statusFilterOptions.filter((option) => option.value !== 'all')}
+                  onChange={(value) => setStatusFilter((value || 'all') as DocumentStatusFilter)}
+                  className="w-[8.75rem]"
+                />
+              </div>
+            }
+            secondaryActions={
+              <>
                 <button
-                  key={filter.id}
                   type="button"
-                  onClick={() => setTypeFilter(filter.id)}
-                  className={`flex flex-none items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-bold transition ${typeFilter === filter.id
-                    ? filter.id === 'noqr'
-                      ? 'border-amber-700 bg-amber-700 text-white shadow-sm'
-                      : 'border-emerald-950 bg-emerald-950 text-white shadow-sm'
-                    : filter.id === 'noqr'
-                      ? 'border-amber-200 bg-amber-50 text-amber-800 hover:border-amber-300 hover:bg-amber-100'
-                      : 'border-emerald-950/10 bg-white text-slate-600 hover:border-emerald-800/25 hover:bg-emerald-50'
-                    }`}
+                  onClick={() => setShowMobileFilters(true)}
+                  className={`inline-flex h-8 flex-shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[0.6rem] border px-2.5 py-1 text-xs font-bold shadow-sm transition lg:hidden ${activeMobileFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
                 >
-                  {filter.label}
-                  <span className="text-[10px] opacity-60">{typeFilterCounts[filter.id] ?? 0}</span>
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Filtres
+                  {activeMobileFilterCount > 0 && (
+                    <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">{activeMobileFilterCount}</span>
+                  )}
                 </button>
-              ))}
+                <ColumnPicker
+                  columns={DOCUMENT_TABLE_COLUMNS}
+                  visibility={documentColumnVisibility}
+                  onToggle={toggleDocumentColumn}
+                  onSetAll={setAllDocumentColumns}
+                  className="!h-8 !rounded-[0.6rem] !px-2.5 !py-1 !text-xs hidden lg:inline-flex"
+                />
+              </>
+            }
+            quickChips={visibleTypeFilters.map((filter) => ({
+              id: filter.id,
+              label: filter.label,
+              count: typeFilterCounts[filter.id] ?? 0,
+              isActive: typeFilter === filter.id,
+              onClick: () => setTypeFilter(filter.id),
+            }))}
+          />
+
+          <MobileFilterSheet
+            isOpen={showMobileFilters}
+            title="Filtres documents"
+            onClose={() => setShowMobileFilters(false)}
+            onReset={() => {
+              setSourceFilter('all');
+              setStatusFilter('all');
+            }}
+          >
+            <div className="space-y-3">
+              <div>
+                <p className="mb-1.5 text-[0.62rem] font-black uppercase tracking-[0.16em] text-slate-400">Source</p>
+                <div className="grid gap-1.5">
+                  {sourceFilterOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setSourceFilter(option.value as DocumentSourceFilter)}
+                      className={`rounded-xl border px-2.5 py-2 text-left text-xs font-bold transition ${sourceFilter === option.value ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-100 bg-[#fffdf8] text-slate-600 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-1.5 text-[0.62rem] font-black uppercase tracking-[0.16em] text-slate-400">Statut</p>
+                <div className="grid gap-1.5">
+                  {statusFilterOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setStatusFilter(option.value as DocumentStatusFilter)}
+                      className={`rounded-xl border px-2.5 py-2 text-left text-xs font-bold transition ${statusFilter === option.value ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-slate-100 bg-[#fffdf8] text-slate-600 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
-          </div>
+          </MobileFilterSheet>
 
           {/* DOCUMENT LIST / TABLE */}
           {loading ? (
@@ -774,17 +867,17 @@ export function Documents() {
           ) : (
             <>
               {/* Desktop: dense list when drawer closed, compact when open */}
-              <div className={`hidden xl:block`}>
-                <div className="sk-table-shell overflow-hidden">
+              <div className="hidden lg:block">
+                <PremiumTableSurface density="compact" withHorizontalScroll ariaLabel="Table des documents">
                   <table className="w-full text-left">
                     <thead>
                       <tr className="border-b border-emerald-950/8 bg-[#faf9f5]/95">
                         <th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Document</th>
-                        {!drawerOpen && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Contexte</th>}
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Période</th>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Statut</th>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Preuve</th>
-                        <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 text-right">Date</th>
+                        {!drawerOpen && isDocumentColumnVisible('context') && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Contexte</th>}
+                        {isDocumentColumnVisible('period') && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Période</th>}
+                        {isDocumentColumnVisible('status') && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Statut</th>}
+                        {isDocumentColumnVisible('proof') && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Preuve</th>}
+                        {!drawerOpen && isDocumentColumnVisible('date') && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 text-right">Date</th>}
                         <th className="w-10" />
                       </tr>
                     </thead>
@@ -847,7 +940,7 @@ export function Documents() {
                               </div>
                             </td>
                             {/* Contexte */}
-                            {!drawerOpen && (
+                            {!drawerOpen && isDocumentColumnVisible('context') && (
                               <td className="px-3 py-2.5">
                                 <div className="min-w-0 max-w-[200px]">
                                   {item.businessContext?.subject ? (
@@ -864,7 +957,8 @@ export function Documents() {
                               </td>
                             )}
                             {/* Période / Version */}
-                            <td className="px-3 py-2.5">
+                            {isDocumentColumnVisible('period') && (
+                              <td className="px-3 py-2.5">
                               <div className="min-w-0">
                                 <p className="text-xs font-semibold text-slate-700">
                                   {item.period ? formatDocumentPeriod(item.period) : '—'}
@@ -875,18 +969,22 @@ export function Documents() {
                                   </span>
                                 )}
                               </div>
-                            </td>
+                              </td>
+                            )}
                             {/* Statut */}
-                            <td className="px-3 py-2.5">
+                            {isDocumentColumnVisible('status') && (
+                              <td className="px-3 py-2.5">
                               <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${statusLabel === 'Archivé'
                                 ? 'bg-slate-100 text-slate-600'
                                 : statusLabel === 'À classer' || statusLabel === 'À revoir'
                                   ? 'bg-amber-50 text-amber-700'
                                   : 'bg-emerald-50 text-emerald-800'
                                 }`}>{statusLabel}</span>
-                            </td>
+                              </td>
+                            )}
                             {/* Preuve */}
-                            <td className="px-3 py-2.5">
+                            {isDocumentColumnVisible('proof') && (
+                              <td className="px-3 py-2.5">
                               {proofState.kind === 'verifiable' ? (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700">
                                   <ShieldCheck className="h-3 w-3" />
@@ -901,11 +999,14 @@ export function Documents() {
                               ) : (
                                 <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-400">Ajouté</span>
                               )}
-                            </td>
+                              </td>
+                            )}
                             {/* Date */}
-                            <td className="px-3 py-2.5 text-right">
+                            {!drawerOpen && isDocumentColumnVisible('date') && (
+                              <td className="px-3 py-2.5 text-right">
                               <p className="text-xs font-semibold text-slate-500 whitespace-nowrap">{new Date(item.createdAt).toLocaleDateString('fr-FR')}</p>
-                            </td>
+                              </td>
+                            )}
                             {/* Chevron */}
                             <td className="px-2 py-2.5">
                               <ChevronRight className="h-4 w-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-700" />
@@ -915,84 +1016,39 @@ export function Documents() {
                       })}
                     </tbody>
                   </table>
-                </div>
+                </PremiumTableSurface>
               </div>
 
               {/* Mobile + tablet: cards */}
-              <div className={`xl:hidden grid min-w-0 max-w-full gap-3`}>
+              <div className="grid min-w-0 max-w-full gap-2 lg:hidden">
                 {filteredItems.map((item) => {
                   const Icon = ['rapport', 'rapport_bailleur', 'rapport_proprietaire'].includes(item.documentType ?? '')
                     ? BarChart3
                     : CATEGORY_ICONS[item.category];
                   const statusLabel = lifecycleLabel(item);
-                  const proofState = getDocumentProofState(item);
-                  const showProofBadge = ['verifiable', 'review', 'revoked', 'superseded'].includes(proofState.kind);
                   const isSelected = `${item.source}-${item.id}` === selectedDocumentId;
+                  const statusTone = item.lifecycleStatus === 'archived'
+                    ? 'slate'
+                    : ['orphaned', 'temporary', 'corrupt'].includes(item.lifecycleStatus)
+                      ? 'amber'
+                      : 'emerald';
+                  const compactSubtitle = item.businessContext?.subject || item.subtitle;
                   return (
-                    <article
+                    <PremiumMobileCard
                       key={`${item.source}-${item.id}`}
-                      className={`group sk-mobile-card min-w-0 max-w-full overflow-hidden p-3 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-800/20 hover:shadow-premium active:scale-[0.992] ${isSelected ? 'border-emerald-700/45 bg-emerald-50/45 ring-2 ring-emerald-700/10' : ''}`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setSelectedDocumentId(`${item.source}-${item.id}`)}
-                        className="block w-full min-w-0 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
-                        aria-label={`Consulter la fiche de ${item.title}`}
-                        {...(isSelected ? { 'aria-pressed': true } : {})}
-                      >
-                        <div className="flex items-start gap-2.5 sm:gap-3">
-                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10 sm:h-11 sm:w-11 sm:rounded-2xl">
-                            <Icon className="h-5 w-5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-700">{documentTypeBadge(item)}</p>
-                            <h2 className="mt-1 line-clamp-2 break-words text-[15px] font-extrabold leading-5 text-slate-950 [overflow-wrap:anywhere] sm:text-base">{item.title}</h2>
-                            <p className="mt-0.5 line-clamp-2 break-words text-xs font-semibold leading-5 text-slate-500 [overflow-wrap:anywhere] sm:text-sm">{item.subtitle}</p>
-                          </div>
-                          <ChevronRight className="h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-emerald-700 mt-1" />
-                        </div>
-
-                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                          <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800">
-                            {item.source === 'generated' ? 'Généré' : 'Ajouté'}
-                          </span>
-                          {showProofBadge && (
-                            <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${proofState.kind === 'verifiable'
-                              ? 'bg-sky-50 text-sky-700'
-                              : proofState.kind === 'revoked'
-                                ? 'bg-red-50 text-red-700'
-                                : proofState.kind === 'superseded'
-                                  ? 'bg-orange-50 text-orange-700'
-                                  : 'bg-amber-50 text-amber-700'
-                              }`}>
-                              {proofState.label}
-                            </span>
-                          )}
-                          <span
-                            className={`rounded-full px-2 py-1 text-[10px] font-bold ${statusLabel === 'Archivé'
-                              ? 'bg-slate-100 text-slate-600'
-                              : statusLabel === 'À classer' || statusLabel === 'À revoir'
-                                ? 'bg-amber-50 text-amber-700'
-                                : 'bg-emerald-50 text-emerald-800'
-                              }`}
-                          >
-                            {statusLabel}
-                          </span>
-                        </div>
-
-                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-semibold text-slate-400 sm:text-xs">
-                          <span>{formatStorageSize(item.size)}</span>
-                          <span>{new Date(item.createdAt).toLocaleDateString('fr-FR')}</span>
-                          {item.period && <span>{formatDocumentPeriod(item.period)}</span>}
-                          {item.version && item.version > 1 && <span className="text-emerald-700 font-bold">v{item.version}</span>}
-                        </div>
-                        {item.reference && (
-                          <p className="mt-1.5 truncate font-mono text-[10px] font-semibold text-slate-400 sm:text-[11px]" title={item.reference}>
-                            Réf. {item.reference}
-                          </p>
-                        )}
-                      </button>
-                    </article>
+                      title={item.title}
+                      subtitle={compactSubtitle}
+                      eyebrow={documentTypeBadge(item)}
+                      icon={Icon}
+                      status={statusLabel}
+                      statusTone={statusTone}
+                      density="dense"
+                      emphasis="identity"
+                      selected={isSelected}
+                      onClick={() => setSelectedDocumentId(`${item.source}-${item.id}`)}
+                      ariaLabel={`Consulter la fiche de ${item.title}`}
+                      className="max-w-full min-w-0 overflow-hidden !rounded-[0.85rem] shadow-[0_6px_16px_rgba(15,23,42,0.04)]"
+                    />
                   );
                 })}
               </div>
@@ -1034,7 +1090,7 @@ export function Documents() {
 
       {/* DRAWER — pleine hauteur colonne droite sur xl, à côté du Hero et du reste */}
       {selectedDocument && (
-        <div className="xl:sticky xl:top-4 xl:self-start xl:h-[calc(100vh-2rem)] w-full">
+        <div className="w-full lg:sticky lg:top-4 lg:self-start lg:h-[calc(100vh-2rem)]">
           <DocumentProofDrawer
               document={selectedDocument}
               canArchive={selectedDocument.source === 'uploaded' && selectedDocument.retentionPolicy !== 'critical' && selectedDocument.lifecycleStatus === 'active'}
@@ -1053,6 +1109,7 @@ export function Documents() {
           </div>
         )}
       </div>
+    </PageShell>
 
       <DocumentUploadWizard
         isOpen={uploadOpen}

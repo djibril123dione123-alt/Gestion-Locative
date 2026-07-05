@@ -81,7 +81,7 @@ const VARIANT_STYLES: Record<
   registry: {
     // Fond clair avec liseré vert/or — scanner et vérification uniquement
     shell:
-      'relative overflow-hidden rounded-[1.4rem] border border-emerald-700/30 bg-gradient-to-br from-white via-emerald-50/40 to-amber-50/30 p-[clamp(1.15rem,1.5vw,1.35rem)] shadow-[0_22px_64px_rgba(6,17,13,0.10)]',
+      'relative overflow-hidden rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.97),rgba(255,255,255,0.94)_54%,rgba(236,253,245,0.62))] p-[clamp(1rem,1.35vw,1.2rem)] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-gradient-to-r before:from-emerald-800 before:via-amber-400 before:to-emerald-700',
     eyebrow: 'text-emerald-700',
     title: 'text-brand-950',
     description: 'text-slate-600',
@@ -94,20 +94,29 @@ const VARIANT_STYLES: Record<
 function EyebrowBadge({
   text,
   variant,
+  density = 'comfortable',
 }: {
   text: string;
   variant: PremiumPageHeaderVariant;
+  density?: PremiumPageHeaderProps['density'];
 }) {
+  const compactBadge =
+    density === 'ultraCompact'
+      ? 'px-2 py-0.5 text-[0.5rem] tracking-[0.12em]'
+      : density === 'compact'
+        ? 'px-2.5 py-0.5 text-[0.55rem] tracking-[0.13em]'
+        : 'px-3 py-1 text-[10px] tracking-[0.14em]';
+
   if (variant === 'darkVault') {
     return (
-      <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-100">
+      <div className={`inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.08] font-semibold uppercase text-emerald-100 ${compactBadge}`}>
         {text}
       </div>
     );
   }
   if (variant === 'registry') {
     return (
-      <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-700/20 bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+      <div className={`inline-flex items-center gap-1.5 rounded-full border border-emerald-700/15 bg-emerald-50/80 font-semibold uppercase text-emerald-700 ${compactBadge}`}>
         {text}
       </div>
     );
@@ -149,21 +158,28 @@ export function PremiumPageHeader({
   const resolvedSecondaryAction = secondaryAction;
   const legacyActions = actions; // actions non-migrées affichées après les nouvelles
 
+  const isUltraCompact = density === 'ultraCompact';
+  const isCompact = density === 'compact' || isUltraCompact;
+
   // La couleur du titre change selon le variant (blanc sur darkVault)
   const titleColorClass =
     variant === 'darkVault' ? 'text-brand-950' : styles.title;
   // Sur darkVault, le titre doit être blanc
+  const compactTitleClass =
+    isUltraCompact
+      ? 'mt-0.5 text-[1.24rem] leading-[1.12]'
+      : isCompact
+        ? 'mt-0.5 text-[1.42rem] leading-[1.12]'
+        : 'mt-1 text-3xl leading-tight sm:text-4xl';
+
   const titleClass =
     variant === 'darkVault'
-      ? 'mt-1 min-w-0 font-serif text-[clamp(1.25rem,1.8vw,1.6rem)] leading-[1.15] font-black tracking-tight text-white'
-      : `mt-1 min-w-0 font-serif text-3xl sm:text-4xl font-black tracking-tight ${titleColorClass}`;
+      ? `min-w-0 font-serif font-black tracking-tight text-white ${isCompact ? compactTitleClass : 'mt-1 text-[clamp(1.25rem,1.8vw,1.6rem)] leading-[1.15]'}`
+      : `min-w-0 font-serif font-black tracking-tight ${titleColorClass} ${compactTitleClass}`;
 
   const hasActions =
     resolvedPrimaryAction || resolvedSecondaryAction || legacyActions;
   const hasSideContent = !!sideContent;
-
-  const isUltraCompact = density === 'ultraCompact';
-  const isCompact = density === 'compact' || isUltraCompact;
 
   if (variant === 'standard') {
     return (
@@ -204,7 +220,7 @@ export function PremiumPageHeader({
 
   return (
     <header
-      className={`@container ${styles.shell} flex flex-col gap-4 @2xl:flex-row @2xl:items-center @2xl:justify-between ${className}`}
+      className={`@container ${styles.shell} flex flex-col ${isUltraCompact ? 'gap-1.5 !px-3 !py-2' : isCompact ? 'gap-2.5 !px-4 !py-3' : 'gap-4'} lg:flex-row lg:items-center lg:justify-between ${className}`}
       role="banner"
     >
       {/* Bulle décorative */}
@@ -212,7 +228,7 @@ export function PremiumPageHeader({
 
       {/* Colonne gauche : eyebrow + title + description + meta/children legacy */}
       <div className="min-w-0 flex-1 relative z-10">
-          <EyebrowBadge text={eyebrow} variant={variant} />
+          <EyebrowBadge text={eyebrow} variant={variant} density={density} />
 
           <h1 className={titleClass}>{title}</h1>
 
@@ -222,19 +238,19 @@ export function PremiumPageHeader({
               {mobileDescription ? (
                 <>
                   <p
-                    className={`mt-1 max-w-2xl text-[0.7rem] font-medium leading-relaxed @md:hidden ${styles.description}`}
+                    className={`${isCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium @md:hidden ${styles.description}`}
                   >
                     {mobileDescription}
                   </p>
                   <p
-                    className={`mt-1 hidden max-w-2xl text-[0.7rem] font-medium leading-relaxed @md:block ${styles.description} ${isSplitOpen ? 'opacity-90' : ''}`}
+                    className={`${isCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium @md:block ${styles.description} ${isSplitOpen ? 'opacity-90' : ''}`}
                   >
                     {isSplitOpen ? mobileDescription : resolvedDescription}
                   </p>
                 </>
               ) : (
                 <p
-                  className={`mt-1 max-w-2xl text-[0.7rem] font-medium leading-relaxed line-clamp-2 ${styles.description}`}
+                  className={`${isCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium line-clamp-2 ${styles.description}`}
                 >
                   {resolvedDescription}
                 </p>
@@ -251,7 +267,7 @@ export function PremiumPageHeader({
 
         {/* Colonne droite : Actions et sideContent */}
         {(hasActions || hasSideContent) && (
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center @2xl:justify-end relative z-10">
+          <div className="relative z-10 flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
             {sideContent}
             {resolvedSecondaryAction}
             {resolvedPrimaryAction}

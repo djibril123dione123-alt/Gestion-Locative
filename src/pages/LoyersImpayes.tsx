@@ -29,6 +29,7 @@ import { Modal } from '../components/ui/Modal';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { MoneyText } from '../components/ui/MoneyText';
+import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { buildMonthFilterOptions, resolveMonthFilter } from '../lib/monthFilters';
 
 const ITEMS_PER_PAGE = 20;
@@ -88,6 +89,12 @@ const STATUS_META: Record<LoyerStatut, { label: string; classes: string }> = {
     a_venir: { label: 'À venir', classes: 'bg-slate-100 text-slate-700 border-slate-200' },
     en_retard: { label: 'En retard', classes: 'bg-red-100 text-red-700 border-red-200' },
     partiel: { label: 'Partiel', classes: 'bg-orange-100 text-orange-700 border-orange-200' },
+};
+
+const getReceivableStatusTone = (statut: LoyerStatut): 'emerald' | 'amber' | 'red' | 'blue' | 'slate' => {
+    if (statut === 'en_retard') return 'red';
+    if (statut === 'partiel') return 'amber';
+    return 'slate';
 };
 
 
@@ -427,21 +434,21 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         },
         {
             label: 'Retards',
-            value: <MoneyText value={kpis.retardsReliquats} />,
+            value: <MoneyText value={kpis.retardsReliquats} compact />,
             helper: 'À recouvrer',
             icon: Wallet,
             tone: 'red' as const,
         },
         {
             label: 'Encaissé',
-            value: <MoneyText value={kpis.dejaEncaisse} />,
+            value: <MoneyText value={kpis.dejaEncaisse} compact />,
             helper: 'Sur créances',
             icon: HandCoins,
             tone: 'emerald' as const,
         },
         {
             label: 'Attendus',
-            value: <MoneyText value={kpis.attendus} />,
+            value: <MoneyText value={kpis.attendus} compact />,
             helper: 'Théorique',
             icon: Building2,
             tone: 'slate' as const,
@@ -571,7 +578,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 </div>
                             }
                             filters={
-                                <>
+                                <div className="hidden min-w-0 items-center gap-2 lg:flex">
                                     <SmartCombobox
                                         value={selectedMois}
                                         options={monthOptions}
@@ -605,7 +612,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                         onSetAll={colSetAll}
                                         className={`!h-8 !rounded-[0.6rem] !px-2.5 !py-1 !text-xs ${drawerLoyer ? 'hidden' : ''}`}
                                     />
-                                </>
+                                </div>
                             }
                         />
 
@@ -650,33 +657,30 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             selectedId={drawerLoyer?.id}
                             mobileRender={(i) => {
                                 const status = STATUS_META[i.statut] || STATUS_META['en_retard'];
-                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                const StatusIcon = (status as any).icon || AlertCircle;
+                                const periodLabel = new Date(i.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
                                 return (
-                                    <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <span className="font-black text-slate-900 truncate">{i.locataire_prenom} {i.locataire_nom}</span>
-                                            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wider whitespace-nowrap ${status.classes}`}>
-                                                <StatusIcon className="h-3 w-3" />
-                                                {status.label}
-                                            </span>
-                                        </div>
-
-                                        <div className="text-xs font-semibold text-slate-500 truncate">
-                                            {i.immeuble_nom || '—'} · {i.unite_nom || '—'}
-                                        </div>
-
-                                        <div className="flex items-center justify-between mt-1">
-                                            <span className="text-base font-black text-red-600"><MoneyText value={i.montant_du} /></span>
-                                            <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(i.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
-                                        </div>
-
-                                        {i.montant_encaisse > 0 && (
-                                            <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
-                                                <span>Déjà encaissé: <MoneyText value={i.montant_encaisse} /></span>
-                                            </div>
-                                        )}
-                                    </div>
+                                    <PremiumMobileCard
+                                        title={`${i.locataire_prenom} ${i.locataire_nom}`.trim() || 'Locataire inconnu'}
+                                        subtitle={`${i.immeuble_nom || 'Bien non renseigné'} · ${i.unite_nom || 'Unité non renseignée'}`}
+                                        icon={AlertCircle}
+                                        status={status.label}
+                                        statusTone={getReceivableStatusTone(i.statut)}
+                                        amount={i.montant_du}
+                                        amountLabel="Reste dû"
+                                        amountTone={i.montant_du > 3 ? 'red' : 'emerald'}
+                                        amountCompact
+                                        secondaryAmount={i.montant_encaisse > 0 ? i.montant_encaisse : undefined}
+                                        secondaryAmountLabel={i.montant_encaisse > 0 ? 'Déjà encaissé' : undefined}
+                                        secondaryAmountTone="emerald"
+                                        meta={[
+                                            { label: 'Période', value: periodLabel },
+                                            { label: 'Échéance', value: new Date(i.date_echeance).toLocaleDateString('fr-FR') },
+                                        ]}
+                                        selected={drawerLoyer?.id === i.id}
+                                        onClick={() => setDrawerLoyer(i)}
+                                        density="compact"
+                                        emphasis="identity"
+                                    />
                                 );
                             }}
                         />

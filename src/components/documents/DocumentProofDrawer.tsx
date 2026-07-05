@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   Archive,
   Check,
@@ -12,9 +12,9 @@ import {
   Loader2,
   QrCode,
   ShieldCheck,
-  X,
 } from 'lucide-react';
 import { formatStorageSize } from '../../services/documentStorage';
+import { PremiumDrawerShell } from '../ui/PremiumDrawerShell';
 import { getDocumentProofState } from './documentProofState';
 
 interface VerificationData {
@@ -133,14 +133,14 @@ function lifecycleLabel(status: string) {
 
 function InfoSection({ title, icon: Icon, children }: { title: string; icon: typeof FileText; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-emerald-950/10 bg-white/90 p-3.5 shadow-[0_10px_26px_rgba(15,23,42,0.035)] sm:p-4">
+    <section className="rounded-xl border border-emerald-950/10 bg-white/[0.88] p-2.5 shadow-[0_8px_18px_rgba(15,23,42,0.045)] ring-1 ring-white/70">
       <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10">
-          <Icon className="h-4 w-4" />
+        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10">
+          <Icon className="h-3.5 w-3.5" />
         </span>
-        <h3 className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">{title}</h3>
+        <h3 className="text-[0.58rem] font-bold uppercase tracking-[0.12em] text-slate-500">{title}</h3>
       </div>
-      <dl className="mt-3 divide-y divide-slate-100">{children}</dl>
+      <dl className="mt-1.5 divide-y divide-slate-100">{children}</dl>
     </section>
   );
 }
@@ -149,9 +149,9 @@ function InfoSection({ title, icon: Icon, children }: { title: string; icon: typ
 function InfoRow({ label, value, mono = false, strong = false }: { label: string; value: ReactNode | null | undefined; mono?: boolean; strong?: boolean }) {
   if (value === null || value === undefined || value === '') return null;
   return (
-    <div className="grid grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-3 py-2.5 first:pt-0 last:pb-0">
-      <dt className="text-xs font-semibold text-slate-500">{label}</dt>
-      <dd className={`min-w-0 break-words text-right text-xs ${strong ? 'font-black text-slate-950' : 'font-bold text-slate-700'} ${mono ? 'font-mono' : ''}`}>{value}</dd>
+    <div className="grid grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] gap-2 py-1 first:pt-0 last:pb-0">
+      <dt className="text-[0.64rem] font-medium text-slate-500">{label}</dt>
+      <dd className={`min-w-0 break-words text-right text-[0.64rem] ${strong ? 'font-semibold text-slate-950' : 'font-semibold text-slate-700'} ${mono ? 'font-mono' : ''}`}>{value}</dd>
     </div>
   );
 }
@@ -228,21 +228,10 @@ export function DocumentProofDrawer({
 }: DocumentProofDrawerProps) {
   const [pendingAction, setPendingAction] = useState<'open' | 'download' | 'copy-link' | null>(null);
   const [referenceCopied, setReferenceCopied] = useState(false);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const contextRows = useMemo(() => buildContextRows(document), [document]);
   const proofState = getDocumentProofState(document);
-  const proofTone = proofState.kind === 'verifiable'
-    ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
-    : proofState.kind === 'revoked'
-      ? 'border-red-200 bg-red-50 text-red-700'
-      : proofState.kind === 'superseded'
-        ? 'border-amber-200 bg-amber-50 text-amber-800'
-        : proofState.kind === 'review'
-          ? 'border-orange-200 bg-orange-50 text-orange-800'
-          : 'border-slate-200 bg-slate-50 text-slate-600';
 
   useEffect(() => {
-    closeButtonRef.current?.focus();
     setReferenceCopied(false);
   }, [document.id]);
 
@@ -280,50 +269,39 @@ export function DocumentProofDrawer({
   const hasContextRows = contextRows.some(([, v]) => v !== null && v !== '');
 
   return (
-    <aside
-      className="fixed inset-0 z-[70] flex min-h-0 flex-col overflow-hidden bg-[#fffdf8] shadow-[0_24px_70px_rgba(15,23,42,0.2)] xl:static xl:inset-auto xl:z-auto xl:h-full xl:min-h-0 xl:rounded-3xl xl:border xl:border-emerald-950/10"
-      role="dialog"
-      aria-label={`Fiche preuve ${document.title}`}
+    <PremiumDrawerShell
+      open
+      title={document.title}
+      eyebrow={documentTypeLabel(document)}
+      description={[
+        proofState.label,
+        lifecycleLabel(document.lifecycleStatus),
+        document.source === 'generated' ? 'Généré' : 'Ajouté',
+        document.reference ? `Réf. ${document.reference}` : null,
+      ].filter(Boolean).join(' · ')}
+      avatar={
+        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-950/10">
+          <FileText className="h-4 w-4" />
+        </span>
+      }
+      onClose={onClose}
+      closeLabel="Fermer la fiche preuve"
+      size="compact"
+      desktopMode="floating"
+      desktopAt="lg"
+      density="compact"
+      ariaLabel={`Fiche preuve ${document.title}`}
+      headerClassName="!py-2"
+      bodyClassName="space-y-2 pb-24 lg:pb-3"
     >
-      {/* Header — sticky */}
-      <header className="shrink-0 border-b border-emerald-950/10 bg-[#fffdf8]/95 px-4 py-3.5 backdrop-blur sm:px-5 sm:py-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-800">{documentTypeLabel(document)}</p>
-              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-black ${proofTone}`}>{proofState.label}</span>
-            </div>
-            <h2 className="mt-1.5 line-clamp-2 text-xl font-black leading-tight text-slate-950 sm:text-2xl">{document.title}</h2>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-500">
-              <span className="rounded-full bg-slate-100 px-2 py-1">{lifecycleLabel(document.lifecycleStatus)}</span>
-              <span className="rounded-full bg-slate-100 px-2 py-1">{document.source === 'generated' ? 'Généré' : 'Ajouté'}</span>
-              {document.version && document.version > 1 && (
-                <span className="rounded-full bg-emerald-100 px-2 py-1 text-emerald-800 font-bold">v{document.version}</span>
-              )}
-            </div>
-            {document.reference && (
-              <p className="mt-2 truncate font-mono text-[11px] font-semibold text-slate-400" title={document.reference}>
-                Réf. {document.reference}
-              </p>
-            )}
-          </div>
-          <button ref={closeButtonRef} type="button" onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-950/10 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-950" aria-label="Fermer la fiche preuve">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
-
-      {/* Scrollable body */}
-      <div className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-3.5 py-3.5 pb-28 sm:px-5 sm:py-4 xl:pb-5">
-
         {/* Primary actions */}
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => run('open', () => onOpen(document))} disabled={pendingAction !== null} className="sk-action sk-action-primary flex-1 justify-center py-2 text-xs disabled:opacity-60">
-            {pendingAction === 'open' ? <Loader2 className="h-4 w-4 animate-spin" /> : <ExternalLink className="h-4 w-4" />}
+          <button type="button" onClick={() => run('open', () => onOpen(document))} disabled={pendingAction !== null} className="sk-action sk-action-primary h-7 min-h-0 flex-1 justify-center px-2 py-0.5 text-[0.68rem] disabled:opacity-60">
+            {pendingAction === 'open' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ExternalLink className="h-3.5 w-3.5" />}
             Ouvrir
           </button>
-          <button type="button" onClick={() => run('download', () => onDownload(document))} disabled={pendingAction !== null} className="sk-action sk-action-secondary flex-1 justify-center py-2 text-xs disabled:opacity-60">
-            {pendingAction === 'download' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          <button type="button" onClick={() => run('download', () => onDownload(document))} disabled={pendingAction !== null} className="sk-action sk-action-secondary h-7 min-h-0 flex-1 justify-center px-2 py-0.5 text-[0.68rem] disabled:opacity-60">
+            {pendingAction === 'download' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
             Télécharger
           </button>
         </div>
@@ -341,22 +319,22 @@ export function DocumentProofDrawer({
         {/* QR / Proof actions */}
         {(document.reference || (onVerify && document.verification) || (onCopyLink && document.verification)) && (
           <InfoSection title="Actions de preuve" icon={QrCode}>
-            <div className="grid grid-cols-2 gap-2 py-1">
+            <div className="grid grid-cols-2 gap-1.5 py-0.5">
               {document.reference && (
-                <button type="button" onClick={copyReference} className="sk-action sk-action-secondary min-w-0 justify-center px-2.5 text-xs">
-                  {referenceCopied ? <Check className="h-4 w-4 text-emerald-700" /> : <Copy className="h-4 w-4" />}
+                <button type="button" onClick={copyReference} className="sk-action sk-action-secondary h-8 min-w-0 justify-center px-2 text-[0.68rem]">
+                  {referenceCopied ? <Check className="h-3.5 w-3.5 text-emerald-700" /> : <Copy className="h-3.5 w-3.5" />}
                   Copier réf.
                 </button>
               )}
               {onVerify && document.verification && (
-                <button type="button" onClick={() => onVerify(document)} className="sk-action sk-action-secondary min-w-0 justify-center px-2.5 text-xs">
-                  <QrCode className="h-4 w-4" />
+                <button type="button" onClick={() => onVerify(document)} className="sk-action sk-action-secondary h-8 min-w-0 justify-center px-2 text-[0.68rem]">
+                  <QrCode className="h-3.5 w-3.5" />
                   Vérifier QR
                 </button>
               )}
               {onCopyLink && document.verification && (
-                <button type="button" onClick={() => run('copy-link', () => onCopyLink(document))} disabled={pendingAction !== null} className="sk-action sk-action-secondary col-span-2 min-w-0 justify-center px-2.5 text-xs disabled:opacity-60">
-                  {pendingAction === 'copy-link' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                <button type="button" onClick={() => run('copy-link', () => onCopyLink(document))} disabled={pendingAction !== null} className="sk-action sk-action-secondary col-span-2 h-8 min-w-0 justify-center px-2 text-[0.68rem] disabled:opacity-60">
+                  {pendingAction === 'copy-link' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
                   Copier le lien de vérification
                 </button>
               )}
@@ -387,19 +365,18 @@ export function DocumentProofDrawer({
 
         {/* 4. ARCHIVAGE — action secondaire */}
         {canArchive && (
-          <section className="rounded-2xl border border-amber-200/70 bg-amber-50/55 p-3.5">
-            <p className="text-xs font-black uppercase tracking-[0.1em] text-amber-800">Archiver ce document</p>
-            <p className="mt-1 text-xs font-semibold leading-5 text-amber-900/70">
+          <section className="rounded-xl border border-amber-200/70 bg-amber-50/50 p-3">
+            <p className="text-[0.65rem] font-bold uppercase tracking-[0.1em] text-amber-800">Archiver ce document</p>
+            <p className="mt-1 text-[0.68rem] font-semibold leading-4 text-amber-900/70">
               Le document reste conservé et traçable. Il sort de la vue active mais n'est pas supprimé.
               <span className="block mt-1 opacity-70">L'archivage ne révoque pas la preuve QR enregistrée.</span>
             </p>
-            <button type="button" onClick={() => onArchive(document)} className="sk-action mt-3 w-full justify-center border border-amber-300 bg-white text-amber-800 hover:bg-amber-50">
+            <button type="button" onClick={() => onArchive(document)} className="sk-action mt-2 w-full justify-center border border-amber-300 bg-white py-1.5 text-amber-800 hover:bg-amber-50">
               <Archive className="h-4 w-4" />
               Archiver le document
             </button>
           </section>
         )}
-      </div>
-    </aside>
+    </PremiumDrawerShell>
   );
 }

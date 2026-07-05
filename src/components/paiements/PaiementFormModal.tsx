@@ -5,17 +5,16 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
   FileCheck2,
-  Info,
   ShieldAlert,
   ShieldCheck,
+  UserRound,
   WifiOff,
 } from 'lucide-react';
 import { WizardShell, type WizardStep } from '../ui/WizardShell';
 import { BrandMark } from '../brand/BrandLogo';
-import { Button } from '../ui/Button';
 import { SmartCombobox, type SmartComboboxOption } from '../ui/SmartCombobox';
-import { TooltipHint } from '../onboarding/TooltipHint';
 import { isCommissionMissing } from '../../services/domain/commissionService';
 import type { ContratRow, PaiementFormData, PaiementRow, PaymentChannel } from './paiementTypes';
 import { buildPaymentMonthOptions, getPaymentMonthState } from '../../services/domain/paymentSchedule';
@@ -58,12 +57,18 @@ function formatPaymentPeriod(monthKey: string): string {
 
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-0 items-start justify-between gap-3">
-      <span className="shrink-0 font-semibold text-slate-500">{label}</span>
-      <span className="min-w-0 text-right font-black text-slate-950">{value}</span>
+    <div className="flex min-w-0 items-start justify-between gap-3 border-b border-slate-100/70 py-1 last:border-b-0">
+      <span className="shrink-0 text-[0.66rem] font-medium text-slate-500">{label}</span>
+      <span className="min-w-0 truncate text-right text-[0.68rem] font-semibold text-slate-900" title={value}>{value}</span>
     </div>
   );
 }
+
+const wizardPrimaryActionClass =
+  'inline-flex h-8 min-h-0 w-full min-w-[7rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-3 py-1 text-[0.72rem] font-semibold leading-none text-white shadow-[0_10px_22px_rgba(6,45,35,0.16)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto';
+
+const wizardSecondaryActionClass =
+  'inline-flex h-8 min-h-0 w-full min-w-[6rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-emerald-950/10 bg-white/85 px-3 py-1 text-[0.72rem] font-semibold leading-none text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto';
 
 export function PaiementFormModal({
   isOpen,
@@ -214,11 +219,14 @@ export function PaiementFormModal({
       tone="finance"
       eyebrow="ENCAISSEMENT & FINANCE"
       title={editingPaiement ? 'Corriger une erreur de paiement' : 'Nouveau paiement'}
-      description={editingPaiement ? 'Comparez les valeurs et justifiez la correction.' : 'Enregistrez un encaissement en trois étapes contrôlées.'}
+      description={editingPaiement ? 'Comparez les valeurs et justifiez la correction.' : 'Encaissez un loyer sans casser le registre financier.'}
       steps={PAYMENT_STEPS}
       currentStep={currentStep - 1}
-      contentDescription={editingPaiement ? 'Comparez les valeurs et justifiez la correction.' : 'Enregistrez un encaissement en trois étapes contrôlées.'}
+      contentDescription={editingPaiement ? 'Comparez les valeurs et justifiez la correction.' : 'Encaissez un loyer sans casser le registre financier.'}
       stepContext={<PaiementWizardStepContext step={currentStep} isEditing={!!editingPaiement} />}
+      panelClassName="sm:!w-[min(90vw,840px)] sm:!max-w-[840px]"
+      bodyClassName="sm:!py-3"
+      footerClassName="sm:!py-1.5"
       rail={
         <PaiementWizardRail
           steps={PAYMENT_STEPS}
@@ -226,37 +234,38 @@ export function PaiementFormModal({
         />
       }
       secondaryAction={
-        <Button
+        <button
           type="button"
-          variant="secondary"
           onClick={() => currentStep === 1 ? onClose() : setCurrentStep((step) => step - 1)}
           disabled={isSaving}
+          className={wizardSecondaryActionClass}
         >
-          {currentStep === 1 ? 'Annuler' : <><ChevronLeft className="h-4 w-4" /> Retour</>}
-        </Button>
+          {currentStep === 1 ? 'Annuler' : <><ChevronLeft className="h-3.5 w-3.5" /> Retour</>}
+        </button>
       }
       primaryAction={
         currentStep < 3 ? (
-          <Button
+          <button
             type="button"
             onClick={() => setCurrentStep((step) => step + 1)}
             disabled={currentStep === 1 ? !stepOneValid : !stepTwoValid}
+            className={wizardPrimaryActionClass}
           >
-            Continuer <ChevronRight className="h-4 w-4" />
-          </Button>
+            Continuer <ChevronRight className="h-3.5 w-3.5" />
+          </button>
         ) : (
-          <Button type="button" onClick={() => void onSubmit()} loading={isSaving} disabled={!canSubmit}>
-            {editingPaiement ? 'Valider la correction' : 'Enregistrer le paiement'}
-          </Button>
+          <button type="button" onClick={() => void onSubmit()} disabled={!canSubmit} className={wizardPrimaryActionClass}>
+            {isSaving ? 'Enregistrement...' : editingPaiement ? 'Corriger' : 'Enregistrer'}
+          </button>
         )
       }
     >
-      <form onSubmit={(event) => event.preventDefault()} className="space-y-3 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+      <form onSubmit={(event) => event.preventDefault()} className="space-y-2.5 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
 
         {currentStep === 1 && (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div>
-              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">
+              <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">
                 Contrat actif <span className="text-red-600">*</span>
               </label>
               <SmartCombobox
@@ -276,7 +285,7 @@ export function PaiementFormModal({
             </div>
 
             <div>
-              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">
+              <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">
                 Échéance <span className="text-red-600">*</span>
               </label>
               <SmartCombobox
@@ -291,19 +300,19 @@ export function PaiementFormModal({
             </div>
 
             {selectedContrat && (
-              <section className="grid gap-2.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm sm:grid-cols-2">
-                <div className="rounded-lg border border-slate-200 bg-white p-2.5">
-                  <p className="text-[9px] font-black uppercase tracking-[0.12em] text-emerald-800">Identité de l’échéance</p>
-                  <dl className="mt-1.5 space-y-1.5 text-[0.72rem]">
+              <section className="grid gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm sm:grid-cols-2">
+                <div className="rounded-lg border border-slate-200/80 bg-white/90 p-2.5">
+                  <p className="text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-emerald-800">Identité de l’échéance</p>
+                  <dl className="mt-1 text-[0.72rem]">
                     <SummaryLine label="Locataire" value={locataireLabel || 'Non renseigné'} />
                     <SummaryLine label="Bien / unité" value={[immeubleLabel, uniteLabel].filter(Boolean).join(' · ') || 'Non renseigné'} />
                     <SummaryLine label="Bailleur" value={bailleurLabel || 'Non renseigné'} />
                     <SummaryLine label="Période" value={formatPaymentPeriod(formData.mois_display)} />
                   </dl>
                 </div>
-                <div className="rounded-lg border border-emerald-100 bg-emerald-50/70 p-2.5">
-                  <p className="text-[9px] font-black uppercase tracking-[0.12em] text-emerald-800">Situation financière</p>
-                  <dl className="mt-1.5 space-y-1.5 text-[0.72rem]">
+                <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-2.5">
+                  <p className="text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-emerald-800">Situation financière</p>
+                  <dl className="mt-1 text-[0.72rem]">
                     <SummaryLine label="Loyer attendu" value={formatCurrency(loyerAttendu)} />
                     <SummaryLine label="Déjà encaissé" value={formatCurrency(paiementsPrecedents)} />
                     <SummaryLine label="Reste à payer" value={formatCurrency(selectedMonthState?.remainingAmount ?? loyerAttendu)} />
@@ -323,9 +332,9 @@ export function PaiementFormModal({
         )}
 
         {currentStep === 2 && (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div>
-              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">
+              <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">
                 Montant encaissé <span className="text-red-600">*</span>
               </label>
               <input aria-label="Champ de saisie"
@@ -336,11 +345,11 @@ export function PaiementFormModal({
                 inputMode="numeric"
                 value={formData.montant_total}
                 onChange={(event) => setFormData((previous) => ({ ...previous, montant_total: event.target.value }))}
-                className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-base font-extrabold tabular-nums text-slate-950 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+                className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[0.95rem] font-semibold tabular-nums text-slate-950 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
               />
               {selectedContrat && (
-                <div className="mt-2 rounded-xl border border-emerald-100 bg-emerald-50 p-2.5">
-                  <div className="flex items-center justify-between gap-3 text-xs font-black text-emerald-950">
+                <div className="mt-2 rounded-xl border border-emerald-100 bg-emerald-50/75 p-2.5">
+                  <div className="flex items-center justify-between gap-3 text-[0.7rem] font-semibold text-emerald-950">
                     <span>{tauxCouverture}% couvert</span>
                     <span>{reliquatPreview > 0 ? `Reliquat ${formatCurrency(reliquatPreview)}` : 'Échéance soldée'}</span>
                   </div>
@@ -357,17 +366,17 @@ export function PaiementFormModal({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Date du paiement <span className="text-red-600">*</span></label>
+                <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">Date du paiement <span className="text-red-600">*</span></label>
                 <input aria-label="Champ de saisie"
                   type="date"
                   required
                   value={formData.date_paiement}
                   onChange={(event) => setFormData((previous) => ({ ...previous, date_paiement: event.target.value }))}
-                  className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+                  className="h-8 min-h-8 w-full rounded-[0.55rem] border border-emerald-950/10 bg-[#fffdf8]/95 px-2.5 py-0 text-[0.72rem] font-semibold leading-4 text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_4px_10px_rgba(15,23,42,0.025)] outline-none transition hover:border-emerald-200 focus:border-brand-700 focus:bg-white focus:ring-2 focus:ring-emerald-100"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Mode de paiement <span className="text-red-600">*</span></label>
+                <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">Mode de paiement <span className="text-red-600">*</span></label>
                 <SmartCombobox
                   value={formData.payment_channel}
                   options={paymentModeOptions}
@@ -387,7 +396,7 @@ export function PaiementFormModal({
             </div>
 
             <div>
-              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Référence de transaction</label>
+              <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">Référence de transaction</label>
               <input
                 type="text"
                 value={formData.reference}
@@ -414,21 +423,27 @@ export function PaiementFormModal({
         )}
 
         {currentStep === 3 && (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="grid gap-2.5 sm:grid-cols-2">
-              <section className="rounded-xl border border-slate-200 bg-white p-2.5">
-                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-emerald-800">Identité</p>
-                <dl className="mt-1.5 space-y-1.5 text-[0.72rem]">
+              <section className="rounded-xl border border-slate-200/80 bg-white/90 p-2.5 shadow-sm shadow-slate-950/[0.02]">
+                <p className="flex items-center gap-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  <UserRound className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />
+                  Dossier
+                </p>
+                <dl className="mt-1.5 text-[0.72rem]">
                   <SummaryLine label="Locataire" value={locataireLabel || 'Non renseigné'} />
                   <SummaryLine label="Bien / unité" value={[immeubleLabel, uniteLabel].filter(Boolean).join(' · ') || 'Non renseigné'} />
                   <SummaryLine label="Bailleur" value={bailleurLabel || 'Non renseigné'} />
                   <SummaryLine label="Période" value={formatPaymentPeriod(formData.mois_display)} />
                 </dl>
               </section>
-              <section className="rounded-xl border border-slate-200 bg-white p-2.5">
-                <p className="text-[9px] font-black uppercase tracking-[0.12em] text-emerald-800">Paiement</p>
-                <dl className="mt-1.5 space-y-1.5 text-[0.72rem]">
-                  <SummaryLine label="Montant encaissé" value={formatCurrency(montantSaisi)} />
+              <section className="rounded-xl border border-slate-200/80 bg-white/90 p-2.5 shadow-sm shadow-slate-950/[0.02]">
+                <p className="flex items-center gap-1.5 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  <CreditCard className="h-3.5 w-3.5 text-emerald-700" aria-hidden="true" />
+                  Règlement
+                </p>
+                <dl className="mt-1.5 text-[0.72rem]">
+                  <SummaryLine label="Montant" value={formatCurrency(montantSaisi)} />
                   <SummaryLine label="Date" value={formData.date_paiement ? new Date(`${formData.date_paiement}T00:00:00`).toLocaleDateString('fr-FR') : 'Non renseignée'} />
                   <SummaryLine label="Mode" value={paymentModeOptions.find((option) => option.value === formData.payment_channel)?.label ?? 'Non renseigné'} />
                   <SummaryLine label="Référence" value={formData.reference.trim() || 'Non renseignée'} />
@@ -437,74 +452,63 @@ export function PaiementFormModal({
             </div>
 
             {editingPaiement && (
-              <section className="rounded-xl border border-amber-200 bg-amber-50/80 p-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-amber-900">Valeur actuelle → nouvelle valeur</p>
-                <div className="mt-2 grid grid-cols-2 gap-2.5">
-                  <div className="rounded-lg bg-white p-2.5 ring-1 ring-amber-200">
-                    <p className="text-[9px] font-black uppercase text-slate-500">Avant</p>
-                    <p className="mt-0.5 text-sm font-black text-slate-950"><MoneyText value={editingPaiement.montant_total} /></p>
+              <section className="rounded-lg border border-amber-200/70 bg-amber-50/55 px-2 py-1.5">
+                <p className="text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-amber-900">Correction</p>
+                <div className="mt-1 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  <div className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-white/82 px-2 py-1 ring-1 ring-amber-200/70">
+                    <p className="shrink-0 text-[0.56rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Avant</p>
+                    <p className="min-w-0 truncate text-right text-[0.72rem] font-semibold tabular-nums text-slate-900"><MoneyText value={editingPaiement.montant_total} /></p>
                   </div>
-                  <div className="rounded-lg bg-white p-2.5 ring-1 ring-emerald-200">
-                    <p className="text-[9px] font-black uppercase text-slate-500">Après</p>
-                    <p className="mt-0.5 text-sm font-black text-emerald-800"><MoneyText value={montantSaisi} /></p>
+                  <div className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-white/82 px-2 py-1 ring-1 ring-emerald-200/70">
+                    <p className="shrink-0 text-[0.56rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Après</p>
+                    <p className="min-w-0 truncate text-right text-[0.72rem] font-semibold tabular-nums text-emerald-800"><MoneyText value={montantSaisi} /></p>
                   </div>
                 </div>
               </section>
             )}
 
-            <section className="rounded-xl border border-emerald-950/10 bg-white p-3 shadow-sm">
-              <div className="mb-2.5 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-800">Impact avant validation</p>
-                  <p className="mt-0.5 text-[11px] font-semibold text-slate-500">Le serveur recalculera et confirmera les montants définitifs.</p>
+            <section className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm shadow-emerald-950/[0.03]">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-emerald-800">Impact financier</p>
+                  <p className="mt-0.5 text-[0.68rem] font-medium text-slate-500">Prévisualisation. Le serveur confirme les montants définitifs.</p>
                 </div>
-                <ShieldCheck className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+                <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
                 {[
-                  { label: 'Loyer attendu', value: loyerAttendu, tone: 'slate' },
-                  { label: 'Déjà encaissé', value: paiementsPrecedents, tone: 'slate' },
-                  { label: 'Nouveau paiement', value: montantSaisi, tone: 'emerald' },
-                  { label: 'Total après paiement', value: totalApresPaiement, tone: 'emerald' },
-                  { label: 'Reliquat après paiement', value: reliquatPreview, tone: reliquatPreview > 0 ? 'orange' : 'emerald' },
-                  { label: 'Avance', value: tropPercuPreview, tone: tropPercuPreview > 0 ? 'orange' : 'slate' },
-                  { label: `Commission (${tauxCommission}%)`, value: commissionPreview, tone: 'slate' },
+                  { label: 'Encaissement', value: montantSaisi, tone: 'emerald' },
+                  { label: 'Reliquat', value: reliquatPreview, tone: reliquatPreview > 0 ? 'orange' : 'slate' },
+                  { label: `Commission ${tauxCommission}%`, value: commissionPreview, tone: 'slate' },
                   { label: 'Net bailleur', value: netBailleurPreview, tone: 'emerald' },
                 ].map((item) => (
-                  <div key={item.label} className={`rounded-lg border p-2 ${
+                  <div key={item.label} className={`rounded-lg border px-2 py-1.5 ${
                     item.tone === 'emerald'
-                      ? 'border-emerald-200 bg-emerald-50'
+                      ? 'border-emerald-200/80 bg-emerald-50/70'
                       : item.tone === 'orange'
-                        ? 'border-orange-200 bg-orange-50'
-                        : 'border-slate-200 bg-slate-50'
+                        ? 'border-orange-200/80 bg-orange-50/70'
+                        : 'border-slate-200/80 bg-white/80'
                   }`}>
-                    <p className="text-[9px] font-black uppercase tracking-[0.08em] text-slate-500">{item.label}</p>
-                    <p className="mt-0.5 text-xs font-extrabold tabular-nums text-slate-950"><MoneyText value={item.value} /></p>
+                    <p className="truncate text-[0.55rem] font-semibold uppercase tracking-[0.08em] text-slate-500">{item.label}</p>
+                    <p className="mt-0.5 text-[0.76rem] font-semibold tabular-nums text-slate-950"><MoneyText value={item.value} /></p>
                   </div>
                 ))}
               </div>
-
-              <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div className="flex items-center gap-2.5 rounded-lg border border-emerald-100 bg-[#fffdf8] p-2.5">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
-                  <div>
-                    <p className="text-[9px] font-black uppercase text-slate-500">Statut prévu</p>
-                    <p className="text-xs font-bold text-slate-950">{finalStatus}</p>
-                  </div>
+              <div className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-white/80 px-2 py-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-700" aria-hidden="true" />
+                  <span className="text-[0.68rem] font-semibold text-slate-700">Statut prévu : <strong className="font-semibold text-slate-950">{finalStatus}</strong></span>
                 </div>
-                <div className="flex items-center gap-2.5 rounded-lg border border-emerald-100 bg-[#fffdf8] p-2.5">
-                  <FileCheck2 className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
-                  <div>
-                    <p className="text-[9px] font-black uppercase text-slate-500">Document généré</p>
-                    <p className="text-xs font-bold text-slate-950">Quittance ou reçu QR</p>
-                  </div>
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-white/80 px-2 py-1.5">
+                  <FileCheck2 className="h-3.5 w-3.5 shrink-0 text-emerald-700" aria-hidden="true" />
+                  <span className="text-[0.68rem] font-semibold text-slate-700">Quittance ou reçu QR</span>
                 </div>
               </div>
             </section>
 
             {editingPaiement && (
               <div>
-                <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">
+                <label className="mb-1 block text-[0.68rem] font-semibold text-slate-600">
                   Raison de la correction <span className="text-red-600">*</span>
                 </label>
                 <textarea
@@ -517,14 +521,6 @@ export function PaiementFormModal({
                 />
               </div>
             )}
-
-            <div className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs font-semibold leading-5 text-emerald-950">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-              Cette prévisualisation guide la validation. Les montants et le statut définitifs proviennent du traitement financier sécurisé.
-              <TooltipHint label="Pourquoi une prévisualisation ?">
-                Le formulaire n’écrit aucun calcul financier directement. La validation finale reste effectuée par le serveur.
-              </TooltipHint>
-            </div>
           </div>
         )}
       </form>
@@ -539,16 +535,16 @@ function PaiementWizardRail({ steps, currentStep }: { steps: WizardStep[]; curre
         <BrandMark size="sm" tone="dark" animated withTile={false} />
         <div>
           <p className="text-[0.5rem] font-bold uppercase tracking-[0.18em] text-emerald-200/80">Trésorerie & Loyers</p>
-          <p className="mt-0.5 text-[0.6rem] font-semibold text-white/[0.56]">Encaissement guidé</p>
+          <p className="mt-0.5 text-[0.6rem] font-semibold text-white/[0.56]">Paiement guidé</p>
         </div>
       </div>
 
       <div className="mt-3">
         <p className="max-w-[11rem] text-[0.72rem] font-semibold leading-tight text-white/[0.86]">
-          Sécurisez les encaissements.
+          Encaissez sans perdre la trace.
         </p>
         <p className="mt-1 max-w-[11rem] text-[0.6rem] font-medium leading-snug text-emerald-50/[0.56]">
-          Traçabilité bancaire, calcul du solde et génération automatique des quittances.
+          Contrat, montant, reliquat et quittance restent alignés.
         </p>
       </div>
 
@@ -591,9 +587,9 @@ function PaiementWizardRail({ steps, currentStep }: { steps: WizardStep[]; curre
       </div>
 
       <div className="mt-4 rounded-xl border border-white/[0.055] bg-white/[0.026] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
-        <p className="text-[0.47rem] font-semibold uppercase tracking-[0.16em] text-cyan-200/[0.75]">SOURCE DE VÉRITÉ</p>
+        <p className="text-[0.47rem] font-semibold uppercase tracking-[0.16em] text-cyan-200/[0.75]">REGISTRE FINANCIER</p>
         <p className="mt-1 text-[0.58rem] font-medium leading-snug text-emerald-50/[0.56]">
-          Impacte directement le solde locataire, la comptabilité et le rapport bailleur.
+          Le serveur confirme le solde, la commission et le net bailleur.
         </p>
       </div>
     </div>
@@ -603,16 +599,16 @@ function PaiementWizardRail({ steps, currentStep }: { steps: WizardStep[]; curre
 function PaiementWizardStepContext({ step, isEditing }: { step: number; isEditing: boolean }) {
   const copy: Record<number, { title?: string; body: string }> = {
     1: {
-      title: 'Sélection du bail et échéance',
-      body: 'Identifiez le contrat de location et sélectionnez l’échéance pour charger le loyer attendu et le solde du locataire.',
+      title: 'Bail et échéance',
+      body: 'Sélectionnez le contrat et le mois à encaisser.',
     },
     2: {
-      title: 'Saisie du règlement',
-      body: 'Renseignez le montant reçu, le canal de règlement (mobile money, virement, chèque) et la référence de transaction.',
+      title: 'Règlement',
+      body: 'Saisissez le montant, la date et le canal de paiement.',
     },
     3: {
-      title: isEditing ? 'Validation de la correction' : 'Contrôle et impact financier',
-      body: 'Vérifiez la ventilation financière avant l’enregistrement définitif et la génération de la quittance conforme.',
+      title: isEditing ? 'Correction' : 'Impact financier',
+      body: 'Contrôlez le reliquat, la commission et le net bailleur.',
     },
   };
   const current = copy[step] || copy[1];
@@ -635,4 +631,3 @@ function PaiementWizardStepContext({ step, isEditing }: { step: number; isEditin
     </div>
   );
 }
-

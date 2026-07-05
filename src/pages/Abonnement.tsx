@@ -49,6 +49,10 @@ interface Usage {
   unites: number;
 }
 
+interface AbonnementProps {
+  embedded?: boolean;
+}
+
 const CONTACT_WHATSAPP = '221769010960';
 const CONTACT_EMAIL    = 'samaykeur@gmail.com';
 
@@ -113,7 +117,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   cancelled: { label: 'Annulé',   color: '#475569', bg: '#F8FAFC', border: '#E2E8F0' },
 };
 
-export function Abonnement() {
+export function Abonnement({ embedded = false }: AbonnementProps = {}) {
   const { profile, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const toast = useToast();
@@ -203,16 +207,16 @@ export function Abonnement() {
 
     return (
       <div data-testid={testId}>
-        <div className="flex items-center justify-between mb-1.5">
-          <div className="flex items-center gap-2 text-slate-500">{icon}
-            <span className="text-sm font-medium text-slate-700">{label}</span>
+        <div className={embedded ? 'mb-1 flex items-center justify-between' : 'flex items-center justify-between mb-1.5'}>
+          <div className={embedded ? 'flex items-center gap-1.5 text-slate-500' : 'flex items-center gap-2 text-slate-500'}>{icon}
+            <span className={embedded ? 'text-xs font-semibold text-slate-700' : 'text-sm font-medium text-slate-700'}>{label}</span>
           </div>
-          <span className="text-sm font-bold text-slate-800">
+          <span className={embedded ? 'text-xs font-bold text-slate-800' : 'text-sm font-bold text-slate-800'}>
             {unlimited ? <span className="text-xs font-semibold text-slate-500">sur mesure</span> : <>{used}<span className="text-slate-400">/{max}</span></>}
           </span>
         </div>
         {!unlimited && (
-          <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+          <div className={embedded ? 'h-1.5 overflow-hidden rounded-full bg-slate-100' : 'h-2 bg-slate-100 rounded-full overflow-hidden'}>
             <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: barColor }} />
           </div>
         )}
@@ -222,7 +226,7 @@ export function Abonnement() {
 
   if (loading) {
     return (
-      <div className="sk-mobile-page sk-page-narrow space-y-5 sm:space-y-6">
+      <div className={embedded ? 'space-y-2.5 sm:space-y-3' : 'sk-mobile-page sk-page-narrow space-y-5 sm:space-y-6'}>
         <div className="rounded-[2rem] border border-emerald-900/10 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-6 sm:p-8 shadow-2xl shadow-emerald-950/15">
           <div className="h-4 w-32 animate-pulse rounded-full bg-white/15" />
           <div className="mt-5 h-8 w-64 animate-pulse rounded-2xl bg-white/15" />
@@ -235,8 +239,9 @@ export function Abonnement() {
   }
 
   return (
-    <div className="sk-mobile-page sk-page-narrow space-y-5 sm:space-y-6">
+    <div className={embedded ? 'space-y-2.5 sm:space-y-3' : 'sk-mobile-page sk-page-narrow space-y-5 sm:space-y-6'}>
 
+      {!embedded && (
       <PremiumPageHeader
         density="compact"
         eyebrow="PARAMÈTRES AGENCE"
@@ -260,8 +265,33 @@ export function Abonnement() {
           </div>
         }
       />
+      )}
 
       {/* ── Bannière urgente essai ── */}
+      {embedded && (
+        <section className="grid gap-2.5 xl:grid-cols-[minmax(0,1fr)_minmax(14rem,0.65fr)]">
+          <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2.5 shadow-sm">
+            <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Abonnement & paiements</p>
+            <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Plan, limites et validation des paiements.</h2>
+            <p className="mt-0.5 text-[0.7rem] leading-4 text-slate-600">
+              Le paiement en ligne reste prioritaire. Pour un paiement manuel, le support valide la preuve et active le plan.
+            </p>
+          </div>
+          <div className="rounded-xl border border-orange-200/70 bg-orange-50/70 p-2.5 shadow-sm">
+            <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-orange-700">Paiement manuel</p>
+            <p className="mt-0.5 text-[0.72rem] font-extrabold text-slate-950">Validation par support</p>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <a href="https://wa.me/221769010960" target="_blank" rel="noopener noreferrer" className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm">
+                WhatsApp
+              </a>
+              <a href="mailto:samaykeur@gmail.com" className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm">
+                Email support
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
+
       {isTrial && trialDaysLeft !== null && (
         <div className="rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4"
           style={{
@@ -309,26 +339,26 @@ export function Abonnement() {
       )}
 
       {/* ── Plan actuel ── */}
-      <div className="sk-premium-panel overflow-hidden">
-        <div className="p-5 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+      <div className={embedded ? 'overflow-hidden rounded-xl border border-emerald-950/10 bg-white/88 shadow-sm' : 'sk-premium-panel overflow-hidden'}>
+        <div className={embedded ? 'p-2.5' : 'p-5 sm:p-6'}>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className={embedded ? 'flex items-center gap-2.5' : 'flex items-center gap-4'}>
+              <div className={embedded ? 'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg' : 'w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0'}
                 style={{ backgroundColor: catalogPlan.color + '18' }}>
-                <catalogPlan.icon className="w-7 h-7" style={{ color: catalogPlan.color }} />
+                <catalogPlan.icon className={embedded ? 'h-4 w-4' : 'w-7 h-7'} style={{ color: catalogPlan.color }} />
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Plan actuel</p>
-                  <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold" data-testid="badge-status"
+                  <p className={embedded ? 'text-[0.5rem] font-black uppercase tracking-[0.14em] text-slate-400' : 'text-xs font-bold text-slate-400 uppercase tracking-wider'}>Plan actuel</p>
+                  <span className={embedded ? 'inline-flex rounded-full px-1.5 py-0.5 text-[0.56rem] font-bold' : 'inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold'} data-testid="badge-status"
                     style={{ backgroundColor: statusCfg.bg, color: statusCfg.color, border: `1px solid ${statusCfg.border}` }}>
                     {statusCfg.label}
                   </span>
                 </div>
-                <p className="text-2xl font-extrabold text-slate-900 mt-0.5" data-testid="text-current-plan">
+                <p className={embedded ? 'mt-0.5 text-[1rem] font-extrabold text-slate-900' : 'text-2xl font-extrabold text-slate-900 mt-0.5'} data-testid="text-current-plan">
                   {displayedPlanName}
                 </p>
-                <p className="text-sm text-slate-400 mt-0.5">
+                <p className={embedded ? 'mt-0.5 text-[0.7rem] text-slate-400' : 'text-sm text-slate-400 mt-0.5'}>
                   {catalogPlan.price_xof > 0
                     ? <>{formatCurrency(catalogPlan.price_xof)}<span className="text-xs">/mois</span></>
                     : <span className="text-green-600 font-semibold">Sur devis</span>}
@@ -336,7 +366,7 @@ export function Abonnement() {
               </div>
             </div>
 
-            <div className="flex flex-col items-start sm:items-end gap-2">
+            <div className="flex flex-col items-start gap-1.5 sm:items-end">
               {subscription && (
                 <div className="flex items-center gap-1.5 text-xs text-slate-400">
                   <Calendar className="w-3.5 h-3.5" />
@@ -345,12 +375,12 @@ export function Abonnement() {
               )}
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => openPayment(currentPlanId)} data-testid="button-pay"
-                  className="sk-action sk-action-financial px-4 py-2.5">
+                  className={embedded ? 'sk-action sk-action-financial h-8 px-2.5 text-[0.7rem]' : 'sk-action sk-action-financial px-4 py-2.5'}>
                   <CreditCard className="w-4 h-4" />
                   Renouveler
                 </button>
                 <button onClick={() => setUpgradeOpen(true)} data-testid="button-upgrade"
-                  className="sk-action sk-action-secondary px-4 py-2.5">
+                  className={embedded ? 'sk-action sk-action-secondary h-8 px-2.5 text-[0.7rem]' : 'sk-action sk-action-secondary px-4 py-2.5'}>
                   <TrendingUp className="w-4 h-4" />
                   Changer de plan
                 </button>
@@ -359,7 +389,7 @@ export function Abonnement() {
           </div>
 
           {/* Usage bars */}
-          <div className="mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+          <div className={embedded ? 'mt-2.5 grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-2.5 sm:grid-cols-2 xl:grid-cols-4' : 'mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5'}>
             {renderUsageBar(<Users className="w-4 h-4" />, 'Utilisateurs', usage.users, currentPlan?.max_users ?? catalogPlan.max_users, 'usage-utilisateurs')}
             {renderUsageBar(<Home className="w-4 h-4" />, isIndividualOwner ? 'Biens' : 'Immeubles', usage.immeubles, currentPlan?.max_immeubles ?? catalogPlan.max_immeubles, 'usage-immeubles')}
             {renderUsageBar(<DoorOpen className="w-4 h-4" />, isIndividualOwner ? 'Unités locatives' : 'Unités', usage.unites, currentPlan?.max_unites ?? catalogPlan.max_unites, 'usage-produits')}
@@ -387,75 +417,75 @@ export function Abonnement() {
       </div>
 
       {/* ── Grille comparaison plans ── */}
-      <div className="sk-premium-panel p-5 sm:p-6">
-        <div className="flex items-center justify-between mb-5">
+      <div className={embedded ? 'rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm' : 'sk-premium-panel p-5 sm:p-6'}>
+        <div className={embedded ? 'mb-2.5 flex items-center justify-between' : 'flex items-center justify-between mb-5'}>
           <div>
-            <h2 className="font-bold text-slate-900 text-lg">Comparer les plans</h2>
-            <p className="text-sm text-slate-400 mt-0.5">Sans engagement · Orange Money · Wave · Djamo · Carte</p>
+            <h2 className={embedded ? 'text-[0.82rem] font-extrabold text-slate-900' : 'font-bold text-slate-900 text-lg'}>Comparer les plans</h2>
+            <p className={embedded ? 'mt-0.5 text-[0.68rem] text-slate-400' : 'text-sm text-slate-400 mt-0.5'}>Sans engagement · Orange Money · Wave · Djamo · Carte</p>
           </div>
           <a href="#/pricing" className="text-xs font-semibold flex items-center gap-1 hover:opacity-80 transition" style={{ color: '#F58220' }}>
             Voir tout <ArrowUpRight className="w-3.5 h-3.5" />
           </a>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
           {PLAN_CATALOG.map((plan) => {
             const isCurrent = currentPlanId === plan.id;
             const Icon = plan.icon;
             const isHigher = PLAN_CATALOG.findIndex((p) => p.id === plan.id) > PLAN_CATALOG.findIndex((p) => p.id === currentPlanId);
             return (
               <div key={plan.id}
-                className="relative flex flex-col gap-3 rounded-[1.25rem] border p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-premium"
+                className={embedded ? 'relative flex flex-col gap-1.5 rounded-xl border p-2.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md' : 'relative flex flex-col gap-3 rounded-[1.25rem] border p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-premium'}
                 style={{ borderColor: isCurrent ? plan.color : '#E2E8F0', backgroundColor: isCurrent ? plan.color + '06' : '#FAFAFA' }}>
                 {'badge' in plan && !isCurrent && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold text-white"
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-[0.58rem] font-bold text-white"
                     style={{ backgroundColor: plan.color }}>
                     {(plan as typeof plan & { badge?: string }).badge}
                   </div>
                 )}
                 {isCurrent && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold text-white"
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full px-2 py-0.5 text-[0.58rem] font-bold text-white"
                     style={{ backgroundColor: plan.color }}>
                     Actuel
                   </div>
                 )}
 
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: plan.color + '18' }}>
-                    <Icon className="w-4 h-4" style={{ color: plan.color }} />
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ backgroundColor: plan.color + '18' }}>
+                    <Icon className="h-3.5 w-3.5" style={{ color: plan.color }} />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-900 text-sm">{plan.name}</p>
-                    <p className="text-xs font-semibold" style={{ color: plan.color }}>
+                    <p className="text-[0.76rem] font-bold text-slate-900">{plan.name}</p>
+                    <p className="text-[0.66rem] font-semibold" style={{ color: plan.color }}>
                       {plan.price_xof > 0 ? formatCurrency(plan.price_xof) + '/mois' : 'Sur devis'}
                     </p>
                   </div>
                 </div>
 
-                <ul className="space-y-1 flex-1">
+                <ul className="flex-1 space-y-0.5">
                   {getPlanFeatures(plan).slice(0, 4).map((f) => (
-                    <li key={f} className="flex items-start gap-1.5 text-xs text-slate-600">
-                      <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: plan.color }} />
+                    <li key={f} className="flex items-start gap-1.5 text-[0.66rem] text-slate-600">
+                      <CheckCircle2 className="mt-0.5 h-3 w-3 flex-shrink-0" style={{ color: plan.color }} />
                       {f}
                     </li>
                   ))}
                 </ul>
 
                 {isCurrent ? (
-                  <div className="text-center py-1.5 rounded-lg text-xs font-bold"
+                  <div className="rounded-lg py-1 text-center text-[0.68rem] font-bold"
                     style={{ backgroundColor: plan.color + '18', color: plan.color }}>
                     Plan actuel
                   </div>
                 ) : plan.id === 'enterprise' ? (
                   <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux un devis Enterprise Samay Këur.')}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-bold text-white transition hover:opacity-90"
+                    className="flex items-center justify-center gap-1 rounded-lg py-1 text-[0.68rem] font-bold text-white transition hover:opacity-90"
                     style={{ backgroundColor: plan.color }}>
                     Contacter
                   </a>
                 ) : (
                   <button onClick={() => openPayment(plan.id)}
-                    className="sk-action sk-action-financial justify-center py-1.5">
+                    className="sk-action sk-action-financial justify-center py-1 text-[0.68rem]">
                     {isHigher ? <><TrendingUp className="w-3 h-3" />Passer au {plan.name}</> : <><ChevronRight className="w-3 h-3" />Sélectionner</>}
                   </button>
                 )}
@@ -466,12 +496,12 @@ export function Abonnement() {
       </div>
 
       {/* ── Historique ── */}
-      <div className="sk-premium-panel p-5 sm:p-6">
-        <h2 className="font-bold text-slate-900 text-lg mb-4">Historique des paiements</h2>
+      <div className={embedded ? 'rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm' : 'sk-premium-panel p-5 sm:p-6'}>
+        <h2 className={embedded ? 'mb-1.5 text-[0.82rem] font-extrabold text-slate-900' : 'font-bold text-slate-900 text-lg mb-4'}>Historique des paiements</h2>
         {history.length === 0 ? (
-          <div className="text-center py-8">
-            <CreditCard className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-            <p className="text-sm text-slate-400">Aucun paiement enregistré pour l'instant.</p>
+          <div className={embedded ? 'py-3 text-center' : 'text-center py-8'}>
+            <CreditCard className={embedded ? 'mx-auto mb-1.5 h-6 w-6 text-slate-200' : 'w-10 h-10 text-slate-200 mx-auto mb-3'} />
+            <p className={embedded ? 'text-[0.7rem] text-slate-400' : 'text-sm text-slate-400'}>Aucun paiement enregistré pour l'instant.</p>
           </div>
         ) : (
           <ul className="divide-y divide-slate-100">
@@ -499,24 +529,24 @@ export function Abonnement() {
       </div>
 
       {/* ── Support ── */}
-      <div className="sk-premium-panel p-5 sm:p-6">
-        <h2 className="font-bold text-slate-900 text-lg mb-4">Besoin d'aide ?</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className={embedded ? 'rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm' : 'sk-premium-panel p-5 sm:p-6'}>
+        <h2 className={embedded ? 'mb-1.5 text-[0.82rem] font-extrabold text-slate-900' : 'font-bold text-slate-900 text-lg mb-4'}>Besoin d'aide ?</h2>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, j\'ai une question sur mon abonnement Samay Këur.')}`}
             target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-green-300 hover:bg-green-50 transition group">
-            <img src="/logo-whatsapp.jpg" alt="WhatsApp" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
+            className={embedded ? 'flex items-center gap-2 rounded-lg border border-slate-200 p-2.5 transition hover:border-green-300 hover:bg-green-50' : 'flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-green-300 hover:bg-green-50 transition group'}>
+            <img src="/logo-whatsapp.jpg" alt="WhatsApp" className={embedded ? 'h-7 w-7 flex-shrink-0 rounded-lg object-cover' : 'w-10 h-10 rounded-xl object-cover flex-shrink-0'} />
             <div>
-              <p className="font-semibold text-slate-900 text-sm">WhatsApp Business</p>
-              <p className="text-xs text-slate-400">+221 76 901 09 60 · Réponse rapide</p>
+              <p className={embedded ? 'text-[0.72rem] font-semibold text-slate-900' : 'font-semibold text-slate-900 text-sm'}>WhatsApp Business</p>
+              <p className={embedded ? 'text-[0.64rem] text-slate-400' : 'text-xs text-slate-400'}>+221 76 901 09 60 · Réponse rapide</p>
             </div>
           </a>
           <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Question abonnement Samay Këur')}`}
-            className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition group">
-            <img src="/logo-gmail.png" alt="Gmail" className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
+            className={embedded ? 'flex items-center gap-2 rounded-lg border border-slate-200 p-2.5 transition hover:border-blue-300 hover:bg-blue-50' : 'flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition group'}>
+            <img src="/logo-gmail.png" alt="Gmail" className={embedded ? 'h-7 w-7 flex-shrink-0 rounded-lg object-cover' : 'w-10 h-10 rounded-xl object-cover flex-shrink-0'} />
             <div>
-              <p className="font-semibold text-slate-900 text-sm">Gmail</p>
-              <p className="text-xs text-slate-400">{CONTACT_EMAIL}</p>
+              <p className={embedded ? 'text-[0.72rem] font-semibold text-slate-900' : 'font-semibold text-slate-900 text-sm'}>Gmail</p>
+              <p className={embedded ? 'text-[0.64rem] text-slate-400' : 'text-xs text-slate-400'}>{CONTACT_EMAIL}</p>
             </div>
           </a>
         </div>

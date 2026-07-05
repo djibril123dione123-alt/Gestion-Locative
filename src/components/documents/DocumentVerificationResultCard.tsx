@@ -106,9 +106,9 @@ function getVisualState(state: VerificationState | 'loading') {
 
 function DetailRow({ label, value }: { label: string; value: string | number | null | undefined }) {
   return (
-    <div className="grid min-w-0 max-w-full grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] items-start gap-3 border-b border-slate-100 py-2.5 last:border-b-0">
-      <span className="min-w-0 text-[10px] font-black uppercase leading-4 tracking-[0.08em] text-slate-400 sm:text-[11px]">{label}</span>
-      <span className="min-w-0 break-words text-right text-xs font-bold leading-5 text-slate-800 [overflow-wrap:anywhere] sm:text-sm">{value || 'Non renseigné'}</span>
+    <div className="grid min-w-0 max-w-full grid-cols-[minmax(0,0.82fr)_minmax(0,1.18fr)] items-start gap-2.5 border-b border-slate-100 py-1.5 last:border-b-0">
+      <span className="min-w-0 text-[0.58rem] font-black uppercase leading-4 tracking-[0.08em] text-slate-400">{label}</span>
+      <span className="min-w-0 break-words text-right text-[0.72rem] font-semibold leading-4 text-slate-800 [overflow-wrap:anywhere]">{value || 'Non renseigné'}</span>
     </div>
   );
 }
@@ -145,41 +145,41 @@ export function DocumentVerificationResultCard({
 
   return (
     <section
-      className={`relative w-full min-w-0 max-w-full overflow-hidden rounded-[1.25rem] border bg-white ${visual.panel} p-3.5 shadow-[0_24px_70px_rgba(15,23,42,0.08)] sm:rounded-[1.7rem] sm:p-6`}
+      className={`relative w-full min-w-0 max-w-full overflow-hidden rounded-[1.2rem] border bg-[linear-gradient(135deg,rgba(255,252,245,0.97),rgba(255,255,255,0.94))] ${visual.panel} p-3 shadow-[0_12px_30px_rgba(15,23,42,0.055)] ring-1 ring-white/70 sm:p-4`}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-800 via-emerald-500 to-amber-400" />
-      <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.08),transparent_68%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-800 via-emerald-500 to-amber-400" />
+      <div className="pointer-events-none absolute right-0 top-0 h-32 w-32 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.07),transparent_68%)]" />
       <div className="relative">
         {showBrand && (
-          <div className="mb-4 flex min-w-0 items-center justify-between gap-3 border-b border-slate-100 pb-3 sm:mb-5 sm:gap-4 sm:pb-4">
-            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3">
+          <div className="mb-3 flex min-w-0 items-center justify-between gap-3 border-b border-slate-100 pb-2.5 sm:mb-4 sm:gap-4 sm:pb-3">
+            <div className="flex min-w-0 items-center gap-2.5">
               <BrandMark size="sm" tone="light" animated withTile={false} />
               <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700 sm:text-xs sm:tracking-[0.2em]">Registre Samay Këur</p>
-                <h1 className="truncate text-base font-black text-slate-950 sm:text-lg">Vérification documentaire</h1>
+                <p className="text-[0.58rem] font-black uppercase tracking-[0.16em] text-emerald-700">Registre Samay Këur</p>
+                <h1 className="truncate text-sm font-extrabold text-slate-950 sm:text-base">Vérification documentaire</h1>
               </div>
             </div>
-            <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border sm:h-10 sm:w-10 ${visual.badge}`}>
-              <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${visual.iconClass}`} />
+            <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border ${visual.badge}`}>
+              <Icon className={`h-4 w-4 ${visual.iconClass}`} />
             </div>
           </div>
         )}
 
         <div className="text-center">
-          <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full border shadow-sm sm:h-14 sm:w-14 ${visual.badge}`}>
-            <Icon className={`h-6 w-6 sm:h-7 sm:w-7 ${visual.iconClass}`} />
+          <div className={`mx-auto flex h-10 w-10 items-center justify-center rounded-2xl border shadow-sm sm:h-11 sm:w-11 ${visual.badge}`}>
+            <Icon className={`h-5 w-5 ${visual.iconClass}`} />
           </div>
-          <p className={`mt-3 text-[10px] font-black uppercase tracking-[0.16em] sm:text-xs sm:tracking-[0.2em] ${visual.eyebrow}`}>Contrôle du registre</p>
-          <h2 className="mt-1 break-words text-xl font-black tracking-tight text-slate-950 [overflow-wrap:anywhere] sm:text-2xl">
+          <p className={`mt-2.5 text-[0.58rem] font-black uppercase tracking-[0.16em] ${visual.eyebrow}`}>Contrôle du registre</p>
+          <h2 className="mt-1 break-words text-base font-extrabold tracking-tight text-slate-950 [overflow-wrap:anywhere] sm:text-lg">
             {visual.title}
           </h2>
-          <p className="mx-auto mt-2 max-w-xl break-words text-xs font-semibold leading-5 text-slate-500 [overflow-wrap:anywhere] sm:text-sm sm:leading-6">
+          <p className="mx-auto mt-1.5 max-w-xl break-words text-[0.72rem] font-medium leading-5 text-slate-500 [overflow-wrap:anywhere] sm:text-xs">
             {result?.message || copy.message}
           </p>
         </div>
 
         {details && (
-          <div className={`mt-4 min-w-0 max-w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3 sm:mt-5 sm:px-4 ${compact ? '' : 'sm:grid sm:grid-cols-2 sm:gap-x-6'}`}>
+          <div className={`mt-3 min-w-0 max-w-full rounded-xl border border-emerald-950/10 bg-white/[0.72] px-3 shadow-sm sm:mt-4 ${compact ? '' : 'sm:grid sm:grid-cols-2 sm:gap-x-5'}`}>
             <div>
               <DetailRow label="Statut" value={getVerificationCopy(result.state).title} />
               <DetailRow label="Référence" value={details.reference} />
@@ -194,14 +194,14 @@ export function DocumentVerificationResultCard({
           </div>
         )}
 
-        <div className="mt-4 max-w-full rounded-xl border border-slate-200 bg-white p-3 sm:mt-5 sm:rounded-2xl sm:p-4">
-          <div className="flex items-start gap-3">
+        <div className="mt-3 max-w-full rounded-xl border border-emerald-950/10 bg-white/75 p-2.5 shadow-sm sm:mt-4 sm:p-3">
+          <div className="flex items-start gap-2.5">
             {result?.state === 'authentic' ? (
-              <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-700" />
+              <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-700" />
             ) : (
-              <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-700" />
             )}
-            <p className="min-w-0 break-words text-[11px] font-semibold leading-5 text-slate-600 [overflow-wrap:anywhere] sm:text-xs">
+            <p className="min-w-0 break-words text-[0.68rem] font-medium leading-5 text-slate-600 [overflow-wrap:anywhere] sm:text-[0.72rem]">
               {result?.state === 'authentic'
                 ? "Le registre Samay Këur confirme l'authenticité de cette référence. Vérifiez que les informations affichées correspondent au document scanné."
                 : "Ne vous fiez pas à ce document tant que son authenticité n'a pas été confirmée par son émetteur."}
@@ -209,16 +209,16 @@ export function DocumentVerificationResultCard({
           </div>
         </div>
 
-        <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 sm:mt-5 sm:flex sm:flex-wrap sm:justify-center sm:gap-2.5">
+        <div className="mt-3 grid min-w-0 grid-cols-1 gap-2 sm:mt-4 sm:flex sm:flex-wrap sm:justify-center">
           {onReset && (
-            <button type="button" onClick={onReset} className="sk-action sk-action-primary justify-center">
-              <ScanLine className="h-4 w-4" />
+            <button type="button" onClick={onReset} className="sk-action sk-action-primary h-8 justify-center px-2.5 text-[0.72rem]">
+              <ScanLine className="h-3.5 w-3.5" />
               Scanner un autre document
             </button>
           )}
           {details?.reference && (
-            <button type="button" onClick={() => void copyReference()} className="sk-action sk-action-secondary justify-center">
-              {copied ? <Check className="h-4 w-4 text-emerald-700" /> : <Copy className="h-4 w-4" />}
+            <button type="button" onClick={() => void copyReference()} className="sk-action sk-action-secondary h-8 justify-center px-2.5 text-[0.72rem]">
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-700" /> : <Copy className="h-3.5 w-3.5" />}
               {copied ? 'Référence copiée' : 'Copier la référence'}
             </button>
           )}
@@ -226,9 +226,9 @@ export function DocumentVerificationResultCard({
             <button
               type="button"
               onClick={onRetry}
-              className="sk-action sk-action-secondary justify-center"
+              className="sk-action sk-action-secondary h-8 justify-center px-2.5 text-[0.72rem]"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-3.5 w-3.5" />
               Réessayer
             </button>
           )}
@@ -236,7 +236,7 @@ export function DocumentVerificationResultCard({
             <button
               type="button"
               onClick={onDiscover}
-              className="sk-action sk-action-secondary justify-center"
+              className="sk-action sk-action-secondary h-8 justify-center px-2.5 text-[0.72rem]"
             >
               Découvrir Samay Këur
             </button>

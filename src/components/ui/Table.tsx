@@ -116,23 +116,7 @@ export function Table<T extends { id: string }>({
           const isSelected = selectedId === item.id;
 
           if (mobileRender) {
-            return (
-              <article
-                key={item.id}
-                className={`sk-mobile-card overflow-hidden transition duration-200 active:scale-[0.992] ${onRowClick ? 'cursor-pointer hover:border-emerald-200 hover:shadow-md outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:border-emerald-400' : ''} ${isSelected ? 'border-emerald-300 ring-1 ring-emerald-300 bg-emerald-50/40 shadow-sm' : ''}`}
-                onClick={() => onRowClick && onRowClick(item)}
-                tabIndex={onRowClick ? 0 : undefined}
-                onKeyDown={(e) => {
-                  if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
-                    e.preventDefault();
-                    onRowClick(item);
-                  }
-                }}
-                {...(onRowClick ? { role: "button", "aria-label": "Ouvrir les détails", "aria-pressed": isSelected } : {})}
-              >
-                {mobileRender(item)}
-              </article>
-            );
+            return <React.Fragment key={item.id}>{mobileRender(item)}</React.Fragment>;
           }
 
           const titleValue = columns.length > 0 ? renderContactValue(columns[0].key, columns[0].render ? columns[0].render(item) : getCellValue(item, columns[0].key)) : null;

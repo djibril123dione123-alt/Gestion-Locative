@@ -12,6 +12,7 @@ import { PremiumButton } from '../components/ui/PremiumButton';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { ToastContainer } from '../components/ui/Toast';
+import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
@@ -362,7 +363,7 @@ export function Depenses() {
   const financeMetrics = useMemo(() => [
     {
       label: 'Dépenses',
-      value: <MoneyText value={kpis.depensesMois} />,
+      value: <MoneyText value={kpis.depensesMois} compact />,
       helper: 'Période active',
       icon: TrendingDown,
       tone: 'red' as const,
@@ -376,14 +377,14 @@ export function Depenses() {
     },
     {
       label: 'Agence',
-      value: <MoneyText value={kpis.depensesAgence} />,
+      value: <MoneyText value={kpis.depensesAgence} compact />,
       helper: 'Fonds propres',
       icon: Wallet,
       tone: 'amber' as const,
     },
     {
       label: 'Bailleurs',
-      value: <MoneyText value={kpis.depensesBailleurs} />,
+      value: <MoneyText value={kpis.depensesBailleurs} compact />,
       helper: 'Imputables',
       icon: Building2,
       tone: 'emerald' as const,
@@ -397,7 +398,7 @@ export function Depenses() {
     },
     {
       label: 'Net',
-      value: <MoneyText value={kpis.netApresDepenses} />,
+      value: <MoneyText value={kpis.netApresDepenses} compact />,
       helper: 'Après dépenses',
       icon: TrendingDown,
       tone: 'slate' as const,
@@ -478,7 +479,7 @@ export function Depenses() {
                 </div>
               }
               filters={
-                <>
+                <div className="hidden min-w-0 items-center gap-2 lg:flex">
                   <SmartCombobox
                     value={selectedMois}
                     options={monthOptions}
@@ -519,7 +520,7 @@ export function Depenses() {
                     onSetAll={colSetAll}
                     className={`!h-8 !rounded-[0.6rem] !px-2.5 !py-1 !text-xs ${selectedDepense ? 'hidden' : ''}`}
                   />
-                </>
+                </div>
               }
             />
 
@@ -602,28 +603,24 @@ export function Depenses() {
                   onRowClick={(d) => setSelectedDepense(d)}
                   selectedId={selectedDepense?.id}
                   mobileRender={(d) => {
-                    const status = { icon: ReceiptText, classes: 'bg-emerald-100 text-emerald-700 border-emerald-200', label: 'Enregistrée' };
                     return (
-                      <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
-                        <div className="flex items-start justify-between gap-3">
-                          <span className="font-black text-slate-900 truncate">
-                            {d.categorie}
-                          </span>
-                          <span className="font-black tracking-tight text-slate-900 whitespace-nowrap">
-                            <MoneyText value={d.montant} />
-                          </span>
-                        </div>
-
-                        <div className="text-sm font-semibold text-slate-600 truncate">
-                          {d.description || 'Dépense'}
-                        </div>
-
-                        <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
-                          <span className="truncate pr-2">
-                            {new Date(d.date_depense).toLocaleDateString('fr-FR')} · {d.immeubles?.nom || 'Général'} · {status.label}
-                          </span>
-                        </div>
-                      </div>
+                      <PremiumMobileCard
+                        title={d.categorie}
+                        subtitle={d.description || d.beneficiaire || 'Dépense enregistrée'}
+                        icon={ReceiptText}
+                        amount={d.montant}
+                        amountLabel="Montant"
+                        amountTone="slate"
+                        amountCompact
+                        meta={[
+                          { label: 'Date', value: new Date(d.date_depense).toLocaleDateString('fr-FR') },
+                          { label: 'Affectation', value: d.immeubles?.nom || 'Général' },
+                        ]}
+                        selected={selectedDepense?.id === d.id}
+                        onClick={() => setSelectedDepense(d)}
+                        density="compact"
+                        emphasis="identity"
+                      />
                     );
                   }}
                 />

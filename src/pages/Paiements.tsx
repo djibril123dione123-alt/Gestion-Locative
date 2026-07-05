@@ -45,6 +45,7 @@ import {
 import { emitEvent } from '../lib/eventBus';
 import { PaiementFormModal } from '../components/paiements/PaiementFormModal';
 import { MoneyText } from '../components/ui/MoneyText';
+import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
@@ -728,6 +729,14 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     return STATUS_LABELS[p.statut] ?? STATUS_LABEL_FALLBACK;
   };
 
+  const getPaiementStatusTone = (p: PaiementRow): 'emerald' | 'amber' | 'red' | 'blue' | 'slate' => {
+    if (p.statut === 'annule' || p.deleted_at) return 'red';
+    if (Number(p.montant_total ?? 0) > Number(p.montant_attendu ?? p.contrats?.loyer_mensuel ?? 0)) return 'blue';
+    if (p.statut === 'partiel' || Number(p.reliquat ?? 0) > 3) return 'amber';
+    if (p.statut === 'paye') return 'emerald';
+    return 'slate';
+  };
+
   const summaryBase = financeSummary
     ? Number(financeSummary.loyers_encaisses || 0) + Number(financeSummary.reliquats_ouverts || 0)
     : kpis.attenduMois;
@@ -737,7 +746,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const financeMetrics = useMemo(() => [
     {
       label: 'Encaissements',
-      value: <MoneyText value={financeSummary?.loyers_encaisses ?? kpis.encaisseMois} />,
+      value: <MoneyText value={financeSummary?.loyers_encaisses ?? kpis.encaisseMois} compact />,
       helper: `${financeSummary?.paiements_count ?? kpis.nbPaiementsMois} paiement${(financeSummary?.paiements_count ?? kpis.nbPaiementsMois) > 1 ? 's' : ''}`,
       icon: Wallet,
       tone: 'emerald' as const,
@@ -765,7 +774,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     },
     {
       label: 'Commissions',
-      value: <MoneyText value={financeSummary?.commissions_agence ?? 0} />,
+      value: <MoneyText value={financeSummary?.commissions_agence ?? 0} compact />,
       helper: 'Revenus',
       icon: Percent,
       tone: 'green' as const,
@@ -873,7 +882,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                 </div>
               }
               filters={
-                <>
+                <div className="hidden min-w-0 items-center gap-2 lg:flex">
                   <SmartCombobox
                     value={monthFilter}
                     options={monthOptions}
@@ -901,7 +910,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                     onSetAll={setAll}
                     className={`!h-8 !rounded-[0.6rem] !px-2.5 !py-1 !text-xs ${selectedPaiement ? 'hidden' : ''}`}
                   />
-                </>
+                </div>
               }
             />
 
@@ -973,33 +982,31 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                   selectedId={selectedPaiement?.id}
                   mobileRender={(p) => {
                     const status = getPaiementStatusMeta(p);
-                    const StatusIcon = status.icon;
+                    const periodLabel = new Date(p.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+                    const reliquat = Number(p.reliquat ?? 0);
                     return (
-                      <div className="flex flex-col p-4 gap-2 bg-white hover:bg-slate-50/50 transition-colors">
-                        <div className="flex items-start justify-between gap-3">
-                          <span className="font-black text-slate-900 truncate">{formatPersonName(p.contrats?.locataires, 'Locataire inconnu')}</span>
-                          <span className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-black tracking-wider ${status.classes}`}>
-                            <StatusIcon className="h-3 w-3" />
-                            <span className="capitalize">{status.label.toLowerCase()}</span>
-                          </span>
-                        </div>
-
-                        <div className="text-xs font-semibold text-slate-500 truncate">
-                          {p.contrats?.unites?.immeubles?.nom || '—'} · {p.contrats?.unites?.nom || '—'}
-                        </div>
-
-                        <div className="flex items-center justify-between mt-1">
-                          <span className="text-base font-black text-emerald-800"><MoneyText value={p.montant_total} /></span>
-                          <span className="text-xs font-semibold text-slate-600 capitalize truncate">{new Date(p.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}</span>
-                        </div>
-
-                        <div className="flex items-center justify-between mt-1 text-[11px] font-bold text-slate-400">
-                          <span>{getPaymentModeLabel(p)} · {new Date(p.date_paiement).toLocaleDateString('fr-FR')}</span>
-                          {Number(p.reliquat) > 0 && (
-                            <span className="text-orange-600">Reste: <MoneyText value={p.reliquat} /></span>
-                          )}
-                        </div>
-                      </div>
+                      <PremiumMobileCard
+                        title={formatPersonName(p.contrats?.locataires, 'Locataire inconnu')}
+                        subtitle={`${p.contrats?.unites?.immeubles?.nom || 'Bien non renseigné'} · ${p.contrats?.unites?.nom || 'Unité non renseignée'}`}
+                        icon={CreditCard}
+                        status={status.label}
+                        statusTone={getPaiementStatusTone(p)}
+                        amount={p.montant_total}
+                        amountLabel="Encaissé"
+                        amountTone="emerald"
+                        amountCompact
+                        secondaryAmount={reliquat > 3 ? reliquat : undefined}
+                        secondaryAmountLabel={reliquat > 3 ? 'Reliquat' : undefined}
+                        secondaryAmountTone="red"
+                        meta={[
+                          { label: 'Période', value: periodLabel },
+                          { label: 'Mode', value: getPaymentModeLabel(p) },
+                        ]}
+                        selected={selectedPaiement?.id === p.id}
+                        onClick={() => setSelectedPaiement(p)}
+                        density="compact"
+                        emphasis="identity"
+                      />
                     );
                   }}
                 />

@@ -61,6 +61,11 @@ type DraftAccessLevel = AccessLevel | 'inherit';
 type PermissionDraftItem = Omit<UserPagePermission, 'access_level'> & { access_level: DraftAccessLevel };
 type PermissionDraft = Record<string, PermissionDraftItem>;
 
+interface EquipeProps {
+  embedded?: boolean;
+  sectionMode?: 'team' | 'permissions' | 'access';
+}
+
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrateur',
   agent: 'Agent',
@@ -85,7 +90,7 @@ const ACTIONS = [
   { key: 'can_manage', label: 'Gérer', icon: SlidersHorizontal },
 ] as const;
 
-export function Equipe() {
+export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps = {}) {
   const { profile } = useAuth();
   const toast = useToast();
   const [members, setMembers] = useState<Member[]>([]);
@@ -381,7 +386,7 @@ export function Equipe() {
 
   if (profile?.role !== 'admin') {
     return (
-      <div className="p-4 sm:p-6">
+      <div className={embedded ? 'p-0' : 'p-4 sm:p-6'}>
         <EmptyState
           icon={Shield}
           title="Accès réservé"
@@ -398,7 +403,8 @@ export function Equipe() {
   }, {});
 
   return (
-    <div className="sk-page-shell space-y-5 sm:space-y-6">
+    <div className={embedded ? 'space-y-2.5' : 'sk-page-shell space-y-5 sm:space-y-6'}>
+      {!embedded && (
       <PremiumPageHeader
         density="compact"
         eyebrow="ADMINISTRATION & SÉCURITÉ"
@@ -417,18 +423,62 @@ export function Equipe() {
           </PremiumButton>
         }
       />
+      )}
 
-      <section className="grid gap-3 sm:grid-cols-3">
+      {embedded && (sectionMode === 'team' || sectionMode === 'access') && (
+        <section className="flex flex-col gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2.5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Equipe & acces</p>
+            <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Collaborateurs, roles et pages visibles.</h2>
+            <p className="mt-0.5 text-[0.7rem] leading-4 text-slate-600">Invitez, filtrez et ajustez les permissions sans quitter le Control Center.</p>
+          </div>
+          <PremiumButton
+            variant="create"
+            size="sm"
+            onClick={() => setIsInviteOpen(true)}
+            data-testid="button-invite-member-embedded"
+            icon={<UserPlus className="h-4 w-4" />}
+          >
+            Inviter
+          </PremiumButton>
+        </section>
+      )}
+
+      {embedded && (sectionMode === 'permissions' || sectionMode === 'access') && (
+        <section className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-emerald-50/80 via-white to-[#fff8ed] p-2.5 shadow-sm">
+          <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Permissions & pages visibles</p>
+          <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Presets simples, controle precis.</h2>
+          <p className="mt-0.5 max-w-2xl text-[0.7rem] leading-4 text-slate-600">
+            Les roles restent la base. Les profils personnalisés ci-dessous utilisent les droits existants par page, sans contourner le RBAC.
+          </p>
+          <div className="mt-2 grid gap-1.5 sm:grid-cols-4">
+            {[
+              ['Standard', 'Agent operationnel avec ecriture metier.'],
+              ['Restreint', 'Lecture ou pages masquees selon besoin.'],
+              ['Finance', 'Encaissements, creances et exports.'],
+              ['Personnalise', 'Overrides par page et par action.'],
+            ].map(([preset, description]) => (
+              <div key={preset} className="rounded-lg border border-emerald-950/10 bg-white/88 px-2 py-1.5 shadow-sm">
+                <p className="text-[0.7rem] font-extrabold text-slate-950">{preset}</p>
+                <p className="mt-0.5 line-clamp-2 text-[0.62rem] font-semibold leading-[0.875rem] text-slate-500">{description}</p>
+              </div>
+            ))}
+          </div>
+          <PermissionMatrixPreview />
+        </section>
+      )}
+
+      <section className="grid gap-1.5 sm:grid-cols-3">
         <MetricCard label="Membres actifs" value={stats.activeMembers} icon={UsersIcon} />
         <MetricCard label="Invitations" value={stats.pendingInvitations} icon={Mail} tone="orange" />
         <MetricCard label="Profils restreints" value={stats.restrictedMembers} icon={Lock} tone="emerald" />
       </section>
 
-      <section className="sk-premium-panel overflow-hidden">
-        <div className="flex flex-col gap-3 border-b border-slate-100 p-4 lg:flex-row lg:items-center lg:justify-between">
+      <section className={embedded ? 'overflow-hidden rounded-xl border border-emerald-950/10 bg-white/88 shadow-sm' : 'sk-premium-panel overflow-hidden'}>
+        <div className="flex flex-col gap-2 border-b border-slate-100 p-2.5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-lg font-black text-slate-950">Membres actuels</h2>
-            <p className="text-sm text-slate-500">{filteredMembers.length} profil(s) visible(s)</p>
+            <h2 className="text-[0.82rem] font-extrabold text-slate-950">{sectionMode === 'team' ? 'Membres actuels' : 'Profils et overrides'}</h2>
+            <p className="text-[0.68rem] text-slate-500">{filteredMembers.length} profil(s) visible(s)</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <label className="relative min-w-0 sm:w-80">
@@ -437,19 +487,19 @@ export function Equipe() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Rechercher..."
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 sm:hidden"
+                className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-2.5 text-[0.72rem] font-semibold text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 sm:hidden"
               />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Rechercher un membre..."
-                className="hidden sm:block h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="hidden h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-2.5 text-[0.72rem] font-semibold text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 sm:block"
               />
             </label>
             <select aria-label="Sélection"
               value={roleFilter}
               onChange={(event) => setRoleFilter(event.target.value as typeof roleFilter)}
-              className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+              className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-[0.72rem] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
             >
               <option value="all">Tous les rôles</option>
               <option value="admin">Admins</option>
@@ -462,7 +512,7 @@ export function Equipe() {
 
         {loading ? (
           <div className="p-4 sm:p-6">
-            <SkeletonTable rows={5} cols={5} />
+            <SkeletonTable rows={4} cols={5} />
           </div>
         ) : filteredMembers.length === 0 ? (
           <EmptyState icon={UsersIcon} title="Aucun membre" description="Aucun profil ne correspond à vos filtres." />
@@ -473,14 +523,14 @@ export function Equipe() {
               const summary = getMemberPermissionSummary(member, permissions);
               const isProtected = member.id === profile.id || member.role === 'admin' || member.role === 'super_admin';
               return (
-                <article key={member.id} className="grid gap-4 p-4 transition hover:bg-emerald-50/45 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-center">
+                <article key={member.id} className="grid gap-2.5 p-2.5 transition hover:bg-emerald-50/45 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-center">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="truncate text-base font-black text-slate-950">
+                      <h3 className="truncate text-[0.78rem] font-extrabold text-slate-950">
                         {member.prenom ?? ''} {member.nom ?? ''}
                       </h3>
                       <RoleBadge role={member.role} />
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-black ${member.actif ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                      <span className={`rounded-full px-2 py-0.5 text-[0.62rem] font-black ${member.actif ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                         {member.actif ? 'Actif' : 'Désactivé'}
                       </span>
                     </div>
@@ -489,7 +539,7 @@ export function Equipe() {
                         href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(member.email)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-sm font-semibold text-brand-700 underline-offset-2 hover:text-brand-950 hover:underline"
+                        className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-xs font-semibold text-brand-700 underline-offset-2 hover:text-brand-950 hover:underline"
                       >
                         <Mail className="h-3.5 w-3.5 flex-shrink-0" />
                         <span className="truncate">{member.email}</span>
@@ -499,7 +549,7 @@ export function Equipe() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 rounded-[1rem] border border-emerald-950/10 bg-white/70 p-2 text-center shadow-sm">
+                  <div className="grid grid-cols-3 gap-1 rounded-lg border border-emerald-950/10 bg-white/70 p-1 text-center shadow-sm">
                     <MiniStat label="Masquées" value={summary.hidden} />
                     <MiniStat label="Lecture" value={summary.readOnly} />
                     <MiniStat label="Overrides" value={summary.overrides} />
@@ -510,7 +560,7 @@ export function Equipe() {
                       type="button"
                       onClick={() => openPermissions(member)}
                       disabled={isProtected}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-900/10 bg-white px-4 py-2.5 text-sm font-black text-brand-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-emerald-900/10 bg-white px-2.5 text-[0.7rem] font-extrabold text-brand-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <SlidersHorizontal className="h-4 w-4" />
                       {isProtected ? 'Protégé' : 'Permissions'}
@@ -520,7 +570,7 @@ export function Equipe() {
                         type="button"
                         onClick={() => setDeactivateTarget(member)}
                         data-testid={`button-deactivate-${member.id}`}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-black text-red-700 transition hover:-translate-y-0.5 hover:bg-red-100"
+                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 text-[0.7rem] font-extrabold text-red-700 transition hover:-translate-y-0.5 hover:bg-red-100"
                       >
                         <X className="h-4 w-4" />
                         Désactiver
@@ -534,13 +584,14 @@ export function Equipe() {
         )}
       </section>
 
-      <section className="sk-premium-panel overflow-hidden">
-        <div className="flex items-center gap-2 border-b border-slate-100 px-5 py-4">
+      {sectionMode !== 'permissions' && (
+      <section className={embedded ? 'overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/88 shadow-sm' : 'sk-premium-panel overflow-hidden'}>
+        <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2.5">
           <Mail className="h-5 w-5 text-slate-500" />
           <h2 className="font-black text-slate-950">Invitations en attente ({invitations.length})</h2>
         </div>
         {invitations.length === 0 ? (
-          <div className="p-8 text-center text-sm text-slate-500">Aucune invitation en attente</div>
+          <div className="p-4 text-center text-xs text-slate-500">Aucune invitation en attente</div>
         ) : (
           <ul className="divide-y divide-slate-100">
             {invitations.map((invitation) => {
@@ -576,6 +627,7 @@ export function Equipe() {
           </ul>
         )}
       </section>
+      )}
 
       <Modal isOpen={isInviteOpen} onClose={closeInviteModal} title="Inviter un collaborateur">
         {generatedLink ? (
@@ -766,6 +818,59 @@ export function Equipe() {
   );
 }
 
+function PermissionMatrixPreview() {
+  const rows = [
+    { page: 'patrimoine', label: 'Biens & patrimoine' },
+    { page: 'occupants-baux', label: 'Locations' },
+    { page: 'paiements', label: 'Encaissements' },
+    { page: 'loyers-impayes', label: 'Creances' },
+    { page: 'depenses', label: 'Depenses' },
+    { page: 'documents', label: 'Documents' },
+    { page: 'abonnement', label: 'Abonnement' },
+  ];
+  const roles: Array<{ key: UserRole; label: string }> = [
+    { key: 'admin', label: 'Admin' },
+    { key: 'agent', label: 'Agent' },
+    { key: 'comptable', label: 'Comptable' },
+  ];
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-xl border border-emerald-950/10 bg-white/90 shadow-sm">
+      <div className="grid grid-cols-[minmax(8rem,1fr)_repeat(3,minmax(4rem,0.55fr))] border-b border-slate-100 bg-[#fffdf8] px-2.5 py-1.5 text-[0.56rem] font-black uppercase tracking-[0.12em] text-slate-500">
+        <span>Page</span>
+        {roles.map((role) => <span key={role.key} className="text-center">{role.label}</span>)}
+      </div>
+      <div className="divide-y divide-slate-100">
+        {rows.map((row) => (
+          <div key={row.page} className="grid grid-cols-[minmax(8rem,1fr)_repeat(3,minmax(4rem,0.55fr))] items-center gap-2 px-2.5 py-1.5">
+            <span className="min-w-0 truncate text-[0.7rem] font-extrabold text-slate-800">{row.label}</span>
+            {roles.map((role) => (
+              <AccessBadge key={role.key} level={getDefaultAccessLevel(role.key, row.page)} />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AccessBadge({ level }: { level: AccessLevel }) {
+  const label = level === 'admin' ? 'Admin' : level === 'write' ? 'Ecriture' : level === 'read' ? 'Lecture' : 'Masque';
+  const className =
+    level === 'admin'
+      ? 'bg-emerald-950 text-white'
+      : level === 'write'
+        ? 'bg-emerald-50 text-emerald-700'
+        : level === 'read'
+          ? 'bg-blue-50 text-blue-700'
+          : 'bg-slate-100 text-slate-400';
+  return (
+    <span className={`justify-self-center rounded-full px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-[0.08em] ${className}`}>
+      {label}
+    </span>
+  );
+}
+
 function MetricCard({
   label,
   value,
@@ -784,14 +889,14 @@ function MetricCard({
         ? 'bg-emerald-50 text-emerald-700'
         : 'bg-brand-50 text-brand-800';
   return (
-    <div className="sk-metric-tile">
-      <div className="flex items-center justify-between gap-3">
+    <div className="rounded-xl border border-emerald-950/10 bg-white/88 px-2.5 py-1.5 shadow-sm">
+      <div className="flex items-center justify-between gap-2.5">
         <div>
-          <p className="text-sm font-bold text-slate-500">{label}</p>
-          <p className="mt-1 text-3xl font-black text-slate-950">{value}</p>
+          <p className="text-[0.52rem] font-black uppercase tracking-[0.13em] text-slate-500">{label}</p>
+          <p className="mt-0.5 text-[1rem] font-extrabold text-slate-950">{value}</p>
         </div>
-        <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${toneClass}`}>
-          <Icon className="h-5 w-5" />
+        <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${toneClass}`}>
+          <Icon className="h-3 w-3" />
         </div>
       </div>
     </div>
@@ -808,7 +913,7 @@ function RoleBadge({ role }: { role: UserRole }) {
           ? 'bg-amber-50 text-amber-700'
           : 'bg-emerald-50 text-emerald-700';
   return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-black ${className}`}>
+    <span className={`rounded-full px-2 py-0.5 text-[0.62rem] font-black ${className}`}>
       {ROLE_LABELS[role] ?? role}
     </span>
   );
@@ -816,9 +921,9 @@ function RoleBadge({ role }: { role: UserRole }) {
 
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-lg bg-white px-2 py-2">
-      <p className="text-base font-black text-slate-950">{value}</p>
-      <p className="text-[11px] font-bold text-slate-500">{label}</p>
+    <div className="rounded-md bg-white px-1.5 py-1">
+      <p className="text-[0.78rem] font-extrabold text-slate-950">{value}</p>
+      <p className="text-[0.56rem] font-bold text-slate-500">{label}</p>
     </div>
   );
 }

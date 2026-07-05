@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { WizardShell, type WizardStep } from '../ui/WizardShell';
 import { BrandMark } from '../brand/BrandLogo';
-import { Button } from '../ui/Button';
 import { SmartCombobox, type SmartComboboxOption } from '../ui/SmartCombobox';
 import { MoneyText } from '../ui/MoneyText';
 import { formatPersonName } from '../../lib/people';
@@ -63,6 +62,12 @@ const BASE_CATEGORIES = [
   'Internet',
   'Autres',
 ];
+
+const wizardPrimaryActionClass =
+  'inline-flex h-8 min-h-0 w-full min-w-[7rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-3 py-1 text-[0.72rem] font-semibold leading-none text-white shadow-[0_10px_22px_rgba(6,45,35,0.16)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto';
+
+const wizardSecondaryActionClass =
+  'inline-flex h-8 min-h-0 w-full min-w-[6rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-emerald-950/10 bg-white/85 px-3 py-1 text-[0.72rem] font-semibold leading-none text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto';
 
 export function DepenseFormModal({
   isOpen,
@@ -122,6 +127,9 @@ export function DepenseFormModal({
       currentStep={currentStep - 1}
       contentDescription="Qualifiez la charge, son affectation et sa preuve avant validation."
       stepContext={<DepenseWizardStepContext step={currentStep} editing={editing} />}
+      panelClassName="sm:!w-[min(90vw,840px)] sm:!max-w-[840px]"
+      bodyClassName="sm:!py-3"
+      footerClassName="sm:!py-1.5"
       rail={
         <DepenseWizardRail
           steps={EXPENSE_STEPS}
@@ -129,38 +137,39 @@ export function DepenseFormModal({
         />
       }
       secondaryAction={
-        <Button
+        <button
           type="button"
-          variant="secondary"
           onClick={() => currentStep === 1 ? onClose() : setCurrentStep((step) => step - 1)}
           disabled={isSaving}
+          className={wizardSecondaryActionClass}
         >
-          {currentStep === 1 ? 'Annuler' : <><ChevronLeft className="h-4 w-4" /> Retour</>}
-        </Button>
+          {currentStep === 1 ? 'Annuler' : <><ChevronLeft className="h-3.5 w-3.5" /> Retour</>}
+        </button>
       }
       primaryAction={
         currentStep < 3 ? (
-          <Button
+          <button
             type="button"
             onClick={() => setCurrentStep((step) => step + 1)}
             disabled={currentStep === 1 ? !stepOneValid : !stepTwoValid}
+            className={wizardPrimaryActionClass}
           >
-            Continuer <ChevronRight className="h-4 w-4" />
-          </Button>
+            Continuer <ChevronRight className="h-3.5 w-3.5" />
+          </button>
         ) : (
-          <Button type="button" onClick={() => void onSubmit()} loading={isSaving} disabled={!canSubmit}>
-            {editing ? 'Modifier la dépense' : 'Enregistrer la dépense'}
-          </Button>
+          <button type="button" onClick={() => void onSubmit()} disabled={!canSubmit} className={wizardPrimaryActionClass}>
+            {isSaving ? 'Enregistrement...' : editing ? 'Modifier' : 'Enregistrer'}
+          </button>
         )
       }
     >
-      <form onSubmit={(event) => event.preventDefault()} className="space-y-3 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+      <form onSubmit={(event) => event.preventDefault()} className="space-y-2.5 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
 
         {currentStep === 1 && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-2.5">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               <div>
-                <label htmlFor="depense-montant" className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Montant <span className="text-red-600">*</span></label>
+                <label htmlFor="depense-montant" className="mb-1 block text-[0.7rem] font-semibold text-slate-600">Montant <span className="text-red-600">*</span></label>
                 <input
                   id="depense-montant"
                   title="Montant de la dépense"
@@ -172,11 +181,11 @@ export function DepenseFormModal({
                   required
                   value={formData.montant}
                   onChange={(event) => setFormData((previous) => ({ ...previous, montant: event.target.value }))}
-                  className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-base font-extrabold tabular-nums text-slate-950 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+                  className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[0.95rem] font-semibold tabular-nums text-slate-950 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
                 />
               </div>
               <div>
-                <label htmlFor="depense-date" className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Date <span className="text-red-600">*</span></label>
+                <label htmlFor="depense-date" className="mb-1 block text-[0.7rem] font-semibold text-slate-600">Date <span className="text-red-600">*</span></label>
                 <input
                   id="depense-date"
                   title="Date de la dépense"
@@ -190,7 +199,7 @@ export function DepenseFormModal({
             </div>
 
             <div>
-              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Catégorie <span className="text-red-600">*</span></label>
+              <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">Catégorie <span className="text-red-600">*</span></label>
               <SmartCombobox
                 value={formData.categorie}
                 options={categoryOptions}
@@ -202,7 +211,7 @@ export function DepenseFormModal({
             </div>
 
             <div>
-              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Description</label>
+              <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">Description</label>
               <textarea
                 value={formData.description}
                 onChange={(event) => setFormData((previous) => ({ ...previous, description: event.target.value }))}
@@ -220,14 +229,14 @@ export function DepenseFormModal({
         )}
 
         {currentStep === 2 && (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div>
-              <p className="mb-1 text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">À qui cette dépense est-elle affectée ?</p>
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+              <p className="mb-1 text-[0.7rem] font-semibold text-slate-600">Affectation de la dépense</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() => setFormData((previous) => ({ ...previous, affectation: 'agence', immeuble_id: '' }))}
-                  className={`flex min-h-14 items-start gap-2 rounded-xl border p-2 text-left transition ${
+                  className={`flex min-h-[3.1rem] items-start gap-2 rounded-xl border p-2 text-left transition ${
                     formData.affectation === 'agence'
                       ? 'border-emerald-700 bg-emerald-50 ring-2 ring-emerald-700/10'
                       : 'border-slate-200 bg-white hover:border-emerald-200'
@@ -236,13 +245,13 @@ export function DepenseFormModal({
                   <Landmark className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
                   <span>
                     <span className="block text-xs font-bold text-slate-950">Dépense agence</span>
-                    <span className="mt-0.5 block text-[11px] font-medium leading-4 text-slate-500">Charge générale non rattachée à un bien.</span>
+                    <span className="mt-0.5 block text-[11px] font-medium leading-4 text-slate-500">Frais général non rattaché.</span>
                   </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setFormData((previous) => ({ ...previous, affectation: 'bien' }))}
-                  className={`flex min-h-14 items-start gap-2 rounded-xl border p-2 text-left transition ${
+                  className={`flex min-h-[3.1rem] items-start gap-2 rounded-xl border p-2 text-left transition ${
                     formData.affectation === 'bien'
                       ? 'border-emerald-700 bg-emerald-50 ring-2 ring-emerald-700/10'
                       : 'border-slate-200 bg-white hover:border-emerald-200'
@@ -251,7 +260,7 @@ export function DepenseFormModal({
                   <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
                   <span>
                     <span className="block text-xs font-bold text-slate-950">Dépense bailleur / bien</span>
-                    <span className="mt-0.5 block text-[11px] font-medium leading-4 text-slate-500">Charge liée à un bien selon la règle métier.</span>
+                    <span className="mt-0.5 block text-[11px] font-medium leading-4 text-slate-500">Imputable à un bien.</span>
                   </span>
                 </button>
               </div>
@@ -259,7 +268,7 @@ export function DepenseFormModal({
 
             {formData.affectation === 'bien' && (
               <div>
-                <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Bien concerné <span className="text-red-600">*</span></label>
+                <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">Bien concerné <span className="text-red-600">*</span></label>
                 <SmartCombobox
                   value={formData.immeuble_id}
                   options={propertyOptions}
@@ -282,7 +291,7 @@ export function DepenseFormModal({
             )}
 
             <div>
-              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Bénéficiaire</label>
+              <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">Bénéficiaire</label>
               <input
                 type="text"
                 value={formData.beneficiaire}
@@ -295,25 +304,25 @@ export function DepenseFormModal({
         )}
 
         {currentStep === 3 && (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {editing && originalAmount != null && (
-              <section className="rounded-xl border border-amber-200 bg-amber-50/80 p-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.12em] text-amber-900">Valeur actuelle → nouvelle valeur</p>
-                <div className="mt-2 grid grid-cols-2 gap-2.5">
-                  <div className="rounded-lg bg-white p-2.5 ring-1 ring-amber-200">
-                    <p className="text-[9px] font-black uppercase text-slate-500">Avant</p>
-                    <p className="mt-0.5 text-sm font-black text-slate-950"><MoneyText value={originalAmount} /></p>
+              <section className="rounded-lg border border-amber-200/70 bg-amber-50/55 px-2 py-1.5">
+                <p className="text-[0.58rem] font-semibold uppercase tracking-[0.12em] text-amber-900">Correction</p>
+                <div className="mt-1 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  <div className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-white/82 px-2 py-1 ring-1 ring-amber-200/70">
+                    <p className="shrink-0 text-[0.56rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Avant</p>
+                    <p className="min-w-0 truncate text-right text-[0.72rem] font-semibold tabular-nums text-slate-900"><MoneyText value={originalAmount} /></p>
                   </div>
-                  <div className="rounded-lg bg-white p-2.5 ring-1 ring-emerald-200">
-                    <p className="text-[9px] font-black uppercase text-slate-500">Après</p>
-                    <p className="mt-0.5 text-sm font-black text-emerald-800"><MoneyText value={amount} /></p>
+                  <div className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-white/82 px-2 py-1 ring-1 ring-emerald-200/70">
+                    <p className="shrink-0 text-[0.56rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Après</p>
+                    <p className="min-w-0 truncate text-right text-[0.72rem] font-semibold tabular-nums text-emerald-800"><MoneyText value={amount} /></p>
                   </div>
                 </div>
               </section>
             )}
 
             <div>
-              <label className="mb-1 block text-[0.7rem] font-bold uppercase tracking-wider text-slate-700">Lien du justificatif</label>
+              <label className="mb-1 block text-[0.68rem] font-semibold text-slate-600">Lien du justificatif</label>
               <input
                 type="url"
                 value={formData.piece_justificative}
@@ -321,66 +330,70 @@ export function DepenseFormModal({
                 placeholder="https://… (facultatif)"
                 className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
               />
-              <p className="mt-1 text-[11px] font-medium text-slate-500">Ajoutez un lien sécurisé existant. Aucun fichier n’est téléversé silencieusement.</p>
             </div>
 
-            <section className="rounded-xl border border-emerald-950/10 bg-white p-3 shadow-sm">
-              <div className="mb-2.5 flex items-center justify-between gap-3">
+            <section className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm shadow-emerald-950/[0.03]">
+              <div className="mb-2 flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-800">Résumé financier</p>
-                  <p className="mt-0.5 text-[11px] font-semibold text-slate-500">Vérifiez l’affectation avant l’enregistrement.</p>
+                  <p className="text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-emerald-800">Résumé financier</p>
+                  <p className="mt-0.5 text-[0.68rem] font-medium text-slate-500">Vérifiez l’affectation avant enregistrement.</p>
                 </div>
-                <ShieldCheck className="h-4 w-4 text-emerald-700" aria-hidden="true" />
+                <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
               </div>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2">
-                  <p className="text-[9px] font-black uppercase tracking-[0.1em] text-emerald-700">Montant</p>
-                  <p className="mt-0.5 text-sm font-extrabold text-emerald-950"><MoneyText value={amount} /></p>
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                <div className="rounded-lg border border-emerald-200/80 bg-emerald-50/70 px-2 py-1.5">
+                  <p className="truncate text-[0.55rem] font-semibold uppercase tracking-[0.08em] text-emerald-700">Montant</p>
+                  <p className="mt-0.5 text-[0.76rem] font-semibold tabular-nums text-slate-950"><MoneyText value={amount} /></p>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-                  <p className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-500">Date</p>
-                  <p className="mt-0.5 text-xs font-bold text-slate-950">
+                <div className="rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5">
+                  <p className="truncate text-[0.55rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Date</p>
+                  <p className="mt-0.5 text-[0.72rem] font-semibold text-slate-950">
                     {formData.date_depense ? new Date(`${formData.date_depense}T00:00:00`).toLocaleDateString('fr-FR') : '—'}
                   </p>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-                  <p className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-500">À la charge de</p>
-                  <p className="mt-0.5 text-xs font-bold text-slate-950">{formData.affectation === 'bien' ? ownerLabel : 'Agence'}</p>
+                <div className="rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5">
+                  <p className="truncate text-[0.55rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Support</p>
+                  <p className="mt-0.5 truncate text-[0.72rem] font-semibold text-slate-950">{formData.affectation === 'bien' ? ownerLabel : 'Agence'}</p>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-                  <p className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-500">Catégorie</p>
-                  <p className="mt-0.5 text-xs font-bold text-slate-950">{formData.categorie || '—'}</p>
+                <div className="rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5">
+                  <p className="truncate text-[0.55rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Catégorie</p>
+                  <p className="mt-0.5 truncate text-[0.72rem] font-semibold text-slate-950">{formData.categorie || '—'}</p>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-                  <p className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-500">Affectation</p>
-                  <p className="mt-0.5 text-xs font-bold text-slate-950">{selectedImmeuble?.nom || 'Dépense générale'}</p>
+                <div className="rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5">
+                  <p className="truncate text-[0.55rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Affectation</p>
+                  <p className="mt-0.5 truncate text-[0.72rem] font-semibold text-slate-950">{selectedImmeuble?.nom || 'Dépense générale'}</p>
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-2">
-                  <p className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-500">Bénéficiaire</p>
-                  <p className="mt-0.5 truncate text-xs font-bold text-slate-950">{formData.beneficiaire.trim() || 'Non renseigné'}</p>
+                <div className="rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5">
+                  <p className="truncate text-[0.55rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Bénéficiaire</p>
+                  <p className="mt-0.5 truncate text-[0.72rem] font-semibold text-slate-950">{formData.beneficiaire.trim() || 'Non renseigné'}</p>
                 </div>
               </div>
-              <div className="mt-2 rounded-lg border border-slate-200 bg-white p-2.5">
-                <p className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-500">Description</p>
-                <p className="mt-0.5 text-xs font-semibold leading-4 text-slate-700">{formData.description.trim() || 'Aucune description ajoutée.'}</p>
+              <div className="mt-1.5 rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5">
+                <p className="text-[0.55rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Description</p>
+                <p className="mt-0.5 line-clamp-2 text-[0.68rem] font-medium leading-4 text-slate-700">{formData.description.trim() || 'Aucune description ajoutée.'}</p>
               </div>
-              <div className="mt-2.5 flex items-start gap-2.5 rounded-lg border border-emerald-100 bg-[#fffdf8] p-2.5">
+              <div className="mt-1.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              <div className="flex min-w-0 items-center gap-2 rounded-lg border border-emerald-100 bg-white/80 px-2 py-1.5">
                 {formData.piece_justificative ? (
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" aria-hidden="true" />
+                  <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-700" aria-hidden="true" />
                 ) : (
-                  <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
+                  <FileText className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
                 )}
-                <div>
-                  <p className="text-sm font-black text-slate-950">{formData.piece_justificative ? 'Justificatif référencé' : 'Aucun justificatif'}</p>
-                  <p className="mt-1 break-all text-xs font-semibold leading-5 text-slate-500">
+                <div className="min-w-0">
+                  <p className="text-[0.68rem] font-semibold text-slate-950">{formData.piece_justificative ? 'Justificatif référencé' : 'Justificatif facultatif'}</p>
+                  <p className="truncate text-[0.62rem] font-medium text-slate-500">
                     {formData.piece_justificative
                       ? formData.piece_justificative
-                      : 'Aucun justificatif ajouté. La dépense peut être enregistrée, mais un justificatif renforce la traçabilité.'}
+                      : 'À ajouter plus tard si besoin.'}
                   </p>
                 </div>
               </div>
-              <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs font-semibold leading-5 text-emerald-950">
-                Impact financier : cette charge sera enregistrée dans le suivi {formData.affectation === 'bien' ? 'du bien et du bailleur associés' : 'de l’agence'} par le workflow sécurisé existant.
+              <div className="flex items-center gap-2 rounded-lg border border-emerald-100 bg-white/80 px-2 py-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-emerald-700" aria-hidden="true" />
+                <span className="text-[0.68rem] font-semibold text-slate-700">
+                  {formData.affectation === 'bien' ? 'Impact net bailleur' : 'Charge agence'}
+                </span>
+              </div>
               </div>
             </section>
           </div>
@@ -403,10 +416,10 @@ function DepenseWizardRail({ steps, currentStep }: { steps: WizardStep[]; curren
 
       <div className="mt-3">
         <p className="max-w-[11rem] text-[0.72rem] font-semibold leading-tight text-white/[0.86]">
-          Maîtrisez vos charges.
+          Enregistrez une charge proprement.
         </p>
         <p className="mt-1 max-w-[11rem] text-[0.6rem] font-medium leading-snug text-emerald-50/[0.56]">
-          Imputation directe agence ou bien, traçabilité des pièces et calcul du résultat pur.
+          Nature, affectation et preuve restent alignées.
         </p>
       </div>
 
@@ -449,9 +462,9 @@ function DepenseWizardRail({ steps, currentStep }: { steps: WizardStep[]; curren
       </div>
 
       <div className="mt-4 rounded-xl border border-white/[0.055] bg-white/[0.026] px-2 py-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
-        <p className="text-[0.47rem] font-semibold uppercase tracking-[0.16em] text-cyan-200/[0.75]">SOURCE DE VÉRITÉ</p>
+        <p className="text-[0.47rem] font-semibold uppercase tracking-[0.16em] text-cyan-200/[0.75]">REGISTRE FINANCIER</p>
         <p className="mt-1 text-[0.58rem] font-medium leading-snug text-emerald-50/[0.56]">
-          Impacte immédiatement le compte d'exploitation de l'agence ou le reversement net du bailleur.
+          Le serveur garde la trace et l'imputation de la dépense.
         </p>
       </div>
     </div>
@@ -461,16 +474,16 @@ function DepenseWizardRail({ steps, currentStep }: { steps: WizardStep[]; curren
 function DepenseWizardStepContext({ step, editing }: { step: number; editing: boolean }) {
   const copy: Record<number, { title?: string; body: string }> = {
     1: {
-      title: 'Qualification de la charge',
-      body: 'Définissez la nature de la dépense, le montant TTC et le prestataire bénéficiaire pour catégoriser la charge.',
+      title: 'Nature de la charge',
+      body: 'Renseignez le montant, la date et la catégorie.',
     },
     2: {
-      title: 'Affectation et imputation',
-      body: 'Indiquez si la charge est supportée par l’agence (frais généraux) ou imputable sur le compte d’un immeuble/bailleur.',
+      title: 'Imputation',
+      body: 'Choisissez agence ou bien, puis le bénéficiaire si nécessaire.',
     },
     3: {
-      title: editing ? 'Validation des modifications' : 'Validation et justificatif',
-      body: 'Référencez la pièce justificative (facture, reçu) et vérifiez les paramètres d’imputation avant enregistrement.',
+      title: editing ? 'Validation' : 'Justificatif',
+      body: 'Contrôlez la charge et ajoutez une preuve si disponible.',
     },
   };
   const current = copy[step] || copy[1];
@@ -493,4 +506,3 @@ function DepenseWizardStepContext({ step, editing }: { step: number; editing: bo
     </div>
   );
 }
-

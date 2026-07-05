@@ -8,6 +8,11 @@ import {
   Building,
   CheckCircle,
   SlidersHorizontal,
+  Edit3,
+  Landmark,
+  QrCode,
+  ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,7 +31,14 @@ type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
 };
 
 type SettingsTab = 'general' | 'documents' | 'appearance' | 'modules';
+type EmbeddedMode = 'single' | 'documentsIdentity';
 type LogoUploadState = 'idle' | 'preview' | 'uploading' | 'done';
+
+interface ParametresProps {
+  initialTab?: SettingsTab;
+  embedded?: boolean;
+  embeddedMode?: EmbeddedMode;
+}
 
 const AGENCY_ASSETS_BUCKET = 'agency-assets';
 const LOGO_MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
@@ -139,13 +151,14 @@ async function compressLogoFile(file: File): Promise<File> {
   }
 }
 
-export function Parametres() {
+export function Parametres({ initialTab = 'general', embedded = false, embeddedMode = 'single' }: ParametresProps = {}) {
   const { profile, agency, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const { showToast, toasts, removeToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
+  const [editingEmbedded, setEditingEmbedded] = useState(false);
   const [settings, setSettings] = useState<SettingsState | null>(null);
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState('');
   const [logoPreview, setLogoPreview] = useState<string>('');
@@ -163,6 +176,11 @@ export function Parametres() {
   // `loadSettings` is intentionally kept as a local workflow because it may create defaults.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.agency_id]);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+    setEditingEmbedded(false);
+  }, [initialTab]);
 
   const loadSettings = async (agencyId: string) => {
     setLoading(true);
@@ -472,11 +490,411 @@ export function Parametres() {
   }
 
   const supportsDocumentMode = 'document_mode' in settings;
+  const displayName = isIndividualOwner
+    ? settings.representant_nom || settings.nom_agence || getOwnerNameFallback()
+    : settings.nom_agence || 'Agence non renseignee';
+  const documentModeLabel = settings.document_mode ?? (isIndividualOwner ? 'simple' : 'professional');
+  const embeddedFieldClass =
+    'h-8 w-full rounded-lg border border-emerald-950/10 bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15';
+  const embeddedTextareaClass =
+    'min-h-[4.25rem] w-full rounded-lg border border-emerald-950/10 bg-white px-2.5 py-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15';
+  const embeddedLabelClass = 'mb-1 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500';
+
+  if (embedded && !editingEmbedded) {
+    return (
+      <div className="space-y-3">
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <SettingsActionBar
+          eyebrow="Lecture premium"
+          title={activeTab === 'general'
+            ? 'Synthese organisation'
+            : activeTab === 'documents'
+              ? embeddedMode === 'documentsIdentity' ? 'Documents & identite' : 'Reglages documentaires'
+              : activeTab === 'appearance'
+                ? 'Identite visuelle'
+                : 'Modules actifs'}
+          description="Les informations restent modifiables sans changer la logique existante."
+          actionLabel={activeTab === 'general' ? "Modifier l'organisation" : 'Modifier'}
+          onAction={() => setEditingEmbedded(true)}
+        />
+
+        {activeTab === 'general' && (
+          <div className="grid gap-2.5 xl:grid-cols-[minmax(0,1.05fr)_minmax(17rem,0.95fr)]">
+            <SettingsInfoCard title="Identite" eyebrow={isIndividualOwner ? 'PROPRIETAIRE' : 'AGENCE'} icon={Building}>
+              <InfoLine label="Nom" value={displayName} strong />
+              <InfoLine label="Telephone" value={formatSenegalPhone(settings.telephone, 'Non renseigne')} />
+              <InfoLine label="Email" value={settings.email} />
+              <InfoLine label="Adresse" value={settings.adresse} />
+              <InfoLine label="Ville" value={settings.city} />
+              <InfoLine label="Site web" value={settings.site_web} />
+            </SettingsInfoCard>
+            <SettingsInfoCard title="Informations legales" eyebrow="DOCUMENTS" icon={Landmark}>
+              {!isIndividualOwner && <InfoLine label="NINEA" value={settings.ninea} strong />}
+              {!isIndividualOwner && <InfoLine label="RC" value={settings.rc} />}
+              <InfoLine label={isIndividualOwner ? 'Proprietaire' : 'Representant'} value={settings.representant_nom || displayName} />
+              <InfoLine label="Fonction" value={settings.representant_fonction} />
+              <InfoLine label="Type piece" value={settings.manager_id_type} />
+              <InfoLine label="Numero piece" value={settings.manager_id_number} />
+            </SettingsInfoCard>
+            <div className="xl:col-span-2 rounded-xl border border-orange-200/70 bg-orange-50/65 p-2.5 text-[0.7rem] font-medium leading-4 text-orange-900">
+              <p className="font-extrabold">Utilisation documentaire</p>
+              <p className="mt-1">
+                Ces informations apparaissent dans les contrats, mandats, quittances, rapports et documents generes.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'documents' && (
+          <div className="grid gap-2.5 xl:grid-cols-[minmax(0,0.95fr)_minmax(19rem,1.05fr)]">
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <SettingsStatusCard label="Mode documentaire" value={documentModeLabel} icon={FileText} />
+              <SettingsStatusCard label="QR Verify" value={settings.qr_code_quittances ? 'Actif' : 'Inactif'} icon={QrCode} />
+              <SettingsStatusCard label="Penalites" value={`${settings.penalite_retard_montant ?? 0} F / jour`} icon={ShieldCheck} />
+              <SettingsStatusCard label="Delai" value={`${settings.penalite_retard_delai_jours ?? 0} jours`} icon={CheckCircle} />
+            </div>
+            <SettingsDocumentPreview
+              title={displayName}
+              logoUrl={logoPreview}
+              primary={settings.couleur_primaire ?? '#F58220'}
+              secondary={settings.couleur_secondaire ?? '#333333'}
+              tribunal={settings.mention_tribunal}
+              footer={settings.pied_page_personnalise}
+            />
+            <SettingsInfoCard title="Mentions configurees" eyebrow="REGISTRE" icon={FileText} className="xl:col-span-2">
+              <InfoLine label="Tribunal" value={settings.mention_tribunal} />
+              <InfoLine label="Pied de page" value={settings.pied_page_personnalise} />
+              <InfoLine label="Frais huissier" value={`${settings.frais_huissier ?? 0} F CFA`} />
+              <InfoLine label="Penalites" value={settings.mention_penalites} multiline />
+            </SettingsInfoCard>
+            {embeddedMode === 'documentsIdentity' && (
+              <SettingsInfoCard title="Identite visuelle" eyebrow="MARQUE" icon={Palette} className="xl:col-span-2">
+                <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <InfoLine label="Logo" value={logoPreview ? 'Logo configure' : 'Logo a ajouter'} strong />
+                    <InfoLine label="Position" value={settings.logo_position} />
+                    <ColorLine label="Couleur primaire" value={settings.couleur_primaire ?? '#F58220'} />
+                    <ColorLine label="Couleur secondaire" value={settings.couleur_secondaire ?? '#333333'} />
+                  </div>
+                  <div className="flex h-12 w-20 items-center justify-center rounded-xl border border-emerald-950/10 bg-[#fff8ed] p-2">
+                    {logoPreview ? <img src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
+                  </div>
+                </div>
+              </SettingsInfoCard>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'appearance' && (
+          <div className="grid gap-2.5 xl:grid-cols-[minmax(0,0.9fr)_minmax(20rem,1.1fr)]">
+            <SettingsInfoCard title="Identite visuelle" eyebrow="MARQUE" icon={Palette}>
+              <div className="mb-2.5 flex items-center gap-2.5 rounded-xl border border-emerald-950/10 bg-white/80 p-2.5">
+                <div className="flex h-11 w-16 items-center justify-center rounded-xl bg-[#fff8ed] p-2">
+                  {logoPreview ? <img src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
+                </div>
+                <div>
+                  <p className="text-[0.72rem] font-extrabold text-slate-950">{logoPreview ? 'Logo charge' : 'Logo a ajouter'}</p>
+                  <p className="text-xs font-semibold text-slate-500">Position : {settings.logo_position ?? 'left'}</p>
+                </div>
+              </div>
+              <ColorLine label="Primaire" value={settings.couleur_primaire ?? '#F58220'} />
+              <ColorLine label="Secondaire" value={settings.couleur_secondaire ?? '#333333'} />
+            </SettingsInfoCard>
+            <SettingsDocumentPreview
+              title={displayName}
+              logoUrl={logoPreview}
+              primary={settings.couleur_primaire ?? '#F58220'}
+              secondary={settings.couleur_secondaire ?? '#333333'}
+              tribunal={settings.mention_tribunal}
+              footer={settings.pied_page_personnalise}
+            />
+          </div>
+        )}
+
+        {activeTab === 'modules' && (
+          <SettingsModulesOverview
+            modules={[
+              { category: 'Portefeuille locatif', items: ['Bailleurs', 'Biens & patrimoine', 'Locations', 'Contrats / baux'] },
+              { category: 'Finance', items: ['Paiements', 'Reliquats', 'Charges', settings.module_depenses_actif ? 'Depenses' : 'Depenses masquees', 'Commissions', 'Rapports'] },
+              { category: 'Documents', items: ['GED', 'QR Verify', 'Scanner', 'Modeles'] },
+              { category: 'Terrain', items: [settings.module_inventaires_actif ? 'Etats des lieux' : 'Etats des lieux a configurer', settings.module_interventions_actif ? 'Maintenance' : 'Maintenance a configurer', 'Planning'] },
+              { category: 'Administration', items: ['Equipe', 'Permissions', 'Abonnement', 'Audit'] },
+            ]}
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (embedded && editingEmbedded) {
+    const showDocumentsIdentity = activeTab === 'documents' && embeddedMode === 'documentsIdentity';
+
+    return (
+      <div className="space-y-3">
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <div className="flex flex-col gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 px-2.5 py-2 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[0.64rem] font-black uppercase tracking-[0.18em] text-emerald-700">
+              {hasUnsavedChanges ? 'Modifications en attente' : 'Configuration a jour'}
+            </p>
+            <p className="truncate text-xs font-semibold text-slate-500">Edition compacte du Control Center.</p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <PremiumButton variant="secondary" size="sm" onClick={() => setEditingEmbedded(false)}>
+              Voir synthese
+            </PremiumButton>
+            <PremiumButton
+              variant="create"
+              size="sm"
+              onClick={handleSave}
+              disabled={saving || !hasUnsavedChanges}
+              icon={saving ? <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" /> : <Save className="h-4 w-4" />}
+            >
+              {saving ? 'Enregistrement...' : !hasUnsavedChanges ? 'A jour' : 'Sauvegarder'}
+            </PremiumButton>
+          </div>
+        </div>
+
+        {activeTab === 'general' && (
+          <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
+            <div className="mb-3 flex items-start gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
+                <Building className="h-3.5 w-3.5" />
+              </div>
+              <div>
+                <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Organisation</p>
+                <h3 className="text-[0.82rem] font-extrabold text-slate-950">Modifier les informations officielles</h3>
+              </div>
+            </div>
+            <div className="grid gap-2.5 md:grid-cols-2">
+              <label>
+                <span className={embeddedLabelClass}>{isIndividualOwner ? 'Nom document' : "Nom de l'agence"}</span>
+                <input
+                  type="text"
+                  value={isIndividualOwner ? settings.representant_nom ?? settings.nom_agence ?? '' : settings.nom_agence ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSettings(isIndividualOwner
+                      ? { ...settings, representant_nom: value, nom_agence: value }
+                      : { ...settings, nom_agence: value });
+                  }}
+                  className={embeddedFieldClass}
+                />
+              </label>
+              <label>
+                <span className={embeddedLabelClass}>Telephone</span>
+                <input
+                  type="text"
+                  value={formatSenegalPhone(settings.telephone, '')}
+                  onChange={(e) => setSettings({ ...settings, telephone: formatSenegalPhoneInput(e.target.value) })}
+                  className={embeddedFieldClass}
+                />
+              </label>
+              <label>
+                <span className={embeddedLabelClass}>Email</span>
+                <input type="email" value={settings.email ?? ''} onChange={(e) => setSettings({ ...settings, email: e.target.value })} className={embeddedFieldClass} />
+              </label>
+              <label>
+                <span className={embeddedLabelClass}>Site web</span>
+                <input type="url" value={settings.site_web ?? ''} onChange={(e) => setSettings({ ...settings, site_web: e.target.value })} className={embeddedFieldClass} />
+              </label>
+              <label className="md:col-span-2">
+                <span className={embeddedLabelClass}>Adresse</span>
+                <input type="text" value={settings.adresse ?? ''} onChange={(e) => setSettings({ ...settings, adresse: e.target.value })} className={embeddedFieldClass} />
+              </label>
+              <label>
+                <span className={embeddedLabelClass}>Ville</span>
+                <input type="text" value={settings.city ?? ''} onChange={(e) => setSettings({ ...settings, city: e.target.value })} className={embeddedFieldClass} />
+              </label>
+              {!isIndividualOwner && (
+                <label>
+                  <span className={embeddedLabelClass}>NINEA</span>
+                  <input type="text" value={settings.ninea ?? ''} onChange={(e) => setSettings({ ...settings, ninea: e.target.value })} className={embeddedFieldClass} />
+                </label>
+              )}
+              {!isIndividualOwner && (
+                <label>
+                  <span className={embeddedLabelClass}>RC</span>
+                  <input type="text" value={settings.rc ?? ''} onChange={(e) => setSettings({ ...settings, rc: e.target.value })} className={embeddedFieldClass} />
+                </label>
+              )}
+              {!isIndividualOwner && (
+                <label>
+                  <span className={embeddedLabelClass}>Representant legal</span>
+                  <input type="text" value={settings.representant_nom ?? ''} onChange={(e) => setSettings({ ...settings, representant_nom: e.target.value })} className={embeddedFieldClass} />
+                </label>
+              )}
+              <label>
+                <span className={embeddedLabelClass}>{isIndividualOwner ? 'Qualite' : 'Fonction'}</span>
+                <input type="text" value={settings.representant_fonction ?? ''} onChange={(e) => setSettings({ ...settings, representant_fonction: e.target.value })} className={embeddedFieldClass} />
+              </label>
+              <label>
+                <span className={embeddedLabelClass}>Type piece</span>
+                <select value={settings.manager_id_type ?? 'CNI'} onChange={(e) => setSettings({ ...settings, manager_id_type: e.target.value })} className={embeddedFieldClass}>
+                  <option value="CNI">CNI</option>
+                  <option value="Passeport">Passeport</option>
+                  <option value="Carte consulaire">Carte consulaire</option>
+                </select>
+              </label>
+              <label>
+                <span className={embeddedLabelClass}>Numero piece</span>
+                <input type="text" value={settings.manager_id_number ?? ''} onChange={(e) => setSettings({ ...settings, manager_id_number: e.target.value })} className={embeddedFieldClass} />
+              </label>
+            </div>
+          </section>
+        )}
+
+        {showDocumentsIdentity && (
+          <section className="grid gap-2.5 xl:grid-cols-[minmax(0,0.95fr)_minmax(19rem,1.05fr)]">
+            <div className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
+              <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Documents</p>
+              <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Reglages documentaires</h3>
+              <div className="mt-2.5 grid gap-2.5">
+                {supportsDocumentMode && (
+                  <label>
+                    <span className={embeddedLabelClass}>Mode documentaire</span>
+                    <select
+                      value={settings.document_mode ?? (isIndividualOwner ? 'simple' : 'professional')}
+                      onChange={(e) => setSettings({ ...settings, document_mode: e.target.value as AgencySettings['document_mode'] })}
+                      className={embeddedFieldClass}
+                    >
+                      <option value="simple">Simple</option>
+                      <option value="professional">Professionnel</option>
+                      <option value="legal">Juridique renforce</option>
+                    </select>
+                  </label>
+                )}
+                <label>
+                  <span className={embeddedLabelClass}>Tribunal competent</span>
+                  <input type="text" value={settings.mention_tribunal ?? ''} onChange={(e) => setSettings({ ...settings, mention_tribunal: e.target.value })} className={embeddedFieldClass} />
+                </label>
+                <label>
+                  <span className={embeddedLabelClass}>Pied de page</span>
+                  <input type="text" value={settings.pied_page_personnalise ?? ''} onChange={(e) => setSettings({ ...settings, pied_page_personnalise: e.target.value })} className={embeddedFieldClass} />
+                </label>
+                <label>
+                  <span className={embeddedLabelClass}>Texte penalites</span>
+                  <textarea value={settings.mention_penalites ?? ''} onChange={(e) => setSettings({ ...settings, mention_penalites: e.target.value })} className={embeddedTextareaClass} />
+                </label>
+                <div className="grid gap-2.5 sm:grid-cols-3">
+                  <label>
+                    <span className={embeddedLabelClass}>Frais huissier</span>
+                    <input type="number" value={settings.frais_huissier ?? 0} onChange={(e) => setSettings({ ...settings, frais_huissier: Number(e.target.value) })} className={embeddedFieldClass} />
+                  </label>
+                  <label>
+                    <span className={embeddedLabelClass}>Penalite / jour</span>
+                    <input type="number" value={settings.penalite_retard_montant ?? 0} onChange={(e) => setSettings({ ...settings, penalite_retard_montant: Number(e.target.value) })} className={embeddedFieldClass} />
+                  </label>
+                  <label>
+                    <span className={embeddedLabelClass}>Delai</span>
+                    <input type="number" value={settings.penalite_retard_delai_jours ?? 0} onChange={(e) => setSettings({ ...settings, penalite_retard_delai_jours: Number(e.target.value) })} className={embeddedFieldClass} />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
+                <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Identite visuelle</p>
+                <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Logo et couleurs</h3>
+                <div className="mt-2.5 grid gap-2.5">
+                  <label className="block" onDrop={handleLogoDrop} onDragOver={(e) => e.preventDefault()}>
+                    <span className={embeddedLabelClass}>{isIndividualOwner ? 'Logo ou signature' : "Logo de l'agence"}</span>
+                    <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-emerald-950/15 bg-[#fffdf8] p-2.5">
+                      <input
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
+                        onChange={handleLogoUpload}
+                        className="hidden"
+                      />
+                      <div className="flex h-11 w-16 items-center justify-center rounded-xl bg-white p-2 shadow-sm">
+                        {logoPreview ? <img src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Upload className="h-5 w-5 text-emerald-800" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[0.72rem] font-extrabold text-slate-950">{logoUploadState === 'uploading' ? 'Upload en cours...' : 'Cliquer ou deposer un logo'}</p>
+                        <p className="text-[0.62rem] font-semibold text-slate-500">PNG, SVG, JPG, WEBP jusqu'a 5 Mo.</p>
+                      </div>
+                    </div>
+                  </label>
+                  <label>
+                    <span className={embeddedLabelClass}>Position logo</span>
+                    <select value={settings.logo_position ?? 'left'} onChange={(e) => setSettings({ ...settings, logo_position: e.target.value as AgencySettings['logo_position'] })} className={embeddedFieldClass}>
+                      <option value="left">Gauche</option>
+                      <option value="center">Centre</option>
+                      <option value="right">Droite</option>
+                    </select>
+                  </label>
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    <label>
+                      <span className={embeddedLabelClass}>Couleur primaire</span>
+                      <div className="flex gap-2">
+                        <input type="color" value={settings.couleur_primaire ?? '#F58220'} onChange={(e) => setSettings({ ...settings, couleur_primaire: e.target.value })} className="h-10 w-12 rounded-xl border border-emerald-950/10 bg-white p-1" />
+                        <input type="text" value={settings.couleur_primaire ?? '#F58220'} onChange={(e) => setSettings({ ...settings, couleur_primaire: e.target.value })} className={embeddedFieldClass} />
+                      </div>
+                    </label>
+                    <label>
+                      <span className={embeddedLabelClass}>Couleur secondaire</span>
+                      <div className="flex gap-2">
+                        <input type="color" value={settings.couleur_secondaire ?? '#333333'} onChange={(e) => setSettings({ ...settings, couleur_secondaire: e.target.value })} className="h-10 w-12 rounded-xl border border-emerald-950/10 bg-white p-1" />
+                        <input type="text" value={settings.couleur_secondaire ?? '#333333'} onChange={(e) => setSettings({ ...settings, couleur_secondaire: e.target.value })} className={embeddedFieldClass} />
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <SettingsDocumentPreview
+                title={displayName}
+                logoUrl={logoPreview}
+                primary={settings.couleur_primaire ?? '#F58220'}
+                secondary={settings.couleur_secondaire ?? '#333333'}
+                tribunal={settings.mention_tribunal}
+                footer={settings.pied_page_personnalise}
+              />
+            </div>
+          </section>
+        )}
+
+        {activeTab === 'modules' && (
+          <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
+            <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Modules & navigation</p>
+            <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Une seule matrice, pas de switches decoratifs</h3>
+            <div className="mt-3 grid gap-2">
+              <ModuleToggle
+                title="Depenses"
+                description="Suivi des charges, depenses bailleurs et justificatifs."
+                enabled={Boolean(settings.module_depenses_actif)}
+                onToggle={() => setSettings({ ...settings, module_depenses_actif: !settings.module_depenses_actif })}
+              />
+              <ModuleToggle
+                title="Etats des lieux"
+                description="Inventaires, entrees, sorties et documents associes."
+                enabled={Boolean(settings.module_inventaires_actif)}
+                onToggle={() => setSettings({ ...settings, module_inventaires_actif: !settings.module_inventaires_actif })}
+              />
+              <ModuleToggle
+                title="Maintenance"
+                description="Demandes d'intervention, suivi terrain et priorites."
+                enabled={Boolean(settings.module_interventions_actif)}
+                onToggle={() => setSettings({ ...settings, module_interventions_actif: !settings.module_interventions_actif })}
+              />
+              <ModuleToggle
+                title="Mode avance"
+                description="Options expertes pour equipes structurees."
+                enabled={Boolean(settings.mode_avance_actif)}
+                onToggle={() => setSettings({ ...settings, mode_avance_actif: !settings.mode_avance_actif })}
+              />
+            </div>
+          </section>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-0 sm:py-0">
+    <div className={embedded ? 'space-y-4 sm:space-y-5' : 'space-y-4 px-4 py-4 sm:space-y-5 sm:px-0 sm:py-0'}>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
+      {!embedded && (
       <PremiumPageHeader
         density="compact"
         eyebrow="PARAMÈTRES AGENCE"
@@ -497,8 +915,37 @@ export function Parametres() {
           </PremiumButton>
         }
       />
+      )}
+
+      {embedded && (
+        <div className="flex flex-col gap-2 rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/92 px-3 py-2.5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[0.64rem] font-black uppercase tracking-[0.18em] text-emerald-700">
+              {hasUnsavedChanges ? 'Modifications en attente' : 'Configuration a jour'}
+            </p>
+            <p className="truncate text-xs font-semibold text-slate-500">
+              Les changements sont appliques uniquement apres sauvegarde.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <PremiumButton variant="secondary" size="sm" onClick={() => setEditingEmbedded(false)}>
+              Voir synthese
+            </PremiumButton>
+            <PremiumButton
+              variant="create"
+              size="sm"
+              onClick={handleSave}
+              disabled={saving || !hasUnsavedChanges}
+              icon={saving ? <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" /> : <Save className="h-4 w-4" />}
+            >
+              {saving ? 'Enregistrement...' : !hasUnsavedChanges ? 'A jour' : 'Sauvegarder'}
+            </PremiumButton>
+          </div>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        {!embedded && (
         <div className="border-b border-slate-200">
           <div className="flex gap-2 overflow-x-auto px-4 scrollbar-hide sm:gap-4 sm:px-6">
             {tabs.map((tab) => {
@@ -520,8 +967,9 @@ export function Parametres() {
             })}
           </div>
         </div>
+        )}
 
-        <div className="p-4 sm:p-6">
+        <div className={embedded ? 'p-3 sm:p-4' : 'p-4 sm:p-6'}>
           {activeTab === 'general' && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -983,23 +1431,23 @@ export function Parametres() {
 
           {activeTab === 'modules' && (
             <div className="space-y-5">
-              <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-5 text-white shadow-xl shadow-emerald-950/10 sm:p-6">
+              <div className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-4 shadow-sm">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-200">
+                    <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-700">
                       Modules visibles
                     </p>
-                    <h3 className="mt-2 text-2xl font-black">Gestion modules/pages</h3>
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-emerald-50/80">
+                    <h3 className="mt-1 text-lg font-black text-slate-950">Gestion modules/pages</h3>
+                    <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-600">
                       Activez uniquement les espaces utiles à votre agence. Les pages désactivées
                       disparaissent de la navigation et deviennent inaccessibles aux rôles standards.
                     </p>
                   </div>
-                  <SlidersHorizontal className="h-8 w-8 text-orange-300" />
+                  <SlidersHorizontal className="h-5 w-5 text-orange-600" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2">
                 {[
                   {
                     key: 'module_depenses_actif',
@@ -1036,31 +1484,31 @@ export function Parametres() {
                       key={module.key}
                       type="button"
                       onClick={() => setSettings({ ...settings, [key]: !enabled })}
-                      className={`rounded-2xl border p-5 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl ${
+                      className={`rounded-2xl border p-3 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md ${
                         enabled
-                          ? 'border-emerald-200 bg-emerald-50 shadow-emerald-100/70'
+                          ? 'border-emerald-200 bg-emerald-50/70'
                           : 'border-slate-200 bg-white shadow-slate-100'
                       }`}
                     >
                       <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <h4 className="text-lg font-black text-slate-950">{module.title}</h4>
-                          <p className="mt-2 text-sm leading-6 text-slate-600">{module.desc}</p>
+                        <div className="min-w-0">
+                          <h4 className="text-sm font-black text-slate-950">{module.title}</h4>
+                          <p className="mt-1 text-xs leading-5 text-slate-600">{module.desc}</p>
                         </div>
                         <span
-                          className={`relative mt-1 inline-flex h-7 w-12 flex-shrink-0 rounded-full p-1 transition-colors ${
+                          className={`relative mt-0.5 inline-flex h-6 w-10 flex-shrink-0 rounded-full p-1 transition-colors ${
                             enabled ? 'bg-emerald-700' : 'bg-slate-200'
                           }`}
                         >
                           <span
-                            className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                              enabled ? 'translate-x-5' : 'translate-x-0'
+                            className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                              enabled ? 'translate-x-4' : 'translate-x-0'
                             }`}
                           />
                         </span>
                       </div>
                       <p
-                        className={`mt-4 text-xs font-black uppercase tracking-[0.18em] ${
+                        className={`mt-2 text-[0.62rem] font-black uppercase tracking-[0.16em] ${
                           enabled ? 'text-emerald-700' : 'text-slate-400'
                         }`}
                       >
@@ -1073,6 +1521,213 @@ export function Parametres() {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ModuleToggle({
+  title,
+  description,
+  enabled,
+  onToggle,
+}: {
+  title: string;
+  description: string;
+  enabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="flex min-w-0 items-center justify-between gap-2.5 rounded-lg border border-emerald-950/10 bg-[#fffdf8] px-2.5 py-1.5 text-left shadow-sm transition hover:border-emerald-800/20 hover:bg-emerald-50/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
+    >
+      <div className="min-w-0">
+        <p className="text-[0.72rem] font-extrabold text-slate-950">{title}</p>
+        <p className="mt-0.5 line-clamp-2 text-xs font-semibold leading-5 text-slate-500">{description}</p>
+      </div>
+      <span className="flex shrink-0 items-center gap-2">
+        <span className={`rounded-full px-1.5 py-0.5 text-[0.54rem] font-black uppercase tracking-[0.1em] ${enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700'}`}>
+          {enabled ? 'Actif' : 'Masque'}
+        </span>
+        <span className={`relative inline-flex h-6 w-10 rounded-full p-1 transition-colors ${enabled ? 'bg-emerald-700' : 'bg-slate-200'}`}>
+          <span className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-4' : 'translate-x-0'}`} />
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function SettingsActionBar({
+  eyebrow,
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <section className="flex flex-col gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2.5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">{eyebrow}</p>
+        <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">{title}</h2>
+        <p className="mt-0.5 text-[0.7rem] leading-4 text-slate-600">{description}</p>
+      </div>
+      <PremiumButton variant="secondary" size="sm" onClick={onAction} icon={<Edit3 className="h-3.5 w-3.5" />}>
+        {actionLabel}
+      </PremiumButton>
+    </section>
+  );
+}
+
+function SettingsInfoCard({
+  title,
+  eyebrow,
+  icon: Icon,
+  children,
+  className = '',
+}: {
+  title: string;
+  eyebrow: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm ${className}`}>
+      <div className="mb-1.5 flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+          <Icon className="h-3 w-3" />
+        </div>
+        <div>
+          <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-slate-500">{eyebrow}</p>
+          <h3 className="text-[0.8rem] font-extrabold text-slate-950">{title}</h3>
+        </div>
+      </div>
+      <div className="divide-y divide-slate-100">{children}</div>
+    </section>
+  );
+}
+
+function InfoLine({ label, value, strong = false, multiline = false }: { label: string; value?: string | null; strong?: boolean; multiline?: boolean }) {
+  const resolved = value && String(value).trim() ? String(value) : 'Non renseigne';
+  return (
+    <div className={`grid gap-2 py-1 ${multiline ? '' : 'sm:grid-cols-[6.5rem_minmax(0,1fr)] sm:items-center'}`}>
+      <dt className="text-[0.64rem] font-bold text-slate-500">{label}</dt>
+      <dd className={`${strong ? 'font-extrabold text-slate-950' : 'font-semibold text-slate-700'} min-w-0 text-[0.72rem] ${multiline ? 'leading-4' : 'truncate sm:text-right'}`}>
+        {resolved}
+      </dd>
+    </div>
+  );
+}
+
+function SettingsStatusCard({ label, value, icon: Icon }: { label: string; value: string; icon: React.ComponentType<{ className?: string }> }) {
+  return (
+    <div className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
+      <div className="flex items-center justify-between gap-2.5">
+        <div className="min-w-0">
+          <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
+          <p className="mt-0.5 truncate text-[0.72rem] font-extrabold text-slate-950">{value}</p>
+        </div>
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+          <Icon className="h-3 w-3" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ColorLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-2.5 py-1.5">
+      <span className="text-[0.7rem] font-bold text-slate-500">{label}</span>
+      <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-slate-800">
+        <span className="h-4 w-4 rounded-full border border-slate-200" style={{ backgroundColor: value }} />
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function SettingsDocumentPreview({
+  title,
+  logoUrl,
+  primary,
+  secondary,
+  tribunal,
+  footer,
+}: {
+  title: string;
+  logoUrl?: string;
+  primary: string;
+  secondary: string;
+  tribunal?: string | null;
+  footer?: string | null;
+}) {
+  return (
+    <section className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
+      <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-[#a45d12]">Apercu document</p>
+      <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner">
+        <div className="flex items-center justify-between gap-2.5 px-3 py-2.5" style={{ borderTop: `3px solid ${primary}` }}>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-extrabold text-slate-950">{title}</p>
+            <p className="text-[0.58rem] font-bold uppercase tracking-[0.12em]" style={{ color: secondary }}>
+              Contrat / quittance
+            </p>
+          </div>
+          <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded-lg bg-slate-50 p-2">
+            {logoUrl ? <img src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" /> : <FileText className="h-5 w-5 text-slate-400" />}
+          </div>
+        </div>
+        <div className="space-y-1.5 px-3 py-2.5">
+          <div className="h-2 w-2/3 rounded-full bg-slate-100" />
+          <div className="h-2 w-5/6 rounded-full bg-slate-100" />
+          <div className="h-2 w-1/2 rounded-full bg-slate-100" />
+        </div>
+        <div className="border-t border-slate-100 px-3 py-2 text-[0.64rem] font-semibold text-slate-500">
+          <p className="truncate">Tribunal : {tribunal || 'Non renseigne'}</p>
+          <p className="mt-1 truncate">Pied de page : {footer || 'Non renseigne'}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SettingsModulesOverview({ modules }: { modules: Array<{ category: string; items: string[] }> }) {
+  return (
+    <div className="space-y-2.5">
+      <section className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-[#fffdf8] via-white to-emerald-50/50 p-2.5 shadow-sm">
+        <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Modules & pages</p>
+        <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Workspace visible par domaine</h2>
+        <p className="mt-0.5 text-[0.7rem] leading-4 text-slate-600">
+          Les modules systeme restent actifs. Les modules optionnels utilisent les reglages existants quand ils sont réellement branches.
+        </p>
+      </section>
+      <div className="grid gap-2.5 xl:grid-cols-2">
+        {modules.map((group) => (
+          <section key={group.category} className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
+            <h3 className="text-[0.72rem] font-extrabold text-slate-950">{group.category}</h3>
+            <div className="mt-1.5 grid gap-1">
+              {group.items.map((item) => {
+                const inactive = item.toLowerCase().includes('masque') || item.toLowerCase().includes('configurer');
+                return (
+                  <div key={item} className="flex items-center justify-between gap-2.5 rounded-lg border border-slate-100 bg-[#fffdf8] px-2 py-1">
+                    <span className="min-w-0 truncate text-[0.7rem] font-semibold text-slate-700">{item}</span>
+                    <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.54rem] font-black uppercase tracking-[0.1em] ${inactive ? 'bg-orange-50 text-orange-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                      {inactive ? 'A configurer' : 'Actif'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </div>
     </div>
   );

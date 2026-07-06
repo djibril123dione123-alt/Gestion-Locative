@@ -20,6 +20,9 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { CheckoutModal } from '../components/billing/CheckoutModal';
 import { BrandLogo } from '../components/brand/BrandLogo';
+import orangeMoneyLogo from '../assets/payments/orange-money.png';
+import waveLogo from '../assets/payments/wave.png';
+import djamoLogo from '../assets/payments/djamo.png';
 
 type PlanId = 'starter' | 'pro' | 'business' | 'enterprise';
 
@@ -406,9 +409,9 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
           </p>
           <div className="relative mx-auto mt-7 grid max-w-[17.5rem] grid-cols-1 items-center justify-center gap-2 text-sm font-bold text-emerald-50 sm:flex sm:max-w-none sm:flex-wrap sm:gap-3">
             {[
-              ['Orange Money', '/logo-orange-money.png'],
-              ['Wave', '/logo-wave.png'],
-              ['Djamo', '/logo-djamo.png'],
+              ['Orange Money', orangeMoneyLogo],
+              ['Wave', waveLogo],
+              ['Djamo', djamoLogo],
             ].map(([label, src]) => (
               <span key={label} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-emerald-50 shadow-lg shadow-emerald-950/10 backdrop-blur">
                 <img src={src} alt={label} className="h-5 w-5 rounded object-contain" />

@@ -44,6 +44,7 @@ interface ParametresHubProps {
 interface SectionConfig {
   id: ControlSection;
   label: string;
+  title?: string;
   eyebrow: string;
   description: string;
   icon: ComponentType<{ className?: string }>;
@@ -55,50 +56,54 @@ const SECTIONS: SectionConfig[] = [
     id: 'overview',
     label: "Vue d'ensemble",
     eyebrow: 'CONTROL CENTER',
-    description: 'Synthese de votre organisation, de vos modules et de vos acces.',
+    description: 'Synthèse de votre organisation, de vos modules et de vos accès.',
     icon: LayoutDashboard,
   },
   {
     id: 'organization',
     label: 'Organisation',
-    eyebrow: 'IDENTITE',
-    description: "Informations legales utilisees dans les contrats, mandats et documents.",
+    eyebrow: 'IDENTITÉ',
+    description: 'Informations légales utilisées dans les contrats, mandats et documents.',
     icon: Building2,
   },
   {
     id: 'documentsIdentity',
-    label: 'Documents & identite',
+    label: 'Documents',
+    title: 'Documents & identité',
     eyebrow: 'REGISTRE DOCUMENTAIRE',
-    description: 'Modeles, QR Verify, logo et rendu des documents emis.',
+    description: 'Modèles, QR Verify, logo et rendu des documents émis.',
     icon: FileText,
   },
   {
     id: 'modules',
-    label: 'Modules & navigation',
+    label: 'Modules',
+    title: 'Modules & navigation',
     eyebrow: 'WORKSPACE',
-    description: 'Pages visibles, modules actifs et capacites de navigation.',
+    description: 'Pages visibles, modules actifs et capacités de navigation.',
     icon: SlidersHorizontal,
   },
   {
     id: 'teamAccess',
-    label: 'Equipe & acces',
+    label: 'Équipe & accès',
     eyebrow: 'COLLABORATEURS',
-    description: 'Collaborateurs, roles, invitations et pages visibles.',
+    description: 'Collaborateurs, rôles, invitations et pages visibles.',
     icon: Users,
     hiddenForOwner: true,
   },
   {
     id: 'billing',
-    label: 'Abonnement & paiements',
+    label: 'Facturation',
+    title: 'Abonnement & paiements',
     eyebrow: 'FACTURATION',
     description: 'Plan, limites, renouvellement, paiement en ligne et support manuel.',
     icon: CreditCard,
   },
   {
     id: 'securitySupport',
-    label: 'Securite & support',
-    eyebrow: 'SECURITE',
-    description: 'Acces, audit, statut systeme et canaux de support.',
+    label: 'Sécurité',
+    title: 'Sécurité & support',
+    eyebrow: 'SÉCURITÉ',
+    description: 'Accès, audit, statut système et canaux de support.',
     icon: LockKeyhole,
   },
 ];
@@ -109,7 +114,7 @@ const initialSectionMap: Record<LegacyInitialTab, ControlSection> = {
   abonnement: 'billing',
 };
 
-const PageLoader = () => <PageSkeleton title="Parametres" variant="form" className="p-4 sm:p-6" />;
+const PageLoader = () => <PageSkeleton title="Paramètres" variant="form" className="p-4 sm:p-6" />;
 
 export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
   const { profile, agency, accountProfile } = useAuth();
@@ -127,8 +132,8 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
   }, [initialTab, isIndividualOwner]);
 
   const activeConfig = sections.find((section) => section.id === activeSection) ?? sections[0];
-  const agencyName = agency?.name ?? (isIndividualOwner ? 'Compte proprietaire' : 'Organisation');
-  const accountKind = isIndividualOwner ? 'Bailleur individuel' : 'Agence immobiliere';
+  const agencyName = agency?.name ?? (isIndividualOwner ? 'Compte propriétaire' : 'Organisation');
+  const accountKind = isIndividualOwner ? 'Bailleur individuel' : 'Agence immobilière';
   const planLabel = agency?.plan ? agency.plan : 'Starter';
   const statusLabel = agency?.status ? agency.status : 'Actif';
 
@@ -137,14 +142,14 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
   };
 
   return (
-    <PageShell spacing="compact" variant="dataDense" tone="paper" verticalInset="compact" ariaLabel="Parametres control center">
+    <PageShell spacing="compact" variant="dataDense" tone="paper" verticalInset="compact" ariaLabel="Paramètres control center">
       <PremiumPageHeader
         density="ultraCompact"
         className="!rounded-2xl"
-        eyebrow={isIndividualOwner ? 'COMPTE PROPRIETAIRE' : 'ADMINISTRATION AGENCE'}
-        title="Parametres"
+        eyebrow={isIndividualOwner ? 'COMPTE PROPRIÉTAIRE' : 'ADMINISTRATION AGENCE'}
+        title="Paramètres"
         description={isIndividualOwner
-          ? 'Pilotez votre profil proprietaire, vos documents, votre abonnement et votre support.'
+          ? 'Pilotez votre profil propriétaire, vos documents, votre abonnement et votre support.'
           : "Pilotez l'organisation, les droits, les modules et l'abonnement depuis un seul espace."}
         mobileDescription="Control Center."
         sideContent={
@@ -152,7 +157,7 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
             <StatusPill label="Compte" value={accountKind} />
             <StatusPill label="Statut" value={statusLabel} />
             <StatusPill label="Plan" value={planLabel} />
-            <StatusPill label="Controle" value="Pret" />
+            <StatusPill label="Contrôle" value="Prêt" />
           </div>
         }
       />
@@ -180,7 +185,7 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
         </div>
       </div>
 
-      <section className="grid gap-2 lg:grid-cols-[9.9rem_minmax(0,1fr)]">
+      <section className="grid gap-2 lg:grid-cols-[11.5rem_minmax(0,1fr)]">
         <aside className="hidden h-fit rounded-2xl border border-emerald-950/10 bg-gradient-to-b from-emerald-950 via-[#073b2f] to-[#041b16] p-1.5 text-white shadow-[0_14px_38px_rgba(6,38,29,0.1)] lg:sticky lg:top-3 lg:block">
           <div className="rounded-xl border border-white/10 bg-white/8 px-1.5 py-1.5">
             <p className="text-[0.5rem] font-black uppercase tracking-[0.18em] text-emerald-200">Source unique</p>
@@ -190,10 +195,10 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
             </p>
             <div className="mt-1.5 flex items-center gap-1 rounded-lg bg-emerald-200/10 px-1.5 py-0.5 text-[0.52rem] font-extrabold text-emerald-50">
               <CheckCircle2 className="h-2.5 w-2.5 text-emerald-200" />
-              Configurable
+              Prêt
             </div>
           </div>
-          <nav className="mt-1 grid gap-0.5" aria-label="Sections parametres">
+          <nav className="mt-1 grid gap-0.5" aria-label="Sections paramètres">
             {sections.map((section) => {
               const Icon = section.icon;
               const active = section.id === activeSection;
@@ -211,7 +216,7 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
                 >
                   <span className={active ? 'h-3 w-0.5 rounded-full bg-orange-300' : 'h-3 w-0.5 rounded-full bg-transparent'} />
                   <Icon className={active ? 'h-3 w-3 text-emerald-100' : 'h-3 w-3 text-emerald-100/64'} />
-                  <span className="min-w-0 flex-1 truncate font-semibold">{section.label}</span>
+                  <span className="min-w-0 flex-1 whitespace-nowrap font-semibold">{section.label}</span>
                 </button>
               );
             })}
@@ -223,7 +228,9 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
                 <p className="text-[0.5rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">{activeConfig.eyebrow}</p>
-                <h1 className="mt-0.5 font-serif text-[0.95rem] font-extrabold leading-tight text-slate-950 sm:text-[1rem]">{activeConfig.label}</h1>
+                <h1 className="mt-0.5 font-serif text-[0.95rem] font-extrabold leading-tight text-slate-950 sm:text-[1rem]">
+                  {activeConfig.title ?? activeConfig.label}
+                </h1>
                 <p className="mt-0.5 max-w-3xl text-[0.66rem] font-medium leading-[0.86rem] text-slate-600">{activeConfig.description}</p>
               </div>
               {activeSection === 'billing' ? (
@@ -288,17 +295,17 @@ function OverviewSection({
   }> = [
     {
       title: 'Organisation',
-      label: 'Identite',
+      label: 'Identité',
       value: agencyName,
-      description: isIndividualOwner ? 'Profil proprietaire et informations legales.' : 'Agence, representant, NINEA et documents.',
+      description: isIndividualOwner ? 'Profil propriétaire et informations légales.' : 'Agence, représentant, NINEA et documents.',
       icon: Building2,
       target: 'organization',
       tone: 'emerald',
     },
     {
-      title: 'Documents & identite',
+      title: 'Documents',
       label: 'GED / QR',
-      value: 'Configure',
+      value: 'Configuré',
       description: 'Mentions, QR Verify, logo et rendu documentaire.',
       icon: FileText,
       target: 'documentsIdentity',
@@ -308,23 +315,23 @@ function OverviewSection({
       title: 'Modules',
       label: 'Workspace',
       value: 'Pages visibles',
-      description: 'Modules actifs, navigation et disponibilite par espace.',
+      description: 'Modules actifs, navigation et disponibilité par espace.',
       icon: SlidersHorizontal,
       target: 'modules',
       tone: 'amber',
     },
     {
-      title: 'Equipe & acces',
+      title: 'Équipe & accès',
       label: 'Collaborateurs',
-      value: isIndividualOwner ? 'Simplifie' : 'Actif',
-      description: isIndividualOwner ? 'Mode proprietaire sans equipe avancee.' : 'Membres, roles, invitations et permissions.',
+      value: isIndividualOwner ? 'Simplifié' : 'Actif',
+      description: isIndividualOwner ? 'Mode propriétaire sans équipe avancée.' : 'Membres, rôles, invitations et permissions.',
       icon: Users,
       target: 'teamAccess',
       tone: 'emerald',
       hidden: isIndividualOwner,
     },
     {
-      title: 'Abonnement & paiements',
+      title: 'Facturation',
       label: 'Facturation',
       value: 'Plan actuel',
       description: 'Usage, plans, renouvellement et paiement manuel.',
@@ -333,10 +340,10 @@ function OverviewSection({
       tone: 'amber',
     },
     {
-      title: 'Securite & support',
+      title: 'Sécurité',
       label: 'RBAC',
       value: role,
-      description: 'Acces, audit, statut systeme et assistance.',
+      description: 'Accès, audit, statut système et assistance.',
       icon: ShieldCheck,
       target: 'securitySupport',
       tone: 'slate',
@@ -347,15 +354,15 @@ function OverviewSection({
     <div className="space-y-2">
       <section className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_16rem]">
         <div className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-[#fffdf8] via-white to-emerald-50/45 p-2 shadow-sm">
-          <p className="text-[0.5rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">Pret pour exploitation</p>
-          <h2 className="mt-0.5 font-serif text-[0.95rem] font-extrabold text-slate-950">Administration centralisee.</h2>
+          <p className="text-[0.5rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">Prêt pour exploitation</p>
+          <h2 className="mt-0.5 font-serif text-[0.95rem] font-extrabold text-slate-950">Administration centralisée.</h2>
           <p className="mt-0.5 max-w-2xl text-[0.66rem] font-medium leading-[0.9rem] text-slate-600">
-            Controlez l'identite, les modules, les droits, les documents et la facturation depuis une source unique.
+            Contrôlez l'identité, les modules, les droits, les documents et la facturation depuis une source unique.
           </p>
           <div className="mt-2 grid gap-1 sm:grid-cols-3">
-            <MiniHealth icon={BadgeCheck} label="Compte" value={isIndividualOwner ? 'Proprietaire' : 'Agence'} />
-            <MiniHealth icon={ShieldCheck} label="Acces" value={role} />
-            <MiniHealth icon={FileText} label="Documents" value="QR pret" />
+            <MiniHealth icon={BadgeCheck} label="Compte" value={isIndividualOwner ? 'Propriétaire' : 'Agence'} />
+            <MiniHealth icon={ShieldCheck} label="Accès" value={role} />
+            <MiniHealth icon={FileText} label="Documents" value="QR prêt" />
           </div>
         </div>
         <div className="rounded-xl border border-orange-200/70 bg-orange-50/65 p-2 shadow-sm">
@@ -364,10 +371,10 @@ function OverviewSection({
               <AlertTriangle className="h-3 w-3" />
             </div>
             <div className="min-w-0">
-              <p className="text-[0.5rem] font-black uppercase tracking-[0.15em] text-orange-700">A verifier</p>
-              <h3 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">Avant demonstration</h3>
+              <p className="text-[0.5rem] font-black uppercase tracking-[0.15em] text-orange-700">À vérifier</p>
+              <h3 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">Avant démonstration</h3>
               <ul className="mt-1 space-y-0.5 text-[0.62rem] font-semibold leading-[0.85rem] text-slate-600">
-                <li>Infos legales agence.</li>
+                <li>Infos légales agence.</li>
                 <li>Logo et couleurs documentaires.</li>
                 <li>Droits agent et comptable.</li>
               </ul>
@@ -465,27 +472,27 @@ function PanelCard({ title, eyebrow, children, icon }: { title: string; eyebrow:
 
 function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isIndividualOwner: boolean }) {
   const statuses: Array<{ label: string; value: string; icon: ComponentType<{ className?: string }> }> = [
-    { label: 'Application', value: 'Operationnelle', icon: CheckCircle2 },
+    { label: 'Application', value: 'Opérationnelle', icon: CheckCircle2 },
     { label: 'Documents', value: 'Disponible', icon: FileText },
     { label: 'QR Verify', value: 'Actif', icon: ShieldCheck },
-    { label: 'Stockage', value: 'Controle', icon: HardDrive },
+    { label: 'Stockage', value: 'Contrôlé', icon: HardDrive },
   ];
 
   return (
     <div className="space-y-2">
       <div className="grid gap-2 lg:grid-cols-3">
-        <PanelCard title="RBAC actif" eyebrow="ACCES" icon={ShieldCheck}>
-          <p>Role courant : <span className="font-black text-slate-900">{role}</span>. Les pages restent controlees par RBAC et permissions par page.</p>
+        <PanelCard title="RBAC actif" eyebrow="ACCÈS" icon={ShieldCheck}>
+          <p>Rôle courant : <span className="font-black text-slate-900">{role}</span>. Les pages restent contrôlées par RBAC et permissions par page.</p>
         </PanelCard>
-        <PanelCard title="Profil de compte protege" eyebrow="MULTI-TENANT" icon={BadgeCheck}>
+        <PanelCard title="Profil de compte protégé" eyebrow="MULTI-TENANT" icon={BadgeCheck}>
           <p>
             {isIndividualOwner
-              ? 'Le compte proprietaire garde une navigation simplifiee et le fallback is_bailleur_account.'
-              : "Le compte agence garde equipe, permissions, modules avances et abonnement d'agence."}
+              ? 'Le compte propriétaire garde une navigation simplifiée et le fallback is_bailleur_account.'
+              : "Le compte agence garde équipe, permissions, modules avancés et abonnement d'agence."}
           </p>
         </PanelCard>
         <PanelCard title="Journal & audit" eyebrow="TRACE" icon={LockKeyhole}>
-          <p>Les evenements sensibles restent dans le journal reserve aux administrateurs autorises.</p>
+          <p>Les événements sensibles restent dans le journal réservé aux administrateurs autorisés.</p>
           <a href="#/audit" className="mt-2 inline-flex text-[0.68rem] font-extrabold text-emerald-800 underline-offset-2 hover:underline">
             Ouvrir le journal d'audit
           </a>
@@ -495,8 +502,8 @@ function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isI
       <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">SYSTEME</p>
-            <h3 className="mt-0.5 text-[0.78rem] font-extrabold text-slate-950">Etat operationnel</h3>
+            <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">SYSTÈME</p>
+            <h3 className="mt-0.5 text-[0.78rem] font-extrabold text-slate-950">État opérationnel</h3>
             <p className="mt-0.5 text-[0.64rem] leading-[0.88rem] text-slate-600">Statuts lisibles sans exposer de secret technique.</p>
           </div>
           <div className="grid min-w-0 flex-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">

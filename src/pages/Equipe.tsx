@@ -74,6 +74,24 @@ const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Super admin',
 };
 
+const INVITE_ROLE_GUIDE: Record<RoleOption, { summary: string; access: string[]; tone: string }> = {
+  agent: {
+    summary: 'Gestion opérationnelle selon les permissions accordées.',
+    access: ['Bailleurs, biens et locations', 'Documents utiles au suivi', 'Finance limitée par défaut'],
+    tone: 'text-emerald-800 bg-emerald-50 border-emerald-100',
+  },
+  comptable: {
+    summary: 'Encaissements, reliquats et rapports selon permissions.',
+    access: ['Paiements et créances', 'Dépenses et commissions', 'Lecture opérationnelle ciblée'],
+    tone: 'text-orange-800 bg-orange-50 border-orange-100',
+  },
+  admin: {
+    summary: 'Accès complet à l’agence et à la configuration.',
+    access: ['Toutes les pages', 'Équipe et permissions', 'Abonnement et paramètres'],
+    tone: 'text-slate-800 bg-slate-50 border-slate-200',
+  },
+};
+
 const ACCESS_LABELS: Record<DraftAccessLevel, string> = {
   inherit: 'Rôle par défaut',
   none: 'Masqué',
@@ -655,36 +673,68 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             </div>
           </div>
         ) : (
-          <form onSubmit={handleInvite} className="space-y-4">
+          <form onSubmit={handleInvite} className="space-y-3">
+            <div className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3 shadow-sm">
+              <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">Nouvel accès</p>
+              <h3 className="mt-0.5 text-[0.9rem] font-extrabold text-slate-950">Inviter un collaborateur</h3>
+              <p className="mt-1 text-[0.7rem] font-medium leading-4 text-slate-600">
+                Les accès pourront être ajustés ensuite dans Équipe & accès.
+              </p>
+              <p className="mt-2 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[0.62rem] font-black text-emerald-800">
+                Utilisateurs : {stats.activeMembers}/5
+              </p>
+            </div>
             <div>
-              <label className="mb-1 block text-sm font-bold text-slate-700">Email</label>
+              <label className="mb-1 block text-[0.72rem] font-extrabold text-slate-700">Email professionnel</label>
               <input aria-label="Champ de saisie"
                 type="email"
                 required
                 value={formData.email}
                 onChange={(event) => setFormData({ ...formData, email: event.target.value })}
                 data-testid="input-invite-email"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                placeholder="collaborateur@agence.sn"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-[0.82rem] font-semibold text-slate-900 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-bold text-slate-700">Rôle</label>
+              <label className="mb-1 block text-[0.72rem] font-extrabold text-slate-700">Rôle initial</label>
               <select aria-label="Sélection"
                 value={formData.role}
                 onChange={(event) => setFormData({ ...formData, role: event.target.value as RoleOption })}
                 data-testid="select-invite-role"
-                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-[0.82rem] font-semibold text-slate-900 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
               >
                 <option value="agent">Agent</option>
                 <option value="comptable">Comptable</option>
                 <option value="admin">Administrateur</option>
               </select>
             </div>
+            {(() => {
+              const guide = INVITE_ROLE_GUIDE[formData.role];
+              return (
+                <div className={`rounded-2xl border p-3 ${guide.tone}`}>
+                  <div className="flex items-start gap-2">
+                    <Shield className="mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[0.72rem] font-extrabold">{ROLE_LABELS[formData.role]}</p>
+                      <p className="mt-0.5 text-[0.66rem] font-semibold leading-4 opacity-80">{guide.summary}</p>
+                    </div>
+                  </div>
+                  <div className="mt-2 grid gap-1 sm:grid-cols-3">
+                    {guide.access.map((item) => (
+                      <span key={item} className="rounded-lg bg-white/70 px-2 py-1 text-[0.6rem] font-bold leading-3 text-slate-700">
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={closeInviteModal}
-                className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                className="h-10 rounded-xl border border-slate-200 px-4 text-[0.78rem] font-bold text-slate-700 transition hover:bg-slate-50"
               >
                 Annuler
               </button>
@@ -692,7 +742,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 type="submit"
                 disabled={submitting}
                 data-testid="button-submit-invitation"
-                className="rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-4 py-2.5 text-sm font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-10 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-4 text-[0.78rem] font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? 'Création...' : "Envoyer l'invitation"}
               </button>

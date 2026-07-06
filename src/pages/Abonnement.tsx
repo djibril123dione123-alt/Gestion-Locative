@@ -13,6 +13,8 @@ import {
 import { formatCurrency } from '../lib/formatters';
 import { SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
 import { formatStorageSize, getAgencyStorageUsage, type StorageUsage } from '../services/documentStorage';
+import gmailLogo from '../assets/support/gmail.png';
+import whatsappLogo from '../assets/support/whatsapp.jpg';
 
 interface Plan {
   id: string;
@@ -55,6 +57,19 @@ interface AbonnementProps {
 
 const CONTACT_WHATSAPP = '221769010960';
 const CONTACT_EMAIL    = 'samaykeur@gmail.com';
+
+function SupportLogo({ src, alt, fallback, className }: { src: string; alt: string; fallback: string; className: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className={`inline-flex items-center justify-center overflow-hidden border border-emerald-950/10 bg-white ${className}`}>
+      {!failed ? (
+        <img src={src} alt={alt} className="h-full w-full object-contain p-1" onError={() => setFailed(true)} />
+      ) : (
+        <span className="text-[0.62rem] font-black text-slate-700">{fallback}</span>
+      )}
+    </span>
+  );
+}
 
 // Plans canoniques — source de vérité pour l'UI
 const PLAN_CATALOG = [
@@ -282,9 +297,11 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             <p className="mt-0.5 text-[0.72rem] font-extrabold text-slate-950">Validation par support</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               <a href="https://wa.me/221769010960" target="_blank" rel="noopener noreferrer" className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm">
+                <SupportLogo src={whatsappLogo} alt="WhatsApp" fallback="WA" className="mr-1.5 h-4 w-4 rounded-md" />
                 WhatsApp
               </a>
               <a href="mailto:samaykeur@gmail.com" className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm">
+                <SupportLogo src={gmailLogo} alt="Gmail" fallback="GM" className="mr-1.5 h-4 w-4 rounded-md" />
                 Email support
               </a>
             </div>
@@ -529,13 +546,14 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
       </div>
 
       {/* ── Support ── */}
-      <div className={embedded ? 'rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm' : 'sk-premium-panel p-5 sm:p-6'}>
+      {!embedded && (
+      <div className="sk-premium-panel p-5 sm:p-6">
         <h2 className={embedded ? 'mb-1.5 text-[0.82rem] font-extrabold text-slate-900' : 'font-bold text-slate-900 text-lg mb-4'}>Besoin d'aide ?</h2>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, j\'ai une question sur mon abonnement Samay Këur.')}`}
             target="_blank" rel="noopener noreferrer"
             className={embedded ? 'flex items-center gap-2 rounded-lg border border-slate-200 p-2.5 transition hover:border-green-300 hover:bg-green-50' : 'flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-green-300 hover:bg-green-50 transition group'}>
-            <img src="/logo-whatsapp.jpg" alt="WhatsApp" className={embedded ? 'h-7 w-7 flex-shrink-0 rounded-lg object-cover' : 'w-10 h-10 rounded-xl object-cover flex-shrink-0'} />
+            <SupportLogo src={whatsappLogo} alt="WhatsApp" fallback="WA" className="h-10 w-10 flex-shrink-0 rounded-xl" />
             <div>
               <p className={embedded ? 'text-[0.72rem] font-semibold text-slate-900' : 'font-semibold text-slate-900 text-sm'}>WhatsApp Business</p>
               <p className={embedded ? 'text-[0.64rem] text-slate-400' : 'text-xs text-slate-400'}>+221 76 901 09 60 · Réponse rapide</p>
@@ -543,7 +561,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
           </a>
           <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Question abonnement Samay Këur')}`}
             className={embedded ? 'flex items-center gap-2 rounded-lg border border-slate-200 p-2.5 transition hover:border-blue-300 hover:bg-blue-50' : 'flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition group'}>
-            <img src="/logo-gmail.png" alt="Gmail" className={embedded ? 'h-7 w-7 flex-shrink-0 rounded-lg object-cover' : 'w-10 h-10 rounded-xl object-cover flex-shrink-0'} />
+            <SupportLogo src={gmailLogo} alt="Gmail" fallback="GM" className="h-10 w-10 flex-shrink-0 rounded-xl" />
             <div>
               <p className={embedded ? 'text-[0.72rem] font-semibold text-slate-900' : 'font-semibold text-slate-900 text-sm'}>Gmail</p>
               <p className={embedded ? 'text-[0.64rem] text-slate-400' : 'text-xs text-slate-400'}>{CONTACT_EMAIL}</p>
@@ -551,6 +569,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
           </a>
         </div>
       </div>
+      )}
 
       {/* ── Modal changement de plan ── */}
       {upgradeOpen && (

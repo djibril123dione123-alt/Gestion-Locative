@@ -114,24 +114,24 @@ const NAV: Array<MenuLeaf | MenuGroup> = [
   {
     id: 'operations',
     label: 'Terrain',
-    description: 'Planning, maintenance et etats des lieux',
+    description: 'Planning, maintenance et états des lieux',
     icon: HardHat,
     roles: ['admin', 'agent'],
     items: [
       { id: 'calendrier', label: 'Calendrier', icon: CalendarDays, roles: ['admin', 'agent'] },
       { id: 'interventions', label: 'Maintenance', icon: Wrench, roles: ['admin', 'agent'] },
-      { id: 'inventaires', label: 'Etats des lieux', icon: ClipboardList, roles: ['admin', 'agent'] },
+      { id: 'inventaires', label: 'États des lieux', icon: ClipboardList, roles: ['admin', 'agent'] },
     ],
   },
   {
     id: 'administration',
     label: 'Administration',
-    description: 'Parametres, equipe, abonnement et controle',
+    description: 'Paramètres, équipe, abonnement et contrôle',
     icon: Settings,
     roles: ['admin'],
     items: [
-      { id: 'parametres', label: 'Parametres', icon: Settings, roles: ['admin'] },
-      { id: 'equipe', label: 'Equipe & acces', icon: Users, roles: ['admin'] },
+      { id: 'parametres', label: 'Paramètres', icon: Settings, roles: ['admin'] },
+      { id: 'equipe', label: 'Équipe & accès', icon: Users, roles: ['admin'] },
       { id: 'abonnement', label: 'Abonnement', icon: CreditCard, roles: ['admin'] },
       { id: 'audit', label: 'Journal & audit', icon: ClipboardList, roles: ['admin'] },
     ],
@@ -396,7 +396,7 @@ export function Sidebar({
             <div className="absolute bottom-[5.6rem] left-4 right-4 z-20 overflow-hidden rounded-2xl border border-white/10 bg-brand-900/98 p-2 shadow-2xl shadow-black/30 backdrop-blur">
               <button type="button" onClick={() => handleNavigate('parametres')} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-200 hover:bg-white/10">
                 <Settings className="h-4 w-4 text-emerald-200" />
-                Parametres
+                Paramètres
               </button>
               <div className="rounded-xl px-1 py-1">
                 <NotificationBell onNavigate={handleNavigate} compact align="bottom" />

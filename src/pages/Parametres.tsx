@@ -113,6 +113,48 @@ const DOCUMENT_PREVIEWS: Record<DocumentPreviewType, {
   },
 };
 
+const DOCUMENT_OPTION_LABELS: Record<string, string> = {
+  annexes: 'Annexes',
+  attachments: 'Pièces jointes',
+  agencyDuties: 'Obligations agence',
+  commission: 'Commission',
+  duration: 'Durée',
+  expenses: 'Charges',
+  financialSummary: 'Résumé financier',
+  fiscalNotice: 'Mention fiscale',
+  footer: 'Pied de page',
+  legalRepresentative: 'Représentant légal',
+  logo: 'Logo',
+  ownerDuties: 'Obligations bailleur',
+  paymentMethod: 'Mode paiement',
+  paymentTerms: 'Conditions paiement',
+  payments: 'Paiements',
+  penalties: 'Pénalités',
+  period: 'Période',
+  qr: 'QR Verify',
+  receiptNotice: 'Réserve encaissement',
+  remainingDue: 'Reliquats',
+  signatures: 'Signatures',
+  stamp: 'Cachet',
+  taxIds: 'NINEA / RC',
+  tribunal: 'Tribunal',
+};
+
+function getDocumentOptionLabel(key: string) {
+  return DOCUMENT_OPTION_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, (value) => value.toUpperCase());
+}
+
+function getDocumentModeLabel(mode?: AgencySettings['document_mode']) {
+  if (mode === 'legal') return 'Juridique renforcé';
+  if (mode === 'simple') return 'Simple';
+  return 'Professionnel';
+}
+
+function formatCompactDate(value?: string | null) {
+  if (!value) return 'Non renseigné';
+  return new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 const DEFAULT_DOCUMENT_PREFERENCES: NonNullable<AgencySettings['document_preferences']> = {
   header_style: 'institutionnel',
   show_slogan: true,
@@ -264,9 +306,6 @@ function buildSettingsModuleCategories(settings: SettingsState): SettingsModuleC
     key: string,
     fallback = true,
   ): Pick<SettingsModuleItem, 'status' | 'toggle'> => {
-    if (key === 'mandates') {
-      return { status: 'system' };
-    }
     const defaultEnabled = key === 'planning' ? true : fallback;
     return {
       status: enabled(key, defaultEnabled) ? 'active' : defaultEnabled ? 'inactive' : 'prepared',
@@ -279,22 +318,22 @@ function buildSettingsModuleCategories(settings: SettingsState): SettingsModuleC
       category: 'Portefeuille locatif',
       description: 'Socle visible dans la navigation principale.',
       items: [
-        { label: 'Bailleurs', description: 'Propriétaires, rattachements et reversements.', status: 'system' },
-        { label: 'Biens & patrimoine', description: 'Biens, unités et occupation.', status: 'system' },
-        { label: 'Locations', description: 'Occupants, baux et cycles locatifs.', status: 'system' },
-        { label: 'Contrats / baux', description: 'Documents contractuels rattachés aux locations.', impact: 'Documents locatifs', ...moduleToggle('mandates') },
+        { label: 'Tableau de bord', description: 'Pilotage quotidien et priorités agence.', impact: 'Accueil', status: 'system' },
+        { label: 'Bailleurs', description: 'Propriétaires, rattachements et reversements.', impact: 'Source propriétaire', status: 'system' },
+        { label: 'Biens & patrimoine', description: 'Biens, unités et occupation.', impact: 'Source patrimoine', status: 'system' },
+        { label: 'Locations / baux', description: 'Occupants, contrats et cycles locatifs.', impact: 'Cycle locatif', status: 'system' },
       ],
     },
     {
       category: 'Finance',
       description: 'Encaissements, charges et pilotage financier.',
       items: [
-        { label: 'Paiements', description: 'Encaissements et quittances.', status: 'system' },
-        { label: 'Reliquats', description: 'Créances, relances et suivis.', status: 'system' },
-        { label: 'Charges', description: 'Charges et exploitation courante.', impact: 'Finance bailleur', status: 'active' },
-        { label: 'Dépenses', description: 'Dépenses opérationnelles et justificatifs.', impact: 'Sidebar finance', ...optional('module_depenses_actif', Boolean(settings.module_depenses_actif)) },
+        { label: 'Encaissements', description: 'Paiements reçus, quittances et statuts.', impact: 'Finance cœur', status: 'system' },
+        { label: 'Créances', description: 'Retards, partiels et restes dus.', impact: 'Finance cœur', status: 'system' },
+        { label: 'Charges bailleur', description: 'Charges refacturables ou liées au rapport bailleur.', impact: 'Rapports bailleurs', status: 'essential' },
+        { label: 'Dépenses agence', description: 'Dépenses opérationnelles internes et justificatifs.', impact: 'Sidebar finance', ...optional('module_depenses_actif', Boolean(settings.module_depenses_actif)) },
         { label: 'Commissions', description: 'Revenus agence et parts de gestion.', impact: 'Marge agence', ...moduleToggle('commissions') },
-        { label: 'Rapports', description: 'Synthèses, exports et lecture direction.', impact: 'Pilotage avancé', ...moduleToggle('advanced_reports', Boolean(settings.mode_avance_actif)) },
+        { label: 'Rapports avancés', description: 'Synthèses, exports et lecture direction.', impact: 'Pilotage avancé', ...moduleToggle('advanced_reports', Boolean(settings.mode_avance_actif)) },
       ],
     },
     {
@@ -314,6 +353,12 @@ function buildSettingsModuleCategories(settings: SettingsState): SettingsModuleC
         { label: 'États des lieux', description: 'Constats entrée, sortie et inventaires.', ...optional('module_inventaires_actif', Boolean(settings.module_inventaires_actif)) },
         { label: 'Maintenance', description: 'Demandes, interventions et priorités.', ...optional('module_interventions_actif', Boolean(settings.module_interventions_actif)) },
         { label: 'Planning', description: 'Opérations terrain et calendrier.', impact: 'Calendrier équipe', ...moduleToggle('planning', false) },
+        {
+          label: 'Notifications bailleurs',
+          description: 'Emails, SMS et relances selon les réglages agence.',
+          impact: 'Communication',
+          status: settings.email_notifications_actif || settings.sms_notifications_actif ? 'active' : 'prepared',
+        },
       ],
     },
     {
@@ -421,7 +466,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
   const getOwnerNameFallback = () => {
     const profileName = [profile?.prenom, profile?.nom].filter(Boolean).join(' ').trim();
-    return profileName || agency?.name || DEFAULT_AGENCY_SETTINGS.nom_agence || 'Proprietaire';
+    return profileName || agency?.name || DEFAULT_AGENCY_SETTINGS.nom_agence || 'Propriétaire';
   };
 
   useEffect(() => {
@@ -454,7 +499,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
           const ownerName = nextSettings.representant_nom || nextSettings.nom_agence || getOwnerNameFallback();
           nextSettings.representant_nom = ownerName;
           nextSettings.nom_agence = nextSettings.nom_agence || ownerName;
-          nextSettings.representant_fonction = nextSettings.representant_fonction || 'Proprietaire';
+          nextSettings.representant_fonction = nextSettings.representant_fonction || 'Propriétaire';
         }
         setSettings(nextSettings);
         setLastSavedSnapshot(JSON.stringify(nextSettings));
@@ -488,7 +533,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
       const ownerName = [profile?.prenom, profile?.nom].filter(Boolean).join(' ').trim()
         || agency?.name
         || DEFAULT_AGENCY_SETTINGS.nom_agence
-        || 'Proprietaire';
+        || 'Propriétaire';
 
       const rowToInsert = {
         ...EMPTY_SETTINGS,
@@ -499,7 +544,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         email: agency?.email ?? '',
         ninea: agency?.ninea ?? '',
         representant_nom: isIndividualOwner ? ownerName : '',
-        representant_fonction: isIndividualOwner ? 'Proprietaire' : EMPTY_SETTINGS.representant_fonction,
+        representant_fonction: isIndividualOwner ? 'Propriétaire' : EMPTY_SETTINGS.representant_fonction,
       };
 
       const { data, error } = await supabase
@@ -751,8 +796,9 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   const supportsDocumentMode = 'document_mode' in settings;
   const displayName = isIndividualOwner
     ? settings.representant_nom || settings.nom_agence || getOwnerNameFallback()
-    : settings.nom_agence || 'Agence non renseignee';
-  const documentModeLabel = settings.document_mode ?? (isIndividualOwner ? 'simple' : 'professional');
+    : settings.nom_agence || 'Agence non renseignée';
+  const documentModeValue = settings.document_mode ?? (isIndividualOwner ? 'simple' : 'professional');
+  const documentModeLabel = getDocumentModeLabel(documentModeValue);
   const documentPreferences = getDocumentPreferences(settings);
   const updateDocumentPreferences = (patch: Partial<NonNullable<AgencySettings['document_preferences']>>) => {
     setSettings({
@@ -843,15 +889,18 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
         {activeTab === 'documents' && (
           <div className="grid gap-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(16rem,1.05fr)]">
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               <SettingsStatusCard label="Mode documentaire" value={documentModeLabel} icon={FileText} />
               <SettingsStatusCard label="QR Verify" value={settings.qr_code_quittances ? 'Actif' : 'Inactif'} icon={QrCode} />
+              <SettingsStatusCard label="Logo" value={logoPreview ? 'Configuré' : 'À ajouter'} icon={Palette} />
+              <SettingsStatusCard label="Couleurs" value={`${settings.couleur_primaire ?? '#F58220'} / ${settings.couleur_secondaire ?? '#333333'}`} icon={Sparkles} />
               <SettingsStatusCard label="Pénalités" value={`${settings.penalite_retard_montant ?? 0} F / jour`} icon={ShieldCheck} />
-              <SettingsStatusCard label="Délai" value={`${settings.penalite_retard_delai_jours ?? 0} jours`} icon={CheckCircle} />
+              <SettingsStatusCard label="Mis à jour" value={formatCompactDate(settings.updated_at)} icon={CheckCircle} />
             </div>
             <SettingsDocumentPreview
               title={displayName}
               logoUrl={logoPreview}
+              logoPosition={settings.logo_position ?? 'left'}
               primary={settings.couleur_primaire ?? '#F58220'}
               secondary={settings.couleur_secondaire ?? '#333333'}
               tribunal={settings.mention_tribunal}
@@ -863,22 +912,22 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               preferences={documentPreferences}
             />
             <SettingsInfoCard title="Mentions configurées" eyebrow="REGISTRE" icon={FileText} className="lg:col-span-2">
-              <InfoLine label="Tribunal" value={settings.mention_tribunal} />
-              <InfoLine label="Pied de page" value={settings.pied_page_personnalise} />
+              <InfoLine label="Tribunal" value={settings.mention_tribunal} multiline />
+              <InfoLine label="Pied de page" value={settings.pied_page_personnalise} multiline />
               <InfoLine label="Frais huissier" value={`${settings.frais_huissier ?? 0} F CFA`} />
-              <InfoLine label="Penalites" value={settings.mention_penalites} multiline />
+              <InfoLine label="Pénalités" value={settings.mention_penalites} multiline />
             </SettingsInfoCard>
             {embeddedMode === 'documentsIdentity' && (
               <SettingsInfoCard title="Identité visuelle" eyebrow="MARQUE" icon={Palette} className="lg:col-span-2">
                 <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                   <div className="min-w-0">
-                    <InfoLine label="Logo" value={logoPreview ? 'Logo configure' : 'Logo a ajouter'} strong />
+                    <InfoLine label="Logo" value={logoPreview ? 'Logo configuré' : 'Logo à ajouter'} strong />
                     <InfoLine label="Position" value={settings.logo_position} />
                     <ColorLine label="Couleur primaire" value={settings.couleur_primaire ?? '#F58220'} />
                     <ColorLine label="Couleur secondaire" value={settings.couleur_secondaire ?? '#333333'} />
                   </div>
                   <div className="flex h-12 w-20 items-center justify-center rounded-xl border border-emerald-950/10 bg-[#fff8ed] p-2">
-                    {logoPreview ? <img src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
+                    {logoPreview ? <SafeLogoImage src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
                   </div>
                 </div>
               </SettingsInfoCard>
@@ -888,13 +937,13 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
         {activeTab === 'appearance' && (
           <div className="grid gap-2 lg:grid-cols-[minmax(0,0.9fr)_minmax(16rem,1.1fr)]">
-            <SettingsInfoCard title="Identite visuelle" eyebrow="MARQUE" icon={Palette}>
+            <SettingsInfoCard title="Identité visuelle" eyebrow="MARQUE" icon={Palette}>
               <div className="mb-2 flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/80 p-2">
                 <div className="flex h-9 w-14 items-center justify-center rounded-xl bg-[#fff8ed] p-1.5">
-                  {logoPreview ? <img src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
+                  {logoPreview ? <SafeLogoImage src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
                 </div>
                 <div>
-                  <p className="text-[0.66rem] font-extrabold text-slate-950">{logoPreview ? 'Logo charge' : 'Logo a ajouter'}</p>
+                  <p className="text-[0.66rem] font-extrabold text-slate-950">{logoPreview ? 'Logo chargé' : 'Logo à ajouter'}</p>
                   <p className="text-[0.58rem] font-semibold text-slate-500">Position : {settings.logo_position ?? 'left'}</p>
                 </div>
               </div>
@@ -904,6 +953,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
             <SettingsDocumentPreview
               title={displayName}
               logoUrl={logoPreview}
+              logoPosition={settings.logo_position ?? 'left'}
               primary={settings.couleur_primaire ?? '#F58220'}
               secondary={settings.couleur_secondaire ?? '#333333'}
               tribunal={settings.mention_tribunal}
@@ -1025,7 +1075,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 </label>
               )}
               <label>
-                <span className={embeddedLabelClass}>{isIndividualOwner ? 'Qualite' : 'Fonction'}</span>
+                <span className={embeddedLabelClass}>{isIndividualOwner ? 'Qualité' : 'Fonction'}</span>
                 <input type="text" value={settings.representant_fonction ?? ''} onChange={(e) => setSettings({ ...settings, representant_fonction: e.target.value })} className={embeddedFieldClass} />
               </label>
               <label>
@@ -1060,7 +1110,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     >
                       <option value="simple">Simple</option>
                       <option value="professional">Professionnel</option>
-                      <option value="legal">Juridique renforce</option>
+                      <option value="legal">Juridique renforcé</option>
                     </select>
                   </label>
                 )}
@@ -1185,7 +1235,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                             : 'bg-slate-50 text-slate-500 ring-slate-200'
                         }`}
                       >
-                        {key}
+                        {getDocumentOptionLabel(key)}
                       </button>
                     ))}
                   </div>
@@ -1208,7 +1258,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                         className="hidden"
                       />
                       <div className="flex h-11 w-16 items-center justify-center rounded-xl bg-white p-2 shadow-sm">
-                        {logoPreview ? <img src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Upload className="h-5 w-5 text-emerald-800" />}
+                        {logoPreview ? <SafeLogoImage src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Upload className="h-5 w-5 text-emerald-800" />}
                       </div>
                       <div className="min-w-0">
                         <p className="text-[0.72rem] font-extrabold text-slate-950">{logoUploadState === 'uploading' ? 'Upload en cours...' : 'Cliquer ou déposer un logo'}</p>
@@ -1245,6 +1295,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               <SettingsDocumentPreview
                 title={displayName}
                 logoUrl={logoPreview}
+                logoPosition={settings.logo_position ?? 'left'}
                 primary={settings.couleur_primaire ?? '#F58220'}
                 secondary={settings.couleur_secondaire ?? '#333333'}
                 tribunal={settings.mention_tribunal}
@@ -1264,7 +1315,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
             <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Modules & navigation</p>
             <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Matrice de navigation</h3>
             <p className="mt-0.5 text-[0.66rem] leading-4 text-slate-600">
-              Les interrupteurs ci-dessous sont uniquement affiches pour les modules deja relies aux reglages agence.
+              Les interrupteurs ci-dessous sont uniquement affichés pour les modules déjà reliés aux réglages agence.
             </p>
             <div className="mt-2.5">
               <SettingsModulesOverview
@@ -1309,15 +1360,15 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         <div className="flex flex-col gap-2 rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/92 px-3 py-2.5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-[0.64rem] font-black uppercase tracking-[0.18em] text-emerald-700">
-              {hasUnsavedChanges ? 'Modifications en attente' : 'Configuration a jour'}
+              {hasUnsavedChanges ? 'Modifications en attente' : 'Configuration à jour'}
             </p>
             <p className="truncate text-xs font-semibold text-slate-500">
-              Les changements sont appliques uniquement apres sauvegarde.
+              Les changements sont appliqués uniquement après sauvegarde.
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <PremiumButton variant="secondary" size="sm" onClick={() => setEditingEmbedded(false)}>
-              Voir synthese
+              Revenir à l'aperçu
             </PremiumButton>
             <PremiumButton
               variant="create"
@@ -1326,7 +1377,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               disabled={saving || !hasUnsavedChanges}
               icon={saving ? <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" /> : <Save className="h-4 w-4" />}
             >
-              {saving ? 'Enregistrement...' : !hasUnsavedChanges ? 'A jour' : 'Sauvegarder'}
+              {saving ? 'Enregistrement...' : !hasUnsavedChanges ? 'À jour' : 'Sauvegarder'}
             </PremiumButton>
           </div>
         </div>
@@ -1559,12 +1610,12 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     onChange={(e) => setSettings({ ...settings, document_mode: e.target.value as AgencySettings['document_mode'] })}
                     className="w-full px-4 py-2 border border-emerald-200 bg-white rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   >
-                    <option value="simple">Simple - proprietaire individuel</option>
+                    <option value="simple">Simple - propriétaire individuel</option>
                     <option value="professional">Professionnel - agence ou cabinet</option>
-                    <option value="legal">Juridique renforce</option>
+                    <option value="legal">Juridique renforcé</option>
                   </select>
                   <p className="mt-2 text-xs leading-5 text-emerald-800">
-                    Ce reglage prepare les variantes de documents sans modifier vos regles metier.
+                    Ce réglage prépare les variantes de documents sans modifier vos règles métier.
                   </p>
                 </div>
               )}
@@ -1718,10 +1769,10 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     <div className="flex-shrink-0">
                       <p className="text-sm font-medium text-slate-700 mb-2">Aperçu</p>
                       <div className="flex h-32 w-48 items-center justify-center rounded-2xl border border-emerald-100 bg-[radial-gradient(circle_at_top,#ecfdf5,white_55%,#fff7ed)] p-4 shadow-inner">
-                        <img
+                        <SafeLogoImage
                           src={logoPreview}
                           alt="Logo agence"
-                          className="max-w-full max-h-full object-contain"
+                          className="max-h-full max-w-full object-contain"
                         />
                       </div>
                     </div>
@@ -1998,6 +2049,12 @@ function SettingsStatusCard({ label, value, icon: Icon }: { label: string; value
   );
 }
 
+function SafeLogoImage({ src, alt, className }: { src: string; alt: string; className: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <Sparkles className="h-5 w-5 text-orange-600" aria-hidden="true" />;
+  return <img src={src} alt={alt} className={className} onError={() => setFailed(true)} />;
+}
+
 function ColorLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-2.5 py-1.5">
@@ -2013,6 +2070,7 @@ function ColorLine({ label, value }: { label: string; value: string }) {
 function SettingsDocumentPreview({
   title,
   logoUrl,
+  logoPosition,
   primary,
   secondary,
   tribunal,
@@ -2025,6 +2083,7 @@ function SettingsDocumentPreview({
 }: {
   title: string;
   logoUrl?: string;
+  logoPosition?: AgencySettings['logo_position'];
   primary: string;
   secondary: string;
   tribunal?: string | null;
@@ -2042,13 +2101,22 @@ function SettingsDocumentPreview({
   const headerStyleLabel = preferences.header_style === 'moderne'
     ? 'Moderne'
     : preferences.header_style === 'sobriete'
-      ? 'Sobriete'
+      ? 'Sobriété'
       : 'Institutionnel';
   const notice = selectedType === 'quittance'
     ? preferences.receipt_notice
     : selectedType === 'facture'
       ? preferences.payment_notice
       : preferences.confidentiality_notice;
+  const optionEntries = Object.entries(preferences.document_options?.[selectedType] ?? {})
+    .filter(([, enabled]) => Boolean(enabled))
+    .slice(0, 6);
+  const normalizedLogoPosition = logoPosition ?? 'left';
+  const textOrder = normalizedLogoPosition === 'right' ? 'order-1' : 'order-2';
+  const logoOrder = normalizedLogoPosition === 'right' ? 'order-2' : 'order-1';
+  const headerLayout = normalizedLogoPosition === 'center'
+    ? 'flex-col items-center text-center'
+    : 'flex-row items-start justify-between';
 
   return (
     <section className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm">
@@ -2077,22 +2145,22 @@ function SettingsDocumentPreview({
         </div>
       </div>
       <div className="mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner">
-        <div className="flex items-start justify-between gap-2 px-2.5 py-2" style={{ borderTop: `3px solid ${primary}` }}>
-          <div className="min-w-0">
+        <div className={`flex gap-2 px-2.5 py-2 ${headerLayout}`} style={{ borderTop: `3px solid ${primary}` }}>
+          <div className={`min-w-0 ${textOrder}`}>
             <p className="truncate text-[0.72rem] font-extrabold text-slate-950">{title}</p>
             <p className="text-[0.5rem] font-bold uppercase tracking-[0.12em]" style={{ color: secondary }}>
               {preview.title}
             </p>
             <p className="mt-0.5 text-[0.54rem] font-semibold text-slate-500">{preview.meta}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className={`flex shrink-0 items-center gap-1.5 ${logoOrder}`}>
             {qrVisible && (
               <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800">
                 <QrCode className="h-3.5 w-3.5" />
               </div>
             )}
             <div className="flex h-8 w-12 items-center justify-center rounded-lg bg-slate-50 p-1.5">
-              {logoUrl ? <img src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" /> : <FileText className="h-4 w-4 text-slate-400" />}
+              {logoUrl ? <SafeLogoImage src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" /> : <FileText className="h-4 w-4 text-slate-400" />}
             </div>
           </div>
         </div>
@@ -2110,10 +2178,26 @@ function SettingsDocumentPreview({
             <p className="truncate text-[0.62rem] font-extrabold text-orange-900">{headerStyleLabel} · {mode}</p>
           </div>
         </div>
-        <div className="space-y-1 px-2.5 pb-2">
-          <div className="h-1.5 w-5/6 rounded-full bg-slate-100" />
-          <div className="h-1.5 w-2/3 rounded-full bg-slate-100" />
-          <div className="h-1.5 w-1/2 rounded-full bg-slate-100" />
+        <div className="space-y-1 px-2.5 pb-2 text-[0.56rem] font-semibold text-slate-500">
+          <div className="grid gap-1 sm:grid-cols-2">
+            <div className="rounded-lg border border-slate-100 bg-white px-1.5 py-1">
+              <span className="text-slate-400">Émetteur</span>
+              <p className="truncate font-extrabold text-slate-700">{title}</p>
+            </div>
+            <div className="rounded-lg border border-slate-100 bg-white px-1.5 py-1">
+              <span className="text-slate-400">Vérification</span>
+              <p className="truncate font-extrabold text-slate-700">{qrVisible ? 'QR public actif' : 'QR masqué'}</p>
+            </div>
+          </div>
+          {optionEntries.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-0.5">
+              {optionEntries.map(([key]) => (
+                <span key={key} className="rounded-full bg-slate-50 px-1.5 py-0.5 text-[0.48rem] font-black uppercase tracking-[0.08em] text-slate-500">
+                  {getDocumentOptionLabel(key)}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="border-t border-slate-100 px-2.5 py-1.5 text-[0.58rem] font-semibold leading-[0.84rem] text-slate-500">
           {notice && <p className="line-clamp-2 text-slate-600">{notice}</p>}

@@ -38,7 +38,7 @@ export const PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { id: 'dashboard', label: 'Vue d’ensemble', description: 'Synthèse opérationnelle, KPIs et activité récente.', category: 'Pilotage' },
   { id: 'tableau-de-bord-financier', label: 'Pilotage financier', description: 'Finance consolidée, indicateurs et exports.', category: 'Finance & reporting', sensitive: true },
   { id: 'bailleurs', label: 'Bailleurs', description: 'Propriétaires, coordonnées et mandats.', category: 'Portefeuille locatif' },
-  { id: 'patrimoine', label: 'Biens', description: 'Vue patrimoine, immeubles, unites et occupation.', category: 'Portefeuille locatif' },
+  { id: 'patrimoine', label: 'Biens', description: 'Vue patrimoine, immeubles, unités et occupation.', category: 'Portefeuille locatif' },
   { id: 'immeubles', label: 'Immeubles', description: 'Immeubles, adresses et regroupements.', category: 'Portefeuille locatif' },
   { id: 'unites', label: 'Unités', description: 'Lots, loyers, disponibilités et états.', category: 'Portefeuille locatif' },
   { id: 'locataires', label: 'Locataires', description: 'Fiches locataires, contacts et historique.', category: 'Portefeuille locatif' },
@@ -58,7 +58,7 @@ export const PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { id: 'equipe', label: 'Équipe', description: 'Invitations, rôles et permissions utilisateur.', category: 'Administration', sensitive: true },
   { id: 'abonnement', label: 'Abonnement', description: 'Plan, facturation SaaS et limites.', category: 'Administration', sensitive: true },
   { id: 'pricing', label: 'Tarifs', description: 'Plans et comparaison des offres.', category: 'Administration' },
-  { id: 'documents/scan', label: 'Scanner un document', description: 'Verification QR et reference documentaire.', category: 'Operations terrain' },
+  { id: 'documents/scan', label: 'Scanner un document', description: 'Vérification QR et référence documentaire.', category: 'Opérations terrain' },
 ];
 
 const PAGE_ROLES: Record<string, UserRole[]> = {

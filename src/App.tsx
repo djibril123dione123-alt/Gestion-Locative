@@ -424,7 +424,7 @@ function AppContent() {
                     </p>
                     <p className="text-sm text-slate-600 mb-6">
                         {!isOnline
-                            ? "Votre session est conservee. Reconnectez le reseau ou revenez apres un premier chargement complet pour utiliser le cache local."
+                            ? "Votre session est conservée. Reconnectez le réseau ou revenez après un premier chargement complet pour utiliser le cache local."
                             : 'Cela peut prendre quelques secondes'}
                     </p>
                     <button
@@ -475,7 +475,7 @@ function AppContent() {
                         <p className="mt-3 text-sm leading-6 text-slate-600">{reason}</p>
                         <button
                             type="button"
-                            onClick={() => handleNavigate(moduleDisabled && profile.role === 'admin' ? 'parametres' : 'dashboard')}
+                            onClick={() => handleNavigate(moduleDisabled && profile.role === 'admin' ? 'parametres?section=modules' : 'dashboard')}
                             className="mt-6 inline-flex items-center justify-center rounded-xl bg-emerald-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/20 transition hover:-translate-y-0.5 hover:bg-emerald-900"
                         >
                             {moduleDisabled && profile.role === 'admin' ? 'Réactiver dans Modules' : 'Retour au tableau de bord'}

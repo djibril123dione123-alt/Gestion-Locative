@@ -452,35 +452,46 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
       {embedded && (sectionMode === 'team' || sectionMode === 'access') && (
         <section className="flex flex-col gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2.5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Equipe & acces</p>
-            <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Collaborateurs, roles et pages visibles.</h2>
+            <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Équipe & accès</p>
+            <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Collaborateurs, rôles et pages visibles.</h2>
             <p className="mt-0.5 text-[0.7rem] leading-4 text-slate-600">Invitez, filtrez et ajustez les permissions sans quitter le Control Center.</p>
           </div>
-          <PremiumButton
-            variant="create"
-            size="sm"
-            onClick={() => setIsInviteOpen(true)}
-            data-testid="button-invite-member-embedded"
-            icon={<UserPlus className="h-4 w-4" />}
-          >
-            Inviter
-          </PremiumButton>
+          <div className="flex flex-col gap-1.5 sm:items-end">
+            <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
+              <span className="rounded-full bg-emerald-50 px-2 py-1 text-[0.58rem] font-black uppercase tracking-[0.08em] text-emerald-800">
+                Utilisateurs {userUsageLabel}
+              </span>
+              <span className="rounded-full bg-orange-50 px-2 py-1 text-[0.58rem] font-black uppercase tracking-[0.08em] text-orange-700">
+                {stats.pendingInvitations} invitation{stats.pendingInvitations > 1 ? 's' : ''}
+              </span>
+            </div>
+            <PremiumButton
+              variant="create"
+              size="sm"
+              onClick={() => setIsInviteOpen(true)}
+              data-testid="button-invite-member-embedded"
+              icon={<UserPlus className="h-4 w-4" />}
+              className="w-full sm:w-auto"
+            >
+              Inviter
+            </PremiumButton>
+          </div>
         </section>
       )}
 
       {embedded && (sectionMode === 'permissions' || sectionMode === 'access') && (
         <section className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-emerald-50/80 via-white to-[#fff8ed] p-2.5 shadow-sm">
           <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Permissions & pages visibles</p>
-          <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Presets simples, controle precis.</h2>
+          <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Repères d'accès, contrôle précis.</h2>
           <p className="mt-0.5 max-w-2xl text-[0.7rem] leading-4 text-slate-600">
-            Les roles restent la base. Les profils personnalisés ci-dessous utilisent les droits existants par page, sans contourner le RBAC.
+            Les rôles restent la base. Les profils personnalisés ci-dessous utilisent les droits existants par page, sans contourner le RBAC.
           </p>
           <div className="mt-2 grid gap-1.5 sm:grid-cols-4">
             {[
-              ['Standard', 'Agent operationnel avec ecriture metier.'],
-              ['Restreint', 'Lecture ou pages masquees selon besoin.'],
-              ['Finance', 'Encaissements, creances et exports.'],
-              ['Personnalise', 'Overrides par page et par action.'],
+              ['Standard', 'Agent opérationnel avec écriture métier.'],
+              ['Restreint', 'Lecture ou pages masquées selon besoin.'],
+              ['Finance', 'Encaissements, créances et exports.'],
+              ['Personnalisé', 'Overrides par page et par action.'],
             ].map(([preset, description]) => (
               <div key={preset} className="rounded-lg border border-emerald-950/10 bg-white/88 px-2 py-1.5 shadow-sm">
                 <p className="text-[0.7rem] font-extrabold text-slate-950">{preset}</p>
@@ -655,8 +666,8 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
 
       <Modal isOpen={isInviteOpen} onClose={closeInviteModal} title="Inviter un collaborateur">
         {generatedLink ? (
-          <div className="space-y-4">
-            <p className="text-sm leading-6 text-slate-700">
+          <div className="space-y-3">
+            <p className="text-[0.76rem] leading-5 text-slate-700">
               Invitation créée. Envoyez ce lien à votre collaborateur pour qu'il rejoigne l'agence.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row">
@@ -665,13 +676,13 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 readOnly
                 value={generatedLink}
                 data-testid="input-invite-link"
-                className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[0.74rem] font-semibold text-slate-700"
               />
               <button
                 type="button"
                 onClick={() => copyLink(generatedLink)}
                 data-testid="button-copy-generated"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-4 py-2 text-sm font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F]"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-3 text-[0.72rem] font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F]"
               >
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {copied ? 'Copié' : 'Copier'}
@@ -679,19 +690,19 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             </div>
           </div>
         ) : (
-          <form onSubmit={handleInvite} className="space-y-3">
-            <div className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3 shadow-sm">
-              <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">Nouvel accès</p>
-              <h3 className="mt-0.5 text-[0.9rem] font-extrabold text-slate-950">Inviter un collaborateur</h3>
-              <p className="mt-1 text-[0.7rem] font-medium leading-4 text-slate-600">
+          <form onSubmit={handleInvite} className="space-y-2.5">
+            <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
+              <p className="text-[0.56rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">Nouvel accès</p>
+              <h3 className="mt-0.5 text-[0.84rem] font-extrabold text-slate-950">Inviter un collaborateur</h3>
+              <p className="mt-0.5 text-[0.66rem] font-medium leading-4 text-slate-600">
                 Les accès pourront être ajustés ensuite dans Équipe & accès.
               </p>
-              <p className="mt-2 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[0.62rem] font-black text-emerald-800">
+              <p className="mt-1.5 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[0.58rem] font-black text-emerald-800">
                 Utilisateurs : {userUsageLabel}
               </p>
             </div>
             <div>
-              <label className="mb-1 block text-[0.72rem] font-extrabold text-slate-700">Email professionnel</label>
+              <label className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Email professionnel</label>
               <input aria-label="Champ de saisie"
                 type="email"
                 required
@@ -699,16 +710,16 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 onChange={(event) => setFormData({ ...formData, email: event.target.value })}
                 data-testid="input-invite-email"
                 placeholder="collaborateur@agence.sn"
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-[0.82rem] font-semibold text-slate-900 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-[0.78rem] font-semibold text-slate-900 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
               />
             </div>
             <div>
-              <label className="mb-1 block text-[0.72rem] font-extrabold text-slate-700">Rôle initial</label>
+              <label className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Rôle et preset d’accès</label>
               <select aria-label="Sélection"
                 value={formData.role}
                 onChange={(event) => setFormData({ ...formData, role: event.target.value as RoleOption })}
                 data-testid="select-invite-role"
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-[0.82rem] font-semibold text-slate-900 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-[0.78rem] font-semibold text-slate-900 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
               >
                 <option value="agent">Agent</option>
                 <option value="comptable">Comptable</option>
@@ -717,18 +728,38 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             </div>
             {(() => {
               const guide = INVITE_ROLE_GUIDE[formData.role];
+              const presetGuide = [
+                ['Standard', formData.role === 'agent', 'Gestion opérationnelle'],
+                ['Finance', formData.role === 'comptable', 'Encaissements et rapports'],
+                ['Admin', formData.role === 'admin', 'Contrôle complet'],
+                ['Restreint', false, 'À ajuster après acceptation'],
+              ] as const;
               return (
-                <div className={`rounded-2xl border p-3 ${guide.tone}`}>
+                <div className={`rounded-xl border p-2.5 ${guide.tone}`}>
                   <div className="flex items-start gap-2">
-                    <Shield className="mt-0.5 h-4 w-4 shrink-0" />
+                    <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-[0.72rem] font-extrabold">{ROLE_LABELS[formData.role]}</p>
-                      <p className="mt-0.5 text-[0.66rem] font-semibold leading-4 opacity-80">{guide.summary}</p>
+                      <p className="text-[0.7rem] font-extrabold">{ROLE_LABELS[formData.role]}</p>
+                      <p className="mt-0.5 text-[0.62rem] font-semibold leading-3 opacity-80">{guide.summary}</p>
                     </div>
                   </div>
-                  <div className="mt-2 grid gap-1 sm:grid-cols-3">
+                  <div className="mt-2 grid gap-1 sm:grid-cols-4">
+                    {presetGuide.map(([label, active, description]) => (
+                      <span
+                        key={label}
+                        className={[
+                          'rounded-lg px-2 py-1 text-[0.54rem] font-black leading-3 ring-1',
+                          active ? 'bg-emerald-950 text-white ring-emerald-950' : 'bg-white/70 text-slate-500 ring-white/70',
+                        ].join(' ')}
+                        title={description}
+                      >
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-1.5 grid gap-1 sm:grid-cols-3">
                     {guide.access.map((item) => (
-                      <span key={item} className="rounded-lg bg-white/70 px-2 py-1 text-[0.6rem] font-bold leading-3 text-slate-700">
+                      <span key={item} className="rounded-lg bg-white/70 px-2 py-1 text-[0.56rem] font-bold leading-3 text-slate-700">
                         {item}
                       </span>
                     ))}
@@ -736,11 +767,11 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 </div>
               );
             })()}
-            <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={closeInviteModal}
-                className="h-10 rounded-xl border border-slate-200 px-4 text-[0.78rem] font-bold text-slate-700 transition hover:bg-slate-50"
+                className="h-9 rounded-lg border border-slate-200 px-3 text-[0.72rem] font-bold text-slate-700 transition hover:bg-slate-50"
               >
                 Annuler
               </button>
@@ -748,7 +779,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 type="submit"
                 disabled={submitting}
                 data-testid="button-submit-invitation"
-                className="h-10 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-4 text-[0.78rem] font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-9 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-3 text-[0.72rem] font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? 'Création...' : "Envoyer l'invitation"}
               </button>
@@ -879,8 +910,8 @@ function PermissionMatrixPreview() {
     { page: 'patrimoine', label: 'Biens & patrimoine' },
     { page: 'occupants-baux', label: 'Locations' },
     { page: 'paiements', label: 'Encaissements' },
-    { page: 'loyers-impayes', label: 'Creances' },
-    { page: 'depenses', label: 'Depenses' },
+    { page: 'loyers-impayes', label: 'Créances' },
+    { page: 'depenses', label: 'Dépenses' },
     { page: 'documents', label: 'Documents' },
     { page: 'abonnement', label: 'Abonnement' },
   ];
@@ -911,7 +942,7 @@ function PermissionMatrixPreview() {
 }
 
 function AccessBadge({ level }: { level: AccessLevel }) {
-  const label = level === 'admin' ? 'Admin' : level === 'write' ? 'Ecriture' : level === 'read' ? 'Lecture' : 'Masque';
+  const label = level === 'admin' ? 'Admin' : level === 'write' ? 'Écriture' : level === 'read' ? 'Lecture' : 'Masqué';
   const className =
     level === 'admin'
       ? 'bg-emerald-950 text-white'

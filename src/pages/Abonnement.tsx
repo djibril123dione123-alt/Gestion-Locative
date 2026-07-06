@@ -111,59 +111,6 @@ const PLAN_CATALOG = PRICING_PLAN_DEFINITIONS.map((plan) => ({
   features: plan.features,
 }));
 
-/*
-  {
-    id: 'starter',
-    name: 'Starter',
-    price_xof: 5000,
-    max_users: 1,
-    max_immeubles: 3,
-    max_unites: 10,
-    storage_gb: 1,
-    icon: Zap,
-    color: '#475569',
-    features: ['Pilotage simple des loyers', 'Documents locatifs professionnels', 'GED légère', 'Support email'],
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price_xof: 15000,
-    max_users: 5,
-    max_immeubles: 20,
-    max_unites: 100,
-    storage_gb: 20,
-    icon: Building2,
-    color: '#F58220',
-    badge: 'Recommandé',
-    features: ['Tout Starter', 'Notifications bailleurs', 'Rapports PDF mensuels', 'Alertes impayés', 'Commissions', 'Support WhatsApp'],
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    price_xof: 35000,
-    max_users: 15,
-    max_immeubles: 100,
-    max_unites: 500,
-    storage_gb: 100,
-    icon: BarChart3,
-    color: '#0891B2',
-    features: ['Tout Pro', '15 utilisateurs', 'Rapports agents', 'Multi-portefeuilles', 'API webhooks', 'Support < 4h'],
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price_xof: 0,
-    max_users: -1,
-    max_immeubles: -1,
-    max_unites: -1,
-    storage_gb: 100,
-    icon: Crown,
-    color: '#7C3AED',
-    features: ['Capacité sur mesure', 'White-label', 'SLA contractualisé', 'Account manager', 'Formation sur site'],
-  },
-] as const;
-*/
-
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   active:    { label: 'Actif',     color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
   trial:     { label: 'Essai',     color: '#92400E', bg: '#FFFBEB', border: '#FDE68A' },
@@ -798,48 +745,84 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
       {upgradeOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand-950/68 p-0 backdrop-blur-md sm:items-center sm:p-4"
           onClick={() => setUpgradeOpen(false)}>
-          <div className="sk-modal-shell w-full max-w-md p-6 space-y-3"
+          <div className="w-full max-w-lg overflow-hidden rounded-t-3xl border border-emerald-950/10 bg-[#fffdf8] shadow-2xl shadow-emerald-950/20 sm:rounded-3xl"
             onClick={(e) => e.stopPropagation()}>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">Changer de plan</h3>
-              <p className="text-sm text-slate-400 mt-1">Sans engagement · Activation instantanée</p>
-            </div>
-            {PLAN_CATALOG.map((plan) => {
-              const Icon = plan.icon;
-              const isCurr = currentPlanId === plan.id;
-              return (
-                <button key={plan.id} disabled={isCurr}
-                  onClick={() => {
-                    setUpgradeOpen(false);
-                    if (plan.id === 'enterprise') {
-                      window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux passer au plan Enterprise Samay Këur.')}`, '_blank');
-                    } else {
-                      openPayment(plan.id);
-                    }
-                  }}
-                  className="w-full flex items-center justify-between p-4 rounded-xl border-2 transition text-left disabled:opacity-60 disabled:cursor-default hover:enabled:shadow-md"
-                  style={{ borderColor: isCurr ? plan.color : '#E2E8F0', backgroundColor: isCurr ? plan.color + '08' : 'white' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: plan.color + '18' }}>
-                      <Icon className="w-4 h-4" style={{ color: plan.color }} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-900 text-sm">{plan.name}</p>
-                      <p className="text-xs" style={{ color: plan.color }}>
-                        {plan.price_xof > 0 ? formatCurrency(plan.price_xof) + '/mois' : 'Sur devis'}
-                      </p>
-                    </div>
-                  </div>
-                  {isCurr
-                    ? <span className="text-xs font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: plan.color }}>Actuel</span>
-                    : <ChevronRight className="w-4 h-4 text-slate-300" />}
+            <div className="border-b border-emerald-950/10 bg-white/78 px-4 py-3">
+              <p className="text-[0.58rem] font-black uppercase tracking-[0.16em] text-emerald-800">Facturation</p>
+              <div className="mt-0.5 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-[1rem] font-extrabold text-slate-950">Changer de plan</h3>
+                  <p className="mt-0.5 text-[0.7rem] font-semibold leading-4 text-slate-500">
+                    Choisissez une capacité puis confirmez le paiement sécurisé.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setUpgradeOpen(false)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-950/10 bg-white text-slate-500 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
+                  aria-label="Fermer le changement de plan"
+                >
+                  ×
                 </button>
-              );
-            })}
-            <button type="button" onClick={() => setUpgradeOpen(false)}
-              className="w-full text-sm text-slate-400 hover:text-slate-700 py-1 transition">
-              Fermer
-            </button>
+              </div>
+            </div>
+            <div className="space-y-2 px-4 py-3">
+              <div className="rounded-xl border border-emerald-950/10 bg-white/80 px-3 py-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-[0.54rem] font-black uppercase tracking-[0.14em] text-slate-500">Plan actuel</p>
+                    <p className="text-[0.8rem] font-extrabold text-slate-950">{displayedPlanName}</p>
+                  </div>
+                  <p className="text-[0.68rem] font-bold text-slate-500">
+                    {catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)}/mois` : 'Sur devis'}
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {PLAN_CATALOG.map((plan) => {
+                  const Icon = plan.icon;
+                  const isCurr = currentPlanId === plan.id;
+                  return (
+                    <button key={plan.id} disabled={isCurr}
+                      onClick={() => {
+                        setUpgradeOpen(false);
+                        if (plan.id === 'enterprise') {
+                          window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux passer au plan Enterprise Samay Këur.')}`, '_blank');
+                        } else {
+                          openPayment(plan.id);
+                        }
+                      }}
+                      className="min-w-0 rounded-xl border p-2.5 text-left transition disabled:cursor-default disabled:opacity-70 hover:enabled:-translate-y-0.5 hover:enabled:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
+                      style={{ borderColor: isCurr ? plan.color : '#E2E8F0', backgroundColor: isCurr ? plan.color + '08' : 'white' }}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: plan.color + '18' }}>
+                            <Icon className="h-4 w-4" style={{ color: plan.color }} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-[0.76rem] font-extrabold text-slate-950">{plan.name}</p>
+                            <p className="text-[0.64rem] font-semibold" style={{ color: plan.color }}>
+                              {plan.price_xof > 0 ? formatCurrency(plan.price_xof) + '/mois' : 'Sur devis'}
+                            </p>
+                          </div>
+                        </div>
+                        {isCurr
+                          ? <span className="rounded-full px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-[0.08em] text-white" style={{ backgroundColor: plan.color }}>Actuel</span>
+                          : <ChevronRight className="mt-1 h-3.5 w-3.5 shrink-0 text-slate-300" />}
+                      </div>
+                      <div className="mt-2 grid grid-cols-3 gap-1 text-[0.54rem] font-bold text-slate-500">
+                        <span className="truncate rounded-md bg-slate-50 px-1.5 py-1">{plan.max_users === -1 ? 'Util. +' : `${plan.max_users} util.`}</span>
+                        <span className="truncate rounded-md bg-slate-50 px-1.5 py-1">{plan.max_unites === -1 ? 'Unités +' : `${plan.max_unites} unités`}</span>
+                        <span className="truncate rounded-md bg-slate-50 px-1.5 py-1">{plan.storage_gb === -1 ? 'Stockage +' : `${plan.storage_gb} Go`}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="rounded-xl border border-orange-200/70 bg-orange-50/70 px-3 py-2 text-[0.66rem] font-semibold leading-4 text-slate-600">
+                Activation après confirmation du paiement. Le paiement en ligne reste prioritaire ; le support valide les preuves manuelles.
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -911,7 +894,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
               />
             </label>
             <label>
-              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Date paiement</span>
+              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Date de paiement</span>
               <input
                 type="date"
                 value={proofForm.payment_date}

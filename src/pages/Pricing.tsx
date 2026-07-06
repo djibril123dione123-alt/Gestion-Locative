@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   ArrowRight,
   BarChart3,
@@ -42,6 +42,32 @@ const PLANS: PlanDef[] = PRICING_PLAN_DEFINITIONS.map((plan) => ({
   icon: PLAN_ICONS[plan.id],
   price: plan.price_xof,
 }));
+
+function SafeImage({
+  src,
+  alt,
+  className,
+  fallback,
+  decorative = false,
+}: {
+  src: string;
+  alt: string;
+  className: string;
+  fallback?: ReactNode;
+  decorative?: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return fallback ? <>{fallback}</> : null;
+  return (
+    <img
+      src={src}
+      alt={decorative ? '' : alt}
+      aria-hidden={decorative ? true : undefined}
+      className={className}
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 /*
   {
@@ -374,10 +400,10 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
     >
       {!embedded && (
         <section className="relative mx-auto max-w-6xl overflow-hidden rounded-b-[2.5rem] px-4 pb-9 pt-10 text-center sm:pb-12 sm:pt-16">
-          <img
+          <SafeImage
             src="/brand/marketing/landing-documents.jpg"
             alt=""
-            aria-hidden="true"
+            decorative
             className="absolute inset-0 h-full w-full object-cover opacity-[0.24]"
           />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(245,130,32,0.18),transparent_18rem),linear-gradient(180deg,rgba(6,18,15,0.86),rgba(11,27,22,0.95))]" />
@@ -404,7 +430,16 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
               ['Djamo', djamoLogo],
             ].map(([label, src]) => (
               <span key={label} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-emerald-50 shadow-lg shadow-emerald-950/10 backdrop-blur">
-                <img src={src} alt={label} className="h-5 w-5 rounded object-contain" />
+                <SafeImage
+                  src={src}
+                  alt={label}
+                  className="h-5 w-5 rounded object-contain"
+                  fallback={
+                    <span className="flex h-5 w-5 items-center justify-center rounded bg-white/15 text-[0.55rem] font-black text-emerald-50">
+                      {label.slice(0, 2).toUpperCase()}
+                    </span>
+                  }
+                />
                 {label}
               </span>
             ))}

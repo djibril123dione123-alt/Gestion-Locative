@@ -186,7 +186,7 @@ export async function saveGeneratedPdf(
 
   announceGeneratedDocument({
     kind: options.kind,
-    title: reused ? `${options.title} deja genere` : options.title,
+    title: reused ? `${options.title} déjà généré` : options.title,
     fileName: options.fileName,
     source: options.source,
     url,
@@ -392,6 +392,57 @@ async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
   }
 }
 
+type PdfDocumentType = 'contrat' | 'mandat' | 'quittance' | 'rapport' | 'facture';
+
+const DEFAULT_PDF_PREFIXES: Record<PdfDocumentType, string> = {
+  contrat: 'CTR',
+  mandat: 'MDT',
+  quittance: 'QIT',
+  rapport: 'RPT',
+  facture: 'FAC',
+};
+
+function getPdfDocumentPreferences(settings?: Partial<AgencySettings>) {
+  return {
+    prefixes: {
+      ...DEFAULT_PDF_PREFIXES,
+      ...(settings?.document_preferences?.prefixes ?? {}),
+    },
+    qr_documents: {
+      contrat: true,
+      mandat: true,
+      quittance: true,
+      rapport: true,
+      facture: true,
+      ...(settings?.document_preferences?.qr_documents ?? {}),
+    } as Record<PdfDocumentType, boolean>,
+    receipt_notice:
+      settings?.document_preferences?.receipt_notice ||
+      "Cette quittance atteste le paiement enregistré pour la période indiquée, sous réserve de vérification du document et des conditions prévues au bail.",
+  };
+}
+
+function normalizeDocumentPrefix(prefix: string | null | undefined, fallback: string): string {
+  const normalized = String(prefix ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]/gi, '')
+    .slice(0, 12)
+    .toUpperCase();
+  return normalized || fallback;
+}
+
+function applyDocumentPrefix(ref: string, type: PdfDocumentType, settings?: Partial<AgencySettings>): string {
+  const preferences = getPdfDocumentPreferences(settings);
+  const prefix = normalizeDocumentPrefix(preferences.prefixes[type], DEFAULT_PDF_PREFIXES[type]);
+  return ref.replace(/^[A-Z0-9]+(?=-)/, prefix);
+}
+
+function isDocumentQrEnabled(settings: Partial<AgencySettings> | undefined, type: PdfDocumentType): boolean {
+  if (settings?.qr_code_quittances === false) return false;
+  return getPdfDocumentPreferences(settings).qr_documents[type] !== false;
+}
+
 function hexToRgb(hex: string | null | undefined, fallback: [number, number, number]): [number, number, number] {
   const normalized = (hex || '').replace('#', '').trim();
   if (!/^[0-9a-f]{6}$/i.test(normalized)) return fallback;
@@ -587,29 +638,37 @@ export async function drawDocumentHeader(
   doc.setLineWidth(0.22);
   doc.line(3.6, 8.5, pageWidth, 8.5);
 
+  const logoPosition = settings.logo_position ?? 'left';
+  const infoAlign: 'left' | 'right' = logoPosition === 'right' ? 'left' : 'right';
+  const infoX = logoPosition === 'right' ? 14 : pageWidth - 14;
   let logoBottom = 26;
   const logo = await loadImageAsPngDataUrl(settings.logo_url, 420);
   if (logo) {
     const logoWidth = Math.min(30, Math.max(15, logo.width * 0.07));
     const logoHeight = Math.min(18, (logo.height / logo.width) * logoWidth);
-    doc.addImage(logo.dataUrl, 'PNG', 15, 14, logoWidth, logoHeight);
+    const logoX = logoPosition === 'center'
+      ? pageWidth / 2 - logoWidth / 2
+      : logoPosition === 'right'
+        ? pageWidth - 14 - logoWidth
+        : 15;
+    doc.addImage(logo.dataUrl, 'PNG', logoX, 14, logoWidth, logoHeight);
     logoBottom = 14 + logoHeight;
   } else {
+    const fallbackLogoX = logoPosition === 'center' ? pageWidth / 2 - 6.5 : logoPosition === 'right' ? pageWidth - 27 : 15;
     doc.setFillColor(...colors.primary);
-    doc.roundedRect(15, 13, 13, 13, 2, 2, 'F');
+    doc.roundedRect(fallbackLogoX, 13, 13, 13, 2, 2, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont(undefined as unknown as string, 'bold');
     doc.setFontSize(8);
-    doc.text((settings.nom_agence ?? 'SK').slice(0, 2).toUpperCase(), 21.5, 21.5, {
+    doc.text((settings.nom_agence ?? 'SK').slice(0, 2).toUpperCase(), fallbackLogoX + 6.5, 21.5, {
       align: 'center',
     });
   }
 
-  const infoX = pageWidth - 14;
   doc.setTextColor(15, 23, 42);
   doc.setFont(undefined as unknown as string, 'bold');
   doc.setFontSize(10.2);
-  doc.text(settings.nom_agence ?? 'Samay Këur', infoX, 14.5, { align: 'right' });
+  doc.text(settings.nom_agence ?? 'Samay Këur', infoX, 14.5, { align: infoAlign });
   doc.setFont(undefined as unknown as string, 'normal');
   doc.setFontSize(7.3);
   doc.setTextColor(71, 85, 105);
@@ -621,7 +680,7 @@ export async function drawDocumentHeader(
     settings.site_web ?? null,
   ].filter(Boolean) as string[];
   infoLines.slice(0, 5).forEach((line, index) => {
-    doc.text(line, infoX, 19.3 + index * 4.2, { align: 'right' });
+    doc.text(line, infoX, 19.3 + index * 4.2, { align: infoAlign });
   });
 
   const separatorY = Math.max(40, logoBottom + 8);
@@ -1355,7 +1414,11 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
   const settings = await loadAgencySettings();
   const individualOwner = isIndividualOwnerSettings(settings);
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-  const contractRef = `CTR-${new Date().getFullYear()}-${(contrat.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+  const contractRef = applyDocumentPrefix(
+    `CTR-${new Date().getFullYear()}-${(contrat.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+    'contrat',
+    settings,
+  );
 
   const bailleur = (contrat.unites?.immeubles?.bailleurs ?? {}) as {
     prenom?: string;
@@ -1495,7 +1558,7 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
   }
 
   addFooter(doc, settings);
-  if (settings.qr_code_quittances !== false) {
+  if (isDocumentQrEnabled(settings, 'contrat')) {
     try {
       await drawLegalVerificationFooter(doc, {
         ref: contractRef,
@@ -1574,8 +1637,9 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     ? Number(paiement.reliquat)
     : Math.max(loyer - totalPayeMois, 0);
   const statusLabel = reliquat > 0 ? 'Paiement partiel' : 'Soldé';
+  const paiementDocumentType: PdfDocumentType = reliquat > 0 ? 'facture' : 'quittance';
   // Numéro de quittance unique (QIT-AAAAMM-XXXX) — légalement traçable
-  const ref = paiement.reference ?? generateQuittanceRef(paiement);
+  const ref = applyDocumentPrefix(paiement.reference ?? generateQuittanceRef(paiement), paiementDocumentType, settings);
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const leftMargin = 14;
@@ -1694,12 +1758,12 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
   if (finalY + finalBlockHeight > finalBlockBottom) {
     finalY = ensureDocumentSpace(doc, finalY, finalBlockHeight, settings, 24, 23);
   }
-  const qrWidth = settings.qr_code_quittances !== false ? 74 : 0;
+  const qrWidth = isDocumentQrEnabled(settings, paiementDocumentType) ? 74 : 0;
   const qrGap = qrWidth > 0 ? 7 : 0;
   const mentionsWidth = usableWidth - qrWidth - qrGap;
 
   const mentions = [
-    'Cette quittance atteste le paiement enregistré pour la période indiquée, sous réserve de vérification du document et des conditions prévues au bail.',
+    getPdfDocumentPreferences(settings).receipt_notice,
     reliquat > 0
       ? 'Tout reliquat, charge ou obligation non réglée demeure exigible conformément au bail.'
       : null,
@@ -1733,7 +1797,7 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     doc.text(footerLines.slice(0, 1), leftMargin + 5, finalY + 27.2);
   }
 
-  if (settings.qr_code_quittances !== false) {
+  if (isDocumentQrEnabled(settings, paiementDocumentType)) {
     try {
       await drawVerificationBlock(doc, {
         x: leftMargin + mentionsWidth + qrGap,
@@ -1800,7 +1864,11 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
     throw new Error("Le mandat de gérance est réservé aux agences et gestionnaires qui administrent des biens pour des tiers.");
   }
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-  const mandatRef = `MDT-${new Date().getFullYear()}-${(bailleur.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
+  const mandatRef = applyDocumentPrefix(
+    `MDT-${new Date().getFullYear()}-${(bailleur.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+    'mandat',
+    settings,
+  );
 
   try {
     const tpl = await fetchTemplate('/templates/mandat_gerance.txt');
@@ -1909,7 +1977,7 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
   }
 
   addFooter(doc, settings);
-  if (settings.qr_code_quittances !== false) {
+  if (isDocumentQrEnabled(settings, 'mandat')) {
     try {
       await drawLegalVerificationFooter(doc, {
         ref: mandatRef,

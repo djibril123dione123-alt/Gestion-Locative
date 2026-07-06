@@ -33,6 +33,30 @@ type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
 type SettingsTab = 'general' | 'documents' | 'appearance' | 'modules';
 type EmbeddedMode = 'single' | 'documentsIdentity';
 type LogoUploadState = 'idle' | 'preview' | 'uploading' | 'done';
+type DocumentPreviewType = 'quittance' | 'contrat' | 'mandat' | 'rapport' | 'facture';
+type ModuleFieldToggleKey =
+  | 'module_depenses_actif'
+  | 'module_inventaires_actif'
+  | 'module_interventions_actif'
+  | 'mode_avance_actif'
+  | 'qr_code_quittances';
+type ModuleToggleTarget =
+  | { kind: 'field'; key: ModuleFieldToggleKey }
+  | { kind: 'enabled_modules'; key: string; defaultEnabled?: boolean };
+
+interface SettingsModuleItem {
+  label: string;
+  description: string;
+  impact?: string;
+  status: 'system' | 'essential' | 'active' | 'inactive' | 'prepared' | 'plan';
+  toggle?: ModuleToggleTarget;
+}
+
+interface SettingsModuleCategory {
+  category: string;
+  description: string;
+  items: SettingsModuleItem[];
+}
 
 interface ParametresProps {
   initialTab?: SettingsTab;
@@ -44,6 +68,121 @@ const AGENCY_ASSETS_BUCKET = 'agency-assets';
 const LOGO_MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
 const LOGO_COMPRESSION_THRESHOLD = 1.4 * 1024 * 1024;
 const LOGO_MAX_DIMENSION = 1200;
+
+const DOCUMENT_PREVIEWS: Record<DocumentPreviewType, {
+  label: string;
+  title: string;
+  reference: string;
+  amount: string;
+  meta: string;
+}> = {
+  quittance: {
+    label: 'Quittance',
+    title: 'Quittance de loyer',
+    reference: 'QIT-2026-07',
+    amount: '500 000 F CFA',
+    meta: 'Juillet 2026 · Appartement F4',
+  },
+  contrat: {
+    label: 'Contrat',
+    title: 'Contrat de bail',
+    reference: 'CTR-2026-04',
+    amount: '300 000 F CFA / mois',
+    meta: 'Bail actif · Unité louée',
+  },
+  mandat: {
+    label: 'Mandat',
+    title: 'Mandat de gestion',
+    reference: 'MDT-2026-08',
+    amount: 'Commission 10%',
+    meta: 'Propriétaire · Portefeuille',
+  },
+  rapport: {
+    label: 'Rapport',
+    title: 'Rapport bailleur',
+    reference: 'RPT-2026-07',
+    amount: '1 175 000 F CFA',
+    meta: 'Encaissements · Reversements',
+  },
+  facture: {
+    label: 'Facture',
+    title: 'Facture de charge',
+    reference: 'FAC-2026-21',
+    amount: '37 500 F CFA',
+    meta: 'Frais huissier · Justificatif',
+  },
+};
+
+const DEFAULT_DOCUMENT_PREFERENCES: NonNullable<AgencySettings['document_preferences']> = {
+  header_style: 'institutionnel',
+  show_slogan: true,
+  numbering_format: 'Q-YYYY-0001',
+  reset_numbering_yearly: true,
+  show_document_number: true,
+  prefixes: {
+    quittance: 'QIT',
+    contrat: 'CTR',
+    mandat: 'MDT',
+    rapport: 'RPT',
+    facture: 'FAC',
+  },
+  qr_documents: {
+    quittance: true,
+    contrat: true,
+    mandat: true,
+    rapport: true,
+    facture: false,
+  },
+  qr_text: "Scannez pour vérifier l'authenticité.",
+  qr_position: 'bottom_right',
+  confidentiality_notice: 'Document confidentiel réservé aux parties concernées.',
+  payment_notice: 'Paiement attendu selon les modalités prévues au contrat.',
+  receipt_notice: "Quittance émise sous réserve d'encaissement effectif.",
+  document_options: {
+    contrat: {
+      logo: true,
+      qr: true,
+      legalRepresentative: true,
+      taxIds: true,
+      penalties: true,
+      tribunal: true,
+      signatures: true,
+      annexes: true,
+    },
+    mandat: {
+      commission: true,
+      duration: true,
+      ownerDuties: true,
+      agencyDuties: true,
+      signatures: true,
+      qr: true,
+    },
+    quittance: {
+      period: true,
+      paymentMethod: true,
+      remainingDue: true,
+      qr: true,
+      receiptNotice: true,
+      stamp: false,
+    },
+    rapport: {
+      financialSummary: true,
+      payments: true,
+      remainingDue: true,
+      expenses: true,
+      commissions: true,
+      attachments: true,
+      qr: true,
+      footer: true,
+    },
+    facture: {
+      taxIds: true,
+      paymentTerms: true,
+      fiscalNotice: true,
+      qr: false,
+    },
+  },
+};
 
 const EMPTY_SETTINGS: Omit<SettingsState, 'agency_id'> = {
   nom_agence: '',
@@ -89,7 +228,122 @@ const EMPTY_SETTINGS: Omit<SettingsState, 'agency_id'> = {
   sms_notifications_actif: false,
   champs_personnalises_locataire: 0,
   onboarding_completed_at: null,
+  document_preferences: DEFAULT_DOCUMENT_PREFERENCES,
 };
+
+function getDocumentPreferences(settings: SettingsState): NonNullable<AgencySettings['document_preferences']> {
+  return {
+    ...DEFAULT_DOCUMENT_PREFERENCES,
+    ...(settings.document_preferences ?? {}),
+    prefixes: {
+      ...DEFAULT_DOCUMENT_PREFERENCES.prefixes,
+      ...(settings.document_preferences?.prefixes ?? {}),
+    },
+    qr_documents: {
+      ...DEFAULT_DOCUMENT_PREFERENCES.qr_documents,
+      ...(settings.document_preferences?.qr_documents ?? {}),
+    },
+    document_options: {
+      ...DEFAULT_DOCUMENT_PREFERENCES.document_options,
+      ...(settings.document_preferences?.document_options ?? {}),
+    },
+  };
+}
+
+function buildSettingsModuleCategories(settings: SettingsState): SettingsModuleCategory[] {
+  const enabledModules = settings.enabled_modules ?? {};
+  const enabled = (key: string, fallback = true) => {
+    const value = enabledModules[key];
+    return typeof value === 'boolean' ? value : fallback;
+  };
+  const optional = (key: ModuleFieldToggleKey, active: boolean): Pick<SettingsModuleItem, 'status' | 'toggle'> => ({
+    status: active ? 'active' : 'inactive',
+    toggle: { kind: 'field', key },
+  });
+  const moduleToggle = (
+    key: string,
+    fallback = true,
+  ): Pick<SettingsModuleItem, 'status' | 'toggle'> => {
+    if (key === 'mandates') {
+      return { status: 'system' };
+    }
+    const defaultEnabled = key === 'planning' ? true : fallback;
+    return {
+      status: enabled(key, defaultEnabled) ? 'active' : defaultEnabled ? 'inactive' : 'prepared',
+      toggle: { kind: 'enabled_modules', key, defaultEnabled },
+    };
+  };
+
+  return [
+    {
+      category: 'Portefeuille locatif',
+      description: 'Socle visible dans la navigation principale.',
+      items: [
+        { label: 'Bailleurs', description: 'Propriétaires, rattachements et reversements.', status: 'system' },
+        { label: 'Biens & patrimoine', description: 'Biens, unités et occupation.', status: 'system' },
+        { label: 'Locations', description: 'Occupants, baux et cycles locatifs.', status: 'system' },
+        { label: 'Contrats / baux', description: 'Documents contractuels rattachés aux locations.', impact: 'Documents locatifs', ...moduleToggle('mandates') },
+      ],
+    },
+    {
+      category: 'Finance',
+      description: 'Encaissements, charges et pilotage financier.',
+      items: [
+        { label: 'Paiements', description: 'Encaissements et quittances.', status: 'system' },
+        { label: 'Reliquats', description: 'Créances, relances et suivis.', status: 'system' },
+        { label: 'Charges', description: 'Charges et exploitation courante.', impact: 'Finance bailleur', status: 'active' },
+        { label: 'Dépenses', description: 'Dépenses opérationnelles et justificatifs.', impact: 'Sidebar finance', ...optional('module_depenses_actif', Boolean(settings.module_depenses_actif)) },
+        { label: 'Commissions', description: 'Revenus agence et parts de gestion.', impact: 'Marge agence', ...moduleToggle('commissions') },
+        { label: 'Rapports', description: 'Synthèses, exports et lecture direction.', impact: 'Pilotage avancé', ...moduleToggle('advanced_reports', Boolean(settings.mode_avance_actif)) },
+      ],
+    },
+    {
+      category: 'Documents',
+      description: 'GED, vérification publique et modèles.',
+      items: [
+        { label: 'GED', description: 'Coffre documentaire centralisé.', status: 'system' },
+        { label: 'QR Verify', description: 'Preuves publiques et vérification QR.', impact: 'Preuve publique', ...optional('qr_code_quittances', Boolean(settings.qr_code_quittances)) },
+        { label: 'Scanner', description: 'Vérification rapide sur mobile.', impact: 'Contrôle terrain', ...moduleToggle('document_scanner') },
+        { label: 'Modèles', description: 'Règles documentaires et mentions.', status: 'system' },
+      ],
+    },
+    {
+      category: 'Terrain',
+      description: 'Opérations et suivi terrain.',
+      items: [
+        { label: 'États des lieux', description: 'Constats entrée, sortie et inventaires.', ...optional('module_inventaires_actif', Boolean(settings.module_inventaires_actif)) },
+        { label: 'Maintenance', description: 'Demandes, interventions et priorités.', ...optional('module_interventions_actif', Boolean(settings.module_interventions_actif)) },
+        { label: 'Planning', description: 'Opérations terrain et calendrier.', impact: 'Calendrier équipe', ...moduleToggle('planning', false) },
+      ],
+    },
+    {
+      category: 'Administration',
+      description: 'Équipe, permissions, abonnement et audit.',
+      items: [
+        { label: 'Équipe', description: 'Collaborateurs et invitations.', status: enabled('team') ? 'active' : 'system' },
+        { label: 'Permissions', description: 'RBAC, pages visibles et overrides.', status: 'system' },
+        { label: 'Abonnement', description: 'Plan, limites et facturation.', status: 'system' },
+        { label: 'Audit', description: 'Journal réservé aux administrateurs.', impact: 'Trace sensible', ...moduleToggle('audit_trail', false) },
+        { label: 'Mode avancé', description: 'Options expertes pour équipes structurées.', impact: 'Configuration', ...optional('mode_avance_actif', Boolean(settings.mode_avance_actif)) },
+      ],
+    },
+  ];
+}
+
+function updateModuleToggle(settings: SettingsState, target: ModuleToggleTarget): SettingsState {
+  if (target.kind === 'field') {
+    return { ...settings, [target.key]: !settings[target.key] };
+  }
+  const current = settings.enabled_modules?.[target.key];
+  const currentValue = typeof current === 'boolean' ? current : target.defaultEnabled ?? true;
+  return {
+    ...settings,
+    enabled_modules: {
+      ...(settings.enabled_modules ?? {}),
+      [target.key]: !currentValue,
+    },
+  };
+}
 
 function getLogoExtension(file: File) {
   if (file.type === 'image/svg+xml') return 'svg';
@@ -163,6 +417,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState('');
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [logoUploadState, setLogoUploadState] = useState<LogoUploadState>('idle');
+  const [documentPreviewType, setDocumentPreviewType] = useState<DocumentPreviewType>('quittance');
 
   const getOwnerNameFallback = () => {
     const profileName = [profile?.prenom, profile?.nom].filter(Boolean).join(' ').trim();
@@ -340,6 +595,9 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
       if ('enabled_modules' in settings) {
         dataToSave.enabled_modules = settings.enabled_modules ?? {};
       }
+      if ('document_preferences' in settings) {
+        dataToSave.document_preferences = getDocumentPreferences(settings);
+      }
       if ('proprietaire_info' in settings) {
         dataToSave.proprietaire_info = settings.proprietaire_info ?? {};
       }
@@ -484,6 +742,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     () => Boolean(settings && JSON.stringify(settings) !== lastSavedSnapshot),
     [settings, lastSavedSnapshot]
   );
+  const moduleCategories = useMemo(() => (settings ? buildSettingsModuleCategories(settings) : []), [settings]);
 
   if (loading || !settings) {
     return <PageSkeleton title="Paramètres" variant="form" />;
@@ -494,6 +753,43 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     ? settings.representant_nom || settings.nom_agence || getOwnerNameFallback()
     : settings.nom_agence || 'Agence non renseignee';
   const documentModeLabel = settings.document_mode ?? (isIndividualOwner ? 'simple' : 'professional');
+  const documentPreferences = getDocumentPreferences(settings);
+  const updateDocumentPreferences = (patch: Partial<NonNullable<AgencySettings['document_preferences']>>) => {
+    setSettings({
+      ...settings,
+      document_preferences: {
+        ...documentPreferences,
+        ...patch,
+      },
+    });
+  };
+  const updateDocumentPrefix = (type: DocumentPreviewType, value: string) => {
+    updateDocumentPreferences({
+      prefixes: {
+        ...(documentPreferences.prefixes ?? {}),
+        [type]: value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 12),
+      },
+    });
+  };
+  const toggleDocumentQr = (type: DocumentPreviewType) => {
+    updateDocumentPreferences({
+      qr_documents: {
+        ...(documentPreferences.qr_documents ?? {}),
+        [type]: !documentPreferences.qr_documents?.[type],
+      },
+    });
+  };
+  const toggleDocumentOption = (type: DocumentPreviewType, key: string) => {
+    updateDocumentPreferences({
+      document_options: {
+        ...(documentPreferences.document_options ?? {}),
+        [type]: {
+          ...(documentPreferences.document_options?.[type] ?? {}),
+          [key]: !documentPreferences.document_options?.[type]?.[key],
+        },
+      },
+    });
+  };
   const embeddedFieldClass =
     'h-8 w-full rounded-lg border border-emerald-950/10 bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15';
   const embeddedTextareaClass =
@@ -507,11 +803,11 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         <SettingsActionBar
           eyebrow="Lecture premium"
           title={activeTab === 'general'
-            ? 'Synthese organisation'
+            ? 'Synthèse organisation'
             : activeTab === 'documents'
-              ? embeddedMode === 'documentsIdentity' ? 'Documents & identite' : 'Reglages documentaires'
+              ? embeddedMode === 'documentsIdentity' ? 'Documents & identité' : 'Réglages documentaires'
               : activeTab === 'appearance'
-                ? 'Identite visuelle'
+                ? 'Identité visuelle'
                 : 'Modules actifs'}
           description="Les informations restent modifiables sans changer la logique existante."
           actionLabel={activeTab === 'general' ? "Modifier l'organisation" : 'Modifier'}
@@ -520,26 +816,26 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
         {activeTab === 'general' && (
           <div className="grid gap-2 lg:grid-cols-2">
-            <SettingsInfoCard title="Identite" eyebrow={isIndividualOwner ? 'PROPRIETAIRE' : 'AGENCE'} icon={Building}>
+            <SettingsInfoCard title="Identité" eyebrow={isIndividualOwner ? 'PROPRIÉTAIRE' : 'AGENCE'} icon={Building}>
               <InfoLine label="Nom" value={displayName} strong />
-              <InfoLine label="Telephone" value={formatSenegalPhone(settings.telephone, 'Non renseigne')} />
+              <InfoLine label="Téléphone" value={formatSenegalPhone(settings.telephone, 'Non renseigné')} />
               <InfoLine label="Email" value={settings.email} />
               <InfoLine label="Adresse" value={settings.adresse} />
               <InfoLine label="Ville" value={settings.city} />
               <InfoLine label="Site web" value={settings.site_web} />
             </SettingsInfoCard>
-            <SettingsInfoCard title="Informations legales" eyebrow="DOCUMENTS" icon={Landmark}>
+            <SettingsInfoCard title="Informations légales" eyebrow="DOCUMENTS" icon={Landmark}>
               {!isIndividualOwner && <InfoLine label="NINEA" value={settings.ninea} strong />}
               {!isIndividualOwner && <InfoLine label="RC" value={settings.rc} />}
-              <InfoLine label={isIndividualOwner ? 'Proprietaire' : 'Representant'} value={settings.representant_nom || displayName} />
+              <InfoLine label={isIndividualOwner ? 'Propriétaire' : 'Représentant'} value={settings.representant_nom || displayName} />
               <InfoLine label="Fonction" value={settings.representant_fonction} />
-              <InfoLine label="Type piece" value={settings.manager_id_type} />
-              <InfoLine label="Numero piece" value={settings.manager_id_number} />
+              <InfoLine label="Type pièce" value={settings.manager_id_type} />
+              <InfoLine label="Numéro pièce" value={settings.manager_id_number} />
             </SettingsInfoCard>
             <div className="lg:col-span-2 rounded-xl border border-orange-200/70 bg-orange-50/60 px-2 py-1.5 text-[0.62rem] font-medium leading-[0.86rem] text-orange-900 sm:flex sm:items-center sm:gap-2">
               <p className="shrink-0 font-extrabold uppercase tracking-[0.08em]">Utilisation documentaire</p>
               <p className="mt-0.5 sm:mt-0">
-                Ces informations apparaissent dans les contrats, mandats, quittances, rapports et documents generes.
+                Ces informations apparaissent dans les contrats, mandats, quittances, rapports et documents générés.
               </p>
             </div>
           </div>
@@ -550,8 +846,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
             <div className="grid gap-2 sm:grid-cols-2">
               <SettingsStatusCard label="Mode documentaire" value={documentModeLabel} icon={FileText} />
               <SettingsStatusCard label="QR Verify" value={settings.qr_code_quittances ? 'Actif' : 'Inactif'} icon={QrCode} />
-              <SettingsStatusCard label="Penalites" value={`${settings.penalite_retard_montant ?? 0} F / jour`} icon={ShieldCheck} />
-              <SettingsStatusCard label="Delai" value={`${settings.penalite_retard_delai_jours ?? 0} jours`} icon={CheckCircle} />
+              <SettingsStatusCard label="Pénalités" value={`${settings.penalite_retard_montant ?? 0} F / jour`} icon={ShieldCheck} />
+              <SettingsStatusCard label="Délai" value={`${settings.penalite_retard_delai_jours ?? 0} jours`} icon={CheckCircle} />
             </div>
             <SettingsDocumentPreview
               title={displayName}
@@ -560,15 +856,20 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               secondary={settings.couleur_secondaire ?? '#333333'}
               tribunal={settings.mention_tribunal}
               footer={settings.pied_page_personnalise}
+              qrEnabled={Boolean(settings.qr_code_quittances)}
+              mode={documentModeLabel}
+              selectedType={documentPreviewType}
+              onSelectType={setDocumentPreviewType}
+              preferences={documentPreferences}
             />
-            <SettingsInfoCard title="Mentions configurees" eyebrow="REGISTRE" icon={FileText} className="lg:col-span-2">
+            <SettingsInfoCard title="Mentions configurées" eyebrow="REGISTRE" icon={FileText} className="lg:col-span-2">
               <InfoLine label="Tribunal" value={settings.mention_tribunal} />
               <InfoLine label="Pied de page" value={settings.pied_page_personnalise} />
               <InfoLine label="Frais huissier" value={`${settings.frais_huissier ?? 0} F CFA`} />
               <InfoLine label="Penalites" value={settings.mention_penalites} multiline />
             </SettingsInfoCard>
             {embeddedMode === 'documentsIdentity' && (
-              <SettingsInfoCard title="Identite visuelle" eyebrow="MARQUE" icon={Palette} className="lg:col-span-2">
+              <SettingsInfoCard title="Identité visuelle" eyebrow="MARQUE" icon={Palette} className="lg:col-span-2">
                 <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                   <div className="min-w-0">
                     <InfoLine label="Logo" value={logoPreview ? 'Logo configure' : 'Logo a ajouter'} strong />
@@ -607,19 +908,18 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               secondary={settings.couleur_secondaire ?? '#333333'}
               tribunal={settings.mention_tribunal}
               footer={settings.pied_page_personnalise}
+              qrEnabled={Boolean(settings.qr_code_quittances)}
+              mode={documentModeLabel}
+              selectedType={documentPreviewType}
+              onSelectType={setDocumentPreviewType}
+              preferences={documentPreferences}
             />
           </div>
         )}
 
         {activeTab === 'modules' && (
           <SettingsModulesOverview
-            modules={[
-              { category: 'Portefeuille locatif', items: ['Bailleurs', 'Biens & patrimoine', 'Locations', 'Contrats / baux'] },
-              { category: 'Finance', items: ['Paiements', 'Reliquats', 'Charges', settings.module_depenses_actif ? 'Depenses' : 'Depenses masquees', 'Commissions', 'Rapports'] },
-              { category: 'Documents', items: ['GED', 'QR Verify', 'Scanner', 'Modeles'] },
-              { category: 'Terrain', items: [settings.module_inventaires_actif ? 'Etats des lieux' : 'Etats des lieux a configurer', settings.module_interventions_actif ? 'Maintenance' : 'Maintenance a configurer', 'Planning'] },
-              { category: 'Administration', items: ['Equipe', 'Permissions', 'Abonnement', 'Audit'] },
-            ]}
+            modules={moduleCategories}
           />
         )}
       </div>
@@ -635,13 +935,13 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         <div className="flex flex-col gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 px-2.5 py-2 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="text-[0.64rem] font-black uppercase tracking-[0.18em] text-emerald-700">
-              {hasUnsavedChanges ? 'Modifications en attente' : 'Configuration a jour'}
+              {hasUnsavedChanges ? 'Modifications en attente' : 'Configuration à jour'}
             </p>
-            <p className="truncate text-xs font-semibold text-slate-500">Edition compacte du Control Center.</p>
+            <p className="truncate text-xs font-semibold text-slate-500">Édition compacte du Control Center.</p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <PremiumButton variant="secondary" size="sm" onClick={() => setEditingEmbedded(false)}>
-              Voir synthese
+              Revenir à l'aperçu
             </PremiumButton>
             <PremiumButton
               variant="create"
@@ -650,7 +950,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               disabled={saving || !hasUnsavedChanges}
               icon={saving ? <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" /> : <Save className="h-4 w-4" />}
             >
-              {saving ? 'Enregistrement...' : !hasUnsavedChanges ? 'A jour' : 'Sauvegarder'}
+              {saving ? 'Enregistrement...' : !hasUnsavedChanges ? 'À jour' : 'Sauvegarder'}
             </PremiumButton>
           </div>
         </div>
@@ -682,7 +982,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 />
               </label>
               <label>
-                <span className={embeddedLabelClass}>Telephone</span>
+                <span className={embeddedLabelClass}>Téléphone</span>
                 <input
                   type="text"
                   value={formatSenegalPhone(settings.telephone, '')}
@@ -720,7 +1020,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               )}
               {!isIndividualOwner && (
                 <label>
-                  <span className={embeddedLabelClass}>Representant legal</span>
+                  <span className={embeddedLabelClass}>Représentant légal</span>
                   <input type="text" value={settings.representant_nom ?? ''} onChange={(e) => setSettings({ ...settings, representant_nom: e.target.value })} className={embeddedFieldClass} />
                 </label>
               )}
@@ -729,7 +1029,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 <input type="text" value={settings.representant_fonction ?? ''} onChange={(e) => setSettings({ ...settings, representant_fonction: e.target.value })} className={embeddedFieldClass} />
               </label>
               <label>
-                <span className={embeddedLabelClass}>Type piece</span>
+                <span className={embeddedLabelClass}>Type pièce</span>
                 <select value={settings.manager_id_type ?? 'CNI'} onChange={(e) => setSettings({ ...settings, manager_id_type: e.target.value })} className={embeddedFieldClass}>
                   <option value="CNI">CNI</option>
                   <option value="Passeport">Passeport</option>
@@ -737,7 +1037,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 </select>
               </label>
               <label>
-                <span className={embeddedLabelClass}>Numero piece</span>
+                <span className={embeddedLabelClass}>Numéro pièce</span>
                 <input type="text" value={settings.manager_id_number ?? ''} onChange={(e) => setSettings({ ...settings, manager_id_number: e.target.value })} className={embeddedFieldClass} />
               </label>
             </div>
@@ -748,7 +1048,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
           <section className="grid gap-2.5 lg:grid-cols-[minmax(0,0.95fr)_minmax(18rem,1.05fr)]">
             <div className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
               <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Documents</p>
-              <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Reglages documentaires</h3>
+              <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Réglages documentaires</h3>
               <div className="mt-2.5 grid gap-2.5">
                 {supportsDocumentMode && (
                   <label>
@@ -765,7 +1065,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   </label>
                 )}
                 <label>
-                  <span className={embeddedLabelClass}>Tribunal competent</span>
+                  <span className={embeddedLabelClass}>Tribunal compétent</span>
                   <input type="text" value={settings.mention_tribunal ?? ''} onChange={(e) => setSettings({ ...settings, mention_tribunal: e.target.value })} className={embeddedFieldClass} />
                 </label>
                 <label>
@@ -773,7 +1073,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   <input type="text" value={settings.pied_page_personnalise ?? ''} onChange={(e) => setSettings({ ...settings, pied_page_personnalise: e.target.value })} className={embeddedFieldClass} />
                 </label>
                 <label>
-                  <span className={embeddedLabelClass}>Texte penalites</span>
+                  <span className={embeddedLabelClass}>Texte pénalités</span>
                   <textarea value={settings.mention_penalites ?? ''} onChange={(e) => setSettings({ ...settings, mention_penalites: e.target.value })} className={embeddedTextareaClass} />
                 </label>
                 <div className="grid gap-2.5 sm:grid-cols-3">
@@ -782,20 +1082,120 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     <input type="number" value={settings.frais_huissier ?? 0} onChange={(e) => setSettings({ ...settings, frais_huissier: Number(e.target.value) })} className={embeddedFieldClass} />
                   </label>
                   <label>
-                    <span className={embeddedLabelClass}>Penalite / jour</span>
+                    <span className={embeddedLabelClass}>Pénalité / jour</span>
                     <input type="number" value={settings.penalite_retard_montant ?? 0} onChange={(e) => setSettings({ ...settings, penalite_retard_montant: Number(e.target.value) })} className={embeddedFieldClass} />
                   </label>
                   <label>
-                    <span className={embeddedLabelClass}>Delai</span>
+                    <span className={embeddedLabelClass}>Délai</span>
                     <input type="number" value={settings.penalite_retard_delai_jours ?? 0} onChange={(e) => setSettings({ ...settings, penalite_retard_delai_jours: Number(e.target.value) })} className={embeddedFieldClass} />
                   </label>
+                </div>
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  <label>
+                    <span className={embeddedLabelClass}>Style d'entête</span>
+                    <select
+                      value={documentPreferences.header_style ?? 'institutionnel'}
+                      onChange={(event) => updateDocumentPreferences({ header_style: event.target.value as NonNullable<AgencySettings['document_preferences']>['header_style'] })}
+                      className={embeddedFieldClass}
+                    >
+                      <option value="institutionnel">Institutionnel</option>
+                      <option value="sobriete">Sobriété</option>
+                      <option value="moderne">Moderne</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span className={embeddedLabelClass}>Numérotation</span>
+                    <select
+                      value={documentPreferences.numbering_format ?? 'Q-YYYY-0001'}
+                      onChange={(event) => updateDocumentPreferences({ numbering_format: event.target.value as NonNullable<AgencySettings['document_preferences']>['numbering_format'] })}
+                      className={embeddedFieldClass}
+                    >
+                      <option value="Q-YYYY-0001">Q-YYYY-0001</option>
+                      <option value="SK-Q-0001">SK-Q-0001</option>
+                      <option value="AGENCE-YYYY-0001">AGENCE-YYYY-0001</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2">
+                  <p className="text-[0.52rem] font-black uppercase tracking-[0.12em] text-slate-500">Préfixes et QR</p>
+                  <div className="mt-2 grid gap-1.5">
+                    {(Object.keys(DOCUMENT_PREVIEWS) as DocumentPreviewType[]).map((type) => (
+                      <div key={type} className="grid grid-cols-[minmax(0,1fr)_4rem_auto] items-center gap-1.5">
+                        <span className="truncate text-[0.62rem] font-extrabold text-slate-700">{DOCUMENT_PREVIEWS[type].label}</span>
+                        <input
+                          value={documentPreferences.prefixes?.[type] ?? ''}
+                          onChange={(event) => updateDocumentPrefix(type, event.target.value)}
+                          className="h-7 rounded-lg border border-emerald-950/10 bg-white px-2 text-[0.62rem] font-black uppercase text-slate-800 outline-none focus:ring-2 focus:ring-emerald-700/15"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleDocumentQr(type)}
+                          className={`h-7 rounded-lg px-2 text-[0.52rem] font-black uppercase tracking-[0.08em] ring-1 transition ${
+                            documentPreferences.qr_documents?.[type] !== false
+                              ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                              : 'bg-slate-50 text-slate-500 ring-slate-200'
+                          }`}
+                        >
+                          QR
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  <label className="sm:col-span-2">
+                    <span className={embeddedLabelClass}>Texte QR</span>
+                    <input
+                      type="text"
+                      value={documentPreferences.qr_text ?? ''}
+                      onChange={(event) => updateDocumentPreferences({ qr_text: event.target.value })}
+                      className={embeddedFieldClass}
+                    />
+                  </label>
+                  <label>
+                    <span className={embeddedLabelClass}>Notice quittance</span>
+                    <input
+                      type="text"
+                      value={documentPreferences.receipt_notice ?? ''}
+                      onChange={(event) => updateDocumentPreferences({ receipt_notice: event.target.value })}
+                      className={embeddedFieldClass}
+                    />
+                  </label>
+                  <label>
+                    <span className={embeddedLabelClass}>Notice paiement</span>
+                    <input
+                      type="text"
+                      value={documentPreferences.payment_notice ?? ''}
+                      onChange={(event) => updateDocumentPreferences({ payment_notice: event.target.value })}
+                      className={embeddedFieldClass}
+                    />
+                  </label>
+                </div>
+                <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2">
+                  <p className="text-[0.52rem] font-black uppercase tracking-[0.12em] text-slate-500">Options du document aperçu</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {Object.entries(documentPreferences.document_options?.[documentPreviewType] ?? {}).map(([key, enabled]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggleDocumentOption(documentPreviewType, key)}
+                        className={`rounded-full px-2 py-1 text-[0.52rem] font-black uppercase tracking-[0.08em] ring-1 transition ${
+                          enabled
+                            ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                            : 'bg-slate-50 text-slate-500 ring-slate-200'
+                        }`}
+                      >
+                        {key}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="space-y-2.5">
               <div className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
-                <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Identite visuelle</p>
+                <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Identité visuelle</p>
                 <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Logo et couleurs</h3>
                 <div className="mt-2.5 grid gap-2.5">
                   <label className="block" onDrop={handleLogoDrop} onDragOver={(e) => e.preventDefault()}>
@@ -811,8 +1211,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                         {logoPreview ? <img src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Upload className="h-5 w-5 text-emerald-800" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[0.72rem] font-extrabold text-slate-950">{logoUploadState === 'uploading' ? 'Upload en cours...' : 'Cliquer ou deposer un logo'}</p>
-                        <p className="text-[0.62rem] font-semibold text-slate-500">PNG, SVG, JPG, WEBP jusqu'a 5 Mo.</p>
+                        <p className="text-[0.72rem] font-extrabold text-slate-950">{logoUploadState === 'uploading' ? 'Upload en cours...' : 'Cliquer ou déposer un logo'}</p>
+                        <p className="text-[0.62rem] font-semibold text-slate-500">PNG, SVG, JPG, WEBP jusqu'à 5 Mo.</p>
                       </div>
                     </div>
                   </label>
@@ -849,6 +1249,11 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 secondary={settings.couleur_secondaire ?? '#333333'}
                 tribunal={settings.mention_tribunal}
                 footer={settings.pied_page_personnalise}
+                qrEnabled={Boolean(settings.qr_code_quittances)}
+                mode={documentModeLabel}
+                selectedType={documentPreviewType}
+                onSelectType={setDocumentPreviewType}
+                preferences={documentPreferences}
               />
             </div>
           </section>
@@ -857,31 +1262,14 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         {activeTab === 'modules' && (
           <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
             <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Modules & navigation</p>
-            <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Une seule matrice, pas de switches decoratifs</h3>
-            <div className="mt-2.5 grid gap-1.5 lg:grid-cols-2">
-              <ModuleToggle
-                title="Depenses"
-                description="Suivi des charges, depenses bailleurs et justificatifs."
-                enabled={Boolean(settings.module_depenses_actif)}
-                onToggle={() => setSettings({ ...settings, module_depenses_actif: !settings.module_depenses_actif })}
-              />
-              <ModuleToggle
-                title="Etats des lieux"
-                description="Inventaires, entrees, sorties et documents associes."
-                enabled={Boolean(settings.module_inventaires_actif)}
-                onToggle={() => setSettings({ ...settings, module_inventaires_actif: !settings.module_inventaires_actif })}
-              />
-              <ModuleToggle
-                title="Maintenance"
-                description="Demandes d'intervention, suivi terrain et priorites."
-                enabled={Boolean(settings.module_interventions_actif)}
-                onToggle={() => setSettings({ ...settings, module_interventions_actif: !settings.module_interventions_actif })}
-              />
-              <ModuleToggle
-                title="Mode avance"
-                description="Options expertes pour equipes structurees."
-                enabled={Boolean(settings.mode_avance_actif)}
-                onToggle={() => setSettings({ ...settings, mode_avance_actif: !settings.mode_avance_actif })}
+            <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Matrice de navigation</h3>
+            <p className="mt-0.5 text-[0.66rem] leading-4 text-slate-600">
+              Les interrupteurs ci-dessous sont uniquement affiches pour les modules deja relies aux reglages agence.
+            </p>
+            <div className="mt-2.5">
+              <SettingsModulesOverview
+                modules={moduleCategories}
+                onToggle={(target) => setSettings(updateModuleToggle(settings, target))}
               />
             </div>
           </section>
@@ -1526,39 +1914,6 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   );
 }
 
-function ModuleToggle({
-  title,
-  description,
-  enabled,
-  onToggle,
-}: {
-  title: string;
-  description: string;
-  enabled: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="flex min-w-0 items-center justify-between gap-2.5 rounded-lg border border-emerald-950/10 bg-[#fffdf8] px-2.5 py-1.5 text-left shadow-sm transition hover:border-emerald-800/20 hover:bg-emerald-50/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
-    >
-      <div className="min-w-0">
-        <p className="text-[0.72rem] font-extrabold text-slate-950">{title}</p>
-        <p className="mt-0.5 line-clamp-2 text-xs font-semibold leading-5 text-slate-500">{description}</p>
-      </div>
-      <span className="flex shrink-0 items-center gap-2">
-        <span className={`rounded-full px-1.5 py-0.5 text-[0.54rem] font-black uppercase tracking-[0.1em] ${enabled ? 'bg-emerald-50 text-emerald-700' : 'bg-orange-50 text-orange-700'}`}>
-          {enabled ? 'Actif' : 'Masque'}
-        </span>
-        <span className={`relative inline-flex h-6 w-10 rounded-full p-1 transition-colors ${enabled ? 'bg-emerald-700' : 'bg-slate-200'}`}>
-          <span className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-4' : 'translate-x-0'}`} />
-        </span>
-      </span>
-    </button>
-  );
-}
-
 function SettingsActionBar({
   eyebrow,
   title,
@@ -1616,7 +1971,7 @@ function SettingsInfoCard({
 }
 
 function InfoLine({ label, value, strong = false, multiline = false }: { label: string; value?: string | null; strong?: boolean; multiline?: boolean }) {
-  const resolved = value && String(value).trim() ? String(value) : 'Non renseigne';
+  const resolved = value && String(value).trim() ? String(value) : 'Non renseigné';
   return (
     <div className={`grid gap-2 py-0.5 ${multiline ? '' : 'sm:grid-cols-[5.75rem_minmax(0,1fr)] sm:items-center'}`}>
       <dt className="text-[0.58rem] font-bold text-slate-500">{label}</dt>
@@ -1662,6 +2017,11 @@ function SettingsDocumentPreview({
   secondary,
   tribunal,
   footer,
+  qrEnabled,
+  mode,
+  selectedType,
+  onSelectType,
+  preferences,
 }: {
   title: string;
   logoUrl?: string;
@@ -1669,62 +2029,117 @@ function SettingsDocumentPreview({
   secondary: string;
   tribunal?: string | null;
   footer?: string | null;
+  qrEnabled: boolean;
+  mode: string;
+  selectedType: DocumentPreviewType;
+  onSelectType: (type: DocumentPreviewType) => void;
+  preferences: NonNullable<AgencySettings['document_preferences']>;
 }) {
+  const preview = DOCUMENT_PREVIEWS[selectedType];
+  const prefix = preferences.prefixes?.[selectedType] ?? preview.reference.split('-')[0];
+  const reference = `${prefix}-${preview.reference.split('-').slice(1).join('-') || '2026-001'}`;
+  const qrVisible = qrEnabled && preferences.qr_documents?.[selectedType] !== false;
+  const headerStyleLabel = preferences.header_style === 'moderne'
+    ? 'Moderne'
+    : preferences.header_style === 'sobriete'
+      ? 'Sobriete'
+      : 'Institutionnel';
+  const notice = selectedType === 'quittance'
+    ? preferences.receipt_notice
+    : selectedType === 'facture'
+      ? preferences.payment_notice
+      : preferences.confidentiality_notice;
+
   return (
     <section className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm">
-      <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-[#a45d12]">Apercu document</p>
+      <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-[#a45d12]">Aperçu document</p>
+          <h3 className="mt-0.5 text-[0.72rem] font-extrabold text-slate-950">Rendu final par document</h3>
+        </div>
+        <div className="flex gap-1 overflow-x-auto pb-0.5 scrollbar-hide">
+          {(Object.keys(DOCUMENT_PREVIEWS) as DocumentPreviewType[]).map((type) => {
+            const active = type === selectedType;
+            return (
+              <button
+                key={type}
+                type="button"
+                onClick={() => onSelectType(type)}
+                className={[
+                  'shrink-0 rounded-lg border px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-[0.08em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20',
+                  active ? 'border-emerald-800 bg-emerald-950 text-white' : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-800/30',
+                ].join(' ')}
+              >
+                {DOCUMENT_PREVIEWS[type].label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <div className="mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner">
-        <div className="flex items-center justify-between gap-2 px-2.5 py-2" style={{ borderTop: `3px solid ${primary}` }}>
+        <div className="flex items-start justify-between gap-2 px-2.5 py-2" style={{ borderTop: `3px solid ${primary}` }}>
           <div className="min-w-0">
             <p className="truncate text-[0.72rem] font-extrabold text-slate-950">{title}</p>
             <p className="text-[0.5rem] font-bold uppercase tracking-[0.12em]" style={{ color: secondary }}>
-              Contrat / quittance
+              {preview.title}
             </p>
+            <p className="mt-0.5 text-[0.54rem] font-semibold text-slate-500">{preview.meta}</p>
           </div>
-          <div className="flex h-8 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-50 p-1.5">
-            {logoUrl ? <img src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" /> : <FileText className="h-4 w-4 text-slate-400" />}
+          <div className="flex shrink-0 items-center gap-1.5">
+            {qrVisible && (
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800">
+                <QrCode className="h-3.5 w-3.5" />
+              </div>
+            )}
+            <div className="flex h-8 w-12 items-center justify-center rounded-lg bg-slate-50 p-1.5">
+              {logoUrl ? <img src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" /> : <FileText className="h-4 w-4 text-slate-400" />}
+            </div>
           </div>
         </div>
-        <div className="space-y-1 px-2.5 py-2">
-          <div className="h-1.5 w-2/3 rounded-full bg-slate-100" />
+        <div className="grid gap-1 px-2.5 py-2 sm:grid-cols-3">
+          <div className="rounded-lg bg-slate-50 px-1.5 py-1">
+            <p className="text-[0.46rem] font-black uppercase tracking-[0.1em] text-slate-400">Référence</p>
+            <p className="truncate text-[0.62rem] font-extrabold text-slate-800">{reference}</p>
+          </div>
+          <div className="rounded-lg bg-emerald-50 px-1.5 py-1">
+            <p className="text-[0.46rem] font-black uppercase tracking-[0.1em] text-emerald-700">Montant</p>
+            <p className="truncate text-[0.62rem] font-extrabold text-emerald-900">{preview.amount}</p>
+          </div>
+          <div className="rounded-lg bg-orange-50 px-1.5 py-1">
+            <p className="text-[0.46rem] font-black uppercase tracking-[0.1em] text-orange-700">Mode</p>
+            <p className="truncate text-[0.62rem] font-extrabold text-orange-900">{headerStyleLabel} · {mode}</p>
+          </div>
+        </div>
+        <div className="space-y-1 px-2.5 pb-2">
           <div className="h-1.5 w-5/6 rounded-full bg-slate-100" />
+          <div className="h-1.5 w-2/3 rounded-full bg-slate-100" />
           <div className="h-1.5 w-1/2 rounded-full bg-slate-100" />
         </div>
         <div className="border-t border-slate-100 px-2.5 py-1.5 text-[0.58rem] font-semibold leading-[0.84rem] text-slate-500">
-          <p className="truncate">Tribunal : {tribunal || 'Non renseigne'}</p>
-          <p className="mt-1 truncate">Pied de page : {footer || 'Non renseigne'}</p>
+          {notice && <p className="line-clamp-2 text-slate-600">{notice}</p>}
+          <p className="truncate">Tribunal : {tribunal || 'Non renseigné'}</p>
+          <p className="mt-1 truncate">Pied de page : {footer || 'Non renseigné'}</p>
         </div>
       </div>
     </section>
   );
 }
 
-function SettingsModulesOverview({ modules }: { modules: Array<{ category: string; items: string[] }> }) {
-  const moduleCopy: Record<string, string> = {
-    Bailleurs: 'Proprietaires et portefeuille.',
-    'Biens & patrimoine': 'Biens, unites et occupation.',
-    Locations: 'Occupants, baux et cycles.',
-    'Contrats / baux': 'Documents contractuels.',
-    Paiements: 'Encaissements et quittances.',
-    Reliquats: 'Creances et relances.',
-    Charges: 'Charges et exploitation.',
-    Depenses: 'Depenses operationnelles.',
-    Commissions: 'Revenus agence.',
-    Rapports: 'Syntheses et exports.',
-    GED: 'Coffre documentaire.',
-    'QR Verify': 'Preuves publiques.',
-    Scanner: 'Verification mobile.',
-    Modeles: 'Regles documentaires.',
-    'Etats des lieux': 'Constats terrain.',
-    Maintenance: 'Demandes et suivi.',
-    Planning: 'Operations terrain.',
-    Equipe: 'Collaborateurs.',
-    Permissions: 'Pages et droits.',
-    Abonnement: 'Plan et limites.',
-    Audit: 'Journal sensible.',
+function SettingsModulesOverview({
+  modules,
+  onToggle,
+}: {
+  modules: SettingsModuleCategory[];
+  onToggle?: (target: ModuleToggleTarget) => void;
+}) {
+  const statusCopy: Record<SettingsModuleItem['status'], { label: string; className: string }> = {
+    system: { label: 'Système', className: 'bg-slate-100 text-slate-600' },
+    essential: { label: 'Essentiel', className: 'bg-emerald-50 text-emerald-700' },
+    active: { label: 'Actif', className: 'bg-emerald-50 text-emerald-700' },
+    inactive: { label: 'Masqué', className: 'bg-orange-50 text-orange-700' },
+    prepared: { label: 'Préparé', className: 'bg-blue-50 text-blue-700' },
+    plan: { label: 'Plan +', className: 'bg-violet-50 text-violet-700' },
   };
-  const cleanLabel = (item: string) => item.replace(' masquees', '').replace(' a configurer', '');
-  const isInactive = (item: string) => item.toLowerCase().includes('masque') || item.toLowerCase().includes('configurer');
 
   return (
     <div className="space-y-2">
@@ -1732,35 +2147,60 @@ function SettingsModulesOverview({ modules }: { modules: Array<{ category: strin
         <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">Modules & pages</p>
         <h2 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">Workspace visible par domaine</h2>
         <p className="mt-0.5 max-w-2xl text-[0.62rem] leading-[0.86rem] text-slate-600">
-          Les modules systeme restent actifs. Les modules optionnels utilisent les reglages existants quand ils sont réellement branches.
+          Les modules système restent actifs. Les modules optionnels utilisent les réglages existants quand ils sont réellement branchés.
         </p>
       </section>
       <div className="grid gap-2 xl:grid-cols-2">
         {modules.map((group) => {
-          const activeCount = group.items.filter((item) => !isInactive(item)).length;
+          const activeCount = group.items.filter((item) => ['system', 'essential', 'active'].includes(item.status)).length;
           return (
           <section key={group.category} className="rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="truncate text-[0.72rem] font-extrabold text-slate-950">{group.category}</h3>
+              <div className="min-w-0">
+                <h3 className="truncate text-[0.72rem] font-extrabold text-slate-950">{group.category}</h3>
+                <p className="truncate text-[0.56rem] font-semibold text-slate-500">{group.description}</p>
+              </div>
               <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-[0.1em] text-emerald-700">
                 {activeCount}/{group.items.length}
               </span>
             </div>
-            <div className="mt-1.5 grid gap-1 sm:grid-cols-2">
+            <div className="mt-1.5 grid gap-1">
               {group.items.map((item) => {
-                const inactive = isInactive(item);
-                const label = cleanLabel(item);
+                const status = statusCopy[item.status];
+                const toggleTarget = item.toggle ?? null;
+                const canToggle = Boolean(onToggle && toggleTarget);
                 return (
-                  <div key={item} className={`min-w-0 rounded-lg border px-1.5 py-1 ${inactive ? 'border-orange-100 bg-orange-50/45' : 'border-slate-100 bg-[#fffdf8]'}`}>
+                  <div key={item.label} className="min-w-0 rounded-lg border border-slate-100 bg-[#fffdf8] px-1.5 py-1">
                     <div className="flex min-w-0 items-center justify-between gap-1.5">
-                      <span className="min-w-0 truncate text-[0.64rem] font-extrabold text-slate-800">{label}</span>
-                      <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.46rem] font-black uppercase tracking-[0.1em] ${inactive ? 'bg-orange-100 text-orange-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                        {inactive ? 'Config.' : 'Actif'}
-                      </span>
+                      <div className="min-w-0">
+                        <span className="block truncate text-[0.64rem] font-extrabold text-slate-800">{item.label}</span>
+                        <p className="truncate text-[0.56rem] font-medium text-slate-500" title={item.description}>
+                          {item.description}
+                        </p>
+                        {item.impact && (
+                          <p className="truncate text-[0.5rem] font-black uppercase tracking-[0.08em] text-slate-400" title={item.impact}>
+                            {item.impact}
+                          </p>
+                        )}
+                      </div>
+                      {canToggle ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleTarget && onToggle?.(toggleTarget)}
+                          className="flex shrink-0 items-center gap-1.5 rounded-full bg-white px-1 py-0.5 text-[0.48rem] font-black uppercase tracking-[0.08em] text-slate-600 shadow-sm ring-1 ring-emerald-950/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
+                          aria-pressed={item.status === 'active'}
+                        >
+                          <span className={`h-3 w-5 rounded-full p-0.5 transition-colors ${item.status === 'active' ? 'bg-emerald-700' : 'bg-slate-200'}`}>
+                            <span className={`block h-2 w-2 rounded-full bg-white transition-transform ${item.status === 'active' ? 'translate-x-2' : 'translate-x-0'}`} />
+                          </span>
+                          {item.status === 'active' ? 'Actif' : 'Masqué'}
+                        </button>
+                      ) : (
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.46rem] font-black uppercase tracking-[0.1em] ${status.className}`}>
+                          {status.label}
+                        </span>
+                      )}
                     </div>
-                    <p className="mt-0.5 truncate text-[0.56rem] font-medium text-slate-500" title={moduleCopy[label] ?? 'Module disponible.'}>
-                      {moduleCopy[label] ?? 'Module disponible.'}
-                    </p>
                   </div>
                 );
               })}

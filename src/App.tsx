@@ -101,6 +101,37 @@ const PAGE_LABELS: Record<string, string> = {
     pricing: 'Tarifs',
 };
 
+type AppModuleSettings = Pick<
+    AgencySettings,
+    | 'module_depenses_actif'
+    | 'module_inventaires_actif'
+    | 'module_interventions_actif'
+    | 'mode_avance_actif'
+    | 'qr_code_quittances'
+    | 'enabled_modules'
+>;
+
+function normalizeAppModuleSettings(data: Partial<AppModuleSettings> | null | undefined): AppModuleSettings {
+    return {
+        module_depenses_actif: data?.module_depenses_actif ?? true,
+        module_inventaires_actif: data?.module_inventaires_actif ?? false,
+        module_interventions_actif: data?.module_interventions_actif ?? false,
+        mode_avance_actif: data?.mode_avance_actif ?? false,
+        qr_code_quittances: data?.qr_code_quittances ?? true,
+        enabled_modules: data?.enabled_modules ?? {},
+    };
+}
+
+function isMissingSettingsColumnError(error: { code?: string; message?: string } | null | undefined) {
+    const message = error?.message?.toLowerCase() ?? '';
+    return (
+        error?.code === '42703' ||
+        error?.code === 'PGRST204' ||
+        message.includes('enabled_modules') ||
+        message.includes('qr_code_quittances')
+    );
+}
+
 function AppContent() {
     const { user, profile, accountProfile, loading } = useAuth();
     const navigate = useNavigate();
@@ -115,12 +146,7 @@ function AppContent() {
     });
     const { pendingCount, syncing, isOnline, errorCount } = useOfflineSync();
     const [showWelcomeAnyway, setShowWelcomeAnyway] = useState(false);
-    const [moduleSettings, setModuleSettings] = useState<
-        Pick<
-            AgencySettings,
-            'module_depenses_actif' | 'module_inventaires_actif' | 'module_interventions_actif' | 'mode_avance_actif'
-        > | null
-    >(null);
+    const [moduleSettings, setModuleSettings] = useState<AppModuleSettings | null>(null);
     const [userPermissions, setUserPermissions] = useState<UserPermissionMap | null>(null);
     const [invitationToken, setInvitationToken] = useState<string | null>(() => {
         const params = new URLSearchParams(window.location.search);
@@ -271,18 +297,26 @@ function AppContent() {
                     { agencyId: profile.agency_id, userId: profile.id },
                     'app-module-settings',
                     async () => {
-                        const { data, error } = await supabase
+                        const querySettings = (columns: string) => supabase
                             .from('agency_settings')
-                            .select('module_depenses_actif,module_inventaires_actif,module_interventions_actif,mode_avance_actif')
+                            .select(columns)
                             .eq('agency_id', profile.agency_id)
                             .maybeSingle();
+
+                        let { data, error } = await querySettings(
+                            'module_depenses_actif,module_inventaires_actif,module_interventions_actif,mode_avance_actif,qr_code_quittances,enabled_modules'
+                        );
+
+                        if (error && isMissingSettingsColumnError(error)) {
+                            const legacyResult = await querySettings(
+                                'module_depenses_actif,module_inventaires_actif,module_interventions_actif,mode_avance_actif'
+                            );
+                            data = legacyResult.data;
+                            error = legacyResult.error;
+                        }
+
                         if (error) throw error;
-                        return {
-                            module_depenses_actif: data?.module_depenses_actif ?? true,
-                            module_inventaires_actif: data?.module_inventaires_actif ?? false,
-                            module_interventions_actif: data?.module_interventions_actif ?? false,
-                            mode_avance_actif: data?.mode_avance_actif ?? false,
-                        };
+                        return normalizeAppModuleSettings(data as Partial<AppModuleSettings> | null);
                     },
                     { timeoutMs: 5_000 }
                 );
@@ -291,10 +325,7 @@ function AppContent() {
             } catch {
                 if (!alive) return;
                 setModuleSettings({
-                    module_depenses_actif: true,
-                    module_inventaires_actif: false,
-                    module_interventions_actif: false,
-                    mode_avance_actif: false,
+                    ...normalizeAppModuleSettings(null),
                 });
             }
         })();
@@ -432,6 +463,7 @@ function AppContent() {
     const renderPage = () => {
         if (!canAccessAccountPage(profile.role, currentPage, accountProfile, moduleSettings, userPermissions)) {
             const reason = getAccountPageAccessReason(currentPage, accountProfile, moduleSettings, userPermissions);
+            const moduleDisabled = reason.toLowerCase().includes('module') && reason.toLowerCase().includes('désactiv');
             return (
                 <div className="flex min-h-full items-center justify-center p-6">
                     <div className="max-w-lg rounded-3xl border border-emerald-100 bg-white p-8 text-center shadow-2xl shadow-emerald-950/10">
@@ -443,10 +475,10 @@ function AppContent() {
                         <p className="mt-3 text-sm leading-6 text-slate-600">{reason}</p>
                         <button
                             type="button"
-                            onClick={() => handleNavigate('dashboard')}
+                            onClick={() => handleNavigate(moduleDisabled && profile.role === 'admin' ? 'parametres' : 'dashboard')}
                             className="mt-6 inline-flex items-center justify-center rounded-xl bg-emerald-800 px-5 py-3 text-sm font-black text-white shadow-lg shadow-emerald-900/20 transition hover:-translate-y-0.5 hover:bg-emerald-900"
                         >
-                            Retour au tableau de bord
+                            {moduleDisabled && profile.role === 'admin' ? 'Réactiver dans Modules' : 'Retour au tableau de bord'}
                         </button>
                     </div>
                 </div>

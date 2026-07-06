@@ -3,7 +3,12 @@ import type { UserRole } from './supabase';
 
 type ModuleSettings = Pick<
   AgencySettings,
-  'module_depenses_actif' | 'module_inventaires_actif' | 'module_interventions_actif' | 'mode_avance_actif'
+  | 'module_depenses_actif'
+  | 'module_inventaires_actif'
+  | 'module_interventions_actif'
+  | 'mode_avance_actif'
+  | 'qr_code_quittances'
+  | 'enabled_modules'
 >;
 
 export type AccessLevel = 'none' | 'read' | 'write' | 'admin';
@@ -114,6 +119,18 @@ export function isModuleEnabled(page: string, settings?: Partial<ModuleSettings>
   if (page === 'depenses') return settings.module_depenses_actif !== false;
   if (page === 'inventaires') return settings.module_inventaires_actif !== false;
   if (page === 'interventions') return settings.module_interventions_actif !== false;
+  const enabledModules = settings.enabled_modules ?? {};
+  const enabled = (key: string, fallback = true) => {
+    const value = enabledModules[key];
+    return typeof value === 'boolean' ? value : fallback;
+  };
+  if (page === 'commissions') return enabled('commissions');
+  if (page === 'calendrier') return enabled('planning');
+  if (page === 'audit') return enabled('audit_trail', false);
+  if (page === 'tableau-de-bord-financier' || page === 'filtres-avances') {
+    return settings.mode_avance_actif !== false && enabled('advanced_reports', Boolean(settings.mode_avance_actif));
+  }
+  if (page === 'documents/scan') return enabled('document_scanner') && settings.qr_code_quittances !== false;
   return true;
 }
 

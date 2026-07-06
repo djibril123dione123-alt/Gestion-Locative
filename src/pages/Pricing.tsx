@@ -23,38 +23,27 @@ import { BrandLogo } from '../components/brand/BrandLogo';
 import orangeMoneyLogo from '../assets/payments/orange-money.png';
 import waveLogo from '../assets/payments/wave.png';
 import djamoLogo from '../assets/payments/djamo.png';
+import { CONTACT_WHATSAPP, PRICING_PLAN_DEFINITIONS, type PlanId, type PricingPlanDefinition } from '../lib/pricingCatalog';
 
-type PlanId = 'starter' | 'pro' | 'business' | 'enterprise';
-
-interface PlanDef {
-  id: PlanId;
-  name: string;
-  audience: string;
-  price: number;
-  priceLabel: string;
-  billingLabel: string;
-  positioning: string;
-  outcome: string;
+interface PlanDef extends PricingPlanDefinition {
   icon: typeof Zap;
-  accent: string;
-  surface: string;
-  highlighted?: boolean;
-  badge?: string;
-  capacities: {
-    users: string;
-    immeubles: string;
-    unites: string;
-    storage: string;
-  };
-  value: string[];
-  infrastructure: string[];
-  cta: string;
-  ctaStyle: 'primary' | 'secondary' | 'outline' | 'contact';
+  price: number;
 }
 
-const CONTACT_WHATSAPP = '221769010960';
+const PLAN_ICONS: Record<PlanId, typeof Zap> = {
+  starter: Zap,
+  pro: Building2,
+  business: BarChart3,
+  enterprise: Crown,
+};
 
-const PLANS: PlanDef[] = [
+const PLANS: PlanDef[] = PRICING_PLAN_DEFINITIONS.map((plan) => ({
+  ...plan,
+  icon: PLAN_ICONS[plan.id],
+  price: plan.price_xof,
+}));
+
+/*
   {
     id: 'starter',
     name: 'Starter',
@@ -174,6 +163,7 @@ const PLANS: PlanDef[] = [
     ctaStyle: 'contact',
   },
 ];
+*/
 
 const TRUST_POINTS = [
   {

@@ -1,20 +1,23 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, type FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 import { CheckoutModal } from '../components/billing/CheckoutModal';
+import { Modal } from '../components/ui/Modal';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import {
   CreditCard, CheckCircle2, Clock, Zap, Building2, Crown,
   BarChart3, TrendingUp, AlertTriangle, Calendar, Users,
   Home, DoorOpen, ChevronRight, ArrowUpRight, HardDrive,
+  FileCheck2, Send,
 } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
 import { SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
 import { formatStorageSize, getAgencyStorageUsage, type StorageUsage } from '../services/documentStorage';
 import gmailLogo from '../assets/support/gmail.png';
 import whatsappLogo from '../assets/support/whatsapp.jpg';
+import { CONTACT_EMAIL, CONTACT_WHATSAPP, PRICING_PLAN_DEFINITIONS, type PlanId } from '../lib/pricingCatalog';
 
 interface Plan {
   id: string;
@@ -51,12 +54,27 @@ interface Usage {
   unites: number;
 }
 
+interface SubscriptionPaymentProof {
+  id: string;
+  agency_id: string;
+  subscription_id: string | null;
+  plan_key: string;
+  amount: number;
+  currency: string;
+  method: string;
+  reference: string | null;
+  payment_date: string | null;
+  proof_file_url: string | null;
+  proof_storage_path: string | null;
+  comment: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  submitted_by: string | null;
+  created_at: string;
+}
+
 interface AbonnementProps {
   embedded?: boolean;
 }
-
-const CONTACT_WHATSAPP = '221769010960';
-const CONTACT_EMAIL    = 'samaykeur@gmail.com';
 
 function SupportLogo({ src, alt, fallback, className }: { src: string; alt: string; fallback: string; className: string }) {
   const [failed, setFailed] = useState(false);
@@ -72,7 +90,28 @@ function SupportLogo({ src, alt, fallback, className }: { src: string; alt: stri
 }
 
 // Plans canoniques — source de vérité pour l'UI
-const PLAN_CATALOG = [
+const PLAN_ICONS: Record<PlanId, typeof Zap> = {
+  starter: Zap,
+  pro: Building2,
+  business: BarChart3,
+  enterprise: Crown,
+};
+
+const PLAN_CATALOG = PRICING_PLAN_DEFINITIONS.map((plan) => ({
+  id: plan.id,
+  name: plan.name,
+  price_xof: plan.price_xof,
+  max_users: plan.limits.max_users,
+  max_immeubles: plan.limits.max_immeubles,
+  max_unites: plan.limits.max_unites,
+  storage_gb: plan.limits.storage_gb,
+  icon: PLAN_ICONS[plan.id],
+  color: plan.accent,
+  badge: plan.badge,
+  features: plan.features,
+}));
+
+/*
   {
     id: 'starter',
     name: 'Starter',
@@ -123,6 +162,7 @@ const PLAN_CATALOG = [
     features: ['Capacité sur mesure', 'White-label', 'SLA contractualisé', 'Account manager', 'Formation sur site'],
   },
 ] as const;
+*/
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string }> = {
   active:    { label: 'Actif',     color: '#15803D', bg: '#F0FDF4', border: '#BBF7D0' },
@@ -130,6 +170,20 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   past_due:  { label: 'Impayé',   color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
   suspended: { label: 'Suspendu', color: '#B91C1C', bg: '#FEF2F2', border: '#FECACA' },
   cancelled: { label: 'Annulé',   color: '#475569', bg: '#F8FAFC', border: '#E2E8F0' },
+};
+
+const MANUAL_PAYMENT_METHODS = [
+  { id: 'orange_money', label: 'Orange Money' },
+  { id: 'wave', label: 'Wave' },
+  { id: 'djamo', label: 'Djamo' },
+  { id: 'bank_transfer', label: 'Virement' },
+  { id: 'cash', label: 'Espèces' },
+] as const;
+
+const PROOF_STATUS_COPY: Record<SubscriptionPaymentProof['status'], { label: string; className: string }> = {
+  pending: { label: 'En attente', className: 'bg-orange-50 text-orange-700 ring-orange-200' },
+  approved: { label: 'Validée', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  rejected: { label: 'Rejetée', className: 'bg-red-50 text-red-700 ring-red-200' },
 };
 
 export function Abonnement({ embedded = false }: AbonnementProps = {}) {
@@ -146,6 +200,19 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>('pro');
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [manualProofs, setManualProofs] = useState<SubscriptionPaymentProof[]>([]);
+  const [proofsAvailable, setProofsAvailable] = useState(true);
+  const [manualProofOpen, setManualProofOpen] = useState(false);
+  const [submittingProof, setSubmittingProof] = useState(false);
+  const [proofForm, setProofForm] = useState({
+    plan_key: 'pro',
+    amount: '15000',
+    method: 'wave',
+    reference: '',
+    payment_date: new Date().toISOString().slice(0, 10),
+    proof_file_url: '',
+    comment: '',
+  });
 
   const load = useCallback(async () => {
     if (!profile?.agency_id) return;
@@ -177,6 +244,26 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
 
       if (limitsRes.data?.usage) setUsage(limitsRes.data.usage as Usage);
       if (storageRes) setStorageUsage(storageRes);
+
+      const { data: proofRows, error: proofError } = await supabase
+        .from('subscription_payment_proofs')
+        .select('*')
+        .eq('agency_id', profile.agency_id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (proofError) {
+        const missingTable = proofError.code === '42P01' || /subscription_payment_proofs|does not exist/i.test(proofError.message ?? '');
+        if (missingTable) {
+          setProofsAvailable(false);
+          setManualProofs([]);
+        } else {
+          console.warn('Erreur chargement preuves abonnement:', proofError.message);
+        }
+      } else {
+        setProofsAvailable(true);
+        setManualProofs((proofRows ?? []) as SubscriptionPaymentProof[]);
+      }
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Erreur de chargement');
     } finally {
@@ -199,6 +286,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
   const catalogPlan   = PLAN_CATALOG.find((p) => p.id === currentPlanId) ?? PLAN_CATALOG[0];
   const displayedPlanName = catalogPlan.name;
   const selectedCatalogPlan = PLAN_CATALOG.find((p) => p.id === selectedPlanId) ?? PLAN_CATALOG[1];
+  const latestManualProof = useMemo(() => manualProofs[0] ?? null, [manualProofs]);
   const getPlanFeatures = (plan: (typeof PLAN_CATALOG)[number]) => {
     if (!isIndividualOwner) return plan.features;
     const individualFeatures: Record<string, readonly string[]> = {
@@ -213,6 +301,55 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
   const openPayment = (planId: string) => {
     setSelectedPlanId(planId);
     setPaymentOpen(true);
+  };
+
+  const openManualProof = () => {
+    setProofForm({
+      plan_key: currentPlanId === 'starter' ? 'pro' : currentPlanId,
+      amount: String(catalogPlan.price_xof > 0 ? catalogPlan.price_xof : 15000),
+      method: 'wave',
+      reference: '',
+      payment_date: new Date().toISOString().slice(0, 10),
+      proof_file_url: '',
+      comment: '',
+    });
+    setManualProofOpen(true);
+  };
+
+  const submitManualProof = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!profile?.agency_id) return;
+    const amount = Number(proofForm.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Indiquez un montant valide.');
+      return;
+    }
+
+    setSubmittingProof(true);
+    const { error } = await supabase.from('subscription_payment_proofs').insert({
+      agency_id: profile.agency_id,
+      subscription_id: subscription?.id ?? null,
+      plan_key: proofForm.plan_key,
+      amount,
+      currency: 'XOF',
+      method: proofForm.method,
+      reference: proofForm.reference.trim() || null,
+      payment_date: proofForm.payment_date || null,
+      proof_file_url: proofForm.proof_file_url.trim() || null,
+      comment: proofForm.comment.trim() || null,
+      status: 'pending',
+      submitted_by: profile.id,
+    });
+    setSubmittingProof(false);
+
+    if (error) {
+      toast.error("Impossible d'enregistrer la preuve pour le moment.");
+      return;
+    }
+
+    toast.success('Preuve transmise au support.');
+    setManualProofOpen(false);
+    load();
   };
 
   const renderUsageBar = (icon: React.ReactNode, label: string, used: number, max: number, testId?: string) => {
@@ -294,15 +431,43 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
           </div>
           <div className="rounded-xl border border-orange-200/70 bg-orange-50/70 p-2.5 shadow-sm">
             <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-orange-700">Paiement manuel</p>
-            <p className="mt-0.5 text-[0.72rem] font-extrabold text-slate-950">Validation par support</p>
+            <div className="mt-1 flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-[0.72rem] font-extrabold text-slate-950">Validation par support</p>
+                {proofsAvailable && latestManualProof ? (
+                  <p className="mt-0.5 truncate text-[0.62rem] font-semibold text-slate-600">
+                    Dernière preuve · {formatCurrency(Number(latestManualProof.amount))}
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-[0.62rem] font-semibold leading-3 text-slate-600">
+                    Problème de paiement ? Contactez le support ou déclarez une preuve.
+                  </p>
+                )}
+              </div>
+              {proofsAvailable && latestManualProof ? (
+                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-[0.08em] ring-1 ${PROOF_STATUS_COPY[latestManualProof.status].className}`}>
+                  {PROOF_STATUS_COPY[latestManualProof.status].label}
+                </span>
+              ) : null}
+            </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
-              <a href="https://wa.me/221769010960" target="_blank" rel="noopener noreferrer" className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm">
+              {proofsAvailable && (
+                <button
+                  type="button"
+                  onClick={openManualProof}
+                  className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm transition hover:bg-emerald-50"
+                >
+                  <FileCheck2 className="mr-1.5 h-3.5 w-3.5" />
+                  Déclarer
+                </button>
+              )}
+              <a href={`https://wa.me/${CONTACT_WHATSAPP}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm">
                 <SupportLogo src={whatsappLogo} alt="WhatsApp" fallback="WA" className="mr-1.5 h-4 w-4 rounded-md" />
                 WhatsApp
               </a>
-              <a href="mailto:samaykeur@gmail.com" className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm">
+              <a href={`mailto:${CONTACT_EMAIL}`} className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm">
                 <SupportLogo src={gmailLogo} alt="Gmail" fallback="GM" className="mr-1.5 h-4 w-4 rounded-md" />
-                Email support
+                Email
               </a>
             </div>
           </div>
@@ -432,6 +597,64 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
           )}
         </div>
       </div>
+
+      {proofsAvailable && (
+        <div className={embedded ? 'rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm' : 'sk-premium-panel p-5 sm:p-6'}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className={embedded ? 'text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700' : 'text-xs font-bold uppercase tracking-wider text-emerald-700'}>
+                Paiements manuels
+              </p>
+              <h2 className={embedded ? 'mt-0.5 text-[0.82rem] font-extrabold text-slate-900' : 'mt-1 text-lg font-bold text-slate-900'}>
+                Preuves transmises au support
+              </h2>
+              <p className={embedded ? 'mt-0.5 text-[0.66rem] leading-4 text-slate-500' : 'mt-1 text-sm text-slate-500'}>
+                Le paiement en ligne reste prioritaire. Les preuves manuelles sont validées par le support.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={openManualProof}
+              className={embedded ? 'sk-action sk-action-secondary h-8 px-2.5 text-[0.7rem]' : 'sk-action sk-action-secondary px-4 py-2.5'}
+            >
+              <FileCheck2 className="h-4 w-4" />
+              Déclarer une preuve
+            </button>
+          </div>
+
+          {manualProofs.length === 0 ? (
+            <div className="mt-2 rounded-xl border border-dashed border-emerald-950/12 bg-[#fffdf8] p-2 text-[0.66rem] font-semibold text-slate-500">
+              Aucune preuve manuelle transmise. Pour un paiement hors ligne, ajoutez la référence ou contactez le support.
+            </div>
+          ) : (
+            <ul className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-100 bg-[#fffdf8]">
+              {manualProofs.map((proof) => {
+                const status = PROOF_STATUS_COPY[proof.status] ?? PROOF_STATUS_COPY.pending;
+                const methodLabel = MANUAL_PAYMENT_METHODS.find((method) => method.id === proof.method)?.label ?? proof.method;
+                return (
+                  <li key={proof.id} className="flex flex-col gap-1.5 px-2 py-1.5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="truncate text-[0.7rem] font-extrabold text-slate-900">
+                        {formatCurrency(Number(proof.amount))} · {methodLabel}
+                      </p>
+                      <p className="truncate text-[0.58rem] font-semibold text-slate-500">
+                        {proof.reference ? `Réf. ${proof.reference} · ` : ''}
+                        {new Date(proof.payment_date ?? proof.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </p>
+                      {proof.comment && (
+                        <p className="truncate text-[0.56rem] font-medium text-slate-400">{proof.comment}</p>
+                      )}
+                    </div>
+                    <span className={`w-fit rounded-full px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-[0.08em] ring-1 ${status.className}`}>
+                      {status.label}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* ── Grille comparaison plans ── */}
       <div className={embedded ? 'rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm' : 'sk-premium-panel p-5 sm:p-6'}>
@@ -620,6 +843,126 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={manualProofOpen}
+        onClose={() => setManualProofOpen(false)}
+        title="Déclarer une preuve"
+        description="Le support valide la preuve puis active le plan si le paiement est confirmé."
+      >
+        <form onSubmit={submitManualProof} className="space-y-3">
+          <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5">
+            <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-emerald-700">Paiement manuel</p>
+            <p className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">
+              Plan {PLAN_CATALOG.find((plan) => plan.id === proofForm.plan_key)?.name ?? proofForm.plan_key}
+            </p>
+            <p className="mt-0.5 text-[0.66rem] font-semibold leading-4 text-slate-500">
+              Ajoutez la référence du paiement ou un lien vers la preuve si vous l'avez déjà partagée.
+            </p>
+          </div>
+
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label>
+              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Plan</span>
+              <select
+                value={proofForm.plan_key}
+                onChange={(event) => setProofForm((form) => ({
+                  ...form,
+                  plan_key: event.target.value,
+                  amount: String(PLAN_CATALOG.find((plan) => plan.id === event.target.value)?.price_xof || form.amount),
+                }))}
+                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
+              >
+                {PLAN_CATALOG.filter((plan) => plan.id !== 'enterprise').map((plan) => (
+                  <option key={plan.id} value={plan.id}>{plan.name}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Montant</span>
+              <input
+                type="number"
+                min="0"
+                value={proofForm.amount}
+                onChange={(event) => setProofForm((form) => ({ ...form, amount: event.target.value }))}
+                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
+              />
+            </label>
+            <label>
+              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Moyen</span>
+              <select
+                value={proofForm.method}
+                onChange={(event) => setProofForm((form) => ({ ...form, method: event.target.value }))}
+                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
+              >
+                {MANUAL_PAYMENT_METHODS.map((method) => (
+                  <option key={method.id} value={method.id}>{method.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Référence</span>
+              <input
+                type="text"
+                value={proofForm.reference}
+                onChange={(event) => setProofForm((form) => ({ ...form, reference: event.target.value }))}
+                placeholder="Ex : WAVE-1289"
+                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
+              />
+            </label>
+            <label>
+              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Date paiement</span>
+              <input
+                type="date"
+                value={proofForm.payment_date}
+                onChange={(event) => setProofForm((form) => ({ ...form, payment_date: event.target.value }))}
+                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
+              />
+            </label>
+            <label className="sm:col-span-2">
+              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Lien preuve</span>
+              <input
+                type="url"
+                value={proofForm.proof_file_url}
+                onChange={(event) => setProofForm((form) => ({ ...form, proof_file_url: event.target.value }))}
+                placeholder="Lien Drive, reçu ou capture déjà partagée"
+                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
+              />
+            </label>
+            <label className="sm:col-span-2">
+              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Commentaire</span>
+              <textarea
+                value={proofForm.comment}
+                onChange={(event) => setProofForm((form) => ({ ...form, comment: event.target.value }))}
+                placeholder="Ex : paiement transmis par Wave au nom de l'agence"
+                className="min-h-[4rem] w-full rounded-lg border border-emerald-950/10 bg-white px-2 py-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setManualProofOpen(false)}
+              className="sk-action sk-action-secondary h-9 justify-center px-3 text-xs"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={submittingProof}
+              className="sk-action sk-action-financial h-9 justify-center px-3 text-xs disabled:opacity-60"
+            >
+              {submittingProof ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-white" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+              Transmettre
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* ── Checkout modal ── */}
       <CheckoutModal

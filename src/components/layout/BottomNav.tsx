@@ -13,7 +13,12 @@ interface BottomNavProps {
   moduleSettings?: Partial<
     Pick<
       AgencySettings,
-      'module_depenses_actif' | 'module_inventaires_actif' | 'module_interventions_actif' | 'mode_avance_actif'
+      | 'module_depenses_actif'
+      | 'module_inventaires_actif'
+      | 'module_interventions_actif'
+      | 'mode_avance_actif'
+      | 'qr_code_quittances'
+      | 'enabled_modules'
     >
   > | null;
   userPermissions?: UserPermissionMap | null;

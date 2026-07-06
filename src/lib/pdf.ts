@@ -73,11 +73,11 @@ const AGENCY_SETTINGS_SELECT_LEGACY = `agency_id, nom_agence, adresse, telephone
   pied_page_personnalise, signature_url, qr_code_quittances,
   penalite_retard_montant, penalite_retard_delai_jours, frais_huissier,
   mention_tribunal, mention_penalites, mention_frais_huissier, mention_litige`;
-const AGENCY_SETTINGS_SELECT_EXTENDED = `${AGENCY_SETTINGS_SELECT_LEGACY}, document_mode, enabled_modules, proprietaire_info`;
+const AGENCY_SETTINGS_SELECT_EXTENDED = `${AGENCY_SETTINGS_SELECT_LEGACY}, document_mode, enabled_modules, document_preferences, proprietaire_info`;
 
 function shouldRetryLegacySelect(error: { message?: string; code?: string } | null): boolean {
   const message = error?.message?.toLowerCase() ?? '';
-  return error?.code === '42703' || message.includes('organization_type') || message.includes('document_mode') || message.includes('enabled_modules') || message.includes('proprietaire_info') || message.includes('column');
+  return error?.code === '42703' || message.includes('organization_type') || message.includes('document_mode') || message.includes('enabled_modules') || message.includes('document_preferences') || message.includes('proprietaire_info') || message.includes('column');
 }
 
 async function loadAgencySettingsRow(agencyId: string): Promise<Partial<AgencySettings> | null> {

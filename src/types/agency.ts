@@ -4,6 +4,21 @@ export interface AgencySettings {
   organization_type?: 'agence' | 'bailleur_individuel' | 'gestionnaire' | 'groupe' | 'agency' | 'individual_landlord' | 'multi_property_landlord' | 'property_manager' | 'group';
   document_mode?: 'simple' | 'professional' | 'legal';
   enabled_modules?: Record<string, boolean>;
+  document_preferences?: {
+    header_style?: 'sobriete' | 'institutionnel' | 'moderne';
+    show_slogan?: boolean;
+    numbering_format?: 'Q-YYYY-0001' | 'SK-Q-0001' | 'AGENCE-YYYY-0001';
+    reset_numbering_yearly?: boolean;
+    show_document_number?: boolean;
+    prefixes?: Record<string, string>;
+    qr_documents?: Record<string, boolean>;
+    qr_text?: string;
+    qr_position?: 'bottom_right' | 'footer' | 'cover';
+    confidentiality_notice?: string;
+    payment_notice?: string;
+    receipt_notice?: string;
+    document_options?: Record<string, Record<string, boolean>>;
+  };
   proprietaire_info?: Record<string, string | null>;
   nom_agence: string | null;
   adresse: string | null;

@@ -2,19 +2,23 @@ import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType, type 
 import {
   ArrowRight,
   AlertTriangle,
+  Activity,
   BadgeCheck,
   Building2,
   CheckCircle2,
   CreditCard,
+  Database,
   FileText,
   HardDrive,
   LayoutDashboard,
   LifeBuoy,
   LockKeyhole,
   Mail,
+  Server,
   ShieldCheck,
   SlidersHorizontal,
   Users,
+  Wifi,
 } from 'lucide-react';
 
 import { PageShell } from '../components/ui/PageShell';
@@ -35,7 +39,8 @@ type ControlSection =
   | 'modules'
   | 'teamAccess'
   | 'billing'
-  | 'securitySupport';
+  | 'securitySupport'
+  | 'technical';
 
 interface ParametresHubProps {
   initialTab?: LegacyInitialTab;
@@ -103,8 +108,16 @@ const SECTIONS: SectionConfig[] = [
     label: 'Sécurité',
     title: 'Sécurité & support',
     eyebrow: 'SÉCURITÉ',
-    description: 'Accès, audit, statut système et canaux de support.',
+    description: 'Accès, audit et canaux de support.',
     icon: LockKeyhole,
+  },
+  {
+    id: 'technical',
+    label: 'Technique',
+    title: 'État technique',
+    eyebrow: 'SYSTÈME',
+    description: 'Application, documents, QR Verify, stockage et synchronisation.',
+    icon: Server,
   },
 ];
 
@@ -256,6 +269,7 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
             {activeSection === 'teamAccess' && <Equipe embedded sectionMode="access" />}
             {activeSection === 'billing' && <Abonnement embedded />}
             {activeSection === 'securitySupport' && <SecuritySupportSection role={profile?.role ?? 'admin'} isIndividualOwner={isIndividualOwner} />}
+            {activeSection === 'technical' && <TechnicalSection />}
           </Suspense>
         </main>
       </section>
@@ -343,9 +357,18 @@ function OverviewSection({
       title: 'Sécurité',
       label: 'RBAC',
       value: role,
-      description: 'Accès, audit, statut système et assistance.',
+      description: 'Accès, audit et assistance.',
       icon: ShieldCheck,
       target: 'securitySupport',
+      tone: 'slate',
+    },
+    {
+      title: 'Technique',
+      label: 'Système',
+      value: 'Opérationnel',
+      description: 'Application, documents, QR Verify et stockage.',
+      icon: Server,
+      target: 'technical',
       tone: 'slate',
     },
   ];
@@ -471,13 +494,6 @@ function PanelCard({ title, eyebrow, children, icon }: { title: string; eyebrow:
 }
 
 function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isIndividualOwner: boolean }) {
-  const statuses: Array<{ label: string; value: string; icon: ComponentType<{ className?: string }> }> = [
-    { label: 'Application', value: 'Opérationnelle', icon: CheckCircle2 },
-    { label: 'Documents', value: 'Disponible', icon: FileText },
-    { label: 'QR Verify', value: 'Actif', icon: ShieldCheck },
-    { label: 'Stockage', value: 'Contrôlé', icon: HardDrive },
-  ];
-
   return (
     <div className="space-y-2">
       <div className="grid gap-2 lg:grid-cols-3">
@@ -499,6 +515,36 @@ function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isI
         </PanelCard>
       </div>
 
+      <div className="grid gap-2 lg:grid-cols-2">
+        <PanelCard title="Support WhatsApp" eyebrow="ASSISTANCE" icon={LifeBuoy}>
+          <p>Canal rapide pour abonnement, incident bloquant ou accompagnement commercial.</p>
+          <a href="https://wa.me/221769010960" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex text-[0.68rem] font-extrabold text-emerald-800 underline-offset-2 hover:underline">
+            Contacter WhatsApp
+          </a>
+        </PanelCard>
+        <PanelCard title="Email support" eyebrow="CONTACT" icon={Mail}>
+          <p>Canal de suivi administratif, preuve de paiement manuel et demande non urgente.</p>
+          <a href="mailto:samaykeur@gmail.com" className="mt-2 inline-flex text-[0.68rem] font-extrabold text-emerald-800 underline-offset-2 hover:underline">
+            samaykeur@gmail.com
+          </a>
+        </PanelCard>
+      </div>
+    </div>
+  );
+}
+
+function TechnicalSection() {
+  const statuses: Array<{ label: string; value: string; icon: ComponentType<{ className?: string }> }> = [
+    { label: 'Application', value: 'Opérationnelle', icon: CheckCircle2 },
+    { label: 'Documents', value: 'Disponible', icon: FileText },
+    { label: 'QR Verify', value: 'Actif', icon: ShieldCheck },
+    { label: 'Stockage', value: 'Contrôlé', icon: HardDrive },
+    { label: 'Base de données', value: 'Protégée par RLS', icon: Database },
+    { label: 'Synchronisation', value: 'Prête', icon: Wifi },
+  ];
+
+  return (
+    <div className="space-y-2">
       <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
@@ -506,7 +552,7 @@ function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isI
             <h3 className="mt-0.5 text-[0.78rem] font-extrabold text-slate-950">État opérationnel</h3>
             <p className="mt-0.5 text-[0.64rem] leading-[0.88rem] text-slate-600">Statuts lisibles sans exposer de secret technique.</p>
           </div>
-          <div className="grid min-w-0 flex-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid min-w-0 flex-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
             {statuses.map(({ label, value, icon: Icon }) => (
               <div key={label} className="rounded-lg border border-emerald-950/10 bg-[#fffdf8] px-1.5 py-1 shadow-sm">
                 <div className="flex items-center justify-between gap-2">
@@ -523,17 +569,11 @@ function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isI
       </section>
 
       <div className="grid gap-2 lg:grid-cols-2">
-        <PanelCard title="Support WhatsApp" eyebrow="ASSISTANCE" icon={LifeBuoy}>
-          <p>Canal rapide pour abonnement, incident bloquant ou accompagnement commercial.</p>
-          <a href="https://wa.me/221769010960" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex text-[0.68rem] font-extrabold text-emerald-800 underline-offset-2 hover:underline">
-            Contacter WhatsApp
-          </a>
+        <PanelCard title="Intégrité documentaire" eyebrow="DOCUMENTS" icon={Activity}>
+          <p>Le coffre, le registre QR et le scanner restent suivis comme capacités métier distinctes.</p>
         </PanelCard>
-        <PanelCard title="Email support" eyebrow="CONTACT" icon={Mail}>
-          <p>Canal de suivi administratif, preuve de paiement manuel et demande non urgente.</p>
-          <a href="mailto:samaykeur@gmail.com" className="mt-2 inline-flex text-[0.68rem] font-extrabold text-emerald-800 underline-offset-2 hover:underline">
-            samaykeur@gmail.com
-          </a>
+        <PanelCard title="Données sensibles" eyebrow="CONFIDENTIALITÉ" icon={Database}>
+          <p>Les statuts techniques restent volontairement synthétiques : aucun secret, token ou détail interne sensible n'est exposé.</p>
         </PanelCard>
       </div>
     </div>

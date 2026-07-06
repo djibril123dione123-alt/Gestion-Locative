@@ -34,6 +34,7 @@ import {
   type UserPagePermission,
   type UserPermissionMap,
 } from '../lib/rbac';
+import { getPricingPlan } from '../lib/pricingCatalog';
 import { supabase, type UserRole } from '../lib/supabase';
 
 interface Member {
@@ -109,7 +110,7 @@ const ACTIONS = [
 ] as const;
 
 export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps = {}) {
-  const { profile } = useAuth();
+  const { profile, agency } = useAuth();
   const toast = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -213,6 +214,11 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
       restrictedMembers,
     };
   }, [invitations.length, members, permissionsByUser]);
+
+  const planDefinition = useMemo(() => getPricingPlan(agency?.plan), [agency?.plan]);
+  const userUsageLabel = planDefinition.limits.max_users === -1
+    ? `${stats.activeMembers}/illimite`
+    : `${stats.activeMembers}/${planDefinition.limits.max_users}`;
 
   const openPermissions = (member: Member) => {
     const existing = permissionsByUser[member.id] ?? {};
@@ -681,7 +687,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 Les accès pourront être ajustés ensuite dans Équipe & accès.
               </p>
               <p className="mt-2 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[0.62rem] font-black text-emerald-800">
-                Utilisateurs : {stats.activeMembers}/5
+                Utilisateurs : {userUsageLabel}
               </p>
             </div>
             <div>

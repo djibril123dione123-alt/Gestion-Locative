@@ -564,15 +564,15 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
   if (error) {
     return (
       <PremiumPageShell className="flex min-h-full items-center justify-center">
-        <div className="max-w-md rounded-[1.75rem] border border-red-100 bg-white p-7 text-center shadow-[0_24px_70px_rgba(127,29,29,0.12)]">
-          <AlertCircle className="mx-auto mb-4 h-14 w-14 text-red-500" />
-          <h2 className="text-2xl font-black text-slate-950">Tableau de bord indisponible</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-600">{error}</p>
+        <div className="max-w-sm rounded-2xl border border-red-100 bg-white p-5 text-center shadow-[0_18px_54px_rgba(127,29,29,0.1)]">
+          <AlertCircle className="mx-auto mb-3 h-9 w-9 text-red-500" />
+          <h2 className="text-lg font-black text-slate-950">Tableau de bord indisponible</h2>
+          <p className="mt-2 text-xs leading-5 text-slate-600">{error}</p>
           <PremiumButton
             variant="primary"
-            size="lg"
-            className="mt-6"
-            icon={<RefreshCw className="h-4 w-4" />}
+            size="sm"
+            className="mt-4 !h-8 !px-3 !text-xs"
+            icon={<RefreshCw className="h-3.5 w-3.5" />}
             onClick={() => {
               if (!profile?.agency_id) {
                 setError("Votre compte n'a pas d'agence associée.");
@@ -595,7 +595,7 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
   }
 
   return (
-    <PremiumPageShell className="space-y-4 pb-28 sm:space-y-5 lg:pb-8">
+    <PremiumPageShell className="space-y-2 pb-24 sm:space-y-2.5 lg:pb-5">
       <DashboardHeader
         selectedMonth={selectedMonth}
         onMonthChange={setSelectedMonth}
@@ -609,24 +609,24 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
 
       <MetricGrid model={model} />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,0.78fr)_minmax(0,1.18fr)_minmax(320px,0.72fr)]">
-        <div className="order-2 xl:order-1">
-          <DashboardPriorityList priorities={model.priorities} onNavigate={onNavigate} />
-        </div>
-        <div className="order-1 xl:order-2">
+      <div className="grid gap-2.5 lg:grid-cols-12">
+        <div className="lg:col-span-8">
           <DashboardFinancialSummary model={model} onNavigate={onNavigate} />
         </div>
-        <div className="order-4 xl:order-3">
+        <div className="lg:col-span-4">
           <DashboardHealthCard model={model} onNavigate={onNavigate} />
         </div>
-        <div className="order-6 xl:order-4">
-          <DashboardActivityFeed items={model.activities} onNavigate={onNavigate} />
+        <div className="lg:col-span-6">
+          <DashboardPriorityList priorities={model.priorities} onNavigate={onNavigate} />
         </div>
-        <div className="order-5 xl:order-5">
+        <div className="lg:col-span-6">
+          <TopUnpaidList items={model.topUnpaid} onNavigate={onNavigate} />
+        </div>
+        <div className="lg:col-span-6 xl:col-span-5">
           <DashboardWatchList items={model.watchItems} onNavigate={onNavigate} />
         </div>
-        <div className="order-3 xl:order-6">
-          <TopUnpaidList items={model.topUnpaid} onNavigate={onNavigate} />
+        <div className="lg:col-span-6 xl:col-span-7">
+          <DashboardActivityFeed items={model.activities} onNavigate={onNavigate} />
         </div>
       </div>
 
@@ -914,34 +914,34 @@ function firstNumber(payload: Record<string, unknown>, keys: string[]): number |
 
 function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: DashboardProps & { onLoaded: () => void }) {
   return (
-    <PremiumPageShell className="space-y-6 lg:space-y-8">
-      <section className="relative overflow-hidden rounded-[2rem] border border-emerald-950/5 bg-[linear-gradient(135deg,#FDFBF7_0%,#F3F9F6_100%)] p-7 shadow-[0_24px_60px_rgba(6,17,13,0.06)] lg:p-12">
-        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-emerald-200/30 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 left-0 h-56 w-56 rounded-full bg-orange-200/20 blur-3xl" />
-        <div className="relative mx-auto max-w-4xl text-center">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-brand-800 shadow-[0_8px_30px_rgba(0,0,0,0.04)] ring-1 ring-emerald-900/5">
-            <Sparkles className="h-8 w-8" />
+    <PremiumPageShell className="space-y-2.5 lg:space-y-3">
+      <section className="relative overflow-hidden rounded-xl border border-emerald-950/5 bg-[linear-gradient(135deg,#FDFBF7_0%,#F3F9F6_100%)] p-3 shadow-[0_10px_26px_rgba(6,17,13,0.05)] lg:p-4">
+        <div className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full bg-emerald-200/28 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 left-0 h-36 w-36 rounded-full bg-orange-200/18 blur-3xl" />
+        <div className="relative mx-auto max-w-3xl text-center">
+          <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white text-brand-800 shadow-[0_5px_14px_rgba(0,0,0,0.03)] ring-1 ring-emerald-900/5">
+            <Sparkles className="h-4 w-4" />
           </div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-action-600">Cockpit Samay Këur</p>
-          <h2 className="mt-2 text-4xl font-black tracking-tight text-slate-950 sm:text-5xl">
+          <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-action-600">Cockpit Samay Këur</p>
+          <h2 className="mt-1.5 text-lg font-black tracking-tight text-slate-950 sm:text-xl">
             Votre agence est prête à être structurée.
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-base font-medium leading-8 text-slate-600 sm:text-lg">
+          <p className="mx-auto mt-1.5 max-w-lg text-xs font-medium leading-4 text-slate-600">
             Commencez par créer votre premier bailleur, puis rattachez ses biens, ses locations et ses paiements.
           </p>
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <div className="mt-3 flex flex-col items-center justify-center gap-1.5 sm:flex-row">
             <PremiumButton
               variant="primary"
-              size="lg"
-              icon={<UserRound className="h-5 w-5" />}
+              size="sm"
+              icon={<UserRound className="h-4 w-4" />}
               onClick={() => onNavigate?.('bailleurs')}
             >
               Créer mon premier bailleur
             </PremiumButton>
             <PremiumButton
               variant="secondary"
-              size="lg"
-              icon={<LayoutDashboard className="h-5 w-5" />}
+              size="sm"
+              icon={<LayoutDashboard className="h-4 w-4" />}
               onClick={onStartSetupWizard}
             >
               Reprendre le wizard
@@ -950,11 +950,11 @@ function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: Dashbo
         </div>
       </section>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
-        <section className="rounded-[1.5rem] border border-emerald-950/10 bg-white/95 p-5 shadow-[0_16px_46px_rgba(15,23,42,0.055)]">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-black text-slate-950">Feuille de route</h2>
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-800">0/4 étapes</span>
+      <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1.3fr)_minmax(220px,0.7fr)]">
+        <section className="rounded-xl border border-emerald-950/10 bg-white/95 p-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-xs font-black text-slate-950">Feuille de route</h2>
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[0.62rem] font-black text-emerald-800">0/4 étapes</span>
           </div>
           <div className="divide-y divide-slate-100">
             {[
@@ -967,26 +967,26 @@ function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: Dashbo
                 key={String(title)}
                 type="button"
                 onClick={() => onNavigate?.(String(page))}
-                className="flex w-full items-center gap-4 py-4 text-left transition hover:bg-emerald-50/55"
+                className="flex w-full items-center gap-2 py-2 text-left transition hover:bg-emerald-50/55"
               >
-                <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${index === 0 ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-50 text-slate-500'}`}>
-                  <Icon className="h-5 w-5" />
+                <div className={`flex h-7 w-7 items-center justify-center rounded-md ${index === 0 ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-50 text-slate-500'}`}>
+                  <Icon className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-black text-slate-950">{index + 1}. {String(title)}</p>
-                  <p className="text-sm text-slate-600">{String(description)}</p>
+                  <p className="text-[0.72rem] font-black text-slate-950">{index + 1}. {String(title)}</p>
+                  <p className="text-[0.62rem] text-slate-600">{String(description)}</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-slate-400" />
+                <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
               </button>
             ))}
           </div>
         </section>
-        <section className="rounded-[1.5rem] border border-emerald-950/10 bg-[#fffdf8] p-5 shadow-sm">
-          <h2 className="text-lg font-black text-slate-950">Tester avec des exemples</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
+        <section className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
+          <h2 className="text-xs font-black text-slate-950">Tester avec des exemples</h2>
+          <p className="mt-1 text-[0.68rem] leading-4 text-slate-600">
             Générez des données fictives pour découvrir le cockpit avant de configurer vos vrais dossiers.
           </p>
-          <div className="mt-5">
+          <div className="mt-2">
             <DemoDataLoader variant="compact" onLoaded={onLoaded} />
           </div>
         </section>
@@ -1006,19 +1006,19 @@ function DashboardHeader({
 }) {
   return (
     <PremiumPageHeader
-      density="compact"
+      density="ultraCompact"
       eyebrow="PILOTAGE AGENCE"
       title="Tableau de bord"
       description="Vue d'ensemble de vos performances locatives et financières."
       mobileDescription="Performances locatives."
       sideContent={
-        <label className="flex h-9 shrink-0 items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/95 px-2.5 text-left text-xs font-bold text-slate-800 shadow-[0_2px_8px_rgba(15,23,42,0.03)] transition hover:border-emerald-200">
-          <CalendarDays className="h-4 w-4 text-emerald-700" />
+        <label className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-emerald-950/10 bg-white/95 px-2 text-left text-[0.68rem] font-bold text-slate-800 shadow-[0_2px_8px_rgba(15,23,42,0.03)] transition hover:border-emerald-200">
+          <CalendarDays className="h-3.5 w-3.5 text-emerald-700" />
           <input
             type="month"
             value={selectedMonth}
             onChange={(event) => onMonthChange(event.target.value || CURRENT_MONTH)}
-            className="w-[7.1rem] bg-transparent text-xs font-black text-slate-900 outline-none"
+            className="w-[6.5rem] bg-transparent text-[0.68rem] font-black text-slate-900 outline-none"
             aria-label="PÃ©riode du tableau de bord"
           />
         </label>
@@ -1027,8 +1027,9 @@ function DashboardHeader({
         <PremiumButton
           variant="create"
           size="sm"
-          icon={<Wallet className="h-4 w-4" />}
+          icon={<Wallet className="h-3.5 w-3.5" />}
           onClick={() => onNavigate?.('paiements')}
+          className="!h-8 !px-2.5 !text-[0.7rem]"
         >
           Enregistrer un paiement
         </PremiumButton>
@@ -1043,15 +1044,15 @@ function DashboardAlert({ model, onNavigate }: { model: ReturnType<typeof buildD
       <button
         type="button"
         onClick={() => onNavigate?.('paiements')}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/75 px-4 py-3 text-left shadow-sm transition hover:bg-emerald-50"
+        className="flex w-full items-center justify-between gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/75 px-3 py-2 text-left shadow-sm transition hover:bg-emerald-50"
       >
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-emerald-700 ring-1 ring-emerald-200">
-            <ShieldCheck className="h-5 w-5" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-emerald-700 ring-1 ring-emerald-200">
+            <ShieldCheck className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <p className="font-black text-emerald-950">Aucun impayé critique ce mois-ci</p>
-            <p className="truncate text-sm font-medium text-emerald-800">Continuez à suivre les encaissements et les échéances.</p>
+            <p className="text-[0.82rem] font-black text-emerald-950">Aucun impayé critique ce mois-ci</p>
+            <p className="truncate text-[0.7rem] font-medium text-emerald-800">Continuez à suivre les encaissements et les échéances.</p>
           </div>
         </div>
         <ArrowRight className="h-4 w-4 text-emerald-800" />
@@ -1063,22 +1064,22 @@ function DashboardAlert({ model, onNavigate }: { model: ReturnType<typeof buildD
     <button
       type="button"
       onClick={() => onNavigate?.('loyers-impayes')}
-      className="flex w-full items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50/80 px-4 py-3 text-left shadow-[0_14px_36px_rgba(185,28,28,0.08)] transition hover:bg-red-50"
+      className="flex w-full items-center justify-between gap-2.5 rounded-xl border border-red-200 bg-red-50/80 px-3 py-2 text-left shadow-[0_10px_24px_rgba(185,28,28,0.065)] transition hover:bg-red-50"
     >
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-600 text-white shadow-lg shadow-red-900/15">
-          <AlertCircle className="h-5 w-5" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-600 text-white shadow-lg shadow-red-900/15">
+          <AlertCircle className="h-4 w-4" />
         </div>
         <div className="min-w-0">
-          <p className="font-black text-red-950">
+          <p className="text-[0.82rem] font-black text-red-950">
             {model.unpaidCount} loyer{model.unpaidCount > 1 ? 's' : ''} impayé{model.unpaidCount > 1 ? 's' : ''} à recouvrer
           </p>
-          <p className="truncate text-sm font-semibold text-red-700">
+          <p className="truncate text-[0.7rem] font-semibold text-red-700">
             <MoneyText value={model.reliquats} /> en attente de paiement
           </p>
         </div>
       </div>
-      <span className="hidden rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-700 sm:inline-flex">
+      <span className="hidden rounded-lg border border-red-200 bg-white px-2 py-1 text-[0.65rem] font-black text-red-700 sm:inline-flex">
         Traiter les impayés
       </span>
       <ArrowRight className="h-4 w-4 text-red-700 sm:hidden" />
@@ -1097,7 +1098,7 @@ function MetricGrid({ model }: { model: ReturnType<typeof buildDashboardModel> }
   ];
 
   return (
-    <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
+    <section className="grid grid-cols-2 gap-1.5 md:grid-cols-3 lg:grid-cols-6">
       {metrics.map((metric) => (
         <DashboardKpiCard key={metric.label} {...metric} />
       ))}
@@ -1151,30 +1152,30 @@ function DashboardKpiCard({
   }[tone];
 
   return (
-    <article className={`group min-w-0 overflow-hidden rounded-[1.05rem] border p-2.5 ring-1 ring-white/60 transition duration-300 hover:-translate-y-0.5 sm:p-3.5 ${styles.card}`}>
-      <div className="flex items-start justify-between gap-1.5 sm:gap-2">
+    <article className={`group min-w-0 overflow-hidden rounded-lg border p-1.5 ring-1 ring-white/60 transition duration-300 hover:-translate-y-0.5 sm:p-2 ${styles.card}`}>
+      <div className="flex items-start justify-between gap-1.5">
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 min-h-[2.5em] text-[9px] leading-tight font-bold uppercase tracking-[0.06em] text-slate-500 sm:text-[10px] sm:leading-snug sm:tracking-[0.1em]">{label}</p>
-          <span className={`mt-1 inline-flex rounded px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide sm:px-1.5 sm:text-[9px] ${styles.accent}`}>
+          <p className="truncate text-[7px] font-bold uppercase tracking-[0.06em] text-slate-500 sm:text-[8px]">{label}</p>
+          <span className={`mt-1 inline-flex rounded px-1 py-0.5 text-[7px] font-bold uppercase tracking-wide sm:text-[7.5px] ${styles.accent}`}>
             {accent}
           </span>
         </div>
-        <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition duration-300 group-hover:scale-105 sm:h-7 sm:w-7 ${styles.icon}`}>
-          <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+        <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded transition duration-300 group-hover:scale-105 ${styles.icon}`}>
+          <Icon className="h-2.5 w-2.5" />
         </div>
       </div>
 
-      <div className="mt-2.5 min-w-0 sm:mt-3">
+      <div className="mt-1.5 min-w-0">
         {money ? (
-          <p className={`truncate text-base font-black tracking-tight tabular-nums sm:text-xl ${styles.amount}`} title={formatCurrency(amount ?? 0)}>
+          <p className={`truncate text-[0.78rem] font-black tracking-tight tabular-nums sm:text-sm ${styles.amount}`} title={formatCurrency(amount ?? 0)}>
             {money}
           </p>
         ) : (
-          <p className={`truncate text-base font-black tracking-tight sm:text-xl ${styles.amount}`}>
+          <p className={`truncate text-[0.78rem] font-black tracking-tight sm:text-sm ${styles.amount}`}>
             {value}
           </p>
         )}
-        <p className="mt-0.5 truncate text-[0.65rem] font-medium text-slate-500">{helper}</p>
+        <p className="mt-0.5 truncate text-[0.52rem] font-medium text-slate-500">{helper}</p>
       </div>
     </article>
   );
@@ -1187,7 +1188,7 @@ function formatPrimaryCfa(value: number) {
 function DashboardPriorityList({ priorities, onNavigate }: { priorities: PriorityItem[]; onNavigate?: (page: string) => void }) {
   return (
     <DashboardSection title="Priorités du mois" subtitle="Les dossiers qui méritent une action rapide.">
-      <div className="space-y-2.5">
+      <div className="grid gap-1.5 xl:grid-cols-2">
         {priorities.map((item) => {
           const Icon = item.icon;
           return (
@@ -1195,22 +1196,22 @@ function DashboardPriorityList({ priorities, onNavigate }: { priorities: Priorit
               key={item.id}
               type="button"
               onClick={() => onNavigate?.(item.page)}
-              className="group flex w-full items-center gap-3 rounded-2xl border border-emerald-950/10 bg-white/90 p-3 text-left transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/55"
+              className="group flex w-full items-center gap-2 rounded-lg border border-emerald-950/10 bg-white/90 p-2 text-left transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-emerald-50/55"
             >
-              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${toneIconClass(item.tone)}`}>
-                <Icon className="h-5 w-5" />
+              <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${toneIconClass(item.tone)}`}>
+                <Icon className="h-3.5 w-3.5" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-black text-slate-950">{item.title}</p>
-                  <span className={`rounded-full px-2 py-1 text-[0.65rem] font-black ${toneBadgeClass(item.tone)}`}>
+                  <p className="truncate text-[0.72rem] font-black text-slate-950">{item.title}</p>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[0.52rem] font-black ${toneBadgeClass(item.tone)}`}>
                     {item.actionLabel}
                   </span>
                 </div>
-                <p className="mt-0.5 text-sm font-bold text-slate-800">{item.value}</p>
-                <p className="truncate text-xs font-medium text-slate-500">{item.description}</p>
+                <p className="mt-0.5 text-[0.66rem] font-bold text-slate-800">{item.value}</p>
+                <p className="truncate text-[0.6rem] font-medium text-slate-500">{item.description}</p>
               </div>
-              <ChevronRight className="h-4 w-4 text-slate-400 transition group-hover:translate-x-0.5" />
+              <ChevronRight className="h-3.5 w-3.5 text-slate-400 transition group-hover:translate-x-0.5" />
             </button>
           );
         })}
@@ -1227,14 +1228,14 @@ function DashboardFinancialSummary({ model, onNavigate }: { model: ReturnType<ty
       subtitle="Commissions, dépenses et marge nette. Les encaissements restent le volume locatif traité."
       action={<button type="button" onClick={() => onNavigate?.('tableau-de-bord-financier')} className="text-xs font-black text-emerald-800 hover:text-emerald-950">Voir le détail financier</button>}
     >
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
         <MiniFinance label="Volume locatif" value={<MoneyText value={model.encaissements} compact />} tone="slate" />
         <MiniFinance label="Commissions" value={<MoneyText value={model.commissions} compact />} tone="emerald" />
         <MiniFinance label="Dépenses" value={<MoneyText value={model.depensesMois} compact />} tone="red" />
         <MiniFinance label="Marge nette" value={<MoneyText value={model.margeNette} compact />} tone={model.margeNette >= 0 ? 'emerald' : 'red'} />
       </div>
 
-      <div className="mt-4 h-56 sm:h-64">
+      <div className="mt-2 h-32 sm:h-36 lg:h-40">
         {hasChartData ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={model.monthly} margin={{ top: 8, right: 6, left: -16, bottom: 0 }}>
@@ -1282,26 +1283,26 @@ function DashboardHealthCard({ model, onNavigate }: { model: ReturnType<typeof b
       subtitle={model.healthMessage}
       action={<button type="button" onClick={() => onNavigate?.('patrimoine')} className="text-xs font-black text-emerald-800 hover:text-emerald-950">Voir patrimoine</button>}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2.5">
         <div
-          className="grid h-32 w-32 shrink-0 place-items-center rounded-full shadow-inner"
+          className="grid h-20 w-20 shrink-0 place-items-center rounded-full shadow-inner"
           style={{
             background: `conic-gradient(#047857 ${occupancy * 3.6}deg, #e7ded0 0deg)`,
           }}
           aria-label={`Taux d'occupation ${occupancy}%`}
         >
-          <div className="grid h-20 w-20 place-items-center rounded-full bg-white text-center shadow-sm">
-            <span className="text-2xl font-black text-slate-950">{occupancy}%</span>
-            <span className="-mt-3 text-[0.62rem] font-bold uppercase tracking-[0.12em] text-slate-500">Occupé</span>
+          <div className="grid h-14 w-14 place-items-center rounded-full bg-white text-center shadow-sm">
+            <span className="text-lg font-black text-slate-950">{occupancy}%</span>
+            <span className="-mt-2 text-[0.52rem] font-bold uppercase tracking-[0.1em] text-slate-500">Occupé</span>
           </div>
         </div>
-        <div className="min-w-0 flex-1 space-y-2.5">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <HealthLine label="Unités occupées" value={model.occupiedUnits} tone="emerald" />
           <HealthLine label="Unités libres" value={model.vacantUnits} tone={model.vacantUnits > 0 ? 'amber' : 'slate'} />
           <HealthLine label="Bailleurs actifs" value={model.bailleurs} tone="slate" />
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-3 divide-x divide-emerald-950/10 rounded-2xl border border-emerald-950/10 bg-[#fffdf8]">
+      <div className="mt-2 grid grid-cols-3 divide-x divide-emerald-950/10 rounded-lg border border-emerald-950/10 bg-[#fffdf8]">
         <HealthMini label="Biens" value={model.properties} />
         <HealthMini label="Unités" value={model.units} />
         <HealthMini label="Locataires" value={model.tenants} />
@@ -1324,18 +1325,18 @@ function DashboardActivityFeed({ items, onNavigate }: { items: ActivityItem[]; o
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate?.(item.page)}
-                className="flex w-full items-center gap-3 py-3 text-left transition hover:bg-emerald-50/45"
+                className="flex w-full items-center gap-2.5 py-2.5 text-left transition hover:bg-emerald-50/45"
               >
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${toneIconClass(item.tone)}`}>
-                  <Icon className="h-4 w-4" />
+                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${toneIconClass(item.tone)}`}>
+                  <Icon className="h-3.5 w-3.5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-black text-slate-950">{item.title}</p>
-                  <p className="truncate text-xs font-medium text-slate-500">{item.subtitle}</p>
+                  <p className="truncate text-[0.78rem] font-black text-slate-950">{item.title}</p>
+                  <p className="truncate text-[0.66rem] font-medium text-slate-500">{item.subtitle}</p>
                 </div>
                 <div className="shrink-0 text-right">
-                  {item.amount != null && <p className="text-xs font-black text-emerald-800"><MoneyText value={item.amount} compact /></p>}
-                  <p className="text-[0.68rem] font-semibold text-slate-400">{item.meta}</p>
+                  {item.amount != null && <p className="text-[0.68rem] font-black text-emerald-800"><MoneyText value={item.amount} compact /></p>}
+                  <p className="text-[0.58rem] font-semibold text-slate-400">{item.meta}</p>
                 </div>
               </button>
             );
@@ -1358,14 +1359,14 @@ function DashboardWatchList({ items, onNavigate }: { items: WatchItem[]; onNavig
               key={item.id}
               type="button"
               onClick={() => onNavigate?.(item.page)}
-              className="flex w-full items-center gap-3 py-3 text-left transition hover:bg-emerald-50/45"
+              className="flex w-full items-center gap-2.5 py-2.5 text-left transition hover:bg-emerald-50/45"
             >
               <span className={`h-2.5 w-2.5 rounded-full ${item.tone === 'red' ? 'bg-red-500' : item.tone === 'amber' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-black text-slate-950">{item.title}</span>
-                <span className="block truncate text-xs font-medium text-slate-500">{item.subtitle}</span>
+                <span className="block truncate text-[0.78rem] font-black text-slate-950">{item.title}</span>
+                <span className="block truncate text-[0.66rem] font-medium text-slate-500">{item.subtitle}</span>
               </span>
-              {item.value && <span className={`text-xs font-black ${item.tone === 'red' ? 'text-red-600' : 'text-slate-800'}`}>{item.value}</span>}
+              {item.value && <span className={`text-[0.68rem] font-black ${item.tone === 'red' ? 'text-red-600' : 'text-slate-800'}`}>{item.value}</span>}
             </button>
           ))}
         </div>
@@ -1380,22 +1381,22 @@ function TopUnpaidList({ items, onNavigate }: { items: WatchItem[]; onNavigate?:
       {items.length === 0 ? (
         <CompactEmptyState icon={ShieldCheck} title="Aucun top impayé" text="Les dossiers en retard apparaîtront ici." />
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-1.5">
           {items.map((item, index) => (
             <button
               key={item.id}
               type="button"
               onClick={() => onNavigate?.(item.page)}
-              className="group flex w-full items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/85 p-3 text-left transition hover:border-red-200 hover:bg-red-50/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500"
+              className="group flex w-full items-center gap-2 rounded-lg border border-emerald-950/10 bg-white/85 p-2 text-left transition hover:border-red-200 hover:bg-red-50/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500"
               aria-label={`Traiter l'impayé de ${item.title}`}
             >
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[#f7efe2] text-xs font-black text-slate-700 transition group-hover:bg-red-100 group-hover:text-red-700">{index + 1}</span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-black text-slate-950 transition group-hover:text-red-950">{item.title}</span>
-                <span className="block truncate text-xs font-medium text-red-600/80 transition group-hover:text-red-700">{item.subtitle}</span>
+                <span className="block truncate text-[0.78rem] font-black text-slate-950 transition group-hover:text-red-950">{item.title}</span>
+                <span className="block truncate text-[0.66rem] font-medium text-red-600/80 transition group-hover:text-red-700">{item.subtitle}</span>
               </span>
               <div className="flex shrink-0 items-center gap-2">
-                <span className="text-right text-xs font-black leading-tight text-red-600 transition group-hover:text-red-700">{item.value}</span>
+                <span className="text-right text-[0.68rem] font-black leading-tight text-red-600 transition group-hover:text-red-700">{item.value}</span>
                 <ChevronRight className="h-4 w-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-red-500" />
               </div>
             </button>
@@ -1416,11 +1417,11 @@ function DashboardQuickActions({ onNavigate }: { onNavigate?: (page: string) => 
   ];
 
   return (
-    <section className="rounded-[1.35rem] border border-emerald-950/10 bg-white/88 p-3 shadow-[0_14px_40px_rgba(15,23,42,0.045)]">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-[0_10px_24px_rgba(15,23,42,0.035)]">
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 className="text-sm font-black text-slate-950">Actions rapides</h2>
-          <p className="text-xs font-medium text-slate-500">Accès direct aux flux les plus utilisés.</p>
+          <h2 className="text-[0.82rem] font-black text-slate-950">Actions rapides</h2>
+          <p className="text-[0.68rem] font-medium text-slate-500">Accès direct aux flux les plus utilisés.</p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex">
           {actions.map((action) => {
@@ -1456,11 +1457,11 @@ function DashboardSection({
   children: ReactNode;
 }) {
   return (
-    <section className="min-w-0 rounded-[1.35rem] border border-emerald-950/10 bg-white/92 p-4 shadow-[0_18px_48px_rgba(15,23,42,0.055)] ring-1 ring-white/70 sm:p-5">
-      <div className="mb-3 flex items-start justify-between gap-3">
+    <section className="h-full min-w-0 rounded-xl border border-emerald-950/10 bg-white/92 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.035)] ring-1 ring-white/70">
+      <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-base font-black text-slate-950">{title}</h2>
-          {subtitle && <p className="mt-0.5 line-clamp-2 text-xs font-medium leading-5 text-slate-500">{subtitle}</p>}
+          <h2 className="text-[0.82rem] font-black text-slate-950">{title}</h2>
+          {subtitle && <p className="mt-0.5 line-clamp-2 text-[0.62rem] font-medium leading-3 text-slate-500">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -1476,9 +1477,9 @@ function MiniFinance({ label, value, tone }: { label: string; value: ReactNode; 
       ? 'border-red-200 bg-red-50 text-red-900'
       : 'border-emerald-950/10 bg-[#fffdf8] text-slate-900';
   return (
-    <div className={`@container rounded-xl border px-3 py-2 ${cls}`}>
-      <p className="line-clamp-2 min-h-[2.5em] text-[0.62rem] font-black uppercase tracking-[0.12em] opacity-65">{label}</p>
-      <p className="mt-1 truncate text-sm font-black">{value}</p>
+    <div className={`@container rounded-lg border px-2 py-1.5 ${cls}`}>
+      <p className="truncate text-[0.5rem] font-black uppercase tracking-[0.1em] opacity-65">{label}</p>
+      <p className="mt-0.5 truncate text-[0.7rem] font-black">{value}</p>
     </div>
   );
 }
@@ -1486,33 +1487,33 @@ function MiniFinance({ label, value, tone }: { label: string; value: ReactNode; 
 function HealthLine({ label, value, tone }: { label: string; value: ReactNode; tone: 'emerald' | 'amber' | 'slate' }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <span className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-        <span className={`h-2.5 w-2.5 rounded-full ${tone === 'emerald' ? 'bg-emerald-600' : tone === 'amber' ? 'bg-amber-500' : 'bg-slate-300'}`} />
+      <span className="flex items-center gap-1.5 text-[0.64rem] font-semibold text-slate-600">
+        <span className={`h-1.5 w-1.5 rounded-full ${tone === 'emerald' ? 'bg-emerald-600' : tone === 'amber' ? 'bg-amber-500' : 'bg-slate-300'}`} />
         {label}
       </span>
-      <strong className="text-sm font-black text-slate-950">{value}</strong>
+      <strong className="text-[0.66rem] font-black text-slate-950">{value}</strong>
     </div>
   );
 }
 
 function HealthMini({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="px-3 py-3 text-center">
-      <p className="text-lg font-black text-slate-950">{value}</p>
-      <p className="text-[0.62rem] font-bold uppercase tracking-[0.12em] text-slate-500">{label}</p>
+    <div className="px-2 py-1.5 text-center">
+      <p className="text-[0.76rem] font-black text-slate-950">{value}</p>
+      <p className="text-[0.5rem] font-bold uppercase tracking-[0.1em] text-slate-500">{label}</p>
     </div>
   );
 }
 
 function CompactEmptyState({ icon: Icon, title, text }: { icon: typeof Sparkles; title: string; text: string }) {
   return (
-    <div className="grid min-h-40 place-items-center rounded-2xl border border-dashed border-emerald-950/15 bg-[#fffdf8] p-5 text-center">
+    <div className="grid min-h-20 place-items-center rounded-lg border border-dashed border-emerald-950/15 bg-[#fffdf8] p-2.5 text-center">
       <div>
-        <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-          <Icon className="h-5 w-5" />
+        <div className="mx-auto mb-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+          <Icon className="h-3.5 w-3.5" />
         </div>
-        <p className="font-black text-slate-950">{title}</p>
-        <p className="mt-1 text-sm font-medium text-slate-500">{text}</p>
+        <p className="text-[0.7rem] font-black text-slate-950">{title}</p>
+        <p className="mt-0.5 text-[0.58rem] font-medium text-slate-500">{text}</p>
       </div>
     </div>
   );

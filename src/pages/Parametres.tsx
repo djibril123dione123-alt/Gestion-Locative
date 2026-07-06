@@ -502,7 +502,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
   if (embedded && !editingEmbedded) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <SettingsActionBar
           eyebrow="Lecture premium"
@@ -519,7 +519,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         />
 
         {activeTab === 'general' && (
-          <div className="grid gap-2.5 xl:grid-cols-[minmax(0,1.05fr)_minmax(17rem,0.95fr)]">
+          <div className="grid gap-2 lg:grid-cols-2">
             <SettingsInfoCard title="Identite" eyebrow={isIndividualOwner ? 'PROPRIETAIRE' : 'AGENCE'} icon={Building}>
               <InfoLine label="Nom" value={displayName} strong />
               <InfoLine label="Telephone" value={formatSenegalPhone(settings.telephone, 'Non renseigne')} />
@@ -536,9 +536,9 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               <InfoLine label="Type piece" value={settings.manager_id_type} />
               <InfoLine label="Numero piece" value={settings.manager_id_number} />
             </SettingsInfoCard>
-            <div className="xl:col-span-2 rounded-xl border border-orange-200/70 bg-orange-50/65 p-2.5 text-[0.7rem] font-medium leading-4 text-orange-900">
-              <p className="font-extrabold">Utilisation documentaire</p>
-              <p className="mt-1">
+            <div className="lg:col-span-2 rounded-xl border border-orange-200/70 bg-orange-50/60 px-2 py-1.5 text-[0.62rem] font-medium leading-[0.86rem] text-orange-900 sm:flex sm:items-center sm:gap-2">
+              <p className="shrink-0 font-extrabold uppercase tracking-[0.08em]">Utilisation documentaire</p>
+              <p className="mt-0.5 sm:mt-0">
                 Ces informations apparaissent dans les contrats, mandats, quittances, rapports et documents generes.
               </p>
             </div>
@@ -546,8 +546,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         )}
 
         {activeTab === 'documents' && (
-          <div className="grid gap-2.5 xl:grid-cols-[minmax(0,0.95fr)_minmax(19rem,1.05fr)]">
-            <div className="grid gap-2.5 sm:grid-cols-2">
+          <div className="grid gap-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(16rem,1.05fr)]">
+            <div className="grid gap-2 sm:grid-cols-2">
               <SettingsStatusCard label="Mode documentaire" value={documentModeLabel} icon={FileText} />
               <SettingsStatusCard label="QR Verify" value={settings.qr_code_quittances ? 'Actif' : 'Inactif'} icon={QrCode} />
               <SettingsStatusCard label="Penalites" value={`${settings.penalite_retard_montant ?? 0} F / jour`} icon={ShieldCheck} />
@@ -561,15 +561,15 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               tribunal={settings.mention_tribunal}
               footer={settings.pied_page_personnalise}
             />
-            <SettingsInfoCard title="Mentions configurees" eyebrow="REGISTRE" icon={FileText} className="xl:col-span-2">
+            <SettingsInfoCard title="Mentions configurees" eyebrow="REGISTRE" icon={FileText} className="lg:col-span-2">
               <InfoLine label="Tribunal" value={settings.mention_tribunal} />
               <InfoLine label="Pied de page" value={settings.pied_page_personnalise} />
               <InfoLine label="Frais huissier" value={`${settings.frais_huissier ?? 0} F CFA`} />
               <InfoLine label="Penalites" value={settings.mention_penalites} multiline />
             </SettingsInfoCard>
             {embeddedMode === 'documentsIdentity' && (
-              <SettingsInfoCard title="Identite visuelle" eyebrow="MARQUE" icon={Palette} className="xl:col-span-2">
-                <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+              <SettingsInfoCard title="Identite visuelle" eyebrow="MARQUE" icon={Palette} className="lg:col-span-2">
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                   <div className="min-w-0">
                     <InfoLine label="Logo" value={logoPreview ? 'Logo configure' : 'Logo a ajouter'} strong />
                     <InfoLine label="Position" value={settings.logo_position} />
@@ -586,15 +586,15 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         )}
 
         {activeTab === 'appearance' && (
-          <div className="grid gap-2.5 xl:grid-cols-[minmax(0,0.9fr)_minmax(20rem,1.1fr)]">
+          <div className="grid gap-2 lg:grid-cols-[minmax(0,0.9fr)_minmax(16rem,1.1fr)]">
             <SettingsInfoCard title="Identite visuelle" eyebrow="MARQUE" icon={Palette}>
-              <div className="mb-2.5 flex items-center gap-2.5 rounded-xl border border-emerald-950/10 bg-white/80 p-2.5">
-                <div className="flex h-11 w-16 items-center justify-center rounded-xl bg-[#fff8ed] p-2">
+              <div className="mb-2 flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/80 p-2">
+                <div className="flex h-9 w-14 items-center justify-center rounded-xl bg-[#fff8ed] p-1.5">
                   {logoPreview ? <img src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
                 </div>
                 <div>
-                  <p className="text-[0.72rem] font-extrabold text-slate-950">{logoPreview ? 'Logo charge' : 'Logo a ajouter'}</p>
-                  <p className="text-xs font-semibold text-slate-500">Position : {settings.logo_position ?? 'left'}</p>
+                  <p className="text-[0.66rem] font-extrabold text-slate-950">{logoPreview ? 'Logo charge' : 'Logo a ajouter'}</p>
+                  <p className="text-[0.58rem] font-semibold text-slate-500">Position : {settings.logo_position ?? 'left'}</p>
                 </div>
               </div>
               <ColorLine label="Primaire" value={settings.couleur_primaire ?? '#F58220'} />
@@ -630,7 +630,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     const showDocumentsIdentity = activeTab === 'documents' && embeddedMode === 'documentsIdentity';
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <div className="flex flex-col gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 px-2.5 py-2 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
@@ -745,7 +745,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         )}
 
         {showDocumentsIdentity && (
-          <section className="grid gap-2.5 xl:grid-cols-[minmax(0,0.95fr)_minmax(19rem,1.05fr)]">
+          <section className="grid gap-2.5 lg:grid-cols-[minmax(0,0.95fr)_minmax(18rem,1.05fr)]">
             <div className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
               <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Documents</p>
               <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Reglages documentaires</h3>
@@ -793,7 +793,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <div className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
                 <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Identite visuelle</p>
                 <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Logo et couleurs</h3>
@@ -858,7 +858,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
           <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
             <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Modules & navigation</p>
             <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Une seule matrice, pas de switches decoratifs</h3>
-            <div className="mt-3 grid gap-2">
+            <div className="mt-2.5 grid gap-1.5 lg:grid-cols-2">
               <ModuleToggle
                 title="Depenses"
                 description="Suivi des charges, depenses bailleurs et justificatifs."
@@ -1573,11 +1573,11 @@ function SettingsActionBar({
   onAction: () => void;
 }) {
   return (
-    <section className="flex flex-col gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2.5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    <section className="flex flex-col gap-1.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">{eyebrow}</p>
-        <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">{title}</h2>
-        <p className="mt-0.5 text-[0.7rem] leading-4 text-slate-600">{description}</p>
+        <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">{eyebrow}</p>
+        <h2 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">{title}</h2>
+        <p className="mt-0.5 text-[0.64rem] leading-[0.88rem] text-slate-600">{description}</p>
       </div>
       <PremiumButton variant="secondary" size="sm" onClick={onAction} icon={<Edit3 className="h-3.5 w-3.5" />}>
         {actionLabel}
@@ -1600,14 +1600,14 @@ function SettingsInfoCard({
   className?: string;
 }) {
   return (
-    <section className={`rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm ${className}`}>
-      <div className="mb-1.5 flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
-          <Icon className="h-3 w-3" />
+    <section className={`h-full rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm ${className}`}>
+      <div className="mb-1 flex items-center gap-1.5">
+        <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+          <Icon className="h-2.5 w-2.5" />
         </div>
         <div>
-          <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-slate-500">{eyebrow}</p>
-          <h3 className="text-[0.8rem] font-extrabold text-slate-950">{title}</h3>
+          <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-slate-500">{eyebrow}</p>
+          <h3 className="text-[0.74rem] font-extrabold text-slate-950">{title}</h3>
         </div>
       </div>
       <div className="divide-y divide-slate-100">{children}</div>
@@ -1618,9 +1618,9 @@ function SettingsInfoCard({
 function InfoLine({ label, value, strong = false, multiline = false }: { label: string; value?: string | null; strong?: boolean; multiline?: boolean }) {
   const resolved = value && String(value).trim() ? String(value) : 'Non renseigne';
   return (
-    <div className={`grid gap-2 py-1 ${multiline ? '' : 'sm:grid-cols-[6.5rem_minmax(0,1fr)] sm:items-center'}`}>
-      <dt className="text-[0.64rem] font-bold text-slate-500">{label}</dt>
-      <dd className={`${strong ? 'font-extrabold text-slate-950' : 'font-semibold text-slate-700'} min-w-0 text-[0.72rem] ${multiline ? 'leading-4' : 'truncate sm:text-right'}`}>
+    <div className={`grid gap-2 py-0.5 ${multiline ? '' : 'sm:grid-cols-[5.75rem_minmax(0,1fr)] sm:items-center'}`}>
+      <dt className="text-[0.58rem] font-bold text-slate-500">{label}</dt>
+      <dd className={`${strong ? 'font-extrabold text-slate-950' : 'font-semibold text-slate-700'} min-w-0 text-[0.66rem] ${multiline ? 'leading-[0.9rem]' : 'truncate sm:text-right'}`} title={resolved}>
         {resolved}
       </dd>
     </div>
@@ -1629,14 +1629,14 @@ function InfoLine({ label, value, strong = false, multiline = false }: { label: 
 
 function SettingsStatusCard({ label, value, icon: Icon }: { label: string; value: string; icon: React.ComponentType<{ className?: string }> }) {
   return (
-    <div className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
-      <div className="flex items-center justify-between gap-2.5">
+    <div className="rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
-          <p className="mt-0.5 truncate text-[0.72rem] font-extrabold text-slate-950">{value}</p>
+          <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
+          <p className="mt-0.5 truncate text-[0.66rem] font-extrabold text-slate-950" title={value}>{value}</p>
         </div>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
-          <Icon className="h-3 w-3" />
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+          <Icon className="h-2.5 w-2.5" />
         </div>
       </div>
     </div>
@@ -1671,26 +1671,26 @@ function SettingsDocumentPreview({
   footer?: string | null;
 }) {
   return (
-    <section className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
-      <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-[#a45d12]">Apercu document</p>
-      <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner">
-        <div className="flex items-center justify-between gap-2.5 px-3 py-2.5" style={{ borderTop: `3px solid ${primary}` }}>
+    <section className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm">
+      <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-[#a45d12]">Apercu document</p>
+      <div className="mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner">
+        <div className="flex items-center justify-between gap-2 px-2.5 py-2" style={{ borderTop: `3px solid ${primary}` }}>
           <div className="min-w-0">
-            <p className="truncate text-xs font-extrabold text-slate-950">{title}</p>
-            <p className="text-[0.58rem] font-bold uppercase tracking-[0.12em]" style={{ color: secondary }}>
+            <p className="truncate text-[0.72rem] font-extrabold text-slate-950">{title}</p>
+            <p className="text-[0.5rem] font-bold uppercase tracking-[0.12em]" style={{ color: secondary }}>
               Contrat / quittance
             </p>
           </div>
-          <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded-lg bg-slate-50 p-2">
-            {logoUrl ? <img src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" /> : <FileText className="h-5 w-5 text-slate-400" />}
+          <div className="flex h-8 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-50 p-1.5">
+            {logoUrl ? <img src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" /> : <FileText className="h-4 w-4 text-slate-400" />}
           </div>
         </div>
-        <div className="space-y-1.5 px-3 py-2.5">
-          <div className="h-2 w-2/3 rounded-full bg-slate-100" />
-          <div className="h-2 w-5/6 rounded-full bg-slate-100" />
-          <div className="h-2 w-1/2 rounded-full bg-slate-100" />
+        <div className="space-y-1 px-2.5 py-2">
+          <div className="h-1.5 w-2/3 rounded-full bg-slate-100" />
+          <div className="h-1.5 w-5/6 rounded-full bg-slate-100" />
+          <div className="h-1.5 w-1/2 rounded-full bg-slate-100" />
         </div>
-        <div className="border-t border-slate-100 px-3 py-2 text-[0.64rem] font-semibold text-slate-500">
+        <div className="border-t border-slate-100 px-2.5 py-1.5 text-[0.58rem] font-semibold leading-[0.84rem] text-slate-500">
           <p className="truncate">Tribunal : {tribunal || 'Non renseigne'}</p>
           <p className="mt-1 truncate">Pied de page : {footer || 'Non renseigne'}</p>
         </div>
@@ -1700,34 +1700,74 @@ function SettingsDocumentPreview({
 }
 
 function SettingsModulesOverview({ modules }: { modules: Array<{ category: string; items: string[] }> }) {
+  const moduleCopy: Record<string, string> = {
+    Bailleurs: 'Proprietaires et portefeuille.',
+    'Biens & patrimoine': 'Biens, unites et occupation.',
+    Locations: 'Occupants, baux et cycles.',
+    'Contrats / baux': 'Documents contractuels.',
+    Paiements: 'Encaissements et quittances.',
+    Reliquats: 'Creances et relances.',
+    Charges: 'Charges et exploitation.',
+    Depenses: 'Depenses operationnelles.',
+    Commissions: 'Revenus agence.',
+    Rapports: 'Syntheses et exports.',
+    GED: 'Coffre documentaire.',
+    'QR Verify': 'Preuves publiques.',
+    Scanner: 'Verification mobile.',
+    Modeles: 'Regles documentaires.',
+    'Etats des lieux': 'Constats terrain.',
+    Maintenance: 'Demandes et suivi.',
+    Planning: 'Operations terrain.',
+    Equipe: 'Collaborateurs.',
+    Permissions: 'Pages et droits.',
+    Abonnement: 'Plan et limites.',
+    Audit: 'Journal sensible.',
+  };
+  const cleanLabel = (item: string) => item.replace(' masquees', '').replace(' a configurer', '');
+  const isInactive = (item: string) => item.toLowerCase().includes('masque') || item.toLowerCase().includes('configurer');
+
   return (
-    <div className="space-y-2.5">
-      <section className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-[#fffdf8] via-white to-emerald-50/50 p-2.5 shadow-sm">
-        <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Modules & pages</p>
-        <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Workspace visible par domaine</h2>
-        <p className="mt-0.5 text-[0.7rem] leading-4 text-slate-600">
+    <div className="space-y-2">
+      <section className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-[#fffdf8] via-white to-emerald-50/45 p-2 shadow-sm">
+        <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">Modules & pages</p>
+        <h2 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">Workspace visible par domaine</h2>
+        <p className="mt-0.5 max-w-2xl text-[0.62rem] leading-[0.86rem] text-slate-600">
           Les modules systeme restent actifs. Les modules optionnels utilisent les reglages existants quand ils sont réellement branches.
         </p>
       </section>
-      <div className="grid gap-2.5 xl:grid-cols-2">
-        {modules.map((group) => (
-          <section key={group.category} className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
-            <h3 className="text-[0.72rem] font-extrabold text-slate-950">{group.category}</h3>
-            <div className="mt-1.5 grid gap-1">
+      <div className="grid gap-2 xl:grid-cols-2">
+        {modules.map((group) => {
+          const activeCount = group.items.filter((item) => !isInactive(item)).length;
+          return (
+          <section key={group.category} className="rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="truncate text-[0.72rem] font-extrabold text-slate-950">{group.category}</h3>
+              <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-[0.1em] text-emerald-700">
+                {activeCount}/{group.items.length}
+              </span>
+            </div>
+            <div className="mt-1.5 grid gap-1 sm:grid-cols-2">
               {group.items.map((item) => {
-                const inactive = item.toLowerCase().includes('masque') || item.toLowerCase().includes('configurer');
+                const inactive = isInactive(item);
+                const label = cleanLabel(item);
                 return (
-                  <div key={item} className="flex items-center justify-between gap-2.5 rounded-lg border border-slate-100 bg-[#fffdf8] px-2 py-1">
-                    <span className="min-w-0 truncate text-[0.7rem] font-semibold text-slate-700">{item}</span>
-                    <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.54rem] font-black uppercase tracking-[0.1em] ${inactive ? 'bg-orange-50 text-orange-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                      {inactive ? 'A configurer' : 'Actif'}
-                    </span>
+                  <div key={item} className={`min-w-0 rounded-lg border px-1.5 py-1 ${inactive ? 'border-orange-100 bg-orange-50/45' : 'border-slate-100 bg-[#fffdf8]'}`}>
+                    <div className="flex min-w-0 items-center justify-between gap-1.5">
+                      <span className="min-w-0 truncate text-[0.64rem] font-extrabold text-slate-800">{label}</span>
+                      <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.46rem] font-black uppercase tracking-[0.1em] ${inactive ? 'bg-orange-100 text-orange-700' : 'bg-emerald-50 text-emerald-700'}`}>
+                        {inactive ? 'Config.' : 'Actif'}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-[0.56rem] font-medium text-slate-500" title={moduleCopy[label] ?? 'Module disponible.'}>
+                      {moduleCopy[label] ?? 'Module disponible.'}
+                    </p>
                   </div>
                 );
               })}
             </div>
           </section>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

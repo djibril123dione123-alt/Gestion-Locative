@@ -144,23 +144,23 @@ export function AgencyRequestsPanel() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* En-tête + filtres */}
-      <div className="flex flex-wrap items-center gap-3 justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex items-center gap-2 text-gray-300">
-          <ShieldCheck className="w-5 h-5 text-orange-400" />
-          <h2 className="text-lg font-semibold">Demandes de création d'agence</h2>
-          <span className="text-xs text-gray-500">({counts.pending} en attente, {rows.length} total)</span>
+          <ShieldCheck className="h-4 w-4 text-orange-400" />
+          <h2 className="text-sm font-semibold">Demandes de création d'agence</h2>
+          <span className="text-[0.68rem] text-gray-500">({counts.pending} en attente, {rows.length} total)</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
-            <Filter className="w-4 h-4 text-gray-500 ml-2 mr-1" />
+        <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 rounded-lg border border-gray-800 bg-gray-900 p-1">
+            <Filter className="ml-1.5 mr-0.5 h-3.5 w-3.5 text-gray-500" />
             {(['pending', 'all', 'approved', 'rejected', 'cancelled'] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                className={`rounded px-2 py-1 text-[0.68rem] font-bold transition-colors ${
                   filter === f
                     ? 'bg-orange-500/20 text-orange-300'
                     : 'text-gray-400 hover:text-gray-200'
@@ -178,9 +178,9 @@ export function AgencyRequestsPanel() {
           <button
             onClick={load}
             disabled={loading}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 rounded-lg bg-gray-800 px-2.5 py-1.5 text-[0.68rem] font-bold text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Actualiser
           </button>
         </div>
@@ -188,7 +188,7 @@ export function AgencyRequestsPanel() {
 
       {/* Feedback */}
       {feedback && (
-        <div className={`px-4 py-3 rounded-lg text-sm border ${
+        <div className={`rounded-lg border px-3 py-2 text-xs ${
           feedback.kind === 'success'
             ? 'bg-green-500/10 border-green-500/30 text-green-300'
             : 'bg-red-500/10 border-red-500/30 text-red-300'
@@ -199,40 +199,40 @@ export function AgencyRequestsPanel() {
 
       {/* Liste */}
       {loading && rows.length === 0 ? (
-        <div className="flex items-center justify-center py-20 text-gray-500">
-          <Loader2 className="w-6 h-6 animate-spin mr-2" />
+        <div className="flex items-center justify-center py-12 text-sm text-gray-500">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           Chargement…
         </div>
       ) : visible.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center text-gray-500">
-          <Clock className="w-10 h-10 mx-auto mb-3 text-gray-600" />
-          <p className="text-sm">Aucune demande {filter !== 'all' ? STATUS_BADGE[filter].label.toLowerCase() : ''} pour le moment.</p>
+        <div className="rounded-xl border border-gray-800 bg-gray-900 p-6 text-center text-gray-500">
+          <Clock className="mx-auto mb-2 h-8 w-8 text-gray-600" />
+          <p className="text-xs">Aucune demande {filter !== 'all' ? STATUS_BADGE[filter].label.toLowerCase() : ''} pour le moment.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {visible.map((req) => {
             const badge = STATUS_BADGE[req.status];
             const Icon = badge.Icon;
             return (
               <div
                 key={req.id}
-                className="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors"
+                className="rounded-xl border border-gray-800 bg-gray-900 p-3.5 transition-colors hover:border-gray-700"
                 data-testid={`row-request-${req.id}`}
               >
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex-1 min-w-[280px]">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-base font-semibold text-white">{req.agency_name}</h3>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${badge.classes}`}>
-                        <Icon className="w-3 h-3" />{badge.label}
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-[240px] flex-1">
+                    <div className="mb-1.5 flex items-center gap-1.5">
+                      <h3 className="text-sm font-semibold text-white">{req.agency_name}</h3>
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.65rem] font-bold ${badge.classes}`}>
+                        <Icon className="h-3 w-3" />{badge.label}
                       </span>
                       {req.is_bailleur_account && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/15 text-blue-300 border border-blue-500/30">
+                        <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/15 px-2 py-0.5 text-[0.65rem] font-bold text-blue-300">
                           Bailleur individuel
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500 mb-3">
+                    <p className="mb-2 text-[0.68rem] text-gray-500">
                       Demande reçue le {formatDate(req.created_at)}
                       {req.reviewed_at && (
                         <>
@@ -241,7 +241,7 @@ export function AgencyRequestsPanel() {
                       )}
                     </p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                    <div className="grid grid-cols-1 gap-1.5 text-xs md:grid-cols-2">
                       <InfoLine icon={Mail}   label="Email"     value={req.requester_email} />
                       {req.requester_phone && <InfoLine icon={Phone}  label="Téléphone" value={formatSenegalPhone(req.requester_phone)} />}
                       {req.agency_address && <InfoLine icon={MapPin} label="Adresse"   value={req.agency_address} />}
@@ -249,30 +249,30 @@ export function AgencyRequestsPanel() {
                     </div>
 
                     {req.status === 'rejected' && req.rejection_reason && (
-                      <div className="mt-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-sm text-red-300">
+                      <div className="mt-2 rounded-lg border border-red-500/20 bg-red-500/10 px-2.5 py-1.5 text-xs text-red-300">
                         <span className="font-semibold">Motif :</span> {req.rejection_reason}
                       </div>
                     )}
                   </div>
 
                   {req.status === 'pending' && (
-                    <div className="flex flex-col gap-2 min-w-[180px]">
+                    <div className="flex min-w-[150px] flex-col gap-1.5">
                       <button
                         onClick={() => approve(req)}
                         disabled={busyId === req.id}
-                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-sm font-medium transition-colors disabled:opacity-60"
+                        className="flex items-center justify-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-green-500 disabled:opacity-60"
                         data-testid={`button-approve-${req.id}`}
                       >
-                        {busyId === req.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                        {busyId === req.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                         Approuver
                       </button>
                       <button
                         onClick={() => openReject(req)}
                         disabled={busyId === req.id}
-                        className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-gray-800 hover:bg-red-900/40 hover:text-red-300 text-gray-300 text-sm font-medium transition-colors disabled:opacity-60"
+                        className="flex items-center justify-center gap-1.5 rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-bold text-gray-300 transition-colors hover:bg-red-900/40 hover:text-red-300 disabled:opacity-60"
                         data-testid={`button-reject-${req.id}`}
                       >
-                        <XCircle className="w-4 h-4" />Rejeter
+                        <XCircle className="h-3.5 w-3.5" />Rejeter
                       </button>
                     </div>
                   )}
@@ -285,43 +285,43 @@ export function AgencyRequestsPanel() {
 
       {/* Modale de rejet (motif obligatoire) */}
       {rejectTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-md bg-gray-900 border border-gray-800 rounded-xl shadow-2xl">
-            <div className="px-5 py-4 border-b border-gray-800 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-red-500/15 border border-red-500/30 flex items-center justify-center">
-                <XCircle className="w-5 h-5 text-red-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-xl border border-gray-800 bg-gray-900 shadow-2xl">
+            <div className="flex items-center gap-2.5 border-b border-gray-800 px-4 py-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/15">
+                <XCircle className="h-4 w-4 text-red-400" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-white">Rejeter cette demande</h3>
+                <h3 className="text-sm font-semibold text-white">Rejeter cette demande</h3>
                 <p className="text-xs text-gray-500">« {rejectTarget.agency_name} »</p>
               </div>
             </div>
-            <div className="px-5 py-4 space-y-3">
-              <p className="text-sm text-gray-300">
+            <div className="space-y-3 px-4 py-3">
+              <p className="text-xs leading-5 text-gray-300">
                 Le motif sera visible par le demandeur. Soyez explicite et professionnel.
               </p>
               <div>
-                <label className="block text-xs font-medium text-gray-400 mb-1">Motif du rejet *</label>
+                <label className="mb-1 block text-[0.68rem] font-bold text-gray-400">Motif du rejet *</label>
                 <textarea
                   autoFocus
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   disabled={rejectBusy}
-                  rows={4}
+                  rows={3}
                   maxLength={500}
                   placeholder="Ex : NINEA invalide, agence en doublon, dossier incomplet…"
-                  className="w-full px-3 py-2 rounded-lg bg-gray-950 border border-gray-700 text-white text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 disabled:opacity-50"
+                  className="w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-xs text-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500 disabled:opacity-50"
                   data-testid="textarea-reject-reason"
                 />
                 <p className="mt-1 text-[10px] text-gray-500 text-right">{rejectReason.length}/500</p>
               </div>
             </div>
-            <div className="px-5 py-3 border-t border-gray-800 flex justify-end gap-2">
+            <div className="flex justify-end gap-2 border-t border-gray-800 px-4 py-3">
               <button
                 type="button"
                 disabled={rejectBusy}
                 onClick={() => { setRejectTarget(null); setRejectReason(''); }}
-                className="px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm transition-colors disabled:opacity-60"
+                className="rounded-lg bg-gray-800 px-3 py-2 text-xs font-bold text-gray-300 transition-colors hover:bg-gray-700 disabled:opacity-60"
               >
                 Annuler
               </button>
@@ -329,10 +329,10 @@ export function AgencyRequestsPanel() {
                 type="button"
                 disabled={rejectBusy || !rejectReason.trim()}
                 onClick={confirmReject}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-medium transition-colors disabled:opacity-60"
+                className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-red-500 disabled:opacity-60"
                 data-testid="button-confirm-reject"
               >
-                {rejectBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                {rejectBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
                 Confirmer le rejet
               </button>
             </div>
@@ -345,8 +345,8 @@ export function AgencyRequestsPanel() {
 
 function InfoLine({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
   return (
-    <div className="flex items-start gap-2 text-gray-300">
-      <Icon className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+    <div className="flex items-start gap-1.5 text-gray-300">
+      <Icon className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-gray-500" />
       <span className="text-gray-500">{label} :</span>
       <span className="text-gray-200 break-all">{value}</span>
     </div>

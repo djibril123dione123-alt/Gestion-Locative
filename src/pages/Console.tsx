@@ -365,17 +365,17 @@ function KpiCard({
   }[tone];
 
   return (
-    <div className={classNames('rounded-2xl border bg-gradient-to-br p-5 shadow-[0_22px_80px_rgba(0,0,0,0.22)]', toneMap)}>
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{label}</p>
-        <div className="rounded-xl border border-white/10 bg-black/20 p-2">
-          <Icon className="h-4 w-4" />
+    <div className={classNames('rounded-lg border bg-gradient-to-br p-2.5 shadow-[0_10px_32px_rgba(0,0,0,0.14)]', toneMap)}>
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <p className="text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
+        <div className="rounded-md border border-white/10 bg-black/20 p-1.5">
+          <Icon className="h-3 w-3" />
         </div>
       </div>
-      <p className="text-2xl font-black tracking-tight text-white sm:text-3xl">{value}</p>
+      <p className="text-base font-black tracking-tight text-white sm:text-lg">{value}</p>
       {(helper || trend) && (
-        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-400">
-          {trend && <span className="rounded-full bg-white/8 px-2 py-1 text-slate-200">{trend}</span>}
+        <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[0.6rem] font-semibold text-slate-400">
+          {trend && <span className="rounded-full bg-white/8 px-1.5 py-0.5 text-slate-200">{trend}</span>}
           {helper && <span>{helper}</span>}
         </div>
       )}
@@ -397,27 +397,27 @@ function SectionCard({
   action?: React.ReactNode;
 }) {
   return (
-    <section className="rounded-3xl border border-white/10 bg-white/[0.045] shadow-[0_20px_80px_rgba(0,0,0,0.18)]">
-      <div className="flex flex-col gap-4 border-b border-white/10 p-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-2.5 text-emerald-100">
-            <Icon className="h-5 w-5" />
+    <section className="rounded-xl border border-white/10 bg-white/[0.045] shadow-[0_10px_34px_rgba(0,0,0,0.13)]">
+      <div className="flex flex-col gap-2.5 border-b border-white/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-2">
+          <div className="rounded-lg border border-emerald-300/20 bg-emerald-300/10 p-1.5 text-emerald-100">
+            <Icon className="h-3.5 w-3.5" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-white">{title}</h2>
-            {subtitle && <p className="mt-1 text-sm font-medium text-slate-400">{subtitle}</p>}
+            <h2 className="text-xs font-black text-white">{title}</h2>
+            {subtitle && <p className="mt-0.5 text-[0.64rem] font-medium text-slate-400">{subtitle}</p>}
           </div>
         </div>
         {action}
       </div>
-      <div className="p-5">{children}</div>
+      <div className="p-3">{children}</div>
     </section>
   );
 }
 
 function EmptyPanel({ title, text }: { title: string; text: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/12 bg-black/15 p-8 text-center">
+    <div className="rounded-xl border border-dashed border-white/12 bg-black/15 p-8 text-center">
       <p className="font-black text-white">{title}</p>
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-400">{text}</p>
     </div>
@@ -770,18 +770,18 @@ export function Console() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_8%_0%,rgba(245,130,32,0.16),transparent_24rem),radial-gradient(circle_at_85%_10%,rgba(16,185,129,0.18),transparent_28rem),linear-gradient(135deg,#050807,#0b1512_48%,#111714)] text-white">
       <div className="flex min-h-screen">
-        <aside className="hidden w-80 shrink-0 border-r border-white/10 bg-black/24 p-5 backdrop-blur-2xl xl:block">
-          <div className="mb-8 flex items-center gap-4">
+        <aside className="hidden w-80 shrink-0 border-r border-white/10 bg-black/24 p-3 backdrop-blur-2xl xl:block">
+          <div className="mb-8 flex items-center gap-3">
             <BrandMark size="sm" tone="dark" animated={false} withTile={false} />
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-100">Samay Këur</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100">Samay Këur</p>
               <p className="text-xs font-bold text-orange-300">Console propriétaire</p>
             </div>
           </div>
 
-          <div className="mb-5 rounded-3xl border border-amber-300/20 bg-amber-300/10 p-4">
+          <div className="mb-5 rounded-3xl border border-amber-300/20 bg-amber-300/10 p-3">
             <div className="flex items-center gap-2 text-amber-100">
-              <Lock className="h-4 w-4" />
+              <Lock className="h-3 w-3" />
               <p className="text-xs font-black uppercase tracking-[0.16em]">Zone critique</p>
             </div>
             <p className="mt-2 text-xs leading-5 text-amber-50/70">
@@ -800,15 +800,15 @@ export function Console() {
                       type="button"
                       onClick={() => selectAdminTab(id)}
                       className={classNames(
-                        'group flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition',
+                        'group flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition',
                         tab === id
                           ? 'border-emerald-300/30 bg-emerald-300/12 text-white shadow-[0_16px_44px_rgba(16,185,129,0.12)]'
                           : 'border-transparent text-slate-400 hover:border-white/10 hover:bg-white/6 hover:text-white'
                       )}
                     >
-                      <Icon className="h-4 w-4 shrink-0" />
+                      <Icon className="h-3 w-3 shrink-0" />
                       <span className="min-w-0">
-                        <span className="block text-sm font-black">{label}</span>
+                        <span className="block text-xs font-black">{label}</span>
                         <span className="block truncate text-xs font-medium text-slate-500 group-hover:text-slate-400">{description}</span>
                       </span>
                     </button>
@@ -830,13 +830,13 @@ export function Console() {
               sideContent={
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <div className="relative min-w-0 sm:w-72">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                    <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Recherche globale..." className="h-9 w-full rounded-xl border border-emerald-950/10 bg-white py-2 pl-10 pr-3 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-500" />
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-3 w-3 -translate-y-1/2 text-slate-500" />
+                    <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Recherche globale..." className="h-9 w-full rounded-xl border border-emerald-950/10 bg-white py-2 pl-10 pr-3 text-xs font-semibold text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-500" />
                   </div>
-                  <button type="button" onClick={() => void loadAll()} disabled={refreshing} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-white px-3 text-xs font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"><RefreshCw className={classNames('h-4 w-4', refreshing && 'animate-spin')} />Actualiser</button>
-                  <button type="button" onClick={() => setShowCreateAgency(true)} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-800/15 bg-emerald-50 px-3 text-xs font-black text-emerald-900 transition hover:bg-emerald-100"><Plus className="h-4 w-4" />Organisation</button>
-                  <button type="button" onClick={() => setShowInviteUser(true)} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 text-xs font-black text-orange-800 transition hover:bg-orange-100"><UserPlus className="h-4 w-4" />Invitation</button>
-                  <button type="button" onClick={signOut} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 px-3 text-xs font-black text-red-700 transition hover:bg-red-100"><LogOut className="h-4 w-4" />Sortir</button>
+                  <button type="button" onClick={() => void loadAll()} disabled={refreshing} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-950/10 bg-white px-3 text-xs font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"><RefreshCw className={classNames('h-3 w-3', refreshing && 'animate-spin')} />Actualiser</button>
+                  <button type="button" onClick={() => setShowCreateAgency(true)} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-emerald-800/15 bg-emerald-50 px-3 text-xs font-black text-emerald-900 transition hover:bg-emerald-100"><Plus className="h-3 w-3" />Organisation</button>
+                  <button type="button" onClick={() => setShowInviteUser(true)} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 text-xs font-black text-orange-800 transition hover:bg-orange-100"><UserPlus className="h-3 w-3" />Invitation</button>
+                  <button type="button" onClick={signOut} className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-red-100 bg-red-50 px-3 text-xs font-black text-red-700 transition hover:bg-red-100"><LogOut className="h-3 w-3" />Sortir</button>
                 </div>
               }
             />
@@ -859,37 +859,37 @@ export function Console() {
             </div>
           </header>
 
-          <main className="flex-1 p-4 sm:p-6">
+          <main className="flex-1 p-3 sm:p-6">
             {loading ? (
               <LoadingState label="Console propriétaire" tone="dark" />
             ) : (
               <div className="mx-auto max-w-[1600px] space-y-6">
                 {lastLoadedAt && (
-                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3 text-xs font-semibold text-slate-400">
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-xs font-semibold text-slate-400">
                     <span>Dernière synchronisation : {formatDate(lastLoadedAt)}</span>
                     <span className="inline-flex items-center gap-2 text-emerald-200">
-                      <CheckCircle className="h-4 w-4" />
+                      <CheckCircle className="h-3 w-3" />
                       Données agrégées et accès super-admin vérifié
                     </span>
                   </div>
                 )}
                 {feedback && (
                   <div className={classNames(
-                    'flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-sm font-bold',
+                    'flex items-center justify-between gap-3 rounded-xl border px-4 py-3 text-xs font-bold',
                     feedback.kind === 'success'
                       ? 'border-emerald-300/25 bg-emerald-300/10 text-emerald-100'
                       : 'border-red-300/25 bg-red-400/10 text-red-100'
                   )}>
                     <span>{feedback.text}</span>
                     <button type="button" onClick={() => setFeedback(null)} className="rounded-lg p-1 hover:bg-white/10">
-                      <X className="h-4 w-4" />
+                      <X className="h-3 w-3" />
                     </button>
                   </div>
                 )}
 
                 {tab === 'overview' && (
                   <div className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                       <KpiCard label="Organisations" value={computed.totalOrganizations} helper={`${computed.activeOrganizations} actives`} icon={Building2} />
                       <KpiCard label="MRR estimé" value={formatCurrency(computed.estimatedMrr)} helper={`${computed.payingOrganizations} comptes payants`} icon={Wallet} tone="gold" />
                       <KpiCard label="Utilisateurs actifs" value={computed.activeUsers} helper={`${computed.totalUsers} utilisateurs métier`} icon={Users} tone="blue" />
@@ -899,7 +899,7 @@ export function Console() {
 
                     <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
                       <SectionCard title="Santé globale de la plateforme" subtitle="Croissance, valeur et adoption produit" icon={Gauge}>
-                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                           {[
                             ['Agences', computed.activeOrganizations, computed.totalOrganizations],
                             ['Bailleurs individuels', computed.individualLandlords, computed.totalOrganizations],
@@ -908,8 +908,8 @@ export function Console() {
                           ].map(([label, value, total]) => {
                             const percent = Math.min(100, Math.round((Number(value) / Math.max(Number(total), 1)) * 100));
                             return (
-                              <div key={label} className="rounded-2xl border border-white/10 bg-black/18 p-4">
-                                <div className="mb-3 flex items-center justify-between text-sm font-black text-white">
+                              <div key={label} className="rounded-xl border border-white/10 bg-black/18 p-3">
+                                <div className="mb-3 flex items-center justify-between text-xs font-black text-white">
                                   <span>{label}</span>
                                   <span>{value}</span>
                                 </div>
@@ -926,12 +926,12 @@ export function Console() {
                       <SectionCard title="Alertes critiques" subtitle="Bruit réduit, priorités visibles" icon={Bell}>
                         <div className="space-y-3">
                           {(snapshot?.incidents ?? []).slice(0, 5).map((incident) => (
-                            <div key={incident.id} className="rounded-2xl border border-white/10 bg-black/16 p-4">
+                            <div key={incident.id} className="rounded-xl border border-white/10 bg-black/16 p-3">
                               <div className="flex items-center justify-between gap-3">
                                 <Badge tone={incident.severity}>{incident.severity}</Badge>
                                 <span className="text-xs font-bold text-slate-500">{safeDate(incident.last_seen_at ?? incident.created_at)}</span>
                               </div>
-                              <p className="mt-3 text-sm font-black text-white">{incident.type}</p>
+                              <p className="mt-3 text-xs font-black text-white">{incident.type}</p>
                               <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-400">{incident.message}</p>
                             </div>
                           ))}
@@ -955,7 +955,7 @@ export function Console() {
 
                 {tab === 'organizations' && (
                   <div className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-4">
+                    <div className="grid gap-3 md:grid-cols-4">
                       <KpiCard label="Actives" value={computed.activeOrganizations} icon={CheckCircle} />
                       <KpiCard label="En essai" value={computed.trialOrganizations} icon={Sparkles} tone="blue" />
                       <KpiCard label="À risque" value={computed.riskAccounts} icon={ShieldAlert} tone={computed.riskAccounts ? 'red' : 'emerald'} />
@@ -967,14 +967,14 @@ export function Console() {
                       icon={Building2}
                       action={(
                         <div className="flex flex-wrap gap-2">
-                          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm font-bold text-white">
+                          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs font-bold text-white">
                             <option value="all">Tous statuts</option>
                             <option value="active">Actif</option>
                             <option value="trial">Essai</option>
                             <option value="suspended">Suspendu</option>
                             <option value="risk">Risque</option>
                           </select>
-                          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm font-bold text-white">
+                          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs font-bold text-white">
                             <option value="all">Tous types</option>
                             <option value="agency">Agences</option>
                             <option value="individual_landlord">Bailleurs individuels</option>
@@ -995,7 +995,7 @@ export function Console() {
 
                 {tab === 'subscriptions' && (
                   <div className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-4">
+                    <div className="grid gap-3 md:grid-cols-4">
                       <KpiCard label="MRR estimé" value={formatCurrency(computed.estimatedMrr)} icon={Wallet} tone="gold" />
                       <KpiCard label="Payants" value={computed.payingOrganizations} icon={CheckCircle} />
                       <KpiCard label="Essais" value={computed.trialOrganizations} icon={Sparkles} tone="blue" />
@@ -1017,7 +1017,7 @@ export function Console() {
                     icon={Users}
                     action={(
                       <button type="button" onClick={() => setShowInviteUser(true)} className="inline-flex items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-300/12 px-3 py-2 text-xs font-black text-orange-100">
-                        <UserPlus className="h-4 w-4" />
+                        <UserPlus className="h-3 w-3" />
                         Inviter
                       </button>
                     )}
@@ -1029,9 +1029,9 @@ export function Console() {
                 {tab === 'product' && (
                   <div className="space-y-6">
                     <SectionCard title="Analytics d'usage produit" subtitle="Ce qui crée réellement de la valeur dans Samay Këur" icon={Activity}>
-                      <div className="grid gap-4 md:grid-cols-5">
+                      <div className="grid gap-3 md:grid-cols-5">
                         {moduleUsage.map((item) => (
-                          <div key={item.label} className="rounded-2xl border border-white/10 bg-black/18 p-4">
+                          <div key={item.label} className="rounded-xl border border-white/10 bg-black/18 p-3">
                             <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{item.label}</p>
                             <p className="mt-3 text-2xl font-black text-white">{item.value}</p>
                             <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/8">
@@ -1054,17 +1054,17 @@ export function Console() {
 
                 {tab === 'documents' && (
                   <div className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-4">
+                    <div className="grid gap-3 md:grid-cols-4">
                       <KpiCard label="Documents totaux" value={computed.totalDocuments || '—'} icon={FileText} tone="slate" />
                       <KpiCard label="Ce mois" value={computed.documentsThisMonth || 0} icon={Archive} />
                       <KpiCard label="QR vérifiables" value="Actif" helper="Registre documentaire" icon={KeyRound} tone="blue" />
                       <KpiCard label="Accès contenu" value="Limité" helper="Métadonnées par défaut" icon={Lock} tone="gold" />
                     </div>
                     <SectionCard title="Supervision documentaire globale" subtitle="Métadonnées uniquement par défaut : type, statut, stockage, QR et erreurs" icon={FileText}>
-                      <div className="grid gap-4 md:grid-cols-3">
+                      <div className="grid gap-3 md:grid-cols-3">
                         {['Quittances', 'Contrats', 'Mandats', 'Rapports', 'GED', 'QR consultés'].map((label) => (
-                          <div key={label} className="rounded-2xl border border-white/10 bg-black/18 p-5">
-                            <p className="text-sm font-black text-white">{label}</p>
+                          <div key={label} className="rounded-xl border border-white/10 bg-black/18 p-3">
+                            <p className="text-xs font-black text-white">{label}</p>
                             <p className="mt-2 text-xs leading-5 text-slate-400">Branché sur `document_registry`, `document_verifications` et `samay_admin.document_metrics`.</p>
                           </div>
                         ))}
@@ -1094,7 +1094,7 @@ export function Console() {
 
                 {tab === 'technical' && (
                   <div className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-4">
+                    <div className="grid gap-3 md:grid-cols-4">
                       <KpiCard label="Incidents ouverts" value={computed.openIncidents} icon={AlertTriangle} tone={computed.openIncidents ? 'red' : 'emerald'} />
                       <KpiCard label="Backups" value="Non connecté" helper="Aucun statut backup live disponible" icon={Database} tone="blue" />
                       <KpiCard label="Stockage total" value="Non mesuré" helper="Aucun compteur stockage branché" icon={HardDrive} tone="slate" />
@@ -1112,13 +1112,13 @@ export function Console() {
                       <AuditTable logs={[...(snapshot?.audit_logs ?? []), ...logs].slice(0, 100)} />
                     </SectionCard>
                     <SectionCard title="Impersonation sécurisée" subtitle="Fonction verrouillée tant que le scope client et la bannière permanente ne sont pas livrés" icon={KeyRound}>
-                      <div className="grid gap-4 md:grid-cols-3">
+                      <div className="grid gap-3 md:grid-cols-3">
                         {[
                           ['2FA obligatoire', 'À activer avant session réelle utilisateur'],
                           ['Session temporaire', 'Durée limitée entre 5 et 60 minutes'],
                           ['Scope limité', 'Secrets, paiements sensibles et mots de passe exclus'],
                         ].map(([title, text]) => (
-                          <div key={title} className="rounded-2xl border border-white/10 bg-black/18 p-5">
+                          <div key={title} className="rounded-xl border border-white/10 bg-black/18 p-3">
                             <p className="font-black text-white">{title}</p>
                             <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
                           </div>
@@ -1242,10 +1242,10 @@ function AdminReasonDialog({
   const canConfirm = reasonValid && confirmationValid && !busy;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-3">
       <button type="button" aria-label="Fermer la confirmation" className="absolute inset-0 bg-black/72 backdrop-blur-sm" onClick={busy ? undefined : onClose} />
       <section className="relative w-full max-w-lg rounded-3xl border border-white/10 bg-[#07100d] p-6 shadow-[0_30px_120px_rgba(0,0,0,0.55)]">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <div className={classNames(
               'mb-3 inline-flex rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.14em]',
@@ -1256,8 +1256,8 @@ function AdminReasonDialog({
             <h2 className="text-xl font-black text-white">{action.title}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-400">{action.message}</p>
           </div>
-          <button type="button" onClick={onClose} disabled={busy} className="rounded-2xl border border-white/10 bg-white/8 p-2 text-slate-200 hover:bg-white/12 disabled:opacity-50">
-            <X className="h-4 w-4" />
+          <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-white/10 bg-white/8 p-2 text-slate-200 hover:bg-white/12 disabled:opacity-50">
+            <X className="h-3 w-3" />
           </button>
         </div>
 
@@ -1268,7 +1268,7 @@ function AdminReasonDialog({
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}
               placeholder={action.requireText}
-              className="mt-2 w-full rounded-2xl border border-white/10 bg-black/24 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-red-300/40"
+              className="mt-2 w-full rounded-xl border border-white/10 bg-black/24 px-4 py-3 text-xs font-bold text-white outline-none placeholder:text-slate-600 focus:border-red-300/40"
             />
           </label>
         )}
@@ -1280,7 +1280,7 @@ function AdminReasonDialog({
             onChange={(event) => setReason(event.target.value)}
             rows={4}
             placeholder={action.reasonPlaceholder ?? 'Expliquez la raison métier ou support de cette action...'}
-            className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-black/24 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
+            className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/24 px-4 py-3 text-xs font-semibold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
           />
           <span className={classNames('mt-2 block text-xs font-semibold', reasonValid ? 'text-emerald-200' : 'text-slate-500')}>
             {reason.trim().length}/{minLength} caractères minimum
@@ -1288,7 +1288,7 @@ function AdminReasonDialog({
         </label>
 
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button type="button" onClick={onClose} disabled={busy} className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black text-slate-200 hover:bg-white/12 disabled:opacity-50">
+          <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-white/10 bg-white/8 px-4 py-3 text-xs font-black text-slate-200 hover:bg-white/12 disabled:opacity-50">
             Annuler
           </button>
           <button
@@ -1296,11 +1296,11 @@ function AdminReasonDialog({
             onClick={() => void onConfirm(reason.trim())}
             disabled={!canConfirm}
             className={classNames(
-              'inline-flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-black disabled:opacity-50',
+              'inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-xs font-black disabled:opacity-50',
               action.destructive ? 'border-red-300/25 bg-red-500/14 text-red-100 hover:bg-red-500/20' : 'border-orange-300/25 bg-orange-300/14 text-orange-100 hover:bg-orange-300/20'
             )}
           >
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+            {busy && <Loader2 className="h-3 w-3 animate-spin" />}
             {action.confirmText ?? 'Confirmer'}
           </button>
         </div>
@@ -1336,8 +1336,8 @@ function OrganizationDetailDrawer({
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <button type="button" aria-label="Fermer la fiche organisation" className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <aside className="relative h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-[#07100d] p-5 shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-5">
+      <aside className="relative h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-[#07100d] p-3 shadow-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-5">
           <div>
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Badge tone={agency.status ?? 'active'}>{agency.status ?? 'active'}</Badge>
@@ -1345,10 +1345,10 @@ function OrganizationDetailDrawer({
               <Badge>{ACCOUNT_LABELS[accountType] ?? accountType}</Badge>
             </div>
             <h2 className="text-2xl font-black text-white">{agency.name}</h2>
-            <p className="mt-2 text-sm font-semibold text-slate-400">Créée {safeDate(agency.created_at)} · Dernière activité {safeDate(agency.derniere_activite)}</p>
+            <p className="mt-2 text-xs font-semibold text-slate-400">Créée {safeDate(agency.created_at)} · Dernière activité {safeDate(agency.derniere_activite)}</p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-2xl border border-white/10 bg-white/8 p-2 text-slate-200 hover:bg-white/12">
-            <X className="h-5 w-5" />
+          <button type="button" onClick={onClose} className="rounded-xl border border-white/10 bg-white/8 p-2 text-slate-200 hover:bg-white/12">
+            <X className="h-3.5 w-3.5" />
           </button>
         </div>
 
@@ -1361,18 +1361,18 @@ function OrganizationDetailDrawer({
             ['Volume', formatCurrency(agency.volume_paiements ?? 0)],
             ['Bailleurs', agency.nb_bailleurs],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+            <div key={label} className="rounded-xl border border-white/10 bg-white/[0.045] p-3">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">{label}</p>
               <p className="mt-2 text-xl font-black text-white">{value}</p>
             </div>
           ))}
         </div>
 
-        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.045] p-5">
+        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.045] p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="font-black text-white">Plan et abonnement</h3>
-              <p className="mt-1 text-sm font-semibold text-slate-400">
+              <p className="mt-1 text-xs font-semibold text-slate-400">
                 Plan actuel : {agency.plan ?? activeSubscription?.plan_id ?? 'starter'} · Échéance {safeDate(activeSubscription?.current_period_end ?? agency.trial_ends_at)}
               </p>
             </div>
@@ -1396,13 +1396,13 @@ function OrganizationDetailDrawer({
           </div>
         </section>
 
-        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.045] p-5">
+        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.045] p-3">
           <h3 className="font-black text-white">Utilisateurs rattachés</h3>
           <div className="mt-4 space-y-3">
             {users.length === 0 ? (
-              <p className="text-sm font-semibold text-slate-500">Aucun utilisateur rattaché détecté.</p>
+              <p className="text-xs font-semibold text-slate-500">Aucun utilisateur rattaché détecté.</p>
             ) : users.slice(0, 8).map((user) => (
-              <div key={user.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/18 p-3">
+              <div key={user.id} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/18 p-3">
                 <div>
                   <p className="font-black text-white">{user.prenom} {user.nom}</p>
                   <p className="text-xs font-semibold text-slate-500">{user.email}</p>
@@ -1413,13 +1413,13 @@ function OrganizationDetailDrawer({
           </div>
         </section>
 
-        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.045] p-5">
+        <section className="mt-5 rounded-3xl border border-white/10 bg-white/[0.045] p-3">
           <h3 className="font-black text-white">Actions sensibles</h3>
           <p className="mt-1 text-sm leading-6 text-slate-400">Chaque action demande une raison et écrit un audit log best-effort dans la console owner.</p>
           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <div className="rounded-2xl border border-amber-300/20 bg-amber-300/8 px-4 py-3">
-              <div className="flex items-center gap-2 text-sm font-black text-amber-100">
-                <Lock className="h-4 w-4" />
+            <div className="rounded-xl border border-amber-300/20 bg-amber-300/8 px-4 py-3">
+              <div className="flex items-center gap-2 text-xs font-black text-amber-100">
+                <Lock className="h-3 w-3" />
                 Impersonation verrouillée
               </div>
               <p className="mt-2 text-xs leading-5 text-amber-50/70">
@@ -1430,7 +1430,7 @@ function OrganizationDetailDrawer({
               type="button"
               onClick={() => void onSuspend(agency, agency.status === 'suspended' ? 'active' : 'suspended')}
               className={classNames(
-                'rounded-2xl border px-4 py-3 text-sm font-black',
+                'rounded-xl border px-4 py-3 text-xs font-black',
                 agency.status === 'suspended'
                   ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100'
                   : 'border-red-300/20 bg-red-400/10 text-red-100'
@@ -1438,7 +1438,7 @@ function OrganizationDetailDrawer({
             >
               {agency.status === 'suspended' ? 'Réactiver' : 'Suspendre'}
             </button>
-            <button type="button" onClick={() => onDelete(agency)} className="sm:col-span-2 rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-black text-red-100">
+            <button type="button" onClick={() => onDelete(agency)} className="sm:col-span-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-xs font-black text-red-100">
               Supprimer l'organisation
             </button>
           </div>
@@ -1613,7 +1613,7 @@ function QuotaBoard({ agencies }: { agencies: AgencyStat[] }) {
   return (
     <div className="grid gap-3 md:grid-cols-2">
       {atRisk.map(({ agency, unitRatio, userRatio }) => (
-        <div key={agency.id} className="rounded-2xl border border-white/10 bg-black/18 p-4">
+        <div key={agency.id} className="rounded-xl border border-white/10 bg-black/18 p-3">
           <div className="flex items-center justify-between gap-3">
             <p className="font-black text-white">{agency.name}</p>
             <Badge tone={unitRatio >= 90 || userRatio >= 90 ? 'critical' : 'past_due'}>{Math.max(unitRatio, userRatio)}%</Badge>
@@ -1686,7 +1686,7 @@ function TicketsList({ tickets, agencies }: { tickets: SupportTicket[]; agencies
   return (
     <div className="space-y-3">
       {tickets.map((ticket) => (
-        <div key={ticket.id} className="rounded-2xl border border-white/10 bg-black/18 p-4">
+        <div key={ticket.id} className="rounded-xl border border-white/10 bg-black/18 p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-black text-white">{ticket.subject}</p>
             <div className="flex gap-2"><Badge tone={ticket.status}>{ticket.status}</Badge><Badge>{ticket.priority}</Badge></div>
@@ -1705,7 +1705,7 @@ function IncidentsList({ incidents, agencies }: { incidents: AdminIncident[]; ag
   return (
     <div className="space-y-3">
       {incidents.map((incident) => (
-        <div key={incident.id} className="rounded-2xl border border-white/10 bg-black/18 p-4">
+        <div key={incident.id} className="rounded-xl border border-white/10 bg-black/18 p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2"><Badge tone={incident.severity}>{incident.severity}</Badge><Badge tone={incident.status}>{incident.status}</Badge></div>
             <p className="text-xs font-bold text-slate-500">{safeDate(incident.last_seen_at ?? incident.created_at)}</p>
@@ -1867,18 +1867,18 @@ function FeatureFlagsBoard({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       <div className="grid gap-3 lg:grid-cols-[1fr_220px_auto]">
         <input
           value={form.flag}
           onChange={(event) => setForm((current) => ({ ...current, flag: event.target.value }))}
           placeholder="module_mobile_money, new_pdf_engine..."
-          className="rounded-2xl border border-white/10 bg-black/24 px-4 py-3 font-mono text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
+          className="rounded-xl border border-white/10 bg-black/24 px-4 py-3 font-mono text-xs font-bold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
         />
         <select
           value={form.agency_id}
           onChange={(event) => setForm((current) => ({ ...current, agency_id: event.target.value }))}
-          className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white"
+          className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-xs font-bold text-white"
         >
           <option value="">Global</option>
           {agencies.map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
@@ -1887,9 +1887,9 @@ function FeatureFlagsBoard({
           type="button"
           onClick={create}
           disabled={creating || !form.flag.trim()}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-orange-300/20 bg-orange-300/12 px-4 py-3 text-sm font-black text-orange-100 hover:bg-orange-300/18 disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-300/20 bg-orange-300/12 px-4 py-3 text-xs font-black text-orange-100 hover:bg-orange-300/18 disabled:opacity-50"
         >
-          {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          {creating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
           Créer
         </button>
       </div>
@@ -1897,11 +1897,11 @@ function FeatureFlagsBoard({
         value={form.description}
         onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
         placeholder="Description, impact et raison du flag"
-        className="w-full rounded-2xl border border-white/10 bg-black/18 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
+        className="w-full rounded-xl border border-white/10 bg-black/18 px-4 py-3 text-xs font-semibold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <Filter className="h-4 w-4 text-slate-500" />
+        <Filter className="h-3 w-3 text-slate-500" />
         {[
           ['all', 'Tous'],
           ['global', 'Global'],
@@ -1922,7 +1922,7 @@ function FeatureFlagsBoard({
       </div>
 
       {message && (
-        <p className={classNames('rounded-2xl border px-4 py-3 text-sm font-bold', message.kind === 'success' ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100' : 'border-red-300/20 bg-red-400/10 text-red-100')}>
+        <p className={classNames('rounded-xl border px-4 py-3 text-xs font-bold', message.kind === 'success' ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100' : 'border-red-300/20 bg-red-400/10 text-red-100')}>
           {message.text}
         </p>
       )}
@@ -1932,10 +1932,10 @@ function FeatureFlagsBoard({
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((flag) => (
-            <div key={flag.id} className="rounded-2xl border border-white/10 bg-black/18 p-4">
+            <div key={flag.id} className="rounded-xl border border-white/10 bg-black/18 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-mono text-sm font-black text-orange-200">{flag.key}</p>
+                  <p className="truncate font-mono text-xs font-black text-orange-200">{flag.key}</p>
                   <p className="mt-1 font-black text-white">{flag.name}</p>
                 </div>
                 <Badge tone={flag.enabled ? 'active' : 'cancelled'}>{flag.enabled ? 'Actif' : 'Inactif'}</Badge>
@@ -1969,7 +1969,7 @@ function FeatureFlagsBoard({
         </div>
       )}
       {deleteTarget && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-3">
           <button
             type="button"
             aria-label="Annuler la suppression du feature flag"
@@ -1990,7 +1990,7 @@ function FeatureFlagsBoard({
                 value={deleteConfirmation}
                 onChange={(event) => setDeleteConfirmation(event.target.value)}
                 placeholder={deleteTarget.key}
-                className="mt-2 w-full rounded-2xl border border-white/10 bg-black/24 px-4 py-3 font-mono text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-red-300/40"
+                className="mt-2 w-full rounded-xl border border-white/10 bg-black/24 px-4 py-3 font-mono text-xs font-bold text-white outline-none placeholder:text-slate-600 focus:border-red-300/40"
               />
             </label>
             <label className="mt-5 block">
@@ -2000,20 +2000,20 @@ function FeatureFlagsBoard({
                 onChange={(event) => setDeleteReason(event.target.value)}
                 rows={3}
                 placeholder="Ex : flag expiré, doublon confirmé, rollout remplacé..."
-                className="mt-2 w-full resize-none rounded-2xl border border-white/10 bg-black/24 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-red-300/40"
+                className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/24 px-4 py-3 text-xs font-semibold text-white outline-none placeholder:text-slate-600 focus:border-red-300/40"
               />
             </label>
             <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setDeleteTarget(null)} disabled={Boolean(busyId)} className="rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm font-black text-slate-200 hover:bg-white/12 disabled:opacity-50">
+              <button type="button" onClick={() => setDeleteTarget(null)} disabled={Boolean(busyId)} className="rounded-xl border border-white/10 bg-white/8 px-4 py-3 text-xs font-black text-slate-200 hover:bg-white/12 disabled:opacity-50">
                 Annuler
               </button>
               <button
                 type="button"
                 onClick={() => void confirmRemove()}
                 disabled={Boolean(busyId) || deleteConfirmation !== deleteTarget.key || deleteReason.trim().length < 8}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-red-300/25 bg-red-500/14 px-4 py-3 text-sm font-black text-red-100 hover:bg-red-500/20 disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-300/25 bg-red-500/14 px-4 py-3 text-xs font-black text-red-100 hover:bg-red-500/20 disabled:opacity-50"
               >
-                {busyId === deleteTarget.id && <Loader2 className="h-4 w-4 animate-spin" />}
+                {busyId === deleteTarget.id && <Loader2 className="h-3 w-3 animate-spin" />}
                 Supprimer
               </button>
             </div>
@@ -2111,7 +2111,7 @@ function ConfigurationPanel({
   };
 
   if (loading) {
-    return <div className="flex items-center gap-2 text-sm font-bold text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Chargement configuration...</div>;
+    return <div className="flex items-center gap-2 text-xs font-bold text-slate-400"><Loader2 className="h-3 w-3 animate-spin" /> Chargement configuration...</div>;
   }
 
   if (rows.length === 0) {
@@ -2121,16 +2121,16 @@ function ConfigurationPanel({
   return (
     <div className="space-y-4">
       {message && (
-        <p className={classNames('rounded-2xl border px-4 py-3 text-sm font-bold', message.kind === 'success' ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100' : 'border-red-300/20 bg-red-400/10 text-red-100')}>
+        <p className={classNames('rounded-xl border px-4 py-3 text-xs font-bold', message.kind === 'success' ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100' : 'border-red-300/20 bg-red-400/10 text-red-100')}>
           {message.text}
         </p>
       )}
       {rows.map((row) => (
-        <div key={row.key} className="rounded-2xl border border-white/10 bg-black/18 p-4">
+        <div key={row.key} className="rounded-xl border border-white/10 bg-black/18 p-3">
           <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="font-mono text-sm font-black text-orange-200">{row.key}</p>
-              {row.description && <p className="mt-1 text-sm font-semibold text-slate-400">{row.description}</p>}
+              <p className="font-mono text-xs font-black text-orange-200">{row.key}</p>
+              {row.description && <p className="mt-1 text-xs font-semibold text-slate-400">{row.description}</p>}
             </div>
             <button
               type="button"
@@ -2146,7 +2146,7 @@ function ConfigurationPanel({
             value={edits[row.key] ?? ''}
             onChange={(event) => setEdits((current) => ({ ...current, [row.key]: event.target.value }))}
             rows={4}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 font-mono text-xs font-semibold text-slate-100 outline-none focus:border-orange-300/40"
+            className="w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 font-mono text-xs font-semibold text-slate-100 outline-none focus:border-orange-300/40"
           />
         </div>
       ))}
@@ -2218,13 +2218,13 @@ function CommunicationPanel({
   };
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[1fr_0.8fr]">
-      <form onSubmit={send} className="space-y-4 rounded-2xl border border-white/10 bg-black/18 p-5">
+    <div className="grid gap-3 xl:grid-cols-[1fr_0.8fr]">
+      <form onSubmit={send} className="space-y-4 rounded-xl border border-white/10 bg-black/18 p-3">
         <div className="grid gap-3 md:grid-cols-[220px_1fr]">
           <select
             value={target}
             onChange={(event) => setTarget(event.target.value)}
-            className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold text-white"
+            className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-xs font-bold text-white"
           >
             <option value="all">Toutes les organisations</option>
             {agencies.map((agency) => <option key={agency.id} value={agency.id}>{agency.name}</option>)}
@@ -2233,7 +2233,7 @@ function CommunicationPanel({
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="Titre de l'annonce ou du message support"
-            className="rounded-2xl border border-white/10 bg-black/24 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
+            className="rounded-xl border border-white/10 bg-black/24 px-4 py-3 text-xs font-bold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
           />
         </div>
         <textarea
@@ -2241,10 +2241,10 @@ function CommunicationPanel({
           onChange={(event) => setMessage(event.target.value)}
           rows={4}
           placeholder="Message visible dans le centre de notifications client"
-          className="w-full rounded-2xl border border-white/10 bg-black/24 px-4 py-3 text-sm font-semibold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
+          className="w-full rounded-xl border border-white/10 bg-black/24 px-4 py-3 text-xs font-semibold text-white outline-none placeholder:text-slate-600 focus:border-orange-300/40"
         />
         {feedback && (
-          <p className={classNames('rounded-xl border px-3 py-2 text-sm font-bold', feedback.kind === 'success' ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100' : 'border-red-300/20 bg-red-400/10 text-red-100')}>
+          <p className={classNames('rounded-xl border px-3 py-2 text-xs font-bold', feedback.kind === 'success' ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100' : 'border-red-300/20 bg-red-400/10 text-red-100')}>
             {feedback.text}
           </p>
         )}
@@ -2252,20 +2252,20 @@ function CommunicationPanel({
           <button
             type="submit"
             disabled={sending || !title.trim()}
-            className="inline-flex items-center gap-2 rounded-2xl border border-orange-300/20 bg-orange-300/12 px-4 py-3 text-sm font-black text-orange-100 hover:bg-orange-300/18 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-orange-300/20 bg-orange-300/12 px-4 py-3 text-xs font-black text-orange-100 hover:bg-orange-300/18 disabled:opacity-50"
           >
-            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+            {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3 w-3" />}
             Envoyer
           </button>
         </div>
       </form>
-      <div className="grid gap-4">
+      <div className="grid gap-3">
         {[
           ['Digest quotidien', 'Nouveaux comptes, tickets, incidents, quotas et paiements SaaS en retard.'],
           ['Annonces ciblées', 'Tous, plan, type de compte, organisation, rôle ou beta group.'],
           ['Seuils intelligents', 'Alerter seulement si un signal dépasse un seuil opérationnel utile.'],
         ].map(([cardTitle, text]) => (
-          <div key={cardTitle} className="rounded-2xl border border-white/10 bg-black/18 p-5">
+          <div key={cardTitle} className="rounded-xl border border-white/10 bg-black/18 p-3">
             <p className="font-black text-white">{cardTitle}</p>
             <p className="mt-2 text-sm leading-6 text-slate-400">{text}</p>
           </div>

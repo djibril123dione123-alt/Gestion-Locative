@@ -32,7 +32,7 @@ export function SuperAdminDashboard() {
     return (
       <div className="p-8 text-center">
         <AlertTriangle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Accès refusé</h2>
+        <h2 className="text-base font-bold text-slate-900 mb-2">Accès refusé</h2>
         <p className="text-slate-600">Seuls les super-administrateurs peuvent accéder à ce tableau de bord.</p>
       </div>
     );
@@ -168,7 +168,7 @@ export function SuperAdminDashboard() {
                 </span>
               </div>
               <p className="text-sm text-slate-600 mb-1">{metric.name}</p>
-              <p className="text-2xl font-bold text-slate-900">{metric.value}</p>
+              <p className="text-base font-bold text-slate-900">{metric.value}</p>
             </div>
           );
         })}

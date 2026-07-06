@@ -180,17 +180,17 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
         </div>
       </div>
 
-      <section className="grid gap-2.5 lg:grid-cols-[11.75rem_minmax(0,1fr)]">
-        <aside className="hidden h-fit rounded-2xl border border-emerald-950/10 bg-gradient-to-b from-emerald-950 via-[#073b2f] to-[#041b16] p-1.5 text-white shadow-[0_14px_38px_rgba(6,38,29,0.11)] lg:sticky lg:top-3 lg:block">
-          <div className="rounded-xl border border-white/10 bg-white/8 px-2 py-1.5">
+      <section className="grid gap-2 lg:grid-cols-[9.9rem_minmax(0,1fr)]">
+        <aside className="hidden h-fit rounded-2xl border border-emerald-950/10 bg-gradient-to-b from-emerald-950 via-[#073b2f] to-[#041b16] p-1.5 text-white shadow-[0_14px_38px_rgba(6,38,29,0.1)] lg:sticky lg:top-3 lg:block">
+          <div className="rounded-xl border border-white/10 bg-white/8 px-1.5 py-1.5">
             <p className="text-[0.5rem] font-black uppercase tracking-[0.18em] text-emerald-200">Source unique</p>
-            <h2 className="mt-0.5 text-[0.78rem] font-extrabold text-white">Control Center</h2>
-            <p className="mt-0.5 text-[0.68rem] leading-4 text-emerald-50/70">
+            <h2 className="mt-0.5 text-[0.74rem] font-extrabold text-white">Control Center</h2>
+            <p className="mt-0.5 truncate text-[0.62rem] leading-3 text-emerald-50/70">
               {agencyName}
             </p>
-            <div className="mt-1.5 flex items-center gap-1 rounded-lg bg-emerald-200/10 px-1.5 py-0.5 text-[0.56rem] font-extrabold text-emerald-50">
+            <div className="mt-1.5 flex items-center gap-1 rounded-lg bg-emerald-200/10 px-1.5 py-0.5 text-[0.52rem] font-extrabold text-emerald-50">
               <CheckCircle2 className="h-2.5 w-2.5 text-emerald-200" />
-              Configuration exploitable
+              Configurable
             </div>
           </div>
           <nav className="mt-1 grid gap-0.5" aria-label="Sections parametres">
@@ -203,13 +203,13 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
                   type="button"
                   onClick={() => setActiveSection(section.id)}
                   className={[
-                    'flex min-w-0 items-center gap-1.5 rounded-lg px-1.5 py-1.5 text-left text-[0.68rem] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/50',
+                    'flex min-w-0 items-center gap-1.5 rounded-lg px-1.5 py-1 text-left text-[0.62rem] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/50',
                     active
                       ? 'bg-white/14 text-white ring-1 ring-white/16'
                       : 'text-emerald-50/72 hover:bg-white/8 hover:text-white',
                   ].join(' ')}
                 >
-                  <span className={active ? 'h-3.5 w-0.5 rounded-full bg-orange-300' : 'h-3.5 w-0.5 rounded-full bg-transparent'} />
+                  <span className={active ? 'h-3 w-0.5 rounded-full bg-orange-300' : 'h-3 w-0.5 rounded-full bg-transparent'} />
                   <Icon className={active ? 'h-3 w-3 text-emerald-100' : 'h-3 w-3 text-emerald-100/64'} />
                   <span className="min-w-0 flex-1 truncate font-semibold">{section.label}</span>
                 </button>
@@ -218,13 +218,13 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
           </nav>
         </aside>
 
-        <main className="min-w-0 space-y-2.5 text-[0.82rem]">
-          <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2.5 shadow-sm ring-1 ring-white/70">
+        <main className="min-w-0 space-y-1.5 text-[0.76rem]">
+          <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2 shadow-sm ring-1 ring-white/70">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <p className="text-[0.54rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">{activeConfig.eyebrow}</p>
-                <h1 className="mt-0.5 font-serif text-[1rem] font-extrabold leading-tight text-slate-950 sm:text-[1.1rem]">{activeConfig.label}</h1>
-                <p className="mt-0.5 max-w-3xl text-[0.72rem] font-medium leading-4 text-slate-600">{activeConfig.description}</p>
+                <p className="text-[0.5rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">{activeConfig.eyebrow}</p>
+                <h1 className="mt-0.5 font-serif text-[0.95rem] font-extrabold leading-tight text-slate-950 sm:text-[1rem]">{activeConfig.label}</h1>
+                <p className="mt-0.5 max-w-3xl text-[0.66rem] font-medium leading-[0.86rem] text-slate-600">{activeConfig.description}</p>
               </div>
               {activeSection === 'billing' ? (
                 <PremiumButton variant="secondary" size="sm" onClick={openPricing} icon={<ArrowRight className="h-3.5 w-3.5" />}>
@@ -258,9 +258,9 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
 
 function StatusPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-lg border border-emerald-950/10 bg-white/78 px-2 py-1 shadow-sm">
-      <p className="text-[0.48rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
-      <p className="truncate text-[0.64rem] font-extrabold text-slate-950">{value}</p>
+    <div className="min-w-0 rounded-lg border border-emerald-950/10 bg-white/70 px-1.5 py-1 shadow-sm">
+      <p className="text-[0.44rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
+      <p className="truncate text-[0.58rem] font-extrabold text-slate-950" title={value}>{value}</p>
     </div>
   );
 }
@@ -344,39 +344,39 @@ function OverviewSection({
   ];
 
   return (
-    <div className="space-y-2.5">
-      <section className="grid gap-2.5 xl:grid-cols-[minmax(0,1.22fr)_minmax(15rem,0.78fr)]">
-        <div className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-[#fffdf8] via-white to-emerald-50/50 p-3 shadow-sm">
-          <p className="text-[0.54rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">Pret pour exploitation</p>
-          <h2 className="mt-0.5 font-serif text-[1.05rem] font-extrabold text-slate-950">Espace d'administration centralise.</h2>
-          <p className="mt-0.5 max-w-2xl text-[0.72rem] font-medium leading-4 text-slate-600">
+    <div className="space-y-2">
+      <section className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_16rem]">
+        <div className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-[#fffdf8] via-white to-emerald-50/45 p-2 shadow-sm">
+          <p className="text-[0.5rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">Pret pour exploitation</p>
+          <h2 className="mt-0.5 font-serif text-[0.95rem] font-extrabold text-slate-950">Administration centralisee.</h2>
+          <p className="mt-0.5 max-w-2xl text-[0.66rem] font-medium leading-[0.9rem] text-slate-600">
             Controlez l'identite, les modules, les droits, les documents et la facturation depuis une source unique.
           </p>
-          <div className="mt-2.5 grid gap-1.5 sm:grid-cols-3">
+          <div className="mt-2 grid gap-1 sm:grid-cols-3">
             <MiniHealth icon={BadgeCheck} label="Compte" value={isIndividualOwner ? 'Proprietaire' : 'Agence'} />
             <MiniHealth icon={ShieldCheck} label="Acces" value={role} />
             <MiniHealth icon={FileText} label="Documents" value="QR pret" />
           </div>
         </div>
-        <div className="rounded-xl border border-orange-200/70 bg-orange-50/70 p-3 shadow-sm">
-          <div className="flex items-start gap-2.5">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-orange-700 shadow-sm">
-              <AlertTriangle className="h-3.5 w-3.5" />
+        <div className="rounded-xl border border-orange-200/70 bg-orange-50/65 p-2 shadow-sm">
+          <div className="flex items-start gap-2">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-orange-700 shadow-sm">
+              <AlertTriangle className="h-3 w-3" />
             </div>
-            <div>
-              <p className="text-[0.54rem] font-black uppercase tracking-[0.15em] text-orange-700">Points a verifier</p>
-              <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Revue avant presentation</h3>
-              <ul className="mt-1 space-y-0.5 text-[0.66rem] font-semibold leading-4 text-slate-600">
-                <li>Verifier les informations legales de l'organisation.</li>
-                <li>Confirmer le logo et les couleurs des documents.</li>
-                <li>Relire les droits des profils agent et comptable.</li>
+            <div className="min-w-0">
+              <p className="text-[0.5rem] font-black uppercase tracking-[0.15em] text-orange-700">A verifier</p>
+              <h3 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">Avant demonstration</h3>
+              <ul className="mt-1 space-y-0.5 text-[0.62rem] font-semibold leading-[0.85rem] text-slate-600">
+                <li>Infos legales agence.</li>
+                <li>Logo et couleurs documentaires.</li>
+                <li>Droits agent et comptable.</li>
               </ul>
             </div>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {cards.filter((card) => !card.hidden).map((card) => (
           <ControlCard key={card.title} {...card} onOpen={() => onOpen(card.target)} />
         ))}
@@ -387,11 +387,11 @@ function OverviewSection({
 
 function MiniHealth({ icon: Icon, label, value }: { icon: ComponentType<{ className?: string }>; label: string; value: string }) {
   return (
-    <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-emerald-950/10 bg-white/82 px-2 py-1.5 shadow-sm">
-      <Icon className="h-3 w-3 shrink-0 text-emerald-800" />
+    <div className="flex min-w-0 items-center gap-1.5 rounded-lg border border-emerald-950/10 bg-white/82 px-1.5 py-1 shadow-sm">
+      <Icon className="h-2.5 w-2.5 shrink-0 text-emerald-800" />
       <div className="min-w-0">
-        <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
-        <p className="truncate text-[0.7rem] font-extrabold text-slate-900">{value}</p>
+        <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
+        <p className="truncate text-[0.64rem] font-extrabold text-slate-900">{value}</p>
       </div>
     </div>
   );
@@ -425,20 +425,20 @@ function ControlCard({
     <button
       type="button"
       onClick={onOpen}
-      className="group min-w-0 rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
+      className="group min-w-0 rounded-xl border border-emerald-950/10 bg-white/88 p-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
     >
-      <div className="flex items-start justify-between gap-2.5">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
-          <h3 className="mt-0.5 truncate text-[0.82rem] font-extrabold text-slate-950">{title}</h3>
+          <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
+          <h3 className="mt-0.5 truncate text-[0.76rem] font-extrabold text-slate-950">{title}</h3>
         </div>
-        <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${toneClass}`}>
-          <Icon className="h-3 w-3" />
+        <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${toneClass}`}>
+          <Icon className="h-2.5 w-2.5" />
         </div>
       </div>
-      <p className="mt-1.5 truncate text-[0.72rem] font-extrabold text-slate-800">{value}</p>
-      <p className="mt-0.5 line-clamp-2 text-[0.66rem] leading-[0.875rem] text-slate-500">{description}</p>
-      <span className="mt-2 inline-flex items-center gap-1 text-[0.66rem] font-extrabold text-emerald-800">
+      <p className="mt-1 truncate text-[0.66rem] font-extrabold text-slate-800">{value}</p>
+      <p className="mt-0.5 line-clamp-2 text-[0.6rem] leading-[0.82rem] text-slate-500">{description}</p>
+      <span className="mt-1.5 inline-flex items-center gap-1 text-[0.62rem] font-extrabold text-emerald-800">
         Ouvrir <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5" />
       </span>
     </button>
@@ -448,15 +448,15 @@ function ControlCard({
 function PanelCard({ title, eyebrow, children, icon }: { title: string; eyebrow: string; children: ReactNode; icon: ComponentType<{ className?: string }> }) {
   const Icon = icon;
   return (
-    <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
-      <div className="flex items-start gap-2.5">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
-          <Icon className="h-3 w-3" />
+    <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm">
+      <div className="flex items-start gap-2">
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+          <Icon className="h-2.5 w-2.5" />
         </div>
         <div className="min-w-0">
-          <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">{eyebrow}</p>
-          <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">{title}</h3>
-          <div className="mt-1 text-[0.7rem] font-medium leading-4 text-slate-600">{children}</div>
+          <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">{eyebrow}</p>
+          <h3 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">{title}</h3>
+          <div className="mt-1 text-[0.64rem] font-medium leading-[0.88rem] text-slate-600">{children}</div>
         </div>
       </div>
     </section>
@@ -472,8 +472,8 @@ function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isI
   ];
 
   return (
-    <div className="space-y-2.5">
-      <div className="grid gap-2.5 xl:grid-cols-3">
+    <div className="space-y-2">
+      <div className="grid gap-2 lg:grid-cols-3">
         <PanelCard title="RBAC actif" eyebrow="ACCES" icon={ShieldCheck}>
           <p>Role courant : <span className="font-black text-slate-900">{role}</span>. Les pages restent controlees par RBAC et permissions par page.</p>
         </PanelCard>
@@ -492,20 +492,20 @@ function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isI
         </PanelCard>
       </div>
 
-      <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
-        <div className="flex flex-col gap-2.5 xl:flex-row xl:items-start xl:justify-between">
+      <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">SYSTEME</p>
-            <h3 className="mt-0.5 text-[0.9rem] font-extrabold text-slate-950">Etat operationnel</h3>
-            <p className="mt-0.5 text-[0.7rem] leading-4 text-slate-600">Statuts lisibles sans exposer de secret technique.</p>
+            <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">SYSTEME</p>
+            <h3 className="mt-0.5 text-[0.78rem] font-extrabold text-slate-950">Etat operationnel</h3>
+            <p className="mt-0.5 text-[0.64rem] leading-[0.88rem] text-slate-600">Statuts lisibles sans exposer de secret technique.</p>
           </div>
-          <div className="grid min-w-0 flex-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid min-w-0 flex-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
             {statuses.map(({ label, value, icon: Icon }) => (
-              <div key={label} className="rounded-lg border border-emerald-950/10 bg-[#fffdf8] px-2 py-1.5 shadow-sm">
+              <div key={label} className="rounded-lg border border-emerald-950/10 bg-[#fffdf8] px-1.5 py-1 shadow-sm">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
-                    <p className="truncate text-[0.7rem] font-extrabold text-slate-950">{value}</p>
+                    <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
+                    <p className="truncate text-[0.62rem] font-extrabold text-slate-950">{value}</p>
                   </div>
                   <Icon className="h-3 w-3 shrink-0 text-emerald-800" />
                 </div>
@@ -515,7 +515,7 @@ function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isI
         </div>
       </section>
 
-      <div className="grid gap-2.5 xl:grid-cols-2">
+      <div className="grid gap-2 lg:grid-cols-2">
         <PanelCard title="Support WhatsApp" eyebrow="ASSISTANCE" icon={LifeBuoy}>
           <p>Canal rapide pour abonnement, incident bloquant ou accompagnement commercial.</p>
           <a href="https://wa.me/221769010960" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex text-[0.68rem] font-extrabold text-emerald-800 underline-offset-2 hover:underline">

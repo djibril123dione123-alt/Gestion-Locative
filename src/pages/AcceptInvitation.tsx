@@ -130,30 +130,30 @@ export function AcceptInvitation({ token, onDone }: Props) {
   }, [token, user, agencyName, role]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-brand-paper p-4">
-      <div className="max-w-md w-full sk-card-premium p-8 text-center">
+    <div className="flex min-h-screen items-center justify-center bg-brand-paper p-4">
+      <div className="w-full max-w-xs rounded-xl border border-emerald-950/10 bg-white/88 p-4 text-center shadow-[0_14px_40px_rgba(6,17,13,0.1)]">
         {status === 'loading' && (
           <>
-            <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" style={{ color: '#F58220' }} />
-            <p className="text-slate-700">Vérification de l'invitation…</p>
+            <Loader2 className="mx-auto mb-2 h-7 w-7 animate-spin" style={{ color: '#F58220' }} />
+            <p className="text-sm font-semibold text-slate-700">Vérification de l'invitation…</p>
           </>
         )}
         {status === 'awaiting_auth' && (
           <>
-            <Loader2 className="w-12 h-12 mx-auto mb-4" style={{ color: '#F58220' }} />
-            <h1 className="text-xl font-bold text-slate-900 mb-2">Invitation valide</h1>
-            <p className="text-slate-600 mb-6">
+            <Loader2 className="mx-auto mb-2 h-7 w-7" style={{ color: '#F58220' }} />
+            <h1 className="mb-1.5 text-base font-bold text-slate-900">Invitation valide</h1>
+            <p className="mb-3 text-xs text-slate-600">
               Vous êtes invité à rejoindre <span className="font-semibold">{agencyName}</span> en tant que{' '}
               <span className="font-semibold capitalize">{role}</span>.
             </p>
-            <p className="text-sm text-slate-500 mb-6">
+            <p className="mb-4 text-xs text-slate-500">
               Connectez-vous ou créez votre compte pour accepter.
             </p>
             <button
               type="button"
               onClick={onDone}
               data-testid="button-go-to-auth"
-              className="px-6 py-3 rounded-lg text-white font-semibold"
+              className="rounded-lg px-4 py-2.5 text-xs font-bold text-white"
               style={{ backgroundColor: '#F58220' }}
             >
               Se connecter / S'inscrire
@@ -162,14 +162,14 @@ export function AcceptInvitation({ token, onDone }: Props) {
         )}
         {status === 'success' && (
           <>
-            <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-4" />
-            <h1 className="text-xl font-bold text-slate-900 mb-2">Bienvenue !</h1>
-            <p className="text-slate-600 mb-6">{message}</p>
+            <CheckCircle2 className="mx-auto mb-2 h-7 w-7 text-green-600" />
+            <h1 className="mb-1.5 text-base font-bold text-slate-900">Bienvenue !</h1>
+            <p className="mb-3 text-xs text-slate-600">{message}</p>
             <button
               type="button"
               onClick={() => { window.location.href = '/'; }}
               data-testid="button-enter-app"
-              className="px-6 py-3 rounded-lg text-white font-semibold"
+              className="rounded-lg px-4 py-2.5 text-xs font-bold text-white"
               style={{ backgroundColor: '#F58220' }}
             >
               Accéder à l'application
@@ -178,13 +178,13 @@ export function AcceptInvitation({ token, onDone }: Props) {
         )}
         {(status === 'error' || status === 'expired') && (
           <>
-            <XCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-            <h1 className="text-xl font-bold text-slate-900 mb-2">Invitation invalide</h1>
-            <p className="text-slate-600 mb-6">{message}</p>
+            <XCircle className="mx-auto mb-2 h-7 w-7 text-red-600" />
+            <h1 className="mb-1.5 text-base font-bold text-slate-900">Invitation invalide</h1>
+            <p className="mb-3 text-xs text-slate-600">{message}</p>
             <button
               type="button"
               onClick={() => { clearStoredToken(); onDone(); }}
-              className="px-6 py-3 rounded-lg text-white font-semibold"
+              className="rounded-lg px-4 py-2.5 text-xs font-bold text-white"
               style={{ backgroundColor: '#F58220' }}
             >
               Continuer

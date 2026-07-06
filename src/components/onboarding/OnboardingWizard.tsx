@@ -137,9 +137,9 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
 
   const canContinue = step !== 0 || form.agencyName.trim().length >= 2;
   const fieldClass =
-    'h-12 w-full rounded-2xl border border-white/20 bg-[#FDFBF7] px-4 py-3 text-base font-bold text-slate-950 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] outline-none transition placeholder:text-slate-500 focus:border-amber-400/70 focus:bg-white focus:ring-4 focus:ring-amber-400/20';
-  const labelClass = 'mb-2 block text-sm font-black text-slate-700';
-  const mutedCopyClass = 'text-sm leading-6 text-slate-600';
+    'h-9 w-full rounded-lg border border-white/20 bg-[#FDFBF7] px-3 py-1.5 text-xs font-bold text-slate-950 shadow-[inset_0_1px_3px_rgba(0,0,0,0.02)] outline-none transition placeholder:text-slate-500 focus:border-amber-400/70 focus:bg-white focus:ring-4 focus:ring-amber-400/20';
+  const labelClass = 'mb-1 block text-[0.68rem] font-black text-slate-700';
+  const mutedCopyClass = 'text-[0.68rem] leading-4 text-slate-600';
   const getVisibleStepTitle = (index: number) => {
     if (!isIndividualOwner) return STEPS[index].title;
     if (index === 0) return 'Profil propriétaire';
@@ -309,35 +309,35 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
   return (
     <>
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
-      <div className="fixed inset-0 z-[85] flex items-center justify-center overflow-y-auto bg-slate-950/76 px-3 py-4 backdrop-blur-2xl">
-        <section className="relative w-full max-w-5xl overflow-hidden rounded-[2rem] border border-white/14 bg-[linear-gradient(135deg,rgba(255,250,240,0.98),rgba(248,244,236,0.94))] shadow-[0_34px_120px_rgba(6,17,13,0.36)]">
+      <div className="fixed inset-0 z-[85] flex items-center justify-center overflow-y-auto bg-slate-950/76 px-3 py-3 backdrop-blur-2xl">
+        <section className="relative w-full max-w-3xl overflow-hidden rounded-xl border border-white/14 bg-[linear-gradient(135deg,rgba(255,250,240,0.98),rgba(248,244,236,0.94))] shadow-[0_18px_56px_rgba(6,17,13,0.3)]">
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-4 top-4 z-10 rounded-full border border-white/25 bg-white/90 p-2 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-200"
+            className="absolute right-3 top-3 z-10 rounded-full border border-white/25 bg-white/90 p-1.5 text-slate-500 shadow-sm transition hover:bg-white hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-200"
             aria-label="Fermer l'onboarding"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
 
-          <div className="grid lg:grid-cols-[0.78fr_1.22fr]">
-            <aside className="relative overflow-hidden bg-[radial-gradient(circle_at_18%_8%,rgba(251,191,36,0.2),transparent_30%),radial-gradient(circle_at_90%_100%,rgba(16,185,129,0.26),transparent_34%),linear-gradient(145deg,#02140f,#053426_48%,#06110e)] p-6 text-white sm:p-8 [@media(max-height:800px)]:p-6">
+          <div className="grid lg:grid-cols-[0.64fr_1.36fr]">
+            <aside className="relative overflow-hidden bg-[radial-gradient(circle_at_18%_8%,rgba(251,191,36,0.2),transparent_30%),radial-gradient(circle_at_90%_100%,rgba(16,185,129,0.26),transparent_34%),linear-gradient(145deg,#02140f,#053426_48%,#06110e)] p-3.5 text-white sm:p-4">
               <div className="pointer-events-none absolute -left-20 -top-20 h-56 w-56 rounded-full bg-emerald-400/16 blur-3xl" />
               <div className="pointer-events-none absolute bottom-0 right-0 h-52 w-52 rounded-full bg-orange-500/20 blur-3xl" />
               <div className="relative">
-                <span className="inline-flex rounded-full border border-orange-300/25 bg-orange-300/10 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-orange-200">
+                <span className="inline-flex rounded-full border border-orange-300/25 bg-orange-300/10 px-2.5 py-0.5 text-[0.62rem] font-black uppercase tracking-[0.16em] text-orange-200">
                   Mise en route
                 </span>
-                <h2 className="mt-5 text-3xl font-black tracking-tight text-[#fff7e6] sm:text-4xl [@media(max-height:800px)]:text-3xl">
+                <h2 className="mt-2 text-lg font-black tracking-tight text-[#fff7e6] sm:text-xl">
                   {isIndividualOwner ? 'Configurez votre espace propriétaire en moins de 3 minutes.' : 'Configurez votre agence en moins de 3 minutes.'}
                 </h2>
-                <p className="mt-4 text-sm leading-6 text-emerald-50/76">
+                <p className="mt-2 text-[0.68rem] leading-4 text-emerald-50/76">
                   {isIndividualOwner
                     ? 'On garde uniquement ce qui débloque la valeur tout de suite : identité, devise, puis premiers pas métier.'
                     : 'On garde uniquement ce qui débloque la valeur tout de suite : identité, devise, équipe, puis premiers pas métier.'}
                 </p>
 
-                <div className="mt-8 space-y-3 [@media(max-height:800px)]:mt-6">
+                <div className="mt-4 space-y-1.5">
                   {STEPS.map((item, index) => {
                     const Icon = item.icon;
                     const active = index === step;
@@ -346,7 +346,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                     return (
                       <div
                         key={item.title}
-                        className={`flex items-center gap-3 rounded-2xl border p-3 transition ${
+                        className={`flex items-center gap-2 rounded-lg border p-2 transition ${
                           active
                             ? 'border-orange-300/35 bg-white/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]'
                             : done
@@ -354,14 +354,14 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                               : 'border-white/10 bg-white/[0.05]'
                         }`}
                       >
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${done ? 'bg-emerald-300 text-emerald-950' : 'bg-white/10 text-orange-200'}`}>
-                          {done ? <CheckCircle2 className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+                        <div className={`flex h-7 w-7 items-center justify-center rounded-md ${done ? 'bg-emerald-300 text-emerald-950' : 'bg-white/10 text-orange-200'}`}>
+                          {done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
                         </div>
                         <div>
-                          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-100/60">
+                          <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-emerald-100/60">
                             {item.eyebrow}
                           </p>
-                          <p className="text-sm font-black text-white">
+                          <p className="text-[0.7rem] font-black text-white">
                             {title}
                           </p>
                         </div>
@@ -372,31 +372,31 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
               </div>
             </aside>
 
-            <div className="max-h-[92vh] overflow-y-auto p-5 sm:p-8 [@media(max-height:800px)]:p-6">
-              <div className="mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-brand-800 ring-1 ring-emerald-100">
-                    <StepIcon className="h-6 w-6" />
+            <div className="max-h-[86vh] overflow-y-auto p-3.5 sm:p-4">
+              <div className="mb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-brand-800 ring-1 ring-emerald-100">
+                    <StepIcon className="h-3.5 w-3.5" />
                   </div>
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-orange-600">
+                    <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-orange-600">
                       {STEPS[step].eyebrow}
                     </p>
-                    <h3 className="text-2xl font-black text-slate-950">
+                    <h3 className="text-base font-black text-slate-950">
                       {currentTitle}
                     </h3>
                   </div>
                 </div>
-                <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-slate-100">
                   <div className="h-full rounded-full bg-gradient-to-r from-emerald-800 to-orange-400 transition-all duration-500" style={{ width: `${progress}%` }} />
                 </div>
               </div>
 
               {step === 0 && (
-                <div className="grid gap-5 sm:grid-cols-[1fr_auto] sm:items-end">
-                  <div className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                  <div className="space-y-2.5">
                     <div>
-                      <p className="text-lg font-black text-slate-950">
+                      <p className="text-xs font-black text-slate-950">
                         {isIndividualOwner ? 'Profil propriétaire' : 'Identité officielle'}
                       </p>
                       <p className={mutedCopyClass}>
@@ -426,16 +426,16 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                           placeholder="Ex: Awa Ndiaye"
                           className={fieldClass}
                         />
-                        <span className="mt-2 block text-xs font-semibold text-slate-500">
+                        <span className="mt-1 block text-[0.62rem] font-semibold text-slate-500">
                           Utilisé sur les contrats, mandats, rapports et signatures si renseigné.
                         </span>
                       </label>
                     )}
                     {isIndividualOwner && (
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-2.5 sm:grid-cols-2">
                         <label className="block">
                           <span className={labelClass}>
-                            <Phone className="mr-1 inline h-4 w-4 text-brand-800" />
+                            <Phone className="mr-1 inline h-3.5 w-3.5 text-brand-800" />
                             Téléphone
                           </span>
                           <input
@@ -447,7 +447,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                         </label>
                         <label className="block">
                           <span className={labelClass}>
-                            <MapPin className="mr-1 inline h-4 w-4 text-brand-800" />
+                            <MapPin className="mr-1 inline h-3.5 w-3.5 text-brand-800" />
                             Adresse
                           </span>
                           <input
@@ -457,23 +457,23 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                             className={fieldClass}
                           />
                         </label>
-                        <p className="rounded-2xl border border-amber-200/60 bg-amber-50/80 p-3 text-xs font-semibold leading-5 text-amber-900 sm:col-span-2">
+                        <p className="rounded-lg border border-amber-200/60 bg-amber-50/80 p-2 text-[0.62rem] font-semibold leading-4 text-amber-900 sm:col-span-2">
                           Ces informations pourront être utilisées dans vos documents, rapports et quittances.
                         </p>
                       </div>
                     )}
                   </div>
 
-                  <label className="group flex min-h-[9rem] cursor-pointer flex-col items-center justify-center rounded-3xl border border-dashed border-emerald-300/70 bg-emerald-50/60 px-5 py-4 text-center shadow-inner transition hover:border-amber-400 hover:bg-amber-50/70 sm:w-44">
+                  <label className="group flex min-h-[5.75rem] cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-emerald-300/70 bg-emerald-50/60 px-3 py-2.5 text-center shadow-inner transition hover:border-amber-400 hover:bg-amber-50/70 sm:w-32">
                     {logoPreview ? (
                       <img src={logoPreview} alt={isIndividualOwner ? 'Photo de profil propriétaire' : 'Logo agence'} className={isIndividualOwner ? 'h-16 w-16 rounded-full object-cover ring-4 ring-white/80' : 'h-16 w-24 object-contain'} />
                     ) : (
-                      <Upload className="h-7 w-7 text-brand-800" />
+                      <Upload className="h-5 w-5 text-brand-800" />
                     )}
-                    <span className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-brand-800">
+                    <span className="mt-2 text-[0.62rem] font-black uppercase tracking-[0.1em] text-brand-800">
                       {isIndividualOwner ? 'Photo optionnelle' : 'Logo optionnel'}
                     </span>
-                    <span className="mt-1 text-xs font-semibold text-slate-500">
+                    <span className="mt-1 text-[0.62rem] font-semibold text-slate-500">
                       {isIndividualOwner ? 'Avatar propriétaire · PNG, JPG' : 'PNG, JPG, SVG'}
                     </span>
                     <input
@@ -487,9 +487,9 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
               )}
 
               {step === 1 && (
-                <div className="grid gap-5 sm:grid-cols-2">
+                <div className="grid gap-2.5 sm:grid-cols-2">
                   <div className="sm:col-span-2">
-                    <p className="text-lg font-black text-slate-950">Cadre de travail</p>
+                    <p className="text-xs font-black text-slate-950">Cadre de travail</p>
                     <p className={mutedCopyClass}>
                       {isIndividualOwner
                         ? 'Définissez les paramètres qui alimenteront vos loyers, documents et dates.'
@@ -522,8 +522,8 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                       ))}
                     </select>
                   </label>
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/75 p-4 sm:col-span-2">
-                    <p className="text-sm font-semibold leading-6 text-emerald-900">
+                  <div className="rounded-lg border border-emerald-100 bg-emerald-50/75 p-2.5 sm:col-span-2">
+                    <p className="text-[0.68rem] font-semibold leading-4 text-emerald-900">
                       Ces réglages alimentent les documents, les rapports et les dates affichées dans l'application.
                     </p>
                   </div>
@@ -531,15 +531,15 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
               )}
 
               {step === 2 && (
-                <div className="space-y-5">
-                  <div className="rounded-2xl border border-emerald-950/10 bg-white/75 p-4 shadow-sm">
-                    <div className="flex items-start gap-3">
-                      <Mail className="mt-1 h-5 w-5 text-brand-800" />
+                <div className="space-y-2.5">
+                  <div className="rounded-lg border border-emerald-950/10 bg-white/75 p-2.5 shadow-sm">
+                    <div className="flex items-start gap-2.5">
+                      <Mail className="mt-0.5 h-4 w-4 text-brand-800" />
                       <div>
-                        <p className="font-black text-slate-950">
+                        <p className="text-xs font-black text-slate-950">
                           {isIndividualOwner ? 'Préférences de démarrage' : "Inviter l'équipe maintenant ou plus tard."}
                         </p>
-                        <p className="mt-1 text-sm leading-6 text-slate-600">
+                        <p className="mt-1 text-[0.68rem] leading-4 text-slate-600">
                           {isIndividualOwner
                             ? 'Votre espace propriétaire est prêt. Vous pourrez maintenant ajouter votre premier bien, suivre vos loyers et générer vos documents.'
                             : "Cette étape est optionnelle. Vous pouvez démarrer seul et inviter vos collaborateurs depuis la page Équipe."}
@@ -548,7 +548,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                     </div>
                   </div>
                   {!isIndividualOwner && (
-                    <div className="grid gap-4 sm:grid-cols-[1fr_13rem]">
+                    <div className="grid gap-2.5 sm:grid-cols-[1fr_10rem]">
                       <label className="block">
                         <span className={labelClass}>Email collaborateur optionnel</span>
                         <input
@@ -574,29 +574,29 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                     </div>
                   )}
                   {generatedInviteLink && (
-                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-[0.68rem] font-semibold text-emerald-900">
                       Invitation créée : {generatedInviteLink}
                     </div>
                   )}
                 </div>
               )}
 
-              <div className="mt-8 flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="mt-4 flex flex-col-reverse gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
                 <button
                   type="button"
                   onClick={() => void skip()}
                   disabled={loading}
-                  className="rounded-xl px-4 py-3 text-sm font-black text-slate-500 transition hover:bg-white/70 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-lg px-3 py-2 text-xs font-black text-slate-500 transition hover:bg-white/70 hover:text-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {skipLabel}
                 </button>
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   {step > 0 && (
                     <button
                       type="button"
                       onClick={() => setStep((value) => Math.max(0, value - 1))}
                       disabled={loading}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                     >
                       <ArrowLeft className="h-4 w-4" />
                       Retour
@@ -606,7 +606,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                     type="button"
                     onClick={next}
                     disabled={loading || !canContinue}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#072F24] px-5 py-3 text-sm font-black text-white shadow-[0_18px_48px_rgba(7,47,36,0.26)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#072F24] px-4 py-2 text-xs font-black text-white shadow-[0_12px_34px_rgba(7,47,36,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : step === STEPS.length - 1 ? <CheckCircle2 className="h-4 w-4" /> : <ArrowRight className="h-4 w-4" />}
                     {step === STEPS.length - 1 ? 'Terminer' : 'Continuer'}

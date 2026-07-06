@@ -253,10 +253,10 @@ export default function Welcome() {
               <BrandLogo size="sm" tone="dark" animated showTagline stacked className="items-center justify-center" />
             </div>
             <div className="rounded-[1.75rem] border border-white/18 bg-brand-950/68 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8 [@media(max-height:800px)]:p-6">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-300/35 bg-[linear-gradient(135deg,#F7E6BF,#C8872E)] text-brand-950 shadow-[0_18px_48px_rgba(143,74,18,0.20)] [@media(max-height:800px)]:mb-4 [@media(max-height:800px)]:h-14 [@media(max-height:800px)]:w-14">
-                <Clock className="h-8 w-8 [@media(max-height:800px)]:h-7 [@media(max-height:800px)]:w-7" />
+              <div className="mx-auto mb-5 flex h-9 w-9 items-center justify-center rounded-lg border border-amber-300/35 bg-[linear-gradient(135deg,#F7E6BF,#C8872E)] text-brand-950 shadow-[0_18px_48px_rgba(143,74,18,0.20)] [@media(max-height:800px)]:mb-4 [@media(max-height:800px)]:h-14 [@media(max-height:800px)]:w-14">
+                <Clock className="h-4 w-4 [@media(max-height:800px)]:h-7 [@media(max-height:800px)]:w-7" />
               </div>
-              <div className="mb-3 inline-flex rounded-full border border-amber-300/30 bg-amber-50 px-3 py-1 text-[11px] font-black uppercase text-amber-800">
+              <div className="mb-3 inline-flex rounded-full border border-amber-300/30 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase text-amber-800">
                 Validation manuelle
               </div>
               <h1 className="mb-3 font-serif text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">Demande en cours d'examen</h1>
@@ -269,9 +269,9 @@ export default function Welcome() {
                 </span>
                 . Notre équipe l'examinera dans les meilleurs délais.
               </p>
-              <div className="mb-5 rounded-2xl border border-amber-200/30 bg-amber-100/12 p-4 text-left shadow-inner shadow-white/50">
+              <div className="mb-5 rounded-lg border border-amber-200/30 bg-amber-100/12 p-2.5 text-left shadow-inner shadow-white/50">
                 <p className="flex items-start gap-3 text-sm font-semibold leading-6 text-[#FFF7E6]">
-                  <Mail className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-700" />
+                  <Mail className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-700" />
                   <span>
                     Vous recevrez une notification par email dès l'approbation. Vous pouvez fermer cet onglet
                     et revenir plus tard.
@@ -314,8 +314,8 @@ export default function Welcome() {
               <BrandLogo size="sm" tone="dark" animated showTagline stacked className="items-center justify-center" />
             </div>
             <div className="rounded-[1.75rem] border border-white/18 bg-brand-950/68 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-red-200 bg-red-50 text-red-700 shadow-[0_18px_48px_rgba(153,27,27,0.14)]">
-                <XCircle className="h-8 w-8" />
+              <div className="mx-auto mb-5 flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-700 shadow-[0_18px_48px_rgba(153,27,27,0.14)]">
+                <XCircle className="h-4 w-4" />
               </div>
               <h1 className="mb-3 font-serif text-3xl font-black text-[#FFF7E6]">Demande non approuvée</h1>
               <p className="mx-auto mb-4 max-w-md text-sm font-semibold leading-7 text-slate-200 sm:text-base">
@@ -362,8 +362,8 @@ export default function Welcome() {
             <BrandLogo size="sm" tone="dark" animated showTagline stacked className="items-center justify-center" />
           </div>
           <div className="rounded-[1.75rem] border border-white/18 bg-brand-950/68 p-6 text-center shadow-[0_34px_120px_rgba(6,17,13,0.32)] backdrop-blur-2xl sm:p-8">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-800 shadow-[0_18px_48px_rgba(6,95,70,0.16)]">
-              <CheckCircle2 className="h-8 w-8" />
+            <div className="mx-auto mb-5 flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 shadow-[0_18px_48px_rgba(6,95,70,0.16)]">
+              <CheckCircle2 className="h-4 w-4" />
             </div>
             <h1 className="mb-3 font-serif text-3xl font-black text-[#FFF7E6]">Demande approuvée !</h1>
             <p className="mb-6 text-sm font-semibold leading-7 text-slate-200 sm:text-base">
@@ -392,7 +392,7 @@ export default function Welcome() {
     : ['Identité', 'Contact', 'Adresse'];
 
   const renderStepper = () => (
-    <div className="mx-auto mb-4 w-full max-w-2xl rounded-2xl border border-white/22 bg-brand-950/50 px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:px-5 [@media(max-height:800px)]:mb-3 [@media(max-height:800px)]:py-2.5">
+    <div className="mx-auto mb-4 w-full max-w-2xl rounded-2xl border border-white/22 bg-brand-950/50 px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:px-5  .5">
       <div className="grid grid-cols-3 items-center gap-2">
         {formSteps.map((label, index) => {
           const itemStep = index + 1;
@@ -400,7 +400,7 @@ export default function Welcome() {
           const isDone = step > itemStep;
           return (
             <div key={label} className="flex items-center gap-2">
-              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-black transition [@media(max-height:800px)]:h-7 [@media(max-height:800px)]:w-7 ${
+              <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-xs font-black transition [@media(max-height:800px)]:h-7 [@media(max-height:800px)]:w-7 ${
                 isActive
                   ? 'border-amber-200 bg-amber-200 text-brand-950 shadow-[0_10px_26px_rgba(208,138,36,0.26)]'
                   : isDone
@@ -437,12 +437,12 @@ export default function Welcome() {
     switch (step) {
       case 0:
         return (
-          <div className="w-full max-w-6xl animate-fadeIn [@media(max-height:800px)]:max-w-5xl">
-            <div className="mx-auto mb-7 max-w-3xl text-center text-white sm:mb-10 animate-slideInUp [@media(max-height:800px)]:mb-4 [@media(max-height:760px)]:mb-3">
-              <div className="mb-5 flex origin-top justify-center [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:scale-90 [@media(max-height:760px)]:scale-[0.84]">
+          <div className="w-full max-w-5xl animate-fadeIn">
+            <div className="mx-auto mb-4 max-w-2xl text-center text-white sm:mb-5 animate-slideInUp [@media(max-height:800px)]:mb-4 [@media(max-height:760px)]:mb-3">
+              <div className="mb-4 flex origin-top justify-center [@media(max-height:800px)]:mb-2 ">
                 <BrandLogo size="md" tone="dark" animated showTagline stacked className="items-center justify-center" />
               </div>
-              <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-amber-200/20 bg-white/[0.08] px-4 py-2 text-[11px] font-black uppercase text-amber-100 shadow-[0_14px_44px_rgba(0,0,0,0.18)] backdrop-blur-xl [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:px-3 [@media(max-height:800px)]:py-1.5 [@media(max-height:800px)]:text-[10px]">
+              <div className="mx-auto mb-3 inline-flex items-center gap-1.5 rounded-full border border-amber-200/20 bg-white/[0.08] px-3 py-1.5 text-[10px] font-black uppercase text-amber-100 shadow-[0_14px_44px_rgba(0,0,0,0.18)] backdrop-blur-xl [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:px-3 [@media(max-height:800px)]:py-1.5 [@media(max-height:800px)]:text-[10px]">
                 <ShieldCheck className="h-4 w-4 [@media(max-height:800px)]:h-3.5 [@media(max-height:800px)]:w-3.5" />
                 Configuration de votre espace
               </div>
@@ -458,49 +458,49 @@ export default function Welcome() {
             <div className="grid gap-5 md:grid-cols-2 md:gap-7 [@media(max-height:800px)]:gap-4">
               <button
                 onClick={() => { setAccountType('agency'); nextStep(); }}
-                className="group relative min-h-full overflow-hidden rounded-[1.65rem] border border-emerald-200/40 bg-white/[0.88] p-5 text-left text-brand-950 shadow-[0_28px_90px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:bg-white/[0.94] hover:shadow-[0_34px_120px_rgba(6,17,13,0.34)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/50 sm:p-7 [@media(max-height:800px)]:rounded-2xl [@media(max-height:800px)]:p-4 sm:[@media(max-height:800px)]:p-5"
+                className="group relative min-h-full overflow-hidden rounded-xl border border-emerald-200/40 bg-white/[0.88] p-3 text-left text-brand-950 shadow-[0_14px_42px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:bg-white/[0.94] hover:shadow-[0_18px_56px_rgba(6,17,13,0.24)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/50 sm:p-4 [@media(max-height:800px)]:rounded-2xl [@media(max-height:800px)]:p-4 sm:[@media(max-height:800px)]:p-5"
                 data-testid="card-account-agency"
               >
-                <div className="mb-6 flex items-start justify-between gap-4 [@media(max-height:800px)]:mb-3">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-900/10 bg-gradient-to-br from-emerald-950 to-brand-700 text-white shadow-[0_18px_42px_rgba(31,59,46,0.28)] transition duration-300 group-hover:scale-[1.03] [@media(max-height:800px)]:h-12 [@media(max-height:800px)]:w-12 [@media(max-height:800px)]:rounded-xl">
-                    <Building2 className="h-8 w-8 [@media(max-height:800px)]:h-6 [@media(max-height:800px)]:w-6" />
+                <div className="mb-3 flex items-start justify-between gap-2.5 ">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-900/10 bg-gradient-to-br from-emerald-950 to-brand-700 text-white shadow-[0_18px_42px_rgba(31,59,46,0.28)] transition duration-300 group-hover:scale-[1.03] [@media(max-height:800px)]:h-12 [@media(max-height:800px)]:w-12 [@media(max-height:800px)]:rounded-xl">
+                    <Building2 className="h-4 w-4 [@media(max-height:800px)]:h-6 [@media(max-height:800px)]:w-6" />
                   </div>
-                  <span className="rounded-full border border-emerald-900/10 bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase text-brand-800 [@media(max-height:800px)]:px-2.5 [@media(max-height:800px)]:py-1 [@media(max-height:800px)]:text-[10px]">
+                  <span className="rounded-full border border-emerald-900/10 bg-emerald-50 px-2.5 py-1 text-[10px] font-black uppercase text-brand-800 [@media(max-height:800px)]:px-2.5 [@media(max-height:800px)]:py-1 [@media(max-height:800px)]:text-[10px]">
                     Agence / cabinet
                   </span>
                 </div>
-                <h2 className="mb-3 font-serif text-2xl font-black text-brand-950 md:text-3xl [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:text-xl md:[@media(max-height:800px)]:text-2xl">Je gère pour des clients</h2>
-                <p className="mb-6 text-sm font-semibold leading-7 text-slate-600 md:text-base [@media(max-height:800px)]:mb-3 [@media(max-height:800px)]:text-sm [@media(max-height:800px)]:leading-6">Un espace structuré pour gérer des propriétaires, des mandats, des encaissements et des rapports professionnels.</p>
-                <ul className="mb-6 grid gap-3 text-sm [@media(max-height:800px)]:mb-4 [@media(max-height:800px)]:gap-2"><li className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><Users className="h-4 w-4 text-brand-800" />Gestion multi-bailleurs</li><li className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><ShieldCheck className="h-4 w-4 text-brand-800" />Équipe collaborative</li><li className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><Sparkles className="h-4 w-4 text-brand-800" />Rapports personnalisés</li></ul>
-                <div className="flex min-h-12 items-center justify-between rounded-xl bg-brand-950 px-4 py-3 text-sm font-black text-white shadow-[0_18px_40px_rgba(6,17,13,0.22)] transition group-hover:bg-brand-800 [@media(max-height:800px)]:min-h-10 [@media(max-height:800px)]:px-3 [@media(max-height:800px)]:py-2.5">Créer un espace agence<ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1 [@media(max-height:800px)]:h-4 [@media(max-height:800px)]:w-4" /></div>
+                <h2 className="mb-1.5 font-serif text-lg font-black text-brand-950 md:text-xl [@media(max-height:800px)]:mb-2 ">Je gère pour des clients</h2>
+                <p className="mb-3 text-[0.72rem] font-semibold leading-4 text-slate-600  [@media(max-height:800px)]:text-sm [@media(max-height:800px)]:leading-6">Un espace structuré pour gérer des propriétaires, des mandats, des encaissements et des rapports professionnels.</p>
+                <ul className="mb-3 grid gap-1.5 text-[0.68rem] "><li className="flex items-center gap-1.5 rounded-md border border-emerald-950/10 bg-white/75 px-2 py-1.5 font-black text-slate-700 shadow-sm "><Users className="h-4 w-4 text-brand-800" />Gestion multi-bailleurs</li><li className="flex items-center gap-1.5 rounded-md border border-emerald-950/10 bg-white/75 px-2 py-1.5 font-black text-slate-700 shadow-sm "><ShieldCheck className="h-4 w-4 text-brand-800" />Équipe collaborative</li><li className="flex items-center gap-1.5 rounded-md border border-emerald-950/10 bg-white/75 px-2 py-1.5 font-black text-slate-700 shadow-sm "><Sparkles className="h-4 w-4 text-brand-800" />Rapports personnalisés</li></ul>
+                <div className="flex min-h-9 items-center justify-between rounded-lg bg-brand-950 px-3 py-1.5 text-[0.68rem] font-black text-white shadow-[0_9px_22px_rgba(6,17,13,0.18)] transition group-hover:bg-brand-800 [@media(max-height:800px)]:min-h-10 [@media(max-height:800px)]:px-3 .5">Créer un espace agence<ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1 " /></div>
               </button>
 
               <button
                 onClick={() => { setAccountType('bailleur'); nextStep(); }}
-                className="group relative min-h-full overflow-hidden rounded-[1.65rem] border border-emerald-200/40 bg-white/[0.88] p-5 text-left text-brand-950 shadow-[0_28px_90px_rgba(0,0,0,0.28)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:bg-white/[0.94] hover:shadow-[0_34px_120px_rgba(6,17,13,0.34)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/50 sm:p-7 [@media(max-height:800px)]:rounded-2xl [@media(max-height:800px)]:p-4 sm:[@media(max-height:800px)]:p-5"
+                className="group relative min-h-full overflow-hidden rounded-xl border border-emerald-200/40 bg-white/[0.88] p-3 text-left text-brand-950 shadow-[0_14px_42px_rgba(0,0,0,0.2)] backdrop-blur-2xl transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:bg-white/[0.94] hover:shadow-[0_18px_56px_rgba(6,17,13,0.24)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300/50 sm:p-4 [@media(max-height:800px)]:rounded-2xl [@media(max-height:800px)]:p-4 sm:[@media(max-height:800px)]:p-5"
                 data-testid="card-account-bailleur"
               >
-                <div className="mb-6 flex items-start justify-between gap-4 [@media(max-height:800px)]:mb-3">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-900/10 bg-gradient-to-br from-amber-500 to-action-500 text-white shadow-[0_18px_42px_rgba(255,138,0,0.22)] transition duration-300 group-hover:scale-[1.03] [@media(max-height:800px)]:h-12 [@media(max-height:800px)]:w-12 [@media(max-height:800px)]:rounded-xl">
-                    <Home className="h-8 w-8 [@media(max-height:800px)]:h-6 [@media(max-height:800px)]:w-6" />
+                <div className="mb-3 flex items-start justify-between gap-2.5 ">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-amber-900/10 bg-gradient-to-br from-amber-500 to-action-500 text-white shadow-[0_18px_42px_rgba(255,138,0,0.22)] transition duration-300 group-hover:scale-[1.03] [@media(max-height:800px)]:h-12 [@media(max-height:800px)]:w-12 [@media(max-height:800px)]:rounded-xl">
+                    <Home className="h-4 w-4 [@media(max-height:800px)]:h-6 [@media(max-height:800px)]:w-6" />
                   </div>
-                  <span className="rounded-full border border-amber-900/10 bg-amber-50 px-3 py-1.5 text-[11px] font-black uppercase text-amber-800 [@media(max-height:800px)]:px-2.5 [@media(max-height:800px)]:py-1 [@media(max-height:800px)]:text-[10px]">
+                  <span className="rounded-full border border-amber-900/10 bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase text-amber-800 [@media(max-height:800px)]:px-2.5 [@media(max-height:800px)]:py-1 [@media(max-height:800px)]:text-[10px]">
                     Patrimoine privé
                   </span>
                 </div>
-                <h2 className="mb-3 font-serif text-2xl font-black text-brand-950 md:text-3xl [@media(max-height:800px)]:mb-2 [@media(max-height:800px)]:text-xl md:[@media(max-height:800px)]:text-2xl">Je gère mes propres biens</h2>
-                <p className="mb-6 text-sm font-semibold leading-7 text-slate-600 md:text-base [@media(max-height:800px)]:mb-3 [@media(max-height:800px)]:text-sm [@media(max-height:800px)]:leading-6">
+                <h2 className="mb-1.5 font-serif text-lg font-black text-brand-950 md:text-xl [@media(max-height:800px)]:mb-2 ">Je gère mes propres biens</h2>
+                <p className="mb-3 text-[0.72rem] font-semibold leading-4 text-slate-600  [@media(max-height:800px)]:text-sm [@media(max-height:800px)]:leading-6">
                   Un espace propriétaire plus simple pour suivre vos locataires, vos loyers,
                   vos impayés et vos documents.
                 </p>
-                <ul className="mb-6 grid gap-3 text-sm [@media(max-height:800px)]:mb-4 [@media(max-height:800px)]:gap-2">
-                  <li className="flex items-center gap-3 rounded-xl border border-amber-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><Home className="h-4 w-4 text-action-600" />Gestion de vos biens</li>
-                  <li className="flex items-center gap-3 rounded-xl border border-amber-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><CheckCircle2 className="h-4 w-4 text-action-600" />Suivi des loyers</li>
-                  <li className="flex items-center gap-3 rounded-xl border border-amber-950/10 bg-white/75 px-3 py-2.5 font-black text-slate-700 shadow-sm [@media(max-height:800px)]:py-2"><User className="h-4 w-4 text-action-600" />Tableau de bord clair</li>
+                <ul className="mb-3 grid gap-1.5 text-[0.68rem] ">
+                  <li className="flex items-center gap-1.5 rounded-md border border-amber-950/10 bg-white/75 px-2 py-1.5 font-black text-slate-700 shadow-sm "><Home className="h-4 w-4 text-action-600" />Gestion de vos biens</li>
+                  <li className="flex items-center gap-1.5 rounded-md border border-amber-950/10 bg-white/75 px-2 py-1.5 font-black text-slate-700 shadow-sm "><CheckCircle2 className="h-4 w-4 text-action-600" />Suivi des loyers</li>
+                  <li className="flex items-center gap-1.5 rounded-md border border-amber-950/10 bg-white/75 px-2 py-1.5 font-black text-slate-700 shadow-sm "><User className="h-4 w-4 text-action-600" />Tableau de bord clair</li>
                 </ul>
-                <div className="flex min-h-12 items-center justify-between rounded-xl bg-brand-950 px-4 py-3 text-sm font-black text-white shadow-[0_18px_40px_rgba(6,17,13,0.22)] transition group-hover:bg-brand-800 [@media(max-height:800px)]:min-h-10 [@media(max-height:800px)]:px-3 [@media(max-height:800px)]:py-2.5">
+                <div className="flex min-h-9 items-center justify-between rounded-lg bg-brand-950 px-3 py-1.5 text-[0.68rem] font-black text-white shadow-[0_9px_22px_rgba(6,17,13,0.18)] transition group-hover:bg-brand-800 [@media(max-height:800px)]:min-h-10 [@media(max-height:800px)]:px-3 .5">
                   Créer un espace bailleur
-                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1 [@media(max-height:800px)]:h-4 [@media(max-height:800px)]:w-4" />
+                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1 " />
                 </div>
               </button>
             </div>
@@ -517,23 +517,23 @@ export default function Welcome() {
         return (
           renderFormCard(
             <>
-            <div className="mb-7 [@media(max-height:800px)]:mb-5">
-              <div className="mb-5 flex items-center justify-between [@media(max-height:800px)]:mb-4">
-                <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-3 py-2 text-sm font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
+            <div className="mb-4">
+              <div className="mb-3 flex items-center justify-between">
+                <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-2.5 py-1.5 text-xs font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
                   <ArrowLeft className="mr-2 h-4 w-4" />Retour
                 </button>
-                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-3 py-1 text-[11px] font-black uppercase text-emerald-100">Étape 1 sur 3</span>
+                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100">Étape 1 sur 3</span>
               </div>
-              <h2 className="mb-2 font-serif text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">
+              <h2 className="mb-1.5 font-serif text-xl font-black text-[#FFF7E6]">
                 {accountType === 'agency' ? 'Nom de votre structure' : 'Votre nom complet'}
               </h2>
-              <p className="text-sm font-semibold leading-6 text-slate-200 sm:text-base">
+              <p className="text-[0.72rem] font-semibold leading-4 text-slate-200">
                 {accountType === 'agency'
                   ? 'Comment s\'appelle votre agence ou cabinet de gestion ?'
                   : 'Indiquez le nom qui sera associé à votre espace propriétaire.'}
               </p>
             </div>
-            <div className="space-y-5">
+            <div className="space-y-2.5">
               <input
                 type="text"
                 autoFocus
@@ -550,7 +550,7 @@ export default function Welcome() {
                 className={welcomePrimaryButtonClass}
                 data-testid="button-next-step-1"
               >
-                Continuer<ArrowRight className="ml-2 h-5 w-5" />
+                Continuer<ArrowRight className="ml-2 h-4 w-4" />
               </button>
             </div>
             </>,
@@ -561,17 +561,17 @@ export default function Welcome() {
         return (
           renderFormCard(
             <>
-            <div className="mb-7 [@media(max-height:800px)]:mb-5">
-              <div className="mb-5 flex items-center justify-between [@media(max-height:800px)]:mb-4">
-                <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-3 py-2 text-sm font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
+            <div className="mb-4">
+              <div className="mb-3 flex items-center justify-between">
+                <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-2.5 py-1.5 text-xs font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
                   <ArrowLeft className="mr-2 h-4 w-4" />Retour
                 </button>
-                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-3 py-1 text-[11px] font-black uppercase text-emerald-100">Étape 2 sur 3</span>
+                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100">Étape 2 sur 3</span>
               </div>
-              <h2 className="mb-2 font-serif text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">Numéro de téléphone</h2>
-              <p className="text-sm font-semibold leading-6 text-slate-200 sm:text-base">À quel numéro notre équipe peut-elle vous joindre ?</p>
+              <h2 className="mb-1.5 font-serif text-xl font-black text-[#FFF7E6]">Numéro de téléphone</h2>
+              <p className="text-[0.72rem] font-semibold leading-4 text-slate-200">À quel numéro notre équipe peut-elle vous joindre ?</p>
             </div>
-            <div className="space-y-5">
+            <div className="space-y-2.5">
               <input
                 type="tel"
                 autoFocus
@@ -588,7 +588,7 @@ export default function Welcome() {
                 className={welcomePrimaryButtonClass}
                 data-testid="button-next-step-2"
               >
-                Continuer<ArrowRight className="ml-2 h-5 w-5" />
+                Continuer<ArrowRight className="ml-2 h-4 w-4" />
               </button>
             </div>
             </>,
@@ -599,25 +599,25 @@ export default function Welcome() {
         return (
           renderFormCard(
             <>
-            <div className="mb-7 [@media(max-height:800px)]:mb-5">
-              <div className="mb-5 flex items-center justify-between [@media(max-height:800px)]:mb-4">
-                <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-3 py-2 text-sm font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
+            <div className="mb-4">
+              <div className="mb-3 flex items-center justify-between">
+                <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-2.5 py-1.5 text-xs font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
                   <ArrowLeft className="mr-2 h-4 w-4" />Retour
                 </button>
-                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-3 py-1 text-[11px] font-black uppercase text-emerald-100">Étape 3 sur 3</span>
+                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100">Étape 3 sur 3</span>
               </div>
-              <h2 className="mb-2 font-serif text-3xl font-black text-[#FFF7E6] [@media(max-height:800px)]:text-2xl">
+              <h2 className="mb-1.5 font-serif text-xl font-black text-[#FFF7E6]">
                 {accountType === 'agency' ? 'Détails de votre structure' : 'Adresse'}
               </h2>
-              <p className="text-sm font-semibold leading-6 text-slate-200 sm:text-base">
+              <p className="text-[0.72rem] font-semibold leading-4 text-slate-200">
                 {accountType === 'agency'
                   ? 'Ajoutez votre adresse et, si disponible, votre NINEA.'
                   : 'Ajoutez votre adresse pour finaliser votre demande.'}
               </p>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-2.5">
               <div>
-                <label className="mb-2 block text-sm font-black text-slate-100">Adresse</label>
+                <label className="mb-1.5 block text-xs font-black text-slate-100">Adresse</label>
                 <input
                   type="text"
                   value={formData.address}
@@ -630,7 +630,7 @@ export default function Welcome() {
               <div>
                 {accountType === 'agency' && (
                   <>
-                    <label className="mb-2 block text-sm font-black text-slate-100">NINEA (optionnel au démarrage)</label>
+                    <label className="mb-1.5 block text-xs font-black text-slate-100">NINEA (optionnel au démarrage)</label>
                     <input
                       type="text"
                       value={formData.ninea}
@@ -643,12 +643,12 @@ export default function Welcome() {
                 )}
               </div>
 
-              <div className="rounded-2xl border border-amber-200/30 bg-amber-100/12 p-4 shadow-inner shadow-white/5">
+              <div className="rounded-lg border border-amber-200/30 bg-amber-100/12 p-2.5 shadow-inner shadow-white/5">
                 <div className="mb-2 flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-amber-200" />
+                  <ShieldCheck className="h-4 w-4 text-amber-200" />
                   <h3 className="font-black text-[#FFF7E6]">Validation par notre équipe</h3>
                 </div>
-                <p className="text-sm font-semibold leading-6 text-slate-200">
+                <p className="text-xs font-semibold leading-5 text-slate-200">
                   Votre demande sera examinée sous 24h ouvrées. Vous recevrez une notification
                   par email dès l'approbation.
                 </p>
@@ -662,7 +662,7 @@ export default function Welcome() {
               >
                 {loading ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-3" />
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-3" />
                     Envoi en cours…
                   </>
                 ) : (

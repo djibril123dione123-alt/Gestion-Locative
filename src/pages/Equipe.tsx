@@ -2,12 +2,16 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Check,
   Copy,
+  CalendarClock,
   Download,
   Edit3,
+  KeyRound,
   Lock,
   Mail,
   Search,
+  Send,
   Shield,
+  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Trash2,
@@ -28,6 +32,7 @@ import { useToast } from '../hooks/useToast';
 import {
   getDefaultAccessLevel,
   getEffectivePermission,
+  isModuleEnabled,
   permissionRowsToMap,
   PERMISSION_CATALOG,
   type AccessLevel,
@@ -36,6 +41,7 @@ import {
 } from '../lib/rbac';
 import { getPricingPlan } from '../lib/pricingCatalog';
 import { supabase, type UserRole } from '../lib/supabase';
+import type { AgencySettings } from '../types/agency';
 
 interface Member {
   id: string;
@@ -58,6 +64,8 @@ interface Invitation {
 }
 
 type RoleOption = 'admin' | 'agent' | 'comptable';
+type StatusFilter = 'all' | 'active' | 'inactive';
+type AccessPreset = 'standard' | 'restricted' | 'finance' | 'custom';
 type DraftAccessLevel = AccessLevel | 'inherit';
 type PermissionDraftItem = Omit<UserPagePermission, 'access_level'> & { access_level: DraftAccessLevel };
 type PermissionDraft = Record<string, PermissionDraftItem>;
@@ -73,6 +81,35 @@ const ROLE_LABELS: Record<string, string> = {
   comptable: 'Comptable',
   bailleur: 'Bailleur',
   super_admin: 'Super admin',
+};
+
+const ACCESS_PRESETS: Record<AccessPreset, { label: string; summary: string; tone: string }> = {
+  standard: {
+    label: 'Standard',
+    summary: 'Droits par défaut du rôle, sans exception manuelle.',
+    tone: 'border-emerald-100 bg-emerald-50 text-emerald-800',
+  },
+  restricted: {
+    label: 'Restreint',
+    summary: 'Accès limité aux pages utiles, modules sensibles masqués.',
+    tone: 'border-orange-100 bg-orange-50 text-orange-800',
+  },
+  finance: {
+    label: 'Finance',
+    summary: 'Lecture finance, encaissements, créances et documents utiles.',
+    tone: 'border-blue-100 bg-blue-50 text-blue-800',
+  },
+  custom: {
+    label: 'Personnalisé',
+    summary: 'Overrides appliqués page par page dans cette agence.',
+    tone: 'border-slate-200 bg-slate-50 text-slate-700',
+  },
+};
+
+const ROLE_DEFAULT_PRESET: Record<RoleOption, AccessPreset> = {
+  admin: 'standard',
+  agent: 'standard',
+  comptable: 'finance',
 };
 
 const INVITE_ROLE_GUIDE: Record<RoleOption, { summary: string; access: string[]; tone: string }> = {
@@ -115,6 +152,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [permissionsByUser, setPermissionsByUser] = useState<Record<string, UserPermissionMap>>({});
+  const [agencySettings, setAgencySettings] = useState<Partial<AgencySettings> | null>(null);
   const [loading, setLoading] = useState(true);
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -128,6 +166,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
   const [deactivating, setDeactivating] = useState(false);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | RoleOption | 'bailleur'>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [permissionTarget, setPermissionTarget] = useState<Member | null>(null);
   const [permissionDraft, setPermissionDraft] = useState<PermissionDraft>({});
   const [savingPermissions, setSavingPermissions] = useState(false);
@@ -136,7 +175,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     if (!profile?.agency_id) return;
     setLoading(true);
     try {
-      const [membersRes, invitationsRes] = await Promise.all([
+      const [membersRes, invitationsRes, settingsRes] = await Promise.all([
         supabase
           .from('user_profiles')
           .select('id, nom, prenom, email, role, actif, created_at')
@@ -148,14 +187,23 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
           .eq('agency_id', profile.agency_id)
           .eq('status', 'pending')
           .order('created_at', { ascending: false }),
+        supabase
+          .from('agency_settings')
+          .select('*')
+          .eq('agency_id', profile.agency_id)
+          .maybeSingle(),
       ]);
 
       if (membersRes.error) throw membersRes.error;
       if (invitationsRes.error) throw invitationsRes.error;
+      if (settingsRes.error) {
+        console.warn('[Equipe] agency settings load failed', settingsRes.error.message);
+      }
 
       const nextMembers = (membersRes.data ?? []) as Member[];
       setMembers(nextMembers);
       setInvitations((invitationsRes.data ?? []) as Invitation[]);
+      setAgencySettings((settingsRes.data ?? null) as Partial<AgencySettings> | null);
 
       const memberIds = nextMembers.map((member) => member.id);
       if (memberIds.length === 0) {
@@ -198,46 +246,120 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     return members.filter((member) => {
       const fullName = `${member.prenom ?? ''} ${member.nom ?? ''} ${member.email ?? ''}`.toLowerCase();
       const roleOk = roleFilter === 'all' || member.role === roleFilter;
-      return roleOk && (!needle || fullName.includes(needle));
+      const statusOk =
+        statusFilter === 'all'
+        || (statusFilter === 'active' && member.actif)
+        || (statusFilter === 'inactive' && !member.actif);
+      return roleOk && statusOk && (!needle || fullName.includes(needle));
     });
-  }, [members, roleFilter, search]);
+  }, [members, roleFilter, search, statusFilter]);
 
   const stats = useMemo(() => {
     const activeMembers = members.filter((member) => member.actif).length;
+    const inactiveMembers = members.filter((member) => !member.actif).length;
     const restrictedMembers = members.filter((member) => {
       const permissions = permissionsByUser[member.id] ?? {};
-      return Object.values(permissions).some((permission) => permission.access_level === 'none' || permission.access_level === 'read');
+      return getMemberPermissionSummary(member, permissions, agencySettings).preset === 'restricted';
     }).length;
+    const customMembers = members.filter((member) => Object.keys(permissionsByUser[member.id] ?? {}).length > 0).length;
     return {
       activeMembers,
+      inactiveMembers,
       pendingInvitations: invitations.length,
       restrictedMembers,
+      customMembers,
     };
-  }, [invitations.length, members, permissionsByUser]);
+  }, [agencySettings, invitations.length, members, permissionsByUser]);
 
   const planDefinition = useMemo(() => getPricingPlan(agency?.plan), [agency?.plan]);
-  const userUsageLabel = planDefinition.limits.max_users === -1
-    ? `${stats.activeMembers}/illimite`
-    : `${stats.activeMembers}/${planDefinition.limits.max_users}`;
+  const seatsUsed = stats.activeMembers + stats.pendingInvitations;
+  const maxUsers = planDefinition.limits.max_users;
+  const hasUnlimitedSeats = maxUsers === -1;
+  const canInviteMore = hasUnlimitedSeats || seatsUsed < maxUsers;
+  const userUsageLabel = hasUnlimitedSeats
+    ? `${seatsUsed}/illimite`
+    : `${seatsUsed}/${maxUsers}`;
+  const planSeatLabel = `${planDefinition.name} · ${userUsageLabel}`;
 
-  const openPermissions = (member: Member) => {
+  const buildPermissionDraft = useCallback((member: Member, preset: AccessPreset = 'custom') => {
     const existing = permissionsByUser[member.id] ?? {};
-    const draft = PERMISSION_CATALOG.reduce<PermissionDraft>((acc, item) => {
+    return PERMISSION_CATALOG.reduce<PermissionDraft>((acc, item) => {
+      const moduleEnabled = isModuleEnabled(item.id, agencySettings);
       const override = existing[item.id];
-      const effective = getEffectivePermission(member.role, item.id, null, existing);
+      const inherited = getEffectivePermission(member.role, item.id, agencySettings);
+      let accessLevel: DraftAccessLevel = override?.access_level ?? 'inherit';
+      let effective = getEffectivePermission(member.role, item.id, agencySettings, existing);
+
+      if (!moduleEnabled) {
+        accessLevel = 'none';
+        effective = getEffectivePermission(member.role, item.id, agencySettings);
+      } else if (preset === 'standard') {
+        accessLevel = 'inherit';
+        effective = inherited;
+      } else if (preset === 'restricted') {
+        const defaultLevel = getDefaultAccessLevel(member.role, item.id);
+        const restrictedLevel: AccessLevel =
+          item.id === 'dashboard' || item.id === 'documents/scan' || item.id === 'notifications'
+            ? 'read'
+            : item.sensitive
+              ? 'none'
+              : defaultLevel === 'none'
+                ? 'none'
+                : 'read';
+        accessLevel = restrictedLevel;
+        effective = getEffectivePermission(member.role, item.id, agencySettings, {
+          [item.id]: {
+            page: item.id,
+            access_level: restrictedLevel,
+            can_create: false,
+            can_update: false,
+            can_delete: false,
+            can_export: restrictedLevel !== 'none',
+            can_manage: false,
+          },
+        });
+      } else if (preset === 'finance') {
+        const financeLevel: AccessLevel =
+          item.category === 'Finance & reporting'
+            ? 'read'
+            : item.id === 'dashboard' || item.id === 'documents' || item.id === 'documents/scan'
+              ? 'read'
+              : 'none';
+        accessLevel = financeLevel;
+        effective = getEffectivePermission(member.role, item.id, agencySettings, {
+          [item.id]: {
+            page: item.id,
+            access_level: financeLevel,
+            can_create: false,
+            can_update: false,
+            can_delete: false,
+            can_export: financeLevel !== 'none',
+            can_manage: false,
+          },
+        });
+      }
+
       acc[item.id] = {
         page: item.id,
-        access_level: override?.access_level ?? 'inherit',
-        can_create: override?.can_create ?? effective.can_create,
-        can_update: override?.can_update ?? effective.can_update,
-        can_delete: override?.can_delete ?? effective.can_delete,
-        can_export: override?.can_export ?? effective.can_export,
-        can_manage: override?.can_manage ?? effective.can_manage,
+        access_level: accessLevel,
+        can_create: accessLevel === 'inherit' ? effective.can_create : effective.can_create,
+        can_update: accessLevel === 'inherit' ? effective.can_update : effective.can_update,
+        can_delete: accessLevel === 'inherit' ? effective.can_delete : effective.can_delete,
+        can_export: accessLevel === 'inherit' ? effective.can_export : effective.can_export,
+        can_manage: accessLevel === 'inherit' ? effective.can_manage : effective.can_manage,
       };
       return acc;
     }, {});
-    setPermissionDraft(draft);
+  }, [agencySettings, permissionsByUser]);
+
+  const openPermissions = (member: Member) => {
+    setPermissionDraft(buildPermissionDraft(member));
     setPermissionTarget(member);
+  };
+
+  const applyPreset = (preset: Exclude<AccessPreset, 'custom'>) => {
+    if (!permissionTarget) return;
+    setPermissionDraft(buildPermissionDraft(permissionTarget, preset));
   };
 
   const updateDraftAccess = (page: string, accessLevel: DraftAccessLevel) => {
@@ -245,7 +367,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
       const current = prev[page];
       if (!current) return prev;
       if (accessLevel === 'inherit' && permissionTarget) {
-        const inherited = getEffectivePermission(permissionTarget.role, page);
+        const inherited = getEffectivePermission(permissionTarget.role, page, agencySettings);
         return {
           ...prev,
           [page]: {
@@ -343,6 +465,14 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     if (!profile?.agency_id) return;
     if (!formData.email.trim()) {
       toast.warning('Veuillez saisir un email');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      toast.warning('Veuillez saisir un email valide');
+      return;
+    }
+    if (!canInviteMore) {
+      toast.warning('La limite utilisateur du plan est atteinte. Changez de plan avant d’inviter un nouveau collaborateur.');
       return;
     }
     setSubmitting(true);
@@ -468,6 +598,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             <PremiumButton
               variant="create"
               size="sm"
+              disabled={!canInviteMore}
               onClick={() => setIsInviteOpen(true)}
               data-testid="button-invite-member-embedded"
               icon={<UserPlus className="h-4 w-4" />}
@@ -503,19 +634,22 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         </section>
       )}
 
-      <section className="grid gap-1.5 sm:grid-cols-3">
-        <MetricCard label="Membres actifs" value={stats.activeMembers} icon={UsersIcon} />
-        <MetricCard label="Invitations" value={stats.pendingInvitations} icon={Mail} tone="orange" />
-        <MetricCard label="Profils restreints" value={stats.restrictedMembers} icon={Lock} tone="emerald" />
+      <section className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-5">
+        <MetricCard label="Membres actifs" value={stats.activeMembers} helper={`${stats.inactiveMembers} inactif(s)`} icon={UsersIcon} />
+        <MetricCard label="Invitations" value={stats.pendingInvitations} helper="En attente" icon={Mail} tone="orange" />
+        <MetricCard label="Accès restreints" value={stats.restrictedMembers} helper={`${stats.customMembers} personnalisé(s)`} icon={Lock} tone="emerald" />
+        <MetricCard label="RBAC" value="Actif" helper="Rôle + page" icon={ShieldCheck} tone="emerald" />
+        <MetricCard label="Plan" value={userUsageLabel} helper={planDefinition.name} icon={KeyRound} tone={canInviteMore ? 'brand' : 'orange'} />
       </section>
 
       <section className={embedded ? 'overflow-hidden rounded-xl border border-emerald-950/10 bg-white/88 shadow-sm' : 'sk-premium-panel overflow-hidden'}>
         <div className="flex flex-col gap-2 border-b border-slate-100 p-2.5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-[0.82rem] font-extrabold text-slate-950">{sectionMode === 'team' ? 'Membres actuels' : 'Profils et overrides'}</h2>
-            <p className="text-[0.68rem] text-slate-500">{filteredMembers.length} profil(s) visible(s)</p>
+            <p className="text-[0.52rem] font-black uppercase tracking-[0.14em] text-emerald-700">Console d’accès</p>
+            <h2 className="text-[0.82rem] font-extrabold text-slate-950">{sectionMode === 'team' ? 'Collaborateurs' : 'Profils et overrides'}</h2>
+            <p className="text-[0.68rem] text-slate-500">{filteredMembers.length} profil(s) visible(s) · {planSeatLabel}</p>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
             <label className="relative min-w-0 sm:w-80">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
@@ -542,6 +676,16 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
               <option value="comptable">Comptables</option>
               <option value="bailleur">Bailleurs</option>
             </select>
+            <select
+              aria-label="Filtrer par statut"
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+              className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-[0.72rem] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+            >
+              <option value="all">Tous statuts</option>
+              <option value="active">Actifs</option>
+              <option value="inactive">Désactivés</option>
+            </select>
           </div>
         </div>
 
@@ -555,16 +699,22 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
           <div className="divide-y divide-slate-100">
             {filteredMembers.map((member) => {
               const permissions = permissionsByUser[member.id] ?? {};
-              const summary = getMemberPermissionSummary(member, permissions);
-              const isProtected = member.id === profile.id || member.role === 'admin' || member.role === 'super_admin';
+              const summary = getMemberPermissionSummary(member, permissions, agencySettings);
+              const isSelf = member.id === profile.id;
+              const isProtected = isSelf || member.role === 'admin' || member.role === 'super_admin';
+              const displayName = getMemberDisplayName(member);
               return (
-                <article key={member.id} className="grid gap-2.5 p-2.5 transition hover:bg-emerald-50/45 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] lg:items-center">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="truncate text-[0.78rem] font-extrabold text-slate-950">
-                        {member.prenom ?? ''} {member.nom ?? ''}
-                      </h3>
+                <article key={member.id} className="grid gap-2.5 p-2.5 transition hover:bg-emerald-50/45 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto] lg:items-center">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-950/10 bg-emerald-50 text-[0.72rem] font-black text-emerald-900">
+                      {getInitials(member)}
+                    </div>
+                    <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <h3 className="truncate text-[0.78rem] font-extrabold text-slate-950">{displayName}</h3>
+                      {isSelf ? <span className="rounded-full bg-slate-900 px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-[0.08em] text-white">Vous</span> : null}
                       <RoleBadge role={member.role} />
+                      <PresetBadge preset={summary.preset} />
                       <span className={`rounded-full px-2 py-0.5 text-[0.62rem] font-black ${member.actif ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                         {member.actif ? 'Actif' : 'Désactivé'}
                       </span>
@@ -574,7 +724,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                         href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(member.email)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-1 inline-flex max-w-full items-center gap-1 truncate text-xs font-semibold text-brand-700 underline-offset-2 hover:text-brand-950 hover:underline"
+                        className="mt-0.5 inline-flex max-w-full items-center gap-1 truncate text-[0.68rem] font-semibold text-brand-700 underline-offset-2 hover:text-brand-950 hover:underline"
                       >
                         <Mail className="h-3.5 w-3.5 flex-shrink-0" />
                         <span className="truncate">{member.email}</span>
@@ -583,10 +733,11 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                       <p className="mt-1 text-sm text-slate-500">Email non renseigné</p>
                     )}
                   </div>
+                  </div>
 
                   <div className="grid grid-cols-3 gap-1 rounded-lg border border-emerald-950/10 bg-white/70 p-1 text-center shadow-sm">
                     <MiniStat label="Masquées" value={summary.hidden} />
-                    <MiniStat label="Lecture" value={summary.readOnly} />
+                    <MiniStat label="Visibles" value={summary.visible} />
                     <MiniStat label="Overrides" value={summary.overrides} />
                   </div>
 
@@ -595,6 +746,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                       type="button"
                       onClick={() => openPermissions(member)}
                       disabled={isProtected}
+                      title={isProtected ? "Profil administrateur protégé" : "Modifier les permissions par page"}
                       className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-emerald-900/10 bg-white px-2.5 text-[0.7rem] font-extrabold text-brand-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <SlidersHorizontal className="h-4 w-4" />
@@ -604,8 +756,10 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                       <button
                         type="button"
                         onClick={() => setDeactivateTarget(member)}
+                        disabled={member.role === 'admin' || member.role === 'super_admin'}
+                        title={member.role === 'admin' || member.role === 'super_admin' ? "Un administrateur ne peut pas être désactivé depuis cette action." : "Désactiver le profil"}
                         data-testid={`button-deactivate-${member.id}`}
-                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 text-[0.7rem] font-extrabold text-red-700 transition hover:-translate-y-0.5 hover:bg-red-100"
+                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 text-[0.7rem] font-extrabold text-red-700 transition hover:-translate-y-0.5 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-45"
                       >
                         <X className="h-4 w-4" />
                         Désactiver
@@ -621,9 +775,15 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
 
       {sectionMode !== 'permissions' && (
       <section className={embedded ? 'overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/88 shadow-sm' : 'sk-premium-panel overflow-hidden'}>
-        <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2.5">
-          <Mail className="h-5 w-5 text-slate-500" />
-          <h2 className="font-black text-slate-950">Invitations en attente ({invitations.length})</h2>
+        <div className="flex flex-col gap-1 border-b border-slate-100 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <Mail className="h-4 w-4 text-slate-500" />
+            <div>
+              <p className="text-[0.52rem] font-black uppercase tracking-[0.14em] text-orange-700">Invitations</p>
+              <h2 className="text-[0.82rem] font-extrabold text-slate-950">En attente ({invitations.length})</h2>
+            </div>
+          </div>
+          <p className="text-[0.66rem] font-semibold text-slate-500">Lien valable 7 jours · validation via invitation</p>
         </div>
         {invitations.length === 0 ? (
           <div className="p-4 text-center text-xs text-slate-500">Aucune invitation en attente</div>
@@ -632,7 +792,11 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             {invitations.map((invitation) => {
               const link = `${window.location.origin}/?token=${invitation.token}`;
               return (
-                <li key={invitation.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <li key={invitation.id} className="grid gap-2.5 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="flex min-w-0 items-start gap-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-orange-100 bg-orange-50 text-orange-700">
+                      <CalendarClock className="h-3.5 w-3.5" />
+                    </div>
                   <div className="min-w-0">
                     <a
                       href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(invitation.email)}`}
@@ -646,16 +810,32 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                     <p className="text-xs text-slate-500">
                       Rôle : <span className="font-bold capitalize">{invitation.role}</span> · Expire le {new Date(invitation.expires_at).toLocaleDateString('fr-FR')}
                     </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <PresetBadge preset={ROLE_DEFAULT_PRESET[invitation.role as RoleOption] ?? 'standard'} />
+                      <span className="rounded-full bg-slate-50 px-1.5 py-0.5 text-[0.54rem] font-black uppercase tracking-[0.08em] text-slate-500">En attente</span>
+                    </div>
                   </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5 sm:flex-row sm:justify-end">
+                  <a
+                    href={getInvitationEmailUrl(invitation, link)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-brand-800 shadow-sm transition hover:bg-emerald-50"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                    Email
+                  </a>
                   <button
                     type="button"
                     onClick={() => copyLink(link)}
                     data-testid={`button-copy-${invitation.id}`}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-[0.68rem] font-extrabold text-slate-700 transition hover:bg-slate-50"
                   >
-                    <Copy className="h-4 w-4" />
-                    Copier le lien
+                    <Copy className="h-3.5 w-3.5" />
+                    Copier
                   </button>
+                  </div>
                 </li>
               );
             })}
@@ -700,6 +880,11 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
               <p className="mt-1.5 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[0.58rem] font-black text-emerald-800">
                 Utilisateurs : {userUsageLabel}
               </p>
+              {!canInviteMore ? (
+                <p className="mt-1.5 rounded-lg border border-orange-200 bg-orange-50 px-2 py-1 text-[0.62rem] font-bold text-orange-800">
+                  Limite du plan atteinte. Changez de plan avant d'ajouter un collaborateur.
+                </p>
+              ) : null}
             </div>
             <div>
               <label className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Email professionnel</label>
@@ -764,6 +949,9 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                       </span>
                     ))}
                   </div>
+                  <div className="mt-2 rounded-lg bg-white/75 px-2 py-1.5 text-[0.6rem] font-semibold leading-4 text-slate-600">
+                    Sécurité : le lien expire automatiquement. Les pages visibles restent contrôlées par RBAC et peuvent être ajustées après acceptation.
+                  </div>
                 </div>
               );
             })()}
@@ -777,7 +965,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
               </button>
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !canInviteMore}
                 data-testid="button-submit-invitation"
                 className="h-9 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-3 text-[0.72rem] font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -794,15 +982,29 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         title={permissionTarget ? `Permissions · ${permissionTarget.prenom ?? ''} ${permissionTarget.nom ?? ''}` : 'Permissions'}
       >
         {permissionTarget ? (
-          <div className="space-y-5">
-            <div className="sk-card-premium p-4">
+          <div className="space-y-3">
+            <div className="sk-card-premium p-3">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-brand-800">Profil contrôlé</p>
               <p className="mt-1 text-sm font-semibold text-slate-700">
                 Base actuelle : {ROLE_LABELS[permissionTarget.role] ?? permissionTarget.role}. Les lignes “Rôle par défaut” suivent automatiquement ce rôle.
               </p>
             </div>
 
-            <div className="max-h-[62vh] space-y-4 overflow-y-auto pr-1">
+            <div className="grid gap-1.5 sm:grid-cols-3">
+              {(['standard', 'restricted', 'finance'] as const).map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => applyPreset(preset)}
+                  className="rounded-lg border border-emerald-950/10 bg-white px-2 py-1.5 text-left text-[0.62rem] font-bold text-slate-600 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50"
+                >
+                  <span className="block text-[0.68rem] font-extrabold text-slate-950">{ACCESS_PRESETS[preset].label}</span>
+                  {ACCESS_PRESETS[preset].summary}
+                </button>
+              ))}
+            </div>
+
+            <div className="max-h-[64vh] space-y-2.5 overflow-y-auto pr-1">
               {Object.entries(groupedCatalog).map(([category, items]) => (
                 <div key={category} className="rounded-[1.25rem] border border-emerald-950/10 bg-white/90 shadow-sm">
                   <div className="border-b border-slate-100 px-4 py-3">
@@ -811,9 +1013,10 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                   <div className="divide-y divide-slate-100">
                     {items.map((item) => {
                       const draft = permissionDraft[item.id];
-                      const inherited = getDefaultAccessLevel(permissionTarget.role, item.id);
+                      const moduleEnabled = isModuleEnabled(item.id, agencySettings);
+                      const inherited = moduleEnabled ? getDefaultAccessLevel(permissionTarget.role, item.id) : 'none';
                       if (!draft) return null;
-                      const actionsDisabled = draft.access_level === 'none';
+                      const actionsDisabled = draft.access_level === 'none' || !moduleEnabled;
                       return (
                         <div key={item.id} className="space-y-3 p-4">
                           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -825,6 +1028,11 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                                     sensible
                                   </span>
                                 ) : null}
+                                {!moduleEnabled ? (
+                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-black uppercase tracking-wide text-slate-500">
+                                    module inactif
+                                  </span>
+                                ) : null}
                               </div>
                               <p className="mt-1 text-sm leading-5 text-slate-500">{item.description}</p>
                               <p className="mt-1 text-xs font-bold text-slate-400">Défaut rôle : {ACCESS_LABELS[inherited]}</p>
@@ -832,7 +1040,8 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                             <select aria-label="Sélection"
                               value={draft.access_level}
                               onChange={(event) => updateDraftAccess(item.id, event.target.value as DraftAccessLevel)}
-                              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"
+                              disabled={!moduleEnabled}
+                              className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                             >
                               <option value="inherit">Rôle par défaut</option>
                               <option value="none">Masquer</option>
@@ -961,11 +1170,13 @@ function AccessBadge({ level }: { level: AccessLevel }) {
 function MetricCard({
   label,
   value,
+  helper,
   icon: Icon,
   tone = 'brand',
 }: {
   label: string;
-  value: number;
+  value: number | string;
+  helper?: string;
   icon: React.ComponentType<{ className?: string }>;
   tone?: 'brand' | 'orange' | 'emerald';
 }) {
@@ -981,6 +1192,7 @@ function MetricCard({
         <div>
           <p className="text-[0.52rem] font-black uppercase tracking-[0.13em] text-slate-500">{label}</p>
           <p className="mt-0.5 text-[1rem] font-extrabold text-slate-950">{value}</p>
+          {helper ? <p className="text-[0.58rem] font-semibold text-slate-500">{helper}</p> : null}
         </div>
         <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${toneClass}`}>
           <Icon className="h-3 w-3" />
@@ -1006,6 +1218,15 @@ function RoleBadge({ role }: { role: UserRole }) {
   );
 }
 
+function PresetBadge({ preset }: { preset: AccessPreset }) {
+  const config = ACCESS_PRESETS[preset] ?? ACCESS_PRESETS.custom;
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.08em] ${config.tone}`}>
+      {config.label}
+    </span>
+  );
+}
+
 function MiniStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-md bg-white px-1.5 py-1">
@@ -1015,15 +1236,60 @@ function MiniStat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function getMemberPermissionSummary(member: Member, permissions: UserPermissionMap) {
+function getMemberPermissionSummary(
+  member: Member,
+  permissions: UserPermissionMap,
+  settings?: Partial<AgencySettings> | null
+) {
   const values = Object.values(permissions);
-  const hidden = values.filter((permission) => permission.access_level === 'none').length;
-  const readOnly = values.filter((permission) => permission.access_level === 'read').length;
   const overrides = values.length;
-  const inheritedReadOnly = PERMISSION_CATALOG.filter((item) => getDefaultAccessLevel(member.role, item.id) === 'read').length;
+  const effectivePermissions = PERMISSION_CATALOG.map((item) =>
+    getEffectivePermission(member.role, item.id, settings, permissions)
+  );
+  const hidden = effectivePermissions.filter((permission) => permission.access_level === 'none').length;
+  const readOnly = effectivePermissions.filter((permission) => permission.access_level === 'read').length;
+  const visible = effectivePermissions.length - hidden;
+  const preset: AccessPreset =
+    overrides > 0
+      ? hidden > 0 || readOnly > 0
+        ? 'restricted'
+        : 'custom'
+      : ROLE_DEFAULT_PRESET[member.role as RoleOption] ?? 'standard';
   return {
     hidden,
-    readOnly: readOnly + inheritedReadOnly,
+    readOnly,
+    visible,
     overrides,
+    preset,
   };
+}
+
+function getMemberDisplayName(member: Member) {
+  const fullName = `${member.prenom ?? ''} ${member.nom ?? ''}`.trim();
+  if (fullName) return fullName;
+  return member.email?.split('@')[0] ?? 'Collaborateur';
+}
+
+function getInitials(member: Member) {
+  const displayName = getMemberDisplayName(member);
+  const parts = displayName.split(/\s+/).filter(Boolean);
+  const initials = parts.length > 1
+    ? `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`
+    : displayName.slice(0, 2);
+  return initials.toUpperCase();
+}
+
+function getInvitationEmailUrl(invitation: Invitation, link: string) {
+  const subject = encodeURIComponent('Invitation Samay Këur');
+  const body = encodeURIComponent(
+    [
+      'Bonjour,',
+      '',
+      `Vous avez été invité à rejoindre Samay Këur avec le rôle ${ROLE_LABELS[invitation.role] ?? invitation.role}.`,
+      `Lien d'invitation : ${link}`,
+      '',
+      "Ce lien expire automatiquement. Les accès pourront être ajustés par l'administrateur de l'agence.",
+    ].join('\n')
+  );
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(invitation.email)}&su=${subject}&body=${body}`;
 }

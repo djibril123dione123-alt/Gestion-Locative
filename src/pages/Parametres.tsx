@@ -615,6 +615,14 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
       const cleanedEmail = cleanOptionalText(settings.email)?.toLowerCase() ?? '';
       const cleanedWebsite = cleanOptionalText(settings.site_web) ?? '';
       const normalizedPhone = settings.telephone ? normalizeSenegalPhone(settings.telephone) : null;
+      const officialName = isIndividualOwner
+        ? cleanOptionalText(settings.representant_nom || settings.nom_agence)
+        : cleanOptionalText(settings.nom_agence);
+      if (!officialName) {
+        showToast(isIndividualOwner ? 'Le nom du profil propriétaire est obligatoire.' : "Le nom de l'agence est obligatoire.", 'error');
+        setSaving(false);
+        return;
+      }
       if (settings.telephone && !normalizedPhone) {
         showToast('Le téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.', 'error');
         setSaving(false);
@@ -626,11 +634,11 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         return;
       }
       const ownerNameForDocuments = isIndividualOwner
-        ? (cleanOptionalText(settings.representant_nom) || cleanOptionalText(settings.nom_agence) || getOwnerNameFallback()).trim()
+        ? officialName
         : '';
       const dataToSave: Omit<AgencySettings, 'created_at' | 'updated_at'> = {
         agency_id: profile.agency_id,
-        nom_agence: isIndividualOwner ? ownerNameForDocuments : cleanOptionalText(settings.nom_agence) ?? '',
+        nom_agence: isIndividualOwner ? ownerNameForDocuments : officialName,
         adresse: cleanOptionalText(settings.adresse) ?? '',
         telephone: normalizedPhone ?? '',
         email: cleanedEmail,
@@ -686,6 +694,9 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
       }
       if ('proprietaire_info' in settings) {
         dataToSave.proprietaire_info = settings.proprietaire_info ?? {};
+      }
+      if ('organization_type' in settings) {
+        dataToSave.organization_type = settings.organization_type;
       }
 
       const { data: savedData, error } = await supabase
@@ -841,6 +852,25 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   const displayName = isIndividualOwner
     ? settings.representant_nom || settings.nom_agence || getOwnerNameFallback()
     : settings.nom_agence || 'Agence non renseignée';
+  const officialNameValue = isIndividualOwner
+    ? cleanOptionalText(settings.representant_nom || settings.nom_agence)
+    : cleanOptionalText(settings.nom_agence);
+  const normalizedOrganizationPhone = settings.telephone ? normalizeSenegalPhone(settings.telephone) : null;
+  const normalizedOrganizationEmail = cleanOptionalText(settings.email)?.toLowerCase() ?? '';
+  const organizationFieldErrors = {
+    officialName: officialNameValue
+      ? null
+      : isIndividualOwner
+        ? 'Nom propriétaire obligatoire.'
+        : "Nom d'agence obligatoire.",
+    phone: settings.telephone && !normalizedOrganizationPhone
+      ? 'Numéro sénégalais attendu, ex. 77 123 45 67.'
+      : null,
+    email: normalizedOrganizationEmail && !isValidEmail(normalizedOrganizationEmail)
+      ? 'Adresse email invalide.'
+      : null,
+  };
+  const hasOrganizationFieldErrors = Object.values(organizationFieldErrors).some(Boolean);
   const documentModeValue = settings.document_mode ?? (isIndividualOwner ? 'simple' : 'professional');
   const documentModeLabel = getDocumentModeLabel(documentModeValue);
   const documentPreferences = getDocumentPreferences(settings);
@@ -886,11 +916,15 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     'min-h-[4.25rem] w-full rounded-lg border border-emerald-950/10 bg-white px-2.5 py-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15';
   const embeddedLabelClass = 'mb-1 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500';
   const accountTypeLabel = getOrganizationTypeLabel(settings.organization_type, isIndividualOwner);
-  const contactComplete = Boolean(cleanOptionalText(settings.telephone) && cleanOptionalText(settings.email));
+  const contactComplete = Boolean(normalizedOrganizationPhone && normalizedOrganizationEmail && !organizationFieldErrors.email);
   const addressComplete = Boolean(cleanOptionalText(settings.adresse) && cleanOptionalText(settings.city));
+  const representativeComplete = isIndividualOwner
+    ? Boolean(cleanOptionalText(settings.representant_nom || settings.nom_agence))
+    : Boolean(cleanOptionalText(settings.representant_nom));
+  const identityDocumentComplete = Boolean(cleanOptionalText(settings.manager_id_type) && cleanOptionalText(settings.manager_id_number));
   const legalComplete = isIndividualOwner
-    ? Boolean(cleanOptionalText(settings.manager_id_number) && cleanOptionalText(settings.representant_nom || displayName))
-    : Boolean(cleanOptionalText(settings.ninea) && cleanOptionalText(settings.rc) && cleanOptionalText(settings.representant_nom));
+    ? Boolean(representativeComplete && identityDocumentComplete)
+    : Boolean(cleanOptionalText(settings.ninea) && cleanOptionalText(settings.rc) && representativeComplete);
   const organizationComplete = contactComplete && addressComplete && legalComplete;
   const organizationStatus = organizationComplete ? 'Dossier complet' : 'À compléter';
   const organizationStatusTone = organizationComplete ? 'success' : 'warning';
@@ -900,6 +934,17 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   const documentImpactItems = isIndividualOwner
     ? ['Quittances', 'Rapports propriétaire', 'Reçus', 'Registre QR']
     : ['Contrats', 'Mandats', 'Quittances', 'Factures', 'Rapports'];
+  const organizationMissingItems = [
+    officialNameValue ? null : (isIndividualOwner ? 'Nom propriétaire' : "Nom de l'agence"),
+    contactComplete ? null : 'Coordonnées',
+    addressComplete ? null : 'Adresse',
+    legalComplete ? null : (isIndividualOwner ? 'Pièce d’identité' : 'Registre légal'),
+  ].filter(Boolean) as string[];
+  const organizationSaveDisabled = saving || !hasUnsavedChanges || (activeTab === 'general' && hasOrganizationFieldErrors);
+  const organizationInputClass = (error?: string | null) => [
+    embeddedFieldClass,
+    error ? 'border-red-300 bg-red-50/40 focus:border-red-500 focus:ring-red-500/15' : '',
+  ].filter(Boolean).join(' ');
 
   if (embedded && !editingEmbedded) {
     return (
@@ -946,11 +991,14 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               </SettingsInfoCard>
 
               <SettingsInfoCard title={isIndividualOwner ? 'Identité propriétaire' : 'Représentant légal'} eyebrow="SIGNATURE" icon={UserRound}>
-                <OrganizationInfoLine label={isIndividualOwner ? 'Propriétaire' : 'Représentant'} value={settings.representant_nom || displayName} strong documentHint="Mandats et contrats" />
+                <OrganizationInfoLine label={isIndividualOwner ? 'Propriétaire' : 'Représentant'} value={isIndividualOwner ? settings.representant_nom || displayName : settings.representant_nom} strong documentHint="Mandats et contrats" />
                 <OrganizationInfoLine label="Fonction" value={settings.representant_fonction} />
                 <OrganizationInfoLine label="Type pièce" value={settings.manager_id_type} />
                 <OrganizationInfoLine label="Numéro pièce" value={settings.manager_id_number} icon={ShieldCheck} />
-                <ReadinessPill label="Pièce" ready={Boolean(cleanOptionalText(settings.manager_id_number))} />
+                {!representativeComplete && (
+                  <OrganizationEmptyNotice text={isIndividualOwner ? 'Complétez le nom propriétaire utilisé pour les documents.' : 'Ajoutez le représentant légal avant une présentation client.'} />
+                )}
+                <ReadinessPill label="Pièce" ready={identityDocumentComplete} />
               </SettingsInfoCard>
             </div>
 
@@ -976,6 +1024,15 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 <DocumentSignal label="Cachet / signature" ready={Boolean(settings.signature_url)} />
                 <DocumentSignal label="QR Verify" ready={Boolean(settings.qr_code_quittances)} />
               </div>
+              {organizationMissingItems.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {organizationMissingItems.map((item) => (
+                    <span key={item} className="rounded-full border border-orange-200 bg-white px-2 py-0.5 text-[0.54rem] font-black uppercase tracking-[0.08em] text-orange-800">
+                      À compléter · {item}
+                    </span>
+                  ))}
+                </div>
+              )}
             </section>
           </div>
         )}
@@ -1090,10 +1147,10 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               variant="create"
               size="sm"
               onClick={handleSave}
-              disabled={saving || !hasUnsavedChanges}
+              disabled={organizationSaveDisabled}
               icon={saving ? <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white" /> : <Save className="h-4 w-4" />}
             >
-              {saving ? 'Enregistrement...' : !hasUnsavedChanges ? 'À jour' : 'Sauvegarder'}
+              {saving ? 'Enregistrement...' : !hasUnsavedChanges ? 'À jour' : hasOrganizationFieldErrors && activeTab === 'general' ? 'À corriger' : 'Sauvegarder'}
             </PremiumButton>
           </div>
         </div>
@@ -1118,6 +1175,14 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 </div>
                 <SettingsStatusBadge tone={organizationStatusTone}>{organizationStatus}</SettingsStatusBadge>
               </div>
+              {hasOrganizationFieldErrors && (
+                <div className="mt-2 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-2.5 py-2 text-red-800">
+                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <p className="text-[0.62rem] font-semibold leading-snug">
+                    Corrigez les champs signalés avant d'enregistrer. Les documents utilisent ces informations comme source officielle.
+                  </p>
+                </div>
+              )}
             </section>
 
             <SettingsEditSection
@@ -1127,7 +1192,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               description={isIndividualOwner ? 'Nom visible dans les documents propriétaire.' : "Nom officiel, type et présence en ligne de l'agence."}
             >
               <div className="grid gap-2.5 md:grid-cols-2">
-                <FormField label={isIndividualOwner ? 'Nom documentaire' : "Nom de l'agence"} hint="Utilisé dans les documents" className="md:col-span-2">
+                <FormField label={isIndividualOwner ? 'Nom documentaire' : "Nom de l'agence"} hint="Utilisé dans les documents" error={organizationFieldErrors.officialName} required className="md:col-span-2">
                   <input
                     type="text"
                     value={isIndividualOwner ? settings.representant_nom ?? settings.nom_agence ?? '' : settings.nom_agence ?? ''}
@@ -1137,7 +1202,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                         ? { ...settings, representant_nom: value, nom_agence: value }
                         : { ...settings, nom_agence: value });
                     }}
-                    className={embeddedFieldClass}
+                    className={organizationInputClass(organizationFieldErrors.officialName)}
+                    aria-invalid={Boolean(organizationFieldErrors.officialName)}
                     autoComplete="organization"
                   />
                 </FormField>
@@ -1152,18 +1218,19 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
             <SettingsEditSection icon={Phone} eyebrow="Contact" title="Coordonnées" description="Téléphone et email apparaissent dans les entêtes et les contacts documentaires.">
               <div className="grid gap-2.5 md:grid-cols-2">
-                <FormField label="Téléphone" hint="Format Sénégal">
+                <FormField label="Téléphone" hint="Format Sénégal" error={organizationFieldErrors.phone}>
                   <input
                     type="text"
                     value={formatSenegalPhone(settings.telephone, '')}
                     onChange={(e) => setSettings({ ...settings, telephone: formatSenegalPhoneInput(e.target.value) })}
-                    className={embeddedFieldClass}
+                    className={organizationInputClass(organizationFieldErrors.phone)}
                     placeholder="77 123 45 67"
+                    aria-invalid={Boolean(organizationFieldErrors.phone)}
                     autoComplete="tel"
                   />
                 </FormField>
-                <FormField label="Email" optional hint="Validé à l'enregistrement">
-                  <input type="email" value={settings.email ?? ''} onChange={(e) => setSettings({ ...settings, email: e.target.value })} className={embeddedFieldClass} placeholder="contact@agence.sn" autoComplete="email" />
+                <FormField label="Email" optional hint="Validé à l'enregistrement" error={organizationFieldErrors.email}>
+                  <input type="email" value={settings.email ?? ''} onChange={(e) => setSettings({ ...settings, email: e.target.value })} className={organizationInputClass(organizationFieldErrors.email)} placeholder="contact@agence.sn" aria-invalid={Boolean(organizationFieldErrors.email)} autoComplete="email" />
                 </FormField>
               </div>
             </SettingsEditSection>
@@ -1222,6 +1289,15 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 <FormField label="Numéro de pièce" optional>
                   <input type="text" value={settings.manager_id_number ?? ''} onChange={(e) => setSettings({ ...settings, manager_id_number: e.target.value })} className={embeddedFieldClass} />
                 </FormField>
+              </div>
+            </SettingsEditSection>
+
+            <SettingsEditSection icon={FileText} eyebrow="Source documentaire" title="Impact dans les documents" description="Ce rappel évite de modifier l'identité officielle sans comprendre où elle sera reprise.">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <DocumentImpactMini label={isIndividualOwner ? 'Nom propriétaire' : "Nom agence"} value="Contrats · Quittances · Rapports" ready={Boolean(officialNameValue)} />
+                <DocumentImpactMini label="Adresse" value="Entêtes · Mentions" ready={addressComplete} />
+                <DocumentImpactMini label={isIndividualOwner ? 'Pièce' : 'NINEA / RC'} value={isIndividualOwner ? 'Mandats · Registre' : 'Documents officiels'} ready={legalComplete} />
+                <DocumentImpactMini label="Représentant" value="Mandats · Signatures" ready={representativeComplete} />
               </div>
             </SettingsEditSection>
           </div>
@@ -2203,6 +2279,15 @@ function ReadinessPill({ label, ready }: { label: string; ready: boolean }) {
   );
 }
 
+function OrganizationEmptyNotice({ text }: { text: string }) {
+  return (
+    <div className="my-1 flex items-start gap-1.5 rounded-lg border border-orange-200 bg-orange-50/75 px-2 py-1.5">
+      <AlertCircle className="mt-0.5 h-3 w-3 shrink-0 text-orange-700" />
+      <p className="text-[0.56rem] font-semibold leading-snug text-orange-900">{text}</p>
+    </div>
+  );
+}
+
 function SettingsStatusBadge({ tone = 'neutral', children }: { tone?: 'success' | 'warning' | 'neutral'; children: React.ReactNode }) {
   const classes = {
     success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
@@ -2223,6 +2308,20 @@ function DocumentSignal({ label, ready }: { label: string; ready: boolean }) {
       <span className={`text-[0.54rem] font-black uppercase tracking-[0.08em] ${ready ? 'text-emerald-700' : 'text-orange-700'}`}>
         {ready ? 'Configuré' : 'À compléter'}
       </span>
+    </div>
+  );
+}
+
+function DocumentImpactMini({ label, value, ready }: { label: string; value: string; ready: boolean }) {
+  return (
+    <div className="rounded-lg border border-emerald-950/10 bg-white px-2 py-1.5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-[0.56rem] font-black uppercase tracking-[0.1em] text-slate-500">{label}</p>
+          <p className="mt-0.5 text-[0.62rem] font-semibold leading-snug text-slate-700">{value}</p>
+        </div>
+        <SettingsStatusBadge tone={ready ? 'success' : 'warning'}>{ready ? 'OK' : 'À compléter'}</SettingsStatusBadge>
+      </div>
     </div>
   );
 }
@@ -2261,12 +2360,16 @@ function FormField({
   label,
   hint,
   optional = false,
+  required = false,
+  error,
   className = '',
   children,
 }: {
   label: string;
   hint?: string;
   optional?: boolean;
+  required?: boolean;
+  error?: string | null;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -2274,10 +2377,21 @@ function FormField({
     <label className={`block min-w-0 ${className}`}>
       <span className="mb-1 flex items-center justify-between gap-2">
         <span className="text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</span>
-        {optional && <span className="text-[0.5rem] font-bold uppercase tracking-[0.08em] text-slate-400">Optionnel</span>}
+        {required ? (
+          <span className="text-[0.5rem] font-bold uppercase tracking-[0.08em] text-emerald-700">Obligatoire</span>
+        ) : optional ? (
+          <span className="text-[0.5rem] font-bold uppercase tracking-[0.08em] text-slate-400">Optionnel</span>
+        ) : null}
       </span>
       {children}
-      {hint && <span className="mt-1 block text-[0.56rem] font-semibold leading-snug text-slate-500">{hint}</span>}
+      {error ? (
+        <span className="mt-1 flex items-center gap-1 text-[0.56rem] font-semibold leading-snug text-red-700">
+          <AlertCircle className="h-3 w-3 shrink-0" />
+          {error}
+        </span>
+      ) : hint ? (
+        <span className="mt-1 block text-[0.56rem] font-semibold leading-snug text-slate-500">{hint}</span>
+      ) : null}
     </label>
   );
 }

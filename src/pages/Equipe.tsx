@@ -635,30 +635,6 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         </section>
       )}
 
-      {embedded && (sectionMode === 'permissions' || sectionMode === 'access') && (
-        <section className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-emerald-50/80 via-white to-[#fff8ed] p-2.5 shadow-sm">
-          <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Permissions & pages visibles</p>
-          <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Repères d'accès, contrôle précis.</h2>
-          <p className="mt-0.5 max-w-2xl text-[0.7rem] leading-4 text-slate-600">
-            Les rôles restent la base. Les profils personnalisés ci-dessous utilisent les droits existants par page, sans contourner le RBAC.
-          </p>
-          <div className="mt-2 grid gap-1.5 sm:grid-cols-4">
-            {[
-              ['Standard', 'Agent opérationnel avec écriture métier.'],
-              ['Restreint', 'Lecture ou pages masquées selon besoin.'],
-              ['Finance', 'Encaissements, créances et exports.'],
-              ['Personnalisé', 'Overrides par page et par action.'],
-            ].map(([preset, description]) => (
-              <div key={preset} className="rounded-lg border border-emerald-950/10 bg-white/88 px-2 py-1.5 shadow-sm">
-                <p className="text-[0.7rem] font-extrabold text-slate-950">{preset}</p>
-                <p className="mt-0.5 line-clamp-2 text-[0.62rem] font-semibold leading-[0.875rem] text-slate-500">{description}</p>
-              </div>
-            ))}
-          </div>
-          <PermissionMatrixPreview settings={agencySettings} />
-        </section>
-      )}
-
       <section className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard label="Membres actifs" value={stats.activeMembers} helper={`${stats.inactiveMembers} inactif(s)`} icon={UsersIcon} />
         <MetricCard label="Invitations" value={stats.pendingInvitations} helper="En attente" icon={Mail} tone="orange" />
@@ -904,6 +880,30 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
           </ul>
         )}
       </section>
+      )}
+
+      {embedded && (sectionMode === 'permissions' || sectionMode === 'access') && (
+        <section className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-emerald-50/80 via-white to-[#fff8ed] p-2.5 shadow-sm">
+          <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Permissions & pages visibles</p>
+          <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Repères d'accès, contrôle précis.</h2>
+          <p className="mt-0.5 max-w-2xl text-[0.7rem] leading-4 text-slate-600">
+            Les rôles restent la base. Les profils personnalisés utilisent les droits existants par page, sans contourner le RBAC ni les modules désactivés.
+          </p>
+          <div className="mt-2 grid gap-1.5 sm:grid-cols-4">
+            {[
+              ['Standard', 'Agent opérationnel avec écriture métier.'],
+              ['Restreint', 'Lecture ou pages masquées selon besoin.'],
+              ['Finance', 'Encaissements, créances et exports.'],
+              ['Personnalisé', 'Overrides par page et par action.'],
+            ].map(([preset, description]) => (
+              <div key={preset} className="rounded-lg border border-emerald-950/10 bg-white/88 px-2 py-1.5 shadow-sm">
+                <p className="text-[0.7rem] font-extrabold text-slate-950">{preset}</p>
+                <p className="mt-0.5 line-clamp-2 text-[0.62rem] font-semibold leading-[0.875rem] text-slate-500">{description}</p>
+              </div>
+            ))}
+          </div>
+          <PermissionMatrixPreview settings={agencySettings} />
+        </section>
       )}
 
       {sectionMode !== 'team' && (

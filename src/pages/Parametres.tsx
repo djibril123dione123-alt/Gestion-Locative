@@ -364,9 +364,11 @@ function buildSettingsModuleCategories(settings: SettingsState): SettingsModuleC
       items: [
         { label: 'Encaissements', description: 'Paiements reçus, quittances et statuts.', impact: 'Finance cœur', status: 'system' },
         { label: 'Créances', description: 'Retards, partiels et restes dus.', impact: 'Finance cœur', status: 'system' },
+        { label: 'Reversements bailleurs', description: 'Montants à reverser et net propriétaire.', impact: 'Bailleurs', status: 'essential' },
         { label: 'Charges bailleur', description: 'Charges refacturables ou liées au rapport bailleur.', impact: 'Rapports bailleurs', status: 'essential' },
         { label: 'Dépenses agence', description: 'Dépenses opérationnelles internes et justificatifs.', impact: 'Sidebar finance', ...optional('module_depenses_actif', Boolean(settings.module_depenses_actif)) },
         { label: 'Commissions', description: 'Revenus agence et parts de gestion.', impact: 'Marge agence', ...moduleToggle('commissions') },
+        { label: 'Exports finance', description: 'Exports, synthèses et pièces de contrôle.', impact: 'Direction', status: settings.mode_avance_actif ? 'active' : 'prepared' },
         { label: 'Rapports avancés', description: 'Synthèses, exports et lecture direction.', impact: 'Pilotage avancé', ...moduleToggle('advanced_reports', Boolean(settings.mode_avance_actif)) },
       ],
     },
@@ -375,6 +377,8 @@ function buildSettingsModuleCategories(settings: SettingsState): SettingsModuleC
       description: 'GED, vérification publique et modèles.',
       items: [
         { label: 'GED', description: 'Coffre documentaire centralisé.', status: 'system' },
+        { label: 'Quittances PDF', description: 'Quittances générées depuis les encaissements.', impact: 'Encaissements', status: 'essential' },
+        { label: 'Contrats PDF', description: 'Contrats, mandats et rapports prêts à produire.', impact: 'Portefeuille', status: 'essential' },
         { label: 'QR Verify', description: 'Preuves publiques et vérification QR.', impact: 'Preuve publique', ...optional('qr_code_quittances', Boolean(settings.qr_code_quittances)) },
         { label: 'Scanner', description: 'Vérification rapide sur mobile.', impact: 'Contrôle terrain', ...moduleToggle('document_scanner') },
         { label: 'Modèles', description: 'Règles documentaires et mentions.', status: 'system' },
@@ -387,6 +391,7 @@ function buildSettingsModuleCategories(settings: SettingsState): SettingsModuleC
         { label: 'États des lieux', description: 'Constats entrée, sortie et inventaires.', ...optional('module_inventaires_actif', Boolean(settings.module_inventaires_actif)) },
         { label: 'Maintenance', description: 'Demandes, interventions et priorités.', ...optional('module_interventions_actif', Boolean(settings.module_interventions_actif)) },
         { label: 'Planning', description: 'Opérations terrain et calendrier.', impact: 'Calendrier équipe', ...moduleToggle('planning', false) },
+        { label: 'Visites et états', description: 'Suivi terrain léger pour les rendez-vous et contrôles.', impact: 'Mobile terrain', status: 'prepared' },
         {
           label: 'Notifications bailleurs',
           description: 'Emails, SMS et relances selon les réglages agence.',
@@ -1038,14 +1043,56 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         )}
 
         {activeTab === 'documents' && (
-          <div className="grid gap-2 lg:grid-cols-[minmax(0,0.95fr)_minmax(16rem,1.05fr)]">
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              <SettingsStatusCard label="Mode documentaire" value={documentModeLabel} icon={FileText} />
-              <SettingsStatusCard label="QR Verify" value={settings.qr_code_quittances ? 'Actif' : 'Inactif'} icon={QrCode} />
-              <SettingsStatusCard label="Logo" value={logoPreview ? 'Configuré' : 'À ajouter'} icon={Palette} />
-              <SettingsStatusCard label="Couleurs" value={`${settings.couleur_primaire ?? '#F58220'} / ${settings.couleur_secondaire ?? '#333333'}`} icon={Sparkles} />
-              <SettingsStatusCard label="Pénalités" value={`${settings.penalite_retard_montant ?? 0} F / jour`} icon={ShieldCheck} />
-              <SettingsStatusCard label="Mis à jour" value={formatCompactDate(settings.updated_at)} icon={CheckCircle} />
+          <div className="grid gap-2 lg:grid-cols-[minmax(0,0.78fr)_minmax(22rem,1.22fr)]">
+            <div className="grid gap-2">
+              <section className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-[#fffdf8] via-white to-emerald-50/45 p-2 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[0.48rem] font-black uppercase tracking-[0.14em] text-emerald-700">Studio documentaire</p>
+                    <h3 className="mt-0.5 text-[0.78rem] font-extrabold text-slate-950">Règles actives et identité</h3>
+                    <p className="mt-0.5 text-[0.62rem] font-semibold leading-snug text-slate-500">
+                      La preview à droite montre le rendu réel appliqué aux quittances, contrats, mandats, rapports et factures.
+                    </p>
+                  </div>
+                  <SettingsStatusBadge tone={settings.qr_code_quittances ? 'success' : 'warning'}>
+                    {settings.qr_code_quittances ? 'QR actif' : 'QR inactif'}
+                  </SettingsStatusBadge>
+                </div>
+                <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                  <SettingsStatusCard label="Mode" value={documentModeLabel} icon={FileText} />
+                  <SettingsStatusCard label="Couleurs" value={`${settings.couleur_primaire ?? '#F58220'} / ${settings.couleur_secondaire ?? '#333333'}`} icon={Sparkles} />
+                  <SettingsStatusCard label="Pénalités" value={`${settings.penalite_retard_montant ?? 0} F / jour`} icon={ShieldCheck} />
+                  <SettingsStatusCard label="Mis à jour" value={formatCompactDate(settings.updated_at)} icon={CheckCircle} />
+                </div>
+                <div className="mt-2 grid gap-1.5 sm:grid-cols-3">
+                  <DocumentSignal label="Logo" ready={Boolean(logoPreview || settings.logo_url)} />
+                  <DocumentSignal label="Signature" ready={Boolean(settings.signature_url)} />
+                  <DocumentSignal label="Mentions" ready={Boolean(settings.mention_tribunal || settings.pied_page_personnalise)} />
+                </div>
+              </section>
+
+              <SettingsInfoCard title="Mentions officielles" eyebrow="REGISTRE" icon={FileText}>
+                <InfoLine label="Tribunal" value={settings.mention_tribunal} multiline />
+                <InfoLine label="Pied de page" value={settings.pied_page_personnalise} multiline />
+                <InfoLine label="Frais huissier" value={`${settings.frais_huissier ?? 0} F CFA`} />
+                <InfoLine label="Pénalités" value={settings.mention_penalites} multiline />
+              </SettingsInfoCard>
+
+              {embeddedMode === 'documentsIdentity' && (
+                <SettingsInfoCard title="Identité visuelle" eyebrow="MARQUE" icon={Palette}>
+                  <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                    <div className="min-w-0">
+                      <InfoLine label="Logo" value={logoPreview ? 'Logo configuré' : 'Logo à ajouter'} strong />
+                      <InfoLine label="Position" value={settings.logo_position} />
+                      <ColorLine label="Couleur primaire" value={settings.couleur_primaire ?? '#F58220'} />
+                      <ColorLine label="Couleur secondaire" value={settings.couleur_secondaire ?? '#333333'} />
+                    </div>
+                    <div className="flex h-12 w-20 items-center justify-center rounded-xl border border-emerald-950/10 bg-[#fff8ed] p-2">
+                      {logoPreview ? <SafeLogoImage src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
+                    </div>
+                  </div>
+                </SettingsInfoCard>
+              )}
             </div>
             <SettingsDocumentPreview
               title={displayName}
@@ -1060,28 +1107,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               selectedType={documentPreviewType}
               onSelectType={setDocumentPreviewType}
               preferences={documentPreferences}
+              className="lg:min-h-full"
             />
-            <SettingsInfoCard title="Mentions configurées" eyebrow="REGISTRE" icon={FileText} className="lg:col-span-2">
-              <InfoLine label="Tribunal" value={settings.mention_tribunal} multiline />
-              <InfoLine label="Pied de page" value={settings.pied_page_personnalise} multiline />
-              <InfoLine label="Frais huissier" value={`${settings.frais_huissier ?? 0} F CFA`} />
-              <InfoLine label="Pénalités" value={settings.mention_penalites} multiline />
-            </SettingsInfoCard>
-            {embeddedMode === 'documentsIdentity' && (
-              <SettingsInfoCard title="Identité visuelle" eyebrow="MARQUE" icon={Palette} className="lg:col-span-2">
-                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                  <div className="min-w-0">
-                    <InfoLine label="Logo" value={logoPreview ? 'Logo configuré' : 'Logo à ajouter'} strong />
-                    <InfoLine label="Position" value={settings.logo_position} />
-                    <ColorLine label="Couleur primaire" value={settings.couleur_primaire ?? '#F58220'} />
-                    <ColorLine label="Couleur secondaire" value={settings.couleur_secondaire ?? '#333333'} />
-                  </div>
-                  <div className="flex h-12 w-20 items-center justify-center rounded-xl border border-emerald-950/10 bg-[#fff8ed] p-2">
-                    {logoPreview ? <SafeLogoImage src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
-                  </div>
-                </div>
-              </SettingsInfoCard>
-            )}
           </div>
         )}
 
@@ -2455,6 +2482,7 @@ function SettingsDocumentPreview({
   selectedType,
   onSelectType,
   preferences,
+  className = '',
 }: {
   title: string;
   logoUrl?: string;
@@ -2468,6 +2496,7 @@ function SettingsDocumentPreview({
   selectedType: DocumentPreviewType;
   onSelectType: (type: DocumentPreviewType) => void;
   preferences: NonNullable<AgencySettings['document_preferences']>;
+  className?: string;
 }) {
   const preview = DOCUMENT_PREVIEWS[selectedType];
   const prefix = preferences.prefixes?.[selectedType] ?? preview.reference.split('-')[0];
@@ -2494,7 +2523,7 @@ function SettingsDocumentPreview({
     : 'flex-row items-start justify-between';
 
   return (
-    <section className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm">
+    <section className={`rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm ${className}`}>
       <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-[#a45d12]">Aperçu document</p>
@@ -2599,15 +2628,55 @@ function SettingsModulesOverview({
     prepared: { label: 'Préparé', className: 'bg-blue-50 text-blue-700' },
     plan: { label: 'Plan +', className: 'bg-violet-50 text-violet-700' },
   };
+  const totalModules = modules.reduce((count, group) => count + group.items.length, 0);
+  const activeModules = modules.reduce(
+    (count, group) => count + group.items.filter((item) => ['system', 'essential', 'active'].includes(item.status)).length,
+    0,
+  );
+  const configurableModules = modules.reduce(
+    (count, group) => count + group.items.filter((item) => Boolean(item.toggle)).length,
+    0,
+  );
+  const moduleSignals = [
+    { label: 'Socle agence', value: `${activeModules}/${totalModules}`, tone: 'success' as const },
+    { label: 'Pilotables', value: `${configurableModules}`, tone: configurableModules > 0 ? 'success' as const : 'neutral' as const },
+    { label: 'Navigation', value: 'Synchronisée', tone: 'success' as const },
+  ];
 
   return (
     <div className="space-y-2">
       <section className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-[#fffdf8] via-white to-emerald-50/45 p-2 shadow-sm">
-        <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">Modules & pages</p>
-        <h2 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">Workspace visible par domaine</h2>
-        <p className="mt-0.5 max-w-2xl text-[0.62rem] leading-[0.86rem] text-slate-600">
-          Les modules système restent actifs. Les modules optionnels utilisent les réglages existants quand ils sont réellement branchés.
-        </p>
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">Modules & pages</p>
+            <h2 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">Workspace visible par domaine</h2>
+            <p className="mt-0.5 max-w-2xl text-[0.62rem] leading-[0.86rem] text-slate-600">
+              Les modules système restent actifs. Les options branchées pilotent la sidebar, les accès et les écrans métier sans créer de faux interrupteurs.
+            </p>
+          </div>
+          <div className="grid gap-1.5 sm:grid-cols-3 lg:w-[23rem]">
+            {moduleSignals.map((signal) => (
+              <div key={signal.label} className="rounded-lg border border-emerald-950/10 bg-white/82 px-2 py-1 shadow-sm">
+                <p className="text-[0.48rem] font-black uppercase tracking-[0.1em] text-slate-500">{signal.label}</p>
+                <div className="mt-0.5">
+                  <SettingsStatusBadge tone={signal.tone}>{signal.value}</SettingsStatusBadge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="mt-2 grid gap-1.5 md:grid-cols-3">
+          {[
+            ['Sidebar', 'Les pages masquées sortent de la navigation active.'],
+            ['Permissions', 'Un module inactif reste verrouillé pour les rôles standards.'],
+            ['Documents', 'QR, modèles et scanner suivent les réglages documentaires.'],
+          ].map(([title, copy]) => (
+            <div key={title} className="rounded-lg border border-emerald-950/10 bg-white/70 px-2 py-1.5">
+              <p className="text-[0.58rem] font-extrabold text-slate-800">{title}</p>
+              <p className="mt-0.5 text-[0.54rem] font-semibold leading-snug text-slate-500">{copy}</p>
+            </div>
+          ))}
+        </div>
       </section>
       <div className="grid gap-2 xl:grid-cols-2">
         {modules.map((group) => {

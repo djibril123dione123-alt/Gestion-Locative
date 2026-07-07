@@ -108,7 +108,8 @@ const SECTIONS: SectionConfig[] = [
   },
   {
     id: 'teamAccess',
-    label: 'Équipe & accès',
+    label: 'Accès',
+    title: 'Équipe & accès',
     eyebrow: 'COLLABORATEURS',
     description: 'Collaborateurs, rôles, invitations et pages visibles.',
     icon: Users,

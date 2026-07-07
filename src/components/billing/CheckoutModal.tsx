@@ -276,18 +276,18 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={`Activer le plan ${planName}`}>
       {step !== 'success' && step !== 'error' && (
-        <div className="mb-3 rounded-2xl border border-emerald-950/10 bg-[#fffdf8] p-3 shadow-sm">
+        <div className="mb-2.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">Plan sélectionné</p>
-              <p className="mt-0.5 truncate text-[0.92rem] font-extrabold text-slate-950">Plan {planName}</p>
+              <p className="mt-0.5 truncate text-[0.86rem] font-extrabold text-slate-950">Plan {planName}</p>
             </div>
-            <p className="shrink-0 text-right text-[1rem] font-black text-orange-600">
+            <p className="shrink-0 text-right text-[0.92rem] font-black text-orange-600">
               {formatCurrency(priceXof)}
               <span className="ml-0.5 text-[0.66rem] font-semibold text-slate-400">/mois</span>
             </p>
           </div>
-          <p className="mt-2 rounded-xl bg-emerald-50/80 px-2.5 py-1.5 text-[0.66rem] font-semibold leading-4 text-emerald-900">
+          <p className="mt-2 rounded-lg bg-emerald-50/80 px-2 py-1 text-[0.62rem] font-semibold leading-4 text-emerald-900">
             Activation après confirmation du paiement. Le paiement en ligne reste prioritaire.
           </p>
         </div>
@@ -299,24 +299,24 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
             <p className="text-[0.78rem] font-extrabold text-slate-900">Choisissez votre moyen de paiement</p>
             <p className="mt-0.5 text-[0.68rem] leading-4 text-slate-500">Les moyens locaux sont traités via PayDunya.</p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-1.5 sm:grid-cols-2">
             {PROVIDERS.map((p) => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => handleSelectProvider(p.id)}
-                className="group flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-800/25 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
+                className="group flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-800/25 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
               >
                 {p.logo ? (
-                  <LogoBadge src={p.logo} label={p.label} fallback={p.fallback} className="h-9 w-9" />
+                  <LogoBadge src={p.logo} label={p.label} fallback={p.fallback} className="h-8 w-8" />
                 ) : (
-                  <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700">
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700">
                     <CreditCard className="h-4 w-4" />
                   </span>
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[0.78rem] font-extrabold text-slate-950">{p.label}</span>
-                  <span className="block truncate text-[0.62rem] font-semibold text-slate-500">{p.sub}</span>
+                  <span className="block truncate text-[0.74rem] font-extrabold text-slate-950">{p.label}</span>
+                  <span className="block truncate text-[0.58rem] font-semibold text-slate-500">{p.sub}</span>
                 </span>
                 {p.id === 'card' ? (
                   <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[0.55rem] font-black uppercase tracking-wide text-blue-700">
@@ -345,7 +345,7 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
           </button>
 
           <div className="flex items-center gap-2.5 rounded-xl border p-2.5" style={{ backgroundColor: selectedProvider.bg, borderColor: `${selectedProvider.color}30` }}>
-            <LogoBadge src={selectedProvider.logo} label={selectedProvider.label} fallback={selectedProvider.fallback} className="h-9 w-9" />
+            <LogoBadge src={selectedProvider.logo} label={selectedProvider.label} fallback={selectedProvider.fallback} className="h-8 w-8" />
             <div className="min-w-0">
               <p className="truncate text-[0.8rem] font-extrabold text-slate-950">{selectedProvider.label}</p>
               <p className="truncate text-[0.62rem] font-semibold text-slate-500">{selectedProvider.sub}</p>
@@ -369,7 +369,7 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
                 placeholder="77 123 45 67"
                 maxLength={14}
                 autoFocus
-                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-14 pr-3 text-[0.95rem] font-semibold tracking-wide text-slate-950 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
+                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-14 pr-3 text-[0.88rem] font-semibold tracking-wide text-slate-950 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
               />
             </div>
             {phoneError ? (

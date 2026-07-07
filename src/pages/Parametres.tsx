@@ -3,16 +3,21 @@ import {
   Save,
   Upload,
   AlertCircle,
+  AtSign,
   FileText,
   Palette,
   Building,
   CheckCircle,
+  Globe2,
   SlidersHorizontal,
   Edit3,
   Landmark,
+  MapPin,
+  Phone,
   QrCode,
   ShieldCheck,
   Sparkles,
+  UserRound,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -153,6 +158,35 @@ function getDocumentModeLabel(mode?: AgencySettings['document_mode']) {
 function formatCompactDate(value?: string | null) {
   if (!value) return 'Non renseigné';
   return new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function cleanOptionalText(value?: string | null) {
+  const cleaned = value?.replace(/\s+/g, ' ').trim();
+  return cleaned || null;
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
+}
+
+function getOrganizationTypeLabel(value: AgencySettings['organization_type'] | undefined, isIndividualOwner: boolean) {
+  if (isIndividualOwner) return 'Bailleur individuel';
+  switch (value) {
+    case 'bailleur_individuel':
+    case 'individual_landlord':
+    case 'multi_property_landlord':
+      return 'Bailleur individuel';
+    case 'gestionnaire':
+    case 'property_manager':
+      return 'Cabinet / gestionnaire';
+    case 'groupe':
+    case 'group':
+      return 'Groupe immobilier';
+    case 'agence':
+    case 'agency':
+    default:
+      return 'Agence immobilière';
+  }
 }
 
 const DEFAULT_DOCUMENT_PREFERENCES: NonNullable<AgencySettings['document_preferences']> = {
@@ -578,29 +612,36 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
     setSaving(true);
     try {
+      const cleanedEmail = cleanOptionalText(settings.email)?.toLowerCase() ?? '';
+      const cleanedWebsite = cleanOptionalText(settings.site_web) ?? '';
       const normalizedPhone = settings.telephone ? normalizeSenegalPhone(settings.telephone) : null;
       if (settings.telephone && !normalizedPhone) {
-        showToast('Le téléphone de l’agence doit être un numéro sénégalais valide, par exemple 77 123 45 67.', 'error');
+        showToast('Le téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.', 'error');
+        setSaving(false);
+        return;
+      }
+      if (cleanedEmail && !isValidEmail(cleanedEmail)) {
+        showToast("L'email doit être valide, par exemple contact@agence.sn.", 'error');
         setSaving(false);
         return;
       }
       const ownerNameForDocuments = isIndividualOwner
-        ? (settings.representant_nom || settings.nom_agence || getOwnerNameFallback()).trim()
+        ? (cleanOptionalText(settings.representant_nom) || cleanOptionalText(settings.nom_agence) || getOwnerNameFallback()).trim()
         : '';
       const dataToSave: Omit<AgencySettings, 'created_at' | 'updated_at'> = {
         agency_id: profile.agency_id,
-        nom_agence: isIndividualOwner ? ownerNameForDocuments : settings.nom_agence ?? '',
-        adresse: settings.adresse ?? '',
+        nom_agence: isIndividualOwner ? ownerNameForDocuments : cleanOptionalText(settings.nom_agence) ?? '',
+        adresse: cleanOptionalText(settings.adresse) ?? '',
         telephone: normalizedPhone ?? '',
-        email: settings.email ?? '',
-        site_web: settings.site_web ?? '',
-        ninea: settings.ninea ?? '',
-        rc: settings.rc ?? '',
-        representant_nom: isIndividualOwner ? ownerNameForDocuments : settings.representant_nom ?? '',
-        representant_fonction: settings.representant_fonction ?? 'Gérant',
-        manager_id_type: settings.manager_id_type ?? 'CNI',
-        manager_id_number: settings.manager_id_number ?? '',
-        city: settings.city ?? 'Dakar',
+        email: cleanedEmail,
+        site_web: cleanedWebsite,
+        ninea: cleanOptionalText(settings.ninea) ?? '',
+        rc: cleanOptionalText(settings.rc) ?? '',
+        representant_nom: isIndividualOwner ? ownerNameForDocuments : cleanOptionalText(settings.representant_nom) ?? '',
+        representant_fonction: cleanOptionalText(settings.representant_fonction) ?? 'Gérant',
+        manager_id_type: cleanOptionalText(settings.manager_id_type) ?? 'CNI',
+        manager_id_number: cleanOptionalText(settings.manager_id_number) ?? '',
+        city: cleanOptionalText(settings.city) ?? 'Dakar',
         logo_url: settings.logo_url ?? '',
         logo_position: settings.logo_position ?? 'left',
         couleur_primaire: settings.couleur_primaire ?? '#F58220',
@@ -668,6 +709,9 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
       setLastSavedSnapshot(JSON.stringify(savedData));
       invalidateAgencySettingsCache(profile.agency_id);
       showToast('Paramètres enregistrés avec succès', 'success');
+      if (embedded) {
+        setEditingEmbedded(false);
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erreur inconnue';
       console.error('Erreur sauvegarde paramètres:', msg);
@@ -841,6 +885,21 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   const embeddedTextareaClass =
     'min-h-[4.25rem] w-full rounded-lg border border-emerald-950/10 bg-white px-2.5 py-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15';
   const embeddedLabelClass = 'mb-1 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500';
+  const accountTypeLabel = getOrganizationTypeLabel(settings.organization_type, isIndividualOwner);
+  const contactComplete = Boolean(cleanOptionalText(settings.telephone) && cleanOptionalText(settings.email));
+  const addressComplete = Boolean(cleanOptionalText(settings.adresse) && cleanOptionalText(settings.city));
+  const legalComplete = isIndividualOwner
+    ? Boolean(cleanOptionalText(settings.manager_id_number) && cleanOptionalText(settings.representant_nom || displayName))
+    : Boolean(cleanOptionalText(settings.ninea) && cleanOptionalText(settings.rc) && cleanOptionalText(settings.representant_nom));
+  const organizationComplete = contactComplete && addressComplete && legalComplete;
+  const organizationStatus = organizationComplete ? 'Dossier complet' : 'À compléter';
+  const organizationStatusTone = organizationComplete ? 'success' : 'warning';
+  const organizationCopy = isIndividualOwner
+    ? 'Ces informations identifient votre profil propriétaire dans les documents générés.'
+    : 'Ces informations identifient votre agence dans les documents générés.';
+  const documentImpactItems = isIndividualOwner
+    ? ['Quittances', 'Rapports propriétaire', 'Reçus', 'Registre QR']
+    : ['Contrats', 'Mandats', 'Quittances', 'Factures', 'Rapports'];
 
   if (embedded && !editingEmbedded) {
     return (
@@ -861,29 +920,63 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         />
 
         {activeTab === 'general' && (
-          <div className="grid gap-2 lg:grid-cols-2">
-            <SettingsInfoCard title="Identité" eyebrow={isIndividualOwner ? 'PROPRIÉTAIRE' : 'AGENCE'} icon={Building}>
-              <InfoLine label="Nom" value={displayName} strong />
-              <InfoLine label="Téléphone" value={formatSenegalPhone(settings.telephone, 'Non renseigné')} />
-              <InfoLine label="Email" value={settings.email} />
-              <InfoLine label="Adresse" value={settings.adresse} />
-              <InfoLine label="Ville" value={settings.city} />
-              <InfoLine label="Site web" value={settings.site_web} />
-            </SettingsInfoCard>
-            <SettingsInfoCard title="Informations légales" eyebrow="DOCUMENTS" icon={Landmark}>
-              {!isIndividualOwner && <InfoLine label="NINEA" value={settings.ninea} strong />}
-              {!isIndividualOwner && <InfoLine label="RC" value={settings.rc} />}
-              <InfoLine label={isIndividualOwner ? 'Propriétaire' : 'Représentant'} value={settings.representant_nom || displayName} />
-              <InfoLine label="Fonction" value={settings.representant_fonction} />
-              <InfoLine label="Type pièce" value={settings.manager_id_type} />
-              <InfoLine label="Numéro pièce" value={settings.manager_id_number} />
-            </SettingsInfoCard>
-            <div className="lg:col-span-2 rounded-xl border border-orange-200/70 bg-orange-50/60 px-2 py-1.5 text-[0.62rem] font-medium leading-[0.86rem] text-orange-900 sm:flex sm:items-center sm:gap-2">
-              <p className="shrink-0 font-extrabold uppercase tracking-[0.08em]">Utilisation documentaire</p>
-              <p className="mt-0.5 sm:mt-0">
-                Ces informations apparaissent dans les contrats, mandats, quittances, rapports et documents générés.
-              </p>
+          <div className="space-y-2">
+            <div className="grid gap-2 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+              <SettingsInfoCard title="Identité" eyebrow={isIndividualOwner ? 'PROFIL PROPRIÉTAIRE' : 'AGENCE'} icon={Building}>
+                <OrganizationInfoLine label={isIndividualOwner ? 'Nom documentaire' : "Nom de l'agence"} value={displayName} strong documentHint="Contrats, quittances, rapports" />
+                <OrganizationInfoLine label="Type" value={accountTypeLabel} />
+                <OrganizationInfoLine label="Email" value={settings.email} icon={AtSign} documentHint="Entêtes et contacts" />
+                <OrganizationInfoLine label="Téléphone" value={formatSenegalPhone(settings.telephone, 'Non renseigné')} icon={Phone} documentHint="Entêtes et contacts" />
+                <OrganizationInfoLine label="Site web" value={settings.site_web} icon={Globe2} />
+                <ReadinessPill label="Contact" ready={contactComplete} />
+              </SettingsInfoCard>
+
+              <SettingsInfoCard title="Adresse" eyebrow="LOCALISATION" icon={MapPin}>
+                <OrganizationInfoLine label="Adresse" value={settings.adresse} documentHint="Entêtes et mentions" />
+                <OrganizationInfoLine label="Ville" value={settings.city} />
+                <OrganizationInfoLine label="Pays" value="Sénégal" />
+                <ReadinessPill label="Adresse" ready={addressComplete} />
+              </SettingsInfoCard>
+
+              <SettingsInfoCard title="Informations légales" eyebrow="REGISTRE" icon={Landmark}>
+                {!isIndividualOwner && <OrganizationInfoLine label="NINEA" value={settings.ninea} strong documentHint="Documents officiels" />}
+                {!isIndividualOwner && <OrganizationInfoLine label="RC" value={settings.rc} documentHint="Documents officiels" />}
+                <OrganizationInfoLine label="Tribunal" value={settings.mention_tribunal} multiline />
+                <ReadinessPill label="Légal" ready={legalComplete} />
+              </SettingsInfoCard>
+
+              <SettingsInfoCard title={isIndividualOwner ? 'Identité propriétaire' : 'Représentant légal'} eyebrow="SIGNATURE" icon={UserRound}>
+                <OrganizationInfoLine label={isIndividualOwner ? 'Propriétaire' : 'Représentant'} value={settings.representant_nom || displayName} strong documentHint="Mandats et contrats" />
+                <OrganizationInfoLine label="Fonction" value={settings.representant_fonction} />
+                <OrganizationInfoLine label="Type pièce" value={settings.manager_id_type} />
+                <OrganizationInfoLine label="Numéro pièce" value={settings.manager_id_number} icon={ShieldCheck} />
+                <ReadinessPill label="Pièce" ready={Boolean(cleanOptionalText(settings.manager_id_number))} />
+              </SettingsInfoCard>
             </div>
+
+            <section className="rounded-xl border border-orange-200/70 bg-orange-50/70 p-2.5 shadow-sm">
+              <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <p className="text-[0.52rem] font-black uppercase tracking-[0.14em] text-orange-700">Impact documentaire</p>
+                    <SettingsStatusBadge tone={organizationStatusTone}>{organizationStatus}</SettingsStatusBadge>
+                  </div>
+                  <p className="mt-1 max-w-3xl text-[0.68rem] font-semibold leading-snug text-orange-950">{organizationCopy}</p>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {documentImpactItems.map((item) => (
+                    <span key={item} className="rounded-full border border-orange-200 bg-white/75 px-2 py-0.5 text-[0.56rem] font-black uppercase tracking-[0.08em] text-orange-800">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-2 grid gap-1.5 sm:grid-cols-3">
+                <DocumentSignal label="Logo" ready={Boolean(logoPreview || settings.logo_url)} />
+                <DocumentSignal label="Cachet / signature" ready={Boolean(settings.signature_url)} />
+                <DocumentSignal label="QR Verify" ready={Boolean(settings.qr_code_quittances)} />
+              </div>
+            </section>
           </div>
         )}
 
@@ -1006,92 +1099,132 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         </div>
 
         {activeTab === 'general' && (
-          <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
-            <div className="mb-3 flex items-start gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
-                <Building className="h-3.5 w-3.5" />
+          <div className="grid gap-2.5">
+            <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
+                    <Building className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">
+                      {isIndividualOwner ? 'Profil propriétaire' : 'Dossier agence'}
+                    </p>
+                    <h3 className="text-[0.82rem] font-extrabold text-slate-950">Modifier les informations officielles</h3>
+                    <p className="mt-0.5 max-w-2xl text-[0.64rem] font-semibold leading-snug text-slate-500">
+                      {organizationCopy}
+                    </p>
+                  </div>
+                </div>
+                <SettingsStatusBadge tone={organizationStatusTone}>{organizationStatus}</SettingsStatusBadge>
               </div>
-              <div>
-                <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Organisation</p>
-                <h3 className="text-[0.82rem] font-extrabold text-slate-950">Modifier les informations officielles</h3>
+            </section>
+
+            <SettingsEditSection
+              icon={Building}
+              eyebrow="Identité"
+              title={isIndividualOwner ? 'Profil propriétaire' : "Identité de l'organisation"}
+              description={isIndividualOwner ? 'Nom visible dans les documents propriétaire.' : "Nom officiel, type et présence en ligne de l'agence."}
+            >
+              <div className="grid gap-2.5 md:grid-cols-2">
+                <FormField label={isIndividualOwner ? 'Nom documentaire' : "Nom de l'agence"} hint="Utilisé dans les documents" className="md:col-span-2">
+                  <input
+                    type="text"
+                    value={isIndividualOwner ? settings.representant_nom ?? settings.nom_agence ?? '' : settings.nom_agence ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSettings(isIndividualOwner
+                        ? { ...settings, representant_nom: value, nom_agence: value }
+                        : { ...settings, nom_agence: value });
+                    }}
+                    className={embeddedFieldClass}
+                    autoComplete="organization"
+                  />
+                </FormField>
+                <FormField label="Type d'organisation">
+                  <input type="text" value={accountTypeLabel} disabled className={`${embeddedFieldClass} bg-slate-50 text-slate-500`} />
+                </FormField>
+                <FormField label="Site web" optional>
+                  <input type="url" value={settings.site_web ?? ''} onChange={(e) => setSettings({ ...settings, site_web: e.target.value })} className={embeddedFieldClass} placeholder="https://..." />
+                </FormField>
               </div>
-            </div>
-            <div className="grid gap-2.5 md:grid-cols-2">
-              <label>
-                <span className={embeddedLabelClass}>{isIndividualOwner ? 'Nom document' : "Nom de l'agence"}</span>
-                <input
-                  type="text"
-                  value={isIndividualOwner ? settings.representant_nom ?? settings.nom_agence ?? '' : settings.nom_agence ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSettings(isIndividualOwner
-                      ? { ...settings, representant_nom: value, nom_agence: value }
-                      : { ...settings, nom_agence: value });
-                  }}
-                  className={embeddedFieldClass}
-                />
-              </label>
-              <label>
-                <span className={embeddedLabelClass}>Téléphone</span>
-                <input
-                  type="text"
-                  value={formatSenegalPhone(settings.telephone, '')}
-                  onChange={(e) => setSettings({ ...settings, telephone: formatSenegalPhoneInput(e.target.value) })}
-                  className={embeddedFieldClass}
-                />
-              </label>
-              <label>
-                <span className={embeddedLabelClass}>Email</span>
-                <input type="email" value={settings.email ?? ''} onChange={(e) => setSettings({ ...settings, email: e.target.value })} className={embeddedFieldClass} />
-              </label>
-              <label>
-                <span className={embeddedLabelClass}>Site web</span>
-                <input type="url" value={settings.site_web ?? ''} onChange={(e) => setSettings({ ...settings, site_web: e.target.value })} className={embeddedFieldClass} />
-              </label>
-              <label className="md:col-span-2">
-                <span className={embeddedLabelClass}>Adresse</span>
-                <input type="text" value={settings.adresse ?? ''} onChange={(e) => setSettings({ ...settings, adresse: e.target.value })} className={embeddedFieldClass} />
-              </label>
-              <label>
-                <span className={embeddedLabelClass}>Ville</span>
-                <input type="text" value={settings.city ?? ''} onChange={(e) => setSettings({ ...settings, city: e.target.value })} className={embeddedFieldClass} />
-              </label>
-              {!isIndividualOwner && (
-                <label>
-                  <span className={embeddedLabelClass}>NINEA</span>
-                  <input type="text" value={settings.ninea ?? ''} onChange={(e) => setSettings({ ...settings, ninea: e.target.value })} className={embeddedFieldClass} />
-                </label>
-              )}
-              {!isIndividualOwner && (
-                <label>
-                  <span className={embeddedLabelClass}>RC</span>
-                  <input type="text" value={settings.rc ?? ''} onChange={(e) => setSettings({ ...settings, rc: e.target.value })} className={embeddedFieldClass} />
-                </label>
-              )}
-              {!isIndividualOwner && (
-                <label>
-                  <span className={embeddedLabelClass}>Représentant légal</span>
-                  <input type="text" value={settings.representant_nom ?? ''} onChange={(e) => setSettings({ ...settings, representant_nom: e.target.value })} className={embeddedFieldClass} />
-                </label>
-              )}
-              <label>
-                <span className={embeddedLabelClass}>{isIndividualOwner ? 'Qualité' : 'Fonction'}</span>
-                <input type="text" value={settings.representant_fonction ?? ''} onChange={(e) => setSettings({ ...settings, representant_fonction: e.target.value })} className={embeddedFieldClass} />
-              </label>
-              <label>
-                <span className={embeddedLabelClass}>Type pièce</span>
-                <select value={settings.manager_id_type ?? 'CNI'} onChange={(e) => setSettings({ ...settings, manager_id_type: e.target.value })} className={embeddedFieldClass}>
-                  <option value="CNI">CNI</option>
-                  <option value="Passeport">Passeport</option>
-                  <option value="Carte consulaire">Carte consulaire</option>
-                </select>
-              </label>
-              <label>
-                <span className={embeddedLabelClass}>Numéro pièce</span>
-                <input type="text" value={settings.manager_id_number ?? ''} onChange={(e) => setSettings({ ...settings, manager_id_number: e.target.value })} className={embeddedFieldClass} />
-              </label>
-            </div>
-          </section>
+            </SettingsEditSection>
+
+            <SettingsEditSection icon={Phone} eyebrow="Contact" title="Coordonnées" description="Téléphone et email apparaissent dans les entêtes et les contacts documentaires.">
+              <div className="grid gap-2.5 md:grid-cols-2">
+                <FormField label="Téléphone" hint="Format Sénégal">
+                  <input
+                    type="text"
+                    value={formatSenegalPhone(settings.telephone, '')}
+                    onChange={(e) => setSettings({ ...settings, telephone: formatSenegalPhoneInput(e.target.value) })}
+                    className={embeddedFieldClass}
+                    placeholder="77 123 45 67"
+                    autoComplete="tel"
+                  />
+                </FormField>
+                <FormField label="Email" optional hint="Validé à l'enregistrement">
+                  <input type="email" value={settings.email ?? ''} onChange={(e) => setSettings({ ...settings, email: e.target.value })} className={embeddedFieldClass} placeholder="contact@agence.sn" autoComplete="email" />
+                </FormField>
+              </div>
+            </SettingsEditSection>
+
+            <SettingsEditSection icon={MapPin} eyebrow="Adresse" title="Adresse de référence" description="Adresse utilisée dans les entêtes et mentions officielles.">
+              <div className="grid gap-2.5 md:grid-cols-2">
+                <FormField label="Adresse" className="md:col-span-2" optional>
+                  <input type="text" value={settings.adresse ?? ''} onChange={(e) => setSettings({ ...settings, adresse: e.target.value })} className={embeddedFieldClass} placeholder="Rue, immeuble, quartier..." />
+                </FormField>
+                <FormField label="Ville">
+                  <input type="text" value={settings.city ?? ''} onChange={(e) => setSettings({ ...settings, city: e.target.value })} className={embeddedFieldClass} placeholder="Dakar" />
+                </FormField>
+                <div className="rounded-lg border border-emerald-950/10 bg-emerald-50/45 px-2.5 py-2">
+                  <p className={embeddedLabelClass}>Pays</p>
+                  <p className="text-xs font-extrabold text-slate-800">Sénégal</p>
+                  <p className="mt-0.5 text-[0.58rem] font-semibold text-slate-500">Contexte documentaire par défaut.</p>
+                </div>
+              </div>
+            </SettingsEditSection>
+
+            <SettingsEditSection icon={Landmark} eyebrow="Registre" title="Informations légales" description={isIndividualOwner ? 'Renseignez les références utiles si elles doivent apparaître dans les documents.' : 'NINEA, RC et tribunal restent ensemble pour les documents officiels.'}>
+              <div className="grid gap-2.5 md:grid-cols-2">
+                {!isIndividualOwner && (
+                  <FormField label="NINEA" optional hint="Documents officiels">
+                    <input type="text" value={settings.ninea ?? ''} onChange={(e) => setSettings({ ...settings, ninea: e.target.value })} className={embeddedFieldClass} />
+                  </FormField>
+                )}
+                {!isIndividualOwner && (
+                  <FormField label="Registre de commerce" optional hint="Documents officiels">
+                    <input type="text" value={settings.rc ?? ''} onChange={(e) => setSettings({ ...settings, rc: e.target.value })} className={embeddedFieldClass} />
+                  </FormField>
+                )}
+                <FormField label="Tribunal compétent" optional className="md:col-span-2">
+                  <input type="text" value={settings.mention_tribunal ?? ''} onChange={(e) => setSettings({ ...settings, mention_tribunal: e.target.value })} className={embeddedFieldClass} />
+                </FormField>
+              </div>
+            </SettingsEditSection>
+
+            <SettingsEditSection icon={UserRound} eyebrow="Signature" title={isIndividualOwner ? 'Identité du propriétaire' : 'Représentant légal'} description="Ces informations sont reprises dans les mandats, contrats et signatures.">
+              <div className="grid gap-2.5 md:grid-cols-2">
+                {!isIndividualOwner && (
+                  <FormField label="Nom du représentant" optional hint="Mandats et contrats">
+                    <input type="text" value={settings.representant_nom ?? ''} onChange={(e) => setSettings({ ...settings, representant_nom: e.target.value })} className={embeddedFieldClass} />
+                  </FormField>
+                )}
+                <FormField label={isIndividualOwner ? 'Qualité' : 'Fonction'} optional>
+                  <input type="text" value={settings.representant_fonction ?? ''} onChange={(e) => setSettings({ ...settings, representant_fonction: e.target.value })} className={embeddedFieldClass} placeholder={isIndividualOwner ? 'Propriétaire' : 'Gérant'} />
+                </FormField>
+                <FormField label="Type de pièce" optional>
+                  <select value={settings.manager_id_type ?? 'CNI'} onChange={(e) => setSettings({ ...settings, manager_id_type: e.target.value })} className={embeddedFieldClass}>
+                    <option value="CNI">CNI</option>
+                    <option value="Passeport">Passeport</option>
+                    <option value="Carte consulaire">Carte consulaire</option>
+                  </select>
+                </FormField>
+                <FormField label="Numéro de pièce" optional>
+                  <input type="text" value={settings.manager_id_number ?? ''} onChange={(e) => setSettings({ ...settings, manager_id_number: e.target.value })} className={embeddedFieldClass} />
+                </FormField>
+              </div>
+            </SettingsEditSection>
+          </div>
         )}
 
         {showDocumentsIdentity && (
@@ -2018,6 +2151,134 @@ function SettingsInfoCard({
       </div>
       <div className="divide-y divide-slate-100">{children}</div>
     </section>
+  );
+}
+
+function OrganizationInfoLine({
+  label,
+  value,
+  strong = false,
+  multiline = false,
+  icon: Icon,
+  documentHint,
+}: {
+  label: string;
+  value?: string | null;
+  strong?: boolean;
+  multiline?: boolean;
+  icon?: React.ComponentType<{ className?: string }>;
+  documentHint?: string;
+}) {
+  const resolved = value && String(value).trim() ? String(value) : 'Non renseigné';
+  const empty = resolved === 'Non renseigné';
+  return (
+    <div className={`grid gap-2 py-1 ${multiline ? '' : 'sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start'}`}>
+      <dt className="flex min-w-0 items-center gap-1.5 text-[0.58rem] font-bold text-slate-500">
+        {Icon && <Icon className="h-3 w-3 shrink-0 text-emerald-800/65" />}
+        <span className="truncate">{label}</span>
+      </dt>
+      <dd className="min-w-0">
+        <div
+          className={`${strong ? 'font-extrabold text-slate-950' : empty ? 'font-semibold text-slate-400' : 'font-semibold text-slate-700'} min-w-0 text-[0.68rem] ${multiline ? 'leading-[0.95rem]' : 'truncate sm:text-right'}`}
+          title={resolved}
+        >
+          {resolved}
+        </div>
+        {documentHint && (
+          <p className="mt-0.5 text-[0.52rem] font-bold uppercase tracking-[0.08em] text-emerald-700/70 sm:text-right">
+            {documentHint}
+          </p>
+        )}
+      </dd>
+    </div>
+  );
+}
+
+function ReadinessPill({ label, ready }: { label: string; ready: boolean }) {
+  return (
+    <div className="mt-1 flex items-center justify-between gap-2 rounded-lg border border-emerald-950/10 bg-white/80 px-2 py-1">
+      <span className="text-[0.55rem] font-black uppercase tracking-[0.12em] text-slate-500">{label}</span>
+      <SettingsStatusBadge tone={ready ? 'success' : 'warning'}>{ready ? 'Complet' : 'À compléter'}</SettingsStatusBadge>
+    </div>
+  );
+}
+
+function SettingsStatusBadge({ tone = 'neutral', children }: { tone?: 'success' | 'warning' | 'neutral'; children: React.ReactNode }) {
+  const classes = {
+    success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+    warning: 'border-orange-200 bg-orange-50 text-orange-800',
+    neutral: 'border-slate-200 bg-slate-50 text-slate-600',
+  }[tone];
+  return (
+    <span className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-[0.08em] ${classes}`}>
+      {children}
+    </span>
+  );
+}
+
+function DocumentSignal({ label, ready }: { label: string; ready: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-orange-200/70 bg-white/70 px-2 py-1">
+      <span className="text-[0.58rem] font-bold text-orange-950">{label}</span>
+      <span className={`text-[0.54rem] font-black uppercase tracking-[0.08em] ${ready ? 'text-emerald-700' : 'text-orange-700'}`}>
+        {ready ? 'Configuré' : 'À compléter'}
+      </span>
+    </div>
+  );
+}
+
+function SettingsEditSection({
+  icon: Icon,
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  eyebrow: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
+      <div className="mb-2 flex items-start gap-2.5">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+          <Icon className="h-3.5 w-3.5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">{eyebrow}</p>
+          <h3 className="text-[0.78rem] font-extrabold text-slate-950">{title}</h3>
+          <p className="mt-0.5 text-[0.62rem] font-semibold leading-snug text-slate-500">{description}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function FormField({
+  label,
+  hint,
+  optional = false,
+  className = '',
+  children,
+}: {
+  label: string;
+  hint?: string;
+  optional?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className={`block min-w-0 ${className}`}>
+      <span className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</span>
+        {optional && <span className="text-[0.5rem] font-bold uppercase tracking-[0.08em] text-slate-400">Optionnel</span>}
+      </span>
+      {children}
+      {hint && <span className="mt-1 block text-[0.56rem] font-semibold leading-snug text-slate-500">{hint}</span>}
+    </label>
   );
 }
 

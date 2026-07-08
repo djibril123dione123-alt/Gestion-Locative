@@ -4,6 +4,7 @@
 -- ==============================================================================
 
 -- 1. P0-1 : Sécurisation de vw_financial_drift_report en SECURITY INVOKER + Filtre Tenant
+DROP VIEW IF EXISTS public.vw_financial_drift_report CASCADE;
 CREATE OR REPLACE VIEW public.vw_financial_drift_report
 WITH (security_invoker = true)
 AS
@@ -33,6 +34,7 @@ WHERE a.id = COALESCE(
 );
 
 -- 2. P0-2 : Sécurisation de vw_system_anomalies en SECURITY INVOKER + Filtre Tenant
+DROP VIEW IF EXISTS public.vw_system_anomalies CASCADE;
 CREATE OR REPLACE VIEW public.vw_system_anomalies
 WITH (security_invoker = true)
 AS

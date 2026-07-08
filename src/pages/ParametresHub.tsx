@@ -62,6 +62,7 @@ interface ControlSnapshot {
   contactReady: boolean;
   documentsReady: boolean;
   logoReady: boolean;
+  signatureReady: boolean;
   qrReady: boolean;
   mentionsReady: boolean;
   modulesActive: number;
@@ -236,13 +237,14 @@ function buildControlSnapshot({
   const legalReady = Boolean(isFilled(settings?.ninea) || isFilled(settings?.rc) || isFilled(settings?.manager_id_number));
   const organizationReady = identityReady && contactReady && legalReady;
   const logoReady = Boolean(isFilled(settings?.logo_url));
+  const signatureReady = Boolean(isFilled(settings?.signature_url));
   const qrReady = settings?.qr_code_quittances !== false;
   const mentionsReady = Boolean(
     isFilled(settings?.mention_tribunal) &&
       isFilled(settings?.mention_penalites) &&
       isFilled(settings?.pied_page_personnalise),
   );
-  const documentsReady = qrReady && mentionsReady && logoReady;
+  const documentsReady = qrReady && mentionsReady && logoReady && signatureReady;
   const optionalModules = [
     settings?.module_depenses_actif !== false,
     Boolean(settings?.module_inventaires_actif),
@@ -258,6 +260,7 @@ function buildControlSnapshot({
   const pointsToReview = [
     !organizationReady ? 'Compléter identité, contact et informations légales.' : null,
     !logoReady ? 'Ajouter ou confirmer le logo documentaire.' : null,
+    !signatureReady ? 'Ajouter la signature ou le cachet documentaire.' : null,
     !mentionsReady ? 'Relire tribunal, pénalités et pied de page.' : null,
     requireTeamReview && teamActive <= 1 ? 'Valider les accès agent et comptable avant la démonstration.' : null,
     pendingInvitations > 0 ? `${pendingInvitations} invitation${pendingInvitations > 1 ? 's' : ''} à relancer.` : null,
@@ -270,6 +273,7 @@ function buildControlSnapshot({
     contactReady,
     documentsReady,
     logoReady,
+    signatureReady,
     qrReady,
     mentionsReady,
     modulesActive,
@@ -559,7 +563,7 @@ function OverviewSection({
       title: 'Documents',
       label: 'GED / QR',
       value: snapshot?.documentsReady ? 'Prêts' : snapshot?.qrReady ? 'QR actif' : 'À relire',
-      description: 'Mentions, QR Verify, logo et rendu documentaire.',
+      description: 'Mentions, QR Verify, logo, signature et rendu documentaire.',
       icon: FileText,
       target: 'documentsIdentity',
       tone: 'slate',

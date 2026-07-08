@@ -578,19 +578,21 @@ export function drawSectionFrame(
   return contentY;
 }
 
-export function drawSignatureBlocks(
+export async function drawSignatureBlocks(
   doc: jsPDF,
   y: number,
   labels: [string, string],
   settings?: Partial<AgencySettings>
-): void {
+): Promise<void> {
   const pageWidth = doc.internal.pageSize.getWidth();
   const colors = getBrandColors(settings);
   const individualOwner = isIndividualOwnerSettings(settings);
+  const signatureImage = await loadImageAsPngDataUrl(settings?.signature_url, 460);
   const width = 76;
   const gap = pageWidth - 28 - width * 2;
   const leftX = 14;
   const rightX = leftX + width + gap;
+  const agencySignatureIndex = labels[1].toLowerCase().includes('mandataire') ? 1 : 0;
 
   [leftX, rightX].forEach((x, index) => {
     doc.setFillColor(255, 255, 255);
@@ -603,6 +605,16 @@ export function drawSignatureBlocks(
     doc.setFontSize(8.2);
     doc.setTextColor(30, 41, 59);
     doc.text(labels[index], x + 4, y + 6.2);
+    if (signatureImage && index === agencySignatureIndex) {
+      const maxImageWidth = width - 12;
+      const maxImageHeight = 12;
+      const ratio = Math.min(maxImageWidth / signatureImage.width, maxImageHeight / signatureImage.height, 1);
+      const imageWidth = Math.max(8, signatureImage.width * ratio);
+      const imageHeight = Math.max(4, signatureImage.height * ratio);
+      const imageX = x + width - imageWidth - 5;
+      const imageY = y + 11;
+      doc.addImage(signatureImage.dataUrl, 'PNG', imageX, imageY, imageWidth, imageHeight);
+    }
     doc.setDrawColor(148, 163, 184);
     doc.setLineWidth(0.22);
     doc.line(x + 4, y + 24.5, x + width - 4, y + 24.5);
@@ -614,6 +626,34 @@ export function drawSignatureBlocks(
       doc.text(individualOwner ? 'Cachet ou mention le cas échéant' : 'Cachet le cas échéant', x + 4, y + 33.3);
     }
   });
+  doc.setTextColor(0, 0, 0);
+}
+
+async function drawCompactSignatureSeal(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  settings?: Partial<AgencySettings>
+): Promise<void> {
+  const signatureImage = await loadImageAsPngDataUrl(settings?.signature_url, 360);
+  if (!signatureImage) return;
+
+  const colors = getBrandColors(settings);
+  const maxImageWidth = Math.min(34, width - 10);
+  const maxImageHeight = Math.min(10, height - 12);
+  const ratio = Math.min(maxImageWidth / signatureImage.width, maxImageHeight / signatureImage.height, 1);
+  const imageWidth = Math.max(10, signatureImage.width * ratio);
+  const imageHeight = Math.max(4, signatureImage.height * ratio);
+  const imageX = x + width - imageWidth - 5;
+  const imageY = y + height - imageHeight - 4;
+
+  doc.setFont(undefined as unknown as string, 'bold');
+  doc.setFontSize(5.6);
+  doc.setTextColor(...colors.muted);
+  doc.text('Cachet / signature', x + width - 5, imageY - 1.5, { align: 'right' });
+  doc.addImage(signatureImage.dataUrl, 'PNG', imageX, imageY, imageWidth, imageHeight);
   doc.setTextColor(0, 0, 0);
 }
 
@@ -1401,7 +1441,7 @@ async function drawEditorialSignatureSection(
   doc.setTextColor(30, 41, 59);
   const introLines = doc.splitTextToSize(intro, usableWidth) as string[];
   doc.text(introLines, leftMargin, sectionY + 2);
-  drawSignatureBlocks(doc, sectionY + 15 + introLines.length * 1.3, labels, settings);
+  await drawSignatureBlocks(doc, sectionY + 15 + introLines.length * 1.3, labels, settings);
 }
 
 // ---------------------------------------------------------------------------
@@ -1796,6 +1836,8 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     const footerLines = doc.splitTextToSize(settings.pied_page_personnalise, mentionsWidth - 10) as string[];
     doc.text(footerLines.slice(0, 1), leftMargin + 5, finalY + 27.2);
   }
+
+  await drawCompactSignatureSeal(doc, leftMargin, finalY, mentionsWidth, finalBlockHeight, settings);
 
   if (isDocumentQrEnabled(settings, paiementDocumentType)) {
     try {

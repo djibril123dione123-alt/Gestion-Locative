@@ -38,6 +38,7 @@ type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
 type SettingsTab = 'general' | 'documents' | 'appearance' | 'modules';
 type EmbeddedMode = 'single' | 'documentsIdentity';
 type LogoUploadState = 'idle' | 'preview' | 'uploading' | 'done';
+type AgencyAssetKind = 'logo' | 'signature';
 type DocumentPreviewType = 'quittance' | 'contrat' | 'mandat' | 'rapport' | 'facture';
 type ModuleFieldToggleKey =
   | 'module_depenses_actif'
@@ -167,6 +168,107 @@ function cleanOptionalText(value?: string | null) {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
+}
+
+const NINEA_PATTERN = /^\d{7}\s?\d[A-Z]\d$/;
+const RCCM_PATTERN = /^SN-[A-Z]{3}-\d{4}-[AB]-\d{1,7}$/;
+const CNI_PATTERN = /^\d{13}$/;
+const PASSPORT_PATTERN = /^(?:[A-Z]{2}\d{7}|[A-Z]\d{8})$/;
+
+const FIELD_FORMAT_MESSAGES = {
+  ninea: 'Le format du NINEA est incorrect. Exemple : 0012345 2G3.',
+  rc: 'Le format du registre de commerce est incorrect. Exemple : SN-DKR-2026-B-12345.',
+  cni: 'Le numéro CNI doit contenir exactement 13 chiffres. Exemple : 1745199901234.',
+  passport: 'Le format du passeport est incorrect. Exemple : A01234567.',
+};
+
+function formatNineaInput(value: string) {
+  const raw = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  let normalized = '';
+  for (const char of raw) {
+    const index = normalized.length;
+    if ((index <= 7 || index === 9) && /\d/.test(char)) {
+      normalized += char;
+    } else if (index === 8 && /[A-Z]/.test(char)) {
+      normalized += char;
+    }
+    if (normalized.length >= 10) break;
+  }
+  return normalized.length > 7 ? `${normalized.slice(0, 7)} ${normalized.slice(7)}` : normalized;
+}
+
+function formatRccmInput(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  const raw = trimmed.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  let cursor = raw.startsWith('SN') ? raw.slice(2) : raw;
+
+  const city = cursor.replace(/[^A-Z]/g, '').slice(0, 3);
+  cursor = cursor.slice(city.length);
+
+  const year = cursor.replace(/\D/g, '').slice(0, 4);
+  cursor = cursor.slice(year.length);
+
+  const type = (cursor.match(/[AB]/)?.[0] ?? '').slice(0, 1);
+  const typeIndex = type ? cursor.indexOf(type) + 1 : 0;
+  cursor = typeIndex > 0 ? cursor.slice(typeIndex) : cursor;
+
+  const order = cursor.replace(/\D/g, '').slice(0, 7);
+  const parts = ['SN'];
+  if (city) parts.push(city);
+  if (year) parts.push(year);
+  if (type) parts.push(type);
+  if (order) parts.push(order);
+  return parts.join('-');
+}
+
+function formatIdentityNumberInput(value: string, type?: string | null) {
+  const normalizedType = (type ?? '').toLowerCase();
+  if (normalizedType.includes('passeport')) {
+    const raw = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let result = '';
+    for (const char of raw) {
+      const index = result.length;
+      if (index === 0 && /[A-Z]/.test(char)) {
+        result += char;
+      } else if (index === 1 && /[A-Z0-9]/.test(char)) {
+        result += char;
+      } else if (index >= 2 && /\d/.test(char)) {
+        result += char;
+      }
+      if (result.length >= 9) break;
+    }
+    return result;
+  }
+  if (normalizedType.includes('cni')) {
+    return value.replace(/\D/g, '').slice(0, 13);
+  }
+  return value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 24);
+}
+
+function validateNinea(value?: string | null) {
+  const cleaned = cleanOptionalText(value);
+  if (!cleaned) return null;
+  return NINEA_PATTERN.test(cleaned) ? null : FIELD_FORMAT_MESSAGES.ninea;
+}
+
+function validateRccm(value?: string | null) {
+  const cleaned = cleanOptionalText(value);
+  if (!cleaned) return null;
+  return RCCM_PATTERN.test(cleaned) ? null : FIELD_FORMAT_MESSAGES.rc;
+}
+
+function validateIdentityNumber(value?: string | null, type?: string | null) {
+  const cleaned = cleanOptionalText(value);
+  if (!cleaned) return null;
+  const normalizedType = (type ?? '').toLowerCase();
+  if (normalizedType.includes('cni')) {
+    return CNI_PATTERN.test(cleaned) ? null : FIELD_FORMAT_MESSAGES.cni;
+  }
+  if (normalizedType.includes('passeport')) {
+    return PASSPORT_PATTERN.test(cleaned) ? null : FIELD_FORMAT_MESSAGES.passport;
+  }
+  return null;
 }
 
 function getOrganizationTypeLabel(value: AgencySettings['organization_type'] | undefined, isIndividualOwner: boolean) {
@@ -444,7 +546,11 @@ function extractAgencyAssetPath(url: string | null | undefined, agencyId: string
 
   const rawPath = url.slice(markerIndex + marker.length).split('?')[0];
   const path = decodeURIComponent(rawPath);
-  if (path.startsWith(`${agencyId}/logos/`) || path.startsWith(`logos/${agencyId}-logo.`)) {
+  if (
+    path.startsWith(`${agencyId}/logos/`) ||
+    path.startsWith(`${agencyId}/signatures/`) ||
+    path.startsWith(`logos/${agencyId}-logo.`)
+  ) {
     return path;
   }
   return null;
@@ -501,6 +607,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   const [lastSavedSnapshot, setLastSavedSnapshot] = useState('');
   const [logoPreview, setLogoPreview] = useState<string>('');
   const [logoUploadState, setLogoUploadState] = useState<LogoUploadState>('idle');
+  const [signaturePreview, setSignaturePreview] = useState<string>('');
+  const [signatureUploadState, setSignatureUploadState] = useState<LogoUploadState>('idle');
   const [documentPreviewType, setDocumentPreviewType] = useState<DocumentPreviewType>('quittance');
 
   const getOwnerNameFallback = () => {
@@ -542,14 +650,15 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         }
         setSettings(nextSettings);
         setLastSavedSnapshot(JSON.stringify(nextSettings));
-        if (data.logo_url) {
-          setLogoPreview(data.logo_url);
-        }
+        setLogoPreview(data.logo_url ?? '');
+        setSignaturePreview(data.signature_url ?? '');
       } else {
         const created = await createDefaultSettings(agencyId);
         if (created) {
           setSettings(created as SettingsState);
           setLastSavedSnapshot(JSON.stringify(created));
+          setLogoPreview(created.logo_url ?? '');
+          setSignaturePreview(created.signature_url ?? '');
         }
       }
     } catch (err) {
@@ -638,9 +747,18 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         setSaving(false);
         return;
       }
+      const nineaValidationError = isIndividualOwner ? null : validateNinea(settings.ninea);
+      const rccmValidationError = isIndividualOwner ? null : validateRccm(settings.rc);
+      const identityValidationError = validateIdentityNumber(settings.manager_id_number, settings.manager_id_type);
+      if (nineaValidationError || rccmValidationError || identityValidationError) {
+        showToast(nineaValidationError || rccmValidationError || identityValidationError || 'Vérifiez les identifiants officiels.', 'error');
+        setSaving(false);
+        return;
+      }
       const ownerNameForDocuments = isIndividualOwner
         ? officialName
         : '';
+      const normalizedManagerIdType = cleanOptionalText(settings.manager_id_type) ?? 'CNI';
       const dataToSave: Omit<AgencySettings, 'created_at' | 'updated_at'> = {
         agency_id: profile.agency_id,
         nom_agence: isIndividualOwner ? ownerNameForDocuments : officialName,
@@ -648,12 +766,12 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         telephone: normalizedPhone ?? '',
         email: cleanedEmail,
         site_web: cleanedWebsite,
-        ninea: cleanOptionalText(settings.ninea) ?? '',
-        rc: cleanOptionalText(settings.rc) ?? '',
+        ninea: formatNineaInput(settings.ninea ?? ''),
+        rc: formatRccmInput(settings.rc ?? ''),
         representant_nom: isIndividualOwner ? ownerNameForDocuments : cleanOptionalText(settings.representant_nom) ?? '',
         representant_fonction: cleanOptionalText(settings.representant_fonction) ?? 'Gérant',
-        manager_id_type: cleanOptionalText(settings.manager_id_type) ?? 'CNI',
-        manager_id_number: cleanOptionalText(settings.manager_id_number) ?? '',
+        manager_id_type: normalizedManagerIdType,
+        manager_id_number: formatIdentityNumberInput(settings.manager_id_number ?? '', normalizedManagerIdType),
         city: cleanOptionalText(settings.city) ?? 'Dakar',
         logo_url: settings.logo_url ?? '',
         logo_position: settings.logo_position ?? 'left',
@@ -723,6 +841,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
       setSettings(savedData as SettingsState);
       setLastSavedSnapshot(JSON.stringify(savedData));
+      setLogoPreview(savedData.logo_url ?? '');
+      setSignaturePreview(savedData.signature_url ?? '');
       invalidateAgencySettingsCache(profile.agency_id);
       showToast('Paramètres enregistrés avec succès', 'success');
       if (embedded) {
@@ -836,6 +956,132 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     if (file) await uploadLogoFile(file);
   };
 
+  const uploadSignatureFile = async (file: File) => {
+    if (!file || !profile?.agency_id || !settings) return;
+
+    const validationError = validateLogoFile(file);
+    if (validationError) {
+      showToast(validationError, 'error');
+      return;
+    }
+
+    const assetKind: AgencyAssetKind = 'signature';
+    const previousPreview = signaturePreview;
+    const previousSignatureUrl = settings.signature_url;
+    const localPreview = URL.createObjectURL(file);
+    setSignaturePreview(localPreview);
+    setSignatureUploadState('preview');
+
+    try {
+      setSignatureUploadState('uploading');
+      const uploadFile = await compressLogoFile(file);
+      const fileExt = getLogoExtension(uploadFile);
+      const fileName = `${assetKind}-${Date.now()}.${fileExt}`;
+      const filePath = `${profile.agency_id}/signatures/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(AGENCY_ASSETS_BUCKET)
+        .upload(filePath, uploadFile, {
+          cacheControl: '31536000',
+          contentType: uploadFile.type,
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrl } = supabase.storage
+        .from(AGENCY_ASSETS_BUCKET)
+        .getPublicUrl(filePath);
+
+      const versionedSignatureUrl = `${publicUrl.publicUrl}?v=${Date.now()}`;
+      const { data: savedSettings, error: updateError } = await supabase
+        .from('agency_settings')
+        .update({ signature_url: versionedSignatureUrl })
+        .eq('agency_id', profile.agency_id)
+        .select()
+        .maybeSingle();
+
+      if (updateError) {
+        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([filePath]);
+        throw updateError;
+      }
+
+      if (!savedSettings) {
+        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([filePath]);
+        throw new Error("Signature uploadée, mais la sauvegarde des paramètres a été refusée par les permissions.");
+      }
+
+      const oldAssetPath = extractAgencyAssetPath(previousSignatureUrl, profile.agency_id);
+      if (oldAssetPath && oldAssetPath !== filePath) {
+        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([oldAssetPath]);
+      }
+
+      setSettings(savedSettings as SettingsState);
+      setLastSavedSnapshot(JSON.stringify(savedSettings));
+      setSignaturePreview(versionedSignatureUrl);
+      setSignatureUploadState('done');
+      invalidateAgencySettingsCache(profile.agency_id);
+      showToast('Signature / cachet sauvegardé dans les documents.', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Erreur upload signature:', msg);
+      setSignatureUploadState('idle');
+      setSignaturePreview(previousPreview);
+      showToast(`Erreur upload signature : ${msg}`, 'error');
+    } finally {
+      URL.revokeObjectURL(localPreview);
+    }
+  };
+
+  const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) await uploadSignatureFile(file);
+    e.target.value = '';
+  };
+
+  const handleSignatureDrop = async (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) await uploadSignatureFile(file);
+  };
+
+  const handleSignatureRemove = async () => {
+    if (!profile?.agency_id || !settings?.signature_url) return;
+
+    const previousSignatureUrl = settings.signature_url;
+    setSignatureUploadState('uploading');
+    try {
+      const { data: savedSettings, error } = await supabase
+        .from('agency_settings')
+        .update({ signature_url: null })
+        .eq('agency_id', profile.agency_id)
+        .select()
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!savedSettings) {
+        throw new Error("La suppression a été refusée par les permissions.");
+      }
+
+      const oldAssetPath = extractAgencyAssetPath(previousSignatureUrl, profile.agency_id);
+      if (oldAssetPath) {
+        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([oldAssetPath]);
+      }
+
+      setSettings(savedSettings as SettingsState);
+      setLastSavedSnapshot(JSON.stringify(savedSettings));
+      setSignaturePreview('');
+      setSignatureUploadState('idle');
+      invalidateAgencySettingsCache(profile.agency_id);
+      showToast('Signature / cachet retiré des prochains documents.', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Erreur suppression signature:', msg);
+      setSignatureUploadState('idle');
+      showToast(`Erreur suppression signature : ${msg}`, 'error');
+    }
+  };
+
   const tabs = [
     { id: 'general', label: 'Informations générales', icon: Building },
     { id: 'documents', label: 'Modèles de documents', icon: FileText },
@@ -874,6 +1120,9 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     email: normalizedOrganizationEmail && !isValidEmail(normalizedOrganizationEmail)
       ? 'Adresse email invalide.'
       : null,
+    ninea: isIndividualOwner ? null : validateNinea(settings.ninea),
+    rc: isIndividualOwner ? null : validateRccm(settings.rc),
+    managerIdNumber: validateIdentityNumber(settings.manager_id_number, settings.manager_id_type),
   };
   const hasOrganizationFieldErrors = Object.values(organizationFieldErrors).some(Boolean);
   const documentModeValue = settings.document_mode ?? (isIndividualOwner ? 'simple' : 'professional');
@@ -928,8 +1177,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     : Boolean(cleanOptionalText(settings.representant_nom));
   const identityDocumentComplete = Boolean(cleanOptionalText(settings.manager_id_type) && cleanOptionalText(settings.manager_id_number));
   const legalComplete = isIndividualOwner
-    ? Boolean(representativeComplete && identityDocumentComplete)
-    : Boolean(cleanOptionalText(settings.ninea) && cleanOptionalText(settings.rc) && representativeComplete);
+    ? Boolean(representativeComplete && identityDocumentComplete && !organizationFieldErrors.managerIdNumber)
+    : Boolean(cleanOptionalText(settings.ninea) && cleanOptionalText(settings.rc) && representativeComplete && !organizationFieldErrors.ninea && !organizationFieldErrors.rc);
   const organizationComplete = contactComplete && addressComplete && legalComplete;
   const organizationStatus = organizationComplete ? 'Dossier complet' : 'À compléter';
   const organizationStatusTone = organizationComplete ? 'success' : 'warning';
@@ -950,6 +1199,11 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     embeddedFieldClass,
     error ? 'border-red-300 bg-red-50/40 focus:border-red-500 focus:ring-red-500/15' : '',
   ].filter(Boolean).join(' ');
+  const identityTypeValue = settings.manager_id_type ?? 'CNI';
+  const isPassportIdentity = identityTypeValue.toLowerCase().includes('passeport');
+  const isCniIdentity = identityTypeValue.toLowerCase().includes('cni');
+  const identityPlaceholder = isPassportIdentity ? 'A01234567' : isCniIdentity ? '1745199901234' : 'Référence officielle';
+  const identityMaxLength = isPassportIdentity ? 9 : isCniIdentity ? 13 : 24;
 
   if (embedded && !editingEmbedded) {
     return (
@@ -1026,7 +1280,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               </div>
               <div className="mt-2 grid gap-1.5 sm:grid-cols-3">
                 <DocumentSignal label="Logo" ready={Boolean(logoPreview || settings.logo_url)} />
-                <DocumentSignal label="Cachet / signature" ready={Boolean(settings.signature_url)} />
+                <DocumentSignal label="Cachet / signature" ready={Boolean(signaturePreview || settings.signature_url)} />
                 <DocumentSignal label="QR Verify" ready={Boolean(settings.qr_code_quittances)} />
               </div>
               {organizationMissingItems.length > 0 && (
@@ -1066,7 +1320,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 </div>
                 <div className="mt-2 grid gap-1.5 sm:grid-cols-3">
                   <DocumentSignal label="Logo" ready={Boolean(logoPreview || settings.logo_url)} />
-                  <DocumentSignal label="Signature" ready={Boolean(settings.signature_url)} />
+                  <DocumentSignal label="Signature" ready={Boolean(signaturePreview || settings.signature_url)} />
                   <DocumentSignal label="Mentions" ready={Boolean(settings.mention_tribunal || settings.pied_page_personnalise)} />
                 </div>
               </section>
@@ -1083,12 +1337,18 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                     <div className="min-w-0">
                       <InfoLine label="Logo" value={logoPreview ? 'Logo configuré' : 'Logo à ajouter'} strong />
+                      <InfoLine label="Signature / cachet" value={signaturePreview ? 'Prêt pour les signatures' : 'À ajouter'} strong={Boolean(signaturePreview)} />
                       <InfoLine label="Position" value={settings.logo_position} />
                       <ColorLine label="Couleur primaire" value={settings.couleur_primaire ?? '#F58220'} />
                       <ColorLine label="Couleur secondaire" value={settings.couleur_secondaire ?? '#333333'} />
                     </div>
-                    <div className="flex h-12 w-20 items-center justify-center rounded-xl border border-emerald-950/10 bg-[#fff8ed] p-2">
-                      {logoPreview ? <SafeLogoImage src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
+                    <div className="grid gap-1">
+                      <div className="flex h-12 w-20 items-center justify-center rounded-xl border border-emerald-950/10 bg-[#fff8ed] p-2">
+                        {logoPreview ? <SafeLogoImage src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
+                      </div>
+                      <div className="flex h-10 w-20 items-center justify-center rounded-xl border border-emerald-950/10 bg-white p-1.5">
+                        {signaturePreview ? <SafeLogoImage src={signaturePreview} alt="Signature ou cachet" className="max-h-full max-w-full object-contain" /> : <span className="text-[0.46rem] font-black uppercase tracking-[0.08em] text-slate-400">Signature</span>}
+                      </div>
                     </div>
                   </div>
                 </SettingsInfoCard>
@@ -1097,6 +1357,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
             <SettingsDocumentPreview
               title={displayName}
               logoUrl={logoPreview}
+              signatureUrl={signaturePreview}
               logoPosition={settings.logo_position ?? 'left'}
               primary={settings.couleur_primaire ?? '#F58220'}
               secondary={settings.couleur_secondaire ?? '#333333'}
@@ -1121,7 +1382,16 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 </div>
                 <div>
                   <p className="text-[0.66rem] font-extrabold text-slate-950">{logoPreview ? 'Logo chargé' : 'Logo à ajouter'}</p>
-                  <p className="text-[0.58rem] font-semibold text-slate-500">Position : {settings.logo_position ?? 'left'}</p>
+                  <p className="text-[0.58rem] font-semibold text-slate-500">Position : {settings.logo_position ?? 'left'} · Signature : {signaturePreview ? 'prête' : 'à ajouter'}</p>
+                </div>
+              </div>
+              <div className="mb-2 flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/80 p-2">
+                <div className="flex h-9 w-14 items-center justify-center rounded-xl bg-white p-1.5 shadow-inner">
+                  {signaturePreview ? <SafeLogoImage src={signaturePreview} alt="Signature ou cachet" className="max-h-full max-w-full object-contain" /> : <FileText className="h-4 w-4 text-slate-400" />}
+                </div>
+                <div>
+                  <p className="text-[0.66rem] font-extrabold text-slate-950">{signaturePreview ? 'Signature / cachet configuré' : 'Signature / cachet à ajouter'}</p>
+                  <p className="text-[0.58rem] font-semibold text-slate-500">Utilisé dans les zones de signature des documents.</p>
                 </div>
               </div>
               <ColorLine label="Primaire" value={settings.couleur_primaire ?? '#F58220'} />
@@ -1130,6 +1400,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
             <SettingsDocumentPreview
               title={displayName}
               logoUrl={logoPreview}
+              signatureUrl={signaturePreview}
               logoPosition={settings.logo_position ?? 'left'}
               primary={settings.couleur_primaire ?? '#F58220'}
               secondary={settings.couleur_secondaire ?? '#333333'}
@@ -1281,13 +1552,32 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
             <SettingsEditSection icon={Landmark} eyebrow="Registre" title="Informations légales" description={isIndividualOwner ? 'Renseignez les références utiles si elles doivent apparaître dans les documents.' : 'NINEA, RC et tribunal restent ensemble pour les documents officiels.'}>
               <div className="grid gap-2.5 md:grid-cols-2">
                 {!isIndividualOwner && (
-                  <FormField label="NINEA" optional hint="Documents officiels">
-                    <input type="text" value={settings.ninea ?? ''} onChange={(e) => setSettings({ ...settings, ninea: e.target.value })} className={embeddedFieldClass} />
+                  <FormField label="NINEA" optional hint="Exemple : 0012345 2G3" error={organizationFieldErrors.ninea}>
+                    <input
+                      type="text"
+                      value={settings.ninea ?? ''}
+                      onChange={(e) => setSettings({ ...settings, ninea: formatNineaInput(e.target.value) })}
+                      className={organizationInputClass(organizationFieldErrors.ninea)}
+                      placeholder="0012345 2G3"
+                      maxLength={11}
+                      inputMode="text"
+                      autoCapitalize="characters"
+                      aria-invalid={Boolean(organizationFieldErrors.ninea)}
+                    />
                   </FormField>
                 )}
                 {!isIndividualOwner && (
-                  <FormField label="Registre de commerce" optional hint="Documents officiels">
-                    <input type="text" value={settings.rc ?? ''} onChange={(e) => setSettings({ ...settings, rc: e.target.value })} className={embeddedFieldClass} />
+                  <FormField label="Registre de commerce" optional hint="Exemple : SN-DKR-2026-B-12345" error={organizationFieldErrors.rc}>
+                    <input
+                      type="text"
+                      value={settings.rc ?? ''}
+                      onChange={(e) => setSettings({ ...settings, rc: formatRccmInput(e.target.value) })}
+                      className={organizationInputClass(organizationFieldErrors.rc)}
+                      placeholder="SN-DKR-2026-B-12345"
+                      maxLength={21}
+                      autoCapitalize="characters"
+                      aria-invalid={Boolean(organizationFieldErrors.rc)}
+                    />
                   </FormField>
                 )}
                 <FormField label="Tribunal compétent" optional className="md:col-span-2">
@@ -1307,14 +1597,40 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   <input type="text" value={settings.representant_fonction ?? ''} onChange={(e) => setSettings({ ...settings, representant_fonction: e.target.value })} className={embeddedFieldClass} placeholder={isIndividualOwner ? 'Propriétaire' : 'Gérant'} />
                 </FormField>
                 <FormField label="Type de pièce" optional>
-                  <select value={settings.manager_id_type ?? 'CNI'} onChange={(e) => setSettings({ ...settings, manager_id_type: e.target.value })} className={embeddedFieldClass}>
+                  <select
+                    value={identityTypeValue}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      manager_id_type: e.target.value,
+                      manager_id_number: formatIdentityNumberInput(settings.manager_id_number ?? '', e.target.value),
+                    })}
+                    className={embeddedFieldClass}
+                  >
                     <option value="CNI">CNI</option>
                     <option value="Passeport">Passeport</option>
                     <option value="Carte consulaire">Carte consulaire</option>
                   </select>
                 </FormField>
-                <FormField label="Numéro de pièce" optional>
-                  <input type="text" value={settings.manager_id_number ?? ''} onChange={(e) => setSettings({ ...settings, manager_id_number: e.target.value })} className={embeddedFieldClass} />
+                <FormField
+                  label="Numéro de pièce"
+                  optional
+                  hint={isPassportIdentity ? 'Exemple : A01234567' : isCniIdentity ? '13 chiffres sans espace' : 'Référence officielle'}
+                  error={organizationFieldErrors.managerIdNumber}
+                >
+                  <input
+                    type="text"
+                    value={settings.manager_id_number ?? ''}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      manager_id_number: formatIdentityNumberInput(e.target.value, identityTypeValue),
+                    })}
+                    className={organizationInputClass(organizationFieldErrors.managerIdNumber)}
+                    placeholder={identityPlaceholder}
+                    maxLength={identityMaxLength}
+                    inputMode={isCniIdentity ? 'numeric' : 'text'}
+                    autoCapitalize="characters"
+                    aria-invalid={Boolean(organizationFieldErrors.managerIdNumber)}
+                  />
                 </FormField>
               </div>
             </SettingsEditSection>
@@ -1485,7 +1801,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Logo et couleurs</h3>
                 <div className="mt-2.5 grid gap-2.5">
                   <label className="block" onDrop={handleLogoDrop} onDragOver={(e) => e.preventDefault()}>
-                    <span className={embeddedLabelClass}>{isIndividualOwner ? 'Logo ou signature' : "Logo de l'agence"}</span>
+                    <span className={embeddedLabelClass}>{isIndividualOwner ? 'Logo du profil' : "Logo de l'agence"}</span>
                     <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-emerald-950/15 bg-[#fffdf8] p-2.5">
                       <input
                         type="file"
@@ -1502,6 +1818,38 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                       </div>
                     </div>
                   </label>
+                  <div className="block" onDrop={handleSignatureDrop} onDragOver={(e) => e.preventDefault()}>
+                    <span className={embeddedLabelClass}>Signature / cachet documentaire</span>
+                    <div className="flex items-center justify-between gap-2.5 rounded-xl border border-dashed border-emerald-950/15 bg-white p-2.5">
+                      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5">
+                        <input
+                          type="file"
+                          accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
+                          onChange={handleSignatureUpload}
+                          className="hidden"
+                        />
+                        <div className="flex h-11 w-16 shrink-0 items-center justify-center rounded-xl bg-[#fffdf8] p-2 shadow-sm">
+                          {signaturePreview ? <SafeLogoImage src={signaturePreview} alt="Signature ou cachet" className="max-h-full max-w-full object-contain" /> : <Upload className="h-5 w-5 text-emerald-800" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[0.72rem] font-extrabold text-slate-950">
+                            {signatureUploadState === 'uploading' ? 'Upload en cours...' : signaturePreview ? 'Signature / cachet prêt' : 'Cliquer ou déposer une signature'}
+                          </p>
+                          <p className="text-[0.62rem] font-semibold text-slate-500">PNG transparent conseillé. Utilisé dans contrats et mandats.</p>
+                        </div>
+                      </label>
+                      {signaturePreview && (
+                        <button
+                          type="button"
+                          onClick={handleSignatureRemove}
+                          className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[0.56rem] font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100"
+                          disabled={signatureUploadState === 'uploading'}
+                        >
+                          Retirer
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   <label>
                     <span className={embeddedLabelClass}>Position logo</span>
                     <select value={settings.logo_position ?? 'left'} onChange={(e) => setSettings({ ...settings, logo_position: e.target.value as AgencySettings['logo_position'] })} className={embeddedFieldClass}>
@@ -1531,6 +1879,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               <SettingsDocumentPreview
                 title={displayName}
                 logoUrl={logoPreview}
+                signatureUrl={signaturePreview}
                 logoPosition={settings.logo_position ?? 'left'}
                 primary={settings.couleur_primaire ?? '#F58220'}
                 secondary={settings.couleur_secondaire ?? '#333333'}
@@ -1721,9 +2070,16 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   <input aria-label="Champ de saisie"
                     type="text"
                     value={settings.ninea ?? ''}
-                    onChange={(e) => setSettings({ ...settings, ninea: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    onChange={(e) => setSettings({ ...settings, ninea: formatNineaInput(e.target.value) })}
+                    className={organizationInputClass(organizationFieldErrors.ninea)}
+                    placeholder="0012345 2G3"
+                    maxLength={11}
+                    autoCapitalize="characters"
+                    aria-invalid={Boolean(organizationFieldErrors.ninea)}
                   />
+                  {organizationFieldErrors.ninea && (
+                    <p className="mt-1 text-xs font-semibold text-red-700">{organizationFieldErrors.ninea}</p>
+                  )}
                 </div>
                 )}
 
@@ -1735,9 +2091,16 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   <input aria-label="Champ de saisie"
                     type="text"
                     value={settings.rc ?? ''}
-                    onChange={(e) => setSettings({ ...settings, rc: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    onChange={(e) => setSettings({ ...settings, rc: formatRccmInput(e.target.value) })}
+                    className={organizationInputClass(organizationFieldErrors.rc)}
+                    placeholder="SN-DKR-2026-B-12345"
+                    maxLength={21}
+                    autoCapitalize="characters"
+                    aria-invalid={Boolean(organizationFieldErrors.rc)}
                   />
+                  {organizationFieldErrors.rc && (
+                    <p className="mt-1 text-xs font-semibold text-red-700">{organizationFieldErrors.rc}</p>
+                  )}
                 </div>
                 )}
 
@@ -1775,9 +2138,13 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     {isIndividualOwner ? "Type de pièce d'identité" : "Type de pièce d'identité du représentant"}
                   </label>
                   <select aria-label="Sélection"
-                    value={settings.manager_id_type ?? 'CNI'}
+                    value={identityTypeValue}
                     onChange={(e) =>
-                      setSettings({ ...settings, manager_id_type: e.target.value })
+                      setSettings({
+                        ...settings,
+                        manager_id_type: e.target.value,
+                        manager_id_number: formatIdentityNumberInput(settings.manager_id_number ?? '', e.target.value),
+                      })
                     }
                     className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   >
@@ -1795,11 +2162,18 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     type="text"
                     value={settings.manager_id_number ?? ''}
                     onChange={(e) =>
-                      setSettings({ ...settings, manager_id_number: e.target.value })
+                      setSettings({ ...settings, manager_id_number: formatIdentityNumberInput(e.target.value, identityTypeValue) })
                     }
-                    placeholder="ex: 1761198600458"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                    placeholder={identityPlaceholder}
+                    maxLength={identityMaxLength}
+                    inputMode={isCniIdentity ? 'numeric' : 'text'}
+                    autoCapitalize="characters"
+                    className={organizationInputClass(organizationFieldErrors.managerIdNumber)}
+                    aria-invalid={Boolean(organizationFieldErrors.managerIdNumber)}
                   />
+                  {organizationFieldErrors.managerIdNumber && (
+                    <p className="mt-1 text-xs font-semibold text-red-700">{organizationFieldErrors.managerIdNumber}</p>
+                  )}
                 </div>
 
                 <div>
@@ -1966,7 +2340,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-3">
-                  {isIndividualOwner ? 'Logo ou signature visuelle' : "Logo de l'agence"}
+                  {isIndividualOwner ? 'Logo du profil' : "Logo de l'agence"}
                 </label>
                 <div className="flex items-start gap-6">
                   <div className="flex-1">
@@ -1995,7 +2369,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                             : 'Glissez le logo ici ou cliquez pour uploader'}
                         </p>
                         <p className="text-xs font-medium text-slate-500">
-                          PNG, SVG, JPG, WEBP jusqu'à 2 Mo
+                          PNG, SVG, JPG, WEBP jusqu'à 5 Mo
                         </p>
                       </div>
                     </label>
@@ -2011,6 +2385,74 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                           className="max-h-full max-w-full object-contain"
                         />
                       </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-3">
+                  Signature / cachet documentaire
+                </label>
+                <div className="flex items-start gap-6">
+                  <div className="flex-1">
+                    <label
+                      className="block"
+                      onDrop={handleSignatureDrop}
+                      onDragOver={(e) => e.preventDefault()}
+                    >
+                      <div className="group rounded-2xl border border-dashed border-emerald-200 bg-white p-4 shadow-sm transition-all duration-300 hover:border-orange-300 hover:shadow-md sm:p-5">
+                        <input
+                          type="file"
+                          accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
+                          onChange={handleSignatureUpload}
+                          className="hidden"
+                        />
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-xl bg-[#fffdf8] p-2 text-emerald-800 shadow-inner ring-1 ring-emerald-100">
+                            {signatureUploadState === 'uploading' ? (
+                              <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-200 border-t-orange-500" />
+                            ) : signaturePreview ? (
+                              <SafeLogoImage src={signaturePreview} alt="Signature ou cachet" className="max-h-full max-w-full object-contain" />
+                            ) : (
+                              <Upload className="h-5 w-5" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-black text-slate-900">
+                              {signatureUploadState === 'uploading'
+                                ? 'Upload de la signature en cours...'
+                                : signaturePreview
+                                  ? 'Signature / cachet configuré'
+                                  : 'Glissez la signature ici ou cliquez pour uploader'}
+                            </p>
+                            <p className="text-xs font-medium text-slate-500">
+                              PNG transparent conseillé. Utilisé sur contrats, mandats et zones de signature.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+
+                  {signaturePreview && (
+                    <div className="flex-shrink-0">
+                      <p className="text-sm font-medium text-slate-700 mb-2">Aperçu cachet</p>
+                      <div className="flex h-24 w-40 items-center justify-center rounded-2xl border border-emerald-100 bg-white p-3 shadow-inner">
+                        <SafeLogoImage
+                          src={signaturePreview}
+                          alt="Signature ou cachet"
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSignatureRemove}
+                        className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100"
+                        disabled={signatureUploadState === 'uploading'}
+                      >
+                        Retirer
+                      </button>
                     </div>
                   )}
                 </div>
@@ -2453,6 +2895,9 @@ function SettingsStatusCard({ label, value, icon: Icon }: { label: string; value
 
 function SafeLogoImage({ src, alt, className }: { src: string; alt: string; className: string }) {
   const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
   if (failed) return <Sparkles className="h-5 w-5 text-orange-600" aria-hidden="true" />;
   return <img src={src} alt={alt} className={className} onError={() => setFailed(true)} />;
 }
@@ -2472,6 +2917,7 @@ function ColorLine({ label, value }: { label: string; value: string }) {
 function SettingsDocumentPreview({
   title,
   logoUrl,
+  signatureUrl,
   logoPosition,
   primary,
   secondary,
@@ -2486,6 +2932,7 @@ function SettingsDocumentPreview({
 }: {
   title: string;
   logoUrl?: string;
+  signatureUrl?: string | null;
   logoPosition?: AgencySettings['logo_position'];
   primary: string;
   secondary: string;
@@ -2603,10 +3050,22 @@ function SettingsDocumentPreview({
             </div>
           )}
         </div>
-        <div className="border-t border-slate-100 px-2.5 py-1.5 text-[0.58rem] font-semibold leading-[0.84rem] text-slate-500">
-          {notice && <p className="line-clamp-2 text-slate-600">{notice}</p>}
-          <p className="truncate">Tribunal : {tribunal || 'Non renseigné'}</p>
-          <p className="mt-1 truncate">Pied de page : {footer || 'Non renseigné'}</p>
+        <div className="grid gap-2 border-t border-slate-100 px-2.5 py-1.5 text-[0.58rem] font-semibold leading-[0.84rem] text-slate-500 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-end">
+          <div className="min-w-0">
+            {notice && <p className="line-clamp-2 text-slate-600">{notice}</p>}
+            <p className="truncate">Tribunal : {tribunal || 'Non renseigné'}</p>
+            <p className="mt-1 truncate">Pied de page : {footer || 'Non renseigné'}</p>
+          </div>
+          <div className="rounded-lg border border-slate-100 bg-white px-1.5 py-1">
+            <p className="text-[0.45rem] font-black uppercase tracking-[0.1em] text-slate-400">Signature / cachet</p>
+            <div className="mt-1 flex h-9 items-center justify-center rounded-md bg-[#fffdf8] px-1">
+              {signatureUrl ? (
+                <SafeLogoImage src={signatureUrl} alt="Signature ou cachet" className="max-h-full max-w-full object-contain" />
+              ) : (
+                <span className="text-[0.48rem] font-black uppercase tracking-[0.08em] text-slate-300">À configurer</span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </section>

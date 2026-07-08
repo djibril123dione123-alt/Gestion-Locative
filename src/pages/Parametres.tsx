@@ -29,6 +29,7 @@ import { PremiumButton } from '../components/ui/PremiumButton';
 import { invalidateAgencySettingsCache } from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
+import { formatSenegalCniInput, validateSenegalCni } from '../lib/senegalIdentity';
 
 type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
   created_at?: string;
@@ -172,13 +173,11 @@ function isValidEmail(value: string) {
 
 const NINEA_PATTERN = /^\d{7}\s?\d[A-Z]\d$/;
 const RCCM_PATTERN = /^SN-[A-Z]{3}-\d{4}-[AB]-\d{1,7}$/;
-const CNI_PATTERN = /^\d{13}$/;
 const PASSPORT_PATTERN = /^(?:[A-Z]{2}\d{7}|[A-Z]\d{8})$/;
 
 const FIELD_FORMAT_MESSAGES = {
   ninea: 'Le format du NINEA est incorrect. Exemple : 0012345 2G3.',
   rc: 'Le format du registre de commerce est incorrect. Exemple : SN-DKR-2026-B-12345.',
-  cni: 'Le numéro CNI doit contenir exactement 13 chiffres. Exemple : 1745199901234.',
   passport: 'Le format du passeport est incorrect. Exemple : A01234567.',
 };
 
@@ -241,7 +240,7 @@ function formatIdentityNumberInput(value: string, type?: string | null) {
     return result;
   }
   if (normalizedType.includes('cni')) {
-    return value.replace(/\D/g, '').slice(0, 13);
+    return formatSenegalCniInput(value);
   }
   return value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 24);
 }
@@ -258,12 +257,19 @@ function validateRccm(value?: string | null) {
   return RCCM_PATTERN.test(cleaned) ? null : FIELD_FORMAT_MESSAGES.rc;
 }
 
-function validateIdentityNumber(value?: string | null, type?: string | null) {
+function preventNonDigitKey(event: React.KeyboardEvent<HTMLInputElement>) {
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.key.length === 1 && !/^\d$/.test(event.key)) {
+    event.preventDefault();
+  }
+}
+
+function validateIdentityNumber(value?: string | null, type?: string | null, allowIncomplete = true) {
   const cleaned = cleanOptionalText(value);
   if (!cleaned) return null;
   const normalizedType = (type ?? '').toLowerCase();
   if (normalizedType.includes('cni')) {
-    return CNI_PATTERN.test(cleaned) ? null : FIELD_FORMAT_MESSAGES.cni;
+    return validateSenegalCni(cleaned, allowIncomplete);
   }
   if (normalizedType.includes('passeport')) {
     return PASSPORT_PATTERN.test(cleaned) ? null : FIELD_FORMAT_MESSAGES.passport;
@@ -749,7 +755,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
       }
       const nineaValidationError = isIndividualOwner ? null : validateNinea(settings.ninea);
       const rccmValidationError = isIndividualOwner ? null : validateRccm(settings.rc);
-      const identityValidationError = validateIdentityNumber(settings.manager_id_number, settings.manager_id_type);
+      const identityValidationError = validateIdentityNumber(settings.manager_id_number, settings.manager_id_type, false);
       if (nineaValidationError || rccmValidationError || identityValidationError) {
         showToast(nineaValidationError || rccmValidationError || identityValidationError || 'Vérifiez les identifiants officiels.', 'error');
         setSaving(false);
@@ -1202,8 +1208,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   const identityTypeValue = settings.manager_id_type ?? 'CNI';
   const isPassportIdentity = identityTypeValue.toLowerCase().includes('passeport');
   const isCniIdentity = identityTypeValue.toLowerCase().includes('cni');
-  const identityPlaceholder = isPassportIdentity ? 'A01234567' : isCniIdentity ? '1745199901234' : 'Référence officielle';
-  const identityMaxLength = isPassportIdentity ? 9 : isCniIdentity ? 13 : 24;
+  const identityPlaceholder = isPassportIdentity ? 'A01234567' : isCniIdentity ? '1 01 19950825 00123 4' : 'Référence officielle';
+  const identityMaxLength = isPassportIdentity ? 9 : isCniIdentity ? 21 : 24;
 
   if (embedded && !editingEmbedded) {
     return (
@@ -1614,7 +1620,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 <FormField
                   label="Numéro de pièce"
                   optional
-                  hint={isPassportIdentity ? 'Exemple : A01234567' : isCniIdentity ? '13 chiffres sans espace' : 'Référence officielle'}
+                  hint={isPassportIdentity ? 'Exemple : A01234567' : isCniIdentity ? '17 chiffres (format biométrique CEDEAO)' : 'Référence officielle'}
                   error={organizationFieldErrors.managerIdNumber}
                 >
                   <input
@@ -1628,6 +1634,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     placeholder={identityPlaceholder}
                     maxLength={identityMaxLength}
                     inputMode={isCniIdentity ? 'numeric' : 'text'}
+                    onKeyDown={isCniIdentity ? preventNonDigitKey : undefined}
                     autoCapitalize="characters"
                     aria-invalid={Boolean(organizationFieldErrors.managerIdNumber)}
                   />
@@ -2167,10 +2174,14 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     placeholder={identityPlaceholder}
                     maxLength={identityMaxLength}
                     inputMode={isCniIdentity ? 'numeric' : 'text'}
+                    onKeyDown={isCniIdentity ? preventNonDigitKey : undefined}
                     autoCapitalize="characters"
                     className={organizationInputClass(organizationFieldErrors.managerIdNumber)}
                     aria-invalid={Boolean(organizationFieldErrors.managerIdNumber)}
                   />
+                  {isCniIdentity && !organizationFieldErrors.managerIdNumber && (
+                    <p className="mt-1 text-xs font-semibold text-slate-500">17 chiffres (format biométrique CEDEAO)</p>
+                  )}
                   {organizationFieldErrors.managerIdNumber && (
                     <p className="mt-1 text-xs font-semibold text-red-700">{organizationFieldErrors.managerIdNumber}</p>
                   )}

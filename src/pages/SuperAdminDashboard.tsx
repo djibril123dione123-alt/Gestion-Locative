@@ -91,7 +91,7 @@ export function SuperAdminDashboard() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 animate-fadeIn bg-slate-50 min-h-screen">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8 animate-fadeIn">
       <PremiumPageHeader
         density="compact"
         eyebrow="SUPER ADMIN"
@@ -175,7 +175,7 @@ export function SuperAdminDashboard() {
       </div>
 
       {/* System Status */}
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+      <div className="sk-card p-4 sm:p-6 lg:p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-6">État du système</h2>
         <div className="space-y-4">
           <StatusRow label="Base de données" status="healthy" uptime="99.9%" />
@@ -187,7 +187,7 @@ export function SuperAdminDashboard() {
       </div>
 
       {/* Recent Alerts */}
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+      <div className="sk-card p-4 sm:p-6 lg:p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-6">Alertes récentes</h2>
         <div className="space-y-3">
           <AlertItem
@@ -212,7 +212,7 @@ export function SuperAdminDashboard() {
       </div>
 
       {/* Agencies Overview */}
-      <div className="bg-white p-6 rounded-2xl shadow-lg border border-slate-200">
+      <div className="sk-card p-4 sm:p-6 lg:p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-6">Agences</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

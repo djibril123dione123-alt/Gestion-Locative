@@ -275,7 +275,7 @@ export function Unites() {
         }
       />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+      <div className="sk-card p-4 sm:p-6 lg:p-6">
         <div className="mb-6">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -285,14 +285,14 @@ export function Unites() {
                 placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent sm:hidden"
+                className="w-full pl-10 pr-4 py-2 sm:py-3 sk-input sm:hidden"
               />
               <input
                 type="text"
                 placeholder="Rechercher une unité..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="hidden sm:block w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="hidden sm:block w-full pl-10 pr-4 py-2 sm:py-3 sk-input"
               />
             </div>
             <ColumnPicker
@@ -321,7 +321,7 @@ export function Unites() {
               required
               value={formData.immeuble_id}
               onChange={(e) => setFormData({ ...formData, immeuble_id: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full sk-input"
             >
               <option value="">Sélectionner un immeuble</option>
               {immeubles.map((i) => (
@@ -337,7 +337,7 @@ export function Unites() {
                 required
                 value={formData.nom}
                 onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full sk-input"
               >
                 <option value="">Sélectionner</option>
                 <option>Appartement F3</option>
@@ -358,7 +358,7 @@ export function Unites() {
                 type="text"
                 value={formData.numero}
                 onChange={(e) => setFormData({ ...formData, numero: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full sk-input"
               />
             </div>
           </div>
@@ -370,7 +370,7 @@ export function Unites() {
                 type="text"
                 value={formData.etage}
                 onChange={(e) => setFormData({ ...formData, etage: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full sk-input"
               />
             </div>
             <div>
@@ -380,7 +380,7 @@ export function Unites() {
                 required
                 value={formData.loyer_base}
                 onChange={(e) => setFormData({ ...formData, loyer_base: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full sk-input"
               />
             </div>
           </div>
@@ -391,7 +391,7 @@ export function Unites() {
               required
               value={formData.statut}
               onChange={(e) => setFormData({ ...formData, statut: e.target.value as UniteStatut })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full sk-input"
             >
               <option value="libre">Libre</option>
             </select>

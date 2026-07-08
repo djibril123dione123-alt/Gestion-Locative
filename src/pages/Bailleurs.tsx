@@ -1802,8 +1802,8 @@ export function Bailleurs() {
             </div>
           ) : (
             <>
-              <div className={`hidden lg:block ${detailPanelOpen ? 'overflow-hidden' : 'overflow-x-auto'}`}>
-                <table className={`w-full border-collapse table-fixed ${detailPanelOpen ? 'min-w-[620px]' : 'min-w-[840px]'}`}>
+              <div className="hidden lg:block overflow-x-auto">
+                <table className={`w-full border-collapse table-fixed ${detailPanelOpen ? 'min-w-[680px]' : 'min-w-[840px]'}`}>
                   <thead className="bg-[#f8f3e8]/70 text-left">
                     <tr>
                       {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[60%]' : 'w-[50%]'} px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><CircleUser className="h-3 w-3 text-slate-400" /> Bailleur</span></th>}

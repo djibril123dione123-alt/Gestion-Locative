@@ -657,6 +657,202 @@ export function TableauDeBordFinancierGlobal() {
     // -------------------------------------------------------------------------
 
     return (
+<content>
+                    : ['Commissions agence', formatCurrency(bilan.total_frais), netLabel, formatCurrency(bilan.total_net)],
+                ['Taux de recouvrement', String(recoveryRate) + '%', 'Immeubles suivis', String(bilan.immeubles.length)],
+            ],
+            startY: y,
+            theme: 'grid',
+            ...tableTheme,
+            styles: {
+                ...tableTheme.styles,
+                fontSize: 8.8,
+                cellPadding: { top: 3.1, right: 3.2, bottom: 3.1, left: 3.2 },
+            },
+            margin: { left: 14, right: 14 },
+            columnStyles: {
+                0: { fontStyle: 'bold', textColor: [71, 85, 105], cellWidth: 42 },
+                1: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 40 },
+                2: { fontStyle: 'bold', textColor: [71, 85, 105], cellWidth: 44 },
+                3: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42] },
+            },
+        });
+        y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 12;
+
+        sectionTitle('Résumé exécutif');
+        const executiveSummary = [
+            'Sur la période ' + periodLabel + ', le portefeuille de ' + bilan.bailleur_prenom + ' ' + bilan.bailleur_nom + ' présente un taux de recouvrement estimé à ' + recoveryRate + '%.',
+            bilan.total_impayes > 0
+                ? 'Les reliquats ouverts représentent ' + formatCurrency(bilan.total_impayes) + ' et doivent rester prioritaires dans le suivi de gestion.'
+                : 'Les échéances enregistrées sur la période sont soldées, sans reliquat significatif à reporter.',
+            accountProfile.isIndividualOwner
+                ? 'Le revenu net estimé du propriétaire ressort à ' + formatCurrency(bilan.total_net) + '.'
+                : 'Après ventilation des commissions, le montant net estimé au profit du bailleur ressort à ' + formatCurrency(bilan.total_net) + '.',
+        ];
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.3);
+        doc.setTextColor(30, 41, 59);
+        const summaryLines = doc.splitTextToSize(executiveSummary.join(' '), 178);
+        doc.text(summaryLines, 14, y);
+        y += summaryLines.length * 4.8 + 10;
+
+        sectionTitle('Détail par immeuble', 'Lecture par immeuble, unité, locataire et situation financière.');
+        if (bilan.immeubles.length === 0) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+            doc.text('Aucune ligne de paiement enregistrée pour cette période.', 14, y);
+            y += 12;
+        }
+
+        bilan.immeubles.forEach((immeuble, index) => {
+            ensureSpace(38);
+            if (index > 0) y += 2;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.setTextColor(15, 23, 42);
+            doc.text(immeuble.immeuble_nom, 14, y);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(100, 116, 139);
+            doc.text(
+                'Total encaissé ' + formatCurrency(immeuble.loyers_percus) + ' · Reliquat ' + formatCurrency(immeuble.loyers_impayes) + ' · ' + netLabel + ' ' + formatCurrency(immeuble.resultat_net),
+                pageWidth - 14,
+                y,
+                { align: 'right' }
+            );
+            y += 5;
+
+            const bodyRows = immeuble.unites.length
+                ? immeuble.unites.map((unit) => [
+                    unit.unite_nom,
+                    unit.locataire_nom,
+                    formatCurrency(unit.loyer),
+                    unit.statut_paiement === 'partiel' ? 'Partiel' : 'Soldé',
+                    formatCurrency(unit.montant_encaisse),
+                    formatCurrency(unit.montant_restant),
+                    unit.periode,
+                    unit.observation,
+                ])
+                : [['-', 'Aucune unité payée', '-', '-', '-', '-', periodLabel, '-']];
+
+            autoTable(doc, {
+                head: [['Unité', 'Locataire', 'Loyer', 'Statut', 'Encaissé', 'Reliquat', 'Période', 'Observation']],
+                body: [
+                    ...bodyRows,
+                    ['', 'Total immeuble', '', '', formatCurrency(immeuble.loyers_percus), formatCurrency(immeuble.loyers_impayes), '', netLabel + ' ' + formatCurrency(immeuble.resultat_net)],
+                ],
+                startY: y,
+                theme: 'grid',
+                ...tableTheme,
+                styles: {
+                    ...tableTheme.styles,
+                    fontSize: 7.6,
+                    cellPadding: { top: 2.5, right: 2.2, bottom: 2.5, left: 2.2 },
+                    overflow: 'linebreak',
+                },
+                headStyles: {
+                    ...tableTheme.headStyles,
+                    fontSize: 7.4,
+                },
+                margin: { left: 14, right: 14 },
+                columnStyles: {
+                    2: { halign: 'right', cellWidth: 20 },
+                    4: { halign: 'right', cellWidth: 22 },
+                    5: { halign: 'right', cellWidth: 22 },
+                    6: { cellWidth: 24 },
+                    7: { cellWidth: 34 },
+                },
+                didParseCell: (data) => {
+                    const raw = Array.isArray(data.row.raw) ? data.row.raw : [];
+                    if (raw[1] === 'Total immeuble') {
+                        data.cell.styles.fillColor = [248, 250, 252];
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = [15, 23, 42];
+                    }
+                },
+            });
+            y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 10;
+        });
+
+        ensureSpace(48);
+        y = drawTotalsBlock(
+            doc,
+            14,
+            y,
+            pageWidth - 28,
+            [
+                { label: 'Loyers encaissés', value: formatCurrency(bilan.total_loyers_percus) },
+                { label: 'Reliquats à suivre', value: formatCurrency(bilan.total_impayes) },
+                ...(accountProfile.isIndividualOwner ? [] : [{ label: 'Commissions agence', value: formatCurrency(bilan.total_frais) }]),
+                { label: netLabel, value: formatCurrency(bilan.total_net), emphasis: true },
+            ],
+            pdfSettings
+        );
+
+        try {
+            await drawLegalVerificationFooter(doc, {
+                ref: reportRef,
+                type: 'rapport_bailleur',
+                agency: agencySettings?.nom_agence ?? 'Samay Këur',
+                date: new Date().toISOString(),
+                settings: pdfSettings,
+            });
+        } catch {
+            // Document verification QR is non-blocking.
+        }
+        addFooter(doc, pdfSettings);
+
+        const previewRows = bilan.immeubles.flatMap((i) =>
+            i.unites.map((u) => ({
+                Immeuble: i.immeuble_nom,
+                Unite: u.unite_nom,
+                Locataire: u.locataire_nom,
+                Statut: u.statut_paiement === 'partiel' ? 'Partiel' : 'Soldé',
+                Encaisse: formatCurrency(u.montant_encaisse),
+                Restant: formatCurrency(u.montant_restant),
+            }))
+        );
+
+        await saveGeneratedPdf(doc, {
+            kind: 'bilan',
+            title: accountProfile.isIndividualOwner ? 'Résumé mensuel propriétaire' : 'Rapport bailleur',
+            fileName: `${accountProfile.isIndividualOwner ? 'resume-proprietaire' : 'rapport-bailleur'}-${bilan.bailleur_nom}-${selectedMonth}.pdf`,
+            source: 'tableau-de-bord-financier',
+            documentType: 'rapport_bailleur',
+            entityId: bilan.bailleur_id,
+            period: selectedMonth,
+            reference: reportRef,
+            data: {
+                document: 'rapport_bailleur',
+                selectedMonth,
+                bilan,
+                agencySettings,
+            },
+            preview: {
+                columns: ['Immeuble', 'Unite', 'Locataire', 'Statut', 'Encaisse', 'Restant'],
+                rows: previewRows.slice(0, 6),
+                rowCount: previewRows.length,
+                period: periodLabel,
+                stats: [
+                    { label: 'Revenus encaissés', value: formatCurrency(bilan.total_loyers_percus) },
+                    { label: 'Impayés', value: formatCurrency(bilan.total_impayes) },
+                    { label: accountProfile.isIndividualOwner ? 'Revenus nets' : 'Net bailleur', value: formatCurrency(bilan.total_net) },
+                    { label: 'Recouvrement', value: `${recoveryRate}%` },
+                ],
+            },
+        });
+    };
+
+    if (loading) {
+        return <PageSkeleton title="Tableau financier" variant="analytics" />;
+    }
+    
+    // -------------------------------------------------------------------------
+    // 7. RENDU DE L'INTERFACE UTILISATEUR CENTRALISÉE
+    // -------------------------------------------------------------------------
+
+    return (
         <div className="relative min-h-full">
             {/* Animated Mesh Gradient Background */}
             <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
@@ -670,23 +866,6 @@ export function TableauDeBordFinancierGlobal() {
                     title="Rapports financiers"
                     description="Suivez les revenus locatifs, impayés et performances de portefeuille."
                     mobileDescription="Performance financière."
-                />
-
-            <div className={`grid grid-cols-1 gap-1.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/85 px-2.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] sm:gap-2 ${accountProfile.isIndividualOwner ? '' : 'sm:grid-cols-2'}`}>
-                <button
-                    onClick={() => {
-                        if (accountProfile.isIndividualOwner) {
-                            setCurrentPage('bailleurs');
-                        } else {
-                            window.location.hash = '#/bailleurs';
-                        }
-                    }}
-                    className={`flex flex-col items-start rounded-lg px-4 py-3 text-left transition ${currentPage === 'bailleurs' ? 'bg-emerald-900 text-white shadow-sm' : 'bg-transparent text-slate-600 hover:bg-white hover:text-emerald-900 hover:shadow-sm'}`}
-                >
-                    <span className="text-sm font-bold">{accountProfile.isIndividualOwner ? 'Mes revenus' : 'Fiches bailleurs'}</span>
-                    <span className="mt-0.5 block text-[11px] font-medium opacity-80">
-                        {accountProfile.isIndividualOwner
-                            ? 'Synthèse mensuelle de vos loyers, impayés et revenus nets.'
                             : 'Les rapports par proprietaire se generent depuis la page Bailleurs.'}
                     </span>
                 </button>

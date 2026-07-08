@@ -238,7 +238,6 @@ export function FiltresAvances() {
       if (error) throw error;
 
       if (filters.statut_paiement) {
-        // Une seule requête pour tous les contrats (au lieu de N+1)
         const contratIds = (data || []).map((c: { id: string }) => c.id);
         const latestByContrat = new Map<string, string>();
 
@@ -327,7 +326,7 @@ export function FiltresAvances() {
         mobileDescription="Recherche avancée."
       />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 mb-6">
+      <div className="sk-card p-4 sm:p-6 lg:p-6 mb-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
           <Filter className="w-5 h-5 text-blue-600 flex-shrink-0" />
           <h2 className="text-base lg:text-lg font-semibold text-slate-900">Critères de recherche</h2>
@@ -341,11 +340,13 @@ export function FiltresAvances() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {!isIndividualOwner && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Bailleur</label>
+              <label htmlFor="filter-bailleur" className="block text-sm font-medium text-slate-700 mb-2">Bailleur</label>
               <select
+                id="filter-bailleur"
+                aria-label="Filtrer par bailleur"
                 value={filters.bailleur_id}
                 onChange={(e) => setFilters({ ...filters, bailleur_id: e.target.value, immeuble_id: '', unite_id: '' })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full sk-input"
               >
                 <option value="">Tous les bailleurs</option>
                 {bailleurs.map((b) => (
@@ -358,12 +359,14 @@ export function FiltresAvances() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Immeuble</label>
+            <label htmlFor="filter-immeuble" className="block text-sm font-medium text-slate-700 mb-2">Immeuble</label>
             <select
+              id="filter-immeuble"
+              aria-label="Filtrer par immeuble"
               value={filters.immeuble_id}
               onChange={(e) => setFilters({ ...filters, immeuble_id: e.target.value, unite_id: '' })}
-              disabled={!isIndividualOwner && !filters.bailleur_id}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 text-sm"
+              className="w-full sk-input"
+              disabled={!isIndividualOwner && !filters.bailleur_id && bailleurs.length > 0}
             >
               <option value="">Tous les immeubles</option>
               {immeubles.map((i) => (
@@ -375,14 +378,16 @@ export function FiltresAvances() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Produit</label>
+            <label htmlFor="filter-unite" className="block text-sm font-medium text-slate-700 mb-2">Unité</label>
             <select
+              id="filter-unite"
+              aria-label="Filtrer par unité"
               value={filters.unite_id}
               onChange={(e) => setFilters({ ...filters, unite_id: e.target.value })}
-              disabled={!filters.immeuble_id}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100 text-sm"
+              className="w-full sk-input"
+              disabled={!filters.immeuble_id && immeubles.length > 0}
             >
-              <option value="">Toutes les produits</option>
+              <option value="">Toutes les unités</option>
               {unites.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.nom}
@@ -392,72 +397,85 @@ export function FiltresAvances() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Statut produit</label>
+            <label htmlFor="filter-statut-unite" className="block text-sm font-medium text-slate-700 mb-2">Statut produit</label>
             <select
+              id="filter-statut-unite"
+              aria-label="Filtrer par statut produit"
               value={filters.statut_unite}
               onChange={(e) => setFilters({ ...filters, statut_unite: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full sk-input"
             >
               <option value="">Tous les statuts</option>
               <option value="libre">Libre</option>
               <option value="loue">Loué</option>
-              <option value="maintenance">Maintenance</option>
+              <option value="maintenance">En maintenance</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Statut paiement</label>
+            <label htmlFor="filter-statut-paiement" className="block text-sm font-medium text-slate-700 mb-2">Statut paiement</label>
             <select
+              id="filter-statut-paiement"
+              aria-label="Filtrer par statut de paiement"
               value={filters.statut_paiement}
               onChange={(e) => setFilters({ ...filters, statut_paiement: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full sk-input"
             >
-              <option value="">Tous les statuts</option>
+              <option value="">Tous</option>
               <option value="paye">Payé</option>
-              <option value="impaye">Impayé</option>
+              <option value="en_retard">En retard</option>
               <option value="partiel">Partiel</option>
+              <option value="aucun">Aucun paiement</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Loyer minimum</label>
+            <label htmlFor="filter-loyer-min" className="block text-sm font-medium text-slate-700 mb-2">Loyer minimum</label>
             <input
+              id="filter-loyer-min"
+              aria-label="Loyer minimum"
               type="number"
               value={filters.loyer_min}
               onChange={(e) => setFilters({ ...filters, loyer_min: e.target.value })}
               placeholder="0"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full sk-input"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Loyer maximum</label>
+            <label htmlFor="filter-loyer-max" className="block text-sm font-medium text-slate-700 mb-2">Loyer maximum</label>
             <input
+              id="filter-loyer-max"
+              aria-label="Loyer maximum"
               type="number"
               value={filters.loyer_max}
               onChange={(e) => setFilters({ ...filters, loyer_max: e.target.value })}
               placeholder="1000000"
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full sk-input"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Date début (min)</label>
+            <label htmlFor="filter-date-debut-min" className="block text-sm font-medium text-slate-700 mb-2">Date début (min)</label>
             <input
+              id="filter-date-debut-min"
+              aria-label="Date de début minimum"
               type="date"
               value={filters.date_debut_min}
               onChange={(e) => setFilters({ ...filters, date_debut_min: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full sk-input"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Date début (max)</label>
+            <label htmlFor="filter-date-debut-max" className="block text-sm font-medium text-slate-700 mb-2">Date début (max)</label>
             <input
+              id="filter-date-debut-max"
+              aria-label="Date de début maximum"
               type="date"
               value={filters.date_debut_max}
               onChange={(e) => setFilters({ ...filters, date_debut_max: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              className="w-full sk-input"
             />
           </div>
         </div>
@@ -493,7 +511,7 @@ export function FiltresAvances() {
       </div>
 
       {results.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+        <div className="sk-card p-4 sm:p-6 lg:p-6">
           <h2 className="text-base lg:text-lg font-semibold text-slate-900 mb-4">
             Résultats ({results.length} contrat{results.length > 1 ? 's' : ''})
           </h2>
@@ -508,39 +526,59 @@ export function FiltresAvances() {
                   {!isIndividualOwner && (
                     <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Bailleur</th>
                   )}
-                  <th className="text-right py-4 px-4 text-sm font-semibold text-slate-700">Loyer</th>
-                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Date début</th>
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Loyer mensuel</th>
+                  <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Période</th>
                   <th className="text-left py-4 px-4 text-sm font-semibold text-slate-700">Statut</th>
                 </tr>
               </thead>
               <tbody>
-                {results.map((result) => (
-                  <tr key={result.id} className="border-b border-slate-100">
-                    <td className="py-4 px-4 text-sm text-slate-700">
-                      {result.locataires ? `${result.locataires.prenom} ${result.locataires.nom}` : '-'}
+                {results.map((c) => (
+                  <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
+                    <td className="py-4 px-4">
+                      <p className="font-medium text-slate-900">
+                        {c.locataires ? `${c.locataires.prenom} ${c.locataires.nom}` : '-'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {formatSenegalPhone(c.locataires?.telephone, '')}
+                      </p>
                     </td>
-                    <td className="py-4 px-4 text-sm text-slate-700">{result.unites?.nom || '-'}</td>
-                    <td className="py-4 px-4 text-sm text-slate-700">{result.unites?.immeubles?.nom || '-'}</td>
+                    <td className="py-4 px-4">
+                      <p className="font-medium text-slate-900">{c.unites?.nom || '-'}</p>
+                      <span className="text-xs px-2 py-0.5 bg-slate-100 text-slate-700 rounded">
+                        {c.unites?.statut || '-'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-slate-700">
+                      {c.unites?.immeubles?.nom || '-'}
+                    </td>
                     {!isIndividualOwner && (
-                      <td className="py-4 px-4 text-sm text-slate-700">
-                        {result.unites?.immeubles?.bailleurs
-                          ? `${result.unites.immeubles.bailleurs.prenom} ${result.unites.immeubles.bailleurs.nom}`
+                      <td className="py-4 px-4 text-slate-700">
+                        {c.unites?.immeubles?.bailleurs
+                          ? `${c.unites.immeubles.bailleurs.prenom} ${c.unites.immeubles.bailleurs.nom}`
                           : '-'}
                       </td>
                     )}
-                    <td className="py-4 px-4 text-sm text-slate-700 text-right font-medium">
-                      {formatCurrency(result.loyer_mensuel)}
+                    <td className="py-4 px-4 font-semibold text-slate-900">
+                      {formatCurrency(c.loyer_mensuel)}
                     </td>
-                    <td className="py-4 px-4 text-sm text-slate-700">{result.date_debut}</td>
-                    <td className="py-4 px-4 text-sm text-slate-700">
+                    <td className="py-4 px-4 text-xs text-slate-600">
+                      Du {new Date(c.date_debut).toLocaleDateString('fr-FR')}
+                      {c.date_fin && (
+                        <>
+                          <br />
+                          Au {new Date(c.date_fin).toLocaleDateString('fr-FR')}
+                        </>
+                      )}
+                    </td>
+                    <td className="py-4 px-4">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          result.statut === 'actif'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                          c.statut === 'actif'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-slate-100 text-slate-800'
                         }`}
                       >
-                        {result.statut}
+                        {c.statut}
                       </span>
                     </td>
                   </tr>
@@ -550,15 +588,6 @@ export function FiltresAvances() {
           </div>
         </div>
       )}
-
-      {!loading && results.length === 0 && activeFiltersCount > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-12 text-center">
-          <Search className="w-12 sm:w-16 h-12 sm:h-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-base lg:text-lg font-medium text-slate-900 mb-2">Aucun résultat</h3>
-          <p className="text-sm sm:text-base text-slate-600">Essayez de modifier vos critères de recherche</p>
-        </div>
-      )}
-
       <ToastContainer toasts={toasts} onRemove={removeToast} />
     </div>
   );

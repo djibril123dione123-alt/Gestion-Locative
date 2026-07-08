@@ -42,7 +42,7 @@ export function Tabs({ tabs, activeId, onChange, className = '', size = 'standar
           <button
             key={tab.id}
             role="tab"
-            aria-selected={active}
+            aria-selected={active ? "true" : "false"}
             onClick={() => onChange(tab.id)}
             className={buttonClass}
           >

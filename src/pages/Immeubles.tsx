@@ -368,7 +368,7 @@ export function Immeubles() {
         }
       />
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
+      <div className="sk-card p-4 sm:p-6 lg:p-6">
         <div className="mb-6">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -378,7 +378,7 @@ export function Immeubles() {
                 placeholder={isIndividualOwner ? 'Rechercher un bien...' : 'Rechercher un immeuble...'}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 sm:py-3 sk-input"
               />
             </div>
             <ColumnPicker
@@ -413,7 +413,7 @@ export function Immeubles() {
               required
               value={formData.nom}
               onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full sk-input"
             />
           </div>
 
@@ -424,7 +424,7 @@ export function Immeubles() {
               required
               value={formData.adresse}
               onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full sk-input"
             />
           </div>
 
@@ -435,7 +435,7 @@ export function Immeubles() {
                 type="text"
                 value={formData.quartier}
                 onChange={(e) => setFormData({ ...formData, quartier: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full sk-input"
               />
             </div>
             <div>
@@ -445,7 +445,7 @@ export function Immeubles() {
                 required
                 value={formData.ville}
                 onChange={(e) => setFormData({ ...formData, ville: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full sk-input"
               />
             </div>
           </div>
@@ -464,7 +464,7 @@ export function Immeubles() {
                 required
                 value={formData.bailleur_id}
                 onChange={(e) => setFormData({ ...formData, bailleur_id: e.target.value })}
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full sk-input"
               >
                 <option value="">Selectionner un bailleur</option>
                 {bailleurs.map((b) => (
@@ -482,7 +482,7 @@ export function Immeubles() {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full sk-input"
             />
           </div>
 

@@ -9,7 +9,7 @@ WITH (security_invoker = true)
 AS
 SELECT 
   a.id AS agency_id,
-  a.nom AS agency_nom,
+  a.name AS agency_nom,
   COALESCE(le.total_ledger_credits, 0) AS ledger_total_credits,
   COALESCE(pm.total_paiements_payes, 0) AS paiements_total_payes,
   COALESCE(le.total_ledger_credits, 0) - COALESCE(pm.total_paiements_payes, 0) AS ecart_reconciliation,
@@ -39,10 +39,10 @@ AS
 SELECT 
   'AGENCY_LONG_TRIAL' AS anomaly_type,
   a.id AS entity_id,
-  a.nom AS description,
+  a.name AS description,
   a.created_at
 FROM public.agencies a
-WHERE a.statut = 'trial' 
+WHERE a.status = 'trial' 
   AND a.created_at < NOW() - INTERVAL '30 days'
   AND a.id = COALESCE(
     NULLIF(current_setting('request.jwt.claim.agency_id', true), '')::uuid,

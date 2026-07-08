@@ -2307,8 +2307,14 @@ function LocationWizardStepContext({ step }: { step: LocationWizardStep }) {
         <Users className="h-2.5 w-2.5" />
       </span>
       <div className="min-w-0">
-        {current.title && <p className="text-[0.68rem] font-semibold leading-tight text-slate-900 sm:text-[0.64rem]">{current.title}</p>}
-        <p className={`text-[0.68rem] font-medium leading-snug text-slate-600 sm:text-[0.62rem] ${current.title ? 'mt-0.5' : ''}`}>{current.body}</p>
+        {current.title && (
+          <p className="text-[0.68rem] font-semibold leading-tight text-slate-900 sm:text-[0.64rem]">
+            {current.title}
+          </p>
+        )}
+        <p className="min-w-0 text-[0.72rem] font-medium leading-snug text-slate-600 sm:text-[0.66rem]">
+          {current.body}
+        </p>
       </div>
     </div>
   );
@@ -2588,28 +2594,36 @@ function OccupationFormModal({
         </button>
       }
     >
-      <div className="space-y-4">
-        <div className={wizardStep === 'occupant' ? 'space-y-4' : 'hidden'}>
-          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-slate-50 p-1">
+      <div className="space-y-2.5 sm:space-y-3 lg:space-y-4">
+        {/* ETAPE 1 : LOCATAIRE */}
+        <div className={wizardStep === 'occupant' ? 'space-y-2.5 sm:space-y-3' : 'hidden'}>
+          <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">
+            Informations principales
+          </h3>
+
+          <div className="flex rounded-xl bg-slate-100/80 p-0.5">
             <button
               type="button"
               onClick={() => update({ occupantMode: 'existing' })}
-              className={`rounded-xl px-3 py-2 text-sm font-bold transition ${form.occupantMode === 'existing' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500'}`}
+              className={`flex-1 rounded-[0.55rem] py-1.5 text-xs font-bold transition ${form.occupantMode === 'existing' ? 'bg-white text-emerald-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              Existant
+              Locataire existant
             </button>
             <button
               type="button"
               onClick={() => update({ occupantMode: 'new', locataire_id: '' })}
-              className={`rounded-xl px-3 py-2 text-sm font-bold transition ${form.occupantMode === 'new' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500'}`}
+              className={`flex-1 rounded-[0.55rem] py-1.5 text-xs font-bold transition ${form.occupantMode === 'new' ? 'bg-white text-emerald-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              Nouveau
+              Nouveau locataire
             </button>
           </div>
+
           {form.occupantMode === 'existing' ? (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <label className="block">
-                <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Locataire</span>
+                <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
+                  Locataire <span className="text-red-500">*</span>
+                </span>
                 <SmartCombobox
                   value={form.locataire_id}
                   options={occupantComboboxOptions}
@@ -2624,37 +2638,57 @@ function OccupationFormModal({
                 />
               </label>
               {selectedOccupant ? (
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3">
-                  <p className="text-sm font-black text-emerald-950">{selectedOccupant.prenom} {selectedOccupant.nom}</p>
-                  <p className="mt-1 text-xs font-semibold text-emerald-800/80">
-                    {selectedOccupant.telephone ? <a href={`tel:${selectedOccupant.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(selectedOccupant.telephone)}</a> : 'Téléphone non renseigné'} · {selectedOccupant.email ? <a href={`mailto:${selectedOccupant.email}`} className="hover:text-brand-700 hover:underline">{selectedOccupant.email}</a> : 'Email non renseigné'}
+                <div className="rounded-xl border border-emerald-950/10 bg-white/60 p-3 shadow-sm">
+                  <p className="text-xs font-bold text-slate-900">{selectedOccupant.prenom} {selectedOccupant.nom}</p>
+                  <p className="mt-0.5 text-[0.72rem] font-medium text-slate-600">
+                    {selectedOccupant.telephone ? formatSenegalPhone(selectedOccupant.telephone) : 'Téléphone non renseigné'} · {selectedOccupant.email || 'Email non renseigné'}
                   </p>
                 </div>
               ) : (
-                <p className="rounded-2xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-3 text-xs font-semibold leading-5 text-slate-500">
+                <p className="rounded-xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-500">
                   Choisissez un locataire existant ou basculez sur “Nouveau” pour créer une fiche locataire.
                 </p>
               )}
             </div>
           ) : (
-            <div className="grid gap-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <TextField label="Prénom" value={form.newOccupant.prenom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, prenom: value } })} />
-                <TextField label="Nom" value={form.newOccupant.nom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, nom: value } })} />
+            <div className="space-y-2.5 sm:space-y-2.5">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
+                <TextField label="Prénom" value={form.newOccupant.prenom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, prenom: value } })} required placeholder="Boury" />
+                <TextField label="Nom" value={form.newOccupant.nom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, nom: value } })} required placeholder="Diallo" />
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <TextField label="Téléphone" value={form.newOccupant.telephone} onChange={(value) => update({ newOccupant: { ...form.newOccupant, telephone: value } })} placeholder="77 123 45 67" />
-                <TextField label="Email" value={form.newOccupant.email} onChange={(value) => update({ newOccupant: { ...form.newOccupant, email: value } })} />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
+                <TextField label="Téléphone" value={form.newOccupant.telephone} onChange={(value) => update({ newOccupant: { ...form.newOccupant, telephone: value } })} required placeholder="77 123 45 67" />
+                <TextField label="Email" value={form.newOccupant.email} onChange={(value) => update({ newOccupant: { ...form.newOccupant, email: value } })} placeholder="nom@domaine.com" />
               </div>
-              <TextField label="Adresse" value={form.newOccupant.adresse_personnelle} onChange={(value) => update({ newOccupant: { ...form.newOccupant, adresse_personnelle: value } })} />
-              <TextField label="Pièce d'identité" value={form.newOccupant.piece_identite} onChange={(value) => update({ newOccupant: { ...form.newOccupant, piece_identite: value } })} />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
+                <TextField label="Adresse" value={form.newOccupant.adresse_personnelle} onChange={(value) => update({ newOccupant: { ...form.newOccupant, adresse_personnelle: value } })} placeholder="Dakar, Plateau" />
+                <TextField label="Pièce d'identité" value={form.newOccupant.piece_identite} onChange={(value) => update({ newOccupant: { ...form.newOccupant, piece_identite: value } })} placeholder="1 45 19990101 12345 6" />
+              </div>
             </div>
           )}
+
+          <div className="hidden rounded-xl border border-emerald-950/10 bg-white/42 px-3 py-2 shadow-[0_5px_14px_rgba(15,23,42,0.014)] sm:block">
+            <div className="min-w-0">
+              <p className="text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-emerald-800/70">
+                Base de rattachement
+              </p>
+              <p className="mt-0.5 text-[0.68rem] font-medium leading-snug text-slate-600">
+                Le contrat rattachera formellement ce locataire à l'unité sélectionnée.
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className={wizardStep === 'unite' ? 'space-y-4' : 'hidden'}>
+        {/* ETAPE 2 : UNITE */}
+        <div className={wizardStep === 'unite' ? 'space-y-2.5 sm:space-y-3' : 'hidden'}>
+          <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">
+            Sélection du lot
+          </h3>
+
           <label className="block">
-            <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Unité disponible</span>
+            <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
+              Unité disponible <span className="text-red-500">*</span>
+            </span>
             <SmartCombobox
               value={form.unite_id}
               options={unitComboboxOptions}
@@ -2675,68 +2709,162 @@ function OccupationFormModal({
               className="mt-1"
             />
           </label>
+
           {selectedUnit ? (
-            <div className="grid gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3 sm:grid-cols-2">
-              <MiniMetric label="Bien" value={selectedUnit.immeuble_nom ?? 'Bien non renseigné'} />
-              <MiniMetric label="Unité" value={selectedUnit.nom} />
-              <MiniMetric label="Propriétaire" value={`${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || 'Non renseigné'} />
-            <MiniMetric label="Loyer conseillé" value={<MoneyText value={selectedUnit.loyer_base ?? 0} />} />
-              <MiniMetric label="Statut" value="Libre" />
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-emerald-950/10 bg-white p-3 shadow-sm sm:grid-cols-4">
+              <div>
+                <p className="text-[0.62rem] font-semibold text-slate-400">Bien</p>
+                <p className="mt-0.5 text-[0.78rem] font-bold text-slate-800 truncate">{selectedUnit.immeuble_nom ?? 'Bien non renseigné'}</p>
+              </div>
+              <div>
+                <p className="text-[0.62rem] font-semibold text-slate-400">Unité</p>
+                <p className="mt-0.5 text-[0.78rem] font-bold text-slate-800 truncate">{selectedUnit.nom}</p>
+              </div>
+              <div>
+                <p className="text-[0.62rem] font-semibold text-slate-400">Propriétaire</p>
+                <p className="mt-0.5 text-[0.78rem] font-bold text-slate-800 truncate">{`${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || 'Non renseigné'}</p>
+              </div>
+              <div>
+                <p className="text-[0.62rem] font-semibold text-slate-400">Loyer conseillé</p>
+                <p className="mt-0.5 text-[0.78rem] font-extrabold text-emerald-800 truncate"><MoneyText value={selectedUnit.loyer_base ?? 0} /></p>
+              </div>
             </div>
           ) : (
-            <p className="rounded-2xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-3 text-xs font-semibold leading-5 text-slate-500">
+            <p className="rounded-xl border border-dashed border-emerald-950/10 bg-slate-50 px-3 py-2.5 text-xs font-medium text-slate-500">
               Sélectionnez une unité libre pour préremplir le loyer, la caution et la commission agence si elle existe.
             </p>
           )}
         </div>
 
-        <div className={wizardStep === 'conditions' ? 'space-y-4' : 'hidden'}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <TextField label="Date de début" value={form.date_debut} onChange={(value) => update({ date_debut: value })} type="date" />
+        {/* ETAPE 3 : CONDITIONS */}
+        <div className={wizardStep === 'conditions' ? 'space-y-2.5 sm:space-y-3' : 'hidden'}>
+          <h3 className="text-[0.68rem] font-semibold uppercase tracking-[0.15em] text-slate-600 sm:text-[0.62rem]">
+            Informations complémentaires
+          </h3>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
+            <TextField label="Date de début" value={form.date_debut} onChange={(value) => update({ date_debut: value })} type="date" required />
             <TextField label="Date de fin" value={form.date_fin} onChange={(value) => update({ date_fin: value })} type="date" />
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <TextField label="Loyer mensuel" value={form.loyer_mensuel} onChange={(value) => update({ loyer_mensuel: value })} type="number" />
-            <TextField label="Caution" value={form.caution} onChange={(value) => update({ caution: value })} type="number" />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
+            <TextField label="Loyer mensuel" value={form.loyer_mensuel} onChange={(value) => update({ loyer_mensuel: value })} type="number" required suffix="F CFA" />
+            <TextField label="Caution" value={form.caution} onChange={(value) => update({ caution: value })} type="number" suffix="F CFA" />
           </div>
           {!isIndividualOwner && (
-            <TextField label="Commission agence" value={form.commission} onChange={(value) => update({ commission: value })} type="number" />
+            <TextField label="Commission agence" value={form.commission} onChange={(value) => update({ commission: value })} type="number" suffix="%" />
           )}
-          <label className="block">
-            <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">Destination</span>
-            <SmartCombobox
-              value={form.destination}
-              options={DESTINATION_OPTIONS}
-              onChange={(value) => update({ destination: value })}
-              placeholder="Choisir une destination"
-              searchPlaceholder="Habitation, commerce, bureau..."
-              className="mt-1"
-            />
-          </label>
-          <div className="grid gap-2 rounded-2xl border border-emerald-950/10 bg-white p-3 text-xs font-semibold text-slate-500 sm:grid-cols-3">
-            <span>Loyer : <strong className="text-slate-900">{form.loyer_mensuel ? <MoneyText value={Number(form.loyer_mensuel)} /> : 'Non renseigné'}</strong></span>
-            <span>Caution : <strong className="text-slate-900">{form.caution ? <MoneyText value={Number(form.caution)} /> : '0 F CFA'}</strong></span>
-            <span>Commission : <strong className="text-slate-900">{isIndividualOwner ? '0%' : `${form.commission || 0}%`}</strong></span>
+
+          <div>
+            <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
+              Destination <span className="text-red-500">*</span>
+            </span>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {[
+                { value: 'Habitation', label: 'Habitation' },
+                { value: 'Commerce', label: 'Commerce' },
+                { value: 'Bureau', label: 'Bureau' },
+                { value: 'Entrepôt', label: 'Entrepôt' },
+                { value: 'Parking', label: 'Parking' },
+              ].map((opt) => {
+                const active = (form.destination || 'Habitation') === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => update({ destination: opt.value })}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                      active
+                        ? 'border border-emerald-700 bg-emerald-700 text-white shadow-sm'
+                        : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
+        {/* ETAPE 4 : VALIDATION (Design identique Capture 2 Bailleurs.tsx) */}
         {wizardStep === 'resume' && (
-          <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <MiniMetric label="Locataire" value={form.occupantMode === 'new' ? `${form.newOccupant.prenom} ${form.newOccupant.nom}` : selectedOccupant ? `${selectedOccupant.prenom} ${selectedOccupant.nom}` : 'Non sélectionné'} />
-              <MiniMetric label="Propriétaire" value={selectedUnit ? `${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || 'Non renseigné' : 'Non sélectionné'} />
-              <MiniMetric label="Bien / unité" value={selectedUnit ? `${selectedUnit.immeuble_nom ?? 'Bien'} · ${selectedUnit.nom}` : 'Non sélectionnée'} />
-              <MiniMetric label="Loyer" value={form.loyer_mensuel ? <MoneyText value={Number(form.loyer_mensuel)} /> : 'Non renseigné'} />
-              <MiniMetric label="Période" value={`${form.date_debut || '—'} → ${form.date_fin || '—'}`} />
-              <MiniMetric label="Caution" value={form.caution ? <MoneyText value={Number(form.caution)} /> : '0 F CFA'} />
-              {!isIndividualOwner && <MiniMetric label="Commission agence" value={`${form.commission || 0}%`} />}
-              <MiniMetric label="Destination" value={form.destination || 'Habitation'} />
+          <div className="space-y-3 sm:space-y-4">
+            <div className="flex items-start gap-2.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 p-3 shadow-sm">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                <Check className="h-3.5 w-3.5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-900">Validation finale</p>
+                <p className="mt-0.5 text-[0.72rem] font-medium leading-relaxed text-slate-600">
+                  Cette location sera enregistrée et l'unité passera automatiquement au statut occupée. Vous pourrez ensuite éditer les contrats et quittances.
+                </p>
+              </div>
             </div>
-            <div className="rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-white p-4 shadow-sm">
-              <p className="text-sm font-black text-emerald-950">Validation finale</p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-emerald-900/80">
-                Cette location sera créée et l'unité passera automatiquement au statut occupée. Aucun paiement n'est enregistré à cette étape.
-              </p>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* Carte 1 : Parties & Unité */}
+              <div className="rounded-xl border border-emerald-950/10 bg-white p-3.5 shadow-sm">
+                <p className="text-[0.68rem] font-bold text-slate-800 mb-2.5 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-600"></span>
+                  Locataire & Unité
+                </p>
+                <div className="space-y-2 text-[0.74rem]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Locataire</span>
+                    <span className="font-bold text-slate-900">
+                      {form.occupantMode === 'new' ? `${form.newOccupant.prenom} ${form.newOccupant.nom}` : selectedOccupant ? `${selectedOccupant.prenom} ${selectedOccupant.nom}` : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Bien / Unité</span>
+                    <span className="font-bold text-slate-900">
+                      {selectedUnit ? `${selectedUnit.immeuble_nom ?? 'Bien'} · ${selectedUnit.nom}` : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Propriétaire</span>
+                    <span className="font-bold text-slate-900">
+                      {selectedUnit ? `${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || '—' : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Destination</span>
+                    <span className="font-bold text-slate-900">{form.destination || 'Habitation'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Carte 2 : Gestion financière */}
+              <div className="rounded-xl border border-emerald-950/10 bg-white p-3.5 shadow-sm">
+                <p className="text-[0.68rem] font-bold text-slate-800 mb-2.5 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+                  Conditions du bail
+                </p>
+                <div className="space-y-2 text-[0.74rem]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Loyer mensuel</span>
+                    <span className="font-bold text-slate-900">
+                      {form.loyer_mensuel ? <MoneyText value={Number(form.loyer_mensuel)} /> : '—'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Caution</span>
+                    <span className="font-bold text-slate-900">
+                      {form.caution ? <MoneyText value={Number(form.caution)} /> : '0 F CFA'}
+                    </span>
+                  </div>
+                  {!isIndividualOwner && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500 font-medium">Commission agence</span>
+                      <span className="font-bold text-slate-900">{form.commission || 0}%</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-500 font-medium">Période</span>
+                    <span className="font-bold text-slate-900">{`${form.date_debut || '—'} → ${form.date_fin || '—'}`}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -2752,6 +2880,14 @@ function TextField({
   placeholder,
   type = 'text',
   disabled = false,
+  required = false,
+  step,
+  min,
+  max,
+  maxLength,
+  inputMode,
+  suffix,
+  helperText,
 }: {
   label: string;
   value: string;
@@ -2759,19 +2895,38 @@ function TextField({
   placeholder?: string;
   type?: 'text' | 'email' | 'tel' | 'number' | 'date';
   disabled?: boolean;
+  required?: boolean;
+  step?: string;
+  min?: string;
+  max?: string;
+  maxLength?: number;
+  inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search';
+  suffix?: string;
+  helperText?: string;
 }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-        inputMode={type === 'number' ? 'numeric' : undefined}
-        className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 disabled:bg-slate-50 disabled:text-slate-500"
-      />
+      <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
+        {label} {required && <span className="text-red-500">*</span>}
+      </span>
+      <div className="relative">
+        <input
+          type={type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          required={required}
+          step={step}
+          min={min}
+          max={max}
+          maxLength={maxLength}
+          inputMode={inputMode || (type === 'number' ? 'numeric' : type === 'tel' ? 'tel' : undefined)}
+          className={`mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 disabled:bg-slate-50 disabled:text-slate-500 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem] ${suffix ? 'pl-3 pr-8' : 'px-3'}`}
+        />
+        {suffix && <span className="absolute bottom-3 right-3 text-[0.72rem] font-semibold text-slate-400 sm:bottom-2 sm:text-[0.68rem]">{suffix}</span>}
+      </div>
+      {helperText && <p className="mt-1 text-[0.66rem] text-slate-500 sm:text-[10px]">{helperText}</p>}
     </label>
   );
 }

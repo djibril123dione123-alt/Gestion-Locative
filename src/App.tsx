@@ -45,7 +45,6 @@ const Paiements = lazy(() => import('./pages/Paiements').then(m => ({ default: m
 const LoyersImpayes = lazy(() => import('./pages/LoyersImpayes').then(m => ({ default: m.LoyersImpayes })));
 const Depenses = lazy(() => import('./pages/Depenses').then(m => ({ default: m.Depenses })));
 const Commissions = lazy(() => import('./pages/Commissions').then(m => ({ default: m.Commissions })));
-const Analyses = lazy(() => import('./pages/Analyses').then(m => ({ default: m.Analyses })));
 const ParametresHub = lazy(() => import('./pages/ParametresHub').then(m => ({ default: m.ParametresHub })));
 const Console = lazy(() => import('./pages/Console').then(m => ({ default: m.Console })));
 const Notifications = lazy(() => import('./pages/Notifications').then(m => ({ default: m.Notifications })));
@@ -86,8 +85,6 @@ const PAGE_LABELS: Record<string, string> = {
     'loyers-impayes': 'Créances à recouvrer',
     depenses: 'Dépenses',
     commissions: 'Commissions',
-    'tableau-de-bord-financier': 'Pilotage financier',
-    'filtres-avances': 'Rapports',
     parametres: 'Paramètres',
     equipe: 'Équipe',
     abonnement: 'Abonnement',
@@ -194,6 +191,9 @@ function AppContent() {
     useEffect(() => {
         if (currentPage === 'locataires' || currentPage === 'contrats') {
             navigate('/occupants-baux', { replace: true });
+        }
+        if (currentPage === 'tableau-de-bord-financier' || currentPage === 'filtres-avances') {
+            navigate('/dashboard', { replace: true });
         }
     }, [currentPage, navigate]);
 
@@ -515,10 +515,6 @@ function AppContent() {
                 return <Depenses />;
             case 'commissions':
                 return <Commissions />;
-            case 'tableau-de-bord-financier':
-                return <Analyses initialTab="rapports" />;
-            case 'filtres-avances':
-                return <Analyses initialTab="rapports" />;
             case 'parametres':
                 return <ParametresHub initialTab="agence" />;
             case 'equipe':
@@ -559,11 +555,9 @@ function AppContent() {
     const pageSkeletonVariant =
         currentPage === 'dashboard'
             ? 'dashboard'
-            : currentPage === 'tableau-de-bord-financier'
-                ? 'analytics'
-                : ['parametres', 'equipe', 'abonnement', 'pricing'].includes(currentPage)
-                    ? 'form'
-                    : 'table';
+            : ['parametres', 'equipe', 'abonnement', 'pricing'].includes(currentPage)
+                ? 'form'
+                : 'table';
 
     return (
         <div className="premium-polish flex h-screen overflow-hidden bg-brand-paper">

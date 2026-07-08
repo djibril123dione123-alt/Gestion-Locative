@@ -238,8 +238,6 @@ export const PAGE_LABEL_KEYS: Record<string, keyof SemanticLabels | 'dashboard' 
   'loyers-impayes': 'unpaidRents',
   depenses: 'charges',
   commissions: 'commissions',
-  'tableau-de-bord-financier': 'reports',
-  'filtres-avances': 'reports',
   documents: 'documents',
   parametres: 'workspaceSettings',
   equipe: 'team',

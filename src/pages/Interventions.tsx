@@ -173,7 +173,7 @@ export function Interventions() {
   const filteredUnites = form.immeuble_id ? unites.filter((u) => u.immeuble_id === form.immeuble_id) : unites;
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+    <div className="space-y-4 pt-2.5 sm:pt-3">
       <PremiumPageHeader
         density="compact"
         eyebrow="OPÉRATIONS TERRAIN"

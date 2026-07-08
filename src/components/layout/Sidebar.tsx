@@ -149,8 +149,6 @@ const PARENT_OF: Record<string, string> = {
   paiements: 'finance',
   'loyers-impayes': 'finance',
   depenses: 'finance',
-  'tableau-de-bord-financier': 'finance',
-  'filtres-avances': 'finance',
   calendrier: 'operations',
   interventions: 'operations',
   inventaires: 'operations',
@@ -252,7 +250,7 @@ export function Sidebar({
   const isLeafActive = (id: string) => {
     if (currentPage === id) return true;
     if (id === 'patrimoine') return currentPage === 'immeubles' || currentPage === 'unites';
-    return id === 'tableau-de-bord-financier' && currentPage === 'filtres-avances';
+    return false;
   };
 
   const isGroupActive = (group: MenuGroup) => group.items.some((item) => isLeafActive(item.id));

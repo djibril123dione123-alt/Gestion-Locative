@@ -36,7 +36,6 @@ export interface PermissionCatalogItem {
 
 export const PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { id: 'dashboard', label: 'Vue d’ensemble', description: 'Synthèse opérationnelle, KPIs et activité récente.', category: 'Pilotage' },
-  { id: 'tableau-de-bord-financier', label: 'Pilotage financier', description: 'Finance consolidée, indicateurs et exports.', category: 'Finance & reporting', sensitive: true },
   { id: 'bailleurs', label: 'Bailleurs', description: 'Propriétaires, coordonnées et mandats.', category: 'Portefeuille locatif' },
   { id: 'patrimoine', label: 'Biens', description: 'Vue patrimoine, immeubles, unités et occupation.', category: 'Portefeuille locatif' },
   { id: 'immeubles', label: 'Immeubles', description: 'Immeubles, adresses et regroupements.', category: 'Portefeuille locatif' },
@@ -75,8 +74,6 @@ const PAGE_ROLES: Record<string, UserRole[]> = {
   'loyers-impayes': ['admin', 'agent', 'comptable', 'bailleur'],
   depenses: ['admin'],
   commissions: ['admin'],
-  'tableau-de-bord-financier': ['admin'],
-  'filtres-avances': ['admin'],
   parametres: ['admin'],
   equipe: ['admin'],
   abonnement: ['admin'],
@@ -127,9 +124,6 @@ export function isModuleEnabled(page: string, settings?: Partial<ModuleSettings>
   if (page === 'commissions') return enabled('commissions');
   if (page === 'calendrier') return enabled('planning');
   if (page === 'audit') return enabled('audit_trail', false);
-  if (page === 'tableau-de-bord-financier' || page === 'filtres-avances') {
-    return settings.mode_avance_actif !== false && enabled('advanced_reports', Boolean(settings.mode_avance_actif));
-  }
   if (page === 'documents/scan') return enabled('document_scanner') && settings.qr_code_quittances !== false;
   return true;
 }

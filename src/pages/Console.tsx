@@ -88,7 +88,7 @@ const ADMIN_ROUTE_TABS: Record<string, AdminTab> = {
   audit: 'security',
   parametres: 'configuration',
   pricing: 'subscriptions',
-  'tableau-de-bord-financier': 'product',
+  'usage-produit': 'product',
 };
 
 const ADMIN_TAB_ROUTES: Record<AdminTab, string> = {
@@ -96,7 +96,7 @@ const ADMIN_TAB_ROUTES: Record<AdminTab, string> = {
   organizations: 'agences',
   subscriptions: 'abonnement',
   users: 'utilisateurs',
-  product: 'tableau-de-bord-financier',
+  product: 'usage-produit',
   documents: 'documents',
   requests: 'demandes',
   support: 'support',

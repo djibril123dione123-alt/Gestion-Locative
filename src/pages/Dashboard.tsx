@@ -611,7 +611,7 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
 
       <div className="grid gap-2.5 lg:grid-cols-12">
         <div className="lg:col-span-8">
-          <DashboardFinancialSummary model={model} onNavigate={onNavigate} />
+          <DashboardFinancialSummary model={model} />
         </div>
         <div className="lg:col-span-4">
           <DashboardHealthCard model={model} onNavigate={onNavigate} />
@@ -1019,7 +1019,7 @@ function DashboardHeader({
             value={selectedMonth}
             onChange={(event) => onMonthChange(event.target.value || CURRENT_MONTH)}
             className="w-[6.5rem] bg-transparent text-[0.68rem] font-black text-slate-900 outline-none"
-            aria-label="PÃ©riode du tableau de bord"
+            aria-label="Période du tableau de bord"
           />
         </label>
       }
@@ -1188,7 +1188,7 @@ function formatPrimaryCfa(value: number) {
 function DashboardPriorityList({ priorities, onNavigate }: { priorities: PriorityItem[]; onNavigate?: (page: string) => void }) {
   return (
     <DashboardSection title="Priorités du mois" subtitle="Les dossiers qui méritent une action rapide.">
-      <div className="grid gap-1.5 xl:grid-cols-2">
+      <div className="grid gap-1.5 lg:grid-cols-2">
         {priorities.map((item) => {
           const Icon = item.icon;
           return (
@@ -1220,13 +1220,12 @@ function DashboardPriorityList({ priorities, onNavigate }: { priorities: Priorit
   );
 }
 
-function DashboardFinancialSummary({ model, onNavigate }: { model: ReturnType<typeof buildDashboardModel>; onNavigate?: (page: string) => void }) {
+function DashboardFinancialSummary({ model }: { model: ReturnType<typeof buildDashboardModel> }) {
   const hasChartData = model.monthly.some((point) => point.commissions > 0 || point.depenses > 0 || point.marge !== 0);
   return (
     <DashboardSection
       title={`Performance agence — ${model.selectedLabel}`}
       subtitle="Commissions, dépenses et marge nette. Les encaissements restent le volume locatif traité."
-      action={<button type="button" onClick={() => onNavigate?.('tableau-de-bord-financier')} className="text-xs font-black text-emerald-800 hover:text-emerald-950">Voir le détail financier</button>}
     >
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
         <MiniFinance label="Volume locatif" value={<MoneyText value={model.encaissements} compact />} tone="slate" />
@@ -1325,7 +1324,7 @@ function DashboardActivityFeed({ items, onNavigate }: { items: ActivityItem[]; o
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate?.(item.page)}
-                className="flex w-full items-center gap-2.5 py-2.5 text-left transition hover:bg-emerald-50/45"
+                className="grid w-full grid-cols-[1.75rem_minmax(0,1fr)_minmax(4.75rem,max-content)] items-center gap-2.5 py-2.5 text-left transition hover:bg-emerald-50/45"
               >
                 <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${toneIconClass(item.tone)}`}>
                   <Icon className="h-3.5 w-3.5" />
@@ -1334,9 +1333,9 @@ function DashboardActivityFeed({ items, onNavigate }: { items: ActivityItem[]; o
                   <p className="truncate text-[0.78rem] font-black text-slate-950">{item.title}</p>
                   <p className="truncate text-[0.66rem] font-medium text-slate-500">{item.subtitle}</p>
                 </div>
-                <div className="shrink-0 text-right">
-                  {item.amount != null && <p className="text-[0.68rem] font-black text-emerald-800"><MoneyText value={item.amount} compact /></p>}
-                  <p className="text-[0.58rem] font-semibold text-slate-400">{item.meta}</p>
+                <div className="min-w-[4.75rem] justify-self-end text-right">
+                  {item.amount != null && <p className="text-[0.68rem] font-black text-emerald-800"><MoneyText value={item.amount} compact className="justify-end" /></p>}
+                  <p className="whitespace-nowrap text-[0.58rem] font-semibold text-slate-400">{item.meta}</p>
                 </div>
               </button>
             );
@@ -1359,14 +1358,14 @@ function DashboardWatchList({ items, onNavigate }: { items: WatchItem[]; onNavig
               key={item.id}
               type="button"
               onClick={() => onNavigate?.(item.page)}
-              className="flex w-full items-center gap-2.5 py-2.5 text-left transition hover:bg-emerald-50/45"
+              className="grid w-full grid-cols-[0.625rem_minmax(0,1fr)_minmax(4.75rem,max-content)] items-center gap-2.5 py-2.5 text-left transition hover:bg-emerald-50/45"
             >
               <span className={`h-2.5 w-2.5 rounded-full ${item.tone === 'red' ? 'bg-red-500' : item.tone === 'amber' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[0.78rem] font-black text-slate-950">{item.title}</span>
                 <span className="block truncate text-[0.66rem] font-medium text-slate-500">{item.subtitle}</span>
               </span>
-              {item.value && <span className={`text-[0.68rem] font-black ${item.tone === 'red' ? 'text-red-600' : 'text-slate-800'}`}>{item.value}</span>}
+              {item.value && <span className={`min-w-[4.75rem] justify-self-end whitespace-nowrap text-right text-[0.68rem] font-black ${item.tone === 'red' ? 'text-red-600' : 'text-slate-800'}`}>{item.value}</span>}
             </button>
           ))}
         </div>
@@ -1413,7 +1412,7 @@ function DashboardQuickActions({ onNavigate }: { onNavigate?: (page: string) => 
     { label: 'Nouvelle location', page: 'occupants-baux', icon: Plus, variant: 'secondary' as const },
     { label: 'Nouveau bien', page: 'patrimoine', icon: Building2, variant: 'secondary' as const },
     { label: 'Documents', page: 'documents', icon: FileText, variant: 'secondary' as const },
-    { label: 'Rapport PDF', page: 'tableau-de-bord-financier', icon: ReceiptText, variant: 'secondary' as const },
+    { label: 'Rapports bailleurs', page: 'bailleurs', icon: ReceiptText, variant: 'secondary' as const },
   ];
 
   return (

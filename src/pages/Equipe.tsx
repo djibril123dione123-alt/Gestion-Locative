@@ -635,7 +635,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         </section>
       )}
 
-      <section className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
         <MetricCard label="Membres actifs" value={stats.activeMembers} helper={`${stats.inactiveMembers} inactif(s)`} icon={UsersIcon} />
         <MetricCard label="Invitations" value={stats.pendingInvitations} helper="En attente" icon={Mail} tone="orange" />
         <MetricCard label="Accès restreints" value={stats.restrictedMembers} helper={`${stats.customMembers} personnalisé(s)`} icon={Lock} tone="emerald" />
@@ -666,27 +666,29 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 className="hidden h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-2.5 text-[0.72rem] font-semibold text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 sm:block"
               />
             </label>
-            <select aria-label="Sélection"
-              value={roleFilter}
-              onChange={(event) => setRoleFilter(event.target.value as typeof roleFilter)}
-              className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-[0.72rem] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            >
-              <option value="all">Tous les rôles</option>
-              <option value="admin">Admins</option>
-              <option value="agent">Agents</option>
-              <option value="comptable">Comptables</option>
-              <option value="bailleur">Bailleurs</option>
-            </select>
-            <select
-              aria-label="Filtrer par statut"
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-              className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-[0.72rem] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-            >
-              <option value="all">Tous statuts</option>
-              <option value="active">Actifs</option>
-              <option value="inactive">Désactivés</option>
-            </select>
+            <div className="grid grid-cols-2 gap-1.5 sm:flex sm:items-center sm:gap-2">
+              <select aria-label="Sélection"
+                value={roleFilter}
+                onChange={(event) => setRoleFilter(event.target.value as typeof roleFilter)}
+                className="h-8 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-[0.72rem] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              >
+                <option value="all">Tous les rôles</option>
+                <option value="admin">Admins</option>
+                <option value="agent">Agents</option>
+                <option value="comptable">Comptables</option>
+                <option value="bailleur">Bailleurs</option>
+              </select>
+              <select
+                aria-label="Filtrer par statut"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+                className="h-8 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-[0.72rem] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+              >
+                <option value="all">Tous statuts</option>
+                <option value="active">Actifs</option>
+                <option value="inactive">Désactivés</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -838,7 +840,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                     </div>
                   </div>
                   </div>
-                  <div className="flex flex-col gap-1.5 sm:flex-row sm:justify-end">
+                  <div className="grid grid-cols-2 gap-1.5 sm:flex sm:flex-row sm:justify-end">
                   <a
                     href={getInvitationEmailUrl(invitation, link)}
                     target="_blank"
@@ -889,7 +891,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
           <p className="mt-0.5 max-w-2xl text-[0.7rem] leading-4 text-slate-600">
             Les rôles restent la base. Les profils personnalisés utilisent les droits existants par page, sans contourner le RBAC ni les modules désactivés.
           </p>
-          <div className="mt-2 grid gap-1.5 sm:grid-cols-4">
+          <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {[
               ['Standard', 'Agent opérationnel avec écriture métier.'],
               ['Restreint', 'Lecture ou pages masquées selon besoin.'],

@@ -401,7 +401,7 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
           : "Pilotez l'organisation, les droits, les modules et l'abonnement depuis un seul espace."}
         mobileDescription="Control Center."
         sideContent={
-          <div className="grid min-w-0 gap-1 sm:grid-cols-4">
+          <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-4">
             <StatusPill label="Compte" value={accountKind} />
             <StatusPill label="Statut" value={statusLabel} />
             <StatusPill label="Plan" value={planLabel} />
@@ -616,7 +616,7 @@ function OverviewSection({
           <p className="mt-0.5 max-w-2xl text-[0.66rem] font-medium leading-[0.9rem] text-slate-600">
             Contrôlez l'identité, les modules, les droits, les documents et la facturation depuis une source unique.
           </p>
-          <div className="mt-2 grid gap-1 sm:grid-cols-3">
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
             <MiniHealth icon={BadgeCheck} label="Compte" value={snapshot?.organizationReady ? 'Configuré' : (isIndividualOwner ? 'Propriétaire' : 'Agence')} />
             <MiniHealth icon={ShieldCheck} label="Accès" value={role} />
             <MiniHealth icon={FileText} label="Documents" value={snapshot?.documentsReady ? 'Prêts' : snapshot?.qrReady ? 'QR actif' : 'À vérifier'} />

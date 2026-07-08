@@ -297,7 +297,7 @@ export function AuditDashboard() {
   const hasAlerts = jobStats.failed > 0 || (finance?.drift_count ?? 0) > 0 || (health?.ledger_drift ?? 0) > 0;
 
   return (
-    <div className="p-4 md:p-6 space-y-5 max-w-6xl mx-auto">
+    <div className="space-y-4 pt-2.5 sm:pt-3">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       {/* ── Header ── */}

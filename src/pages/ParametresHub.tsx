@@ -782,7 +782,7 @@ function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isI
             <h3 className="mt-0.5 text-[0.78rem] font-extrabold text-slate-950">État opérationnel</h3>
             <p className="mt-0.5 text-[0.64rem] leading-[0.88rem] text-slate-600">Statuts lisibles sans exposer de secret technique.</p>
           </div>
-          <div className="grid min-w-0 flex-1 gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid min-w-0 flex-1 grid-cols-2 gap-1.5 xl:grid-cols-4">
             {statuses.map(({ label, value, icon: Icon }) => (
               <div key={label} className="rounded-lg border border-emerald-950/10 bg-[#fffdf8] px-1.5 py-1 shadow-sm">
                 <div className="flex items-center justify-between gap-2">

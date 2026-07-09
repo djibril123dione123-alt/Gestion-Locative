@@ -1318,13 +1318,13 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     {settings.qr_code_quittances ? 'QR actif' : 'QR inactif'}
                   </SettingsStatusBadge>
                 </div>
-                <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
                   <SettingsStatusCard label="Mode" value={documentModeLabel} icon={FileText} />
                   <SettingsStatusCard label="Couleurs" value={`${settings.couleur_primaire ?? '#F58220'} / ${settings.couleur_secondaire ?? '#333333'}`} icon={Sparkles} />
                   <SettingsStatusCard label="Pénalités" value={`${settings.penalite_retard_montant ?? 0} F / jour`} icon={ShieldCheck} />
                   <SettingsStatusCard label="Mis à jour" value={formatCompactDate(settings.updated_at)} icon={CheckCircle} />
                 </div>
-                <div className="mt-2 grid gap-1.5 sm:grid-cols-3">
+                <div className="mt-2 grid grid-cols-3 gap-1.5">
                   <DocumentSignal label="Logo" ready={Boolean(logoPreview || settings.logo_url)} />
                   <DocumentSignal label="Signature" ready={Boolean(signaturePreview || settings.signature_url)} />
                   <DocumentSignal label="Mentions" ready={Boolean(settings.mention_tribunal || settings.pied_page_personnalise)} />
@@ -2728,20 +2728,20 @@ function OrganizationInfoLine({
   const resolved = value && String(value).trim() ? String(value) : 'Non renseigné';
   const empty = resolved === 'Non renseigné';
   return (
-    <div className={`grid gap-2 py-1 ${multiline ? '' : 'sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start'}`}>
-      <dt className="flex min-w-0 items-center gap-1.5 text-[0.58rem] font-bold text-slate-500">
+    <div className={`flex items-start justify-between gap-2 py-1 ${multiline ? 'flex-col' : ''}`}>
+      <dt className="flex min-w-0 shrink-0 items-center gap-1.5 text-[0.62rem] font-bold text-slate-500">
         {Icon && <Icon className="h-3 w-3 shrink-0 text-emerald-800/65" />}
-        <span className="truncate">{label}</span>
+        <span>{label}</span>
       </dt>
-      <dd className="min-w-0">
+      <dd className="min-w-0 text-right">
         <div
-          className={`${strong ? 'font-extrabold text-slate-950' : empty ? 'font-semibold text-slate-400' : 'font-semibold text-slate-700'} min-w-0 text-[0.68rem] ${multiline ? 'leading-[0.95rem]' : 'truncate sm:text-right'}`}
+          className={`${strong ? 'font-extrabold text-slate-950' : empty ? 'font-semibold text-slate-400' : 'font-semibold text-slate-700'} text-[0.68rem] ${multiline ? 'text-left leading-[0.95rem]' : 'truncate'}`}
           title={resolved}
         >
           {resolved}
         </div>
         {documentHint && (
-          <p className="mt-0.5 text-[0.52rem] font-bold uppercase tracking-[0.08em] text-emerald-700/70 sm:text-right">
+          <p className="mt-0.5 text-[0.52rem] font-bold uppercase tracking-[0.08em] text-emerald-700/70">
             {documentHint}
           </p>
         )}
@@ -2879,9 +2879,9 @@ function FormField({
 function InfoLine({ label, value, strong = false, multiline = false }: { label: string; value?: string | null; strong?: boolean; multiline?: boolean }) {
   const resolved = value && String(value).trim() ? String(value) : 'Non renseigné';
   return (
-    <div className={`grid gap-2 py-0.5 ${multiline ? '' : 'sm:grid-cols-[5.75rem_minmax(0,1fr)] sm:items-center'}`}>
-      <dt className="text-[0.58rem] font-bold text-slate-500">{label}</dt>
-      <dd className={`${strong ? 'font-extrabold text-slate-950' : 'font-semibold text-slate-700'} min-w-0 text-[0.66rem] ${multiline ? 'leading-[0.9rem]' : 'truncate sm:text-right'}`} title={resolved}>
+    <div className={`flex items-start justify-between gap-2 py-1 ${multiline ? 'flex-col' : ''}`}>
+      <dt className="shrink-0 text-[0.62rem] font-bold text-slate-500">{label}</dt>
+      <dd className={`${strong ? 'font-extrabold text-slate-950' : 'font-semibold text-slate-700'} min-w-0 text-right text-[0.68rem] ${multiline ? 'text-left leading-[0.95rem]' : 'truncate'}`} title={resolved}>
         {resolved}
       </dd>
     </div>

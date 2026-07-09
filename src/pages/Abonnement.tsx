@@ -834,114 +834,140 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
         description="Le support valide la preuve puis active le plan si le paiement est confirmé."
       >
         <form onSubmit={submitManualProof} className="space-y-3">
-          <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5">
-            <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-emerald-700">Paiement manuel</p>
-            <p className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">
-              Plan {PLAN_CATALOG.find((plan) => plan.id === proofForm.plan_key)?.name ?? proofForm.plan_key}
-            </p>
-            <p className="mt-0.5 text-[0.66rem] font-semibold leading-4 text-slate-500">
-              Ajoutez la référence du paiement ou un lien vers la preuve si vous l'avez déjà partagée.
-            </p>
+          {/* Bandeau de synthèse officiel premium */}
+          <div className="flex items-center justify-between rounded-xl border border-emerald-950/15 bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-3 py-2 text-white shadow-sm">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-emerald-300 ring-1 ring-white/15">
+                <FileCheck2 className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[0.52rem] font-black uppercase tracking-[0.16em] text-emerald-300">Déclaration officielle</p>
+                <h3 className="truncate text-xs font-extrabold text-white">
+                  Plan {PLAN_CATALOG.find((plan) => plan.id === proofForm.plan_key)?.name ?? proofForm.plan_key}
+                </h3>
+              </div>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-[0.52rem] font-black uppercase tracking-[0.14em] text-emerald-300">Montant estimé</p>
+              <p className="text-xs font-extrabold text-amber-300">
+                {formatCurrency(Number(proofForm.amount || 0))}
+              </p>
+            </div>
           </div>
 
-          <div className="grid gap-2 sm:grid-cols-2">
-            <label>
-              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Plan</span>
-              <select
-                value={proofForm.plan_key}
-                onChange={(event) => setProofForm((form) => ({
-                  ...form,
-                  plan_key: event.target.value,
-                  amount: String(PLAN_CATALOG.find((plan) => plan.id === event.target.value)?.price_xof || form.amount),
-                }))}
-                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
-              >
-                {PLAN_CATALOG.filter((plan) => plan.id !== 'enterprise').map((plan) => (
-                  <option key={plan.id} value={plan.id}>{plan.name}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Montant</span>
-              <input
-                type="number"
-                min="0"
-                value={proofForm.amount}
-                onChange={(event) => setProofForm((form) => ({ ...form, amount: event.target.value }))}
-                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
-              />
-            </label>
-            <label>
-              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Moyen</span>
-              <select
-                value={proofForm.method}
-                onChange={(event) => setProofForm((form) => ({ ...form, method: event.target.value }))}
-                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
-              >
-                {MANUAL_PAYMENT_METHODS.map((method) => (
-                  <option key={method.id} value={method.id}>{method.label}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Référence</span>
-              <input
-                type="text"
-                value={proofForm.reference}
-                onChange={(event) => setProofForm((form) => ({ ...form, reference: event.target.value }))}
-                placeholder="Ex : WAVE-1289"
-                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
-              />
-            </label>
-            <label>
-              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Date de paiement</span>
-              <input
-                type="date"
-                value={proofForm.payment_date}
-                onChange={(event) => setProofForm((form) => ({ ...form, payment_date: event.target.value }))}
-                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
-              />
-            </label>
-            <label className="sm:col-span-2">
-              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Lien preuve</span>
-              <input
-                type="url"
-                value={proofForm.proof_file_url}
-                onChange={(event) => setProofForm((form) => ({ ...form, proof_file_url: event.target.value }))}
-                placeholder="Lien Drive, reçu ou capture déjà partagée"
-                className="h-9 w-full rounded-lg border border-emerald-950/10 bg-white px-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
-              />
-            </label>
-            <label className="sm:col-span-2">
-              <span className="mb-1 block text-[0.58rem] font-black uppercase tracking-[0.14em] text-slate-500">Commentaire</span>
-              <textarea
-                value={proofForm.comment}
-                onChange={(event) => setProofForm((form) => ({ ...form, comment: event.target.value }))}
-                placeholder="Ex : paiement transmis par Wave au nom de l'agence"
-                className="min-h-[4rem] w-full rounded-lg border border-emerald-950/10 bg-white px-2 py-2 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15"
-              />
-            </label>
+          {/* Grille de champs ultra dense (zéro scroll vertical) */}
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <label>
+                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Plan</span>
+                <select
+                  value={proofForm.plan_key}
+                  onChange={(event) => setProofForm((form) => ({
+                    ...form,
+                    plan_key: event.target.value,
+                    amount: String(PLAN_CATALOG.find((plan) => plan.id === event.target.value)?.price_xof || form.amount),
+                  }))}
+                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                >
+                  {PLAN_CATALOG.filter((plan) => plan.id !== 'enterprise').map((plan) => (
+                    <option key={plan.id} value={plan.id}>{plan.name}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Montant (XOF)</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={proofForm.amount}
+                  onChange={(event) => setProofForm((form) => ({ ...form, amount: event.target.value }))}
+                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                />
+              </label>
+
+              <label>
+                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Date de paiement</span>
+                <input
+                  type="date"
+                  value={proofForm.payment_date}
+                  onChange={(event) => setProofForm((form) => ({ ...form, payment_date: event.target.value }))}
+                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <label>
+                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Moyen</span>
+                <select
+                  value={proofForm.method}
+                  onChange={(event) => setProofForm((form) => ({ ...form, method: event.target.value }))}
+                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                >
+                  {MANUAL_PAYMENT_METHODS.map((method) => (
+                    <option key={method.id} value={method.id}>{method.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Référence</span>
+                <input
+                  type="text"
+                  value={proofForm.reference}
+                  onChange={(event) => setProofForm((form) => ({ ...form, reference: event.target.value }))}
+                  placeholder="Ex : WAVE-1289"
+                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                />
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <label>
+                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Lien preuve (optionnel)</span>
+                <input
+                  type="url"
+                  value={proofForm.proof_file_url}
+                  onChange={(event) => setProofForm((form) => ({ ...form, proof_file_url: event.target.value }))}
+                  placeholder="Lien Drive, reçu ou capture"
+                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                />
+              </label>
+
+              <label>
+                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Commentaire</span>
+                <input
+                  type="text"
+                  value={proofForm.comment}
+                  onChange={(event) => setProofForm((form) => ({ ...form, comment: event.target.value }))}
+                  placeholder="Ex : paiement transmis par Wave au nom de l'agence"
+                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                />
+              </label>
+            </div>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          {/* Actions du bas */}
+          <div className="mt-1 flex items-center justify-end gap-2 border-t border-slate-100 pt-2.5">
             <button
               type="button"
               onClick={() => setManualProofOpen(false)}
-              className="sk-action sk-action-secondary h-9 justify-center px-3 text-xs"
+              className="inline-flex h-8.5 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-extrabold text-slate-700 transition hover:bg-slate-50"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={submittingProof}
-              className="sk-action sk-action-financial h-9 justify-center px-3 text-xs disabled:opacity-60"
+              className="inline-flex h-8.5 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-4 text-xs font-extrabold text-white shadow-sm transition hover:from-[#073b2f] hover:to-emerald-950 disabled:opacity-60"
             >
               {submittingProof ? (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-white" />
               ) : (
-                <Send className="h-3.5 w-3.5" />
+                <Send className="h-3.5 w-3.5 text-emerald-300" />
               )}
-              Transmettre
+              Transmettre la preuve
             </button>
           </div>
         </form>

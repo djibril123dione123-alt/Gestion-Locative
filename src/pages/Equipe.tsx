@@ -635,7 +635,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         </section>
       )}
 
-      <section className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 xl:grid-cols-5">
+      <section className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
         <MetricCard label="Membres actifs" value={stats.activeMembers} helper={`${stats.inactiveMembers} inactif(s)`} icon={UsersIcon} />
         <MetricCard label="Invitations" value={stats.pendingInvitations} helper="En attente" icon={Mail} tone="orange" />
         <MetricCard label="Accès restreints" value={stats.restrictedMembers} helper={`${stats.customMembers} personnalisé(s)`} icon={Lock} tone="emerald" />

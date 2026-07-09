@@ -61,6 +61,9 @@ export function SmartCombobox({
   const isWizard = density === 'wizard';
   const isCompact = density === 'compact' || density === 'dense';
   const isDense = density === 'dense';
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [menuPlacement, setMenuPlacement] = useState<MenuPlacement | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);

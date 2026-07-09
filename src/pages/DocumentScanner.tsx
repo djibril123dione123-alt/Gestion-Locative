@@ -21,6 +21,7 @@ import {
   verifyDocumentReference,
   verifyDocumentToken,
 } from '../services/documentVerification';
+import jsQR from 'jsqr';
 
 type BarcodeDetectorShape = {
   detect(video: HTMLVideoElement): Promise<Array<{ rawValue?: string }>>;
@@ -42,6 +43,7 @@ export function DocumentScanner() {
   const { profile } = useAuth();
   const toast = useToast();
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanningRef = useRef(false);
@@ -95,10 +97,6 @@ export function DocumentScanner() {
       setCameraStatus('unsupported');
       return;
     }
-    if (!window.BarcodeDetector) {
-      setCameraStatus('unsupported');
-      return;
-    }
 
     setCameraStatus('starting');
     try {
@@ -109,25 +107,52 @@ export function DocumentScanner() {
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute('playsinline', 'true'); // indispensable sur iPhone/Safari
         await videoRef.current.play();
       }
 
-      const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+      const detector = window.BarcodeDetector ? new window.BarcodeDetector({ formats: ['qr_code'] }) : null;
       scanningRef.current = true;
       setCameraStatus('active');
 
       const scanFrame = async () => {
         if (!scanningRef.current || !videoRef.current) return;
         try {
-          const codes = await detector.detect(videoRef.current);
-          const rawValue = codes[0]?.rawValue;
-          if (rawValue) {
-            stopCamera();
-            await verifyValue(rawValue);
-            return;
+          if (detector) {
+            const codes = await detector.detect(videoRef.current);
+            const rawValue = codes[0]?.rawValue;
+            if (rawValue) {
+              stopCamera();
+              await verifyValue(rawValue);
+              return;
+            }
+          } else {
+            // Fallback universel jsQR (iPhone / Safari / Firefox)
+            const video = videoRef.current;
+            if (video.readyState === video.HAVE_ENOUGH_DATA && video.videoWidth > 0) {
+              if (!canvasRef.current) {
+                canvasRef.current = document.createElement('canvas');
+              }
+              const canvas = canvasRef.current;
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              const ctx = canvas.getContext('2d', { willReadFrequently: true });
+              if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                  inversionAttempts: 'dontInvert',
+                });
+                if (code?.data) {
+                  stopCamera();
+                  await verifyValue(code.data);
+                  return;
+                }
+              }
+            }
           }
         } catch {
-          // Some browsers can fail while the video is warming up; retry next frame.
+          // Retry next frame
         }
         frameRef.current = window.requestAnimationFrame(scanFrame);
       };

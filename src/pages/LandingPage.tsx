@@ -1076,7 +1076,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               Infrastructure immobilière pour agences, bailleurs et équipes qui veulent suivre leurs opérations avec sérieux, clarté et traçabilité.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
-              {['Dakar', 'Abidjan', 'Mobile Money', 'Proptech africaine'].map((tag) => (
+              {['Dakar', 'Sénégal', 'Mobile Money', 'Proptech sénégalaise'].map((tag) => (
                 <span key={tag} className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1 text-xs font-black text-emerald-50/72">
                   {tag}
                 </span>

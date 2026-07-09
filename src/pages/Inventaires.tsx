@@ -1,17 +1,23 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
+import { PremiumToolbar, type QuickChip } from '../components/ui/PremiumToolbar';
+import { SmartCombobox } from '../components/ui/SmartCombobox';
+import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
+import { MetricCard } from '../components/ui/MetricCard';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { Modal } from '../components/ui/Modal';
+import { WizardShell } from '../components/ui/WizardShell';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
-import { ClipboardList, Plus, Download, Trash2 } from 'lucide-react';
+import { ClipboardList, Plus, Download, Trash2, Search, FileCheck, AlertTriangle, ArrowUpRight, ArrowDownRight, ShieldCheck, Building2, Sparkles, Layers } from 'lucide-react';
+import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { addFooter, drawPageBorder, drawSectionFrame, saveGeneratedPdf } from '../lib/pdf';
@@ -56,6 +62,9 @@ const etatColors: Record<string, string> = {
   mauvais: 'bg-red-100 text-red-800',
 };
 
+type InventaireTypeFilter = 'all' | 'entree' | 'sortie';
+type InventaireStatutFilter = 'all' | 'en_cours' | 'termine' | 'litige';
+
 export function Inventaires() {
   const { profile, user } = useAuth();
   const toast = useToast();
@@ -65,11 +74,13 @@ export function Inventaires() {
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  type InventaireTypeFilter = 'all' | 'entree' | 'sortie';
-  type InventaireStatutFilter = 'all' | 'en_cours' | 'termine' | 'litige';
+
+  // Filtres
+  const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<InventaireTypeFilter>('all');
   const [filterStatut, setFilterStatut] = useState<InventaireStatutFilter>('all');
   const [filterImmeuble, setFilterImmeuble] = useState<string>('all');
+
   const [deleteTarget, setDeleteTarget] = useState<Inventaire | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -119,10 +130,7 @@ export function Inventaires() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.agency_id || !form.contrat_id) {
-      toast.warning('Sélectionnez un contrat');
-      return;
-    }
+    if (!profile?.agency_id) return;
     setSubmitting(true);
     try {
       const { error } = await supabase.from('inventaires').insert({
@@ -130,17 +138,17 @@ export function Inventaires() {
         contrat_id: form.contrat_id,
         type: form.type,
         date: form.date,
+        statut: 'en_cours',
+        pieces: form.pieces,
+        observations: form.observations.trim() || null,
+        caution_retenue: form.caution_retenue || 0,
         locataire_present: form.locataire_present,
         proprietaire_present: form.proprietaire_present,
         agent_present: form.agent_present,
-        pieces: form.pieces,
-        observations: form.observations || null,
-        caution_retenue: form.type === 'sortie' ? form.caution_retenue : 0,
-        statut: 'en_cours',
         created_by: user?.id,
       });
       if (error) throw error;
-      toast.success('Inventaire créé');
+      toast.success('État des lieux créé avec succès');
       setIsOpen(false);
       setForm({
         contrat_id: '',
@@ -162,93 +170,82 @@ export function Inventaires() {
     }
   };
 
+  const generatePDF = async (inv: Inventaire) => {
+    const loc = `${inv.contrats?.locataires?.prenom ?? ''} ${inv.contrats?.locataires?.nom ?? ''}`;
+    const bien = `${inv.contrats?.unites?.immeubles?.nom ?? ''} - ${inv.contrats?.unites?.nom ?? ''}`;
+    const typeTitle = inv.type === 'entree' ? 'ÉTAT DES LIEUX D’ENTRÉE' : 'ÉTAT DES LIEUX DE SORTIE';
+
+    let agenceInfo = {
+      nom: 'SAMAY KEUR',
+      adresse: 'Sénégal',
+      contact: '',
+    };
+    if (profile?.agency_id) {
+      const { data } = await supabase.from('agencies').select('name, address, email, phone').eq('id', profile.agency_id).maybeSingle();
+      if (data) {
+        agenceInfo = {
+          nom: data.name || 'SAMAY KEUR',
+          adresse: data.address || 'Sénégal',
+          contact: [data.phone, data.email].filter(Boolean).join(' · '),
+        };
+      }
+    }
+
+    const doc = new jsPDF();
+    const width = doc.internal.pageSize.getWidth();
+    let y = 16;
+
+    drawPageBorder(doc);
+
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text(typeTitle, 14, y);
+    y += 7;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(`${agenceInfo.nom} — Date : ${new Date(inv.date).toLocaleDateString('fr-FR')}`, 14, y);
+    y += 10;
+
+    y = drawSectionFrame(doc, y, 32);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 41, 59);
+    doc.text('INFORMATIONS CONTRAT & BIEN', 18, y + 6);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Locataire : ${loc}`, 18, y + 14);
+    doc.text(`Bien : ${bien}`, 18, y + 21);
+    doc.text(`Statut : ${inv.statut === 'termine' ? 'Terminé' : inv.statut === 'litige' ? 'En litige' : 'En cours'}`, 115, y + 14);
+    y += 38;
+
+    autoTable(doc, {
+      startY: y,
+      head: [['Pièce / Élément', 'État constaté', 'Observations']],
+      body: (inv.pieces || []).map((p) => [
+        p.nom,
+        p.etat === 'bon' ? 'Bon état' : p.etat === 'moyen' ? 'État moyen' : 'Mauvais état',
+        p.observations || '-',
+      ]),
+      headStyles: { fillColor: [24, 160, 88], textColor: 255 },
+      styles: { fontSize: 9 },
+    });
+
+    addFooter(doc, profile?.agency_id || null, 'État des lieux officiel - Samay Keur');
+
+    const fileName = `Etat_des_lieux_${inv.type}_${loc.replace(/\s+/g, '_')}.pdf`;
+    saveGeneratedPdf(doc, fileName, 'documents');
+  };
+
   const updateStatut = async (id: string, statut: Inventaire['statut']) => {
     const { error } = await supabase.from('inventaires').update({ statut }).eq('id', id);
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Statut mis à jour');
       load();
     }
-  };
-
-  const exportPDF = async (inv: Inventaire) => {
-    const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-    drawPageBorder(doc);
-
-    const title = `État des lieux ${inv.type === 'entree' ? "d'entrée" : 'de sortie'}`;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(15, 23, 42);
-    doc.text(title, 14, 24);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Référence : ${inv.id.slice(0, 8).toUpperCase()} • ${new Date(inv.date).toLocaleDateString('fr-FR')}`, 14, 31);
-    doc.setDrawColor(226, 232, 240);
-    doc.line(14, 38, 196, 38);
-
-    drawSectionFrame(doc, 14, 48, 182, 34, undefined, {
-      title: 'Informations générales',
-      accent: 'primary',
-    });
-    doc.setFontSize(9);
-    doc.setTextColor(30, 41, 59);
-    doc.text(`Locataire : ${inv.contrats?.locataires?.prenom ?? ''} ${inv.contrats?.locataires?.nom ?? ''}`, 18, 62);
-    doc.text(`Logement : ${inv.contrats?.unites?.nom ?? ''} (${inv.contrats?.unites?.immeubles?.nom ?? ''})`, 18, 69);
-    doc.text(`Statut : ${inv.statut}`, 18, 76);
-
-    drawSectionFrame(doc, 14, 92, 182, 12, undefined, {
-      title: 'Pièces inspectées',
-      accent: 'orange',
-      fill: false,
-    });
-    autoTable(doc, {
-      startY: 110,
-      head: [['Pièce', 'État', 'Observations']],
-      body: (inv.pieces || []).map((p) => [
-        p.nom || '—',
-        p.etat,
-        p.observations || '—',
-      ]),
-      theme: 'grid',
-      styles: { fontSize: 8.5, cellPadding: 2.6, textColor: [30, 41, 59], lineColor: [226, 232, 240], lineWidth: 0.12 },
-      headStyles: { fillColor: [20, 83, 45], textColor: [255, 255, 255], fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { left: 14, right: 14 },
-    });
-
-    let y = ((doc as jsPDF & { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? 110) + 12;
-    if (inv.observations) {
-      if (y > 235) {
-        doc.addPage();
-        drawPageBorder(doc);
-        y = 28;
-      }
-      drawSectionFrame(doc, 14, y, 182, 34, undefined, {
-        title: 'Observations',
-        accent: 'neutral',
-      });
-      doc.setFontSize(9);
-      doc.setTextColor(30, 41, 59);
-      doc.text(doc.splitTextToSize(inv.observations, 170) as string[], 18, y + 15);
-    }
-    addFooter(doc);
-    await saveGeneratedPdf(doc, {
-      kind: 'inventaire',
-      title: `État des lieux ${inv.type === 'entree' ? "d'entrée" : 'de sortie'}`,
-      fileName: `inventaire-${inv.id.slice(0, 8)}.pdf`,
-      source: 'inventaires',
-      documentType: 'document',
-      entityId: inv.id,
-      period: inv.date?.slice(0, 7) ?? null,
-      reference: `INV-${inv.id.slice(0, 8).toUpperCase()}`,
-      data: {
-        document: 'inventaire',
-        inventaire: inv,
-        agency_id: profile?.agency_id ?? null,
-      },
-    });
   };
 
   const confirmDelete = async () => {
@@ -265,12 +262,29 @@ export function Inventaires() {
     setDeleting(false);
   };
 
-  const filtered = items.filter((i) => {
-    if (filterType !== 'all' && i.type !== filterType) return false;
-    if (filterStatut !== 'all' && i.statut !== filterStatut) return false;
-    if (filterImmeuble !== 'all' && i.contrats?.unites?.immeubles?.id !== filterImmeuble) return false;
-    return true;
-  });
+  const filtered = useMemo(() => {
+    return items.filter((i) => {
+      if (filterType !== 'all' && i.type !== filterType) return false;
+      if (filterStatut !== 'all' && i.statut !== filterStatut) return false;
+      if (filterImmeuble !== 'all' && i.contrats?.unites?.immeubles?.id !== filterImmeuble) return false;
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        const loc = `${i.contrats?.locataires?.prenom ?? ''} ${i.contrats?.locataires?.nom ?? ''}`.toLowerCase();
+        const bien = `${i.contrats?.unites?.immeubles?.nom ?? ''} ${i.contrats?.unites?.nom ?? ''}`.toLowerCase();
+        if (!loc.includes(q) && !bien.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [items, filterType, filterStatut, filterImmeuble, searchTerm]);
+
+  const stats = useMemo(() => {
+    return {
+      total: items.length,
+      entrees: items.filter((i) => i.type === 'entree').length,
+      sorties: items.filter((i) => i.type === 'sortie').length,
+      litiges: items.filter((i) => i.statut === 'litige').length,
+    };
+  }, [items]);
 
   const updatePiece = (idx: number, patch: Partial<Piece>) => {
     setForm((f) => ({ ...f, pieces: f.pieces.map((p, i) => (i === idx ? { ...p, ...patch } : p)) }));
@@ -285,41 +299,102 @@ export function Inventaires() {
   const allColumns = [
     {
       key: 'date',
-      label: 'Date',
-      render: (i: Inventaire) => new Date(i.date).toLocaleDateString('fr-FR'),
+      label: 'Date constat',
+      render: (i: Inventaire) => (
+        <span className="text-xs font-semibold text-slate-800">
+          {new Date(i.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+        </span>
+      ),
     },
     {
       key: 'type',
       label: 'Type',
       render: (i: Inventaire) => (
-        <span className={`inline-flex px-2 py-1 rounded text-xs font-medium ${i.type === 'entree' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
-          {i.type === 'entree' ? 'Entrée' : 'Sortie'}
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+            i.type === 'entree'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200/80 shadow-2xs'
+              : 'bg-indigo-50 text-indigo-800 border-indigo-200/80 shadow-2xs'
+          }`}
+        >
+          {i.type === 'entree' ? (
+            <>
+              <ArrowDownRight className="w-3.5 h-3.5 text-emerald-600" />
+              Entrée
+            </>
+          ) : (
+            <>
+              <ArrowUpRight className="w-3.5 h-3.5 text-indigo-600" />
+              Sortie
+            </>
+          )}
         </span>
       ),
     },
     {
       key: 'contrat',
-      label: 'Contrat',
-      render: (i: Inventaire) => (
-        <div>
-          <p className="text-sm font-medium">{i.contrats?.locataires?.prenom ?? ''} {i.contrats?.locataires?.nom ?? ''}</p>
-          <p className="text-xs text-slate-500">{i.contrats?.unites?.immeubles?.nom ?? ''} – {i.contrats?.unites?.nom ?? ''}</p>
-        </div>
-      ),
+      label: 'Locataire & Bien',
+      render: (i: Inventaire) => {
+        const prenom = i.contrats?.locataires?.prenom ?? '';
+        const nom = i.contrats?.locataires?.nom ?? '';
+        const init = `${prenom[0] ?? ''}${nom[0] ?? ''}`.toUpperCase() || 'L';
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-600 to-emerald-900 text-white flex items-center justify-center text-xs font-bold shrink-0 shadow-xs">
+              {init}
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-900 leading-tight">
+                {prenom} {nom}
+              </p>
+              <p className="text-[11px] text-slate-500 inline-flex items-center gap-1 mt-0.5">
+                <Building2 className="w-3 h-3 text-slate-400 shrink-0" />
+                {i.contrats?.unites?.immeubles?.nom ?? 'Immeuble'} – {i.contrats?.unites?.nom ?? 'Unité'}
+              </p>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'pieces',
+      label: 'Inspection & Retenue',
+      render: (i: Inventaire) => {
+        const nbPieces = Array.isArray(i.pieces) ? i.pieces.length : 0;
+        const retenue = Number(i.caution_retenue) || 0;
+        return (
+          <div className="space-y-1">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-semibold">
+              <Layers className="w-3 h-3 text-slate-500" />
+              {nbPieces} {nbPieces > 1 ? 'pièces inspectées' : 'pièce inspectée'}
+            </span>
+            {retenue > 0 ? (
+              <div className="text-[11px] font-bold text-amber-700">
+                Retenue : {formatCurrency(retenue)}
+              </div>
+            ) : (
+              <div className="text-[11px] font-medium text-emerald-700">
+                ✓ Aucune retenue caution
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'statut',
       label: 'Statut',
       render: (i: Inventaire) => (
-        <select aria-label="Sélection"
+        <select
+          aria-label="Sélection du statut"
           value={i.statut}
           onChange={(e) => updateStatut(i.id, e.target.value as Inventaire['statut'])}
           data-testid={`select-statut-${i.id}`}
-          className={`text-xs font-medium px-2 py-1 rounded border-0 cursor-pointer ${statutColors[i.statut]}`}
+          className={`text-[11px] font-bold px-3 py-1 rounded-full border cursor-pointer transition shadow-2xs outline-none ${statutColors[i.statut]}`}
         >
           <option value="en_cours">En cours</option>
-          <option value="termine">Terminé</option>
-          <option value="litige">Litige</option>
+          <option value="termine">Terminé & signé</option>
+          <option value="litige">Litige ou réserve</option>
         </select>
       ),
     },
@@ -327,28 +402,66 @@ export function Inventaires() {
       key: 'actions',
       label: 'Actions',
       render: (i: Inventaire) => (
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => void exportPDF(i)}
-            data-testid={`button-pdf-${i.id}`}
-            className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-slate-300 hover:bg-slate-50"
+            onClick={() => generatePDF(i)}
+            data-testid={`button-download-pdf-${i.id}`}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-bold rounded-lg border border-emerald-200/80 bg-emerald-50/50 text-emerald-800 hover:bg-emerald-100/70 transition shadow-2xs"
+            title="Générer l'état des lieux en PDF probant"
           >
-            <Download className="w-3 h-3" /> PDF
+            <Download className="w-3.5 h-3.5" />
+            Rapport PDF
           </button>
-          <button aria-label="Action"
+          <button
             type="button"
             onClick={() => setDeleteTarget(i)}
             data-testid={`button-delete-${i.id}`}
-            className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded border border-red-200 text-red-600 hover:bg-red-50"
+            className="inline-flex items-center justify-center p-1.5 rounded-lg border border-red-200/70 text-red-600 hover:bg-red-50 transition"
+            title="Supprimer"
           >
-            <Trash2 className="w-3 h-3" />
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
       ),
     },
   ];
+
   const columns = allColumns.filter((c) => c.key === 'actions' || colIsVisible(c.key));
+
+  const quickChips: QuickChip[] = useMemo(() => [
+    {
+      id: 'all',
+      label: 'Tous',
+      count: items.length,
+      isActive: filterType === 'all' && filterStatut === 'all',
+      onClick: () => {
+        setFilterType('all');
+        setFilterStatut('all');
+      },
+    },
+    {
+      id: 'entree',
+      label: 'Entrées',
+      count: stats.entrees,
+      isActive: filterType === 'entree',
+      onClick: () => setFilterType(filterType === 'entree' ? 'all' : 'entree'),
+    },
+    {
+      id: 'sortie',
+      label: 'Sorties',
+      count: stats.sorties,
+      isActive: filterType === 'sortie',
+      onClick: () => setFilterType(filterType === 'sortie' ? 'all' : 'sortie'),
+    },
+    {
+      id: 'litige',
+      label: 'En litige',
+      count: stats.litiges,
+      isActive: filterStatut === 'litige',
+      onClick: () => setFilterStatut(filterStatut === 'litige' ? 'all' : 'litige'),
+    },
+  ], [items.length, stats, filterType, filterStatut]);
 
   return (
     <div className="space-y-4 pt-2.5 sm:pt-3">
@@ -356,7 +469,7 @@ export function Inventaires() {
         density="compact"
         eyebrow="OPÉRATIONS TERRAIN"
         title="États des lieux"
-        description="Préparez, suivez et archivez les inventaires de location."
+        description="Préparez, suivez et archivez les inventaires d'entrée et de sortie."
         mobileDescription="États des lieux."
         primaryAction={
           <PremiumButton variant="create" size="sm" onClick={() => setIsOpen(true)} data-testid="button-new-inventaire" icon={<Plus className="h-4 w-4" />}>
@@ -365,32 +478,80 @@ export function Inventaires() {
         }
       />
 
+      <PremiumKpiGrid density="compact">
+        <MetricCard density="compact" label="Total états des lieux" value={stats.total} icon={ClipboardList} tone="emerald" />
+        <MetricCard density="compact" label="Entrées (Baux neufs)" value={stats.entrees} icon={ArrowUpRight} tone="blue" />
+        <MetricCard density="compact" label="Sorties (Fin de bail)" value={stats.sorties} icon={ArrowDownRight} tone="green" />
+        <MetricCard density="compact" label="En litige" value={stats.litiges} icon={AlertTriangle} tone="amber" />
+      </PremiumKpiGrid>
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select aria-label="Sélection" value={filterType} onChange={(e) => setFilterType(e.target.value as InventaireTypeFilter)} data-testid="filter-type" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
-          <option value="all">Tous types</option>
-          <option value="entree">Entrée</option>
-          <option value="sortie">Sortie</option>
-        </select>
-        <select aria-label="Sélection" value={filterStatut} onChange={(e) => setFilterStatut(e.target.value as InventaireStatutFilter)} data-testid="filter-statut" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
-          <option value="all">Tous statuts</option>
-          <option value="en_cours">En cours</option>
-          <option value="termine">Terminé</option>
-          <option value="litige">Litige</option>
-        </select>
-        <select aria-label="Sélection" value={filterImmeuble} onChange={(e) => setFilterImmeuble(e.target.value)} data-testid="filter-immeuble" className="px-3 py-2 text-sm border border-slate-300 rounded-lg">
-          <option value="all">Tous immeubles</option>
-          {immeubles.map((im) => (
-            <option key={im.id} value={im.id}>{im.nom}</option>
-          ))}
-        </select>
-        <ColumnPicker
-          columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
-          visibility={colVis}
-          onToggle={colToggle}
-          onSetAll={colSetAll}
-        />
-      </div>
+      <PremiumToolbar
+        density="compact"
+        ariaLabel="Filtres des états des lieux"
+        quickChips={quickChips}
+        search={
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Rechercher par locataire, immeuble ou unité..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="!min-h-8 !h-8 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-8 pr-2.5 py-0 text-xs font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none transition focus:border-emerald-700/30 focus:ring-2 focus:ring-emerald-700/10"
+              />
+            </div>
+          </div>
+        }
+        filters={
+          <div className="flex min-w-0 items-center gap-2">
+            <SmartCombobox
+              value={filterType}
+              options={[
+                { value: 'all', label: 'Tous types' },
+                { value: 'entree', label: 'Entrée' },
+                { value: 'sortie', label: 'Sortie' },
+              ]}
+              onChange={(val) => setFilterType((val || 'all') as InventaireTypeFilter)}
+              placeholder="Type"
+              className="w-36 shrink-0"
+              density="compact"
+            />
+            <SmartCombobox
+              value={filterStatut}
+              options={[
+                { value: 'all', label: 'Tous statuts' },
+                { value: 'en_cours', label: 'En cours' },
+                { value: 'termine', label: 'Terminé' },
+                { value: 'litige', label: 'Litige' },
+              ]}
+              onChange={(val) => setFilterStatut((val || 'all') as InventaireStatutFilter)}
+              placeholder="Statut"
+              className="w-40 shrink-0"
+              density="compact"
+            />
+            <SmartCombobox
+              value={filterImmeuble}
+              options={[
+                { value: 'all', label: 'Tous immeubles' },
+                ...immeubles.map((im) => ({ value: im.id, label: im.nom })),
+              ]}
+              onChange={(val) => setFilterImmeuble(val || 'all')}
+              placeholder="Immeuble"
+              className="w-44 shrink-0"
+              density="compact"
+            />
+          </div>
+        }
+        secondaryActions={
+          <ColumnPicker
+            columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
+            visibility={colVis}
+            onToggle={colToggle}
+            onSetAll={colSetAll}
+          />
+        }
+      />
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
         {loading ? (
@@ -404,91 +565,199 @@ export function Inventaires() {
         )}
       </div>
 
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title="Nouvel état des lieux">
+      <WizardShell
+        open={isOpen}
+        onClose={() => setIsOpen(false)}
+        size="simple"
+        variant="classic"
+        tone="agency"
+        eyebrow="SAMAY KËUR"
+        title="Nouvel état des lieux"
+        description="Renseignez le contrat, les présences et l'inspection minutieuse des pièces du bien."
+        primaryAction={
+          <button
+            type="button"
+            onClick={(e) => void submit(e as unknown as React.FormEvent)}
+            disabled={submitting || !form.contrat_id}
+            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? 'Enregistrement…' : 'Enregistrer l’état des lieux'}
+          </button>
+        }
+        secondaryAction={
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 transition"
+          >
+            Annuler
+          </button>
+        }
+      >
         <form onSubmit={submit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Contrat</label>
-              <select aria-label="Sélection" required value={form.contrat_id} onChange={(e) => setForm({ ...form, contrat_id: e.target.value })} data-testid="select-contrat" className="w-full px-3 py-2 border border-slate-300 rounded-lg">
-                <option value="">— Sélectionner —</option>
-                {contrats.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.locataires?.prenom} {c.locataires?.nom} – {c.unites?.nom}
-                  </option>
-                ))}
-              </select>
+              <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Contrat concerné *</label>
+              <SmartCombobox
+                value={form.contrat_id}
+                options={[
+                  { value: '', label: '— Sélectionner un contrat —' },
+                  ...contrats.map((c) => ({
+                    value: c.id,
+                    label: `${c.locataires?.prenom ?? ''} ${c.locataires?.nom ?? ''} (${c.unites?.immeubles?.nom ?? ''} - ${c.unites?.nom ?? ''})`,
+                  })),
+                ]}
+                onChange={(val) => setForm({ ...form, contrat_id: val })}
+                placeholder="Sélectionner un contrat"
+                className="w-full"
+                density="compact"
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
-              <select aria-label="Sélection" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'entree' | 'sortie' })} data-testid="select-type" className="w-full px-3 py-2 border border-slate-300 rounded-lg">
-                <option value="entree">Entrée</option>
-                <option value="sortie">Sortie</option>
-              </select>
+              <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Type d'état des lieux</label>
+              <SmartCombobox
+                value={form.type}
+                options={[
+                  { value: 'entree', label: 'État des lieux d’entrée' },
+                  { value: 'sortie', label: 'État des lieux de sortie' },
+                ]}
+                onChange={(val) => setForm({ ...form, type: (val || 'entree') as 'entree' | 'sortie' })}
+                placeholder="Type"
+                className="w-full"
+                density="compact"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Date du constat *</label>
+              <input
+                type="date"
+                required
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+                className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-xs outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+              />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Date</label>
-              <input aria-label="Champ de saisie" type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
+              <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Caution retenue (FCFA)</label>
+              <input
+                type="number"
+                value={form.caution_retenue}
+                onChange={(e) => setForm({ ...form, caution_retenue: parseFloat(e.target.value) || 0 })}
+                className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-xs outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+              />
             </div>
-            {form.type === 'sortie' && (
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Caution retenue (XOF)</label>
-                <input aria-label="Champ de saisie" type="number" min={0} value={form.caution_retenue} onChange={(e) => setForm({ ...form, caution_retenue: parseFloat(e.target.value) || 0 })} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
-              </div>
-            )}
           </div>
 
-          <div className="flex flex-wrap gap-4 text-sm">
-            <label className="flex items-center gap-2"><input type="checkbox" checked={form.locataire_present} onChange={(e) => setForm({ ...form, locataire_present: e.target.checked })} /> Locataire présent</label>
-            <label className="flex items-center gap-2"><input type="checkbox" checked={form.proprietaire_present} onChange={(e) => setForm({ ...form, proprietaire_present: e.target.checked })} /> Propriétaire présent</label>
-            <label className="flex items-center gap-2"><input type="checkbox" checked={form.agent_present} onChange={(e) => setForm({ ...form, agent_present: e.target.checked })} /> Agent présent</label>
+          <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-3">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-2">Présences lors de la visite</label>
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.locataire_present}
+                  onChange={(e) => setForm({ ...form, locataire_present: e.target.checked })}
+                  className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+                />
+                Locataire présent
+              </label>
+              <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.proprietaire_present}
+                  onChange={(e) => setForm({ ...form, proprietaire_present: e.target.checked })}
+                  className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+                />
+                Bailleur présent
+              </label>
+              <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.agent_present}
+                  onChange={(e) => setForm({ ...form, agent_present: e.target.checked })}
+                  className="rounded border-slate-300 text-emerald-700 focus:ring-emerald-600"
+                />
+                Agent Samay Keur présent
+              </label>
+            </div>
           </div>
 
-          <div>
+          <div className="border-t border-slate-100 pt-3">
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-slate-700">Pièces</label>
-              <button type="button" onClick={addPiece} className="text-sm text-orange-600 hover:text-orange-700 font-medium">+ Ajouter une pièce</button>
+              <label className="block text-xs font-semibold text-slate-800">Pièces / Éléments inspectés</label>
+              <button
+                type="button"
+                onClick={addPiece}
+                className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1 transition"
+              >
+                <Plus className="h-3.5 w-3.5" /> Ajouter une pièce
+              </button>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
               {form.pieces.map((p, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                  <input type="text" placeholder="Nom de la pièce" required value={p.nom} onChange={(e) => updatePiece(idx, { nom: e.target.value })} className="col-span-4 px-2 py-1.5 border border-slate-300 rounded text-sm" />
-                  <select aria-label="Sélection" value={p.etat} onChange={(e) => updatePiece(idx, { etat: e.target.value as Piece['etat'] })} className={`col-span-3 px-2 py-1.5 border rounded text-sm ${etatColors[p.etat]}`}>
-                    <option value="bon">Bon</option>
-                    <option value="moyen">Moyen</option>
-                    <option value="mauvais">Mauvais</option>
+                <div key={idx} className="flex flex-col sm:flex-row gap-2 p-2.5 rounded-xl border border-slate-200 bg-white shadow-xs">
+                  <input
+                    type="text"
+                    placeholder="Pièce (ex: Salon, Cuisine)"
+                    value={p.nom}
+                    onChange={(e) => updatePiece(idx, { nom: e.target.value })}
+                    className="flex-1 h-9 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:border-emerald-700 outline-none"
+                  />
+                  <select
+                    aria-label="Sélection de l'état"
+                    value={p.etat}
+                    onChange={(e) => updatePiece(idx, { etat: e.target.value as Piece['etat'] })}
+                    className="w-full sm:w-32 h-9 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:border-emerald-700 outline-none"
+                  >
+                    <option value="bon">Bon état</option>
+                    <option value="moyen">État moyen</option>
+                    <option value="mauvais">Mauvais état</option>
                   </select>
-                  <input type="text" placeholder="Observations" value={p.observations} onChange={(e) => updatePiece(idx, { observations: e.target.value })} className="col-span-4 px-2 py-1.5 border border-slate-300 rounded text-sm" />
-                  <button aria-label="Action" type="button" onClick={() => removePiece(idx)} className="col-span-1 text-red-600 hover:text-red-800"><Trash2 className="w-4 h-4" /></button>
+                  <input
+                    type="text"
+                    placeholder="Observations"
+                    value={p.observations}
+                    onChange={(e) => updatePiece(idx, { observations: e.target.value })}
+                    className="flex-1 h-9 px-2.5 py-1.5 border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:border-emerald-700 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePiece(idx)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg shrink-0 self-start sm:self-center transition"
+                    title="Supprimer cette pièce"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Observations générales</label>
-            <textarea aria-label="Zone de texte" value={form.observations} onChange={(e) => setForm({ ...form, observations: e.target.value })} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-lg" />
-          </div>
-
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setIsOpen(false)} className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50">Annuler</button>
-            <button type="submit" disabled={submitting} data-testid="button-submit-inventaire" className="px-4 py-2 rounded-lg text-white font-semibold disabled:opacity-50" style={{ backgroundColor: '#F58220' }}>
-              {submitting ? 'Création…' : 'Créer'}
-            </button>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Observations générales</label>
+            <textarea
+              rows={2}
+              value={form.observations}
+              onChange={(e) => setForm({ ...form, observations: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 shadow-xs outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+              placeholder="Constat global, compteurs, remise des clés..."
+            />
           </div>
         </form>
-      </Modal>
+      </WizardShell>
 
       <ConfirmModal
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={confirmDelete}
-        title="Supprimer cet inventaire ?"
-        message="Cette action est irréversible."
-        confirmLabel="Supprimer"
-        cancelLabel="Annuler"
-        isDestructive
-        isLoading={deleting}
+        title="Supprimer l'état des lieux"
+        message="Êtes-vous sûr de vouloir supprimer définitivement cet état des lieux ? Cette action est irréversible."
+        confirmLabel={deleting ? 'Suppression…' : 'Supprimer'}
+        variant="danger"
       />
+
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>
   );

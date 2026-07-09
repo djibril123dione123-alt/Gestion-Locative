@@ -50,7 +50,7 @@ const STEPS = [
 ] as const;
 
 const TIMEZONES = [
-  { value: 'Africa/Dakar', label: 'Dakar, Abidjan, GMT' },
+  { value: 'Africa/Dakar', label: 'Dakar, Sénégal (GMT)' },
   { value: 'Africa/Bamako', label: 'Bamako, GMT' },
   { value: 'Africa/Conakry', label: 'Conakry, GMT' },
   { value: 'Africa/Casablanca', label: 'Casablanca, GMT+1' },

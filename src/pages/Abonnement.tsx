@@ -5,6 +5,7 @@ import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 import { CheckoutModal } from '../components/billing/CheckoutModal';
 import { Modal } from '../components/ui/Modal';
+import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import {
   CreditCard, CheckCircle2, Clock, Zap, Building2, Crown,
@@ -858,22 +859,26 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
           {/* Grille de champs ultra dense (zéro scroll vertical) */}
           <div className="space-y-2">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <label>
+              <div>
                 <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Plan</span>
-                <select
+                <SmartCombobox
                   value={proofForm.plan_key}
-                  onChange={(event) => setProofForm((form) => ({
-                    ...form,
-                    plan_key: event.target.value,
-                    amount: String(PLAN_CATALOG.find((plan) => plan.id === event.target.value)?.price_xof || form.amount),
+                  options={PLAN_CATALOG.filter((plan) => plan.id !== 'enterprise').map((plan) => ({
+                    value: plan.id,
+                    label: plan.name,
+                    subtitle: `${formatCurrency(plan.price_xof)} / mois`,
                   }))}
-                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
-                >
-                  {PLAN_CATALOG.filter((plan) => plan.id !== 'enterprise').map((plan) => (
-                    <option key={plan.id} value={plan.id}>{plan.name}</option>
-                  ))}
-                </select>
-              </label>
+                  onChange={(val) => {
+                    setProofForm((form) => ({
+                      ...form,
+                      plan_key: val,
+                      amount: String(PLAN_CATALOG.find((plan) => plan.id === val)?.price_xof || form.amount),
+                    }));
+                  }}
+                  placeholder="Sélectionner un plan..."
+                  density="compact"
+                />
+              </div>
 
               <label>
                 <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Montant (XOF)</span>
@@ -882,7 +887,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                   min="0"
                   value={proofForm.amount}
                   onChange={(event) => setProofForm((form) => ({ ...form, amount: event.target.value }))}
-                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                  className="h-9 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                 />
               </label>
 
@@ -892,24 +897,25 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                   type="date"
                   value={proofForm.payment_date}
                   onChange={(event) => setProofForm((form) => ({ ...form, payment_date: event.target.value }))}
-                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                  className="h-9 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                 />
               </label>
             </div>
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <label>
+              <div>
                 <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Moyen</span>
-                <select
+                <SmartCombobox
                   value={proofForm.method}
-                  onChange={(event) => setProofForm((form) => ({ ...form, method: event.target.value }))}
-                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
-                >
-                  {MANUAL_PAYMENT_METHODS.map((method) => (
-                    <option key={method.id} value={method.id}>{method.label}</option>
-                  ))}
-                </select>
-              </label>
+                  options={MANUAL_PAYMENT_METHODS.map((method) => ({
+                    value: method.id,
+                    label: method.label,
+                  }))}
+                  onChange={(val) => setProofForm((form) => ({ ...form, method: val }))}
+                  placeholder="Moyen de paiement..."
+                  density="compact"
+                />
+              </div>
 
               <label>
                 <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Référence</span>
@@ -918,7 +924,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                   value={proofForm.reference}
                   onChange={(event) => setProofForm((form) => ({ ...form, reference: event.target.value }))}
                   placeholder="Ex : WAVE-1289"
-                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                  className="h-9 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                 />
               </label>
             </div>
@@ -931,7 +937,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                   value={proofForm.proof_file_url}
                   onChange={(event) => setProofForm((form) => ({ ...form, proof_file_url: event.target.value }))}
                   placeholder="Lien Drive, reçu ou capture"
-                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                  className="h-9 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                 />
               </label>
 
@@ -942,25 +948,25 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                   value={proofForm.comment}
                   onChange={(event) => setProofForm((form) => ({ ...form, comment: event.target.value }))}
                   placeholder="Ex : paiement transmis par Wave au nom de l'agence"
-                  className="h-8.5 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                  className="h-9 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                 />
               </label>
             </div>
           </div>
 
           {/* Actions du bas */}
-          <div className="mt-1 flex items-center justify-end gap-2 border-t border-slate-100 pt-2.5">
+          <div className="mt-2 flex items-center justify-end gap-2.5 border-t border-slate-100 pt-3">
             <button
               type="button"
               onClick={() => setManualProofOpen(false)}
-              className="inline-flex h-8.5 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-extrabold text-slate-700 transition hover:bg-slate-50"
+              className="inline-flex h-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-extrabold text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={submittingProof}
-              className="inline-flex h-8.5 items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-4 text-xs font-extrabold text-white shadow-sm transition hover:from-[#073b2f] hover:to-emerald-950 disabled:opacity-60"
+              className="inline-flex h-9.5 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-4 text-xs font-extrabold text-white shadow-sm transition hover:from-[#073b2f] hover:to-emerald-950 disabled:opacity-60"
             >
               {submittingProof ? (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-white" />

@@ -49,6 +49,10 @@ import {
   saveGeneratedPdf,
 } from '../../lib/pdf';
 import type { AgencySettings } from '../../types';
+import {
+  allocateDocumentReference,
+  resolvePublishedDocumentTemplate,
+} from '../../services/documentTemplateService';
 import { useToast } from '../../hooks/useToast';
 import { OfflineDataNotice } from '../ui/OfflineDataNotice';
 import { PageSkeleton } from '../ui/Skeleton';
@@ -133,6 +137,7 @@ interface OwnerSettings {
   email?: string | null;
   adresse?: string | null;
   logo_url?: string | null;
+  document_preferences?: AgencySettings['document_preferences'];
 }
 
 interface OwnerWorkspaceData {
@@ -271,7 +276,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
           const [settingsRes, ownerBailleur, propertiesRes, unitsRes, contractsRes, paymentsRes, expensesRes, docsRes, registryRes] = await Promise.all([
             supabase
               .from('agency_settings')
-              .select('nom_agence, telephone, email, adresse, logo_url')
+              .select('nom_agence, telephone, email, adresse, logo_url, document_preferences')
               .eq('agency_id', scopedAgencyId)
               .maybeSingle(),
             getOrCreateIndividualOwnerBailleur({
@@ -771,7 +776,6 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
     setGeneratingReport(true);
     try {
       const periodLabel = formatMonthLabel(reportPeriod);
-      const reportRef = createOwnerReportReference(reportPeriod);
       const settings: Partial<AgencySettings> = {
         agency_id: profile.agency_id,
         is_bailleur_account: true,
@@ -786,6 +790,26 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         couleur_secondaire: '#F59E0B',
         pied_page_personnalise: `${ownerName} - Résumé propriétaire`,
       };
+      const reportTemplate = await resolvePublishedDocumentTemplate('rapport_proprietaire', profile.agency_id);
+      settings.document_preferences = {
+        ...(settings.document_preferences ?? {}),
+        header_style: reportTemplate.content.style.header,
+        show_document_number: reportTemplate.content.style.showDocumentNumber,
+      };
+      if (!reportTemplate.content.style.showLogo) settings.logo_url = null;
+      const enabledReportSections = new Set(
+        reportTemplate.content.blocks
+          .filter((block) => block.enabled && block.systemKey)
+          .map((block) => block.systemKey),
+      );
+      const reportRef = await allocateDocumentReference({
+        documentType: 'rapport_proprietaire',
+        entityId: data.ownerBailleur?.id ?? profile.agency_id,
+        periodKey: reportPeriod,
+        format: data.settings?.document_preferences?.numbering_format,
+        prefix: data.settings?.document_preferences?.prefixes?.rapport ?? 'RPT',
+        fallback: createOwnerReportReference(reportPeriod),
+      });
 
       const doc = new jsPDF('p', 'mm', 'a4');
       drawPageBorder(doc, settings);
@@ -811,9 +835,9 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         y,
         doc.internal.pageSize.getWidth() - 28,
         [
-          { label: 'Loyers encaissés', value: formatCurrency(reportSummary.collected) },
-          { label: 'Reliquats', value: formatCurrency(reportSummary.reliquats) },
-          { label: 'Dépenses', value: formatCurrency(reportSummary.expenses) },
+          ...(enabledReportSections.has('collections') ? [{ label: 'Loyers encaissés', value: formatCurrency(reportSummary.collected) }] : []),
+          ...(enabledReportSections.has('arrears') ? [{ label: 'Reliquats', value: formatCurrency(reportSummary.reliquats) }] : []),
+          ...(enabledReportSections.has('expenses') ? [{ label: 'Dépenses', value: formatCurrency(reportSummary.expenses) }] : []),
           { label: 'Net propriétaire', value: formatCurrency(reportSummary.netOwner), emphasis: true },
         ],
         settings,
@@ -829,7 +853,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         row.status,
       ]);
 
-      autoTable(doc, {
+      if (enabledReportSections.has('collections') || enabledReportSections.has('occupancy')) autoTable(doc, {
         startY: y,
         head: [['Bien', 'Unité', 'Locataire', 'Loyer', 'Encaissé', 'Reliquat', 'Statut']],
         body: rows.length > 0 ? rows : [['-', '-', 'Aucune location en cours', formatCurrency(0), formatCurrency(0), formatCurrency(0), '-']],
@@ -845,13 +869,13 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         },
       });
 
-      const tableEnd = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? y + 34;
+      const tableEnd = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? y + 12;
       doc.setFont(undefined as unknown as string, 'bold');
       doc.setFontSize(8.4);
       doc.setTextColor(15, 23, 42);
       doc.text(`Taux de recouvrement : ${reportSummary.recoveryRate}%`, 14, Math.min(tableEnd + 9, 258));
 
-      try {
+      if (reportTemplate.content.style.showQr && enabledReportSections.has('qr_verification')) {
         await drawLegalVerificationFooter(doc, {
           ref: reportRef,
           type: 'rapport_bailleur',
@@ -859,8 +883,6 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
           date: new Date().toISOString(),
           settings,
         });
-      } catch {
-        // La vérification QR reste non bloquante.
       }
       addFooter(doc, settings);
 
@@ -885,6 +907,19 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             netOwner: reportSummary.netOwner,
             recoveryRate: reportSummary.recoveryRate,
           },
+          template: {
+            revisionId: reportTemplate.revisionId,
+            revision: reportTemplate.revision,
+            checksum: reportTemplate.checksum,
+            source: reportTemplate.source,
+            rendererVersion: reportTemplate.rendererVersion,
+          },
+        },
+        template: reportTemplate,
+        assetUrls: {
+          logo: settings.logo_url,
+          signature: settings.signature_enabled ? settings.signature_url : null,
+          stamp: settings.stamp_enabled ? settings.stamp_url : null,
         },
         preview: {
           columns: ['Bien', 'Unité', 'Locataire', 'Loyer', 'Encaissé', 'Reliquat', 'Statut'],

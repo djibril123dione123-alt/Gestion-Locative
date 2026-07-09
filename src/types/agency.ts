@@ -39,6 +39,9 @@ export interface AgencySettings {
   devise: string | null;
   pied_page_personnalise: string | null;
   signature_url: string | null;
+  stamp_url?: string | null;
+  signature_enabled?: boolean;
+  stamp_enabled?: boolean;
   qr_code_quittances: boolean;
   penalite_retard_montant: number | null;
   penalite_retard_delai_jours: number | null;
@@ -89,6 +92,9 @@ export const DEFAULT_AGENCY_SETTINGS: AgencySettingsFormInput = {
   devise: 'XOF',
   pied_page_personnalise: 'Gestion Locative - Dakar, Sénégal',
   signature_url: null,
+  stamp_url: null,
+  signature_enabled: false,
+  stamp_enabled: false,
   qr_code_quittances: true,
   penalite_retard_montant: 1000,
   penalite_retard_delai_jours: 3,

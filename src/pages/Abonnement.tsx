@@ -12,6 +12,7 @@ import {
   BarChart3, TrendingUp, AlertTriangle, Calendar, Users,
   Home, DoorOpen, ChevronRight, ArrowUpRight, HardDrive,
   FileCheck2, Send,
+  ShieldCheck,
 } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
 import { SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
@@ -80,9 +81,9 @@ interface AbonnementProps {
 function SupportLogo({ src, alt, fallback, className }: { src: string; alt: string; fallback: string; className: string }) {
   const [failed, setFailed] = useState(false);
   return (
-    <span className={`inline-flex items-center justify-center overflow-hidden border border-emerald-950/10 bg-white ${className}`}>
+    <span className={`inline-flex items-center justify-center overflow-hidden bg-white ${className}`}>
       {!failed ? (
-        <img src={src} alt={alt} className="h-full w-full object-contain p-1" onError={() => setFailed(true)} />
+        <img src={src} alt={alt} className="h-full w-full object-contain" onError={() => setFailed(true)} />
       ) : (
         <span className="text-[0.62rem] font-black text-slate-700">{fallback}</span>
       )}
@@ -398,23 +399,31 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                 </span>
               ) : null}
             </div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
               {proofsAvailable && (
                 <button
                   type="button"
                   onClick={openManualProof}
-                  className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm transition hover:bg-emerald-50"
+                  className="inline-flex h-8.5 items-center justify-center rounded-xl border border-emerald-950/15 bg-white px-3 text-xs font-black text-emerald-900 shadow-sm transition hover:bg-emerald-50"
                 >
-                  <FileCheck2 className="mr-1.5 h-3.5 w-3.5" />
-                  Déclarer
+                  <FileCheck2 className="mr-1.5 h-4 w-4 text-emerald-700" />
+                  Déclarer une preuve
                 </button>
               )}
-              <a href={`https://wa.me/${CONTACT_WHATSAPP}`} target="_blank" rel="noopener noreferrer" className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm">
-                <SupportLogo src={whatsappLogo} alt="WhatsApp" fallback="WA" className="mr-1.5 h-4 w-4 rounded-md" />
+              <a
+                href={`https://wa.me/${CONTACT_WHATSAPP}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-8.5 items-center justify-center rounded-xl border border-emerald-600/30 bg-emerald-50/90 px-3 text-xs font-black text-emerald-950 shadow-sm transition hover:bg-emerald-100/90"
+              >
+                <SupportLogo src={whatsappLogo} alt="WhatsApp" fallback="WA" className="mr-2 h-5 w-5 shrink-0 rounded-md border border-black/5" />
                 WhatsApp
               </a>
-              <a href={`mailto:${CONTACT_EMAIL}`} className="inline-flex h-7 items-center justify-center rounded-lg border border-emerald-950/10 bg-white px-2.5 text-[0.68rem] font-extrabold text-emerald-800 shadow-sm">
-                <SupportLogo src={gmailLogo} alt="Gmail" fallback="GM" className="mr-1.5 h-4 w-4 rounded-md" />
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="inline-flex h-8.5 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-800 shadow-sm transition hover:bg-slate-50"
+              >
+                <SupportLogo src={gmailLogo} alt="Gmail" fallback="GM" className="mr-2 h-5 w-5 shrink-0 rounded-md border border-black/5" />
                 Email
               </a>
             </div>
@@ -718,73 +727,99 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
 
       {/* ── Support ── */}
       {!embedded && (
-      <div className="sk-premium-panel p-5 sm:p-6">
-        <h2 className={embedded ? 'mb-1.5 text-[0.82rem] font-extrabold text-slate-900' : 'font-bold text-slate-900 text-lg mb-4'}>Besoin d'aide ?</h2>
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, j\'ai une question sur mon abonnement Samay Këur.')}`}
-            target="_blank" rel="noopener noreferrer"
-            className={embedded ? 'flex items-center gap-2 rounded-lg border border-slate-200 p-2.5 transition hover:border-green-300 hover:bg-green-50' : 'flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-green-300 hover:bg-green-50 transition group'}>
-            <SupportLogo src={whatsappLogo} alt="WhatsApp" fallback="WA" className="h-10 w-10 flex-shrink-0 rounded-xl" />
-            <div>
-              <p className={embedded ? 'text-[0.72rem] font-semibold text-slate-900' : 'font-semibold text-slate-900 text-sm'}>WhatsApp Business</p>
-              <p className={embedded ? 'text-[0.64rem] text-slate-400' : 'text-xs text-slate-400'}>+221 76 901 09 60 · Réponse rapide</p>
-            </div>
-          </a>
-          <a href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Question abonnement Samay Këur')}`}
-            className={embedded ? 'flex items-center gap-2 rounded-lg border border-slate-200 p-2.5 transition hover:border-blue-300 hover:bg-blue-50' : 'flex items-center gap-3 p-4 rounded-xl border border-slate-200 hover:border-blue-300 hover:bg-blue-50 transition group'}>
-            <SupportLogo src={gmailLogo} alt="Gmail" fallback="GM" className="h-10 w-10 flex-shrink-0 rounded-xl" />
-            <div>
-              <p className={embedded ? 'text-[0.72rem] font-semibold text-slate-900' : 'font-semibold text-slate-900 text-sm'}>Gmail</p>
-              <p className={embedded ? 'text-[0.64rem] text-slate-400' : 'text-xs text-slate-400'}>{CONTACT_EMAIL}</p>
-            </div>
-          </a>
+        <div className="sk-premium-panel p-5 sm:p-6">
+          <h2 className="mb-4 text-lg font-bold text-slate-900">Besoin d'aide ?</h2>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <a
+              href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent("Bonjour, j'ai une question sur mon abonnement Samay Këur.")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-green-300 hover:bg-green-50"
+            >
+              <SupportLogo src={whatsappLogo} alt="WhatsApp" fallback="WA" className="h-10 w-10 flex-shrink-0 rounded-xl" />
+              <div>
+                <p className="text-sm font-semibold text-slate-900">WhatsApp Business</p>
+                <p className="text-xs text-slate-400">+221 76 901 09 60 · Réponse rapide</p>
+              </div>
+            </a>
+            <a
+              href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Question abonnement Samay Këur')}`}
+              className="group flex items-center gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-blue-300 hover:bg-blue-50"
+            >
+              <SupportLogo src={gmailLogo} alt="Gmail" fallback="GM" className="h-10 w-10 flex-shrink-0 rounded-xl" />
+              <div>
+                <p className="text-sm font-semibold text-slate-900">Email</p>
+                <p className="text-xs text-slate-400">{CONTACT_EMAIL}</p>
+              </div>
+            </a>
+          </div>
         </div>
-      </div>
       )}
 
       {/* ── Modal changement de plan ── */}
       {upgradeOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand-950/68 p-0 backdrop-blur-md sm:items-center sm:p-4"
-          onClick={() => setUpgradeOpen(false)}>
-          <div className="w-full max-w-lg overflow-hidden rounded-t-3xl border border-emerald-950/10 bg-[#fffdf8] shadow-2xl shadow-emerald-950/20 sm:rounded-3xl"
-            onClick={(e) => e.stopPropagation()}>
-            <div className="border-b border-emerald-950/10 bg-white/78 px-4 py-3">
-              <p className="text-[0.58rem] font-black uppercase tracking-[0.16em] text-emerald-800">Facturation</p>
-              <div className="mt-0.5 flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="text-[1rem] font-extrabold text-slate-950">Changer de plan</h3>
-                  <p className="mt-0.5 text-[0.7rem] font-semibold leading-4 text-slate-500">
-                    Choisissez une capacité puis confirmez le paiement sécurisé.
-                  </p>
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-brand-950/70 p-0 backdrop-blur-md sm:items-center sm:p-4"
+          onClick={() => setUpgradeOpen(false)}
+        >
+          <div
+            className="w-full max-w-2xl overflow-hidden rounded-t-3xl border border-emerald-950/15 bg-gradient-to-b from-[#fffefb] to-white shadow-2xl shadow-emerald-950/30 sm:rounded-3xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header premium */}
+            <div className="border-b border-emerald-950/10 bg-gradient-to-r from-emerald-950/[0.04] via-transparent to-transparent px-6 py-4.5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-800 to-emerald-950 text-white shadow-md">
+                    <Crown className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-emerald-800">FACTURATION & PLAN</p>
+                    <h3 className="text-lg font-black tracking-tight text-slate-950">Changer de plan</h3>
+                    <p className="mt-0.5 text-xs font-medium text-slate-600">
+                      Sélectionnez la capacité adaptée à votre croissance. Le paiement s'effectue en ligne via nos partenaires sécurisés.
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => setUpgradeOpen(false)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-950/10 bg-white text-slate-500 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-950/10 bg-white text-slate-500 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
                   aria-label="Fermer le changement de plan"
                 >
                   ×
                 </button>
               </div>
             </div>
-            <div className="space-y-2 px-4 py-3">
-              <div className="rounded-xl border border-emerald-950/10 bg-white/80 px-3 py-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-[0.54rem] font-black uppercase tracking-[0.14em] text-slate-500">Plan actuel</p>
-                    <p className="text-[0.8rem] font-extrabold text-slate-950">{displayedPlanName}</p>
+
+            <div className="space-y-4 p-6">
+              {/* Carte Plan Actuel */}
+              <div className="rounded-2xl border border-emerald-900/15 bg-gradient-to-r from-emerald-50/70 to-emerald-50/20 p-3.5 shadow-2xs">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-3 w-3 rounded-full bg-emerald-600 ring-4 ring-emerald-600/20" />
+                    <div>
+                      <p className="text-[0.6rem] font-black uppercase tracking-[0.14em] text-emerald-800">VOTRE PLAN ACTUEL</p>
+                      <p className="text-sm font-black text-slate-950">{displayedPlanName}</p>
+                    </div>
                   </div>
-                  <p className="text-[0.68rem] font-bold text-slate-500">
-                    {catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)}/mois` : 'Sur devis'}
-                  </p>
+                  <div className="text-right">
+                    <span className="rounded-full border border-emerald-600/30 bg-emerald-600/10 px-2.5 py-0.5 text-[0.68rem] font-extrabold text-emerald-900">
+                      {catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)}/mois` : 'Sur devis'}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div className="grid gap-2 sm:grid-cols-2">
+
+              {/* Grille des plans */}
+              <div className="grid gap-3 sm:grid-cols-2">
                 {PLAN_CATALOG.map((plan) => {
                   const Icon = plan.icon;
                   const isCurr = currentPlanId === plan.id;
                   return (
-                    <button key={plan.id} disabled={isCurr}
+                    <button
+                      key={plan.id}
+                      disabled={isCurr}
                       onClick={() => {
                         setUpgradeOpen(false);
                         if (plan.id === 'enterprise') {
@@ -793,35 +828,68 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                           openPayment(plan.id);
                         }
                       }}
-                      className="min-w-0 rounded-xl border p-2.5 text-left transition disabled:cursor-default disabled:opacity-70 hover:enabled:-translate-y-0.5 hover:enabled:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
-                      style={{ borderColor: isCurr ? plan.color : '#E2E8F0', backgroundColor: isCurr ? plan.color + '08' : 'white' }}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex min-w-0 items-center gap-2">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: plan.color + '18' }}>
-                            <Icon className="h-4 w-4" style={{ color: plan.color }} />
+                      className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-4 text-left transition ${
+                        isCurr
+                          ? 'cursor-default border-emerald-700/30 bg-emerald-50/40 shadow-xs'
+                          : 'border-slate-200/90 bg-white hover:-translate-y-0.5 hover:border-emerald-600/50 hover:shadow-lg'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <div
+                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-2xs transition group-hover:scale-105"
+                              style={{ backgroundColor: plan.color + '18' }}
+                            >
+                              <Icon className="h-5 w-5" style={{ color: plan.color }} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-slate-950">{plan.name}</p>
+                              <p className="text-xs font-extrabold" style={{ color: plan.color }}>
+                                {plan.price_xof > 0 ? `${formatCurrency(plan.price_xof)}/mois` : 'Sur devis'}
+                              </p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-[0.76rem] font-extrabold text-slate-950">{plan.name}</p>
-                            <p className="text-[0.64rem] font-semibold" style={{ color: plan.color }}>
-                              {plan.price_xof > 0 ? formatCurrency(plan.price_xof) + '/mois' : 'Sur devis'}
-                            </p>
-                          </div>
+                          {isCurr ? (
+                            <span
+                              className="rounded-full px-2 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.08em] text-white shadow-2xs"
+                              style={{ backgroundColor: plan.color }}
+                            >
+                              Actuel
+                            </span>
+                          ) : (
+                            <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-100 bg-slate-50 text-slate-400 transition group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700">
+                              <ArrowUpRight className="h-4 w-4" />
+                            </span>
+                          )}
                         </div>
-                        {isCurr
-                          ? <span className="rounded-full px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-[0.08em] text-white" style={{ backgroundColor: plan.color }}>Actuel</span>
-                          : <ChevronRight className="mt-1 h-3.5 w-3.5 shrink-0 text-slate-300" />}
                       </div>
-                      <div className="mt-2 grid grid-cols-3 gap-1 text-[0.54rem] font-bold text-slate-500">
-                        <span className="truncate rounded-md bg-slate-50 px-1.5 py-1">{plan.max_users === -1 ? 'Util. +' : `${plan.max_users} util.`}</span>
-                        <span className="truncate rounded-md bg-slate-50 px-1.5 py-1">{plan.max_unites === -1 ? 'Unités +' : `${plan.max_unites} unités`}</span>
-                        <span className="truncate rounded-md bg-slate-50 px-1.5 py-1">{plan.storage_gb === -1 ? 'Stockage +' : `${plan.storage_gb} Go`}</span>
+
+                      <div className="mt-4 grid grid-cols-3 gap-1.5 pt-3 border-t border-slate-100">
+                        <div className="rounded-lg bg-slate-50/80 px-2 py-1.5 text-center">
+                          <p className="text-[0.56rem] font-bold uppercase tracking-wider text-slate-400">Collaborateurs</p>
+                          <p className="text-xs font-black text-slate-800">{plan.max_users === -1 ? 'Illimitées' : `${plan.max_users}`}</p>
+                        </div>
+                        <div className="rounded-lg bg-slate-50/80 px-2 py-1.5 text-center">
+                          <p className="text-[0.56rem] font-bold uppercase tracking-wider text-slate-400">Unités</p>
+                          <p className="text-xs font-black text-slate-800">{plan.max_unites === -1 ? 'Illimitées' : `${plan.max_unites}`}</p>
+                        </div>
+                        <div className="rounded-lg bg-slate-50/80 px-2 py-1.5 text-center">
+                          <p className="text-[0.56rem] font-bold uppercase tracking-wider text-slate-400">Stockage</p>
+                          <p className="text-xs font-black text-slate-800">{plan.storage_gb === -1 ? 'Illimitée' : `${plan.storage_gb} Go`}</p>
+                        </div>
                       </div>
                     </button>
                   );
                 })}
               </div>
-              <div className="rounded-xl border border-orange-200/70 bg-orange-50/70 px-3 py-2 text-[0.66rem] font-semibold leading-4 text-slate-600">
-                Activation après confirmation du paiement. Le paiement en ligne reste prioritaire ; le support valide les preuves manuelles.
+
+              {/* Note d'assistance bas */}
+              <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-950/10 bg-slate-50/80 px-4 py-3 text-xs font-medium text-slate-600">
+                <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-700" />
+                <span>
+                  Activation instantanée après confirmation du paiement en ligne. En cas de virement ou paiement manuel, notre support valide votre preuve sous 15 minutes.
+                </span>
               </div>
             </div>
           </div>

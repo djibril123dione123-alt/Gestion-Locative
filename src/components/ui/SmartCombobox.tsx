@@ -352,12 +352,12 @@ export function SmartCombobox({
   return (
     <div ref={wrapperRef} className={`relative min-w-0 ${className}`}>
       <div className="relative flex items-center">
-        <Search className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-emerald-800/60 ${isDense ? 'left-2.5 h-3 w-3' : 'left-3.5 h-4 w-4'}`} />
+        <Search className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-emerald-800/60 ${isCompact ? 'left-2.5 h-3.5 w-3.5' : 'left-3.5 h-4 w-4'}`} />
         <input
           ref={inputRef}
           type="text"
           disabled={disabled}
-          style={{ paddingLeft: isDense ? '2rem' : '2.5rem' }}
+          style={{ paddingLeft: isCompact ? '2rem' : '2.5rem' }}
           value={open ? query : (selectedOption ? selectedOption.label : query)}
           onChange={(event) => {
             setQuery(event.target.value);
@@ -380,7 +380,7 @@ export function SmartCombobox({
           aria-expanded={open}
           aria-controls="smart-combobox-listbox"
           aria-autocomplete="list"
-          className={`${isDense ? '!h-8 !min-h-8 py-0 rounded-lg !pl-8 !pr-7 text-xs leading-4 shadow-sm focus:ring-1' : isCompact ? '!h-11 !min-h-11 py-0 rounded-xl !pl-10 !pr-8 text-xs leading-4 shadow-sm focus:ring-2' : isWizard ? '!h-11 !min-h-11 py-0 rounded-xl !pl-10 !pr-9 text-xs leading-4 shadow-sm focus:ring-2' : '!h-12 rounded-2xl !pl-11 !pr-11 text-sm leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] focus:ring-4'} w-full min-w-0 border border-emerald-950/15 bg-[#fffdf8]/95 font-bold text-slate-800 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-emerald-600/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-300`}
+          className={`${isCompact ? '!h-8 !min-h-8 py-0 rounded-[0.6rem] !pl-8 !pr-7 text-xs leading-4 shadow-sm focus:ring-1' : isWizard ? '!h-11 !min-h-11 py-0 rounded-xl !pl-10 !pr-9 text-xs leading-4 shadow-sm focus:ring-2' : '!h-12 rounded-2xl !pl-11 !pr-11 text-sm leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] focus:ring-4'} w-full min-w-0 border border-emerald-950/15 bg-[#fffdf8]/95 font-bold text-slate-800 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-emerald-600/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-300`}
         />
         <button
           type="button"
@@ -391,9 +391,9 @@ export function SmartCombobox({
             if (!open) inputRef.current?.focus();
           }}
           aria-label={open ? 'Fermer la liste' : 'Ouvrir la liste'}
-          className={`absolute right-0 top-0 flex items-center justify-center text-slate-400 transition hover:bg-[#fff6df] hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 ${isDense ? 'h-8 w-7 rounded-r-lg' : isCompact ? '!h-11 !min-h-11 w-8 rounded-r-xl' : isWizard ? '!h-11 !min-h-11 w-8 rounded-r-xl' : 'h-12 w-11 rounded-r-2xl'}`}
+          className={`absolute right-0 top-0 flex items-center justify-center text-slate-400 transition hover:bg-[#fff6df] hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 ${isCompact ? '!h-8 !min-h-8 w-7 rounded-r-[0.6rem]' : isWizard ? '!h-11 !min-h-11 w-8 rounded-r-xl' : 'h-12 w-11 rounded-r-2xl'}`}
         >
-          <ChevronDown className={`${isDense ? 'h-3 w-3' : isCompact ? 'h-3.5 w-3.5' : 'h-4 w-4'} transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`${isCompact ? 'h-3 w-3' : 'h-4 w-4'} transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
         </button>
       </div>
       {menu}

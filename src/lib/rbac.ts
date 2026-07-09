@@ -58,6 +58,7 @@ export const PERMISSION_CATALOG: PermissionCatalogItem[] = [
   { id: 'abonnement', label: 'Abonnement', description: 'Plan, facturation SaaS et limites.', category: 'Administration', sensitive: true },
   { id: 'pricing', label: 'Tarifs', description: 'Plans et comparaison des offres.', category: 'Administration' },
   { id: 'documents/scan', label: 'Scanner un document', description: 'Vérification QR et référence documentaire.', category: 'Opérations terrain' },
+  { id: 'documents/studio', label: 'Studio documentaire', description: 'Modèles, clauses et versions publiées.', category: 'Administration', sensitive: true },
 ];
 
 const PAGE_ROLES: Record<string, UserRole[]> = {
@@ -83,6 +84,7 @@ const PAGE_ROLES: Record<string, UserRole[]> = {
   calendrier: ['admin', 'agent'],
   documents: ['admin', 'agent'],
   'documents/scan': ['admin', 'agent', 'comptable', 'bailleur'],
+  'documents/studio': ['admin'],
   audit: ['admin'],
   pricing: ['admin', 'agent', 'comptable', 'bailleur'],
 };

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Save,
   Upload,
@@ -389,6 +390,9 @@ const EMPTY_SETTINGS: Omit<SettingsState, 'agency_id'> = {
   devise: DEFAULT_AGENCY_SETTINGS.devise ?? 'XOF',
   pied_page_personnalise: DEFAULT_AGENCY_SETTINGS.pied_page_personnalise ?? '',
   signature_url: null,
+  stamp_url: null,
+  signature_enabled: false,
+  stamp_enabled: false,
   qr_code_quittances: true,
   mention_tribunal: DEFAULT_AGENCY_SETTINGS.mention_tribunal ?? '',
   mention_penalites: DEFAULT_AGENCY_SETTINGS.mention_penalites ?? '',
@@ -603,6 +607,7 @@ async function compressLogoFile(file: File): Promise<File> {
 }
 
 export function Parametres({ initialTab = 'general', embedded = false, embeddedMode = 'single' }: ParametresProps = {}) {
+  const navigate = useNavigate();
   const { profile, agency, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const { showToast, toasts, removeToast } = useToast();
@@ -616,6 +621,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   const [logoUploadState, setLogoUploadState] = useState<LogoUploadState>('idle');
   const [signaturePreview, setSignaturePreview] = useState<string>('');
   const [signatureUploadState, setSignatureUploadState] = useState<LogoUploadState>('idle');
+  const [stampPreview, setStampPreview] = useState<string>('');
+  const [stampUploadState, setStampUploadState] = useState<LogoUploadState>('idle');
   const [documentPreviewType, setDocumentPreviewType] = useState<DocumentPreviewType>('quittance');
 
   const getOwnerNameFallback = () => {
@@ -659,6 +666,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         setLastSavedSnapshot(JSON.stringify(nextSettings));
         setLogoPreview(data.logo_url ?? '');
         setSignaturePreview(data.signature_url ?? '');
+        setStampPreview(data.stamp_url ?? '');
       } else {
         const created = await createDefaultSettings(agencyId);
         if (created) {
@@ -666,6 +674,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
           setLastSavedSnapshot(JSON.stringify(created));
           setLogoPreview(created.logo_url ?? '');
           setSignaturePreview(created.signature_url ?? '');
+          setStampPreview(created.stamp_url ?? '');
         }
       }
     } catch (err) {
@@ -795,6 +804,9 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         penalite_retard_delai_jours: settings.penalite_retard_delai_jours ?? 3,
         devise: settings.devise ?? 'XOF',
         signature_url: settings.signature_url ?? null,
+        stamp_url: settings.stamp_url ?? null,
+        signature_enabled: settings.signature_enabled ?? false,
+        stamp_enabled: settings.stamp_enabled ?? false,
         qr_code_quittances: settings.qr_code_quittances ?? true,
         commission_personnalisee_par_bailleur: settings.commission_personnalisee_par_bailleur ?? false,
         mode_avance_actif: settings.mode_avance_actif ?? false,
@@ -850,6 +862,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
       setLastSavedSnapshot(JSON.stringify(savedData));
       setLogoPreview(savedData.logo_url ?? '');
       setSignaturePreview(savedData.signature_url ?? '');
+      setStampPreview(savedData.stamp_url ?? '');
       invalidateAgencySettingsCache(profile.agency_id);
       showToast('Paramètres enregistrés avec succès', 'success');
       if (embedded) {
@@ -1086,6 +1099,100 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
       console.error('Erreur suppression signature:', msg);
       setSignatureUploadState('idle');
       showToast(`Erreur suppression signature : ${msg}`, 'error');
+    }
+  };
+
+  const uploadStampFile = async (file: File) => {
+    if (!file || !profile?.agency_id || !settings) return;
+    const validationError = validateLogoFile(file);
+    if (validationError) {
+      showToast(validationError, 'error');
+      return;
+    }
+
+    const previousPreview = stampPreview;
+    const previousStampUrl = settings.stamp_url;
+    const localPreview = URL.createObjectURL(file);
+    setStampPreview(localPreview);
+    setStampUploadState('preview');
+
+    try {
+      setStampUploadState('uploading');
+      const uploadFile = await compressLogoFile(file);
+      const fileName = `stamp-${Date.now()}.${getLogoExtension(uploadFile)}`;
+      const filePath = `${profile.agency_id}/stamps/${fileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from(AGENCY_ASSETS_BUCKET)
+        .upload(filePath, uploadFile, {
+          cacheControl: '31536000',
+          contentType: uploadFile.type,
+          upsert: false,
+        });
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrl } = supabase.storage.from(AGENCY_ASSETS_BUCKET).getPublicUrl(filePath);
+      const versionedStampUrl = `${publicUrl.publicUrl}?v=${Date.now()}`;
+      const { data: savedSettings, error: updateError } = await supabase
+        .from('agency_settings')
+        .update({ stamp_url: versionedStampUrl })
+        .eq('agency_id', profile.agency_id)
+        .select()
+        .maybeSingle();
+      if (updateError || !savedSettings) {
+        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([filePath]);
+        throw updateError ?? new Error('La sauvegarde du cachet a été refusée.');
+      }
+
+      const oldAssetPath = extractAgencyAssetPath(previousStampUrl, profile.agency_id);
+      if (oldAssetPath && oldAssetPath !== filePath) {
+        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([oldAssetPath]);
+      }
+
+      setSettings(savedSettings as SettingsState);
+      setLastSavedSnapshot(JSON.stringify(savedSettings));
+      setStampPreview(versionedStampUrl);
+      setStampUploadState('done');
+      invalidateAgencySettingsCache(profile.agency_id);
+      showToast('Cachet officiel sauvegardé.', 'success');
+    } catch (error) {
+      setStampPreview(previousPreview);
+      setStampUploadState('idle');
+      showToast(`Erreur upload cachet : ${error instanceof Error ? error.message : String(error)}`, 'error');
+    } finally {
+      URL.revokeObjectURL(localPreview);
+    }
+  };
+
+  const handleStampUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) await uploadStampFile(file);
+    event.target.value = '';
+  };
+
+  const handleStampRemove = async () => {
+    if (!profile?.agency_id || !settings?.stamp_url) return;
+    const previousStampUrl = settings.stamp_url;
+    setStampUploadState('uploading');
+    try {
+      const { data: savedSettings, error } = await supabase
+        .from('agency_settings')
+        .update({ stamp_url: null, stamp_enabled: false })
+        .eq('agency_id', profile.agency_id)
+        .select()
+        .maybeSingle();
+      if (error || !savedSettings) throw error ?? new Error('La suppression du cachet a été refusée.');
+
+      const oldAssetPath = extractAgencyAssetPath(previousStampUrl, profile.agency_id);
+      if (oldAssetPath) await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([oldAssetPath]);
+      setSettings(savedSettings as SettingsState);
+      setLastSavedSnapshot(JSON.stringify(savedSettings));
+      setStampPreview('');
+      setStampUploadState('idle');
+      invalidateAgencySettingsCache(profile.agency_id);
+      showToast('Cachet retiré des prochains documents.', 'success');
+    } catch (error) {
+      setStampUploadState('idle');
+      showToast(`Erreur suppression cachet : ${error instanceof Error ? error.message : String(error)}`, 'error');
     }
   };
 
@@ -1330,6 +1437,16 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   <DocumentSignal label="Signature" ready={Boolean(signaturePreview || settings.signature_url)} />
                   <DocumentSignal label="Mentions" ready={Boolean(settings.mention_tribunal || settings.pied_page_personnalise)} />
                 </div>
+                <PremiumButton
+                  variant="primary"
+                  size="sm"
+                  fullWidth
+                  className="mt-2"
+                  onClick={() => navigate('/documents/studio')}
+                  icon={<FileText className="h-3.5 w-3.5" />}
+                >
+                  Ouvrir le Studio des modèles
+                </PremiumButton>
               </section>
 
               <SettingsInfoCard title="Mentions officielles" eyebrow="REGISTRE" icon={FileText}>
@@ -2140,27 +2257,6 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   </label>
                   <input
                     type="text"
-
-                {!isIndividualOwner && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    {isIndividualOwner ? 'Nom du propriétaire' : 'Nom du représentant'}
-                  </label>
-                  <input aria-label="Champ de saisie"
-                    type="text"
-                    value={settings.representant_nom ?? ''}
-                    onChange={(e) => setSettings({ ...settings, representant_nom: e.target.value })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  />
-                </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    {isIndividualOwner ? 'Qualité sur les documents' : 'Fonction du représentant'}
-                  </label>
-                  <input
-                    type="text"
                     value={settings.representant_fonction ?? ''}
                     onChange={(e) =>
                       setSettings({ ...settings, representant_fonction: e.target.value })
@@ -2435,7 +2531,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-3">
-                  Signature / cachet documentaire
+                  Signature documentaire
                 </label>
                 <div className="flex items-start gap-6">
                   <div className="flex-1">
@@ -2466,11 +2562,11 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                               {signatureUploadState === 'uploading'
                                 ? 'Upload de la signature en cours...'
                                 : signaturePreview
-                                  ? 'Signature / cachet configuré'
+                                  ? 'Signature configurée'
                                   : 'Glissez la signature ici ou cliquez pour uploader'}
                             </p>
                             <p className="text-xs font-medium text-slate-500">
-                              PNG transparent conseillé. Utilisé sur contrats, mandats et zones de signature.
+                              PNG transparent conseillé. Insertion contrôlée par chaque modèle publié.
                             </p>
                           </div>
                         </div>
@@ -2480,7 +2576,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
                   {signaturePreview && (
                     <div className="flex-shrink-0">
-                      <p className="text-sm font-medium text-slate-700 mb-2">Aperçu cachet</p>
+                      <p className="text-sm font-medium text-slate-700 mb-2">Aperçu signature</p>
                       <div className="flex h-24 w-40 items-center justify-center rounded-2xl border border-emerald-100 bg-white p-3 shadow-inner">
                         <SafeLogoImage
                           src={signaturePreview}
@@ -2497,6 +2593,68 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                         Retirer
                       </button>
                     </div>
+                  )}
+                </div>
+                <label className="mt-2 inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(settings.signature_enabled)}
+                    onChange={(event) => setSettings({ ...settings, signature_enabled: event.target.checked })}
+                    className="h-4 w-4 accent-emerald-800"
+                  />
+                  Autoriser l'insertion de la signature dans les modèles publiés
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-3">Cachet officiel</label>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                  <label className="block min-w-0 flex-1">
+                    <div className="group rounded-2xl border border-dashed border-emerald-200 bg-white p-4 shadow-sm transition hover:border-orange-300">
+                      <input
+                        type="file"
+                        accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
+                        onChange={handleStampUpload}
+                        className="hidden"
+                      />
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-xl bg-[#fffdf8] p-2 text-emerald-800 ring-1 ring-emerald-100">
+                          {stampUploadState === 'uploading' ? (
+                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-200 border-t-orange-500" />
+                          ) : stampPreview ? (
+                            <SafeLogoImage src={stampPreview} alt="Cachet officiel" className="max-h-full max-w-full object-contain" />
+                          ) : (
+                            <Upload className="h-5 w-5" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-slate-900">{stampPreview ? 'Cachet configuré' : 'Ajouter le cachet'}</p>
+                          <p className="text-xs font-medium text-slate-500">Fichier distinct de la signature, idéalement détouré et transparent.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </label>
+                  {stampPreview && (
+                    <div className="flex h-24 w-40 items-center justify-center rounded-2xl border border-emerald-100 bg-white p-3 shadow-inner">
+                      <SafeLogoImage src={stampPreview} alt="Cachet officiel" className="max-h-full max-w-full object-contain" />
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(settings.stamp_enabled)}
+                      disabled={!stampPreview}
+                      onChange={(event) => setSettings({ ...settings, stamp_enabled: event.target.checked })}
+                      className="h-4 w-4 accent-emerald-800"
+                    />
+                    Autoriser l'insertion du cachet
+                  </label>
+                  {stampPreview && (
+                    <button type="button" onClick={handleStampRemove} className="text-xs font-black text-red-700 hover:underline">
+                      Retirer le cachet
+                    </button>
                   )}
                 </div>
               </div>

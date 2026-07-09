@@ -639,12 +639,12 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         </section>
       )}
 
-      <PremiumKpiGrid columns={5} mobileColumns={2}>
-        <MetricCard label="Membres actifs" value={stats.activeMembers} helper={`${stats.inactiveMembers} inactif(s)`} icon={UsersIcon} />
-        <MetricCard label="Invitations" value={stats.pendingInvitations} helper="En attente" icon={Mail} tone="orange" />
-        <MetricCard label="Accès restreints" value={stats.restrictedMembers} helper={`${stats.customMembers} personnalisé(s)`} icon={Lock} tone="emerald" />
-        <MetricCard label="RBAC" value="Actif" helper="Rôle + page" icon={ShieldCheck} tone="emerald" />
-        <MetricCard label="Plan" value={userUsageLabel} helper={planDefinition.name} icon={KeyRound} tone={canInviteMore ? 'brand' : 'orange'} />
+      <PremiumKpiGrid variant="dashboard" maxItems={5} density="ultraCompact">
+        <MetricCard density="ultraCompact" label="Membres actifs" value={stats.activeMembers} helper={`${stats.inactiveMembers} inactif(s)`} icon={UsersIcon} />
+        <MetricCard density="ultraCompact" label="Invitations" value={stats.pendingInvitations} helper="En attente" icon={Mail} tone="warning" />
+        <MetricCard density="ultraCompact" label="Accès restreints" value={stats.restrictedMembers} helper={`${stats.customMembers} personnalisé(s)`} icon={Lock} tone="success" />
+        <MetricCard density="ultraCompact" label="RBAC" value="Actif" helper="Rôle + page" icon={ShieldCheck} tone="success" />
+        <MetricCard density="ultraCompact" label="Plan" value={userUsageLabel} helper={planDefinition.name} icon={KeyRound} tone={canInviteMore ? 'financial' : 'warning'} />
       </PremiumKpiGrid>
 
       <section className={embedded ? 'overflow-hidden rounded-xl border border-emerald-950/10 bg-white/88 shadow-sm' : 'sk-premium-panel overflow-hidden'}>
@@ -1165,7 +1165,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                             </div>
                             <div className="w-44">
                               <SmartCombobox
-                                isDense
+                                density="dense"
                                 disabled={!moduleEnabled}
                                 value={draft.access_level}
                                 options={[
@@ -1332,41 +1332,6 @@ function SecurityGuardCard({
         <div className="min-w-0">
           <p className="text-[0.72rem] font-extrabold text-slate-950">{title}</p>
           <p className="mt-0.5 text-[0.62rem] font-semibold leading-4 text-slate-500">{description}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MetricCard({
-  label,
-  value,
-  helper,
-  icon: Icon,
-  tone = 'brand',
-}: {
-  label: string;
-  value: number | string;
-  helper?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  tone?: 'brand' | 'orange' | 'emerald';
-}) {
-  const toneClass =
-    tone === 'orange'
-      ? 'bg-orange-50 text-orange-700'
-      : tone === 'emerald'
-        ? 'bg-emerald-50 text-emerald-700'
-        : 'bg-brand-50 text-brand-800';
-  return (
-    <div className="rounded-xl border border-emerald-950/10 bg-white/88 px-2.5 py-1.5 shadow-sm">
-      <div className="flex items-center justify-between gap-2.5">
-        <div>
-          <p className="text-[0.52rem] font-black uppercase tracking-[0.13em] text-slate-500">{label}</p>
-          <p className="mt-0.5 text-[1rem] font-extrabold text-slate-950">{value}</p>
-          {helper ? <p className="text-[0.58rem] font-semibold text-slate-500">{helper}</p> : null}
-        </div>
-        <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${toneClass}`}>
-          <Icon className="h-3 w-3" />
         </div>
       </div>
     </div>

@@ -11,9 +11,7 @@ import {
   Database,
   FileText,
   LayoutDashboard,
-  LifeBuoy,
   LockKeyhole,
-  Mail,
   ShieldCheck,
   SlidersHorizontal,
   Users,
@@ -27,6 +25,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { getPricingPlan } from '../lib/pricingCatalog';
 import type { AgencySettings } from '../types/agency';
+import gmailLogo from '../assets/support/gmail.png';
+import whatsappLogo from '../assets/support/whatsapp.jpg';
 
 const Parametres = lazy(() => import('./Parametres').then((m) => ({ default: m.Parametres })));
 const Equipe = lazy(() => import('./Equipe').then((m) => ({ default: m.Equipe })));
@@ -714,18 +714,38 @@ function ControlCard({
   );
 }
 
-function PanelCard({ title, eyebrow, children, icon }: { title: string; eyebrow: string; children: ReactNode; icon: ComponentType<{ className?: string }> }) {
+function PanelCard({
+  title,
+  eyebrow,
+  children,
+  icon,
+  logoSrc,
+  logoAlt,
+}: {
+  title: string;
+  eyebrow: string;
+  children: ReactNode;
+  icon?: ComponentType<{ className?: string }>;
+  logoSrc?: string;
+  logoAlt?: string;
+}) {
   const Icon = icon;
   return (
-    <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm">
-      <div className="flex items-start gap-2">
-        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
-          <Icon className="h-2.5 w-2.5" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">{eyebrow}</p>
-          <h3 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">{title}</h3>
-          <div className="mt-1 text-[0.64rem] font-medium leading-[0.88rem] text-slate-600">{children}</div>
+    <section className="rounded-xl border border-emerald-950/10 bg-white/90 p-3 shadow-sm transition hover:shadow-md">
+      <div className="flex items-start gap-2.5">
+        {logoSrc ? (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200/80 bg-white p-1 shadow-2xs">
+            <img src={logoSrc} alt={logoAlt ?? title} className="h-full w-full object-contain" />
+          </div>
+        ) : Icon ? (
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+            <Icon className="h-3.5 w-3.5" />
+          </div>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <p className="text-[0.48rem] font-black uppercase tracking-[0.14em] text-emerald-700">{eyebrow}</p>
+          <h3 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">{title}</h3>
+          <div className="mt-1 text-[0.68rem] font-medium leading-4 text-slate-600">{children}</div>
         </div>
       </div>
     </section>
@@ -761,16 +781,24 @@ function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isI
         </PanelCard>
       </div>
 
-      <div className="grid gap-2 lg:grid-cols-2">
-        <PanelCard title="Support WhatsApp" eyebrow="ASSISTANCE" icon={LifeBuoy}>
+      <div className="grid gap-2.5 lg:grid-cols-2">
+        <PanelCard title="Support WhatsApp" eyebrow="ASSISTANCE" logoSrc={whatsappLogo} logoAlt="WhatsApp">
           <p>Canal rapide pour abonnement, incident bloquant ou accompagnement commercial.</p>
-          <a href="https://wa.me/221769010960" target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex text-[0.68rem] font-extrabold text-emerald-800 underline-offset-2 hover:underline">
+          <a
+            href="https://wa.me/221769010960"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-emerald-600/30 bg-emerald-50/90 px-3 py-1.5 text-[0.72rem] font-extrabold text-emerald-950 shadow-2xs transition hover:bg-emerald-100/90 hover:border-emerald-600/50"
+          >
             Contacter WhatsApp
           </a>
         </PanelCard>
-        <PanelCard title="Email support" eyebrow="CONTACT" icon={Mail}>
+        <PanelCard title="Email support" eyebrow="CONTACT" logoSrc={gmailLogo} logoAlt="Gmail">
           <p>Canal de suivi administratif, preuve de paiement manuel et demande non urgente.</p>
-          <a href="mailto:samaykeur@gmail.com" className="mt-2 inline-flex text-[0.68rem] font-extrabold text-emerald-800 underline-offset-2 hover:underline">
+          <a
+            href="mailto:samaykeur@gmail.com"
+            className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.72rem] font-extrabold text-slate-800 shadow-2xs transition hover:bg-slate-50 hover:border-slate-300"
+          >
             samaykeur@gmail.com
           </a>
         </PanelCard>

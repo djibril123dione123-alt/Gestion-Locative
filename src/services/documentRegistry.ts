@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { assertCanUploadDocument, type RetentionPolicy } from './documentStorage';
+import type { ResolvedDocumentTemplate } from '../types/documentStudio';
 
 export type ManagedDocumentType =
   | 'contrat'
@@ -29,6 +30,10 @@ export interface DocumentRegistryEntry {
   file_size: number;
   mime_type: string;
   metadata?: Record<string, unknown>;
+  template_revision_id?: string | null;
+  template_checksum?: string | null;
+  renderer_version?: string | null;
+  asset_checksums?: Record<string, string>;
 }
 
 export interface ManagedDocumentSaveInput {
@@ -42,6 +47,11 @@ export interface ManagedDocumentSaveInput {
   mimeType?: string;
   metadata?: Record<string, unknown>;
   retentionPolicy?: RetentionPolicy;
+  template?: Pick<
+    ResolvedDocumentTemplate,
+    'revisionId' | 'checksum' | 'rendererVersion' | 'catalogVersion' | 'source'
+  >;
+  assetUrls?: Record<string, string | null | undefined>;
 }
 
 export interface ManagedDocumentSaveResult {
@@ -114,6 +124,22 @@ async function sha256String(value: string): Promise<string> {
 
 async function sha256Blob(blob: Blob): Promise<string> {
   return sha256Bytes(await blob.arrayBuffer());
+}
+
+async function checksumDocumentAssets(assetUrls?: ManagedDocumentSaveInput['assetUrls']) {
+  const checksums: Record<string, string> = {};
+  for (const [key, url] of Object.entries(assetUrls ?? {})) {
+    if (!url) continue;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`ASSET_HTTP_${response.status}`);
+      checksums[key] = await sha256Blob(await response.blob());
+    } catch {
+      // The URL fingerprint still makes a visual identity change produce a new version.
+      checksums[key] = await sha256String(url);
+    }
+  }
+  return checksums;
 }
 
 function sanitizePathSegment(value: string): string {
@@ -214,7 +240,12 @@ export async function saveManagedDocument(
   if (!context) return null;
 
   const { period } = resolvePeriodParts(input.period);
-  const dataHash = await sha256String(stableStringify(input.data));
+  const assetChecksums = await checksumDocumentAssets(input.assetUrls);
+  const dataHash = await sha256String(stableStringify({
+    data: input.data,
+    templateChecksum: input.template?.checksum ?? null,
+    assetChecksums,
+  }));
   const latest = await getLatestEntry({
     agencyId: context.agencyId,
     documentType: input.documentType,
@@ -296,8 +327,14 @@ export async function saveManagedDocument(
       mime_type: input.mimeType ?? input.blob.type ?? 'application/pdf',
       metadata: {
         file_name: input.fileName,
+        template_catalog_version: input.template?.catalogVersion,
+        template_source: input.template?.source,
         ...(input.metadata ?? {}),
       },
+      template_revision_id: input.template?.revisionId ?? null,
+      template_checksum: input.template?.checksum ?? null,
+      renderer_version: input.template?.rendererVersion ?? null,
+      asset_checksums: assetChecksums,
     })
     .select('*')
     .single();

@@ -153,14 +153,6 @@ const LOCATION_WIZARD_STEPS: WizardStep[] = [
   { id: 'resume', label: 'Validation' },
 ];
 
-const DESTINATION_OPTIONS: SmartComboboxOption[] = [
-  { value: 'Habitation', label: 'Habitation', subtitle: 'Appartement, maison, studio', badge: 'Résidentiel' },
-  { value: 'Commerce', label: 'Commerce', subtitle: 'Boutique, point de vente', badge: 'Pro' },
-  { value: 'Bureau', label: 'Bureau', subtitle: 'Usage professionnel', badge: 'Pro' },
-  { value: 'Entrepôt', label: 'Entrepôt', subtitle: 'Stockage et activité logistique', badge: 'Pro' },
-  { value: 'Parking', label: 'Parking', subtitle: 'Place de stationnement', badge: 'Simple' },
-];
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function fullName(row: OccupantBailRow): string {
@@ -2212,21 +2204,6 @@ function CompactLabelValue({ label, value }: { label: string; value: ReactNode |
   );
 }
 
-function MiniMetric({ label, value, tone = 'slate' }: { label: string; value: ReactNode; tone?: 'emerald' | 'amber' | 'red' | 'slate' }) {
-  const toneClass = {
-    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-    amber: 'border-amber-200 bg-amber-50 text-amber-900',
-    red: 'border-red-200 bg-red-50 text-red-800',
-    slate: 'border-emerald-950/10 bg-white text-slate-950',
-  }[tone];
-
-  return (
-    <div className={`@container rounded-2xl border p-3 shadow-[0_10px_26px_rgba(15,23,42,0.035)] ${toneClass}`}>
-      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-slate-400">{label}</p>
-      <p className="mt-1 whitespace-nowrap text-sm font-black text-current">{value}</p>
-    </div>
-  );
-}
 function DrawerEmpty({
   icon: Icon,
   title,

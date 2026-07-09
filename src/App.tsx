@@ -53,6 +53,7 @@ const Interventions = lazy(() => import('./pages/Interventions').then(m => ({ de
 const Calendrier = lazy(() => import('./pages/Calendrier').then(m => ({ default: m.Calendrier })));
 const Documents = lazy(() => import('./pages/Documents').then(m => ({ default: m.Documents })));
 const DocumentScanner = lazy(() => import('./pages/DocumentScanner').then(m => ({ default: m.DocumentScanner })));
+const DocumentStudio = lazy(() => import('./pages/DocumentStudio').then(m => ({ default: m.DocumentStudio })));
 const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation').then(m => ({ default: m.AcceptInvitation })));
 const AuditDashboard = lazy(() => import('./pages/AuditDashboard').then(m => ({ default: m.AuditDashboard })));
 const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
@@ -94,6 +95,7 @@ const PAGE_LABELS: Record<string, string> = {
     calendrier: 'Calendrier',
     documents: 'Documents',
     'documents/scan': 'Scanner un document',
+    'documents/studio': 'Studio documentaire',
     audit: 'Control Tower',
     pricing: 'Tarifs',
 };
@@ -533,6 +535,8 @@ function AppContent() {
                 return <Documents />;
             case 'documents/scan':
                 return <DocumentScanner />;
+            case 'documents/studio':
+                return <DocumentStudio />;
             case 'audit':
                 return <AuditDashboard />;
             case 'pricing':

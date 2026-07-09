@@ -40,10 +40,10 @@ export function ColumnPicker({ columns, visibility, onToggle, onSetAll, classNam
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className={`inline-flex items-center whitespace-nowrap gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-900 text-sm font-bold transition shadow-sm focus:outline-none focus:ring-4 focus:ring-brand-400/15 ${className || ''}`}
+        className={`inline-flex !h-8 !min-h-8 items-center whitespace-nowrap gap-1.5 px-2.5 py-0 rounded-[0.6rem] border border-slate-200 bg-white text-slate-700 hover:border-emerald-200 hover:bg-emerald-50 text-xs font-bold transition shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-600/15 ${className || ''}`}
         title="Afficher/masquer les colonnes"
       >
-        <Columns className="w-4 h-4" />
+        <Columns className="w-3.5 h-3.5" />
         <span className="hidden sm:inline">Colonnes</span>
       </button>
 

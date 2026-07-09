@@ -68,6 +68,10 @@ import {
   type BailleurLifecycleImpacts,
 } from '../services/api/bailleurApi';
 import type { AgencySettings } from '../types/agency';
+import {
+  allocateDocumentReference,
+  resolvePublishedDocumentTemplate,
+} from '../services/documentTemplateService';
 import { PageShell } from '../components/ui/PageShell';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
@@ -1098,8 +1102,28 @@ export function Bailleurs() {
         is_bailleur_account: accountProfile.isIndividualOwner,
         organization_type: accountProfile.type,
       };
+      const reportTemplateType = accountProfile.isIndividualOwner ? 'rapport_proprietaire' : 'rapport_bailleur';
+      const reportTemplate = await resolvePublishedDocumentTemplate(reportTemplateType, settings.agency_id);
+      settings.document_preferences = {
+        ...(settings.document_preferences ?? {}),
+        header_style: reportTemplate.content.style.header,
+        show_document_number: reportTemplate.content.style.showDocumentNumber,
+      };
+      if (!reportTemplate.content.style.showLogo) settings.logo_url = null;
+      const enabledReportSections = new Set(
+        reportTemplate.content.blocks
+          .filter((block) => block.enabled && block.systemKey)
+          .map((block) => block.systemKey),
+      );
       const periodLabel = formatMonthLabel(reportMonth);
-      const reportRef = `RBL-${reportMonth}-${bailleur.id.slice(0, 8).toUpperCase()}`;
+      const reportRef = await allocateDocumentReference({
+        documentType: reportTemplateType,
+        entityId: bailleur.id,
+        periodKey: reportMonth,
+        format: settings.document_preferences?.numbering_format,
+        prefix: settings.document_preferences?.prefixes?.rapport ?? 'RPT',
+        fallback: `RBL-${reportMonth}-${bailleur.id.slice(0, 8).toUpperCase()}`,
+      });
       const reportTitle = accountProfile.isIndividualOwner ? 'Résumé mensuel propriétaire' : 'Rapport mensuel bailleur';
       const netLabel = accountProfile.isIndividualOwner ? 'Revenus nets' : 'Net à reverser';
       const tableTheme = getAutoTableTheme(settings);
@@ -1144,12 +1168,26 @@ export function Bailleurs() {
       };
 
       sectionTitle('Indicateurs du mois', `Période analysée : ${periodLabel}`);
+      const indicatorItems: Array<[string, string]> = [
+        ...(enabledReportSections.has('collections') ? [['Loyers encaissés', formatCurrency(totalLoyers)] as [string, string]] : []),
+        ...(enabledReportSections.has('arrears') ? [['Reliquats à suivre', formatCurrency(totalReliquats)] as [string, string]] : []),
+        ...(enabledReportSections.has('commissions') && !accountProfile.isIndividualOwner
+          ? [['Commissions agence', formatCurrency(totalCommissions)] as [string, string]]
+          : []),
+        [netLabel, formatCurrency(totalNet)],
+        ['Taux de recouvrement', `${recoveryRate}%`],
+        ...(enabledReportSections.has('occupancy')
+          ? [['Biens concernés', String(summary.immeubles.length)] as [string, string]]
+          : []),
+      ];
+      const indicatorBody: string[][] = [];
+      for (let index = 0; index < indicatorItems.length; index += 2) {
+        const left = indicatorItems[index];
+        const right = indicatorItems[index + 1] ?? ['', ''];
+        indicatorBody.push([left[0], left[1], right[0], right[1]]);
+      }
       autoTable(doc, {
-        body: [
-          ['Loyers encaissés', formatCurrency(totalLoyers), 'Reliquats à suivre', formatCurrency(totalReliquats)],
-          [accountProfile.isIndividualOwner ? 'Frais / dépenses' : 'Commissions agence', formatCurrency(accountProfile.isIndividualOwner ? totalDepenses : totalCommissions), netLabel, formatCurrency(totalNet)],
-          ['Taux de recouvrement', `${recoveryRate}%`, 'Biens concernés', String(summary.immeubles.length)],
-        ],
+        body: indicatorBody,
         startY: y,
         theme: 'grid',
         ...tableTheme,
@@ -1171,9 +1209,11 @@ export function Bailleurs() {
       sectionTitle('Synthèse propriétaire');
       const summaryText = [
         `Sur la période ${periodLabel}, ${formatPersonName(bailleur, '')} présente ${formatCurrency(totalLoyers)} de loyers encaissés.`,
-        totalReliquats > 0
+        enabledReportSections.has('arrears') && totalReliquats > 0
           ? `Les reliquats ouverts représentent ${formatCurrency(totalReliquats)} et doivent rester prioritaires dans le suivi de gestion.`
-          : "Aucun reliquat significatif n'est rattaché aux paiements enregistrés sur cette période.",
+          : enabledReportSections.has('arrears')
+            ? "Aucun reliquat significatif n'est rattaché aux paiements enregistrés sur cette période."
+            : '',
         `Le montant ${netLabel.toLowerCase()} ressort à ${formatCurrency(totalNet)}.`,
       ].join(' ');
       doc.setFont('helvetica', 'normal');
@@ -1183,7 +1223,6 @@ export function Bailleurs() {
       doc.text(summaryLines, 14, y);
       y += summaryLines.length * 4.7 + 9;
 
-      sectionTitle('Détail par bien', 'Lecture par immeuble, unité, locataire et situation financière.');
       const contractById = new Map(summary.contrats.map((contrat) => [contrat.id, contrat]));
       const unitById = new Map(summary.unites.map((unite) => [unite.id, unite]));
       const rows = reportPaiements.map((paiement) => {
@@ -1203,6 +1242,8 @@ export function Bailleurs() {
         };
       });
 
+      if (enabledReportSections.has('collections') || enabledReportSections.has('occupancy')) {
+      sectionTitle('Détail par bien', 'Lecture par immeuble, unité, locataire et situation financière.');
       autoTable(doc, {
         head: [['Bien', 'Unité', 'Locataire', 'Loyer', 'Statut', 'Encaissé', 'Reliquat', 'Net']],
         body: rows.length
@@ -1230,8 +1271,9 @@ export function Bailleurs() {
         },
       });
       y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 10;
+      }
 
-      if (reportDepenses.length > 0) {
+      if (enabledReportSections.has('expenses') && reportDepenses.length > 0) {
         ensureSpace(34);
         sectionTitle('Dépenses rattachées');
         autoTable(doc, {
@@ -1258,15 +1300,19 @@ export function Bailleurs() {
         y,
         pageWidth - 28,
         [
-          { label: 'Loyers encaissés', value: formatCurrency(totalLoyers) },
-          { label: 'Reliquats à suivre', value: formatCurrency(totalReliquats) },
-          ...(accountProfile.isIndividualOwner ? [{ label: 'Dépenses', value: formatCurrency(totalDepenses) }] : [{ label: 'Commissions agence', value: formatCurrency(totalCommissions) }]),
+          ...(enabledReportSections.has('collections') ? [{ label: 'Loyers encaissés', value: formatCurrency(totalLoyers) }] : []),
+          ...(enabledReportSections.has('arrears') ? [{ label: 'Reliquats à suivre', value: formatCurrency(totalReliquats) }] : []),
+          ...(accountProfile.isIndividualOwner && enabledReportSections.has('expenses')
+            ? [{ label: 'Dépenses', value: formatCurrency(totalDepenses) }]
+            : !accountProfile.isIndividualOwner && enabledReportSections.has('commissions')
+              ? [{ label: 'Commissions agence', value: formatCurrency(totalCommissions) }]
+              : []),
           { label: netLabel, value: formatCurrency(totalNet), emphasis: true },
         ],
         settings,
       );
 
-      try {
+      if (reportTemplate.content.style.showQr && enabledReportSections.has('qr_verification')) {
         await drawLegalVerificationFooter(doc, {
           ref: reportRef,
           type: 'rapport_bailleur',
@@ -1274,8 +1320,6 @@ export function Bailleurs() {
           date: new Date().toISOString(),
           settings,
         });
-      } catch {
-        // Le QR de vérification est non bloquant pour ne pas empêcher la génération.
       }
       addFooter(doc, settings);
 
@@ -1293,6 +1337,19 @@ export function Bailleurs() {
           reportMonth,
           bailleur,
           totals: { totalLoyers, totalReliquats, totalCommissions, totalDepenses, totalNet, recoveryRate },
+          template: {
+            revisionId: reportTemplate.revisionId,
+            revision: reportTemplate.revision,
+            checksum: reportTemplate.checksum,
+            source: reportTemplate.source,
+            rendererVersion: reportTemplate.rendererVersion,
+          },
+        },
+        template: reportTemplate,
+        assetUrls: {
+          logo: settings.logo_url,
+          signature: settings.signature_enabled ? settings.signature_url : null,
+          stamp: settings.stamp_enabled ? settings.stamp_url : null,
         },
         preview: {
           columns: ['Bien', 'Unité', 'Locataire', 'Statut', 'Encaissé', 'Reliquat', 'Net'],

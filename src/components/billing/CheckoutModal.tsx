@@ -50,8 +50,8 @@ const CONTACT_EMAIL = 'samaykeur@gmail.com';
 
 const PROVIDERS: ProviderConfig[] = [
   { id: 'orange_money', label: 'Orange Money', sub: 'Sénégal', logo: orangeMoneyLogo, fallback: 'OM', color: '#FF6600', bg: '#FFF4EE' },
-  { id: 'wave', label: 'Wave', sub: 'Sénégal / Côte d’Ivoire', logo: waveLogo, fallback: 'W', color: '#00AEEF', bg: '#EFF9FF' },
-  { id: 'djamo', label: 'Djamo', sub: 'Côte d’Ivoire', logo: djamoLogo, fallback: 'D', color: '#1A1A1A', bg: '#F5F5F5' },
+  { id: 'wave', label: 'Wave', sub: 'Sénégal', logo: waveLogo, fallback: 'W', color: '#00AEEF', bg: '#EFF9FF' },
+  { id: 'djamo', label: 'Djamo', sub: 'Sénégal', logo: djamoLogo, fallback: 'D', color: '#1A1A1A', bg: '#F5F5F5' },
   { id: 'card', label: 'Carte bancaire', sub: 'Visa / Mastercard', fallback: 'CB', color: '#1D4ED8', bg: '#EFF6FF' },
 ];
 
@@ -79,9 +79,9 @@ function LogoBadge({
   const [failed, setFailed] = useState(false);
 
   return (
-    <span className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-emerald-950/10 bg-white shadow-sm ${className}`}>
+    <span className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-emerald-950/10 bg-white shadow-2xs ${className}`}>
       {src && !failed ? (
-        <img src={src} alt={label} className="h-full w-full object-contain p-1" onError={() => setFailed(true)} />
+        <img src={src} alt={label} className="h-full w-full object-contain" onError={() => setFailed(true)} />
       ) : (
         <span className="text-[0.62rem] font-black text-slate-700">{fallback}</span>
       )}
@@ -276,59 +276,70 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={`Activer le plan ${planName}`}>
       {step !== 'success' && step !== 'error' && (
-        <div className="mb-2.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
+        <div className="mb-4 overflow-hidden rounded-2xl border border-emerald-950/15 bg-gradient-to-br from-[#fffefc] via-[#fffcf6] to-emerald-50/20 p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">Plan sélectionné</p>
-              <p className="mt-0.5 truncate text-[0.86rem] font-extrabold text-slate-950">Plan {planName}</p>
+              <p className="text-[0.6rem] font-black uppercase tracking-[0.16em] text-emerald-800">PLAN SÉLECTIONNÉ</p>
+              <p className="mt-0.5 truncate text-base font-black text-slate-950">Plan {planName}</p>
             </div>
-            <p className="shrink-0 text-right text-[0.92rem] font-black text-orange-600">
-              {formatCurrency(priceXof)}
-              <span className="ml-0.5 text-[0.66rem] font-semibold text-slate-400">/mois</span>
-            </p>
+            <div className="shrink-0 text-right">
+              <p className="text-xl font-black tracking-tight text-emerald-950">
+                {formatCurrency(priceXof)}
+                <span className="ml-1 text-xs font-semibold text-slate-500">/mois</span>
+              </p>
+            </div>
           </div>
-          <p className="mt-2 rounded-lg bg-emerald-50/80 px-2 py-1 text-[0.62rem] font-semibold leading-4 text-emerald-900">
-            Activation après confirmation du paiement. Le paiement en ligne reste prioritaire.
-          </p>
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-800/15 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-950">
+            <Shield className="h-4 w-4 shrink-0 text-emerald-700" />
+            <span>Activation instantanée après confirmation du paiement. Le paiement en ligne reste prioritaire.</span>
+          </div>
         </div>
       )}
 
       {step === 'select_provider' && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div>
-            <p className="text-[0.78rem] font-extrabold text-slate-900">Choisissez votre moyen de paiement</p>
-            <p className="mt-0.5 text-[0.68rem] leading-4 text-slate-500">Les moyens locaux sont traités via PayDunya.</p>
+            <h4 className="text-sm font-black text-slate-950">Choisissez votre moyen de paiement</h4>
+            <p className="mt-0.5 text-xs text-slate-500">Les transactions locales sont sécurisées et vérifiées automatiquement via PayDunya.</p>
           </div>
-          <div className="grid gap-1.5 sm:grid-cols-2">
+          <div className="grid gap-2.5 sm:grid-cols-2">
             {PROVIDERS.map((p) => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => handleSelectProvider(p.id)}
-                className="group flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-800/25 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
+                className="group relative flex min-w-0 items-center gap-3.5 rounded-2xl border border-slate-200/90 bg-white p-3.5 text-left shadow-2xs transition hover:-translate-y-0.5 hover:border-emerald-600/40 hover:bg-emerald-50/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
               >
                 {p.logo ? (
-                  <LogoBadge src={p.logo} label={p.label} fallback={p.fallback} className="h-8 w-8" />
+                  <LogoBadge src={p.logo} label={p.label} fallback={p.fallback} className="h-10 w-10 shrink-0 shadow-xs" />
                 ) : (
-                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700">
-                    <CreditCard className="h-4 w-4" />
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700 shadow-xs">
+                    <CreditCard className="h-5 w-5" />
                   </span>
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[0.74rem] font-extrabold text-slate-950">{p.label}</span>
-                  <span className="block truncate text-[0.58rem] font-semibold text-slate-500">{p.sub}</span>
+                  <span className="block truncate text-sm font-black text-slate-950 group-hover:text-emerald-950">{p.label}</span>
+                  <span className="block truncate text-[0.68rem] font-semibold text-slate-500">{p.sub}</span>
                 </span>
                 {p.id === 'card' ? (
-                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[0.55rem] font-black uppercase tracking-wide text-blue-700">
-                    Visa
+                  <span className="rounded-full border border-blue-200/60 bg-blue-50 px-2 py-0.5 text-[0.6rem] font-black uppercase tracking-wide text-blue-700">
+                    VISA
                   </span>
-                ) : null}
+                ) : (
+                  <span className="rounded-full border border-slate-200/80 bg-slate-50 px-2 py-0.5 text-[0.6rem] font-bold text-slate-600 group-hover:border-emerald-300 group-hover:bg-emerald-100/60 group-hover:text-emerald-900">
+                    Rapide
+                  </span>
+                )}
               </button>
             ))}
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-[0.62rem] font-bold text-slate-500">
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1"><Shield className="h-3 w-3" />Sécurisé PayDunya</span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2 py-1"><Clock className="h-3 w-3" />Activation rapide</span>
+          <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1 text-xs font-bold text-slate-500">
+            <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-1.5 shadow-2xs">
+              <Shield className="h-3.5 w-3.5 text-emerald-700" /> Sécurisé par PayDunya
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-1.5 shadow-2xs">
+              <Clock className="h-3.5 w-3.5 text-emerald-700" /> Activation instantanée
+            </span>
           </div>
         </div>
       )}

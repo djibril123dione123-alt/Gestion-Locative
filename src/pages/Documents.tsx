@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  PanelsTopLeft,
   Upload,
   UserRound,
 } from 'lucide-react';
@@ -591,15 +592,28 @@ export function Documents() {
         description="Centralisez, retrouvez et vérifiez vos preuves."
         mobileDescription="Preuves vérifiables."
         secondaryAction={
-          <PremiumButton
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate('/documents/scan')}
-            icon={<ShieldCheck className="h-3.5 w-3.5" />}
-            className="!h-8 w-full border-white/15 bg-white/10 !px-3 !text-xs text-white hover:bg-white/15 sm:w-auto"
-          >
-            Scanner
-          </PremiumButton>
+          <div className="flex w-full gap-1.5 sm:w-auto">
+            {profile?.role === 'admin' && (
+              <PremiumButton
+                variant="secondary"
+                size="sm"
+                onClick={() => navigate('/documents/studio')}
+                icon={<PanelsTopLeft className="h-3.5 w-3.5" />}
+                className="!h-8 flex-1 border-white/15 bg-white/10 !px-3 !text-xs text-white hover:bg-white/15 sm:flex-none"
+              >
+                Studio
+              </PremiumButton>
+            )}
+            <PremiumButton
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate('/documents/scan')}
+              icon={<ShieldCheck className="h-3.5 w-3.5" />}
+              className="!h-8 flex-1 border-white/15 bg-white/10 !px-3 !text-xs text-white hover:bg-white/15 sm:flex-none"
+            >
+              Scanner
+            </PremiumButton>
+          </div>
         }
         primaryAction={
           <PremiumButton

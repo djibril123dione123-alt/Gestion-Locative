@@ -16,6 +16,12 @@ import {
   type GeneratedDocumentPreview,
 } from './documentGenerated';
 import { saveManagedDocument, type ManagedDocumentType } from '../services/documentRegistry';
+import {
+  allocateDocumentReference,
+  resolvePublishedDocumentTemplate,
+} from '../services/documentTemplateService';
+import { renderDocumentTemplate } from './documents/templateEngine';
+import type { ResolvedDocumentTemplate } from '../types/documentStudio';
 
 export { formatCurrency };
 
@@ -43,6 +49,9 @@ const PDF_SETTINGS_FALLBACK: Partial<AgencySettings> = {
   devise: DEFAULT_AGENCY_SETTINGS.devise ?? 'XOF',
   pied_page_personnalise: DEFAULT_AGENCY_SETTINGS.pied_page_personnalise ?? null,
   signature_url: DEFAULT_AGENCY_SETTINGS.signature_url ?? null,
+  stamp_url: DEFAULT_AGENCY_SETTINGS.stamp_url ?? null,
+  signature_enabled: DEFAULT_AGENCY_SETTINGS.signature_enabled ?? false,
+  stamp_enabled: DEFAULT_AGENCY_SETTINGS.stamp_enabled ?? false,
   qr_code_quittances: DEFAULT_AGENCY_SETTINGS.qr_code_quittances ?? true,
   penalite_retard_montant: DEFAULT_AGENCY_SETTINGS.penalite_retard_montant ?? 1000,
   penalite_retard_delai_jours: DEFAULT_AGENCY_SETTINGS.penalite_retard_delai_jours ?? 3,
@@ -65,12 +74,13 @@ const PDF_SETTINGS_FALLBACK: Partial<AgencySettings> = {
 // ---------------------------------------------------------------------------
 type CacheEntry = { settings: Partial<AgencySettings>; expiresAt: number };
 const settingsCache = new Map<string, CacheEntry>();
+const pendingVerificationByReference = new Map<string, string>();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 const AGENCY_SETTINGS_SELECT_LEGACY = `agency_id, nom_agence, adresse, telephone, email, site_web, logo_url, couleur_primaire, couleur_secondaire,
   ninea, rc, representant_nom, representant_fonction,
   manager_id_type, manager_id_number, city, devise,
-  pied_page_personnalise, signature_url, qr_code_quittances,
+  pied_page_personnalise, signature_url, stamp_url, signature_enabled, stamp_enabled, qr_code_quittances,
   penalite_retard_montant, penalite_retard_delai_jours, frais_huissier,
   mention_tribunal, mention_penalites, mention_frais_huissier, mention_litige`;
 const AGENCY_SETTINGS_SELECT_EXTENDED = `${AGENCY_SETTINGS_SELECT_LEGACY}, document_mode, enabled_modules, document_preferences, proprietaire_info`;
@@ -141,6 +151,8 @@ export async function saveGeneratedPdf(
     period?: string | null;
     reference?: string;
     data?: unknown;
+    template?: ResolvedDocumentTemplate;
+    assetUrls?: Record<string, string | null | undefined>;
   }
 ) {
   const blob = doc.output('blob');
@@ -166,17 +178,55 @@ export async function saveGeneratedPdf(
           title: options.title,
           source: options.source,
         },
+        template: options.template,
+        assetUrls: options.assetUrls,
       });
 
-      if (managed) {
-        url = managed.url;
-        fileSize = managed.fileSize;
-        reused = managed.reused;
-        version = managed.version;
-        storagePath = managed.storagePath;
+      if (!managed) {
+        throw new Error('REGISTRY_CONTEXT_REQUIRED');
+      }
+
+      url = managed.url;
+      fileSize = managed.fileSize;
+      reused = managed.reused;
+      version = managed.version;
+      storagePath = managed.storagePath;
+      const verificationId = pendingVerificationByReference.get(options.reference);
+      if (verificationId && managed.entry) {
+        await supabase
+          .from('document_verifications')
+          .update({
+            document_registry_id: managed.entry.id,
+            registry_version: managed.version,
+            template_checksum: options.template?.checksum ?? null,
+            metadata: {
+              source: 'pdf_generation',
+              registry_version: managed.version,
+              renderer_version: options.template?.rendererVersion ?? null,
+            },
+          })
+          .eq('id', verificationId);
+        pendingVerificationByReference.delete(options.reference);
       }
     } catch (error) {
-      console.warn('[DocumentRegistry] Archive indisponible, generation locale utilisee.', error);
+      const verificationId = pendingVerificationByReference.get(options.reference);
+      if (verificationId) {
+        await supabase
+          .from('document_verifications')
+          .update({
+            document_status: 'revoked',
+            metadata: {
+              source: 'pdf_generation',
+              reason: 'registry_archive_failed',
+            },
+          })
+          .eq('id', verificationId);
+        pendingVerificationByReference.delete(options.reference);
+      }
+      console.error('[DocumentRegistry] Émission officielle interrompue.', error);
+      throw new Error(
+        "L'archivage sécurisé du document a échoué. Aucun document officiel n'a été émis.",
+      );
     }
   }
 
@@ -248,7 +298,7 @@ async function createDocumentVerificationToken(payload: DocumentVerificationPayl
 }
 
 type DocumentVerificationRegistration =
-  | { token: string; url: string; registered: true }
+  | { id: string; token: string; url: string; registered: true }
   | { token: null; url: null; registered: false };
 
 async function registerDocumentVerification(payload: DocumentVerificationPayload): Promise<DocumentVerificationRegistration> {
@@ -266,12 +316,36 @@ async function registerDocumentVerification(payload: DocumentVerificationPayload
       payload.agencyId,
       payload.agency,
       payload.amount ?? 0,
-      issuedAt,
+      payload.date?.slice(0, 10) ?? '',
       payload.paymentStatus ?? '',
     ].join('|'));
 
+    const existing = await supabase
+      .from('document_verifications')
+      .select('id, token')
+      .eq('agency_id', payload.agencyId)
+      .eq('document_ref', payload.ref)
+      .eq('document_type', payload.type)
+      .eq('payload_hash', payloadHash)
+      .eq('document_status', 'authentic')
+      .maybeSingle();
+
+    if (!existing.error && existing.data?.token) {
+      pendingVerificationByReference.set(payload.ref, existing.data.id);
+      return {
+        id: existing.data.id,
+        token: existing.data.token,
+        registered: true,
+        url: buildVerificationUrl({
+          type: payload.type,
+          ref: payload.ref,
+          token: existing.data.token,
+        }),
+      };
+    }
+
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from('document_verifications').insert({
+    const { data: inserted, error } = await supabase.from('document_verifications').insert({
       token,
       agency_id: payload.agencyId,
       document_ref: payload.ref,
@@ -287,17 +361,28 @@ async function registerDocumentVerification(payload: DocumentVerificationPayload
         source: 'pdf_generation',
         version: 1,
       },
-    });
+    }).select('id, token').single();
 
-    if (error) {
-      console.warn('[PDF] QR omis : enregistrement de vérification impossible:', error.message);
+    if (error || !inserted) {
+      console.warn('[PDF] QR omis : enregistrement de vérification impossible:', error?.message ?? 'réponse vide');
       return { token: null, url: null, registered: false };
     }
 
+    await supabase
+      .from('document_verifications')
+      .update({ document_status: 'superseded' })
+      .eq('agency_id', payload.agencyId)
+      .eq('document_ref', payload.ref)
+      .eq('document_type', payload.type)
+      .eq('document_status', 'authentic')
+      .neq('id', inserted.id);
+
+    pendingVerificationByReference.set(payload.ref, inserted.id);
     return {
-      token,
+      id: inserted.id,
+      token: inserted.token,
       registered: true,
-      url: buildVerificationUrl({ type: payload.type, ref: payload.ref, token }),
+      url: buildVerificationUrl({ type: payload.type, ref: payload.ref, token: inserted.token }),
     };
   } catch (error) {
     console.warn('[PDF] QR omis : preuve documentaire non enregistrée.', error);
@@ -530,6 +615,23 @@ function isIndividualOwnerSettings(settings?: Partial<AgencySettings>): boolean 
     || settings?.is_bailleur_account === true;
 }
 
+function applyPublishedTemplateStyle(
+  settings: Partial<AgencySettings>,
+  template: ResolvedDocumentTemplate,
+): Partial<AgencySettings> {
+  return {
+    ...settings,
+    logo_url: template.content.style.showLogo ? settings.logo_url : null,
+    signature_enabled: template.content.style.showSignature && settings.signature_enabled === true,
+    stamp_enabled: template.content.style.showStamp && settings.stamp_enabled === true,
+    document_preferences: {
+      ...(settings.document_preferences ?? {}),
+      header_style: template.content.style.header,
+      show_document_number: template.content.style.showDocumentNumber,
+    },
+  };
+}
+
 function fitSingleLine(doc: jsPDF, text: string, maxWidth: number): string {
   if (doc.getTextWidth(text) <= maxWidth) return text;
   let output = text;
@@ -587,7 +689,12 @@ export async function drawSignatureBlocks(
   const pageWidth = doc.internal.pageSize.getWidth();
   const colors = getBrandColors(settings);
   const individualOwner = isIndividualOwnerSettings(settings);
-  const signatureImage = await loadImageAsPngDataUrl(settings?.signature_url, 460);
+  const signatureImage = settings?.signature_enabled
+    ? await loadImageAsPngDataUrl(settings.signature_url, 460)
+    : null;
+  const stampImage = settings?.stamp_enabled
+    ? await loadImageAsPngDataUrl(settings.stamp_url, 360)
+    : null;
   const width = 76;
   const gap = pageWidth - 28 - width * 2;
   const leftX = 14;
@@ -615,6 +722,12 @@ export async function drawSignatureBlocks(
       const imageY = y + 11;
       doc.addImage(signatureImage.dataUrl, 'PNG', imageX, imageY, imageWidth, imageHeight);
     }
+    if (stampImage && index === agencySignatureIndex) {
+      const ratio = Math.min(18 / stampImage.width, 12 / stampImage.height, 1);
+      const stampWidth = Math.max(8, stampImage.width * ratio);
+      const stampHeight = Math.max(6, stampImage.height * ratio);
+      doc.addImage(stampImage.dataUrl, 'PNG', x + 5, y + 11, stampWidth, stampHeight);
+    }
     doc.setDrawColor(148, 163, 184);
     doc.setLineWidth(0.22);
     doc.line(x + 4, y + 24.5, x + width - 4, y + 24.5);
@@ -637,7 +750,12 @@ async function drawCompactSignatureSeal(
   height: number,
   settings?: Partial<AgencySettings>
 ): Promise<void> {
-  const signatureImage = await loadImageAsPngDataUrl(settings?.signature_url, 360);
+  const assetUrl = settings?.stamp_enabled && settings.stamp_url
+    ? settings.stamp_url
+    : settings?.signature_enabled
+      ? settings.signature_url
+      : null;
+  const signatureImage = await loadImageAsPngDataUrl(assetUrl, 360);
   if (!signatureImage) return;
 
   const colors = getBrandColors(settings);
@@ -652,7 +770,7 @@ async function drawCompactSignatureSeal(
   doc.setFont(undefined as unknown as string, 'bold');
   doc.setFontSize(5.6);
   doc.setTextColor(...colors.muted);
-  doc.text('Cachet / signature', x + width - 5, imageY - 1.5, { align: 'right' });
+  doc.text(settings?.stamp_enabled ? 'Cachet officiel' : 'Signature', x + width - 5, imageY - 1.5, { align: 'right' });
   doc.addImage(signatureImage.dataUrl, 'PNG', imageX, imageY, imageWidth, imageHeight);
   doc.setTextColor(0, 0, 0);
 }
@@ -667,11 +785,16 @@ export async function drawDocumentHeader(
   const pageWidth = doc.internal.pageSize.getWidth();
   const colors = getBrandColors(settings);
   const individualOwner = isIndividualOwnerSettings(settings);
+  const headerStyle = settings.document_preferences?.header_style ?? 'sobriete';
 
-  doc.setFillColor(255, 255, 255);
+  doc.setFillColor(...(headerStyle === 'institutionnel' ? colors.paper : [255, 255, 255] as [number, number, number]));
   doc.rect(0, 0, pageWidth, 66, 'F');
   doc.setFillColor(...colors.primary);
-  doc.rect(0, 0, 3.6, 66, 'F');
+  if (headerStyle === 'moderne') {
+    doc.rect(0, 0, pageWidth, 5.2, 'F');
+  } else {
+    doc.rect(0, 0, headerStyle === 'institutionnel' ? 2.4 : 3.6, 66, 'F');
+  }
   doc.setFillColor(...colors.paper);
   doc.rect(3.6, 0, pageWidth - 3.6, 8.5, 'F');
   doc.setDrawColor(226, 213, 181);
@@ -755,7 +878,9 @@ export async function drawDocumentHeader(
   }
 
   const details: string[] = [];
-  if (meta.reference) details.push(`Réf. ${meta.reference}`);
+  if (meta.reference && settings.document_preferences?.show_document_number !== false) {
+    details.push(`Réf. ${meta.reference}`);
+  }
   if (meta.issueDate) details.push(`Date : ${meta.issueDate}`);
   if (details.length) {
     const detailText = details.join(' · ');
@@ -866,20 +991,12 @@ export function generateQuittanceRef(p: { id?: string; created_at?: string; mois
   const d = new Date(p.mois_concerne ?? p.created_at ?? Date.now());
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
-  // Combine ID prefix + random for uniqueness even without DB sequence
-  const idPart = (p.id ?? '').replace(/-/g, '').slice(0, 4).toUpperCase();
-  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-  return `QIT-${y}${m}-${idPart}${rand}`;
-}
-
-export async function fetchTemplate(path: string): Promise<string> {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error('Template introuvable: ' + path);
-  return res.text();
-}
-
-export function fillTemplate(tpl: string, vars: Record<string, string>): string {
-  return tpl.replace(/\{\{(.*?)\}\}/g, (_match, key: string) => vars[key.trim()] ?? '');
+  const stableId = (p.id ?? `${y}${m}`)
+    .replace(/[^a-z0-9]/gi, '')
+    .slice(0, 8)
+    .padEnd(8, '0')
+    .toUpperCase();
+  return `QIT-${y}${m}-${stableId}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -991,6 +1108,34 @@ function renderTemplateToDoc(
   }
 
   return y;
+}
+
+function renderStructuredTemplateToDoc(
+  doc: jsPDF,
+  template: ResolvedDocumentTemplate,
+  variables: Record<string, string>,
+  startY: number,
+  leftMargin: number,
+  usableWidth: number,
+  settings?: Partial<AgencySettings>,
+) {
+  const rendered = renderDocumentTemplate(template.content, variables);
+  const editorialBlocks = rendered.blocks.filter((block) => block.kind !== 'signature' && block.kind !== 'system');
+  const body = editorialBlocks
+    .map((block) => `${block.title.toUpperCase()}\n${block.content}`)
+    .join('\n\n');
+  const dynamicValues = [...new Set(Object.values(variables).filter(Boolean))];
+  return renderTemplateToDoc(
+    doc,
+    cleanupLegalBody(body),
+    dynamicValues,
+    startY,
+    leftMargin,
+    usableWidth,
+    template.content.style.density === 'compact' ? 5.6 : 6.4,
+    template.content.style.density === 'compact' ? 9.2 : 10.5,
+    settings,
+  );
 }
 
 function getDocumentBottomLimit(doc: jsPDF, reserve = 24): number {
@@ -1451,14 +1596,24 @@ async function drawEditorialSignatureSection(
 export async function generateContratPDF(contrat: ContratPDFData): Promise<void> {
   if (!contrat) throw new Error('Aucun contrat fourni');
 
-  const settings = await loadAgencySettings();
+  const loadedSettings = await loadAgencySettings();
+  const contractTemplate = await resolvePublishedDocumentTemplate('contrat', loadedSettings.agency_id);
+  const settings = applyPublishedTemplateStyle(loadedSettings, contractTemplate);
   const individualOwner = isIndividualOwnerSettings(settings);
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-  const contractRef = applyDocumentPrefix(
+  const contractRefFallback = applyDocumentPrefix(
     `CTR-${new Date().getFullYear()}-${(contrat.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`,
     'contrat',
     settings,
   );
+  const contractRef = await allocateDocumentReference({
+    documentType: 'contrat',
+    entityId: contrat.id ?? contractRefFallback,
+    periodKey: contrat.date_debut?.slice(0, 7),
+    format: settings.document_preferences?.numbering_format,
+    prefix: getPdfDocumentPreferences(settings).prefixes.contrat,
+    fallback: contractRefFallback,
+  });
 
   const bailleur = (contrat.unites?.immeubles?.bailleurs ?? {}) as {
     prenom?: string;
@@ -1472,16 +1627,6 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
   };
 
   try {
-    const tpl = await fetchTemplate('/templates/contrat_location.txt');
-    let templateSource = tpl;
-    if (individualOwner) {
-      const lines = tpl.split(/\r?\n/);
-      if (lines[2]?.toLowerCase().includes('mandataire')) {
-        lines[2] = "M. {{bailleur_prenom}} {{bailleur_nom}} (Propriétaire), d'une part;";
-      }
-      templateSource = lines.join('\n').replace(/\bmandataire\b/gi, 'bailleur');
-    }
-
     let dureeAnnees = '1';
     if (contrat.date_debut && contrat.date_fin) {
       try {
@@ -1537,13 +1682,6 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
       mention_litige: settings.mention_litige ?? '',
     };
 
-    const dynamicValues: string[] = [];
-    const body = cleanupLegalBody(templateSource.replace(/\{\{(.*?)\}\}/g, (_match, key: string) => {
-      const value = dynamicVars[key.trim()] ?? '';
-      if (value) dynamicValues.push(value);
-      return value;
-    }));
-
     const pageWidth = doc.internal.pageSize.getWidth();
     const leftMargin = 14;
     const usableWidth = pageWidth - 28;
@@ -1570,15 +1708,13 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
       settings,
       'Conditions applicables au présent bail'
     );
-    const endY = renderTemplateToDoc(
+    const endY = renderStructuredTemplateToDoc(
       doc,
-      body,
-      dynamicValues,
+      contractTemplate,
+      dynamicVars,
       bodyY,
       leftMargin,
       usableWidth,
-      6.4,
-      10.5,
       settings
     );
 
@@ -1593,23 +1729,20 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
       usableWidth,
       settings,
     });
-  } catch (err) {
-    console.error('Erreur génération contrat:', err);
+  } catch (error) {
+    console.error('Erreur génération contrat:', error);
+    throw error;
   }
 
   addFooter(doc, settings);
-  if (isDocumentQrEnabled(settings, 'contrat')) {
-    try {
-      await drawLegalVerificationFooter(doc, {
-        ref: contractRef,
-        type: 'contrat',
-        agency: settings.nom_agence ?? 'Samay Këur',
-        date: new Date().toISOString(),
-        settings,
-      });
-    } catch {
-      // Document verification QR is non-blocking.
-    }
+  if (contractTemplate.content.style.showQr && isDocumentQrEnabled(settings, 'contrat')) {
+    await drawLegalVerificationFooter(doc, {
+      ref: contractRef,
+      type: 'contrat',
+      agency: settings.nom_agence ?? 'Samay Këur',
+      date: new Date().toISOString(),
+      settings,
+    });
   }
   await saveGeneratedPdf(doc, {
     kind: 'contrat',
@@ -1625,6 +1758,19 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
       reference: contractRef,
       contrat,
       agency: settings,
+      template: {
+        revisionId: contractTemplate.revisionId,
+        revision: contractTemplate.revision,
+        checksum: contractTemplate.checksum,
+        source: contractTemplate.source,
+        rendererVersion: contractTemplate.rendererVersion,
+      },
+    },
+    template: contractTemplate,
+    assetUrls: {
+      logo: settings.logo_url,
+      signature: settings.signature_enabled ? settings.signature_url : null,
+      stamp: settings.stamp_enabled ? settings.stamp_url : null,
     },
     preview: {
       columns: ['Champ', 'Valeur'],
@@ -1666,7 +1812,7 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     // Continue with fallback values — do not block generation
   }
 
-  const settings = await loadAgencySettings();
+  const loadedSettings = await loadAgencySettings();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
 
   const loyer = Number(paiement.montant_attendu ?? contrat.loyer_mensuel ?? 0);
@@ -1678,8 +1824,27 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     : Math.max(loyer - totalPayeMois, 0);
   const statusLabel = reliquat > 0 ? 'Paiement partiel' : 'Soldé';
   const paiementDocumentType: PdfDocumentType = reliquat > 0 ? 'facture' : 'quittance';
-  // Numéro de quittance unique (QIT-AAAAMM-XXXX) — légalement traçable
-  const ref = applyDocumentPrefix(paiement.reference ?? generateQuittanceRef(paiement), paiementDocumentType, settings);
+  const templateType = reliquat > 0 ? 'facture' : 'quittance';
+  const receiptTemplate = await resolvePublishedDocumentTemplate(templateType, loadedSettings.agency_id);
+  const settings = applyPublishedTemplateStyle(loadedSettings, receiptTemplate);
+  const referenceFallback = applyDocumentPrefix(
+    paiement.reference ?? generateQuittanceRef(paiement),
+    paiementDocumentType,
+    settings,
+  );
+  const ref = await allocateDocumentReference({
+    documentType: templateType,
+    entityId: paiement.id ?? referenceFallback,
+    periodKey: paiement.mois_concerne?.slice(0, 7),
+    format: settings.document_preferences?.numbering_format,
+    prefix: getPdfDocumentPreferences(settings).prefixes[paiementDocumentType],
+    fallback: referenceFallback,
+  });
+  const enabledReceiptSections = new Set(
+    receiptTemplate.content.blocks
+      .filter((block) => block.enabled && block.systemKey)
+      .map((block) => block.systemKey),
+  );
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const leftMargin = 14;
@@ -1718,20 +1883,22 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
   );
 
   let y = titleY + 4;
-  y = drawCompactPaymentSummaryCard(
-    doc,
-    leftMargin,
-    y,
-    usableWidth,
-    {
-      paid: formatCurrency(paye, devise),
-      due: formatCurrency(loyer, devise),
-      remaining: formatCurrency(reliquat, devise),
-      status: statusLabel,
-      period: moisConcerne,
-    },
-    settings
-  );
+  if (enabledReceiptSections.has('payment_summary')) {
+    y = drawCompactPaymentSummaryCard(
+      doc,
+      leftMargin,
+      y,
+      usableWidth,
+      {
+        paid: formatCurrency(paye, devise),
+        due: formatCurrency(loyer, devise),
+        remaining: formatCurrency(reliquat, devise),
+        status: statusLabel,
+        period: moisConcerne,
+      },
+      settings
+    );
+  }
 
   y = drawSubtleSectionTitle(
     doc,
@@ -1742,24 +1909,27 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     settings,
     'Contexte locatif, période concernée et référence du paiement'
   );
+  const receiptIdentityRows: [string, string][] = [
+    ...(enabledReceiptSections.has('tenant_identity') ? [['Locataire', tenantName] as [string, string]] : []),
+    ...(enabledReceiptSections.has('property_identity') ? [
+      ['Logement', propertyLabel] as [string, string],
+      ['Adresse', addressLabel] as [string, string],
+    ] : []),
+    ['Période', moisConcerne],
+    ['Référence', ref],
+    ['Date paiement', datePaiement],
+  ];
   y = drawKeyValueGrid(
     doc,
     leftMargin,
     y,
     usableWidth,
-    [
-      ['Locataire', tenantName],
-      ['Logement', propertyLabel],
-      ['Adresse', addressLabel],
-      ['Période', moisConcerne],
-      ['Référence', ref],
-      ['Date paiement', datePaiement],
-    ],
+    receiptIdentityRows,
     settings
   );
   y += 3;
 
-  autoTable(doc, {
+  if (enabledReceiptSections.has('payment_breakdown')) autoTable(doc, {
     startY: y,
     head: [['Libellé', 'Montant']],
     body: [
@@ -1798,12 +1968,16 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
   if (finalY + finalBlockHeight > finalBlockBottom) {
     finalY = ensureDocumentSpace(doc, finalY, finalBlockHeight, settings, 24, 23);
   }
-  const qrWidth = isDocumentQrEnabled(settings, paiementDocumentType) ? 74 : 0;
+  const receiptQrEnabled = receiptTemplate.content.style.showQr
+    && enabledReceiptSections.has('qr_verification')
+    && isDocumentQrEnabled(settings, paiementDocumentType);
+  const qrWidth = receiptQrEnabled ? 74 : 0;
   const qrGap = qrWidth > 0 ? 7 : 0;
   const mentionsWidth = usableWidth - qrWidth - qrGap;
 
   const mentions = [
-    getPdfDocumentPreferences(settings).receipt_notice,
+    receiptTemplate.content.blocks.find((block) => block.kind === 'footer' && block.enabled)?.content
+      || getPdfDocumentPreferences(settings).receipt_notice,
     reliquat > 0
       ? 'Tout reliquat, charge ou obligation non réglée demeure exigible conformément au bail.'
       : null,
@@ -1839,23 +2013,19 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
 
   await drawCompactSignatureSeal(doc, leftMargin, finalY, mentionsWidth, finalBlockHeight, settings);
 
-  if (isDocumentQrEnabled(settings, paiementDocumentType)) {
-    try {
-      await drawVerificationBlock(doc, {
-        x: leftMargin + mentionsWidth + qrGap,
-        y: finalY,
-        width: qrWidth,
-        ref,
-        type: 'quittance',
-        agency: settings.nom_agence ?? 'Samay Këur',
-        amount: paye,
-        date: paiement.date_paiement ?? new Date().toISOString(),
-        paymentStatus: statusLabel,
-        settings,
-      });
-    } catch {
-      // QR code generation failure is non-blocking
-    }
+  if (receiptQrEnabled) {
+    await drawVerificationBlock(doc, {
+      x: leftMargin + mentionsWidth + qrGap,
+      y: finalY,
+      width: qrWidth,
+      ref,
+      type: paiementDocumentType,
+      agency: settings.nom_agence ?? 'Samay Këur',
+      amount: paye,
+      date: paiement.date_paiement ?? new Date().toISOString(),
+      paymentStatus: statusLabel,
+      settings,
+    });
   }
 
   addFooter(doc, settings);
@@ -1864,12 +2034,12 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     title: 'Facture / quittance de loyer',
     fileName: `${ref}.pdf`,
     source: 'paiements',
-    documentType: 'quittance',
+    documentType: paiementDocumentType,
     entityId: paiement.id ?? ref,
     period: paiement.mois_concerne?.slice(0, 7) ?? null,
     reference: ref,
     data: {
-      document: 'quittance',
+      document: paiementDocumentType,
       reference: ref,
       paiement,
       loyer,
@@ -1878,6 +2048,19 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
       totalPayeMois,
       reliquat,
       agency: settings,
+      template: {
+        revisionId: receiptTemplate.revisionId,
+        revision: receiptTemplate.revision,
+        checksum: receiptTemplate.checksum,
+        source: receiptTemplate.source,
+        rendererVersion: receiptTemplate.rendererVersion,
+      },
+    },
+    template: receiptTemplate,
+    assetUrls: {
+      logo: settings.logo_url,
+      signature: settings.signature_enabled ? settings.signature_url : null,
+      stamp: settings.stamp_enabled ? settings.stamp_url : null,
     },
     preview: {
       columns: ['Ligne', 'Montant'],
@@ -1901,20 +2084,28 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
 export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promise<void> {
   if (!bailleur) throw new Error('Aucun bailleur fourni');
 
-  const settings = await loadAgencySettings();
-  if (isIndividualOwnerSettings(settings)) {
+  const loadedSettings = await loadAgencySettings();
+  if (isIndividualOwnerSettings(loadedSettings)) {
     throw new Error("Le mandat de gérance est réservé aux agences et gestionnaires qui administrent des biens pour des tiers.");
   }
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-  const mandatRef = applyDocumentPrefix(
+  const mandateTemplate = await resolvePublishedDocumentTemplate('mandat', loadedSettings.agency_id);
+  const settings = applyPublishedTemplateStyle(loadedSettings, mandateTemplate);
+  const mandateRefFallback = applyDocumentPrefix(
     `MDT-${new Date().getFullYear()}-${(bailleur.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`,
     'mandat',
     settings,
   );
+  const mandatRef = await allocateDocumentReference({
+    documentType: 'mandat',
+    entityId: bailleur.id ?? mandateRefFallback,
+    periodKey: bailleur.debut_contrat?.slice(0, 7),
+    format: settings.document_preferences?.numbering_format,
+    prefix: getPdfDocumentPreferences(settings).prefixes.mandat,
+    fallback: mandateRefFallback,
+  });
 
   try {
-    const tpl = await fetchTemplate('/templates/mandat_gerance.txt');
-
     const bienAdresse = cleanDocumentText(bailleur.bien_adresse, '');
     const bienComposition = cleanDocumentText(bailleur.bien_composition, '');
     const bienDescription = bienAdresse
@@ -1953,15 +2144,6 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
       mention_frais_huissier: settings.mention_frais_huissier ?? '',
     };
 
-    const dynamicValues: string[] = [];
-    let body = cleanupLegalBody(tpl.replace(/\{\{(.*?)\}\}/g, (_match, key: string) => {
-      const value = vars[key.trim()] ?? '';
-      if (value) dynamicValues.push(value);
-      return value;
-    }));
-
-    if (!body.trim()) body = 'Contenu du mandat vide.';
-
     const pageWidth = doc.internal.pageSize.getWidth();
     const leftMargin = 14;
     const usableWidth = pageWidth - leftMargin - 14;
@@ -1988,15 +2170,13 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
       settings,
       'Délégation de gestion locative'
     );
-    const endY = renderTemplateToDoc(
+    const endY = renderStructuredTemplateToDoc(
       doc,
-      body,
-      dynamicValues,
+      mandateTemplate,
+      vars,
       bodyY,
       leftMargin,
       usableWidth,
-      6.4,
-      10.5,
       settings
     );
 
@@ -2011,26 +2191,20 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
       usableWidth,
       settings,
     });
-  } catch {
-    doc.setFont(undefined as unknown as string, 'normal');
-    doc.setFontSize(12);
-    const text = `Mandat de gérance\nPropriétaire: ${bailleur.prenom ?? ''} ${bailleur.nom ?? ''}`;
-    doc.text(doc.splitTextToSize(text, 182) as string[], 14, 50);
+  } catch (error) {
+    console.error('Erreur génération mandat:', error);
+    throw error;
   }
 
   addFooter(doc, settings);
-  if (isDocumentQrEnabled(settings, 'mandat')) {
-    try {
-      await drawLegalVerificationFooter(doc, {
-        ref: mandatRef,
-        type: 'mandat',
-        agency: settings.nom_agence ?? 'Samay Këur',
-        date: new Date().toISOString(),
-        settings,
-      });
-    } catch {
-      // Document verification QR is non-blocking.
-    }
+  if (mandateTemplate.content.style.showQr && isDocumentQrEnabled(settings, 'mandat')) {
+    await drawLegalVerificationFooter(doc, {
+      ref: mandatRef,
+      type: 'mandat',
+      agency: settings.nom_agence ?? 'Samay Këur',
+      date: new Date().toISOString(),
+      settings,
+    });
   }
   await saveGeneratedPdf(doc, {
     kind: 'mandat',
@@ -2046,6 +2220,19 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
       reference: mandatRef,
       bailleur,
       agency: settings,
+      template: {
+        revisionId: mandateTemplate.revisionId,
+        revision: mandateTemplate.revision,
+        checksum: mandateTemplate.checksum,
+        source: mandateTemplate.source,
+        rendererVersion: mandateTemplate.rendererVersion,
+      },
+    },
+    template: mandateTemplate,
+    assetUrls: {
+      logo: settings.logo_url,
+      signature: settings.signature_enabled ? settings.signature_url : null,
+      stamp: settings.stamp_enabled ? settings.stamp_url : null,
     },
     preview: {
       columns: ['Champ', 'Valeur'],

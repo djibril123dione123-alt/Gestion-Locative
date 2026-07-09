@@ -856,11 +856,11 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             </div>
           </div>
 
-          {/* Grille de champs ultra dense (zéro scroll vertical) */}
-          <div className="space-y-2">
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {/* Grille de champs ultra dense et uniforme (hauteur h-11 exacte pour tous les champs) */}
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
-                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Plan</span>
+                <span className="mb-1 block text-xs font-bold text-slate-700">Plan</span>
                 <SmartCombobox
                   value={proofForm.plan_key}
                   options={PLAN_CATALOG.filter((plan) => plan.id !== 'enterprise').map((plan) => ({
@@ -876,35 +876,35 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                     }));
                   }}
                   placeholder="Sélectionner un plan..."
-                  density="compact"
+                  density="wizard"
                 />
               </div>
 
               <label>
-                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Montant (XOF)</span>
+                <span className="mb-1 block text-xs font-bold text-slate-700">Montant (XOF)</span>
                 <input
                   type="number"
                   min="0"
                   value={proofForm.amount}
                   onChange={(event) => setProofForm((form) => ({ ...form, amount: event.target.value }))}
-                  className="h-9 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                  className="h-11 w-full rounded-xl border border-emerald-950/15 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                 />
               </label>
 
               <label>
-                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Date de paiement</span>
+                <span className="mb-1 block text-xs font-bold text-slate-700">Date de paiement</span>
                 <input
                   type="date"
                   value={proofForm.payment_date}
                   onChange={(event) => setProofForm((form) => ({ ...form, payment_date: event.target.value }))}
-                  className="h-9 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                  className="h-11 w-full rounded-xl border border-emerald-950/15 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                 />
               </label>
             </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Moyen</span>
+                <span className="mb-1 block text-xs font-bold text-slate-700">Moyen de paiement</span>
                 <SmartCombobox
                   value={proofForm.method}
                   options={MANUAL_PAYMENT_METHODS.map((method) => ({
@@ -913,60 +913,60 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                   }))}
                   onChange={(val) => setProofForm((form) => ({ ...form, method: val }))}
                   placeholder="Moyen de paiement..."
-                  density="compact"
+                  density="wizard"
                 />
               </div>
 
               <label>
-                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Référence</span>
+                <span className="mb-1 block text-xs font-bold text-slate-700">Référence</span>
                 <input
                   type="text"
                   value={proofForm.reference}
                   onChange={(event) => setProofForm((form) => ({ ...form, reference: event.target.value }))}
                   placeholder="Ex : WAVE-1289"
-                  className="h-9 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                  className="h-11 w-full rounded-xl border border-emerald-950/15 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                 />
               </label>
             </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label>
-                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Lien preuve (optionnel)</span>
+                <span className="mb-1 block text-xs font-bold text-slate-700">Lien preuve (optionnel)</span>
                 <input
                   type="url"
                   value={proofForm.proof_file_url}
                   onChange={(event) => setProofForm((form) => ({ ...form, proof_file_url: event.target.value }))}
                   placeholder="Lien Drive, reçu ou capture"
-                  className="h-9 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                  className="h-11 w-full rounded-xl border border-emerald-950/15 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                 />
               </label>
 
               <label>
-                <span className="mb-0.5 block text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">Commentaire</span>
+                <span className="mb-1 block text-xs font-bold text-slate-700">Commentaire</span>
                 <input
                   type="text"
                   value={proofForm.comment}
                   onChange={(event) => setProofForm((form) => ({ ...form, comment: event.target.value }))}
                   placeholder="Ex : paiement transmis par Wave au nom de l'agence"
-                  className="h-9 w-full rounded-lg border border-emerald-950/15 bg-white px-2.5 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                  className="h-11 w-full rounded-xl border border-emerald-950/15 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                 />
               </label>
             </div>
           </div>
 
           {/* Actions du bas */}
-          <div className="mt-2 flex items-center justify-end gap-2.5 border-t border-slate-100 pt-3">
+          <div className="mt-3 flex items-center justify-end gap-3 border-t border-slate-100 pt-3">
             <button
               type="button"
               onClick={() => setManualProofOpen(false)}
-              className="inline-flex h-9.5 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-extrabold text-slate-700 shadow-sm transition hover:bg-slate-50"
+              className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-extrabold text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={submittingProof}
-              className="inline-flex h-9.5 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-4 text-xs font-extrabold text-white shadow-sm transition hover:from-[#073b2f] hover:to-emerald-950 disabled:opacity-60"
+              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-5 text-xs font-extrabold text-white shadow-sm transition hover:from-[#073b2f] hover:to-emerald-950 disabled:opacity-60"
             >
               {submittingProof ? (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-white" />

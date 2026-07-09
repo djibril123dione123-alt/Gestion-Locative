@@ -281,8 +281,8 @@ export function SmartCombobox({
                   <div
                     key={option.value}
                     role="option"
-                    aria-selected={isSelected ? "true" : "false"}
-                    aria-disabled={isDisabled ? "true" : undefined}
+                    aria-selected={isSelected}
+                    aria-disabled={isDisabled || undefined}
                   onClick={() => {
                     if (!isDisabled) selectOption(option);
                   }}
@@ -376,7 +376,7 @@ export function SmartCombobox({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           role="combobox"
-          aria-expanded={open ? "true" : "false"}
+          aria-expanded={open}
           aria-controls="smart-combobox-listbox"
           aria-autocomplete="list"
           className={`${isDense ? '!h-8 !min-h-8 py-0 rounded-lg pl-8 pr-7 text-xs leading-4 shadow-sm focus:ring-1' : isCompact ? '!h-11 !min-h-11 py-0 rounded-xl pl-9 pr-8 text-xs leading-4 shadow-sm focus:ring-2' : isWizard ? '!h-11 !min-h-11 py-0 rounded-xl pl-10 pr-9 text-xs leading-4 shadow-sm focus:ring-2' : 'h-12 rounded-2xl pl-10 pr-11 text-sm leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] focus:ring-4'} w-full min-w-0 border border-emerald-950/15 bg-[#fffdf8]/95 font-bold text-slate-800 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-emerald-600/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-300`}

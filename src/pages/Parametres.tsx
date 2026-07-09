@@ -27,6 +27,7 @@ import { ToastContainer } from '../components/ui/Toast';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { invalidateAgencySettingsCache } from '../lib/pdf';
+import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 import { formatSenegalCniInput, validateSenegalCni } from '../lib/senegalIdentity';
@@ -1603,19 +1604,21 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   <input type="text" value={settings.representant_fonction ?? ''} onChange={(e) => setSettings({ ...settings, representant_fonction: e.target.value })} className={embeddedFieldClass} placeholder={isIndividualOwner ? 'Propriétaire' : 'Gérant'} />
                 </FormField>
                 <FormField label="Type de pièce" optional>
-                  <select
+                  <SmartCombobox
+                    density="wizard"
                     value={identityTypeValue}
-                    onChange={(e) => setSettings({
+                    options={[
+                      { value: 'CNI', label: 'CNI' },
+                      { value: 'Passeport', label: 'Passeport' },
+                      { value: 'Carte consulaire', label: 'Carte consulaire' },
+                    ]}
+                    onChange={(val) => setSettings({
                       ...settings,
-                      manager_id_type: e.target.value,
-                      manager_id_number: formatIdentityNumberInput(settings.manager_id_number ?? '', e.target.value),
+                      manager_id_type: val,
+                      manager_id_number: formatIdentityNumberInput(settings.manager_id_number ?? '', val),
                     })}
-                    className={embeddedFieldClass}
-                  >
-                    <option value="CNI">CNI</option>
-                    <option value="Passeport">Passeport</option>
-                    <option value="Carte consulaire">Carte consulaire</option>
-                  </select>
+                    placeholder="Sélectionner le type"
+                  />
                 </FormField>
                 <FormField
                   label="Numéro de pièce"
@@ -1857,14 +1860,20 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                       )}
                     </div>
                   </div>
-                  <label>
+                  <div>
                     <span className={embeddedLabelClass}>Position logo</span>
-                    <select value={settings.logo_position ?? 'left'} onChange={(e) => setSettings({ ...settings, logo_position: e.target.value as AgencySettings['logo_position'] })} className={embeddedFieldClass}>
-                      <option value="left">Gauche</option>
-                      <option value="center">Centre</option>
-                      <option value="right">Droite</option>
-                    </select>
-                  </label>
+                    <SmartCombobox
+                      density="wizard"
+                      value={settings.logo_position ?? 'left'}
+                      options={[
+                        { value: 'left', label: 'Gauche' },
+                        { value: 'center', label: 'Centre' },
+                        { value: 'right', label: 'Droite' },
+                      ]}
+                      onChange={(val) => setSettings({ ...settings, logo_position: val as AgencySettings['logo_position'] })}
+                      placeholder="Sélectionner la position"
+                    />
+                  </div>
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     <label>
                       <span className={embeddedLabelClass}>Couleur primaire</span>
@@ -2131,6 +2140,27 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   </label>
                   <input
                     type="text"
+
+                {!isIndividualOwner && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    {isIndividualOwner ? 'Nom du propriétaire' : 'Nom du représentant'}
+                  </label>
+                  <input aria-label="Champ de saisie"
+                    type="text"
+                    value={settings.representant_nom ?? ''}
+                    onChange={(e) => setSettings({ ...settings, representant_nom: e.target.value })}
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  />
+                </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    {isIndividualOwner ? 'Qualité sur les documents' : 'Fonction du représentant'}
+                  </label>
+                  <input
+                    type="text"
                     value={settings.representant_fonction ?? ''}
                     onChange={(e) =>
                       setSettings({ ...settings, representant_fonction: e.target.value })
@@ -2144,21 +2174,23 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     {isIndividualOwner ? "Type de pièce d'identité" : "Type de pièce d'identité du représentant"}
                   </label>
-                  <select aria-label="Sélection"
+                  <SmartCombobox
+                    density="wizard"
                     value={identityTypeValue}
-                    onChange={(e) =>
+                    options={[
+                      { value: 'CNI', label: "CNI (Carte Nationale d'Identité)" },
+                      { value: 'Passeport', label: 'Passeport' },
+                      { value: 'Carte consulaire', label: 'Carte consulaire' },
+                    ]}
+                    onChange={(val) =>
                       setSettings({
                         ...settings,
-                        manager_id_type: e.target.value,
-                        manager_id_number: formatIdentityNumberInput(settings.manager_id_number ?? '', e.target.value),
+                        manager_id_type: val,
+                        manager_id_number: formatIdentityNumberInput(settings.manager_id_number ?? '', val),
                       })
                     }
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  >
-                    <option value="CNI">CNI (Carte Nationale d'Identité)</option>
-                    <option value="Passeport">Passeport</option>
-                    <option value="Carte consulaire">Carte consulaire</option>
-                  </select>
+                    placeholder="Sélectionner le type"
+                  />
                 </div>
 
                 <div>

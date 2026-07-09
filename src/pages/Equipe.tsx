@@ -25,6 +25,10 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { PremiumButton } from '../components/ui/PremiumButton';
+import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
+import { MetricCard } from '../components/ui/MetricCard';
+import { PremiumFilterSelect } from '../components/ui/PremiumFilterSelect';
+import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { SkeletonTable } from '../components/ui/Skeleton';
 import { ToastContainer } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -635,13 +639,13 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         </section>
       )}
 
-      <section className="grid grid-cols-3 gap-1.5 sm:grid-cols-5">
+      <PremiumKpiGrid columns={5} mobileColumns={2}>
         <MetricCard label="Membres actifs" value={stats.activeMembers} helper={`${stats.inactiveMembers} inactif(s)`} icon={UsersIcon} />
         <MetricCard label="Invitations" value={stats.pendingInvitations} helper="En attente" icon={Mail} tone="orange" />
         <MetricCard label="Accès restreints" value={stats.restrictedMembers} helper={`${stats.customMembers} personnalisé(s)`} icon={Lock} tone="emerald" />
         <MetricCard label="RBAC" value="Actif" helper="Rôle + page" icon={ShieldCheck} tone="emerald" />
         <MetricCard label="Plan" value={userUsageLabel} helper={planDefinition.name} icon={KeyRound} tone={canInviteMore ? 'brand' : 'orange'} />
-      </section>
+      </PremiumKpiGrid>
 
       <section className={embedded ? 'overflow-hidden rounded-xl border border-emerald-950/10 bg-white/88 shadow-sm' : 'sk-premium-panel overflow-hidden'}>
         <div className="flex flex-col gap-2 border-b border-slate-100 p-2.5 lg:flex-row lg:items-center lg:justify-between">
@@ -667,27 +671,30 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
               />
             </label>
             <div className="grid grid-cols-2 gap-1.5 sm:flex sm:items-center sm:gap-2">
-              <select aria-label="Sélection"
+              <PremiumFilterSelect
                 value={roleFilter}
-                onChange={(event) => setRoleFilter(event.target.value as typeof roleFilter)}
-                className="h-8 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-[0.72rem] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-              >
-                <option value="all">Tous les rôles</option>
-                <option value="admin">Admins</option>
-                <option value="agent">Agents</option>
-                <option value="comptable">Comptables</option>
-                <option value="bailleur">Bailleurs</option>
-              </select>
-              <select
-                aria-label="Filtrer par statut"
+                onChange={(v) => setRoleFilter(v as typeof roleFilter)}
+                placeholder="Tous les rôles"
+                options={[
+                  { value: 'all', label: 'Tous les rôles' },
+                  { value: 'admin', label: 'Admins' },
+                  { value: 'agent', label: 'Agents' },
+                  { value: 'comptable', label: 'Comptables' },
+                  { value: 'bailleur', label: 'Bailleurs' },
+                ]}
+                className="w-full sm:w-40"
+              />
+              <PremiumFilterSelect
                 value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-                className="h-8 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-[0.72rem] font-bold text-slate-700 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
-              >
-                <option value="all">Tous statuts</option>
-                <option value="active">Actifs</option>
-                <option value="inactive">Désactivés</option>
-              </select>
+                onChange={(v) => setStatusFilter(v as StatusFilter)}
+                placeholder="Tous statuts"
+                options={[
+                  { value: 'all', label: 'Tous statuts' },
+                  { value: 'active', label: 'Actifs' },
+                  { value: 'inactive', label: 'Désactivés' },
+                ]}
+                className="w-full sm:w-36"
+              />
             </div>
           </div>
         </div>
@@ -991,20 +998,21 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             </div>
             <div>
               <label className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Rôle et preset d’accès</label>
-              <select aria-label="Sélection"
+              <SmartCombobox
+                density="wizard"
                 value={formData.role}
-                onChange={(event) => {
-                  const nextRole = event.target.value as RoleOption;
+                options={[
+                  { value: 'agent', label: 'Agent' },
+                  { value: 'comptable', label: 'Comptable' },
+                  { value: 'admin', label: 'Administrateur' },
+                ]}
+                onChange={(val) => {
+                  const nextRole = val as RoleOption;
                   setFormData({ ...formData, role: nextRole });
                   setInvitePreset(ROLE_DEFAULT_PRESET[nextRole] ?? 'standard');
                 }}
-                data-testid="select-invite-role"
-                className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-[0.78rem] font-semibold text-slate-900 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
-              >
-                <option value="agent">Agent</option>
-                <option value="comptable">Comptable</option>
-                <option value="admin">Administrateur</option>
-              </select>
+                placeholder="Sélectionner un rôle"
+              />
             </div>
             <div>
               <p className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Preset d’accès prévu</p>
@@ -1155,18 +1163,22 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                               <p className="mt-0.5 text-[0.66rem] leading-4 text-slate-500">{item.description}</p>
                               <p className="mt-0.5 text-[0.58rem] font-bold text-slate-400">Défaut rôle : {ACCESS_LABELS[inherited]}</p>
                             </div>
-                            <select aria-label="Sélection"
-                              value={draft.access_level}
-                              onChange={(event) => updateDraftAccess(item.id, event.target.value as DraftAccessLevel)}
-                              disabled={!moduleEnabled}
-                              className="h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-[0.7rem] font-black text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
-                            >
-                              <option value="inherit">Rôle par défaut</option>
-                              <option value="none">Masquer</option>
-                              <option value="read">Lecture seule</option>
-                              <option value="write">Édition</option>
-                              <option value="admin">Admin module</option>
-                            </select>
+                            <div className="w-44">
+                              <SmartCombobox
+                                isDense
+                                disabled={!moduleEnabled}
+                                value={draft.access_level}
+                                options={[
+                                  { value: 'inherit', label: 'Rôle par défaut' },
+                                  { value: 'none', label: 'Masquer' },
+                                  { value: 'read', label: 'Lecture seule' },
+                                  { value: 'write', label: 'Édition' },
+                                  { value: 'admin', label: 'Admin module' },
+                                ]}
+                                onChange={(val) => updateDraftAccess(item.id, val as DraftAccessLevel)}
+                                placeholder="Niveau d'accès"
+                              />
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">

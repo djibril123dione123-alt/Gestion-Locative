@@ -1,16 +1,23 @@
+import { useMemo, useState } from 'react';
 import {
   ArrowDown,
   ArrowUp,
   Braces,
   FileText,
   Plus,
+  Search,
   Trash2,
 } from 'lucide-react';
 import { PremiumButton } from '../ui/PremiumButton';
-import { getTemplateTags } from '../../lib/documents/templateCatalog';
+import {
+  getSystemBlockPublicLabel,
+  getTemplateTags,
+  TEMPLATE_TAG_CATEGORY_LABELS,
+} from '../../lib/documents/templateCatalog';
 import type {
   DocumentTemplateBlock,
   DocumentTemplateContent,
+  TemplateTagDefinition,
 } from '../../types/documentStudio';
 
 interface DocumentTemplateEditorProps {
@@ -24,15 +31,33 @@ function normalizeOrder(blocks: DocumentTemplateBlock[]) {
   return blocks.map((block, index) => ({ ...block, order: index }));
 }
 
+function groupTags(tags: TemplateTagDefinition[]) {
+  return tags.reduce<Record<TemplateTagDefinition['category'], TemplateTagDefinition[]>>((groups, tag) => {
+    groups[tag.category] = [...(groups[tag.category] ?? []), tag];
+    return groups;
+  }, {} as Record<TemplateTagDefinition['category'], TemplateTagDefinition[]>);
+}
+
 export function DocumentTemplateEditor({
   content,
   selectedBlockId,
   onSelectBlock,
   onChange,
 }: DocumentTemplateEditorProps) {
+  const [tagSearch, setTagSearch] = useState('');
   const blocks = [...content.blocks].sort((left, right) => left.order - right.order);
   const selected = blocks.find((block) => block.id === selectedBlockId) ?? blocks[0];
   const tags = getTemplateTags(content.documentType);
+  const filteredTags = useMemo(() => {
+    const query = tagSearch.trim().toLowerCase();
+    if (!query) return tags;
+    return tags.filter((tag) => (
+      tag.label.toLowerCase().includes(query)
+      || tag.key.toLowerCase().includes(query)
+      || tag.example.toLowerCase().includes(query)
+    ));
+  }, [tagSearch, tags]);
+  const groupedTags = useMemo(() => groupTags(filteredTags), [filteredTags]);
 
   const updateBlock = (blockId: string, patch: Partial<DocumentTemplateBlock>) => {
     onChange({
@@ -108,7 +133,9 @@ export function DocumentTemplateEditor({
                 className="flex min-w-0 flex-1 items-center gap-1.5 rounded px-1 py-0.5 text-left"
               >
                 <FileText className="h-3.5 w-3.5 shrink-0 text-slate-300" />
-                <span className="min-w-0 flex-1 truncate text-[0.68rem] font-bold">{block.title}</span>
+                <span className="min-w-0 flex-1 truncate text-[0.68rem] font-bold">
+                  {block.kind === 'system' ? getSystemBlockPublicLabel(block.systemKey, block.title) : block.title}
+                </span>
                 {!block.enabled && <span className="text-[0.5rem] font-black uppercase text-slate-400">masqué</span>}
               </button>
               <button
@@ -139,9 +166,14 @@ export function DocumentTemplateEditor({
           <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-200 pb-2">
             <div>
               <p className="text-[0.56rem] font-black uppercase tracking-[0.14em] text-orange-600">
-                {selected.custom ? 'Clause personnalisée' : 'Modèle officiel'}
+                {selected.custom ? 'Clause personnalisée' : selected.kind === 'system' ? 'Section automatique' : 'Modèle officiel'}
               </p>
-              <p className="text-sm font-black text-slate-950">{selected.title}</p>
+              <p className="text-sm font-black text-slate-950">
+                {selected.kind === 'system' ? getSystemBlockPublicLabel(selected.systemKey, selected.title) : selected.title}
+              </p>
+              {!selected.custom && selected.kind !== 'system' && (
+                <p className="mt-0.5 text-[0.58rem] font-semibold text-slate-400">Identifiant modèle : {selected.code}</p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <label className="inline-flex items-center gap-1.5 text-[0.64rem] font-bold text-slate-600">
@@ -167,24 +199,33 @@ export function DocumentTemplateEditor({
             </div>
           </div>
 
-          <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_11rem]">
+          <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem]">
             <label className="block">
-              <span className="text-[0.58rem] font-black uppercase tracking-[0.12em] text-slate-500">Titre</span>
+              <span className="text-[0.58rem] font-black uppercase tracking-[0.12em] text-slate-500">Titre public</span>
               <input
                 value={selected.title}
                 onChange={(event) => updateBlock(selected.id, { title: event.target.value })}
                 className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/10"
               />
             </label>
-            <label className="block">
-              <span className="text-[0.58rem] font-black uppercase tracking-[0.12em] text-slate-500">Code interne</span>
-              <input
-                value={selected.code}
-                disabled={!selected.custom}
-                onChange={(event) => updateBlock(selected.id, { code: event.target.value.replace(/[^a-z0-9-]/gi, '-').toLowerCase() })}
-                className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-slate-50 px-2.5 text-xs font-semibold outline-none disabled:text-slate-400"
-              />
-            </label>
+            {selected.custom ? (
+              <label className="block">
+                <span className="text-[0.58rem] font-black uppercase tracking-[0.12em] text-slate-500">Identifiant</span>
+                <input
+                  value={selected.code}
+                  onChange={(event) => updateBlock(selected.id, { code: event.target.value.replace(/[^a-z0-9-]/gi, '-').toLowerCase() })}
+                  className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-slate-50 px-2.5 text-xs font-semibold outline-none"
+                />
+                <span className="mt-1 block text-[0.54rem] font-semibold text-slate-400">Invisible sur le PDF.</span>
+              </label>
+            ) : (
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2">
+                <p className="text-[0.58rem] font-black uppercase tracking-[0.12em] text-slate-500">Source</p>
+                <p className="mt-1 text-xs font-bold text-slate-700">
+                  {selected.kind === 'system' ? 'Données métier validées' : 'Catalogue officiel'}
+                </p>
+              </div>
+            )}
           </div>
 
           {selected.kind !== 'system' && (
@@ -193,7 +234,7 @@ export function DocumentTemplateEditor({
               <textarea
                 value={selected.content}
                 onChange={(event) => updateBlock(selected.id, { content: event.target.value })}
-                rows={12}
+                rows={10}
                 className="mt-1 w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2 text-xs leading-relaxed outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/10"
               />
             </label>
@@ -201,26 +242,52 @@ export function DocumentTemplateEditor({
 
           {selected.kind === 'system' ? (
             <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-[0.66rem] leading-relaxed text-blue-800">
-              Cette section est alimentée par la source métier. Vous pouvez la déplacer ou la masquer, sans altérer les calculs.
+              Cette section est alimentée par la source métier. Vous pouvez la déplacer ou la masquer, sans altérer les calculs ni les données financières.
             </div>
           ) : (
-            <div className="mt-3">
-              <div className="flex items-center gap-1.5">
-                <Braces className="h-3.5 w-3.5 text-emerald-700" />
-                <p className="text-[0.58rem] font-black uppercase tracking-[0.12em] text-slate-500">Variables disponibles</p>
+            <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Braces className="h-3.5 w-3.5 text-emerald-700" />
+                  <div>
+                    <p className="text-[0.58rem] font-black uppercase tracking-[0.12em] text-slate-500">Variables disponibles</p>
+                    <p className="text-[0.58rem] font-semibold text-slate-500">Cliquez pour insérer une donnée remplacée automatiquement au PDF.</p>
+                  </div>
+                </div>
+                <label className="relative block w-full sm:w-52">
+                  <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                  <input
+                    value={tagSearch}
+                    onChange={(event) => setTagSearch(event.target.value)}
+                    placeholder="Rechercher..."
+                    className="h-8 w-full rounded-md border border-slate-200 bg-white pl-7 pr-2 text-[0.66rem] font-semibold outline-none focus:border-emerald-700"
+                  />
+                </label>
               </div>
-              <div className="mt-1.5 flex max-h-24 flex-wrap gap-1 overflow-y-auto">
-                {tags.map((tag) => (
-                  <button
-                    type="button"
-                    key={tag.key}
-                    title={`${tag.label} · Exemple : ${tag.example}`}
-                    onClick={() => insertTag(tag.key)}
-                    className="rounded border border-emerald-900/10 bg-emerald-50 px-1.5 py-1 text-[0.58rem] font-bold text-emerald-800 hover:border-emerald-700/30 hover:bg-emerald-100"
-                  >
-                    {tag.label}
-                  </button>
-                ))}
+              <div className="mt-2 max-h-44 space-y-2 overflow-y-auto pr-1">
+                {Object.entries(TEMPLATE_TAG_CATEGORY_LABELS).map(([category, label]) => {
+                  const categoryTags = groupedTags[category as TemplateTagDefinition['category']] ?? [];
+                  if (categoryTags.length === 0) return null;
+                  return (
+                    <div key={category}>
+                      <p className="mb-1 text-[0.54rem] font-black uppercase tracking-[0.12em] text-slate-400">{label}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {categoryTags.map((tag) => (
+                          <button
+                            type="button"
+                            key={tag.key}
+                            title={`${tag.label} · Exemple : ${tag.example}`}
+                            onClick={() => insertTag(tag.key)}
+                            className="rounded border border-emerald-900/10 bg-white px-1.5 py-1 text-left text-[0.58rem] font-bold text-emerald-800 hover:border-emerald-700/30 hover:bg-emerald-50"
+                          >
+                            <span>{tag.label}</span>
+                            <span className="ml-1 text-slate-400">{`{{${tag.key}}}`}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

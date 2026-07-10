@@ -7,6 +7,7 @@ import {
   History,
   Save,
   Send,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageShell } from '../components/ui/PageShell';
@@ -53,6 +54,82 @@ function getFriendlyError(error: unknown) {
   return message || 'Une erreur empêche cette action.';
 }
 
+function SimpleDocumentMode({
+  content,
+  onChange,
+  onShowPreview,
+  onDownloadTest,
+}: {
+  content: DocumentTemplateContent;
+  onChange: (content: DocumentTemplateContent) => void;
+  onShowPreview: () => void;
+  onDownloadTest: () => void;
+}) {
+  const activeBlocks = content.blocks.filter((block) => block.enabled).length;
+  const updateStyle = (key: keyof DocumentTemplateContent['style'], value: boolean) => {
+    onChange({ ...content, style: { ...content.style, [key]: value } });
+  };
+
+  return (
+    <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_18rem]">
+      <section className="rounded-md border border-emerald-950/10 bg-white p-3">
+        <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-orange-600">Mode simple</p>
+        <h2 className="mt-1 text-sm font-black text-slate-950">Réglages visibles du document</h2>
+        <p className="mt-1 max-w-2xl text-[0.68rem] font-semibold leading-5 text-slate-500">
+          Activez les éléments d’identité, vérifiez l’aperçu et générez un PDF test. Les clauses détaillées restent disponibles en mode avancé.
+        </p>
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {[
+            { key: 'showLogo', label: 'Logo agence', helper: 'Affiché dans l’en-tête.' },
+            { key: 'showQr', label: 'QR Verify', helper: 'Authentification publique.' },
+            { key: 'showSignature', label: 'Signature', helper: 'Bloc signature si configuré.' },
+            { key: 'showStamp', label: 'Cachet', helper: 'Cachet officiel si configuré.' },
+          ].map((option) => (
+            <label key={option.key} className="flex items-start justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+              <span>
+                <span className="block text-xs font-black text-slate-900">{option.label}</span>
+                <span className="mt-0.5 block text-[0.62rem] font-semibold text-slate-500">{option.helper}</span>
+              </span>
+              <input
+                type="checkbox"
+                checked={content.style[option.key as keyof typeof content.style] === true}
+                onChange={(event) => updateStyle(option.key as keyof DocumentTemplateContent['style'], event.target.checked)}
+                className="mt-0.5 h-4 w-4 accent-emerald-800"
+              />
+            </label>
+          ))}
+        </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <PremiumButton variant="primary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={onDownloadTest}>
+            PDF test
+          </PremiumButton>
+          <PremiumButton variant="secondary" size="sm" onClick={onShowPreview}>
+            Voir l’aperçu
+          </PremiumButton>
+        </div>
+      </section>
+
+      <aside className="rounded-md border border-emerald-950/10 bg-[#fffdf8] p-3">
+        <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-emerald-700">Structure active</p>
+        <p className="mt-1 text-2xl font-black text-slate-950">{activeBlocks}</p>
+        <p className="mt-1 text-[0.66rem] font-semibold leading-5 text-slate-500">
+          sections publiables. Les articles personnalisés et l’ordre des clauses se règlent en mode avancé.
+        </p>
+        <div className="mt-3 space-y-1">
+          {content.blocks.slice(0, 5).map((block) => (
+            <div key={block.id} className="flex items-center justify-between gap-2 rounded-md bg-white px-2 py-1 text-[0.62rem] font-bold text-slate-700">
+              <span className="truncate">{block.title}</span>
+              <span className={block.enabled ? 'text-emerald-700' : 'text-slate-400'}>{block.enabled ? 'Actif' : 'Masqué'}</span>
+            </div>
+          ))}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 export function DocumentStudio() {
   const navigate = useNavigate();
   const toast = useToast();
@@ -66,6 +143,7 @@ export function DocumentStudio() {
   const [publishing, setPublishing] = useState(false);
   const [changeNote, setChangeNote] = useState('');
   const [activeView, setActiveView] = useState<'editor' | 'preview' | 'history'>('editor');
+  const [editorMode, setEditorMode] = useState<'simple' | 'advanced'>('simple');
   const [savedFingerprint, setSavedFingerprint] = useState('');
   const loadSequence = useRef(0);
 
@@ -127,7 +205,7 @@ export function DocumentStudio() {
       const saved = await saveDocumentTemplateDraft(documentType, content, row);
       setRow(saved);
       setSavedFingerprint(stableTemplateStringify(content));
-      toast.success('Brouillon enregistré.');
+      toast.success('Modèle enregistré.');
     } catch (error) {
       toast.error(getFriendlyError(error));
     } finally {
@@ -206,7 +284,7 @@ export function DocumentStudio() {
         }
         primaryAction={
           <PremiumButton variant="create" size="sm" icon={<Send className="h-3.5 w-3.5" />} disabled={!canPublish} onClick={publish}>
-            {publishing ? 'Publication…' : 'Publier'}
+            {publishing ? 'Publication…' : 'Publier version active'}
           </PremiumButton>
         }
       />
@@ -249,6 +327,24 @@ export function DocumentStudio() {
                   </button>
                 ))}
               </div>
+              {activeView === 'editor' && (
+                <div className="flex rounded-md border border-emerald-900/10 bg-emerald-50 p-0.5">
+                  {[
+                    { id: 'simple', label: 'Simple' },
+                    { id: 'advanced', label: 'Avancé' },
+                  ].map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => setEditorMode(item.id as typeof editorMode)}
+                      className={`flex h-7 items-center gap-1 rounded px-2 text-[0.62rem] font-bold ${editorMode === item.id ? 'bg-emerald-950 text-white' : 'text-emerald-900'}`}
+                    >
+                      {item.id === 'advanced' && <SlidersHorizontal className="h-3 w-3" />}
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="flex items-center gap-1.5">
                 {hasUnsavedChanges && (
                   <span className="rounded-full bg-amber-50 px-2 py-1 text-[0.56rem] font-black uppercase text-amber-700">
@@ -259,7 +355,7 @@ export function DocumentStudio() {
                   PDF test
                 </PremiumButton>
                 <PremiumButton variant="primary" size="sm" icon={<Save className="h-3.5 w-3.5" />} onClick={saveDraft} disabled={!content || !hasUnsavedChanges || saving || publishing}>
-                  {saving ? 'Enregistrement…' : 'Brouillon'}
+                  {saving ? 'Enregistrement…' : 'Enregistrer'}
                 </PremiumButton>
               </div>
             </div>
@@ -275,12 +371,21 @@ export function DocumentStudio() {
                 Le Studio ne peut pas charger ce modèle. Vérifiez la migration et vos droits.
               </div>
             ) : activeView === 'editor' ? (
-              <DocumentTemplateEditor
-                content={content}
-                selectedBlockId={selectedBlockId}
-                onSelectBlock={setSelectedBlockId}
-                onChange={setContent}
-              />
+              editorMode === 'simple' ? (
+                <SimpleDocumentMode
+                  content={content}
+                  onChange={setContent}
+                  onShowPreview={() => setActiveView('preview')}
+                  onDownloadTest={downloadTest}
+                />
+              ) : (
+                <DocumentTemplateEditor
+                  content={content}
+                  selectedBlockId={selectedBlockId}
+                  onSelectBlock={setSelectedBlockId}
+                  onChange={setContent}
+                />
+              )
             ) : activeView === 'preview' ? (
               <div className="h-[42rem]">
                 <DocumentTemplatePreview content={content} />

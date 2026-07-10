@@ -69,128 +69,6 @@ function SafeImage({
   );
 }
 
-/*
-  {
-    id: 'starter',
-    name: 'Starter',
-    audience: 'Bailleur individuel',
-    price: 5000,
-    priceLabel: '5 000 F CFA',
-    billingLabel: 'par mois',
-    positioning: 'Pour structurer un petit patrimoine sans Excel dispersé.',
-    outcome: 'Vous gardez une vision claire des loyers, documents et échéances essentielles.',
-    icon: Zap,
-    accent: '#475569',
-    surface: '#F8FAFC',
-    capacities: {
-      users: '1 utilisateur',
-      immeubles: '3 immeubles',
-      unites: '10 unités',
-      storage: '1 Go sécurisé',
-    },
-    value: [
-      'Pilotage simple des loyers',
-      'Documents locatifs professionnels',
-      'Suivi basique des impayés',
-      'Archivage documentaire léger',
-    ],
-    infrastructure: ['GED de démarrage', 'Exports essentiels', 'Support email'],
-    cta: 'Commencer en Starter',
-    ctaStyle: 'outline',
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    audience: 'Bailleur sérieux / petite gestion',
-    price: 15000,
-    priceLabel: '15 000 F CFA',
-    billingLabel: 'par mois',
-    positioning: 'Pour professionnaliser les encaissements et rassurer les propriétaires.',
-    outcome: 'Vous automatisez le suivi financier, les relances et les rapports propriétaires.',
-    icon: Building2,
-    accent: '#F58220',
-    surface: '#FFF7ED',
-    highlighted: true,
-    badge: 'Recommandé',
-    capacities: {
-      users: '5 utilisateurs',
-      immeubles: '20 immeubles',
-      unites: '100 unités',
-      storage: '20 Go sécurisés',
-    },
-    value: [
-      'Suivi propriétaire automatisé',
-      'Reporting financier avancé',
-      'Paiements Wave, Orange Money et Djamo',
-      'QR de vérification documentaire',
-      'Gestion des reliquats et paiements partiels',
-    ],
-    infrastructure: ['GED structurée', 'Synchronisation offline-first', 'Support WhatsApp prioritaire'],
-    cta: 'Activer Pro',
-    ctaStyle: 'primary',
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    audience: 'Agence immobilière structurée',
-    price: 35000,
-    priceLabel: '35 000 F CFA',
-    billingLabel: 'par mois',
-    positioning: 'Pour coordonner une équipe, sécuriser les workflows et piloter un portefeuille.',
-    outcome: 'Votre agence gagne en contrôle : rôles, validations, audit trail et reporting consolidé.',
-    icon: BarChart3,
-    accent: '#0F766E',
-    surface: '#ECFDF5',
-    badge: 'Agence',
-    capacities: {
-      users: '15 utilisateurs',
-      immeubles: '100 immeubles',
-      unites: '500 unités',
-      storage: '100 Go sécurisés',
-    },
-    value: [
-      'Rôles et permissions avancés',
-      'Workflows équipe et coordination agence',
-      'Historique et audit trail opérationnel',
-      'Rapports bailleurs et finance consolidés',
-      'Portefeuille multi-gestionnaires',
-    ],
-    infrastructure: ['GED agence complète', 'API webhooks', 'Support prioritaire < 4h'],
-    cta: 'Passer en Business',
-    ctaStyle: 'secondary',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    audience: 'Groupes, réseaux, multi-agences',
-    price: 0,
-    priceLabel: 'Sur devis',
-    billingLabel: 'capacité sur mesure',
-    positioning: 'Pour déployer une infrastructure immobilière gouvernée, sécurisée et scalable.',
-    outcome: 'Vous obtenez une plateforme adaptée à vos règles, vos équipes et votre gouvernance.',
-    icon: Crown,
-    accent: '#14532D',
-    surface: '#F0FDF4',
-    capacities: {
-      users: 'Sur mesure',
-      immeubles: 'Sur mesure',
-      unites: 'Sur mesure',
-      storage: 'Fair usage contractualisé',
-    },
-    value: [
-      'Multi-agence et gouvernance réseau',
-      'SLA, sécurité et conformité renforcés',
-      'Déploiement personnalisé et formation',
-      'White-label et intégrations métier',
-      'Account manager dédié',
-    ],
-    infrastructure: ['Architecture dédiée selon volume', 'API complète', 'Support institutionnel'],
-    cta: 'Demander un devis',
-    ctaStyle: 'contact',
-  },
-];
-*/
-
 const TRUST_POINTS = [
   {
     icon: LockKeyhole,
@@ -282,83 +160,103 @@ function PlanCard({ plan, onCta }: { plan: PlanDef; onCta: (plan: PlanDef) => vo
 
   return (
     <article
-      className={`relative mx-auto flex h-full w-full max-w-[20rem] min-w-0 flex-col overflow-hidden rounded-[1.7rem] border bg-white/96 shadow-premium backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-emerald-900/25 hover:shadow-2xl sm:max-w-none ${
-        plan.highlighted ? 'border-orange-300 ring-4 ring-orange-200/55' : 'border-white/70'
+      className={`relative flex h-full w-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
+        plan.highlighted
+          ? 'border-orange-400 ring-2 ring-orange-400/30 shadow-orange-500/10'
+          : 'border-slate-200/90 hover:border-emerald-700/30'
       }`}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[radial-gradient(circle_at_22%_0%,rgba(245,130,32,0.13),transparent_11rem)]" />
+      <div
+        className="h-1.5 w-full"
+        style={{
+          background: plan.highlighted
+            ? 'linear-gradient(90deg, #F97316, #F59E0B)'
+            : `linear-gradient(90deg, ${plan.accent}, #0F766E)`,
+        }}
+      />
+
       {plan.badge && (
-        <div className="absolute right-4 top-4 z-10 rounded-full bg-emerald-950 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.14em] text-white shadow-lg shadow-emerald-950/20">
+        <div className="absolute right-3.5 top-3.5 z-10 rounded-full bg-slate-900 px-2.5 py-0.5 text-[0.65rem] font-black uppercase tracking-[0.12em] text-white shadow-sm">
           {plan.badge}
         </div>
       )}
 
-      <div className="relative p-5 sm:p-6" style={{ background: `linear-gradient(145deg, ${plan.surface}, #FFFFFF 72%)` }}>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-lg shadow-slate-950/5 ring-1 ring-black/5">
-          <Icon className="h-5 w-5" style={{ color: plan.accent }} />
+      <div className="p-4 sm:p-5" style={{ background: `linear-gradient(145deg, ${plan.surface}, #FFFFFF 85%)` }}>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white shadow-xs ring-1 ring-slate-900/10">
+            <Icon className="h-5 w-5" style={{ color: plan.accent }} />
+          </div>
+          <div>
+            <p className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-slate-500">{plan.audience}</p>
+            <h3 className="text-xl font-black tracking-tight text-slate-950">{plan.name}</h3>
+          </div>
         </div>
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-slate-500">{plan.audience}</p>
-        <h3 className="mt-2 text-2xl font-extrabold tracking-tight text-slate-950">{plan.name}</h3>
-        <p className="mt-3 min-h-[48px] break-words text-sm font-semibold leading-6 text-slate-600">{plan.positioning}</p>
-        <div className="mt-5">
-          <span className="text-3xl font-extrabold text-slate-950">{plan.priceLabel}</span>
-          <span className="ml-2 text-sm font-bold text-slate-500">{plan.billingLabel}</span>
+        <p className="mt-2.5 min-h-[36px] text-xs font-semibold leading-5 text-slate-600">{plan.positioning}</p>
+        <div className="mt-4 flex items-baseline rounded-xl bg-white/80 px-3.5 py-2.5 border border-slate-150">
+          <span className="text-2xl font-black text-slate-950">{plan.priceLabel}</span>
+          <span className="ml-1.5 text-xs font-bold text-slate-500">{plan.billingLabel}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 border-y border-emerald-950/10 bg-[linear-gradient(135deg,rgba(6,78,59,0.045),rgba(255,255,255,0.88),rgba(245,130,32,0.055))] p-4">
+      <div className="grid grid-cols-2 gap-2 border-y border-slate-100 bg-slate-50/70 p-3">
         {Object.entries(plan.capacities).map(([key, value]) => (
-          <div key={key} className="rounded-xl border border-emerald-950/8 bg-white/82 px-3 py-2 shadow-sm">
-            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{key === 'unites' ? 'unités' : key}</p>
-            <p className="mt-1 text-xs font-black text-slate-800">{value}</p>
+          <div key={key} className="rounded-xl border border-slate-200/70 bg-white px-3 py-2 shadow-2xs">
+            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
+              {key === 'unites' ? 'unités' : key}
+            </p>
+            <p className="mt-0.5 text-xs font-black text-slate-900">{value}</p>
           </div>
         ))}
       </div>
 
-      <div className="flex flex-1 flex-col gap-5 p-5 sm:p-6">
-        <div>
-          <p className="text-sm font-extrabold text-slate-950">Valeur métier</p>
-          <ul className="mt-3 space-y-2.5">
-            {plan.value.map((item) => (
-              <li key={item} className="flex gap-2 text-sm font-semibold leading-5 text-slate-650">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: plan.accent }} />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
+      <div className="flex flex-1 flex-col justify-between gap-4 bg-white p-4 sm:p-5">
+        <div className="space-y-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wider text-slate-900">Valeur métier incluse</p>
+            <ul className="mt-2.5 space-y-2">
+              {plan.value.map((item) => (
+                <li key={item} className="flex items-start gap-2 text-xs font-bold leading-5 text-slate-700">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" style={{ color: plan.accent }} />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-        <div className="rounded-[1.25rem] border border-emerald-950/10 bg-gradient-to-br from-emerald-50 via-white to-orange-50/45 p-4 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-900">Infrastructure incluse</p>
-          <ul className="mt-3 space-y-2">
-            {plan.infrastructure.map((item) => (
-              <li key={item} className="flex gap-2 text-xs font-bold leading-5 text-emerald-950/75">
-                <Database className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-emerald-800" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 shadow-2xs">
+            <p className="text-[0.64rem] font-black uppercase tracking-[0.12em] text-slate-800">
+              Infrastructure & support
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {plan.infrastructure.map((item) => (
+                <li key={item} className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                  <Database className="h-3.5 w-3.5 flex-shrink-0 text-emerald-700" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
 
-        <p className="mt-auto break-words text-sm font-semibold leading-6 text-slate-500">{plan.outcome}</p>
+          <p className="text-[0.72rem] font-semibold leading-5 text-slate-500 italic">{plan.outcome}</p>
+        </div>
 
         <button
           type="button"
           onClick={() => onCta(plan)}
-          className={`mt-1 flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-black transition active:scale-[0.98] ${
+          className={`mt-2 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-xs font-black shadow-sm transition active:scale-[0.98] ${
             plan.ctaStyle === 'outline'
-              ? 'border border-emerald-900/20 bg-white text-emerald-950 hover:bg-emerald-50'
+              ? 'border-2 border-slate-300 bg-white text-slate-900 hover:border-slate-400 hover:bg-slate-50'
               : plan.ctaStyle === 'contact'
-                ? 'bg-emerald-950 text-white hover:bg-emerald-900'
-                : 'text-white shadow-lg'
+                ? 'bg-slate-900 text-white hover:bg-slate-800'
+                : 'text-white shadow-md hover:opacity-95'
           }`}
           style={
             plan.ctaStyle === 'primary' || plan.ctaStyle === 'secondary'
-              ? { background: `linear-gradient(135deg, ${plan.accent}, #14532D)` }
+              ? { background: `linear-gradient(135deg, ${plan.accent}, #0F766E)` }
               : undefined
           }
         >
-          {plan.cta}
+          <span>{plan.cta}</span>
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
@@ -399,7 +297,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
       }}
     >
       {!embedded && (
-        <section className="relative mx-auto max-w-6xl overflow-hidden rounded-b-[2.5rem] px-4 pb-9 pt-10 text-center sm:pb-12 sm:pt-16">
+        <section className="relative mx-auto max-w-6xl overflow-hidden rounded-b-3xl px-4 pb-6 pt-6 text-center sm:pb-8 sm:pt-8">
           <SafeImage
             src="/brand/marketing/landing-documents.jpg"
             alt=""
@@ -407,35 +305,35 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
             className="absolute inset-0 h-full w-full object-cover opacity-[0.24]"
           />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(245,130,32,0.18),transparent_18rem),linear-gradient(180deg,rgba(6,18,15,0.86),rgba(11,27,22,0.95))]" />
-          <div className="pointer-events-none absolute left-1/2 top-6 h-64 w-64 -translate-x-1/2 rounded-full bg-orange-300/10 blur-3xl" />
-          <div className="relative mb-5 flex justify-center">
+          <div className="pointer-events-none absolute left-1/2 top-4 h-48 w-48 -translate-x-1/2 rounded-full bg-orange-300/10 blur-3xl" />
+          <div className="relative mb-3 flex justify-center">
             <BrandLogo size="sm" tone="dark" showTagline />
           </div>
-          <div className="relative mx-auto inline-flex max-w-full items-center gap-2 rounded-full border border-white/12 bg-white/[0.08] px-3 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-50 shadow-sm backdrop-blur sm:px-4 sm:tracking-[0.16em]">
-            <ShieldCheck className="h-4 w-4 text-orange-500" />
+          <div className="relative mx-auto inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.08] px-3 py-1 text-[0.68rem] font-extrabold uppercase tracking-[0.14em] text-emerald-50 shadow-xs backdrop-blur">
+            <ShieldCheck className="h-3.5 w-3.5 text-orange-500" />
             <span className="truncate sm:hidden">Pricing SaaS</span>
             <span className="hidden sm:inline">Pricing infrastructure immobilière</span>
           </div>
-          <h1 className="relative mx-auto mt-5 max-w-[17rem] text-[1.58rem] font-black leading-[1.12] tracking-tight text-white sm:mt-6 sm:max-w-4xl sm:text-6xl">
+          <h1 className="relative mx-auto mt-3 max-w-3xl text-2xl font-black leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
             Des plans pensés pour faire grandir une gestion locative sérieuse.
           </h1>
-          <p className="relative mx-auto mt-5 max-w-[17.5rem] text-[0.88rem] font-semibold leading-7 text-emerald-50/80 sm:max-w-2xl sm:text-lg">
+          <p className="relative mx-auto mt-2 max-w-2xl text-xs font-semibold leading-5 text-emerald-50/80 sm:text-sm">
             Samay Këur ne vend pas seulement des fonctionnalités : la plateforme fournit l’infrastructure de paiement, GED,
             reporting, synchronisation et contrôle dont une agence a besoin pour travailler proprement.
           </p>
-          <div className="relative mx-auto mt-7 grid max-w-[17.5rem] grid-cols-1 items-center justify-center gap-2 text-sm font-bold text-emerald-50 sm:flex sm:max-w-none sm:flex-wrap sm:gap-3">
+          <div className="relative mx-auto mt-4 flex flex-wrap items-center justify-center gap-2 text-xs font-bold text-emerald-50">
             {[
               ['Orange Money', orangeMoneyLogo],
               ['Wave', waveLogo],
               ['Djamo', djamoLogo],
             ].map(([label, src]) => (
-              <span key={label} className="inline-flex min-w-0 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-emerald-50 shadow-lg shadow-emerald-950/10 backdrop-blur">
+              <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-xs text-emerald-50 shadow-sm backdrop-blur">
                 <SafeImage
                   src={src}
                   alt={label}
-                  className="h-5 w-5 rounded object-contain"
+                  className="h-4 w-4 rounded object-contain"
                   fallback={
-                    <span className="flex h-5 w-5 items-center justify-center rounded bg-white/15 text-[0.55rem] font-black text-emerald-50">
+                    <span className="flex h-4 w-4 items-center justify-center rounded bg-white/15 text-[0.5rem] font-black text-emerald-50">
                       {label.slice(0, 2).toUpperCase()}
                     </span>
                   }
@@ -443,16 +341,16 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
                 {label}
               </span>
             ))}
-            <span className="inline-flex min-w-0 items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-emerald-50 shadow-lg shadow-emerald-950/10 backdrop-blur">
-              <Smartphone className="h-4 w-4 text-emerald-700" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-xs text-emerald-50 shadow-sm backdrop-blur">
+              <Smartphone className="h-3.5 w-3.5 text-emerald-400" />
               Mobile Money local
             </span>
           </div>
         </section>
       )}
 
-      <main className="sk-mobile-page max-w-7xl pb-12">
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <main className="sk-mobile-page max-w-7xl pt-4 pb-12">
+        <section className="grid grid-cols-1 gap-3.5 md:grid-cols-2 lg:grid-cols-4">
           {PLANS.map((plan) => (
             <PlanCard key={plan.id} plan={plan} onCta={handleCta} />
           ))}
@@ -460,33 +358,33 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
 
         {!embedded && (
           <>
-            <section className="mt-12 grid gap-4 lg:grid-cols-4">
+            <section className="mt-8 grid gap-3 lg:grid-cols-4">
               {TRUST_POINTS.map((item) => (
-                <div key={item.title} className="rounded-[1.4rem] border border-emerald-950/10 bg-white/90 p-5 shadow-sm">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
-                    <item.icon className="h-5 w-5" />
+                <div key={item.title} className="rounded-xl border border-emerald-950/10 bg-white/90 p-4 shadow-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
+                    <item.icon className="h-4 w-4" />
                   </div>
-                  <h2 className="mt-4 text-base font-black text-slate-950">{item.title}</h2>
-                  <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">{item.text}</p>
+                  <h2 className="mt-3 text-sm font-black text-slate-950">{item.title}</h2>
+                  <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">{item.text}</p>
                 </div>
               ))}
             </section>
 
-            <section className="mt-12 overflow-hidden rounded-[1.75rem] border border-emerald-950/10 bg-emerald-950 text-white shadow-2xl shadow-emerald-950/15">
+            <section className="mt-10 overflow-hidden rounded-2xl border border-emerald-950/10 bg-emerald-950 text-white shadow-xl">
               <div className="grid gap-0 lg:grid-cols-[1fr_1.2fr]">
-                <div className="p-6 sm:p-8">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.08] px-3 py-1 text-xs font-black uppercase tracking-[0.16em] text-emerald-100">
-                    <Network className="h-3.5 w-3.5 text-orange-200" />
+                <div className="p-5 sm:p-6">
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.08] px-2.5 py-0.5 text-[0.68rem] font-black uppercase tracking-[0.14em] text-emerald-100">
+                    <Network className="h-3 w-3 text-orange-200" />
                     Capacité et fair usage
                   </div>
-                  <h2 className="mt-5 text-2xl font-black tracking-tight sm:text-3xl">
+                  <h2 className="mt-3 text-lg font-black tracking-tight sm:text-xl">
                     Le pricing protège votre croissance et la stabilité de la plateforme.
                   </h2>
-                  <p className="mt-4 text-sm font-semibold leading-7 text-emerald-50/70">
+                  <p className="mt-2 text-xs font-semibold leading-5 text-emerald-50/70">
                     Les limites ne sont pas là pour bloquer : elles donnent une base saine pour dimensionner stockage, bande
                     passante, équipes, documents et support sans créer de coûts cachés.
                   </p>
-                </div>
+</div>
                 <div className="grid gap-3 border-t border-white/10 bg-white/[0.04] p-5 sm:grid-cols-2 lg:border-l lg:border-t-0">
                   {[
                     ['Starter', '1 Go', 'Patrimoine léger'],
@@ -581,7 +479,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
                 <button
                   type="button"
                   onClick={() => onNavigate?.(profile ? 'abonnement' : 'auth')}
-                  className="rounded-2xl bg-orange-500 px-6 py-3 text-sm font-black text-white transition hover:bg-orange-400"
+                  className="rounded-2xl bg-orange-500 px-8 py-4 text-sm font-black text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-400 active:scale-95"
                 >
                   Démarrer maintenant
                 </button>
@@ -589,9 +487,9 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
                   href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux comprendre quel plan Samay Këur choisir.')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-2xl border border-white/15 px-6 py-3 text-sm font-black text-slate-200 transition hover:bg-white/10"
+                  className="rounded-2xl border border-white/20 bg-white/5 px-8 py-4 text-sm font-black text-white transition hover:bg-white/10 active:scale-95"
                 >
-                  Parler à l’équipe
+                  Parler à l’équipe WhatsApp
                 </a>
               </div>
             </section>
@@ -619,19 +517,39 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
 function FragmentRows({ title, rows }: { title: string; rows: string[][] }) {
   return (
     <>
-      <tr className="border-b border-slate-100 bg-emerald-50/60">
-        <td colSpan={5} className="px-5 py-3 text-xs font-black uppercase tracking-[0.16em] text-emerald-950">
+      <tr className="border-b border-slate-200 bg-slate-100/80">
+        <td colSpan={5} className="px-6 py-3.5 text-xs font-black uppercase tracking-[0.16em] text-slate-800">
           {title}
         </td>
       </tr>
       {rows.map(([label, ...values]) => (
-        <tr key={`${title}-${label}`} className="border-b border-slate-100">
-          <td className="px-5 py-4 font-bold text-slate-700">{label}</td>
-          {values.map((value, index) => (
-            <td key={`${label}-${index}`} className="px-4 py-4 font-semibold text-slate-600">
-              {value}
-            </td>
-          ))}
+        <tr key={`${title}-${label}`} className="border-b border-slate-100 hover:bg-slate-50/90 transition-colors">
+          <td className="w-1/4 px-6 py-4 font-bold text-slate-900">{label}</td>
+          {values.map((value, index) => {
+            const isPro = index === 1;
+            return (
+              <td
+                key={`${label}-${index}`}
+                className={`px-5 py-4 font-semibold ${
+                  isPro
+                    ? 'bg-orange-50/50 text-slate-900 font-bold border-x border-orange-200/50'
+                    : 'text-slate-600'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {value === 'Inclus' || value.includes('Avancé') || value.includes('Prioritaire') ? (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-100/80 px-2 py-0.5 text-xs font-bold text-emerald-900">
+                      ✓ {value}
+                    </span>
+                  ) : value === 'Non inclus' ? (
+                    <span className="text-slate-400 font-normal">—</span>
+                  ) : (
+                    <span>{value}</span>
+                  )}
+                </div>
+              </td>
+            );
+          })}
         </tr>
       ))}
     </>

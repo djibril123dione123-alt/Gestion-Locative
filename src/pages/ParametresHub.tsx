@@ -401,17 +401,32 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
           : "Pilotez l'organisation, les droits, les modules et l'abonnement depuis un seul espace."}
         mobileDescription="Control Center."
         sideContent={
-          <div className="grid min-w-0 grid-cols-2 gap-1.5 sm:grid-cols-4">
-            <StatusPill label="Compte" value={accountKind} />
-            <StatusPill label="Statut" value={statusLabel} />
-            <StatusPill label="Plan" value={planLabel} />
-            <StatusPill label="Contrôle" value={controlLabel} />
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-950/15 bg-white/90 px-3 py-1.5 shadow-sm">
+              <span className="inline-flex items-center gap-1.5 border-r border-slate-200 pr-2.5 text-[0.66rem] font-extrabold text-slate-800">
+                <Building2 className="h-3.5 w-3.5 text-emerald-700" />
+                {accountKind}
+              </span>
+              <span className="inline-flex items-center gap-1 border-r border-slate-200 pr-2.5 text-[0.66rem] font-extrabold text-emerald-800">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+                {statusLabel}
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950 px-2 py-0.5 text-[0.62rem] font-black uppercase tracking-[0.08em] text-emerald-100">
+                {planLabel}
+              </span>
+            </div>
+            {controlLabel ? (
+              <div className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50/90 px-2.5 py-1.5 text-[0.66rem] font-black text-amber-900 shadow-sm">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-700" />
+                {controlLabel}
+              </div>
+            ) : null}
           </div>
         }
       />
 
-      <div className="lg:hidden">
-        <div className="flex gap-1 overflow-x-auto rounded-xl border border-emerald-950/10 bg-white/82 p-1 shadow-sm scrollbar-hide">
+      <div className="rounded-2xl border border-emerald-950/10 bg-white/90 p-1.5 shadow-sm backdrop-blur">
+        <div className="flex items-center justify-start sm:justify-center gap-1 overflow-x-auto scrollbar-hide">
           {sections.map((section) => {
             const Icon = section.icon;
             const active = section.id === activeSection;
@@ -421,11 +436,13 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
                 type="button"
                 onClick={() => selectSection(section.id)}
                 className={[
-                  'inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-[0.68rem] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20',
-                  active ? 'bg-emerald-950 text-white shadow-sm' : 'text-slate-600 hover:bg-emerald-50',
+                  'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-[0.72rem] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20 sm:px-3.5',
+                  active
+                    ? 'bg-emerald-950 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-emerald-50/80 hover:text-emerald-950',
                 ].join(' ')}
               >
-                <Icon className="h-3 w-3" />
+                <Icon className={active ? 'h-3.5 w-3.5 text-emerald-300' : 'h-3.5 w-3.5 text-slate-400'} />
                 {section.label}
               </button>
             );
@@ -433,49 +450,7 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
         </div>
       </div>
 
-      <section className="grid gap-2 lg:grid-cols-[11.5rem_minmax(0,1fr)]">
-        <aside className="hidden h-fit rounded-2xl border border-emerald-950/10 bg-gradient-to-b from-emerald-950 via-[#073b2f] to-[#041b16] p-1.5 text-white shadow-[0_14px_38px_rgba(6,38,29,0.1)] lg:sticky lg:top-3 lg:block">
-          <div className="rounded-xl border border-white/10 bg-white/8 px-1.5 py-1.5">
-            <p className="text-[0.5rem] font-black uppercase tracking-[0.18em] text-emerald-200">Source unique</p>
-            <h2 className="mt-0.5 text-[0.74rem] font-extrabold text-white">Control Center</h2>
-            <p className="mt-0.5 truncate text-[0.62rem] leading-3 text-emerald-50/70">
-              {agencyName}
-            </p>
-            <div className="mt-1.5 flex items-center gap-1 rounded-lg bg-emerald-200/10 px-1.5 py-0.5 text-[0.52rem] font-extrabold text-emerald-50">
-              {snapshot?.pointsToReview.length ? (
-                <AlertTriangle className="h-2.5 w-2.5 text-orange-200" />
-              ) : (
-                <CheckCircle2 className="h-2.5 w-2.5 text-emerald-200" />
-              )}
-              {snapshot?.pointsToReview.length ? 'À relire' : 'Exploitable'}
-            </div>
-          </div>
-          <nav className="mt-1 grid gap-0.5" aria-label="Sections paramètres">
-            {sections.map((section) => {
-              const Icon = section.icon;
-              const active = section.id === activeSection;
-              return (
-                <button
-                  key={section.id}
-                  type="button"
-                  onClick={() => selectSection(section.id)}
-                  className={[
-                    'flex min-w-0 items-center gap-1.5 rounded-lg px-1.5 py-1 text-left text-[0.62rem] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200/50',
-                    active
-                      ? 'bg-white/14 text-white ring-1 ring-white/16'
-                      : 'text-emerald-50/72 hover:bg-white/8 hover:text-white',
-                  ].join(' ')}
-                >
-                  <span className={active ? 'h-3 w-0.5 rounded-full bg-orange-300' : 'h-3 w-0.5 rounded-full bg-transparent'} />
-                  <Icon className={active ? 'h-3 w-3 text-emerald-100' : 'h-3 w-3 text-emerald-100/64'} />
-                  <span className="min-w-0 flex-1 whitespace-nowrap font-semibold">{section.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
-
-        <main className="min-w-0 space-y-1.5 text-[0.76rem]">
+      <main className="min-w-0 space-y-2 text-[0.76rem]">
           <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2 shadow-sm ring-1 ring-white/70">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
@@ -511,19 +486,11 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
             {activeSection === 'securitySupport' && <SecuritySupportSection role={profile?.role ?? 'admin'} isIndividualOwner={isIndividualOwner} />}
           </Suspense>
         </main>
-      </section>
     </PageShell>
   );
 }
 
-function StatusPill({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-lg border border-emerald-950/10 bg-white/70 px-1.5 py-1 shadow-sm">
-      <p className="text-[0.44rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
-      <p className="truncate text-[0.58rem] font-extrabold text-slate-950" title={value}>{value}</p>
-    </div>
-  );
-}
+
 
 function OverviewSection({
   isIndividualOwner,
@@ -683,33 +650,48 @@ function ControlCard({
   tone?: 'emerald' | 'amber' | 'slate';
   onOpen: () => void;
 }) {
-  const toneClass =
+  const badgeToneClass =
     tone === 'emerald'
-      ? 'bg-emerald-50 text-emerald-800'
+      ? 'border-emerald-200/80 bg-emerald-50 text-emerald-800'
       : tone === 'amber'
-        ? 'bg-orange-50 text-orange-700'
-        : 'bg-slate-100 text-slate-700';
+        ? 'border-orange-200/80 bg-orange-50 text-orange-800'
+        : 'border-slate-200/80 bg-slate-100 text-slate-700';
+
+  const iconContainerClass =
+    tone === 'emerald'
+      ? 'bg-emerald-600 text-white shadow-sm'
+      : tone === 'amber'
+        ? 'bg-amber-500 text-white shadow-sm'
+        : 'bg-slate-800 text-white shadow-sm';
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="group min-w-0 rounded-xl border border-emerald-950/10 bg-white/88 p-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
+      className="group flex flex-col justify-between min-w-0 rounded-2xl border border-emerald-950/10 bg-white p-3 text-left shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-emerald-700/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</p>
-          <h3 className="mt-0.5 truncate text-[0.76rem] font-extrabold text-slate-950">{title}</h3>
+      <div>
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl ${iconContainerClass}`}>
+              <Icon className="h-3.5 w-3.5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p>
+              <h3 className="truncate text-[0.8rem] font-extrabold text-slate-950">{title}</h3>
+            </div>
+          </div>
+          <span className={`inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[0.58rem] font-extrabold ${badgeToneClass}`}>
+            {value}
+          </span>
         </div>
-        <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${toneClass}`}>
-          <Icon className="h-2.5 w-2.5" />
-        </div>
+        <p className="mt-2 line-clamp-2 text-[0.66rem] font-medium leading-[0.92rem] text-slate-600">{description}</p>
       </div>
-      <p className="mt-1 truncate text-[0.66rem] font-extrabold text-slate-800">{value}</p>
-      <p className="mt-0.5 line-clamp-2 text-[0.6rem] leading-[0.82rem] text-slate-500">{description}</p>
-      <span className="mt-1.5 inline-flex items-center gap-1 text-[0.62rem] font-extrabold text-emerald-800">
-        Ouvrir <ArrowRight className="h-3 w-3 transition group-hover:translate-x-0.5" />
-      </span>
+      <div className="mt-3 flex items-center justify-end border-t border-slate-100 pt-2">
+        <span className="inline-flex items-center gap-1 text-[0.66rem] font-extrabold text-emerald-800 transition-colors group-hover:text-emerald-600">
+          Gérer cet espace <ArrowRight className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5" />
+        </span>
+      </div>
     </button>
   );
 }

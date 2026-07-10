@@ -301,26 +301,61 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
     load();
   };
 
-  const renderUsageBar = (icon: React.ReactNode, label: string, used: number, max: number, testId?: string) => {
+  const renderUsageBar = (
+    icon: React.ReactNode,
+    label: string,
+    used: number,
+    max: number,
+    testId?: string,
+    displayValue?: string
+  ) => {
     const unlimited = max === -1;
-    const pct       = unlimited ? 0 : Math.min(100, Math.round((used / Math.max(max, 1)) * 100));
-    const barColor  = pct > 85 ? '#EF4444' : pct > 65 ? '#F59E0B' : '#F58220';
+    const pct = unlimited ? 0 : Math.min(100, Math.round((used / Math.max(max, 1)) * 100));
+    const toneClass =
+      pct > 85
+        ? 'bg-red-500'
+        : pct > 65
+          ? 'bg-amber-500'
+          : 'bg-emerald-500';
 
     return (
-      <div data-testid={testId}>
-        <div className={embedded ? 'mb-1 flex items-center justify-between' : 'flex items-center justify-between mb-1.5'}>
-          <div className={embedded ? 'flex items-center gap-1.5 text-slate-500' : 'flex items-center gap-2 text-slate-500'}>{icon}
-            <span className={embedded ? 'text-xs font-semibold text-slate-700' : 'text-sm font-medium text-slate-700'}>{label}</span>
+      <div
+        data-testid={testId}
+        className="flex flex-col justify-between rounded-xl border border-emerald-950/10 bg-white/90 p-3 shadow-xs transition hover:border-emerald-500/30"
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+              {icon}
+            </div>
+            <span className="text-[0.72rem] font-extrabold text-slate-800">{label}</span>
           </div>
-          <span className={embedded ? 'text-xs font-bold text-slate-800' : 'text-sm font-bold text-slate-800'}>
-            {unlimited ? <span className="text-xs font-semibold text-slate-500">sur mesure</span> : <>{used}<span className="text-slate-400">/{max}</span></>}
+          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.08em] text-slate-600">
+            {unlimited ? 'Illimité' : `${pct}%`}
           </span>
         </div>
-        {!unlimited && (
-          <div className={embedded ? 'h-1.5 overflow-hidden rounded-full bg-slate-100' : 'h-2 bg-slate-100 rounded-full overflow-hidden'}>
-            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: barColor }} />
+
+        <div className="mt-2.5">
+          <div className="flex items-center justify-between text-[0.68rem] font-extrabold text-slate-900">
+            <span>Consommation</span>
+            <span>
+              {displayValue ? (
+                displayValue
+              ) : unlimited ? (
+                'Sur mesure'
+              ) : (
+                <>
+                  {used} <span className="font-semibold text-slate-400">/ {max}</span>
+                </>
+              )}
+            </span>
           </div>
-        )}
+          {!unlimited && (
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div className={`h-full rounded-full transition-all duration-500 ${toneClass}`} style={{ width: `${pct}%` }} />
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -528,7 +563,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
           </div>
 
           {/* Usage bars */}
-          <div className={embedded ? 'mt-2.5 grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-2.5 sm:grid-cols-2 xl:grid-cols-4' : 'mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5'}>
+          <div className={embedded ? 'mt-3 grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-3 sm:grid-cols-2 xl:grid-cols-4' : 'mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5'}>
             {renderUsageBar(<Users className="w-4 h-4" />, 'Utilisateurs', usage.users, currentPlan?.max_users ?? catalogPlan.max_users, 'usage-utilisateurs')}
             {renderUsageBar(<Home className="w-4 h-4" />, isIndividualOwner ? 'Biens' : 'Immeubles', usage.immeubles, currentPlan?.max_immeubles ?? catalogPlan.max_immeubles, 'usage-immeubles')}
             {renderUsageBar(<DoorOpen className="w-4 h-4" />, isIndividualOwner ? 'Unités locatives' : 'Unités', usage.unites, currentPlan?.max_unites ?? catalogPlan.max_unites, 'usage-produits')}
@@ -544,14 +579,12 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                     1024
                 )
               ),
-              'usage-stockage'
+              'usage-stockage',
+              storageUsage
+                ? `${formatStorageSize(storageUsage.used_bytes)} / ${formatStorageSize(storageUsage.limit_bytes)}`
+                : undefined
             )}
           </div>
-          {storageUsage && (
-            <p className="mt-3 text-xs font-semibold text-slate-400">
-              Stockage utilisé : {formatStorageSize(storageUsage.used_bytes)} sur {formatStorageSize(storageUsage.limit_bytes)}.
-            </p>
-          )}
         </div>
       </div>
 

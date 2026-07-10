@@ -44,6 +44,7 @@ import {
   drawDocumentHeader,
   drawLegalVerificationFooter,
   drawPageBorder,
+  drawSectionFrame,
   drawTotalsBlock,
   getAutoTableTheme,
   saveGeneratedPdf,
@@ -874,6 +875,32 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       doc.setFontSize(8.4);
       doc.setTextColor(15, 23, 42);
       doc.text(`Taux de recouvrement : ${reportSummary.recoveryRate}%`, 14, Math.min(tableEnd + 9, 258));
+
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      let closingTop = tableEnd + 16;
+      if (closingTop + 34 > pageHeight - 24) {
+        addFooter(doc, settings);
+        doc.addPage();
+        drawPageBorder(doc, settings);
+        closingTop = 24;
+      }
+      const closingY = drawSectionFrame(doc, 14, closingTop, pageWidth - 28, 30, settings, {
+        title: 'Synthèse de reversement',
+        subtitle: `Net propriétaire : ${formatCurrency(reportSummary.netOwner)}`,
+        accent: 'neutral',
+      });
+      doc.setFont(undefined as unknown as string, 'normal');
+      doc.setFontSize(7.6);
+      doc.setTextColor(71, 85, 105);
+      doc.text(
+        doc.splitTextToSize(
+          'Aucune note particulière pour cette période. Ce résumé consolide les encaissements, reliquats, dépenses et revenus nets issus du registre Samay Këur.',
+          pageWidth - 42,
+        ),
+        19,
+        closingY,
+      );
 
       if (reportTemplate.content.style.showQr && enabledReportSections.has('qr_verification')) {
         await drawLegalVerificationFooter(doc, {

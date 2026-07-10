@@ -714,52 +714,77 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
               const isProtected = isSelf || member.role === 'admin' || member.role === 'super_admin';
               const displayName = getMemberDisplayName(member);
               return (
-                <article key={member.id} className="grid gap-2.5 p-2.5 transition hover:bg-emerald-50/45 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto] lg:items-center">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-950/10 bg-emerald-50 text-[0.72rem] font-black text-emerald-900">
-                      {getInitials(member)}
+                <article key={member.id} className="grid gap-3 p-3 transition-colors duration-150 hover:bg-emerald-50/50 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1.1fr)_auto] lg:items-center">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="relative shrink-0">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-950/10 bg-gradient-to-br from-emerald-50 to-white text-[0.74rem] font-black text-emerald-900 shadow-sm">
+                        {getInitials(member)}
+                      </div>
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white ${
+                          member.actif ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]' : 'bg-slate-300'
+                        }`}
+                        title={member.actif ? 'Actif' : 'Désactivé'}
+                      />
                     </div>
-                    <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <h3 className="truncate text-[0.78rem] font-extrabold text-slate-950">{displayName}</h3>
-                      {isSelf ? <span className="rounded-full bg-slate-900 px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-[0.08em] text-white">Vous</span> : null}
-                      <RoleBadge role={member.role} />
-                      <PresetBadge preset={summary.preset} />
-                      <span className={`rounded-full px-2 py-0.5 text-[0.62rem] font-black ${member.actif ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                        {member.actif ? 'Actif' : 'Désactivé'}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <h3 className="truncate text-[0.82rem] font-extrabold text-slate-950">{displayName}</h3>
+                        {isSelf ? <span className="rounded-full bg-slate-900 px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-[0.08em] text-white">Vous</span> : null}
+                        <RoleBadge role={member.role} />
+                        <PresetBadge preset={summary.preset} />
+                      </div>
+                      {member.email ? (
+                        <a
+                          href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(member.email)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-0.5 inline-flex max-w-full items-center gap-1 truncate text-[0.68rem] font-semibold text-slate-600 underline-offset-2 transition hover:text-emerald-900 hover:underline"
+                        >
+                          <Mail className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                          <span className="truncate">{member.email}</span>
+                        </a>
+                      ) : (
+                        <p className="mt-0.5 text-[0.68rem] text-slate-400">Email non renseigné</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 rounded-xl border border-emerald-950/10 bg-white/90 px-3 py-2 shadow-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between text-[0.66rem] font-extrabold text-slate-800">
+                        <span>Pages accessibles</span>
+                        <span className="text-emerald-800">{summary.visible} page{summary.visible > 1 ? 's' : ''} visible{summary.visible > 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-emerald-600 transition-all duration-300"
+                          style={{
+                            width: `${Math.min(100, Math.max(12, (summary.visible / ((summary.visible + summary.hidden) || 1)) * 100))}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    {summary.overrides > 0 ? (
+                      <span className="shrink-0 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[0.58rem] font-black text-amber-800">
+                        +{summary.overrides} sur mesure
                       </span>
-                    </div>
-                    {member.email ? (
-                      <a
-                        href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(member.email)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-0.5 inline-flex max-w-full items-center gap-1 truncate text-[0.68rem] font-semibold text-brand-700 underline-offset-2 hover:text-brand-950 hover:underline"
-                      >
-                        <Mail className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate">{member.email}</span>
-                      </a>
                     ) : (
-                      <p className="mt-1 text-sm text-slate-500">Email non renseigné</p>
+                      <span className="shrink-0 rounded-full border border-emerald-200/80 bg-emerald-50/70 px-2 py-0.5 text-[0.58rem] font-black text-emerald-800">
+                        Par défaut
+                      </span>
                     )}
                   </div>
-                  </div>
 
-                  <div className="grid grid-cols-3 gap-1 rounded-lg border border-emerald-950/10 bg-white/70 p-1 text-center shadow-sm">
-                    <MiniStat label="Masquées" value={summary.hidden} />
-                    <MiniStat label="Visibles" value={summary.visible} />
-                    <MiniStat label="Overrides" value={summary.overrides} />
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
+                  <div className="flex flex-col gap-1.5 sm:flex-row lg:justify-end">
                     <button
                       type="button"
                       onClick={() => openPermissions(member)}
                       disabled={isProtected}
-                      title={isProtected ? "Profil administrateur protégé" : "Modifier les permissions par page"}
-                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-emerald-900/10 bg-white px-2.5 text-[0.7rem] font-extrabold text-brand-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      title={isProtected ? 'Profil administrateur protégé' : 'Modifier les permissions par page'}
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-emerald-900/15 bg-white px-3 text-[0.72rem] font-extrabold text-brand-900 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-700 hover:bg-emerald-50/80 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <SlidersHorizontal className="h-4 w-4" />
+                      <SlidersHorizontal className="h-3.5 w-3.5 text-emerald-700" />
                       {isProtected ? 'Protégé' : 'Permissions'}
                     </button>
                     {member.actif && member.id !== profile.id ? (
@@ -767,11 +792,11 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                         type="button"
                         onClick={() => setDeactivateTarget(member)}
                         disabled={member.role === 'admin' || member.role === 'super_admin'}
-                        title={member.role === 'admin' || member.role === 'super_admin' ? "Un administrateur ne peut pas être désactivé depuis cette action." : "Désactiver le profil"}
+                        title={member.role === 'admin' || member.role === 'super_admin' ? 'Un administrateur ne peut pas être désactivé depuis cette action.' : 'Désactiver le profil'}
                         data-testid={`button-deactivate-${member.id}`}
-                        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 text-[0.7rem] font-extrabold text-red-700 transition hover:-translate-y-0.5 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-45"
+                        className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-[0.7rem] font-extrabold text-slate-600 transition hover:-translate-y-0.5 hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        <X className="h-4 w-4" />
+                        <X className="h-3.5 w-3.5" />
                         Désactiver
                       </button>
                     ) : null}
@@ -1270,23 +1295,23 @@ function PermissionMatrixPreview({ settings }: { settings?: Partial<AgencySettin
         {rows.map((row) => {
           const moduleEnabled = isModuleEnabled(row.page, settings);
           return (
-          <div key={row.page} className="grid grid-cols-[minmax(8rem,1fr)_repeat(3,minmax(4rem,0.55fr))] items-center gap-2 px-2.5 py-1.5">
-            <span className="min-w-0 truncate text-[0.7rem] font-extrabold text-slate-800">
-              {row.label}
-              {!moduleEnabled ? (
-                <span className="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-[0.48rem] font-black uppercase tracking-[0.06em] text-slate-500">
-                  Désactivé
-                </span>
-              ) : null}
-            </span>
-            {roles.map((role) => (
-              <AccessBadge
-                key={role.key}
-                level={moduleEnabled ? getDefaultAccessLevel(role.key, row.page) : 'none'}
-                disabled={!moduleEnabled}
-              />
-            ))}
-          </div>
+            <div key={row.page} className="grid grid-cols-[minmax(8rem,1fr)_repeat(3,minmax(4rem,0.55fr))] items-center gap-2 px-2.5 py-2 transition-colors hover:bg-emerald-50/45">
+              <span className="min-w-0 truncate text-[0.72rem] font-extrabold text-slate-800">
+                {row.label}
+                {!moduleEnabled ? (
+                  <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[0.48rem] font-black uppercase tracking-[0.06em] text-slate-500">
+                    Désactivé
+                  </span>
+                ) : null}
+              </span>
+              {roles.map((role) => (
+                <AccessBadge
+                  key={role.key}
+                  level={moduleEnabled ? getDefaultAccessLevel(role.key, row.page) : 'none'}
+                  disabled={!moduleEnabled}
+                />
+              ))}
+            </div>
           );
         })}
       </div>
@@ -1295,20 +1320,27 @@ function PermissionMatrixPreview({ settings }: { settings?: Partial<AgencySettin
 }
 
 function AccessBadge({ level, disabled = false }: { level: AccessLevel; disabled?: boolean }) {
-  const label = disabled ? 'Verrouillé' : level === 'admin' ? 'Admin' : level === 'write' ? 'Écriture' : level === 'read' ? 'Lecture' : 'Masqué';
+  if (disabled || level === 'none') {
+    return (
+      <span
+        title={disabled ? 'Module désactivé' : 'Accès masqué pour ce rôle'}
+        className="justify-self-center inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[0.56rem] font-semibold text-slate-300 transition-opacity hover:text-slate-500"
+      >
+        —
+      </span>
+    );
+  }
+
+  const label = level === 'admin' ? 'Admin' : level === 'write' ? 'Écriture' : 'Lecture';
   const className =
-    disabled
-      ? 'bg-slate-100 text-slate-400'
-      :
     level === 'admin'
-      ? 'bg-emerald-950 text-white'
+      ? 'border border-emerald-900 bg-emerald-950 text-white shadow-xs'
       : level === 'write'
-        ? 'bg-emerald-50 text-emerald-700'
-        : level === 'read'
-          ? 'bg-blue-50 text-blue-700'
-          : 'bg-slate-100 text-slate-400';
+        ? 'border border-emerald-200/80 bg-emerald-50 text-emerald-800 font-extrabold'
+        : 'border border-sky-200/80 bg-sky-50 text-sky-800 font-extrabold';
+
   return (
-    <span className={`justify-self-center rounded-full px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-[0.08em] ${className}`}>
+    <span className={`justify-self-center rounded-full px-2 py-0.5 text-[0.54rem] uppercase tracking-[0.08em] ${className}`}>
       {label}
     </span>
   );

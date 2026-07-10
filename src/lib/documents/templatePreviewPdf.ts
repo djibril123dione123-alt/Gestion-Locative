@@ -1,6 +1,10 @@
 import jsPDF from 'jspdf';
 import type { DocumentTemplateContent } from '../../types/documentStudio';
 import {
+  getSystemBlockPreviewText,
+  getSystemBlockPublicLabel,
+} from './templateCatalog';
+import {
   getSampleTemplateVariables,
   renderDocumentTemplate,
 } from './templateEngine';
@@ -45,10 +49,11 @@ export function createDocumentTemplateTestPdf(content: DocumentTemplateContent) 
   y += 9;
 
   for (const block of rendered.blocks) {
-    const titleLines = doc.splitTextToSize(block.title, usableWidth);
+    const publicTitle = block.kind === 'system' ? getSystemBlockPublicLabel(block.systemKey, block.title) : block.title;
     const body = block.kind === 'system'
-      ? `Section alimentée automatiquement par les données métier : ${block.systemKey ?? block.code}.`
+      ? getSystemBlockPreviewText(block.systemKey, content.documentType)
       : block.content;
+    const titleLines = doc.splitTextToSize(publicTitle, usableWidth);
     const bodyLines = doc.splitTextToSize(body, usableWidth);
     const needed = titleLines.length * 5 + bodyLines.length * 4 + 8;
     ensureSpace(needed);
@@ -76,4 +81,3 @@ export function createDocumentTemplateTestPdf(content: DocumentTemplateContent) 
 
   return doc;
 }
-

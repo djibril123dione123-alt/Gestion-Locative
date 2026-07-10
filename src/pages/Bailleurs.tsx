@@ -38,6 +38,7 @@ import {
   drawDocumentHeader,
   drawLegalVerificationFooter,
   drawPageBorder,
+  drawSectionFrame,
   drawTotalsBlock,
   generateMandatBailleurPDF,
   getAutoTableTheme,
@@ -1311,6 +1312,22 @@ export function Bailleurs() {
         ],
         settings,
       );
+
+      ensureSpace(34);
+      const closingY = drawSectionFrame(doc, 14, y, pageWidth - 28, 30, settings, {
+        title: 'Reversement et authentification',
+        subtitle: `${netLabel} : ${formatCurrency(totalNet)}`,
+        accent: 'neutral',
+      });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.6);
+      doc.setTextColor(71, 85, 105);
+      const closingLines = doc.splitTextToSize(
+        `Aucune note particulière pour cette période. Le rapport consolide les encaissements, reliquats, ${accountProfile.isIndividualOwner ? 'dépenses' : 'commissions'} et montants nets issus du registre financier Samay Këur.`,
+        pageWidth - 42,
+      );
+      doc.text(closingLines, 19, closingY);
+      y += 38;
 
       if (reportTemplate.content.style.showQr && enabledReportSections.has('qr_verification')) {
         await drawLegalVerificationFooter(doc, {

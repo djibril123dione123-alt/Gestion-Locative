@@ -1323,19 +1323,32 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     return (
       <div className="space-y-2">
         <ToastContainer toasts={toasts} onRemove={removeToast} />
-        <SettingsActionBar
-          eyebrow="Lecture premium"
-          title={activeTab === 'general'
-            ? 'Synthèse organisation'
-            : activeTab === 'documents'
-              ? embeddedMode === 'documentsIdentity' ? 'Documents & identité' : 'Réglages documentaires'
-              : activeTab === 'appearance'
-                ? 'Identité visuelle'
-                : 'Modules actifs'}
-          description="Les informations restent modifiables sans changer la logique existante."
-          actionLabel={activeTab === 'general' ? "Modifier l'organisation" : 'Modifier'}
-          onAction={() => setEditingEmbedded(true)}
-        />
+        <div className="flex flex-col gap-2 rounded-xl border border-emerald-950/10 bg-white/90 px-3 py-2 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-6 items-center rounded-md bg-emerald-50 px-2 text-[0.6rem] font-black uppercase tracking-[0.08em] text-emerald-800">
+              Synthèse
+            </span>
+            <h2 className="text-[0.8rem] font-extrabold text-slate-900">
+              {activeTab === 'general'
+                ? 'Organisation officielle'
+                : activeTab === 'documents'
+                  ? embeddedMode === 'documentsIdentity'
+                    ? 'Documents & identité'
+                    : 'Réglages documentaires'
+                  : activeTab === 'appearance'
+                    ? 'Identité visuelle'
+                    : 'Modules actifs'}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => setEditingEmbedded(true)}
+            className="inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border border-emerald-900/15 bg-white px-3 text-[0.7rem] font-extrabold text-emerald-900 shadow-2xs transition hover:border-emerald-700 hover:bg-emerald-50/80"
+          >
+            <Edit3 className="h-3.5 w-3.5 text-emerald-700" />
+            {activeTab === 'general' ? "Modifier l'organisation" : 'Modifier'}
+          </button>
+        </div>
 
         {activeTab === 'general' && (
           <div className="space-y-2">
@@ -1554,14 +1567,24 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     return (
       <div className="space-y-2.5">
         <ToastContainer toasts={toasts} onRemove={removeToast} />
-        <div className="flex flex-col gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 px-2.5 py-2 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[0.64rem] font-black uppercase tracking-[0.18em] text-emerald-700">
-              {hasUnsavedChanges ? 'Modifications en attente' : 'Configuration à jour'}
-            </p>
-            <p className="truncate text-xs font-semibold text-slate-500">Édition compacte du Control Center.</p>
+        <div className="sticky top-2 z-20 flex flex-col gap-2 rounded-xl border border-emerald-950/15 bg-white/95 p-3 shadow-md backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
+              <Building className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[0.62rem] font-black uppercase tracking-[0.14em] text-emerald-700">
+                  {isIndividualOwner ? 'Profil propriétaire' : 'Dossier agence'}
+                </span>
+                <SettingsStatusBadge tone={organizationStatusTone}>{organizationStatus}</SettingsStatusBadge>
+              </div>
+              <p className="truncate text-[0.74rem] font-extrabold text-slate-900">
+                {hasUnsavedChanges ? 'Modifications en attente de sauvegarde' : 'Édition des informations officielles'}
+              </p>
+            </div>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-wrap items-center gap-2">
             <PremiumButton variant="secondary" size="sm" onClick={() => setEditingEmbedded(false)}>
               Revenir à l'aperçu
             </PremiumButton>
@@ -1577,35 +1600,17 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
           </div>
         </div>
 
+        {hasOrganizationFieldErrors && (
+          <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-red-800">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <p className="text-[0.68rem] font-semibold leading-snug">
+              Corrigez les champs signalés avant d'enregistrer. Les documents utilisent ces informations comme source officielle.
+            </p>
+          </div>
+        )}
+
         {activeTab === 'general' && (
           <div className="grid gap-2.5">
-            <section className="rounded-xl border border-emerald-950/10 bg-white/88 p-2.5 shadow-sm">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex min-w-0 items-start gap-2.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
-                    <Building className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">
-                      {isIndividualOwner ? 'Profil propriétaire' : 'Dossier agence'}
-                    </p>
-                    <h3 className="text-[0.82rem] font-extrabold text-slate-950">Modifier les informations officielles</h3>
-                    <p className="mt-0.5 max-w-2xl text-[0.64rem] font-semibold leading-snug text-slate-500">
-                      {organizationCopy}
-                    </p>
-                  </div>
-                </div>
-                <SettingsStatusBadge tone={organizationStatusTone}>{organizationStatus}</SettingsStatusBadge>
-              </div>
-              {hasOrganizationFieldErrors && (
-                <div className="mt-2 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-2.5 py-2 text-red-800">
-                  <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  <p className="text-[0.62rem] font-semibold leading-snug">
-                    Corrigez les champs signalés avant d'enregistrer. Les documents utilisent ces informations comme source officielle.
-                  </p>
-                </div>
-              )}
-            </section>
 
             <SettingsEditSection
               icon={Building}
@@ -2918,22 +2923,22 @@ function OrganizationInfoLine({
   const resolved = value && String(value).trim() ? String(value) : 'Non renseigné';
   const empty = resolved === 'Non renseigné';
   return (
-    <div className={`flex items-start justify-between gap-2 py-1 ${multiline ? 'flex-col' : ''}`}>
-      <dt className="flex min-w-0 shrink-0 items-center gap-1.5 text-[0.62rem] font-bold text-slate-500">
-        {Icon && <Icon className="h-3 w-3 shrink-0 text-emerald-800/65" />}
+    <div className={`flex items-start justify-between gap-3 border-b border-slate-100/70 py-1.5 last:border-b-0 ${multiline ? 'flex-col' : ''}`}>
+      <dt className="flex min-w-0 shrink-0 items-center gap-1.5 text-[0.66rem] font-bold text-slate-500">
+        {Icon && <Icon className="h-3.5 w-3.5 shrink-0 text-emerald-700/80" />}
         <span>{label}</span>
       </dt>
-      <dd className="min-w-0 text-right">
+      <dd className="min-w-0 flex-1 text-right">
         <div
-          className={`${strong ? 'font-extrabold text-slate-950' : empty ? 'font-semibold text-slate-400' : 'font-semibold text-slate-700'} text-[0.68rem] ${multiline ? 'text-left leading-[0.95rem]' : 'truncate'}`}
+          className={`${strong ? 'font-extrabold text-slate-950' : empty ? 'font-semibold text-slate-400' : 'font-extrabold text-slate-800'} text-[0.7rem] ${multiline ? 'text-left leading-4' : 'truncate'}`}
           title={resolved}
         >
           {resolved}
         </div>
         {documentHint && (
-          <p className="mt-0.5 text-[0.52rem] font-bold uppercase tracking-[0.08em] text-emerald-700/70">
+          <span className="mt-0.5 inline-block rounded bg-emerald-50/90 px-1.5 py-0.5 text-[0.48rem] font-black uppercase tracking-[0.08em] text-emerald-800">
             {documentHint}
-          </p>
+          </span>
         )}
       </dd>
     </div>
@@ -3046,11 +3051,11 @@ function FormField({
   return (
     <label className={`block min-w-0 ${className}`}>
       <span className="mb-1 flex items-center justify-between gap-2">
-        <span className="text-[0.56rem] font-black uppercase tracking-[0.14em] text-slate-500">{label}</span>
-        {required ? (
-          <span className="text-[0.5rem] font-bold uppercase tracking-[0.08em] text-emerald-700">Obligatoire</span>
-        ) : optional ? (
-          <span className="text-[0.5rem] font-bold uppercase tracking-[0.08em] text-slate-400">Optionnel</span>
+        <span className="text-[0.7rem] font-extrabold text-slate-800">
+          {label} {required && <span className="text-red-500">*</span>}
+        </span>
+        {optional ? (
+          <span className="text-[0.6rem] font-semibold text-slate-400">facultatif</span>
         ) : null}
       </span>
       {children}

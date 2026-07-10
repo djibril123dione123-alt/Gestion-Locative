@@ -8,7 +8,6 @@ import { MetricCard } from '../components/ui/MetricCard';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { Modal } from '../components/ui/Modal';
 import { WizardShell } from '../components/ui/WizardShell';
 import { ToastContainer } from '../components/ui/Toast';
 import { ChevronLeft, ChevronRight, Plus, Calendar, CalendarClock, CheckCircle2, AlertCircle, Search } from 'lucide-react';

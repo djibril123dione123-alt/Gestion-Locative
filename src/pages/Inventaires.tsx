@@ -10,13 +10,12 @@ import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { Modal } from '../components/ui/Modal';
 import { WizardShell } from '../components/ui/WizardShell';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
-import { ClipboardList, Plus, Download, Trash2, Search, FileCheck, AlertTriangle, ArrowUpRight, ArrowDownRight, ShieldCheck, Building2, Sparkles, Layers } from 'lucide-react';
+import { ClipboardList, Plus, Download, Trash2, Search, AlertTriangle, ArrowUpRight, ArrowDownRight, Building2, Layers } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
@@ -54,12 +53,6 @@ const statutColors: Record<string, string> = {
   en_cours: 'bg-blue-100 text-blue-800',
   termine: 'bg-green-100 text-green-800',
   litige: 'bg-red-100 text-red-800',
-};
-
-const etatColors: Record<string, string> = {
-  bon: 'bg-green-100 text-green-800',
-  moyen: 'bg-yellow-100 text-yellow-800',
-  mauvais: 'bg-red-100 text-red-800',
 };
 
 type InventaireTypeFilter = 'all' | 'entree' | 'sortie';
@@ -192,7 +185,6 @@ export function Inventaires() {
     }
 
     const doc = new jsPDF();
-    const width = doc.internal.pageSize.getWidth();
     let y = 16;
 
     drawPageBorder(doc);
@@ -209,7 +201,7 @@ export function Inventaires() {
     doc.text(`${agenceInfo.nom} — Date : ${new Date(inv.date).toLocaleDateString('fr-FR')}`, 14, y);
     y += 10;
 
-    y = drawSectionFrame(doc, y, 32);
+    y = drawSectionFrame(doc, 14, y, 182, 32);
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(30, 41, 59);
@@ -233,10 +225,15 @@ export function Inventaires() {
       styles: { fontSize: 9 },
     });
 
-    addFooter(doc, profile?.agency_id || null, 'État des lieux officiel - Samay Keur');
+    addFooter(doc);
 
     const fileName = `Etat_des_lieux_${inv.type}_${loc.replace(/\s+/g, '_')}.pdf`;
-    saveGeneratedPdf(doc, fileName, 'documents');
+    await saveGeneratedPdf(doc, {
+      kind: 'inventaire',
+      title: 'État des lieux',
+      fileName,
+      source: 'inventaires',
+    });
   };
 
   const updateStatut = async (id: string, statut: Inventaire['statut']) => {

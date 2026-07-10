@@ -8,7 +8,6 @@ import { MetricCard } from '../components/ui/MetricCard';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
-import { Modal } from '../components/ui/Modal';
 import { WizardShell } from '../components/ui/WizardShell';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -403,7 +402,7 @@ export function Interventions() {
                               </div>
                               {i.prestataire_telephone && (
                                 <a
-                                  href={getSenegalPhoneHref(i.prestataire_telephone)}
+                                  href={getSenegalPhoneHref(i.prestataire_telephone) ?? undefined}
                                   className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold shadow-2xs transition shrink-0"
                                   title="Appeler l'artisan"
                                 >

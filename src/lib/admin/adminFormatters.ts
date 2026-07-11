@@ -40,4 +40,3 @@ export function numberValue(value: unknown) {
 export function textValue(value: unknown, fallback = 'Non renseigné') {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback;
 }
-

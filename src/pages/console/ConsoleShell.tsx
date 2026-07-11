@@ -13,6 +13,7 @@ export function ConsoleShell({
   refreshing,
   lastLoadedAt,
   partialErrors,
+  searchSlot,
   children,
 }: {
   activeSpace: ConsoleSpace;
@@ -22,9 +23,11 @@ export function ConsoleShell({
   refreshing: boolean;
   lastLoadedAt?: string | null;
   partialErrors: string[];
+  searchSlot?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const activeItem = CONSOLE_NAV_ITEMS.find((item) => item.id === activeSpace) ?? CONSOLE_NAV_ITEMS[0];
+
   return (
     <div className="min-h-screen bg-[#f5efe3] text-slate-950">
       <div className="grid min-h-screen xl:grid-cols-[248px_1fr]">
@@ -55,7 +58,7 @@ export function ConsoleShell({
                     onClick={() => onSpaceChange(item.id)}
                     className={classNames(
                       'flex w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left text-[0.78rem] font-black transition',
-                      active ? 'border-orange-300/35 bg-white text-emerald-950 shadow-md' : 'border-transparent text-emerald-50/76 hover:bg-white/8 hover:text-white',
+                      active ? 'border-orange-300/35 bg-white text-emerald-950 shadow-md' : 'border-transparent text-emerald-50/75 hover:bg-white/10 hover:text-white',
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
@@ -92,6 +95,7 @@ export function ConsoleShell({
                   </AdminButton>
                 </div>
               </div>
+              {searchSlot && <div className="relative z-40">{searchSlot}</div>}
               <div className="flex gap-2 overflow-x-auto pb-1 xl:hidden">
                 {CONSOLE_NAV_ITEMS.map((item) => {
                   const Icon = item.icon;

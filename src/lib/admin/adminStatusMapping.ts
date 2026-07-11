@@ -7,17 +7,22 @@ export function getStatusTone(status: string | null | undefined): AdminTone {
     case 'validated':
     case 'paid':
     case 'published':
+    case 'resolved':
+    case 'closed':
       return 'emerald';
     case 'trial':
     case 'pending':
     case 'processing':
     case 'past_due':
+    case 'in_progress':
+    case 'scheduled':
       return 'amber';
     case 'suspended':
     case 'cancelled':
     case 'rejected':
     case 'failed':
     case 'critical':
+    case 'blocking':
       return 'red';
     case 'draft':
     case 'review':
@@ -41,8 +46,13 @@ export function getStatusLabel(status: string | null | undefined) {
     paid: 'Payé',
     past_due: 'En retard',
     processing: 'En traitement',
+    in_progress: 'En cours',
     failed: 'Échec',
     draft: 'Brouillon',
+    review: 'En revue',
+    scheduled: 'Planifié',
+    resolved: 'Résolu',
+    closed: 'Clôturé',
   };
   return labels[key] ?? status ?? 'À vérifier';
 }

@@ -4,6 +4,7 @@ import { ToastContainer } from '../../components/ui/Toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { AdminActionDialog, type AdminActionRequest } from '../../components/console/AdminActionDialog';
+import { AdminGlobalSearch } from '../../components/console/AdminGlobalSearch';
 import { AdminLoadingState } from '../../components/console/AdminPrimitives';
 import { AgencyRequestReviewDrawer } from '../../components/console/AgencyRequestReviewDrawer';
 import { OrganizationDrawer } from '../../components/console/OrganizationDrawer';
@@ -17,16 +18,24 @@ import {
   changeAgencyStatus,
   changeUserRole,
   changeUserStatus,
+  createAdminNote,
+  createMaintenanceAnnouncement,
+  createSupportTicket,
   deleteAgencyCascade,
   extendAgencyTrial,
+  recordIncident,
   rejectAgencyRequest,
   rejectPaymentProof,
+  resolveIncident,
   toggleFeatureFlag,
+  updateSupportTicket,
 } from '../../services/admin/adminActionsService';
 import {
   loadAdminConsoleData,
   type AdminAgency,
   type AdminConsoleData,
+  type AdminIncident,
+  type AdminTicket,
   type AdminUser,
   type AgencyCreationRequest,
   type SubscriptionPaymentProof,
@@ -53,7 +62,10 @@ export function Console() {
   const [action, setAction] = useState<AdminActionRequest | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
 
-  const auditContext = useMemo(() => ({ actorId: profile?.id ?? null, actorEmail: profile?.email ?? null }), [profile?.email, profile?.id]);
+  const auditContext = useMemo(() => ({
+    actorId: profile?.id ?? null,
+    actorEmail: profile?.email ?? null,
+  }), [profile?.email, profile?.id]);
 
   const load = useCallback(async (mode: 'initial' | 'refresh' = 'refresh') => {
     if (mode === 'initial') setLoading(true);
@@ -96,13 +108,64 @@ export function Console() {
     await load();
   };
 
+  const openAgencyById = (agencyId: string | null | undefined) => {
+    if (!agencyId || !data) return;
+    const agency = data.agencies.find((item) => item.id === agencyId);
+    if (agency) setSelectedAgency(agency);
+  };
+
+  const openProofById = (proofId: string | null | undefined) => {
+    if (!proofId || !data) return;
+    const proof = data.proofs.find((item) => item.id === proofId);
+    if (proof) setSelectedProof(proof);
+  };
+
+  const handleUpdateTicket = (ticket: AdminTicket, status: string, note: string) => {
+    runAction({
+      title: status === 'resolved' ? 'Résoudre ce ticket support ?' : 'Mettre à jour ce ticket support ?',
+      message: 'Le statut et la note interne seront enregistrés dans la console support.',
+      confirmLabel: status === 'resolved' ? 'Résoudre le ticket' : 'Mettre à jour',
+      onConfirm: (reason) => withRefresh(
+        () => updateSupportTicket(ticket.id, status, note, reason, auditContext),
+        'Ticket support mis à jour.',
+      ),
+    });
+  };
+
+  const handleRecordIncident = (payload: { type: string; severity: string; message: string; organizationId: string | null }) => {
+    runAction({
+      title: 'Enregistrer cet incident ?',
+      message: 'L’incident sera visible dans le suivi opérationnel super-admin et l’audit.',
+      confirmLabel: 'Enregistrer incident',
+      destructive: payload.severity === 'critical' || payload.severity === 'blocking',
+      onConfirm: (reason) => withRefresh(
+        () => recordIncident(payload.type, payload.severity, payload.message, payload.organizationId, reason, auditContext),
+        'Incident enregistré.',
+      ),
+    });
+  };
+
+  const handleResolveIncident = (incident: AdminIncident, resolution: string) => {
+    runAction({
+      title: 'Résoudre cet incident ?',
+      message: 'La résolution sera conservée dans le suivi incident et l’audit.',
+      confirmLabel: 'Marquer résolu',
+      onConfirm: (reason) => withRefresh(
+        () => resolveIncident(incident.id, resolution, reason, auditContext),
+        'Incident résolu.',
+      ),
+    });
+  };
+
   if (profile?.role !== 'super_admin') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f4efe4] p-4">
         <div className="max-w-md rounded-3xl border border-red-200 bg-white p-6 text-center shadow-xl">
           <AlertTriangle className="mx-auto h-8 w-8 text-red-600" />
           <h1 className="mt-3 text-xl font-black text-slate-950">Accès super-admin requis</h1>
-          <p className="mt-2 text-sm font-medium text-slate-600">Cette console pilote toute la plateforme Samay Këur et reste réservée aux propriétaires autorisés.</p>
+          <p className="mt-2 text-sm font-medium text-slate-600">
+            Cette console pilote toute la plateforme Samay Këur et reste réservée aux propriétaires autorisés.
+          </p>
         </div>
       </div>
     );
@@ -111,16 +174,39 @@ export function Console() {
   const selectedSubscriptions = data?.subscriptions.filter((sub) => sub.agency_id === selectedAgency?.id) ?? [];
   const selectedUsers = data?.users.filter((user) => user.agency_id === selectedAgency?.id) ?? [];
   const selectedProofs = data?.proofs.filter((proof) => proof.agency_id === selectedAgency?.id) ?? [];
+  const selectedNotes = data?.notes.filter((note) => note.organization_id === selectedAgency?.id) ?? [];
+  const selectedTickets = data?.tickets.filter((ticket) => ticket.organization_id === selectedAgency?.id) ?? [];
+  const selectedIncidents = data?.incidents.filter((incident) => incident.organization_id === selectedAgency?.id) ?? [];
+  const selectedDocuments = data?.documentRegistry.filter((document) => document.agency_id === selectedAgency?.id) ?? [];
+  const selectedVerifications = data?.documentVerifications.filter((verification) => verification.agency_id === selectedAgency?.id) ?? [];
+  const selectedMetrics = data?.organizationMetrics.find((metric) => metric.organization_id === selectedAgency?.id);
+  const selectedAuditLogs = data?.auditLogs.filter((log) => log.target_organization_id === selectedAgency?.id) ?? [];
 
   const renderSpace = () => {
     if (!data || loading) return <AdminLoadingState />;
     if (space === 'overview') {
-      return <OverviewTab data={data} onOpenAgency={setSelectedAgency} onOpenProof={(id) => setSelectedProof(data.proofs.find((proof) => proof.id === id) ?? null)} />;
+      return (
+        <OverviewTab
+          data={data}
+          onOpenAgency={setSelectedAgency}
+          onOpenProof={openProofById}
+        />
+      );
     }
     if (space === 'organizations') return <OrganizationsTab data={data} onOpenAgency={setSelectedAgency} />;
     if (space === 'billing') return <BillingTab data={data} onOpenProof={setSelectedProof} />;
     if (space === 'users-access') return <UsersAccessTab data={data} onOpenUser={setSelectedUser} />;
-    if (space === 'support-ops') return <SupportOpsTab data={data} onOpenRequest={setSelectedRequest} />;
+    if (space === 'support-ops') {
+      return (
+        <SupportOpsTab
+          data={data}
+          onOpenRequest={setSelectedRequest}
+          onUpdateTicket={handleUpdateTicket}
+          onRecordIncident={handleRecordIncident}
+          onResolveIncident={handleResolveIncident}
+        />
+      );
+    }
     return (
       <SystemConfigTab
         data={data}
@@ -130,6 +216,15 @@ export function Console() {
           confirmLabel: nextActive ? 'Activer le flag' : 'Désactiver le flag',
           destructive: !nextActive,
           onConfirm: (reason) => withRefresh(() => toggleFeatureFlag(flag, nextActive, reason, auditContext), 'Feature flag mis à jour.'),
+        })}
+        onCreateAnnouncement={(title, message, status) => runAction({
+          title: 'Créer cette annonce plateforme ?',
+          message: 'L’annonce sera enregistrée comme communication opérationnelle super-admin.',
+          confirmLabel: 'Créer annonce',
+          onConfirm: (reason) => withRefresh(
+            () => createMaintenanceAnnouncement(title, message, status, reason, auditContext),
+            'Annonce plateforme créée.',
+          ),
         })}
       />
     );
@@ -145,6 +240,17 @@ export function Console() {
         onSignOut={() => void signOut()}
         lastLoadedAt={data?.generatedAt}
         partialErrors={data?.partialErrors ?? []}
+        searchSlot={data ? (
+          <AdminGlobalSearch
+            data={data}
+            onOpenAgency={setSelectedAgency}
+            onOpenProof={setSelectedProof}
+            onOpenRequest={setSelectedRequest}
+            onOpenUser={setSelectedUser}
+            onOpenAgencyById={openAgencyById}
+            onChangeSpace={changeSpace}
+          />
+        ) : null}
       >
         {renderSpace()}
       </ConsoleShell>
@@ -154,6 +260,13 @@ export function Console() {
         users={selectedUsers}
         subscriptions={selectedSubscriptions}
         proofs={selectedProofs}
+        notes={selectedNotes}
+        tickets={selectedTickets}
+        incidents={selectedIncidents}
+        documents={selectedDocuments}
+        verifications={selectedVerifications}
+        metrics={selectedMetrics}
+        auditLogs={selectedAuditLogs}
         onClose={() => setSelectedAgency(null)}
         onChangeStatus={(agency, nextStatus) => runAction({
           title: nextStatus === 'suspended' ? 'Suspendre cette organisation ?' : 'Réactiver cette organisation ?',
@@ -182,6 +295,24 @@ export function Console() {
           requireText: agency.name,
           minReasonLength: 12,
           onConfirm: (reason) => withRefresh(() => deleteAgencyCascade(agency, reason, auditContext), 'Organisation supprimée.'),
+        })}
+        onCreateNote={(agency, note, visibility) => runAction({
+          title: 'Ajouter cette note interne ?',
+          message: 'La note sera rattachée à la fiche organisation et visible selon sa catégorie.',
+          confirmLabel: 'Ajouter note',
+          onConfirm: (reason) => withRefresh(
+            () => createAdminNote(agency.id, note, visibility, reason, auditContext),
+            'Note interne ajoutée.',
+          ),
+        })}
+        onCreateTicket={(agency, subject, category, priority, description) => runAction({
+          title: 'Créer ce ticket support ?',
+          message: 'Le ticket sera rattaché à l’organisation et suivi dans Support & opérations.',
+          confirmLabel: 'Créer ticket',
+          onConfirm: (reason) => withRefresh(
+            () => createSupportTicket(agency.id, subject, category, priority, description, reason, auditContext),
+            'Ticket support créé.',
+          ),
         })}
       />
 

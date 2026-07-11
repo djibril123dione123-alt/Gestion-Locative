@@ -599,7 +599,6 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
       <DashboardHeader
         selectedMonth={selectedMonth}
         onMonthChange={setSelectedMonth}
-        onNavigate={onNavigate}
       />
 
       {cacheTimestamp && <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadDashboardData} />}
@@ -631,7 +630,7 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
       </div>
 
       <div className="hidden sm:block">
-        <DashboardQuickActions onNavigate={onNavigate} />
+        <DashboardQuickActions />
       </div>
     </PremiumPageShell>
   );
@@ -998,11 +997,9 @@ function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: Dashbo
 function DashboardHeader({
   selectedMonth,
   onMonthChange,
-  onNavigate: _onNavigate,
 }: {
   selectedMonth: string;
   onMonthChange: (value: string) => void;
-  onNavigate?: (page: string) => void;
 }) {
   return (
     <PremiumPageHeader
@@ -1406,7 +1403,7 @@ function TopUnpaidList({ items, onNavigate }: { items: WatchItem[]; onNavigate?:
   );
 }
 
-function DashboardQuickActions({ onNavigate: _onNavigate }: { onNavigate?: (page: string) => void }) {
+function DashboardQuickActions() {
   const actions = [
     { label: 'Enregistrer paiement', hashUrl: '#/paiements?action=new', icon: Wallet, variant: 'primary' as const },
     { label: 'Nouvelle location', hashUrl: '#/occupants-baux?action=new-location', icon: Plus, variant: 'secondary' as const },

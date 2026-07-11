@@ -9,7 +9,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Building2,
   CalendarDays,
@@ -296,7 +295,6 @@ function getOccupantsBauxColumnLabel(key: OccupantsBauxColumnKey): string {
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export function OccupantsBaux() {
-  const navigate = useNavigate();
   const { profile, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const { success: notifySuccess, error: notifyError, toasts, removeToast } = useToast();
@@ -1246,7 +1244,6 @@ export function OccupantsBaux() {
                 onResiliate={openResiliation}
                 onArchive={setArchiveTarget}
                 onRenew={openRenewal}
-                onNavigate={navigate}
               />
             ) : undefined
           }
@@ -1457,7 +1454,6 @@ function OccupantBailDrawer({
   onResiliate,
   onArchive,
   onRenew,
-  onNavigate,
 }: {
   row: OccupantBailRow | null;
   details: OccupantBailDetails | null;
@@ -1474,7 +1470,6 @@ function OccupantBailDrawer({
   onResiliate: (row: OccupantBailRow) => void;
   onArchive: (row: OccupantBailRow) => void;
   onRenew: (row: OccupantBailRow) => void;
-  onNavigate: (path: string) => void;
 }) {
   if (!row) return null;
 
@@ -1570,10 +1565,9 @@ function OccupantBailDrawer({
               onEditOccupant={() => onEditOccupant(row)}
               onEditBail={() => onEditBail(row)}
               onRenew={() => onRenew(row)}
-              onNavigate={onNavigate}
             />
           )}
-          {activeTab === 'paiements' && <DrawerPayments contractId={row.id} details={details} loading={detailsLoading} error={detailsError} />}
+          {activeTab === 'paiements' && <DrawerPayments contractId={row.contrat_id} details={details} loading={detailsLoading} error={detailsError} />}
           {activeTab === 'documents' && (
             <DrawerDocuments
               row={row}
@@ -1625,7 +1619,6 @@ function DrawerResume({
   onEditOccupant,
   onEditBail,
   onRenew,
-  onNavigate,
 }: {
   row: OccupantBailRow;
   details: OccupantBailDetails | null;
@@ -1633,7 +1626,6 @@ function DrawerResume({
   onEditOccupant: () => void;
   onEditBail: () => void;
   onRenew: () => void;
-  onNavigate: (path: string) => void;
 }) {
   const latestPayment = details?.payments[0] ?? null;
   const nextExpectedLabel = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date());
@@ -1842,6 +1834,7 @@ function DrawerPayments({
           </div>
         </button>
       ))}
+      </div>
     </div>
   );
 }

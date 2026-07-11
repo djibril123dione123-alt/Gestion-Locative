@@ -71,7 +71,7 @@ export const CONSOLE_NAV_ITEMS: ConsoleNavItem[] = [
     label: 'Système & configuration',
     shortLabel: 'Système',
     route: '#/console/system-config',
-    description: 'Documents, QR, santé technique, feature flags, audit et config.',
+    description: 'Documents, QR, santé technique, feature flags, audit et configuration.',
     icon: Settings2,
   },
 ];

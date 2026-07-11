@@ -125,7 +125,11 @@ export interface AdminIncident {
   status?: string | null;
   message?: string | null;
   organization_id?: string | null;
+  user_id?: string | null;
   occurrences?: number | null;
+  resolution?: string | null;
+  owner?: string | null;
+  metadata?: Record<string, unknown> | null;
   created_at?: string | null;
   last_seen_at?: string | null;
 }
@@ -137,7 +141,12 @@ export interface AdminTicket {
   priority?: string | null;
   category?: string | null;
   organization_id?: string | null;
+  user_id?: string | null;
+  description?: string | null;
+  internal_notes?: string | null;
+  assigned_to?: string | null;
   created_at?: string | null;
+  resolved_at?: string | null;
 }
 
 export interface SaasConfigRow {
@@ -145,6 +154,97 @@ export interface SaasConfigRow {
   value: unknown;
   description?: string | null;
   updated_at?: string | null;
+}
+
+export interface AdminNote {
+  id: string;
+  organization_id?: string | null;
+  author_user_id?: string | null;
+  note: string;
+  visibility?: string | null;
+  created_at?: string | null;
+}
+
+export interface AdminNotification {
+  id: string;
+  severity?: string | null;
+  title: string;
+  message?: string | null;
+  target_organization_id?: string | null;
+  status?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string | null;
+}
+
+export interface AdminSystemEvent {
+  id: string;
+  event_type: string;
+  severity?: string | null;
+  organization_id?: string | null;
+  user_id?: string | null;
+  message: string;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string | null;
+}
+
+export interface AdminOrganizationMetric {
+  id: string;
+  organization_id: string;
+  metric_date?: string | null;
+  active_users?: number | null;
+  total_properties?: number | null;
+  total_units?: number | null;
+  total_contracts?: number | null;
+  total_documents?: number | null;
+  storage_used_mb?: number | string | null;
+  payments_count?: number | null;
+  payments_amount?: number | string | null;
+  unpaid_amount?: number | string | null;
+  last_activity_at?: string | null;
+  health_score?: number | null;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string | null;
+}
+
+export interface AdminDocumentRegistryEntry {
+  id: string;
+  agency_id?: string | null;
+  document_type?: string | null;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  reference?: string | null;
+  period?: string | null;
+  status?: string | null;
+  storage_path?: string | null;
+  version?: number | null;
+  generated_at?: string | null;
+  created_at?: string | null;
+  agencies?: { name?: string | null } | null;
+}
+
+export interface AdminDocumentVerification {
+  id: string;
+  agency_id?: string | null;
+  document_type?: string | null;
+  token?: string | null;
+  status?: string | null;
+  verification_count?: number | null;
+  last_verified_at?: string | null;
+  created_at?: string | null;
+  document_registry_id?: string | null;
+  agencies?: { name?: string | null } | null;
+}
+
+export interface AdminMaintenanceAnnouncement {
+  id: string;
+  title: string;
+  message: string;
+  status?: string | null;
+  target?: Record<string, unknown> | null;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  created_by?: string | null;
+  created_at?: string | null;
 }
 
 export interface AdminPlatformStats {
@@ -178,6 +278,13 @@ export interface AdminConsoleData {
   featureFlags: AdminFeatureFlag[];
   auditLogs: AdminAuditLog[];
   configRows: SaasConfigRow[];
+  notes: AdminNote[];
+  notifications: AdminNotification[];
+  systemEvents: AdminSystemEvent[];
+  organizationMetrics: AdminOrganizationMetric[];
+  documentRegistry: AdminDocumentRegistryEntry[];
+  documentVerifications: AdminDocumentVerification[];
+  announcements: AdminMaintenanceAnnouncement[];
 }
 
 function readSnapshotPlatform(snapshot: Record<string, unknown> | null | undefined) {
@@ -199,6 +306,7 @@ function readSnapshotPlatform(snapshot: Record<string, unknown> | null | undefin
 }
 
 export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
+  const admin = supabase.schema('samay_admin');
   const results = await Promise.allSettled([
     supabase.rpc('admin_console_snapshot'),
     supabase.from('vw_owner_agency_stats').select('*').order('created_at', { ascending: false }),
@@ -209,6 +317,13 @@ export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
     supabase.from('owner_actions_log').select('*').order('created_at', { ascending: false }).limit(120),
     supabase.from('feature_flags').select('*').order('updated_at', { ascending: false }).limit(120),
     supabase.from('saas_config').select('*').order('key'),
+    admin.from('admin_notes').select('*').order('created_at', { ascending: false }).limit(200),
+    admin.from('admin_notifications').select('*').order('created_at', { ascending: false }).limit(120),
+    admin.from('system_events').select('*').order('created_at', { ascending: false }).limit(120),
+    admin.from('organization_metrics').select('*').order('metric_date', { ascending: false }).limit(300),
+    admin.from('maintenance_announcements').select('*').order('created_at', { ascending: false }).limit(80),
+    supabase.from('document_registry').select('*, agencies(name)').order('created_at', { ascending: false }).limit(200),
+    supabase.from('document_verifications').select('*, agencies(name)').order('created_at', { ascending: false }).limit(200),
   ]);
 
   const partialErrors: string[] = [];
@@ -235,6 +350,13 @@ export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
   const legacyLogs = unpack<AdminAuditLog[]>(6, 'Audit historique', []);
   const legacyFlags = unpack<AdminFeatureFlag[]>(7, 'Feature flags', []);
   const configRows = unpack<SaasConfigRow[]>(8, 'Configuration SaaS', []);
+  const notes = unpack<AdminNote[]>(9, 'Notes internes', []);
+  const notifications = unpack<AdminNotification[]>(10, 'Notifications admin', []);
+  const systemEvents = unpack<AdminSystemEvent[]>(11, 'Événements système', []);
+  const organizationMetrics = unpack<AdminOrganizationMetric[]>(12, 'Métriques organisations', []);
+  const announcements = unpack<AdminMaintenanceAnnouncement[]>(13, 'Annonces maintenance', []);
+  const documentRegistry = unpack<AdminDocumentRegistryEntry[]>(14, 'Registry documents', []);
+  const documentVerifications = unpack<AdminDocumentVerification[]>(15, 'QR Verify', []);
 
   const platformFromSnapshot = readSnapshotPlatform(snapshot);
   const auditLogs = ((snapshot?.audit_logs as AdminAuditLog[] | undefined) ?? legacyLogs).slice(0, 120);
@@ -261,6 +383,13 @@ export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
     featureFlags,
     auditLogs,
     configRows,
+    notes,
+    notifications,
+    systemEvents,
+    organizationMetrics,
+    documentRegistry,
+    documentVerifications,
+    announcements,
     platform: {
       totalOrganizations: platformFromSnapshot.totalOrganizations || agencies.length,
       activeOrganizations: platformFromSnapshot.activeOrganizations || agencies.filter((agency) => (agency.status ?? 'active') === 'active').length,
@@ -279,4 +408,3 @@ export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
     },
   };
 }
-

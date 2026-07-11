@@ -16,7 +16,7 @@ const toneClasses: Record<AdminTone, string> = {
 export function AdminStatusBadge({ status, children, tone }: { status?: string | null; children?: React.ReactNode; tone?: AdminTone }) {
   const nextTone = tone ?? getStatusTone(status);
   return (
-    <span className={classNames('inline-flex items-center rounded-full border px-2 py-0.5 text-[0.62rem] font-black uppercase tracking-[0.1em]', toneClasses[nextTone])}>
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.62rem] font-black uppercase tracking-[0.1em] ${toneClasses[nextTone]}`}>
       {children ?? getStatusLabel(status)}
     </span>
   );
@@ -43,7 +43,7 @@ export function AdminMetricCard({
           <p className="mt-1 truncate text-base font-black text-slate-950 sm:text-lg">{value}</p>
         </div>
         {Icon && (
-          <span className={classNames('rounded-xl border p-2', toneClasses[tone])}>
+          <span className={`rounded-xl border p-2 ${toneClasses[tone]}`}>
             <Icon className="h-3.5 w-3.5" />
           </span>
         )}

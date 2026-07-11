@@ -209,6 +209,161 @@ export async function rejectAgencyRequest(requestId: string, reason: string, con
   });
 }
 
+export async function createAdminNote(
+  organizationId: string,
+  note: string,
+  visibility: 'internal' | 'support' | 'commercial' | 'security',
+  reason: string,
+  context: AuditContext,
+) {
+  await auditedAction({
+    ...context,
+    action: 'admin_note_created_from_console',
+    reason,
+    targetOrganizationId: organizationId,
+    targetType: 'admin_note',
+    targetLabel: visibility,
+    metadata: { visibility },
+  }, async () => {
+    const { error } = await supabase.rpc('admin_create_admin_note', {
+      p_organization_id: organizationId,
+      p_note: note,
+      p_visibility: visibility,
+    });
+    if (error) throw error;
+  });
+}
+
+export async function createSupportTicket(
+  organizationId: string,
+  subject: string,
+  category: string,
+  priority: string,
+  description: string,
+  reason: string,
+  context: AuditContext,
+) {
+  await auditedAction({
+    ...context,
+    action: 'support_ticket_created_from_console',
+    reason,
+    targetOrganizationId: organizationId,
+    targetType: 'support_ticket',
+    targetLabel: subject,
+    metadata: { category, priority },
+  }, async () => {
+    const { error } = await supabase.rpc('admin_create_support_ticket', {
+      p_organization_id: organizationId,
+      p_subject: subject,
+      p_category: category,
+      p_priority: priority,
+      p_description: description || null,
+    });
+    if (error) throw error;
+  });
+}
+
+export async function updateSupportTicket(
+  ticketId: string,
+  status: string,
+  internalNotes: string,
+  reason: string,
+  context: AuditContext,
+) {
+  await auditedAction({
+    ...context,
+    action: 'support_ticket_status_changed',
+    reason,
+    targetType: 'support_ticket',
+    targetLabel: ticketId,
+    metadata: { ticket_id: ticketId, status },
+  }, async () => {
+    const { error } = await supabase.rpc('admin_update_support_ticket', {
+      p_ticket_id: ticketId,
+      p_status: status,
+      p_internal_notes: internalNotes || null,
+    });
+    if (error) throw error;
+  });
+}
+
+export async function recordIncident(
+  type: string,
+  severity: string,
+  message: string,
+  organizationId: string | null,
+  reason: string,
+  context: AuditContext,
+) {
+  await auditedAction({
+    ...context,
+    action: 'incident_recorded_from_console',
+    reason,
+    targetOrganizationId: organizationId,
+    targetType: 'incident',
+    targetLabel: type,
+    metadata: { severity },
+  }, async () => {
+    const { error } = await supabase.rpc('admin_record_incident', {
+      p_type: type,
+      p_severity: severity,
+      p_message: message,
+      p_organization_id: organizationId,
+      p_metadata: {},
+    });
+    if (error) throw error;
+  });
+}
+
+export async function resolveIncident(
+  incidentId: string,
+  resolution: string,
+  reason: string,
+  context: AuditContext,
+) {
+  await auditedAction({
+    ...context,
+    action: 'incident_resolved_from_console',
+    reason,
+    targetType: 'incident',
+    targetLabel: incidentId,
+    metadata: { incident_id: incidentId },
+  }, async () => {
+    const { error } = await supabase.rpc('admin_resolve_incident', {
+      p_incident_id: incidentId,
+      p_resolution: resolution,
+    });
+    if (error) throw error;
+  });
+}
+
+export async function createMaintenanceAnnouncement(
+  title: string,
+  message: string,
+  status: string,
+  reason: string,
+  context: AuditContext,
+) {
+  await auditedAction({
+    ...context,
+    action: 'maintenance_announcement_created_from_console',
+    reason,
+    targetType: 'maintenance_announcement',
+    targetLabel: title,
+    metadata: { status },
+  }, async () => {
+    const { error } = await supabase.rpc('admin_create_maintenance_announcement', {
+      p_title: title,
+      p_message: message,
+      p_status: status,
+      p_target: { type: 'all' },
+      p_starts_at: null,
+      p_ends_at: null,
+    });
+    if (error) throw error;
+  });
+}
+
 function assertUserCanBeChanged(user: AdminUser, users: AdminUser[], nextRole?: string, nextActive?: boolean) {
   if (user.role === 'super_admin') {
     throw new Error('Un compte super-admin ne peut pas être modifié depuis cette action.');

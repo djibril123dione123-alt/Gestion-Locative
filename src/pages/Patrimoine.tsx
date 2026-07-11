@@ -1817,6 +1817,7 @@ function UnitDrawer({
 }) {
   const status = getUnitStatusLabel(unit, summary);
   const hasReliquat = summary.reliquat > 0;
+  const activeContract = summary.contract;
   return (
     <>
       {/* Résumé financier */}
@@ -1850,18 +1851,18 @@ function UnitDrawer({
       <div className="mb-3">
         <CompactSection title="Occupation actuelle" icon={CircleUser}>
           <div className="flex flex-col divide-y divide-slate-100">
-            {summary.contract ? (
+            {activeContract ? (
               <>
-                <CompactLabelValue label="Locataire" value={formatPersonName(summary.contract.locataires, 'Locataire')} />
+                <CompactLabelValue label="Locataire" value={formatPersonName(activeContract.locataires, 'Locataire')} />
                 {(() => {
-                  const lData = summary.contract.locataires as unknown as Array<{ telephone?: string }> | { telephone?: string };
+                  const lData = activeContract.locataires as unknown as Array<{ telephone?: string }> | { telephone?: string };
                   const phone = Array.isArray(lData) ? lData[0]?.telephone : lData?.telephone;
                   return phone ? <CompactLabelValue label="Téléphone" value={phone} /> : null;
                 })()}
                 <CompactLabelValue label="Bien parent" value={property?.nom || unit.immeubles?.nom || 'Aucun bien'} />
-                <CompactLabelValue label="Bail" value={summary.contract.statut === 'actif' ? 'Location active' : 'Historique'} />
-                {summary.contract.date_debut && (
-                  <CompactLabelValue label="Entrée" value={formatDate(summary.contract.date_debut)} />
+                <CompactLabelValue label="Bail" value={activeContract.statut === 'actif' ? 'Location active' : 'Historique'} />
+                {activeContract.date_debut && (
+                  <CompactLabelValue label="Entrée" value={formatDate(activeContract.date_debut)} />
                 )}
               </>
             ) : (
@@ -1880,13 +1881,13 @@ function UnitDrawer({
       <div className="mb-3">
         <CompactSection title="Actions & Gestion" icon={Pencil}>
           <div className="grid grid-cols-2 gap-1.5">
-            {summary.contract ? (
-              <button type="button" onClick={() => { window.location.hash = `#/occupants-baux?id=${summary.contract.id}`; }} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+            {activeContract ? (
+              <button type="button" onClick={() => { window.location.hash = `#/occupants-baux?id=${activeContract.id}`; }} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
                 <ClipboardList className="h-3.5 w-3.5 text-brand-700" />
                 Voir la location
               </button>
             ) : (
-              <button type="button" onClick={() => { window.location.hash = `#/occupants-baux?action=new-location&uniteId=${summary.unite.id}`; }} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+              <button type="button" onClick={() => { window.location.hash = `#/occupants-baux?action=new-location&uniteId=${unit.id}`; }} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
                 <Plus className="h-3.5 w-3.5 text-brand-700" />
                 Créer une location
               </button>

@@ -30,6 +30,7 @@ import { MetricCard } from '../components/ui/MetricCard';
 import { PremiumFilterSelect } from '../components/ui/PremiumFilterSelect';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { PageSkeleton, SkeletonTable } from '../components/ui/Skeleton';
+import { useDirectRoute } from '../hooks/useDirectRoute';
 import { ToastContainer } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -214,6 +215,20 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
   const [permissionsByUser, setPermissionsByUser] = useState<Record<string, UserPermissionMap>>({});
   const [agencySettings, setAgencySettings] = useState<Partial<AgencySettings> | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const { clearDirectRouteParams } = useDirectRoute({
+    onNew: (params) => {
+      const action = params.get('action');
+      if (action === 'invite' || action === 'new') {
+        setIsInviteOpen(true);
+      }
+    },
+    onSelectId: (userId) => {
+      const match = members.find((m) => m.id === userId);
+      if (match) setPermissionTarget(match);
+    },
+  });
+
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState<{ email: string; role: RoleOption }>({
@@ -605,6 +620,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     setInviteStep(1);
     setInviteNote('');
     setGeneratedLink(null);
+    clearDirectRouteParams();
   };
 
   const confirmDeactivate = async () => {
@@ -1264,7 +1280,10 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
 
       <Modal
         isOpen={!!permissionTarget}
-        onClose={() => setPermissionTarget(null)}
+        onClose={() => {
+          setPermissionTarget(null);
+          clearDirectRouteParams();
+        }}
         title={permissionTarget ? `Permissions · ${permissionTarget.prenom ?? ''} ${permissionTarget.nom ?? ''}` : 'Permissions'}
       >
         {permissionTarget ? (

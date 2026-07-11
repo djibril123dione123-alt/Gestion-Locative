@@ -30,6 +30,7 @@ import { useTracking } from '../hooks/useTracking';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
+import { useDirectRoute } from '../hooks/useDirectRoute';
 import { formatCurrency, formatCompactCurrency } from '../lib/formatters';
 import {
   buildPaiementPayload,
@@ -82,6 +83,23 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const { track } = useTracking();
   const { isOnline } = useOfflineSync();
 
+  const { clearDirectRouteParams } = useDirectRoute({
+    onNew: (params) => {
+      setEditingPaiement(null);
+      const contratId = params.get('contratId');
+      setFormData((prev) => ({
+        ...makeInitialForm(),
+        contrat_id: contratId || prev.contrat_id,
+      }));
+      idempotencyKeyRef.current = crypto.randomUUID();
+      setIsModalOpen(true);
+    },
+    onSelectId: (id) => {
+      const match = paiements.find((p) => p.id === id);
+      if (match) setSelectedPaiement(match);
+    },
+  });
+
   const [paiements, setPaiements] = useState<PaiementRow[]>([]);
   const [contrats, setContrats] = useState<ContratRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,6 +143,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     setEditingPaiement(null);
     setFormData(makeInitialForm());
     idempotencyKeyRef.current = crypto.randomUUID();
+    clearDirectRouteParams();
   };
 
   const openCreateModal = () => {
@@ -1039,7 +1058,10 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                   </p>
                 </div>
               }
-              onClose={() => setSelectedPaiement(null)}
+              onClose={() => {
+                setSelectedPaiement(null);
+                clearDirectRouteParams();
+              }}
               actions={
                 <PremiumButton
                   variant="primary"

@@ -57,6 +57,7 @@ import { formatPersonName } from '../lib/people';
 import { supabase } from '../lib/supabase';
 import { getOrCreateIndividualOwnerBailleur } from '../services/individualOwner';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
+import { useDirectRoute } from '../hooks/useDirectRoute';
 
 type PatrimoineTab = 'biens' | 'unites';
 type DrawerState = { type: 'bien'; id: string } | { type: 'unite'; id: string } | null;
@@ -372,6 +373,33 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   const navigate = useNavigate();
   const toast = useToast();
   const planLimits = usePlanLimits();
+
+  const { clearDirectRouteParams } = useDirectRoute({
+    onNew: (params) => {
+      const action = params.get('action');
+      if (action === 'new-unite' || action === 'new-unit') {
+        const bienId = params.get('bienId');
+        setEditingUnit(null);
+        if (bienId) {
+          setUnitForm((prev) => ({ ...prev, immeuble_id: bienId }));
+        }
+        setUnitWizardStep('main');
+        setUnitModalOpen(true);
+      } else {
+        setEditingProperty(null);
+        setPropertyWizardStep('main');
+        setPropertyModalOpen(true);
+      }
+    },
+    onSelectId: (id, params) => {
+      const isUnite = params.has('uniteId') || params.get('tab') === 'unites';
+      if (isUnite) {
+        setDrawer({ type: 'unite', id });
+      } else {
+        setDrawer({ type: 'bien', id });
+      }
+    },
+  });
 
   const [activeTab, setActiveTab] = useState<PatrimoineTab>(initialTab);
   const [data, setData] = useState<PatrimoineData>(EMPTY_DATA);
@@ -815,6 +843,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
     setEditingProperty(null);
     setPropertyWizardStep('main');
     setPropertyForm(createPropertyForm());
+    clearDirectRouteParams();
   };
 
   const closeUnitModal = () => {
@@ -822,6 +851,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
     setEditingUnit(null);
     setUnitWizardStep('main');
     setUnitForm(createUnitForm());
+    clearDirectRouteParams();
   };
 
   const reloadAfterMutation = async () => {

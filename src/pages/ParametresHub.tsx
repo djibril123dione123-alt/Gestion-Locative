@@ -401,11 +401,11 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
           : "Pilotez l'organisation, les droits, les modules et l'abonnement depuis un seul espace."}
         mobileDescription="Control Center."
         sideContent={
-          <div className="flex items-center justify-end gap-1.5 sm:gap-2">
-            <div className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl border border-emerald-950/15 bg-white/95 px-2 py-1 sm:px-3 sm:py-1.5 shadow-2xs">
+          <div className="flex items-center justify-end gap-1 sm:gap-2">
+            <div className="inline-flex items-center gap-1 sm:gap-2 rounded-xl border border-emerald-950/15 bg-white/95 px-2 py-1 sm:px-3 sm:py-1.5 shadow-2xs">
               <span className="inline-flex items-center gap-1 sm:gap-1.5 border-r border-slate-200 pr-1.5 sm:pr-2.5 text-[0.60rem] sm:text-[0.66rem] font-extrabold text-slate-800">
                 <Building2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-emerald-700 shrink-0" />
-                <span className="sm:hidden">{isIndividualOwner ? 'Propriétaire' : 'Agence'}</span>
+                <span className="sm:hidden">{isIndividualOwner ? 'Proprio' : 'Agence'}</span>
                 <span className="hidden sm:inline">{accountKind}</span>
               </span>
               <span className="inline-flex items-center gap-1 border-r border-slate-200 pr-1.5 sm:pr-2.5 text-[0.60rem] sm:text-[0.66rem] font-extrabold text-emerald-800">
@@ -417,10 +417,9 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
               </span>
             </div>
             {controlLabel ? (
-              <div className="inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-amber-200 bg-amber-50/95 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[0.60rem] sm:text-[0.66rem] font-black text-amber-900 shadow-2xs shrink-0">
+              <div className="hidden sm:inline-flex items-center gap-1 sm:gap-1.5 rounded-xl border border-amber-200 bg-amber-50/95 px-2 py-1 sm:px-2.5 sm:py-1.5 text-[0.60rem] sm:text-[0.66rem] font-black text-amber-900 shadow-2xs shrink-0">
                 <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-amber-700 shrink-0" />
-                <span className="sm:hidden">{snapshot && snapshot.pointsToReview.length > 0 ? `${snapshot.pointsToReview.length} pts` : controlLabel}</span>
-                <span className="hidden sm:inline">{controlLabel}</span>
+                <span>{controlLabel}</span>
               </div>
             ) : null}
           </div>

@@ -41,6 +41,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { useDirectRoute } from '../hooks/useDirectRoute';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { Modal } from '../components/ui/Modal';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
@@ -71,7 +72,7 @@ import {
   type OccupantBailPersonOption,
 } from '../repositories/occupantsBauxRepository';
 import { readWithCache, invalidateOperationalCaches, notifyDataChanged } from '../services/offlineReadCache';
-import { formatDate, formatSenegalPhone, normalizeSenegalPhone } from '../lib/formatters';
+import { formatCurrency, formatDate, formatSenegalPhone, normalizeSenegalPhone } from '../lib/formatters';
 import { createContratViaEdge, renewContratViaEdge, updateContratViaEdge } from '../services/api/contratApi';
 import { generateContratPDF } from '../lib/pdf';
 
@@ -300,6 +301,35 @@ export function OccupantsBaux() {
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const { success: notifySuccess, error: notifyError, toasts, removeToast } = useToast();
 
+  const { clearDirectRouteParams } = useDirectRoute({
+    onNew: (params) => {
+      const action = params.get('action');
+      if (action === 'new-locataire') {
+        setOccupantForm(emptyOccupantForm());
+        setOccupantModalMode('create');
+      } else {
+        openCreateOccupation();
+        const locataireId = params.get('locataireId');
+        const uniteId = params.get('uniteId');
+        if (locataireId || uniteId) {
+          setOccupationForm((prev) => ({
+            ...prev,
+            locataire_id: locataireId || prev.locataire_id,
+            unite_id: uniteId || prev.unite_id,
+          }));
+        }
+      }
+    },
+    onSelectId: (id, params) => {
+      const match = rows.find((r) => r.contrat_id === id);
+      if (match) {
+        setSelectedRow(match);
+        const tab = params.get('tab') as DrawerTab | null;
+        if (tab) setActiveDrawerTab(tab);
+      }
+    },
+  });
+
   const [rows, setRows] = useState<OccupantBailRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
@@ -442,12 +472,14 @@ export function OccupantsBaux() {
   const closeOccupantModal = useCallback(() => {
     if (workflowSubmitting) return;
     setOccupantModalMode(null);
-  }, [workflowSubmitting]);
+    clearDirectRouteParams();
+  }, [workflowSubmitting, clearDirectRouteParams]);
 
   const closeOccupationModal = useCallback(() => {
     if (workflowSubmitting) return;
     setOccupationModalMode(null);
-  }, [workflowSubmitting]);
+    clearDirectRouteParams();
+  }, [workflowSubmitting, clearDirectRouteParams]);
 
   const submitOccupant = useCallback(async () => {
     if (!profile?.agency_id) return;
@@ -1203,7 +1235,10 @@ export function OccupantsBaux() {
                 isIndividualOwner={isIndividualOwner}
                 activeTab={activeDrawerTab}
                 onTabChange={setActiveDrawerTab}
-                onClose={() => setSelectedRow(null)}
+                onClose={() => {
+                  setSelectedRow(null);
+                  clearDirectRouteParams();
+                }}
                 onEditOccupant={openEditOccupant}
                 onEditBail={openEditBail}
                 onGeneratePdf={(row) => void generateContractPdf(row)}

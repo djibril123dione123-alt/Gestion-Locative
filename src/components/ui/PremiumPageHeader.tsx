@@ -183,7 +183,7 @@ export function PremiumPageHeader({
 
   if (variant === 'standard') {
     return (
-      <header className={`flex flex-col lg:flex-row lg:items-center lg:justify-between ${isCompact ? `${isUltraCompact ? 'gap-1.5' : 'gap-2'}` : 'gap-3'} rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${isCompact ? `${isUltraCompact ? 'px-3 py-1.5 sm:px-3.5 sm:py-1.5' : 'px-3 py-1.5 sm:px-4 sm:py-2'}` : 'px-4 py-3 sm:px-5 sm:py-3.5'} ${className}`}>
+      <header className={`flex flex-col sm:flex-row sm:items-center sm:justify-between ${isCompact ? `${isUltraCompact ? 'gap-1.5' : 'gap-2'}` : 'gap-3'} rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${isCompact ? `${isUltraCompact ? 'px-3 py-1.5 sm:px-3.5 sm:py-1.5' : 'px-3 py-1.5 sm:px-4 sm:py-2'}` : 'px-4 py-3 sm:px-5 sm:py-3.5'} ${className}`}>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <div className="min-w-0">
@@ -192,7 +192,7 @@ export function PremiumPageHeader({
             </div>
 
             {sideContent && (
-              <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
+              <div className="flex items-center gap-1.5 shrink-0 sm:hidden">
                 {sideContent}
               </div>
             )}
@@ -201,8 +201,8 @@ export function PremiumPageHeader({
           {resolvedDescription && (
             mobileDescription ? (
               <>
-                <p className={`${isUltraCompact ? 'mt-0 text-[0.64rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium text-slate-600 lg:hidden`}>{mobileDescription}</p>
-                <p className={`${isUltraCompact ? 'mt-0 text-[0.64rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium text-slate-600 lg:block ${isSplitOpen ? 'opacity-90' : ''}`}>{isSplitOpen ? mobileDescription : resolvedDescription}</p>
+                <p className={`${isUltraCompact ? 'mt-0 text-[0.64rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium text-slate-600 sm:hidden`}>{mobileDescription}</p>
+                <p className={`${isUltraCompact ? 'mt-0 text-[0.64rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium text-slate-600 sm:block ${isSplitOpen ? 'opacity-90' : ''}`}>{isSplitOpen ? mobileDescription : resolvedDescription}</p>
               </>
             ) : (
               <p className={`${isUltraCompact ? 'mt-0' : 'mt-1'} max-w-2xl font-medium ${isCompact ? `${isUltraCompact ? 'text-[0.55rem]' : 'text-[0.58rem]'} leading-snug text-slate-500` : 'text-[0.7rem] leading-relaxed text-slate-600'}`}>{resolvedDescription}</p>
@@ -214,9 +214,9 @@ export function PremiumPageHeader({
         </div>
 
         {(hasActions || hasSideContent) && (
-          <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end mt-1 lg:mt-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end mt-1 sm:mt-0">
             {sideContent && (
-              <div className="hidden lg:flex items-center gap-1.5">
+              <div className="hidden sm:flex items-center gap-1.5">
                 {sideContent}
               </div>
             )}
@@ -231,7 +231,7 @@ export function PremiumPageHeader({
 
   return (
     <header
-      className={`@container ${styles.shell} flex flex-col ${isUltraCompact ? 'gap-1.5 !px-3 !py-2' : isCompact ? 'gap-2.5 !px-4 !py-3' : 'gap-4'} lg:flex-row lg:items-center lg:justify-between ${className}`}
+      className={`@container ${styles.shell} flex flex-col ${isUltraCompact ? 'gap-1.5 !px-3 !py-2' : isCompact ? 'gap-2.5 !px-4 !py-3' : 'gap-4'} sm:flex-row sm:items-center sm:justify-between ${className}`}
       role="banner"
     >
       {/* Bulle décorative */}

@@ -60,6 +60,7 @@ import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { useDirectRoute } from '../hooks/useDirectRoute';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
@@ -527,6 +528,20 @@ export function Bailleurs() {
   const { user, profile, accountProfile } = useAuth();
   const toast = useToast();
 
+  const { clearDirectRouteParams } = useDirectRoute({
+    onNew: () => {
+      setEditingBailleur(null);
+      setBailleurWizardStep('identity');
+      setIsModalOpen(true);
+    },
+    onSelectId: (id, params) => {
+      setSelectedBailleurId(id);
+      setDetailOpen(true);
+      const tab = params.get('tab') as DrawerTab | null;
+      if (tab) setActiveDrawerTab(tab);
+    },
+  });
+
   // États
   const [bailleurs, setBailleurs] = useState<Bailleur[]>([]);
   const [pageData, setPageData] = useState<BailleurPageData>(EMPTY_PAGE_DATA);
@@ -593,6 +608,7 @@ export function Bailleurs() {
     setEditingBailleur(null);
     resetForm();
     setError(null);
+    clearDirectRouteParams();
   };
 
   /**
@@ -1964,7 +1980,10 @@ export function Bailleurs() {
             selectedBailleur && (
               <PremiumDrawerShell
                 open={detailPanelOpen}
-                onClose={() => setDetailOpen(false)}
+                onClose={() => {
+                  setDetailOpen(false);
+                  clearDirectRouteParams();
+                }}
                 size="compact"
                 desktopMode="floating"
                 desktopAt="lg"

@@ -26,6 +26,7 @@ import { PremiumTableSurface } from '../components/ui/PremiumTableSurface';
 import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
 import { EmptyState } from '../components/ui/EmptyState';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
+import { useDirectRoute } from '../hooks/useDirectRoute';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { cancelDepenseViaRpc, createDepenseViaRpc, updateDepenseViaRpc } from '../services/api/financeApi';
 import { buildMonthFilterOptions, resolveMonthFilter } from '../lib/monthFilters';
@@ -55,6 +56,23 @@ interface Depense {
 
 export function Depenses() {
   const { profile } = useAuth();
+
+  const { clearDirectRouteParams } = useDirectRoute({
+    onNew: (params) => {
+      setEditingDepense(null);
+      const bienId = params.get('bienId');
+      setFormData((prev) => ({
+        ...prev,
+        immeuble_id: bienId || prev.immeuble_id,
+      }));
+      setIsModalOpen(true);
+    },
+    onSelectId: (id) => {
+      const match = depenses.find((d) => d.id === id);
+      if (match) setSelectedDepense(match);
+    },
+  });
+
   const [depenses, setDepenses] = useState<Depense[]>([]);
   const [filtered, setFiltered] = useState<Depense[]>([]);
   const [immeubles, setImmeubles] = useState<DepenseImmeubleOption[]>([]);
@@ -287,6 +305,7 @@ export function Depenses() {
       piece_justificative: '',
       affectation: 'agence',
     });
+    clearDirectRouteParams();
   };
 
   const openCreateModal = () => {
@@ -655,7 +674,10 @@ export function Depenses() {
                   </p>
                 </div>
               }
-              onClose={() => setSelectedDepense(null)}
+              onClose={() => {
+                setSelectedDepense(null);
+                clearDirectRouteParams();
+              }}
               actions={
                 selectedDepense.piece_justificative ? (
                   <a

@@ -163,6 +163,9 @@ function AppContent() {
     const externalAuthMode = getExternalAuthMode();
     const hashPage = location.pathname.replace(/^\//, '') || 'dashboard';
     const currentPage = externalAuthMode ? 'auth' : hashPage;
+    const basePage = currentPage.includes('/') && currentPage !== 'documents/scan' && currentPage !== 'documents/studio'
+        ? currentPage.split('/')[0]
+        : currentPage;
     const routeKey = `${currentPage}:${location.pathname}${location.search}`;
 
     // Navigation helper - compatible avec l'interface onNavigate existante
@@ -487,7 +490,11 @@ function AppContent() {
             );
         }
 
-        switch (currentPage) {
+        const routeTarget = currentPage === 'documents/scan' || currentPage === 'documents/studio'
+            ? currentPage
+            : basePage;
+
+        switch (routeTarget) {
             case 'dashboard':
                 return <Dashboard onNavigate={handleNavigate} onStartSetupWizard={() => setShowOnboardingWizard(true)} />;
             case 'agences':
@@ -546,7 +553,10 @@ function AppContent() {
         }
     };
 
-    const pageLabel = getAccountPageLabel(currentPage, accountProfile) ?? PAGE_LABELS[currentPage] ?? 'Samay Këur';
+    const activePageKey = currentPage === 'documents/scan' || currentPage === 'documents/studio'
+        ? currentPage
+        : basePage;
+    const pageLabel = getAccountPageLabel(activePageKey, accountProfile) ?? PAGE_LABELS[activePageKey] ?? 'Samay Këur';
     const mobileSyncLabel = !isOnline
         ? 'Hors ligne'
         : syncing
@@ -557,9 +567,9 @@ function AppContent() {
                     ? `${errorCount} erreur${errorCount > 1 ? 's' : ''}`
                     : null;
     const pageSkeletonVariant =
-        currentPage === 'dashboard'
+        activePageKey === 'dashboard'
             ? 'dashboard'
-            : ['parametres', 'equipe', 'abonnement', 'pricing'].includes(currentPage)
+            : ['parametres', 'equipe', 'abonnement', 'pricing'].includes(activePageKey)
                 ? 'form'
                 : 'table';
 
@@ -567,7 +577,7 @@ function AppContent() {
         <div className="premium-polish flex h-screen overflow-hidden bg-brand-paper">
             <MaintenanceBanner />
             <Sidebar
-                currentPage={currentPage}
+                currentPage={activePageKey}
                 onNavigate={handleNavigate}
                 isOpen={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}

@@ -14,6 +14,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Wrench, Plus, ArrowRight, Phone, Building2, AlertTriangle, CheckCircle2, Clock, Search } from 'lucide-react';
 import { formatCurrency, formatSenegalPhone, formatSenegalPhoneInput, getSenegalPhoneHref, normalizeSenegalPhone } from '../lib/formatters';
 import { PageSkeleton, SkeletonCards } from '../components/ui/Skeleton';
+import { useDirectRoute } from '../hooks/useDirectRoute';
 
 type Statut = 'a_faire' | 'en_cours' | 'termine';
 type Urgence = 'urgente' | 'normale' | 'basse';
@@ -56,6 +57,15 @@ const colonnes: { id: Statut; label: string; bg: string }[] = [
 export function Interventions() {
   const { profile, user } = useAuth();
   const toast = useToast();
+
+  const { clearDirectRouteParams } = useDirectRoute({
+    onNew: (params) => {
+      const bienId = params.get('bienId');
+      setForm((prev) => ({ ...prev, immeuble_id: bienId || prev.immeuble_id }));
+      setIsOpen(true);
+    },
+  });
+
   const [items, setItems] = useState<Intervention[]>([]);
   const [immeubles, setImmeubles] = useState<{ id: string; nom: string }[]>([]);
   const [unites, setUnites] = useState<{ id: string; nom: string; immeuble_id: string }[]>([]);
@@ -460,7 +470,10 @@ export function Interventions() {
 
       <WizardShell
         open={isOpen}
-        onClose={() => setIsOpen(false)}
+        onClose={() => {
+          setIsOpen(false);
+          clearDirectRouteParams();
+        }}
         size="simple"
         variant="classic"
         tone="agency"
@@ -480,7 +493,10 @@ export function Interventions() {
         secondaryAction={
           <button
             type="button"
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              setIsOpen(false);
+              clearDirectRouteParams();
+            }}
             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 transition"
           >
             Annuler

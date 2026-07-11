@@ -11,6 +11,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { WizardShell } from '../components/ui/WizardShell';
+import { PageSkeleton, SkeletonTable } from '../components/ui/Skeleton';
+import { useDirectRoute } from '../hooks/useDirectRoute';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
@@ -20,7 +22,6 @@ import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { addFooter, drawPageBorder, drawSectionFrame, saveGeneratedPdf } from '../lib/pdf';
-import { PageSkeleton, SkeletonTable } from '../components/ui/Skeleton';
 
 interface Piece {
   nom: string;
@@ -61,6 +62,15 @@ type InventaireStatutFilter = 'all' | 'en_cours' | 'termine' | 'litige';
 export function Inventaires() {
   const { profile, user } = useAuth();
   const toast = useToast();
+
+  const { clearDirectRouteParams } = useDirectRoute({
+    onNew: (params) => {
+      const contratId = params.get('contratId');
+      setForm((prev) => ({ ...prev, contrat_id: contratId || prev.contrat_id }));
+      setIsOpen(true);
+    },
+  });
+
   const [items, setItems] = useState<Inventaire[]>([]);
   const [contrats, setContrats] = useState<Contrat[]>([]);
   const [immeubles, setImmeubles] = useState<{ id: string; nom: string }[]>([]);
@@ -568,7 +578,10 @@ export function Inventaires() {
 
       <WizardShell
         open={isOpen}
-        onClose={() => setIsOpen(false)}
+        onClose={() => {
+          setIsOpen(false);
+          clearDirectRouteParams();
+        }}
         size="simple"
         variant="classic"
         tone="agency"
@@ -588,7 +601,10 @@ export function Inventaires() {
         secondaryAction={
           <button
             type="button"
-            onClick={() => setIsOpen(false)}
+            onClick={() => {
+              setIsOpen(false);
+              clearDirectRouteParams();
+            }}
             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 transition"
           >
             Annuler

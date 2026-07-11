@@ -890,17 +890,17 @@ export function Documents() {
             <>
               {/* Desktop: dense list when drawer closed, compact when open */}
               <div className="hidden lg:block">
-                <PremiumTableSurface density="compact" withHorizontalScroll ariaLabel="Table des documents">
-                  <table className="w-full text-left">
+                <PremiumTableSurface density="compact" withHorizontalScroll={!drawerOpen} ariaLabel="Table des documents">
+                  <table className={`w-full text-left ${drawerOpen ? 'table-fixed' : ''}`}>
                     <thead>
                       <tr className="border-b border-emerald-950/8 bg-[#faf9f5]/95">
-                        <th className="px-4 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Document</th>
+                        <th className={`${drawerOpen ? 'w-[46%]' : ''} px-4 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500`}>Document</th>
                         {!drawerOpen && isDocumentColumnVisible('context') && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Contexte</th>}
-                        {isDocumentColumnVisible('period') && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Période</th>}
-                        {isDocumentColumnVisible('status') && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Statut</th>}
-                        {isDocumentColumnVisible('proof') && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">Preuve</th>}
+                        {isDocumentColumnVisible('period') && <th className={`${drawerOpen ? 'w-[18%]' : ''} px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500`}>Période</th>}
+                        {isDocumentColumnVisible('status') && <th className={`${drawerOpen ? 'w-[17%]' : ''} px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500`}>Statut</th>}
+                        {isDocumentColumnVisible('proof') && <th className={`${drawerOpen ? 'w-[15%]' : ''} px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500`}>Preuve</th>}
                         {!drawerOpen && isDocumentColumnVisible('date') && <th className="px-3 py-3 text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 text-right">Date</th>}
-                        <th className="w-10" />
+                        <th className={`${drawerOpen ? 'w-[4%]' : 'w-10'}`} />
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100/80">

@@ -949,13 +949,6 @@ function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: Dashbo
           </div>
         </div>
       </section>
-              onClick={onStartSetupWizard}
-            >
-              Reprendre le wizard
-            </PremiumButton>
-          </div>
-        </div>
-      </section>
 
       <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1.3fr)_minmax(220px,0.7fr)]">
         <section className="rounded-xl border border-emerald-950/10 bg-white/95 p-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
@@ -1035,7 +1028,7 @@ function DashboardHeader({
           variant="create"
           size="sm"
           icon={<Wallet className="h-3.5 w-3.5" />}
-          onClick={() => window.location.hash = '#/paiements?action=new'}
+          onClick={() => { window.location.hash = '#/paiements?action=new'; }}
           className="!h-8 !px-2.5 !text-[0.7rem]"
         >
           Enregistrer un paiement
@@ -1428,6 +1421,22 @@ function DashboardQuickActions({ onNavigate }: { onNavigate?: (page: string) => 
         <div>
           <h2 className="text-[0.82rem] font-black text-slate-950">Actions rapides</h2>
           <p className="text-[0.68rem] font-medium text-slate-500">Accès direct aux flux les plus utilisés.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex">
+          {actions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <PremiumButton
+                key={action.label}
+                variant={action.variant}
+                size="sm"
+                icon={<Icon className="h-4 w-4" />}
+                onClick={() => { window.location.hash = action.hashUrl; }}
+                className="justify-center"
+              >
+                {action.label}
+              </PremiumButton>
+            );
           })}
         </div>
       </div>

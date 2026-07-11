@@ -1573,7 +1573,7 @@ function OccupantBailDrawer({
               onNavigate={onNavigate}
             />
           )}
-          {activeTab === 'paiements' && <DrawerPayments details={details} loading={detailsLoading} error={detailsError} />}
+          {activeTab === 'paiements' && <DrawerPayments contractId={row.id} details={details} loading={detailsLoading} error={detailsError} />}
           {activeTab === 'documents' && (
             <DrawerDocuments
               row={row}
@@ -1758,10 +1758,12 @@ function DrawerResume({
 }
 
 function DrawerPayments({
+  contractId,
   details,
   loading,
   error,
 }: {
+  contractId?: string;
   details: OccupantBailDetails | null;
   loading: boolean;
   error: string | null;
@@ -1782,10 +1784,10 @@ function DrawerPayments({
           title="Aucun paiement rattaché"
           description="Les paiements liés à ce bail seront affichés ici dès qu'ils existent dans le module Encaissements."
         />
-        {details?.contract?.id && (
+        {contractId && (
           <button
             type="button"
-            onClick={() => { window.location.hash = `#/paiements?action=new&contratId=${details.contract?.id}`; }}
+            onClick={() => { window.location.hash = `#/paiements?action=new&contratId=${contractId}`; }}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-900 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-brand-800"
           >
             <Wallet className="h-3.5 w-3.5" />
@@ -1798,10 +1800,10 @@ function DrawerPayments({
 
   return (
     <div className="space-y-2">
-      {details?.contract?.id && (
+      {contractId && (
         <button
           type="button"
-          onClick={() => { window.location.hash = `#/paiements?action=new&contratId=${details.contract?.id}`; }}
+          onClick={() => { window.location.hash = `#/paiements?action=new&contratId=${contractId}`; }}
           className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-700/20 bg-emerald-50/80 px-3 py-1.5 text-[0.7rem] font-bold text-emerald-900 transition hover:bg-emerald-100"
         >
           <Plus className="h-3.5 w-3.5 text-emerald-700" />

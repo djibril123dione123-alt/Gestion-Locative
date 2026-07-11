@@ -1455,32 +1455,20 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
   if (embedded && !editingEmbedded) {
     return (
-      <div className="space-y-2">
+      <div className="space-y-2.5">
         <ToastContainer toasts={toasts} onRemove={removeToast} />
-        <div className="flex flex-col gap-2 rounded-xl border border-emerald-950/10 bg-white/90 px-3 py-2 shadow-xs sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-6 items-center rounded-md bg-emerald-50 px-2 text-[0.6rem] font-black uppercase tracking-[0.08em] text-emerald-800">
-              Synthèse
-            </span>
-            <h2 className="text-[0.8rem] font-extrabold text-slate-900">
-              {activeTab === 'general'
-                ? 'Organisation officielle'
-                : activeTab === 'documents'
-                  ? embeddedMode === 'documentsIdentity'
-                    ? 'Documents & identité'
-                    : 'Réglages documentaires'
-                  : activeTab === 'appearance'
-                    ? 'Identité visuelle'
-                    : 'Modules actifs'}
-            </h2>
-          </div>
+        <div className="flex items-center justify-end -mt-1">
           <button
             type="button"
             onClick={() => setEditingEmbedded(true)}
-            className="inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border border-emerald-900/15 bg-white px-3 text-[0.7rem] font-extrabold text-emerald-900 shadow-2xs transition hover:border-emerald-700 hover:bg-emerald-50/80"
+            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-emerald-950/15 bg-white px-3.5 text-xs font-extrabold text-emerald-950 shadow-xs transition hover:border-emerald-700 hover:bg-emerald-50/80"
           >
             <Edit3 className="h-3.5 w-3.5 text-emerald-700" />
-            {activeTab === 'general' ? "Modifier l'organisation" : 'Modifier'}
+            {activeTab === 'general'
+              ? "Modifier l'organisation"
+              : activeTab === 'documents'
+                ? 'Modifier les réglages documentaires'
+                : 'Modifier les modules'}
           </button>
         </div>
 

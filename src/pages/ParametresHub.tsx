@@ -467,21 +467,24 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
 
       {/* ── FULL-WIDTH CONTENT PANE ── */}
       <main className="w-full flex-1 min-w-0 space-y-3 sm:space-y-4 text-[0.78rem]">
-        <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/95 p-3 sm:p-4 shadow-sm ring-1 ring-white/70">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-[0.55rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">{activeConfig.eyebrow}</p>
-              <h1 className="mt-0.5 font-serif text-base sm:text-lg font-extrabold leading-tight text-slate-950">
+        <section className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-emerald-950/10 bg-white/95 px-3.5 py-2 shadow-2xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="inline-flex items-center rounded-md bg-amber-50 border border-amber-200/60 px-2 py-0.5 text-[0.6rem] font-black uppercase tracking-[0.08em] text-[#a45d12] shrink-0">
+              {activeConfig.eyebrow}
+            </span>
+            <div className="flex items-baseline gap-2 min-w-0 truncate">
+              <h1 className="font-extrabold text-sm sm:text-[0.92rem] text-slate-900 leading-none shrink-0">
                 {activeConfig.title ?? activeConfig.label}
               </h1>
-              <p className="mt-0.5 max-w-3xl text-xs font-medium leading-relaxed text-slate-600">{activeConfig.description}</p>
+              <span className="hidden md:inline text-slate-300">·</span>
+              <p className="hidden md:block text-xs text-slate-500 truncate">{activeConfig.description}</p>
             </div>
-            {activeSection === 'billing' ? (
-              <PremiumButton variant="secondary" size="sm" onClick={openPricing} icon={<ArrowRight className="h-3.5 w-3.5" />}>
-                Voir les tarifs
-              </PremiumButton>
-            ) : null}
           </div>
+          {activeSection === 'billing' ? (
+            <PremiumButton variant="secondary" size="sm" onClick={openPricing} icon={<ArrowRight className="h-3.5 w-3.5" />}>
+              Voir les tarifs
+            </PremiumButton>
+          ) : null}
         </section>
 
         <Suspense fallback={<PageLoader />}>

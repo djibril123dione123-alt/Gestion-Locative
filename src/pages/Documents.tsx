@@ -590,11 +590,11 @@ export function Documents() {
       <PremiumPageHeader
         variant="darkVault"
         density="compact"
-        className="!gap-2 !p-3 sm:!p-3.5 lg:!flex-row lg:!items-center lg:!justify-between lg:!p-4"
-        eyebrow="COFFRE DOCUMENTAIRE"
+        className={`!gap-2 ${drawerOpen ? '!p-2.5 lg:!flex-row lg:!items-center lg:!justify-between' : '!p-3 sm:!p-3.5 lg:!flex-row lg:!items-center lg:!justify-between lg:!p-4'}`}
+        eyebrow={drawerOpen ? undefined : 'COFFRE DOCUMENTAIRE'}
         title="Documents"
-        description="Centralisez, retrouvez et vérifiez vos preuves."
-        mobileDescription="Preuves vérifiables."
+        description={drawerOpen ? undefined : 'Centralisez, retrouvez et vérifiez vos preuves.'}
+        mobileDescription={drawerOpen ? undefined : 'Preuves vérifiables.'}
         secondaryAction={
           <div className="flex w-full gap-1.5 sm:w-auto">
             {profile?.role === 'admin' && (
@@ -632,24 +632,26 @@ export function Documents() {
           </PremiumButton>
         }
         sideContent={
-          <div className="hidden min-w-0 rounded-lg border border-white/10 bg-white/[0.07] p-1.5 backdrop-blur sm:block sm:w-auto sm:min-w-[132px] sm:max-w-[150px]">
-            <div className="flex items-center justify-between gap-1.5">
-              <div className="min-w-0">
-                <p className="truncate text-[0.52rem] font-semibold uppercase tracking-[0.12em] text-emerald-100/50">Espace sécurisé</p>
-                <p className="mt-0.5 whitespace-nowrap text-[0.68rem] font-bold text-white">
-                  {formatStorageSize(usage?.used_bytes)}{' '}
-                  <span className="text-[0.56rem] font-semibold text-emerald-100/45">/ {formatStorageSize(usage?.limit_bytes)}</span>
-                </p>
+          drawerOpen ? undefined : (
+            <div className="hidden min-w-0 rounded-lg border border-white/10 bg-white/[0.07] p-1.5 backdrop-blur sm:block sm:w-auto sm:min-w-[132px] sm:max-w-[150px]">
+              <div className="flex items-center justify-between gap-1.5">
+                <div className="min-w-0">
+                  <p className="truncate text-[0.52rem] font-semibold uppercase tracking-[0.12em] text-emerald-100/50">Espace sécurisé</p>
+                  <p className="mt-0.5 whitespace-nowrap text-[0.68rem] font-bold text-white">
+                    {formatStorageSize(usage?.used_bytes)}{' '}
+                    <span className="text-[0.56rem] font-semibold text-emerald-100/45">/ {formatStorageSize(usage?.limit_bytes)}</span>
+                  </p>
+                </div>
+                <HardDrive className="h-3 w-3 flex-shrink-0 text-emerald-200/60" />
               </div>
-              <HardDrive className="h-3 w-3 flex-shrink-0 text-emerald-200/60" />
+              <div className="mt-1 h-0.5 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className={'h-full rounded-full transition-all duration-700 ' + usageTone(usedPercent)}
+                  {...({ style: { width: usedPercent + '%' } } as React.HTMLAttributes<HTMLDivElement>)}
+                />
+              </div>
             </div>
-            <div className="mt-1 h-0.5 overflow-hidden rounded-full bg-white/10">
-              <div
-                className={'h-full rounded-full transition-all duration-700 ' + usageTone(usedPercent)}
-                {...({ style: { width: usedPercent + '%' } } as React.HTMLAttributes<HTMLDivElement>)}
-              />
-            </div>
-          </div>
+          )
         }
       />
 
@@ -681,58 +683,60 @@ export function Documents() {
       />
 
       {/* ── KPI MÉTIER — actionnables ── */}
-      <PremiumKpiGrid density="compact">
-            {[
-              {
-                id: 'active' as const,
-                label: 'Preuves actives',
-                value: activeCount,
-                helper: 'Disponibles',
-                icon: FileCheck2,
-                isActive: statusFilter === 'active',
-                tone: 'emerald' as const,
-              },
-              {
-                id: 'qr' as const,
-                label: 'Vérifiables QR',
-                value: verifiableCount,
-                helper: 'QR public',
-                icon: ShieldCheck,
-                isActive: sourceFilter === 'qr',
-                tone: 'blue' as const,
-              },
-              {
-                id: 'unclassified' as const,
-                label: 'À classer',
-                value: toClassifyCount,
-                helper: 'Sans lien',
-                icon: FolderOpen,
-                isActive: statusFilter === 'unclassified',
-                tone: 'amber' as const,
-              },
-              {
-                id: 'archived' as const,
-                label: 'Archivés',
-                value: archivedCount,
-                helper: 'Hors vue',
-                icon: Archive,
-                isActive: statusFilter === 'archived',
-                tone: 'slate' as const,
-              },
-            ].map((metric) => (
-              <MetricCard
-                key={metric.id}
-                density="compact"
-                icon={metric.icon}
-                title={metric.label}
-                value={metric.value}
-                helper={metric.helper}
-                tone={metric.tone}
-                isActive={metric.isActive}
-                onClick={() => handleKpiClick(metric.id)}
-              />
-            ))}
-      </PremiumKpiGrid>
+      {!drawerOpen && (
+        <PremiumKpiGrid density="compact">
+          {[
+            {
+              id: 'active' as const,
+              label: 'Preuves actives',
+              value: activeCount,
+              helper: 'Disponibles',
+              icon: FileCheck2,
+              isActive: statusFilter === 'active',
+              tone: 'emerald' as const,
+            },
+            {
+              id: 'qr' as const,
+              label: 'Vérifiables QR',
+              value: verifiableCount,
+              helper: 'QR public',
+              icon: ShieldCheck,
+              isActive: sourceFilter === 'qr',
+              tone: 'blue' as const,
+            },
+            {
+              id: 'unclassified' as const,
+              label: 'À classer',
+              value: toClassifyCount,
+              helper: 'Sans lien',
+              icon: FolderOpen,
+              isActive: statusFilter === 'unclassified',
+              tone: 'amber' as const,
+            },
+            {
+              id: 'archived' as const,
+              label: 'Archivés',
+              value: archivedCount,
+              helper: 'Hors vue',
+              icon: Archive,
+              isActive: statusFilter === 'archived',
+              tone: 'slate' as const,
+            },
+          ].map((metric) => (
+            <MetricCard
+              key={metric.id}
+              density="compact"
+              icon={metric.icon}
+              title={metric.label}
+              value={metric.value}
+              helper={metric.helper}
+              tone={metric.tone}
+              isActive={metric.isActive}
+              onClick={() => handleKpiClick(metric.id)}
+            />
+          ))}
+        </PremiumKpiGrid>
+      )}
 
           {/* LIST SECTION */}
           <section className="min-w-0 max-w-full space-y-3 pb-24 sm:space-y-4 sm:pb-0">

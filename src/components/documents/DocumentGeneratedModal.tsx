@@ -6,12 +6,10 @@ import {
   Download,
   ExternalLink,
   FileCheck,
-  FilePlus2,
   FileSpreadsheet,
   FileText,
   HardDrive,
   Layers,
-  LayoutDashboard,
   Mail,
   Printer,
   Share2,
@@ -49,7 +47,7 @@ const KIND_LABELS: Partial<Record<GeneratedDocumentPayload['kind'], string>> = {
   document: 'Document officiel',
 };
 
-export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalProps) {
+export function DocumentGeneratedModal({ onNavigate: _onNavigate }: DocumentGeneratedModalProps) {
   const [documentPayload, setDocumentPayload] = useState<GeneratedDocumentPayload | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
@@ -174,11 +172,6 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
   };
 
   const close = () => setDocumentPayload(null);
-
-  const goDashboard = () => {
-    onNavigate?.('dashboard');
-    close();
-  };
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-slate-950/80 p-3 backdrop-blur-md sm:p-5">
@@ -345,15 +338,15 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
               </div>
 
               {isPdf ? (
-                <div className="hidden h-[255px] bg-slate-100/80 md:block">
+                <div className="hidden h-[390px] bg-slate-100/80 sm:h-[430px] md:block">
                   <iframe
                     title={`Aperçu ${documentPayload.fileName}`}
-                    src={documentPayload.url}
+                    src={documentPayload.url.includes('#') ? documentPayload.url : `${documentPayload.url}#view=FitH`}
                     className="h-full w-full bg-white"
                   />
                 </div>
               ) : (
-                <div className="max-h-[255px] overflow-auto bg-white p-3">
+                <div className="max-h-[390px] overflow-auto bg-white p-3 sm:max-h-[430px]">
                   {documentPayload.preview?.stats?.length ? (
                     <div className="mb-3 grid gap-2 sm:grid-cols-3">
                       {documentPayload.preview.stats.map((stat) => (
@@ -470,26 +463,6 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
                 >
                   <Copy className="h-3.5 w-3.5 text-amber-600" />
                   <span>Copier lien</span>
-                </button>
-              </div>
-
-              {/* Navigation inférieure discrète */}
-              <div className="flex items-center justify-between border-t border-slate-200/80 pt-2.5 text-xs">
-                <button
-                  type="button"
-                  onClick={goDashboard}
-                  className="flex items-center gap-1.5 font-bold text-slate-500 transition hover:text-brand-900"
-                >
-                  <LayoutDashboard className="h-3.5 w-3.5" />
-                  <span>Retour au tableau de bord</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={close}
-                  className="flex items-center gap-1.5 font-extrabold text-brand-800 transition hover:text-brand-950"
-                >
-                  <FilePlus2 className="h-3.5 w-3.5" />
-                  <span>Nouveau document</span>
                 </button>
               </div>
             </div>

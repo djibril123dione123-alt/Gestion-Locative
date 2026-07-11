@@ -1676,7 +1676,7 @@ function DrawerResume({
             <span className="text-[0.68rem] font-semibold text-slate-500">Bien immobilier</span>
             <button
               type="button"
-              onClick={() => onNavigate('/patrimoine')}
+              onClick={() => { window.location.hash = row.immeuble_id ? `#/patrimoine?id=${row.immeuble_id}` : '#/patrimoine'; }}
               className="flex items-center gap-1 text-[0.7rem] font-bold text-brand-700 hover:text-brand-900 transition"
             >
               <span>{row.immeuble_nom || 'Bien non renseigné'}</span>
@@ -1687,7 +1687,7 @@ function DrawerResume({
             <span className="text-[0.68rem] font-semibold text-slate-500">Unité / Lot</span>
             <button
               type="button"
-              onClick={() => onNavigate('/patrimoine')}
+              onClick={() => { window.location.hash = row.unite_id ? `#/patrimoine?uniteId=${row.unite_id}` : '#/patrimoine'; }}
               className="flex items-center gap-1 text-[0.7rem] font-bold text-brand-700 hover:text-brand-900 transition"
             >
               <span>{row.unite_nom || 'Unité non renseignée'}</span>
@@ -1700,7 +1700,7 @@ function DrawerResume({
               <span className="text-[0.68rem] font-semibold text-slate-500">Propriétaire</span>
               <button
                 type="button"
-                onClick={() => onNavigate('/bailleurs')}
+                onClick={() => { window.location.hash = row.bailleur_id ? `#/bailleurs?id=${row.bailleur_id}` : '#/bailleurs'; }}
                 className="flex items-center gap-1 text-[0.7rem] font-bold text-brand-700 hover:text-brand-900 transition"
               >
                 <span>{ownerName(row)}</span>
@@ -1776,21 +1776,44 @@ function DrawerPayments({
   const payments = details?.payments ?? [];
   if (payments.length === 0) {
     return (
-      <DrawerEmpty
-        icon={Wallet}
-        title="Aucun paiement rattaché"
-        description="Les paiements liés à ce bail seront affichés ici dès qu'ils existent dans le module Encaissements."
-      />
+      <div className="space-y-3">
+        <DrawerEmpty
+          icon={Wallet}
+          title="Aucun paiement rattaché"
+          description="Les paiements liés à ce bail seront affichés ici dès qu'ils existent dans le module Encaissements."
+        />
+        {details?.contract?.id && (
+          <button
+            type="button"
+            onClick={() => { window.location.hash = `#/paiements?action=new&contratId=${details.contract?.id}`; }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-900 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-brand-800"
+          >
+            <Wallet className="h-3.5 w-3.5" />
+            Enregistrer un encaissement
+          </button>
+        )}
+      </div>
     );
   }
 
   return (
-    <div className="space-y-1">
-      {payments.map((payment) => (
+    <div className="space-y-2">
+      {details?.contract?.id && (
         <button
-          key={payment.id}
           type="button"
-          onClick={() => { window.location.hash = '#/paiements'; }}
+          onClick={() => { window.location.hash = `#/paiements?action=new&contratId=${details.contract?.id}`; }}
+          className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-700/20 bg-emerald-50/80 px-3 py-1.5 text-[0.7rem] font-bold text-emerald-900 transition hover:bg-emerald-100"
+        >
+          <Plus className="h-3.5 w-3.5 text-emerald-700" />
+          Nouveau paiement pour ce bail
+        </button>
+      )}
+      <div className="space-y-1">
+        {payments.map((payment) => (
+          <button
+            key={payment.id}
+            type="button"
+            onClick={() => { window.location.hash = `#/paiements?id=${payment.id}`; }}
           className="group flex w-full items-center justify-between gap-2 rounded-lg border border-emerald-950/10 bg-white px-2 py-1.5 text-left shadow-sm transition hover:bg-slate-50 hover:border-emerald-200"
           aria-label={`Ouvrir le paiement de ${payment.mois_concerne}`}
         >

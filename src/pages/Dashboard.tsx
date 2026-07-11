@@ -949,6 +949,13 @@ function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: Dashbo
           </div>
         </div>
       </section>
+              onClick={onStartSetupWizard}
+            >
+              Reprendre le wizard
+            </PremiumButton>
+          </div>
+        </div>
+      </section>
 
       <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1.3fr)_minmax(220px,0.7fr)]">
         <section className="rounded-xl border border-emerald-950/10 bg-white/95 p-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
@@ -958,15 +965,15 @@ function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: Dashbo
           </div>
           <div className="divide-y divide-slate-100">
             {[
-              ['Créer un bailleur', 'Le propriétaire légal du bien.', UserRound, 'bailleurs'],
-              ['Ajouter un bien', 'Rattachez un immeuble ou une maison.', Building2, 'patrimoine'],
-              ['Créer une location', 'Associez un locataire à une unité.', FileText, 'occupants-baux'],
-              ['Enregistrer un paiement', 'Suivez le premier loyer encaissé.', Wallet, 'paiements'],
-            ].map(([title, description, Icon, page], index) => (
+              ['Créer un bailleur', 'Le propriétaire légal du bien.', UserRound, '#/bailleurs?action=new'],
+              ['Ajouter un bien', 'Rattachez un immeuble ou une maison.', Building2, '#/patrimoine?action=new'],
+              ['Créer une location', 'Associez un locataire à une unité.', FileText, '#/occupants-baux?action=new-location'],
+              ['Enregistrer un paiement', 'Suivez le premier loyer encaissé.', Wallet, '#/paiements?action=new'],
+            ].map(([title, description, Icon, hashUrl], index) => (
               <button
                 key={String(title)}
                 type="button"
-                onClick={() => onNavigate?.(String(page))}
+                onClick={() => { window.location.hash = String(hashUrl); }}
                 className="flex w-full items-center gap-2 py-2 text-left transition hover:bg-emerald-50/55"
               >
                 <div className={`flex h-7 w-7 items-center justify-center rounded-md ${index === 0 ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-50 text-slate-500'}`}>
@@ -1028,7 +1035,7 @@ function DashboardHeader({
           variant="create"
           size="sm"
           icon={<Wallet className="h-3.5 w-3.5" />}
-          onClick={() => onNavigate?.('paiements')}
+          onClick={() => window.location.hash = '#/paiements?action=new'}
           className="!h-8 !px-2.5 !text-[0.7rem]"
         >
           Enregistrer un paiement
@@ -1408,11 +1415,11 @@ function TopUnpaidList({ items, onNavigate }: { items: WatchItem[]; onNavigate?:
 
 function DashboardQuickActions({ onNavigate }: { onNavigate?: (page: string) => void }) {
   const actions = [
-    { label: 'Enregistrer paiement', page: 'paiements', icon: Wallet, variant: 'primary' as const },
-    { label: 'Nouvelle location', page: 'occupants-baux', icon: Plus, variant: 'secondary' as const },
-    { label: 'Nouveau bien', page: 'patrimoine', icon: Building2, variant: 'secondary' as const },
-    { label: 'Documents', page: 'documents', icon: FileText, variant: 'secondary' as const },
-    { label: 'Rapports bailleurs', page: 'bailleurs', icon: ReceiptText, variant: 'secondary' as const },
+    { label: 'Enregistrer paiement', hashUrl: '#/paiements?action=new', icon: Wallet, variant: 'primary' as const },
+    { label: 'Nouvelle location', hashUrl: '#/occupants-baux?action=new-location', icon: Plus, variant: 'secondary' as const },
+    { label: 'Nouveau bien', hashUrl: '#/patrimoine?action=new', icon: Building2, variant: 'secondary' as const },
+    { label: 'Documents', hashUrl: '#/documents', icon: FileText, variant: 'secondary' as const },
+    { label: 'Nouveau bailleur', hashUrl: '#/bailleurs?action=new', icon: ReceiptText, variant: 'secondary' as const },
   ];
 
   return (
@@ -1421,22 +1428,6 @@ function DashboardQuickActions({ onNavigate }: { onNavigate?: (page: string) => 
         <div>
           <h2 className="text-[0.82rem] font-black text-slate-950">Actions rapides</h2>
           <p className="text-[0.68rem] font-medium text-slate-500">Accès direct aux flux les plus utilisés.</p>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:flex">
-          {actions.map((action) => {
-            const Icon = action.icon;
-            return (
-              <PremiumButton
-                key={action.label}
-                variant={action.variant}
-                size="sm"
-                icon={<Icon className="h-4 w-4" />}
-                onClick={() => onNavigate?.(action.page)}
-                className="justify-center"
-              >
-                {action.label}
-              </PremiumButton>
-            );
           })}
         </div>
       </div>

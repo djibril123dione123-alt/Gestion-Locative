@@ -1762,7 +1762,7 @@ function PropertyDrawer({
                     icon: ClipboardList,
                     title: formatPersonName(contract.locataires, 'Locataire'),
                     subtitle: <span className="font-medium text-slate-500">{unitOfContract?.nom || 'Unité'} · <MoneyText value={contract.loyer_mensuel ?? 0} compact={false} /> · {contract.statut === 'actif' ? 'Actif' : 'Historique'}</span>,
-                    onClick: () => { window.location.hash = '#/occupants-baux'; },
+                    onClick: () => { window.location.hash = `#/occupants-baux?id=${contract.id}`; },
                   };
                 })} />
               ),
@@ -1881,12 +1881,12 @@ function UnitDrawer({
         <CompactSection title="Actions & Gestion" icon={Pencil}>
           <div className="grid grid-cols-2 gap-1.5">
             {summary.contract ? (
-              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+              <button type="button" onClick={() => { window.location.hash = `#/occupants-baux?id=${summary.contract.id}`; }} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
                 <ClipboardList className="h-3.5 w-3.5 text-brand-700" />
                 Voir la location
               </button>
             ) : (
-              <button type="button" onClick={() => onNavigate('/occupants-baux')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+              <button type="button" onClick={() => { window.location.hash = `#/occupants-baux?action=new-location&uniteId=${summary.unite.id}`; }} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
                 <Plus className="h-3.5 w-3.5 text-brand-700" />
                 Créer une location
               </button>

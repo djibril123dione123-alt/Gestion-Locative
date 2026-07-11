@@ -998,7 +998,7 @@ function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: Dashbo
 function DashboardHeader({
   selectedMonth,
   onMonthChange,
-  onNavigate,
+  onNavigate: _onNavigate,
 }: {
   selectedMonth: string;
   onMonthChange: (value: string) => void;
@@ -1406,7 +1406,7 @@ function TopUnpaidList({ items, onNavigate }: { items: WatchItem[]; onNavigate?:
   );
 }
 
-function DashboardQuickActions({ onNavigate }: { onNavigate?: (page: string) => void }) {
+function DashboardQuickActions({ onNavigate: _onNavigate }: { onNavigate?: (page: string) => void }) {
   const actions = [
     { label: 'Enregistrer paiement', hashUrl: '#/paiements?action=new', icon: Wallet, variant: 'primary' as const },
     { label: 'Nouvelle location', hashUrl: '#/occupants-baux?action=new-location', icon: Plus, variant: 'secondary' as const },

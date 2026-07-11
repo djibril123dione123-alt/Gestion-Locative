@@ -1108,7 +1108,7 @@ export function OccupantsBaux() {
             ) : (
               <>
                 <div className={`hidden md:block ${selectedRow ? 'overflow-hidden' : 'overflow-x-auto'}`}>
-                  <table className={`w-full border-collapse table-fixed ${selectedRow ? 'min-w-[520px]' : 'min-w-[840px]'}`}>
+                  <table className={`w-full border-collapse table-fixed ${selectedRow ? 'min-w-[440px]' : 'min-w-[660px]'}`}>
                     <thead className="bg-[#f8f3e8]/70 text-left border-b border-slate-100">
                       <tr>
                         {occupantColumns.isVisible('occupant') && (

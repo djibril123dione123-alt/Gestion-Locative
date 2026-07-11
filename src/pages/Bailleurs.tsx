@@ -1893,14 +1893,14 @@ export function Bailleurs() {
           ) : (
             <>
               <div className="hidden lg:block overflow-x-auto">
-                <table className={`w-full border-collapse table-fixed ${detailPanelOpen ? 'min-w-[680px]' : 'min-w-[840px]'}`}>
+                <table className={`w-full border-collapse table-fixed ${detailPanelOpen ? 'min-w-[460px]' : 'min-w-[640px]'}`}>
                   <thead className="bg-[#f8f3e8]/70 text-left">
                     <tr>
-                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[43%]' : 'w-[32%]'} px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><CircleUser className="h-3 w-3 text-slate-400" /> Bailleur</span></th>}
+                      {showBailleurColumn('bailleur') && <th className={`${detailPanelOpen ? 'w-[38%]' : 'w-[30%]'} px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><CircleUser className="h-3 w-3 text-slate-400" /> Bailleur</span></th>}
                       {showBailleurColumn('telephone') && <th className="w-[18%] px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500"><span className="flex items-center gap-1.5"><Phone className="h-3 w-3 text-slate-400" /> Téléphone</span></th>}
-                      {showBailleurColumn('commission') && <th className={`${detailPanelOpen ? 'w-[17%]' : 'w-[14%]'} px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Percent className="h-3 w-3 text-slate-400" /> Commission</span></th>}
-                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[19%]' : 'w-[17%]'} px-2 py-1.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><AlertCircle className="h-3 w-3 text-slate-400" /> Reliquats</span></th>}
-                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[19%]' : 'w-[17%]'} px-2 py-1.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><Wallet className="h-3 w-3 text-slate-400" /> Net</span></th>}
+                      {showBailleurColumn('commission') && <th className={`${detailPanelOpen ? 'w-[18%]' : 'w-[14%]'} px-2 py-1.5 text-left text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5"><Percent className="h-3 w-3 text-slate-400" /> Commission</span></th>}
+                      {showBailleurColumn('reliquats') && <th className={`${detailPanelOpen ? 'w-[21%]' : 'w-[18%]'} px-2 py-1.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><AlertCircle className="h-3 w-3 text-slate-400" /> Reliquats</span></th>}
+                      {showBailleurColumn('net') && <th className={`${detailPanelOpen ? 'w-[21%]' : 'w-[18%]'} px-2 py-1.5 text-right text-[0.6rem] font-semibold uppercase tracking-wider text-slate-500`}><span className="flex items-center gap-1.5 justify-end"><Wallet className="h-3 w-3 text-slate-400" /> Net</span></th>}
                       <th className="w-[2%] px-2 py-1.5"><span className="sr-only">Ouvrir</span></th>
                     </tr>
                   </thead>

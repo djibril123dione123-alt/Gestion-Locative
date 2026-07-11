@@ -678,29 +678,37 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
       )}
 
       {embedded && (sectionMode === 'team' || sectionMode === 'access') && (
-        <section className="flex flex-col gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2.5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Équipe & accès</p>
-            <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Collaborateurs, rôles et pages visibles.</h2>
-            <p className="mt-0.5 text-[0.7rem] leading-4 text-slate-600">Invitez, filtrez et ajustez les permissions sans quitter le Control Center.</p>
-          </div>
-          <div className="flex flex-col gap-1.5 sm:items-end">
-            <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
-              <span className="rounded-full bg-emerald-50 px-2 py-1 text-[0.58rem] font-black uppercase tracking-[0.08em] text-emerald-800">
-                Utilisateurs {userUsageLabel}
-              </span>
-              <span className="rounded-full bg-orange-50 px-2 py-1 text-[0.58rem] font-black uppercase tracking-[0.08em] text-orange-700">
-                {stats.pendingInvitations} invitation{stats.pendingInvitations > 1 ? 's' : ''}
-              </span>
+        <section className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-emerald-950/12 bg-gradient-to-r from-white via-white to-emerald-50/40 px-3.5 py-2.5 shadow-2xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="inline-flex items-center rounded-md bg-amber-50 border border-amber-200/60 px-2 py-0.5 text-[0.6rem] font-black uppercase tracking-[0.08em] text-[#a45d12] shrink-0">
+              COLLABORATEURS
+            </span>
+            <div className="flex items-baseline gap-2 min-w-0 truncate">
+              <h1 className="font-extrabold text-sm sm:text-[0.92rem] text-slate-900 leading-none shrink-0">
+                Équipe & accès
+              </h1>
+              <span className="hidden md:inline text-slate-300">·</span>
+              <p className="hidden md:block text-xs text-slate-500 truncate">
+                Collaborateurs, rôles, invitations et pages visibles.
+              </p>
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 shrink-0 sm:justify-end">
+            <span className="rounded-full bg-emerald-50 border border-emerald-200/60 px-2 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.08em] text-emerald-800">
+              Utilisateurs {userUsageLabel}
+            </span>
+            {stats.pendingInvitations > 0 && (
+              <span className="rounded-full bg-orange-50 border border-orange-200/60 px-2 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.08em] text-orange-700">
+                {stats.pendingInvitations} inv.
+              </span>
+            )}
             <PremiumButton
               variant="create"
               size="sm"
               disabled={!canInviteMore}
               onClick={() => setIsInviteOpen(true)}
               data-testid="button-invite-member-embedded"
-              icon={<UserPlus className="h-4 w-4" />}
-              className="w-full sm:w-auto"
+              icon={<UserPlus className="h-3.5 w-3.5" />}
             >
               Inviter
             </PremiumButton>

@@ -1454,23 +1454,53 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   const identityMaxLength = isPassportIdentity ? 9 : isCniIdentity ? 21 : 24;
 
   if (embedded && !editingEmbedded) {
+    const subheaderEyebrow =
+      activeTab === 'general'
+        ? 'IDENTITÉ'
+        : activeTab === 'documents'
+          ? 'REGISTRE DOCUMENTAIRE'
+          : 'WORKSPACE';
+    const subheaderTitle =
+      activeTab === 'general'
+        ? 'Organisation'
+        : activeTab === 'documents'
+          ? 'Documents & identité'
+          : 'Modules & navigation';
+    const subheaderDesc =
+      activeTab === 'general'
+        ? 'Informations légales utilisées dans les contrats, mandats et documents.'
+        : activeTab === 'documents'
+          ? 'Modèles, QR Verify, logo et rendu des documents émis.'
+          : 'Pages visibles, modules actifs et capacités de navigation.';
+
     return (
-      <div className="space-y-2.5">
+      <div className="space-y-3 sm:space-y-4">
         <ToastContainer toasts={toasts} onRemove={removeToast} />
-        <div className="flex items-center justify-end -mt-1">
-          <button
-            type="button"
-            onClick={() => setEditingEmbedded(true)}
-            className="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-emerald-950/15 bg-white px-3.5 text-xs font-extrabold text-emerald-950 shadow-xs transition hover:border-emerald-700 hover:bg-emerald-50/80"
-          >
-            <Edit3 className="h-3.5 w-3.5 text-emerald-700" />
-            {activeTab === 'general'
-              ? "Modifier l'organisation"
-              : activeTab === 'documents'
-                ? 'Modifier les réglages documentaires'
-                : 'Modifier les modules'}
-          </button>
-        </div>
+
+        <section className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-emerald-950/12 bg-gradient-to-r from-white via-white to-emerald-50/40 px-3.5 py-2.5 shadow-2xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="inline-flex items-center rounded-md bg-amber-50 border border-amber-200/60 px-2 py-0.5 text-[0.6rem] font-black uppercase tracking-[0.08em] text-[#a45d12] shrink-0">
+              {subheaderEyebrow}
+            </span>
+            <div className="flex items-baseline gap-2 min-w-0 truncate">
+              <h1 className="font-extrabold text-sm sm:text-[0.92rem] text-slate-900 leading-none shrink-0">
+                {subheaderTitle}
+              </h1>
+              <span className="hidden md:inline text-slate-300">·</span>
+              <p className="hidden md:block text-xs text-slate-500 truncate">{subheaderDesc}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setEditingEmbedded(true)}
+              className="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl border border-emerald-950/15 bg-white px-3.5 text-xs font-extrabold text-emerald-950 shadow-2xs transition hover:border-emerald-700 hover:bg-emerald-50/80 active:translate-y-0.5"
+            >
+              <Edit3 className="h-3.5 w-3.5 text-emerald-700" />
+              <span>Modifier</span>
+            </button>
+          </div>
+        </section>
 
         {activeTab === 'general' && (
           <div className="space-y-2">

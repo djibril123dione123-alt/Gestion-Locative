@@ -20,7 +20,7 @@ import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { addFooter, drawPageBorder, drawSectionFrame, saveGeneratedPdf } from '../lib/pdf';
-import { SkeletonTable } from '../components/ui/Skeleton';
+import { PageSkeleton, SkeletonTable } from '../components/ui/Skeleton';
 
 interface Piece {
   nom: string;
@@ -459,6 +459,10 @@ export function Inventaires() {
       onClick: () => setFilterStatut(filterStatut === 'litige' ? 'all' : 'litige'),
     },
   ], [items.length, stats, filterType, filterStatut]);
+
+  if (loading && items.length === 0) {
+    return <PageSkeleton title="États des lieux" variant="table" />;
+  }
 
   return (
     <div className="space-y-4 pt-2.5 sm:pt-3">

@@ -15,7 +15,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { formatCurrency } from '../lib/formatters';
-import { SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
+import { PageSkeleton } from '../components/ui/Skeleton';
 import { formatStorageSize, getAgencyStorageUsage, type StorageUsage } from '../services/documentStorage';
 import gmailLogo from '../assets/support/gmail.png';
 import whatsappLogo from '../assets/support/whatsapp.jpg';
@@ -361,17 +361,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
   };
 
   if (loading) {
-    return (
-      <div className={embedded ? 'space-y-2.5 sm:space-y-3' : 'sk-mobile-page sk-page-narrow space-y-5 sm:space-y-6'}>
-        <div className="rounded-[2rem] border border-emerald-900/10 bg-gradient-to-br from-emerald-950 via-emerald-900 to-slate-950 p-6 sm:p-8 shadow-2xl shadow-emerald-950/15">
-          <div className="h-4 w-32 animate-pulse rounded-full bg-white/15" />
-          <div className="mt-5 h-8 w-64 animate-pulse rounded-2xl bg-white/15" />
-          <div className="mt-3 h-4 w-full max-w-xl animate-pulse rounded-full bg-white/10" />
-        </div>
-        <SkeletonCards count={3} />
-        <SkeletonTable rows={4} cols={4} />
-      </div>
-    );
+    return <PageSkeleton title="Abonnement & Formules" variant="dashboard" />;
   }
 
   return (
@@ -760,16 +750,22 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
 
       {/* ── Support ── */}
       {!embedded && (
-        <div className="sk-premium-panel p-5 sm:p-6">
-          <h2 className="mb-4 text-lg font-bold text-slate-900">Besoin d'aide ?</h2>
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <div className="rounded-2xl border border-emerald-950/10 bg-white/92 p-3 shadow-sm">
+          <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-emerald-700">Support facturation</p>
+              <h2 className="text-sm font-black text-slate-950">Problème de paiement ?</h2>
+            </div>
+            <p className="text-xs font-semibold text-slate-500">Support compact, preuve manuelle disponible plus haut.</p>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <a
               href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent("Bonjour, j'ai une question sur mon abonnement Samay Këur.")}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-green-300 hover:bg-green-50"
+              className="group flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 transition hover:border-green-300 hover:bg-green-50"
             >
-              <SupportLogo src={whatsappLogo} alt="WhatsApp" fallback="WA" className="h-10 w-10 flex-shrink-0 rounded-xl" />
+              <SupportLogo src={whatsappLogo} alt="WhatsApp" fallback="WA" className="h-7 w-7 flex-shrink-0 rounded-lg" />
               <div>
                 <p className="text-sm font-semibold text-slate-900">WhatsApp Business</p>
                 <p className="text-xs text-slate-400">+221 76 901 09 60 · Réponse rapide</p>
@@ -777,9 +773,9 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             </a>
             <a
               href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Question abonnement Samay Këur')}`}
-              className="group flex items-center gap-3 rounded-xl border border-slate-200 p-4 transition hover:border-blue-300 hover:bg-blue-50"
+              className="group flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 transition hover:border-blue-300 hover:bg-blue-50"
             >
-              <SupportLogo src={gmailLogo} alt="Gmail" fallback="GM" className="h-10 w-10 flex-shrink-0 rounded-xl" />
+              <SupportLogo src={gmailLogo} alt="Gmail" fallback="GM" className="h-7 w-7 flex-shrink-0 rounded-lg" />
               <div>
                 <p className="text-sm font-semibold text-slate-900">Email</p>
                 <p className="text-xs text-slate-400">{CONTACT_EMAIL}</p>
@@ -1053,6 +1049,18 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                 />
               </label>
             </div>
+          </div>
+
+          <div className="grid gap-2 rounded-2xl border border-orange-200/70 bg-orange-50/70 p-3 text-xs text-orange-950 sm:grid-cols-[1fr_auto] sm:items-center">
+            <div className="min-w-0">
+              <p className="font-black">Validation support avant activation</p>
+              <p className="mt-0.5 font-semibold leading-5 text-orange-900/80">
+                Ajoutez une référence claire et, si possible, un lien vers le reçu ou la capture. Le plan reste inchangé tant que la preuve n’est pas validée.
+              </p>
+            </div>
+            <span className="rounded-full border border-orange-200 bg-white px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.1em] text-orange-700">
+              En attente
+            </span>
           </div>
 
           {/* Actions du bas */}

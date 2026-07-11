@@ -29,7 +29,7 @@ import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
 import { MetricCard } from '../components/ui/MetricCard';
 import { PremiumFilterSelect } from '../components/ui/PremiumFilterSelect';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
-import { SkeletonTable } from '../components/ui/Skeleton';
+import { PageSkeleton, SkeletonTable } from '../components/ui/Skeleton';
 import { ToastContainer } from '../components/ui/Toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -151,6 +151,61 @@ const ACTIONS = [
   { key: 'can_manage', label: 'Gérer', icon: SlidersHorizontal },
 ] as const;
 
+type PermissionActionKey = (typeof ACTIONS)[number]['key'];
+
+type PermissionActionShape = {
+  page: string;
+  access_level: AccessLevel | DraftAccessLevel;
+  can_create: boolean;
+  can_update: boolean;
+  can_delete: boolean;
+  can_export: boolean;
+  can_manage: boolean;
+};
+
+const PAGE_ACTION_CAPABILITIES: Record<string, PermissionActionKey[]> = {
+  dashboard: [],
+  bailleurs: ['can_create', 'can_update', 'can_delete'],
+  patrimoine: ['can_create', 'can_update', 'can_delete'],
+  immeubles: ['can_create', 'can_update', 'can_delete'],
+  unites: ['can_create', 'can_update', 'can_delete'],
+  locataires: ['can_create', 'can_update', 'can_delete'],
+  contrats: ['can_create', 'can_update', 'can_delete', 'can_export'],
+  'occupants-baux': ['can_create', 'can_update', 'can_delete'],
+  paiements: ['can_create', 'can_update', 'can_export'],
+  'loyers-impayes': ['can_update', 'can_export'],
+  depenses: ['can_create', 'can_update', 'can_delete', 'can_export'],
+  commissions: ['can_update', 'can_export'],
+  documents: ['can_create', 'can_update', 'can_delete', 'can_export', 'can_manage'],
+  'documents/scan': ['can_create'],
+  'documents/studio': ['can_update', 'can_manage'],
+  notifications: ['can_update'],
+  calendrier: ['can_create', 'can_update', 'can_delete'],
+  interventions: ['can_create', 'can_update', 'can_delete'],
+  inventaires: ['can_create', 'can_update', 'can_delete', 'can_export'],
+  audit: ['can_export'],
+  parametres: ['can_update', 'can_manage'],
+  equipe: ['can_create', 'can_update', 'can_delete', 'can_manage'],
+  abonnement: ['can_update', 'can_manage'],
+  pricing: [],
+};
+
+function getPageActionCapabilities(page: string): PermissionActionKey[] {
+  return PAGE_ACTION_CAPABILITIES[page] ?? ['can_create', 'can_update'];
+}
+
+function constrainPermissionActions<T extends PermissionActionShape>(permission: T): T {
+  const capabilities = getPageActionCapabilities(permission.page);
+  return {
+    ...permission,
+    can_create: capabilities.includes('can_create') && permission.can_create,
+    can_update: capabilities.includes('can_update') && permission.can_update,
+    can_delete: capabilities.includes('can_delete') && permission.can_delete,
+    can_export: capabilities.includes('can_export') && permission.can_export,
+    can_manage: capabilities.includes('can_manage') && permission.can_manage,
+  };
+}
+
 export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps = {}) {
   const { profile, agency } = useAuth();
   const toast = useToast();
@@ -166,6 +221,8 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     role: 'agent',
   });
   const [invitePreset, setInvitePreset] = useState<AccessPreset>('standard');
+  const [inviteStep, setInviteStep] = useState<1 | 2 | 3>(1);
+  const [inviteNote, setInviteNote] = useState('');
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [deactivateTarget, setDeactivateTarget] = useState<Member | null>(null);
@@ -357,7 +414,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         });
       }
 
-      acc[item.id] = {
+      acc[item.id] = constrainPermissionActions({
         page: item.id,
         access_level: accessLevel,
         can_create: accessLevel === 'inherit' ? effective.can_create : effective.can_create,
@@ -365,7 +422,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         can_delete: accessLevel === 'inherit' ? effective.can_delete : effective.can_delete,
         can_export: accessLevel === 'inherit' ? effective.can_export : effective.can_export,
         can_manage: accessLevel === 'inherit' ? effective.can_manage : effective.can_manage,
-      };
+      });
       return acc;
     }, {});
   }, [agencySettings, permissionsByUser]);
@@ -390,29 +447,31 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
       if (!current) return prev;
       if (accessLevel === 'inherit' && permissionTarget) {
         const inherited = getEffectivePermission(permissionTarget.role, page, agencySettings);
+        const constrained = constrainPermissionActions({ ...inherited, page, access_level: 'inherit' });
         return {
           ...prev,
           [page]: {
             ...current,
             access_level: 'inherit',
-            can_create: inherited.can_create,
-            can_update: inherited.can_update,
-            can_delete: inherited.can_delete,
-            can_export: inherited.can_export,
-            can_manage: inherited.can_manage,
+            can_create: constrained.can_create,
+            can_update: constrained.can_update,
+            can_delete: constrained.can_delete,
+            can_export: constrained.can_export,
+            can_manage: constrained.can_manage,
           },
         };
       }
+      const capabilities = getPageActionCapabilities(page);
       return {
         ...prev,
         [page]: {
           ...current,
           access_level: accessLevel,
-          can_create: accessLevel === 'write' || accessLevel === 'admin',
-          can_update: accessLevel === 'write' || accessLevel === 'admin',
-          can_delete: accessLevel === 'admin',
-          can_export: accessLevel !== 'none',
-          can_manage: accessLevel === 'admin',
+          can_create: capabilities.includes('can_create') && (accessLevel === 'write' || accessLevel === 'admin'),
+          can_update: capabilities.includes('can_update') && (accessLevel === 'write' || accessLevel === 'admin'),
+          can_delete: capabilities.includes('can_delete') && accessLevel === 'admin',
+          can_export: capabilities.includes('can_export') && accessLevel !== 'none',
+          can_manage: capabilities.includes('can_manage') && accessLevel === 'admin',
         },
       };
     });
@@ -422,6 +481,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     setPermissionDraft((prev) => {
       const current = prev[page];
       if (!current || current.access_level === 'none') return prev;
+      if (!getPageActionCapabilities(page).includes(key)) return prev;
       return {
         ...prev,
         [page]: {
@@ -450,18 +510,21 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
 
       const rows = Object.values(permissionDraft)
         .filter((permission) => permission.access_level !== 'inherit' && isModuleEnabled(permission.page, agencySettings))
-        .map((permission) => ({
-          agency_id: profile.agency_id,
-          user_id: permissionTarget.id,
-          page: permission.page,
-          access_level: permission.access_level as AccessLevel,
-          can_create: permission.access_level !== 'none' && permission.can_create,
-          can_update: permission.access_level !== 'none' && permission.can_update,
-          can_delete: permission.access_level !== 'none' && permission.can_delete,
-          can_export: permission.access_level !== 'none' && permission.can_export,
-          can_manage: permission.access_level === 'admin' && permission.can_manage,
-          created_by: profile.id,
-        }));
+        .map((permission) => {
+          const constrained = constrainPermissionActions(permission);
+          return {
+            agency_id: profile.agency_id,
+            user_id: permissionTarget.id,
+            page: constrained.page,
+            access_level: constrained.access_level as AccessLevel,
+            can_create: constrained.access_level !== 'none' && constrained.can_create,
+            can_update: constrained.access_level !== 'none' && constrained.can_update,
+            can_delete: constrained.access_level !== 'none' && constrained.can_delete,
+            can_export: constrained.access_level !== 'none' && constrained.can_export,
+            can_manage: constrained.access_level === 'admin' && constrained.can_manage,
+            created_by: profile.id,
+          };
+        });
 
       if (rows.length > 0) {
         const { error: insertErr } = await supabase.from('user_page_permissions').insert(rows);
@@ -507,7 +570,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         role: formData.role,
         token,
         invited_by: profile.id,
-        message: JSON.stringify({ access_preset: invitePreset }),
+        message: JSON.stringify({ access_preset: invitePreset, note: inviteNote.trim() || null }),
         expires_at: expiresAt,
         status: 'pending',
       });
@@ -539,6 +602,8 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     setIsInviteOpen(false);
     setFormData({ email: '', role: 'agent' });
     setInvitePreset('standard');
+    setInviteStep(1);
+    setInviteNote('');
     setGeneratedLink(null);
   };
 
@@ -584,6 +649,10 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     acc[item.category].push(item);
     return acc;
   }, {});
+
+  if (loading && members.length === 0) {
+    return <PageSkeleton title="Équipe & permissions" variant="table" />;
+  }
 
   return (
     <div className={embedded ? 'space-y-2.5' : 'sk-page-shell space-y-5 sm:space-y-6'}>
@@ -1009,7 +1078,29 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 </p>
               ) : null}
             </div>
-            <div>
+
+            <div className="grid grid-cols-3 gap-1 rounded-xl border border-slate-200 bg-white p-1">
+              {[
+                { step: 1 as const, label: 'Collaborateur' },
+                { step: 2 as const, label: 'Accès' },
+                { step: 3 as const, label: 'Confirmation' },
+              ].map((item) => (
+                <button
+                  key={item.step}
+                  type="button"
+                  onClick={() => setInviteStep(item.step)}
+                  className={`h-8 rounded-lg text-[0.6rem] font-black transition ${
+                    inviteStep === item.step
+                      ? 'bg-emerald-950 text-white shadow-sm'
+                      : 'text-slate-500 hover:bg-slate-50'
+                  }`}
+                >
+                  {item.step}. {item.label}
+                </button>
+              ))}
+            </div>
+
+            <div className={inviteStep === 1 ? 'space-y-2' : 'hidden'}>
               <label className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Email professionnel</label>
               <input aria-label="Champ de saisie"
                 type="email"
@@ -1020,8 +1111,18 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 placeholder="collaborateur@agence.sn"
                 className="h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-[0.78rem] font-semibold text-slate-900 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
               />
+              <div>
+                <label className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Message optionnel</label>
+                <textarea
+                  value={inviteNote}
+                  onChange={(event) => setInviteNote(event.target.value.slice(0, 240))}
+                  placeholder="Ex. Bienvenue dans l'espace Samay Këur de l'agence."
+                  className="min-h-20 w-full resize-none rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[0.74rem] font-semibold text-slate-800 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
+                />
+                <p className="mt-1 text-[0.58rem] font-semibold text-slate-400">Lien valable 7 jours. {240 - inviteNote.length} caractères restants.</p>
+              </div>
             </div>
-            <div>
+            <div className={inviteStep === 2 ? '' : 'hidden'}>
               <label className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Rôle et preset d’accès</label>
               <SmartCombobox
                 density="wizard"
@@ -1039,7 +1140,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 placeholder="Sélectionner un rôle"
               />
             </div>
-            <div>
+            <div className={inviteStep === 2 ? '' : 'hidden'}>
               <p className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Preset d’accès prévu</p>
               <div className="grid gap-1.5 sm:grid-cols-4">
                 {(['standard', 'restricted', 'finance', 'custom'] as AccessPreset[]).map((preset) => {
@@ -1065,7 +1166,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 })}
               </div>
             </div>
-            {(() => {
+            {inviteStep === 2 ? (() => {
               const guide = INVITE_ROLE_GUIDE[formData.role];
               return (
                 <div className={`rounded-xl border p-2.5 ${guide.tone}`}>
@@ -1099,23 +1200,55 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                   ) : null}
                 </div>
               );
-            })()}
+            })() : null}
+            {inviteStep === 3 ? (
+              <div className="rounded-xl border border-emerald-950/10 bg-white p-3 shadow-sm">
+                <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-emerald-700">Confirmation</p>
+                <h3 className="mt-0.5 text-[0.86rem] font-black text-slate-950">Vérifier avant envoi</h3>
+                <div className="mt-2 grid gap-1.5 sm:grid-cols-4">
+                  <MiniStat label="Email" value={formData.email.trim() || 'À renseigner'} />
+                  <MiniStat label="Rôle" value={ROLE_LABELS[formData.role]} />
+                  <MiniStat label="Preset" value={ACCESS_PRESETS[invitePreset].label} />
+                  <MiniStat label="Sièges" value={userUsageLabel} />
+                </div>
+                <div className="mt-2 grid gap-1.5 rounded-lg bg-emerald-50/70 p-1.5 sm:grid-cols-4">
+                  <MiniStat label="Visibles" value={invitePreview.visible} />
+                  <MiniStat label="Masquées" value={invitePreview.hidden} />
+                  <MiniStat label="Actions" value={invitePreview.actions} />
+                  <MiniStat label="Modules off" value={invitePreview.disabled} />
+                </div>
+                <p className="mt-2 rounded-lg bg-slate-50 px-2 py-1.5 text-[0.62rem] font-semibold leading-4 text-slate-600">
+                  Les accès restent protégés par le rôle, les permissions par page et les modules activés. Ils pourront être ajustés après acceptation.
+                </p>
+              </div>
+            ) : null}
             <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                onClick={closeInviteModal}
+                onClick={inviteStep === 1 ? closeInviteModal : () => setInviteStep((prev) => (prev === 3 ? 2 : 1))}
                 className="h-9 rounded-lg border border-slate-200 px-3 text-[0.72rem] font-bold text-slate-700 transition hover:bg-slate-50"
               >
-                Annuler
+                {inviteStep === 1 ? 'Annuler' : 'Retour'}
               </button>
-              <button
-                type="submit"
-                disabled={submitting || !canInviteMore}
-                data-testid="button-submit-invitation"
-                className="h-9 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-3 text-[0.72rem] font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {submitting ? 'Création...' : "Envoyer l'invitation"}
-              </button>
+              {inviteStep < 3 ? (
+                <button
+                  type="button"
+                  disabled={!canInviteMore || (inviteStep === 1 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()))}
+                  onClick={() => setInviteStep((prev) => (prev === 1 ? 2 : 3))}
+                  className="h-9 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-3 text-[0.72rem] font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Continuer
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={submitting || !canInviteMore}
+                  data-testid="button-submit-invitation"
+                  className="h-9 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-3 text-[0.72rem] font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {submitting ? 'Création...' : "Envoyer l'invitation"}
+                </button>
+              )}
             </div>
           </form>
         )}
@@ -1168,6 +1301,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                       const inherited = moduleEnabled ? getDefaultAccessLevel(permissionTarget.role, item.id) : 'none';
                       if (!draft) return null;
                       const actionsDisabled = draft.access_level === 'none' || !moduleEnabled;
+                      const actionCapabilities = getPageActionCapabilities(item.id);
                       return (
                         <div key={item.id} className="space-y-2 px-3 py-2.5">
                           <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
@@ -1206,24 +1340,30 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
-                            {ACTIONS.map(({ key, label, icon: Icon }) => (
-                              <button
-                                key={key}
-                                type="button"
-                                disabled={actionsDisabled}
-                                onClick={() => toggleDraftAction(item.id, key)}
-                                className={`inline-flex h-7 items-center justify-center gap-1 rounded-lg border px-2 text-[0.58rem] font-black transition ${
-                                  draft[key]
-                                    ? 'border-emerald-200 bg-emerald-50 text-brand-800'
-                                    : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
-                                } disabled:cursor-not-allowed disabled:opacity-40`}
-                              >
-                                <Icon className="h-3.5 w-3.5" />
-                                {label}
-                              </button>
-                            ))}
-                          </div>
+                          {actionCapabilities.length > 0 ? (
+                            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+                              {ACTIONS.filter(({ key }) => actionCapabilities.includes(key)).map(({ key, label, icon: Icon }) => (
+                                <button
+                                  key={key}
+                                  type="button"
+                                  disabled={actionsDisabled}
+                                  onClick={() => toggleDraftAction(item.id, key)}
+                                  className={`inline-flex h-7 items-center justify-center gap-1 rounded-lg border px-2 text-[0.58rem] font-black transition ${
+                                    draft[key]
+                                      ? 'border-emerald-200 bg-emerald-50 text-brand-800'
+                                      : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                                  } disabled:cursor-not-allowed disabled:opacity-40`}
+                                >
+                                  <Icon className="h-3.5 w-3.5" />
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="rounded-lg bg-slate-50 px-2 py-1.5 text-[0.6rem] font-bold text-slate-500">
+                              Consultation uniquement. Aucune action fine n'est disponible pour cette page.
+                            </p>
+                          )}
                         </div>
                       );
                     })}
@@ -1395,7 +1535,7 @@ function PresetBadge({ preset }: { preset: AccessPreset }) {
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: number }) {
+function MiniStat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-md bg-white px-1.5 py-1">
       <p className="text-[0.78rem] font-extrabold text-slate-950">{value}</p>

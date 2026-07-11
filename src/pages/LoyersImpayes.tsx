@@ -11,7 +11,7 @@ import { createPaiementViaEdge, PaiementApiError } from '../services/api/paiemen
 import { emitEvent } from '../lib/eventBus';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
-import { LoadingState } from '../components/ui/LoadingState';
+import { PageSkeleton } from '../components/ui/Skeleton';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
@@ -477,14 +477,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     }, [financeMetrics, drawerLoyer]);
 
     if (loading) {
-        return (
-            <LoadingState
-                label="Créances à recouvrer"
-                description="Analyse des échéances, reliquats et paiements partiels."
-                compact
-                className="min-h-[45vh]"
-            />
-        );
+        return <PageSkeleton title="Créances à recouvrer" variant="table" />;
     }
 
     if (error) {

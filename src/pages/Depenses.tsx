@@ -17,7 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
-import { SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
+import { PageSkeleton, SkeletonCards, SkeletonTable } from '../components/ui/Skeleton';
 import { SplitViewShell } from '../components/ui/SplitViewShell';
 import { PageShell } from '../components/ui/PageShell';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
@@ -412,6 +412,10 @@ export function Depenses() {
     return financeMetrics;
   }, [financeMetrics, selectedDepense]);
 
+  if (loading && depenses.length === 0) {
+    return <PageSkeleton title="Dépenses" variant="table" />;
+  }
+
   return (
     <PageShell spacing="compact" variant="dataDense" tone="paper" verticalInset="compact">
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
@@ -444,7 +448,7 @@ export function Depenses() {
             />
 
             {loading ? (
-              <SkeletonCards count={6} />
+              <SkeletonCards count={4} />
             ) : (
               <CompactFinanceKpiGrid metrics={displayedMetrics} />
             )}

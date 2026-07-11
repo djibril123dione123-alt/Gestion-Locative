@@ -13,7 +13,7 @@ import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Wrench, Plus, ArrowRight, Phone, Building2, AlertTriangle, CheckCircle2, Clock, Search } from 'lucide-react';
 import { formatCurrency, formatSenegalPhone, formatSenegalPhoneInput, getSenegalPhoneHref, normalizeSenegalPhone } from '../lib/formatters';
-import { SkeletonCards } from '../components/ui/Skeleton';
+import { PageSkeleton, SkeletonCards } from '../components/ui/Skeleton';
 
 type Statut = 'a_faire' | 'en_cours' | 'termine';
 type Urgence = 'urgente' | 'normale' | 'basse';
@@ -231,6 +231,10 @@ export function Interventions() {
     },
   ], [items.length, stats, filterStatut]);
 
+  if (loading && items.length === 0) {
+    return <PageSkeleton title="Maintenance" variant="table" />;
+  }
+
   return (
     <div className="space-y-4 pt-2.5 sm:pt-3">
       <PremiumPageHeader
@@ -318,7 +322,7 @@ export function Interventions() {
       />
 
       {loading ? (
-        <SkeletonCards count={6} />
+        <SkeletonCards count={4} />
       ) : items.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
           <EmptyState icon={Wrench} title="Aucune intervention" description="Créez votre première fiche de maintenance." />

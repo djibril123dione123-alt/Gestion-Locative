@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { useMemo, useRef, useState, type ComponentType } from 'react';
 import {
   AlertCircle,
   Bell,
@@ -9,7 +9,6 @@ import {
   ClipboardList,
   CreditCard,
   FolderOpen,
-  HardHat,
   LayoutDashboard,
   LogOut,
   Settings,

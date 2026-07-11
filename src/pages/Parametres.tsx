@@ -42,7 +42,7 @@ type SettingsTab = 'general' | 'documents' | 'appearance' | 'modules';
 type EmbeddedMode = 'single' | 'documentsIdentity';
 type LogoUploadState = 'idle' | 'preview' | 'uploading' | 'done';
 type AgencyAssetKind = 'logo' | 'signature';
-type DocumentPreviewType = 'quittance' | 'contrat' | 'mandat' | 'rapport' | 'facture';
+type DocumentPreviewType = 'quittance' | 'contrat' | 'mandat' | 'rapport' | 'rapport_proprietaire' | 'facture';
 type ModuleFieldToggleKey =
   | 'module_depenses_actif'
   | 'module_inventaires_actif'
@@ -107,11 +107,18 @@ const DOCUMENT_PREVIEWS: Record<DocumentPreviewType, {
     meta: 'Propriétaire · Portefeuille',
   },
   rapport: {
-    label: 'Rapport',
+    label: 'Rapport bailleur',
     title: 'Rapport bailleur',
     reference: 'RPT-2026-07',
     amount: '1 175 000 F CFA',
     meta: 'Encaissements · Reversements',
+  },
+  rapport_proprietaire: {
+    label: 'Rapport propriétaire',
+    title: 'Rapport propriétaire',
+    reference: 'RPR-2026-07',
+    amount: '875 000 F CFA',
+    meta: 'Synthèse propriétaire · Net reversé',
   },
   facture: {
     label: 'Facture',
@@ -152,6 +159,128 @@ const DOCUMENT_OPTION_LABELS: Record<string, string> = {
 function getDocumentOptionLabel(key: string) {
   return DOCUMENT_OPTION_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, (value) => value.toUpperCase());
 }
+
+type DocumentPreviewBlueprint = {
+  subject: string;
+  period: string;
+  summary: Array<{ label: string; value: string; tone?: 'neutral' | 'success' | 'warning' }>;
+  columns: [string, string, string];
+  rows: Array<[string, string, string]>;
+  totalLabel: string;
+  totalValue: string;
+  note: string;
+};
+
+const DOCUMENT_PREVIEW_BLUEPRINTS: Record<DocumentPreviewType, DocumentPreviewBlueprint> = {
+  quittance: {
+    subject: 'Ablaye Sow · Appartement F4',
+    period: 'Période : juillet 2026',
+    summary: [
+      { label: 'Locataire', value: 'Ablaye Sow' },
+      { label: 'Logement', value: 'Keur Modou · F4' },
+      { label: 'Statut', value: 'Payé', tone: 'success' },
+    ],
+    columns: ['Libellé', 'Période', 'Montant'],
+    rows: [
+      ['Loyer mensuel', 'Juillet 2026', '450 000 F CFA'],
+      ['Charges locatives', 'Juillet 2026', '50 000 F CFA'],
+      ['Reliquat antérieur', 'Aucun', '0 F CFA'],
+    ],
+    totalLabel: 'Total encaissé',
+    totalValue: '500 000 F CFA',
+    note: 'Quittance délivrée sous réserve d’encaissement effectif et de vérification comptable.',
+  },
+  contrat: {
+    subject: 'Contrat de bail · Appartement F4',
+    period: 'Prise d’effet : 01 août 2026',
+    summary: [
+      { label: 'Bailleur', value: 'Mamadou Diallo' },
+      { label: 'Locataire', value: 'Ablaye Sow' },
+      { label: 'Durée', value: '12 mois' },
+    ],
+    columns: ['Article', 'Objet', 'Statut'],
+    rows: [
+      ['Article 1', 'Désignation du bien loué', 'Actif'],
+      ['Article 2', 'Loyer, dépôt et échéance', 'Actif'],
+      ['Article 3', 'Obligations des parties', 'Actif'],
+    ],
+    totalLabel: 'Loyer mensuel',
+    totalValue: '300 000 F CFA',
+    note: 'Les clauses actives du studio sont reprises dans le PDF généré avec les variables métier remplacées.',
+  },
+  mandat: {
+    subject: 'Mandat de gérance · Portefeuille Diallo',
+    period: 'Validité : 12 mois renouvelables',
+    summary: [
+      { label: 'Mandant', value: 'Mamadou Diallo' },
+      { label: 'Mandataire', value: 'Boy Dakar' },
+      { label: 'Commission', value: '10%' },
+    ],
+    columns: ['Section', 'Engagement', 'État'],
+    rows: [
+      ['Gestion', 'Encaissements et suivi locatif', 'Inclus'],
+      ['Reversement', 'Net bailleur après commission', 'Inclus'],
+      ['Reporting', 'Rapport mensuel propriétaire', 'Inclus'],
+    ],
+    totalLabel: 'Honoraires agence',
+    totalValue: '10% des encaissements',
+    note: 'Le mandat valorise les pouvoirs donnés à l’agence, les conditions de gestion et les signatures.',
+  },
+  rapport: {
+    subject: 'Bailleur : Mamadou Diallo',
+    period: 'Période : juillet 2026',
+    summary: [
+      { label: 'Encaissements', value: '1 250 000 F CFA', tone: 'success' },
+      { label: 'Reliquats', value: '75 000 F CFA', tone: 'warning' },
+      { label: 'Net à reverser', value: '1 087 500 F CFA', tone: 'success' },
+    ],
+    columns: ['Bien / unité', 'Encaissement', 'Net bailleur'],
+    rows: [
+      ['Keur Modou · F4', '500 000 F CFA', '450 000 F CFA'],
+      ['Résidence Almadies · Studio', '350 000 F CFA', '315 000 F CFA'],
+      ['Villa Sacré-Cœur · RDC', '400 000 F CFA', '322 500 F CFA'],
+    ],
+    totalLabel: 'Net à reverser',
+    totalValue: '1 087 500 F CFA',
+    note: 'Synthèse mensuelle claire avec encaissements, dépenses, commissions, reliquats et QR de vérification.',
+  },
+  rapport_proprietaire: {
+    subject: 'Propriétaire : Awa Ndiaye',
+    period: 'Période : juillet 2026',
+    summary: [
+      { label: 'Revenus', value: '920 000 F CFA', tone: 'success' },
+      { label: 'Charges', value: '45 000 F CFA', tone: 'warning' },
+      { label: 'Solde net', value: '875 000 F CFA', tone: 'success' },
+    ],
+    columns: ['Élément', 'Détail', 'Montant'],
+    rows: [
+      ['Encaissements', '2 logements réglés', '920 000 F CFA'],
+      ['Dépenses', 'Maintenance et charges', '45 000 F CFA'],
+      ['Reliquats', 'Aucun retard critique', '0 F CFA'],
+    ],
+    totalLabel: 'Solde propriétaire',
+    totalValue: '875 000 F CFA',
+    note: 'Version adaptée au bailleur individuel, sans vocabulaire agence inutile.',
+  },
+  facture: {
+    subject: 'Facture · Frais huissier',
+    period: 'Émission : 08 juillet 2026',
+    summary: [
+      { label: 'Client', value: 'Ablaye Sow' },
+      { label: 'Objet', value: 'Frais huissier' },
+      { label: 'Statut', value: 'À régler', tone: 'warning' },
+    ],
+    columns: ['Désignation', 'Quantité', 'Montant'],
+    rows: [
+      ['Frais huissier', '1', '37 500 F CFA'],
+      ['Justificatif', 'Joint au dossier', 'Inclus'],
+      ['TVA', 'Non applicable', '0 F CFA'],
+    ],
+    totalLabel: 'Total facture',
+    totalValue: '37 500 F CFA',
+    note: 'Facture structurée avec référence, détail financier, mention officielle et pied de page agence.',
+  },
+};
 
 function getDocumentModeLabel(mode?: AgencySettings['document_mode']) {
   if (mode === 'legal') return 'Juridique renforcé';
@@ -453,6 +582,10 @@ function buildSettingsModuleCategories(settings: SettingsState): SettingsModuleC
     key: string,
     fallback = true,
   ): Pick<SettingsModuleItem, 'status' | 'toggle'> => {
+    const configuredValue = enabledModules[key];
+    if (fallback === false && configuredValue !== true) {
+      return { status: 'prepared' };
+    }
     const defaultEnabled = key === 'planning' ? true : fallback;
     return {
       status: enabled(key, defaultEnabled) ? 'active' : defaultEnabled ? 'inactive' : 'prepared',
@@ -495,6 +628,7 @@ function buildSettingsModuleCategories(settings: SettingsState): SettingsModuleC
         { label: 'QR Verify', description: 'Preuves publiques et vérification QR.', impact: 'Preuve publique', ...optional('qr_code_quittances', Boolean(settings.qr_code_quittances)) },
         { label: 'Scanner', description: 'Vérification rapide sur mobile.', impact: 'Contrôle terrain', ...moduleToggle('document_scanner') },
         { label: 'Modèles', description: 'Règles documentaires et mentions.', status: 'system' },
+        { label: 'Signature / cachet', description: 'Identité officielle appliquée aux PDF.', impact: 'Contrats, mandats, rapports', status: settings.signature_url || settings.stamp_url ? 'active' : 'prepared' },
       ],
     },
     {
@@ -2849,33 +2983,6 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   );
 }
 
-function SettingsActionBar({
-  eyebrow,
-  title,
-  description,
-  actionLabel,
-  onAction,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  actionLabel: string;
-  onAction: () => void;
-}) {
-  return (
-    <section className="flex flex-col gap-1.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">{eyebrow}</p>
-        <h2 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">{title}</h2>
-        <p className="mt-0.5 text-[0.64rem] leading-[0.88rem] text-slate-600">{description}</p>
-      </div>
-      <PremiumButton variant="secondary" size="sm" onClick={onAction} icon={<Edit3 className="h-3.5 w-3.5" />}>
-        {actionLabel}
-      </PremiumButton>
-    </section>
-  );
-}
-
 function SettingsInfoCard({
   title,
   eyebrow,
@@ -3152,6 +3259,7 @@ function SettingsDocumentPreview({
   className?: string;
 }) {
   const preview = DOCUMENT_PREVIEWS[selectedType];
+  const blueprint = DOCUMENT_PREVIEW_BLUEPRINTS[selectedType];
   const prefix = preferences.prefixes?.[selectedType] ?? preview.reference.split('-')[0];
   const reference = `${prefix}-${preview.reference.split('-').slice(1).join('-') || '2026-001'}`;
   const qrVisible = qrEnabled && preferences.qr_documents?.[selectedType] !== false;
@@ -3235,6 +3343,55 @@ function SettingsDocumentPreview({
             <p className="truncate text-[0.62rem] font-extrabold text-orange-900">{headerStyleLabel} · {mode}</p>
           </div>
         </div>
+        <div className="space-y-1.5 px-2.5 pb-2">
+          <div className="rounded-lg border border-slate-100 bg-white px-2 py-1.5">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
+                <p className="truncate text-[0.66rem] font-extrabold text-slate-900">{blueprint.subject}</p>
+                <p className="truncate text-[0.54rem] font-semibold text-slate-500">{blueprint.period}</p>
+              </div>
+              <p className="shrink-0 rounded-full bg-slate-50 px-1.5 py-0.5 text-[0.48rem] font-black uppercase tracking-[0.08em] text-slate-500">
+                {qrVisible ? 'QR Verify actif' : 'QR masqué'}
+              </p>
+            </div>
+          </div>
+          <div className="grid gap-1 sm:grid-cols-3">
+            {blueprint.summary.map((item) => {
+              const toneClass = item.tone === 'success'
+                ? 'border-emerald-100 bg-emerald-50 text-emerald-900'
+                : item.tone === 'warning'
+                  ? 'border-orange-100 bg-orange-50 text-orange-900'
+                  : 'border-slate-100 bg-slate-50 text-slate-800';
+              return (
+                <div key={item.label} className={`rounded-lg border px-1.5 py-1 ${toneClass}`}>
+                  <p className="text-[0.45rem] font-black uppercase tracking-[0.1em] opacity-70">{item.label}</p>
+                  <p className="truncate text-[0.58rem] font-extrabold">{item.value}</p>
+                </div>
+              );
+            })}
+          </div>
+          <div className="overflow-hidden rounded-lg border border-slate-100 bg-white">
+            <div className="grid grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] bg-slate-50 px-2 py-1 text-[0.46rem] font-black uppercase tracking-[0.1em] text-slate-400">
+              {blueprint.columns.map((column) => (
+                <span key={column} className="truncate last:text-right">{column}</span>
+              ))}
+            </div>
+            {blueprint.rows.map((row) => (
+              <div key={`${row[0]}-${row[1]}`} className="grid grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] border-t border-slate-100 px-2 py-1 text-[0.55rem] font-semibold text-slate-600">
+                <span className="truncate font-extrabold text-slate-800">{row[0]}</span>
+                <span className="truncate">{row[1]}</span>
+                <span className="truncate text-right font-extrabold text-slate-800">{row[2]}</span>
+              </div>
+            ))}
+            <div className="flex items-center justify-between gap-2 border-t border-emerald-100 bg-emerald-50/70 px-2 py-1.5">
+              <span className="text-[0.52rem] font-black uppercase tracking-[0.1em] text-emerald-700">{blueprint.totalLabel}</span>
+              <span className="truncate text-[0.66rem] font-black text-emerald-950">{blueprint.totalValue}</span>
+            </div>
+          </div>
+          <p className="rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-1 text-[0.55rem] font-semibold leading-snug text-slate-500">
+            {blueprint.note}
+          </p>
+        </div>
         <div className="space-y-1 px-2.5 pb-2 text-[0.56rem] font-semibold text-slate-500">
           <div className="grid gap-1 sm:grid-cols-2">
             <div className="rounded-lg border border-slate-100 bg-white px-1.5 py-1">
@@ -3286,12 +3443,12 @@ function SettingsModulesOverview({
   onToggle?: (target: ModuleToggleTarget) => void;
 }) {
   const statusCopy: Record<SettingsModuleItem['status'], { label: string; className: string }> = {
-    system: { label: 'Système', className: 'bg-slate-100 text-slate-600' },
-    essential: { label: 'Essentiel', className: 'bg-emerald-50 text-emerald-700' },
-    active: { label: 'Actif', className: 'bg-emerald-50 text-emerald-700' },
-    inactive: { label: 'Masqué', className: 'bg-orange-50 text-orange-700' },
-    prepared: { label: 'Préparé', className: 'bg-blue-50 text-blue-700' },
-    plan: { label: 'Plan +', className: 'bg-violet-50 text-violet-700' },
+    system: { label: 'Système', className: 'bg-slate-100 text-slate-700 ring-slate-200' },
+    essential: { label: 'Essentiel', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+    active: { label: 'Pilotable', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+    inactive: { label: 'Désactivé', className: 'bg-orange-50 text-orange-700 ring-orange-200' },
+    prepared: { label: 'Préparé', className: 'bg-blue-50 text-blue-700 ring-blue-200' },
+    plan: { label: 'Plan +', className: 'bg-violet-50 text-violet-700 ring-violet-200' },
   };
   const totalModules = modules.reduce((count, group) => count + group.items.length, 0);
   const activeModules = modules.reduce(
@@ -3310,13 +3467,13 @@ function SettingsModulesOverview({
 
   return (
     <div className="space-y-2">
-      <section className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-[#fffdf8] via-white to-emerald-50/45 p-2 shadow-sm">
+      <section className="rounded-xl border border-emerald-950/10 bg-white p-2.5 shadow-sm">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-[0.46rem] font-black uppercase tracking-[0.14em] text-emerald-700">Modules & pages</p>
             <h2 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">Workspace visible par domaine</h2>
-            <p className="mt-0.5 max-w-2xl text-[0.62rem] leading-[0.86rem] text-slate-600">
-              Les modules système restent actifs. Les options branchées pilotent la sidebar, les accès et les écrans métier sans créer de faux interrupteurs.
+            <p className="mt-0.5 max-w-2xl text-[0.63rem] leading-[0.9rem] text-slate-600">
+              Les modules système restent verrouillés. Les modules pilotables masquent la navigation et verrouillent les permissions sans supprimer les données existantes.
             </p>
           </div>
           <div className="grid gap-1.5 sm:grid-cols-3 lg:w-[23rem]">
@@ -3332,9 +3489,9 @@ function SettingsModulesOverview({
         </div>
         <div className="mt-2 grid gap-1.5 md:grid-cols-3">
           {[
-            ['Sidebar', 'Les pages masquées sortent de la navigation active.'],
-            ['Permissions', 'Un module inactif reste verrouillé pour les rôles standards.'],
-            ['Documents', 'QR, modèles et scanner suivent les réglages documentaires.'],
+            ['Navigation', 'Un module désactivé sort des menus actifs.'],
+            ['Permissions', 'Les rôles standards ne contournent pas un module verrouillé.'],
+            ['Données', 'Aucune donnée métier n’est supprimée par un masquage.'],
           ].map(([title, copy]) => (
             <div key={title} className="rounded-lg border border-emerald-950/10 bg-white/70 px-2 py-1.5">
               <p className="text-[0.58rem] font-extrabold text-slate-800">{title}</p>
@@ -3343,11 +3500,25 @@ function SettingsModulesOverview({
           ))}
         </div>
       </section>
+      <div className="flex flex-wrap gap-1.5 rounded-xl border border-emerald-950/10 bg-white/90 p-2 shadow-sm">
+        {[
+          ['Système', 'Indispensable, non désactivable.'],
+          ['Essentiel', 'Cœur métier visible pour ce compte.'],
+          ['Pilotable', 'Relié aux réglages agence.'],
+          ['Préparé', 'Visible comme capacité, sans faux switch.'],
+          ['Désactivé', 'Masqué et verrouillé.'],
+        ].map(([label, copy]) => (
+          <span key={label} className="inline-flex min-w-0 items-center gap-1.5 rounded-lg border border-slate-100 bg-[#fffdf8] px-2 py-1">
+            <span className="text-[0.56rem] font-black uppercase tracking-[0.1em] text-slate-800">{label}</span>
+            <span className="hidden text-[0.55rem] font-semibold text-slate-500 md:inline">{copy}</span>
+          </span>
+        ))}
+      </div>
       <div className="grid gap-2 xl:grid-cols-2">
         {modules.map((group) => {
           const activeCount = group.items.filter((item) => ['system', 'essential', 'active'].includes(item.status)).length;
           return (
-          <section key={group.category} className="rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm">
+          <section key={group.category} className="rounded-xl border border-emerald-950/10 bg-white p-2 shadow-sm">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <h3 className="truncate text-[0.72rem] font-extrabold text-slate-950">{group.category}</h3>
@@ -3363,7 +3534,7 @@ function SettingsModulesOverview({
                 const toggleTarget = item.toggle ?? null;
                 const canToggle = Boolean(onToggle && toggleTarget);
                 return (
-                  <div key={item.label} className="min-w-0 rounded-lg border border-slate-100 bg-[#fffdf8] px-1.5 py-1">
+                  <div key={item.label} className="min-w-0 rounded-lg border border-slate-100 bg-[#fffdf8]/70 px-2 py-1.5">
                     <div className="flex min-w-0 items-center justify-between gap-1.5">
                       <div className="min-w-0">
                         <span className="block truncate text-[0.64rem] font-extrabold text-slate-800">{item.label}</span>
@@ -3386,10 +3557,10 @@ function SettingsModulesOverview({
                           <span className={`h-3 w-5 rounded-full p-0.5 transition-colors ${item.status === 'active' ? 'bg-emerald-700' : 'bg-slate-200'}`}>
                             <span className={`block h-2 w-2 rounded-full bg-white transition-transform ${item.status === 'active' ? 'translate-x-2' : 'translate-x-0'}`} />
                           </span>
-                          {item.status === 'active' ? 'Actif' : 'Masqué'}
+                          {item.status === 'active' ? 'Actif' : 'Off'}
                         </button>
                       ) : (
-                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.46rem] font-black uppercase tracking-[0.1em] ${status.className}`}>
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.46rem] font-black uppercase tracking-[0.1em] ring-1 ${status.className}`}>
                           {status.label}
                         </span>
                       )}

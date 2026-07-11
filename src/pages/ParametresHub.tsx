@@ -425,67 +425,83 @@ export function ParametresHub({ initialTab = 'agence' }: ParametresHubProps) {
         }
       />
 
-      <div className="rounded-2xl border border-emerald-950/10 bg-white/90 p-1.5 shadow-sm backdrop-blur">
-        <div className="flex items-center justify-start sm:justify-center gap-1 overflow-x-auto scrollbar-hide">
-          {sections.map((section) => {
-            const Icon = section.icon;
-            const active = section.id === activeSection;
-            return (
-              <button
-                key={section.id}
-                type="button"
-                onClick={() => selectSection(section.id)}
-                className={[
-                  'inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 py-1.5 text-[0.72rem] font-extrabold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20 sm:px-3.5',
-                  active
-                    ? 'bg-emerald-950 text-white shadow-md'
-                    : 'text-slate-600 hover:bg-emerald-50/80 hover:text-emerald-950',
-                ].join(' ')}
-              >
-                <Icon className={active ? 'h-3.5 w-3.5 text-emerald-300' : 'h-3.5 w-3.5 text-slate-400'} />
-                {section.label}
-              </button>
-            );
-          })}
+      {/* ── ULTRA-PREMIUM STICKY TOP NAV ── */}
+      <div className="sticky top-0 z-20 -mx-1 px-1 py-1.5 backdrop-blur-md transition-all">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-950/12 bg-white/92 p-1.5 shadow-sm backdrop-blur-xl">
+          <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide flex-1" aria-label="Navigation des paramètres">
+            {sections.map((section) => {
+              const Icon = section.icon;
+              const active = section.id === activeSection;
+              return (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => selectSection(section.id)}
+                  className={[
+                    'group inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 text-xs font-extrabold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30',
+                    active
+                      ? 'bg-emerald-950 text-white shadow-md shadow-emerald-950/15 ring-1 ring-white/10'
+                      : 'text-slate-600 hover:bg-emerald-50/80 hover:text-emerald-950',
+                  ].join(' ')}
+                >
+                  <Icon
+                    className={[
+                      'h-4 w-4 transition-transform duration-200 group-hover:scale-110',
+                      active ? 'text-[#F58220]' : 'text-slate-400 group-hover:text-emerald-700',
+                    ].join(' ')}
+                  />
+                  <span>{section.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="hidden sm:flex items-center gap-1.5 border-l border-emerald-950/10 pl-3 pr-1.5 shrink-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 text-[0.68rem] font-extrabold text-emerald-900">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+              <span>{controlLabel}</span>
+            </span>
+          </div>
         </div>
       </div>
 
-      <main className="min-w-0 space-y-2 text-[0.76rem]">
-          <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2 shadow-sm ring-1 ring-white/70">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-[0.5rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">{activeConfig.eyebrow}</p>
-                <h1 className="mt-0.5 font-serif text-[0.95rem] font-extrabold leading-tight text-slate-950 sm:text-[1rem]">
-                  {activeConfig.title ?? activeConfig.label}
-                </h1>
-                <p className="mt-0.5 max-w-3xl text-[0.66rem] font-medium leading-[0.86rem] text-slate-600">{activeConfig.description}</p>
-              </div>
-              {activeSection === 'billing' ? (
-                <PremiumButton variant="secondary" size="sm" onClick={openPricing} icon={<ArrowRight className="h-3.5 w-3.5" />}>
-                  Voir les tarifs
-                </PremiumButton>
-              ) : null}
+      {/* ── FULL-WIDTH CONTENT PANE ── */}
+      <main className="w-full flex-1 min-w-0 space-y-3 sm:space-y-4 text-[0.78rem]">
+        <section className="rounded-2xl border border-emerald-950/10 bg-[#fffdf8]/95 p-3 sm:p-4 shadow-sm ring-1 ring-white/70">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-[0.55rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">{activeConfig.eyebrow}</p>
+              <h1 className="mt-0.5 font-serif text-base sm:text-lg font-extrabold leading-tight text-slate-950">
+                {activeConfig.title ?? activeConfig.label}
+              </h1>
+              <p className="mt-0.5 max-w-3xl text-xs font-medium leading-relaxed text-slate-600">{activeConfig.description}</p>
             </div>
-          </section>
+            {activeSection === 'billing' ? (
+              <PremiumButton variant="secondary" size="sm" onClick={openPricing} icon={<ArrowRight className="h-3.5 w-3.5" />}>
+                Voir les tarifs
+              </PremiumButton>
+            ) : null}
+          </div>
+        </section>
 
-          <Suspense fallback={<PageLoader />}>
-            {activeSection === 'overview' && (
-              <OverviewSection
-                isIndividualOwner={isIndividualOwner}
-                agencyName={agencyName}
-                role={profile?.role ?? 'admin'}
-                snapshot={snapshot}
-                onOpen={selectSection}
-              />
-            )}
-            {activeSection === 'organization' && <Parametres embedded initialTab="general" />}
-            {activeSection === 'documentsIdentity' && <Parametres embedded initialTab="documents" embeddedMode="documentsIdentity" />}
-            {activeSection === 'modules' && <Parametres embedded initialTab="modules" />}
-            {activeSection === 'teamAccess' && <Equipe embedded sectionMode="access" />}
-            {activeSection === 'billing' && <Abonnement embedded />}
-            {activeSection === 'securitySupport' && <SecuritySupportSection role={profile?.role ?? 'admin'} isIndividualOwner={isIndividualOwner} />}
-          </Suspense>
-        </main>
+        <Suspense fallback={<PageLoader />}>
+          {activeSection === 'overview' && (
+            <OverviewSection
+              isIndividualOwner={isIndividualOwner}
+              agencyName={agencyName}
+              role={profile?.role ?? 'admin'}
+              snapshot={snapshot}
+              onOpen={selectSection}
+            />
+          )}
+          {activeSection === 'organization' && <Parametres embedded initialTab="general" />}
+          {activeSection === 'documentsIdentity' && <Parametres embedded initialTab="documents" embeddedMode="documentsIdentity" />}
+          {activeSection === 'modules' && <Parametres embedded initialTab="modules" />}
+          {activeSection === 'teamAccess' && <Equipe embedded sectionMode="access" />}
+          {activeSection === 'billing' && <Abonnement embedded />}
+          {activeSection === 'securitySupport' && <SecuritySupportSection role={profile?.role ?? 'admin'} isIndividualOwner={isIndividualOwner} />}
+        </Suspense>
+      </main>
     </PageShell>
   );
 }

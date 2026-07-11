@@ -847,7 +847,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
             )}
 
             {loading ? (
-              <SkeletonCards count={6} />
+              <SkeletonCards count={4} />
             ) : (
               <CompactFinanceKpiGrid metrics={displayedMetrics} />
             )}

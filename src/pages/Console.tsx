@@ -48,7 +48,7 @@ import {
   type SubscriptionRow,
   type UserRow,
 } from '../components/console/ConsoleModals';
-import { LoadingState } from '../components/ui/LoadingState';
+import { PageSkeleton } from '../components/ui/Skeleton';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../lib/formatters';
@@ -861,7 +861,7 @@ export function Console() {
 
           <main className="flex-1 p-3 sm:p-6">
             {loading ? (
-              <LoadingState label="Console propriétaire" tone="dark" />
+              <PageSkeleton title="Console propriétaire" variant="dashboard" tone="dark" />
             ) : (
               <div className="mx-auto max-w-[1600px] space-y-6">
                 {lastLoadedAt && (

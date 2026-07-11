@@ -27,7 +27,7 @@ import { useToast } from '../hooks/useToast';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
-import { SkeletonCards } from '../components/ui/Skeleton';
+import { PageSkeleton, SkeletonCards } from '../components/ui/Skeleton';
 import {
   createDocumentSignedUrl,
   cleanupTemporaryDocuments,
@@ -577,6 +577,10 @@ export function Documents() {
   ];
   const activeMobileFilterCount = Number(sourceFilter !== 'all') + Number(statusFilter !== 'all');
 
+  if (loading && items.length === 0) {
+    return <PageSkeleton title="Documents" variant="table" />;
+  }
+
   return (
     <>
     <PageShell spacing="standard" variant="dataDense" tone="paper" verticalInset="standard" ariaLabel="Coffre documentaire">
@@ -844,7 +848,7 @@ export function Documents() {
 
           {/* DOCUMENT LIST / TABLE */}
           {loading ? (
-            <SkeletonCards count={6} />
+            <SkeletonCards count={4} />
           ) : filteredItems.length === 0 ? (
             <div className="rounded-2xl border border-emerald-950/10 bg-white/90 shadow-sm">
               {query || typeFilter !== 'all' || statusFilter !== 'all' || sourceFilter !== 'all' ? (

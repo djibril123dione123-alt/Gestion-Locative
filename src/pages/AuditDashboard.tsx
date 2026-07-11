@@ -10,6 +10,7 @@ import {
 import { formatCurrency } from '../lib/formatters';
 import { ToastContainer } from '../components/ui/Toast';
 import { useToast } from '../hooks/useToast';
+import { PageSkeleton } from '../components/ui/Skeleton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -295,6 +296,10 @@ export function AuditDashboard() {
   }
 
   const hasAlerts = jobStats.failed > 0 || (finance?.drift_count ?? 0) > 0 || (health?.ledger_drift ?? 0) > 0;
+
+  if (loading && outboxEvents.length === 0) {
+    return <PageSkeleton title="Control Tower" variant="analytics" />;
+  }
 
   return (
     <div className="space-y-4 pt-2.5 sm:pt-3">

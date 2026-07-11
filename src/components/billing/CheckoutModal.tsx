@@ -272,6 +272,11 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
   const timeLeft = Math.max(0, POLL_MAX_ATTEMPTS - pollCount) * (POLL_INTERVAL_MS / 1000);
   const minutesLeft = Math.floor(timeLeft / 60);
   const secondsLeft = timeLeft % 60;
+  const checkoutSteps = [
+    { label: 'Moyen', active: step === 'select_provider' },
+    { label: 'Détails', active: step === 'enter_phone' || step === 'processing' },
+    { label: 'Confirmation', active: step === 'polling' || step === 'card_redirect' || step === 'success' },
+  ];
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={`Activer le plan ${planName}`}>
@@ -293,6 +298,28 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
             <Shield className="h-4 w-4 shrink-0 text-emerald-700" />
             <span>Activation instantanée après confirmation du paiement. Le paiement en ligne reste prioritaire.</span>
           </div>
+        </div>
+      )}
+
+      {step !== 'success' && step !== 'error' && (
+        <div className="mb-4 grid grid-cols-3 gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-1.5">
+          {checkoutSteps.map((checkoutStep, index) => (
+            <div
+              key={checkoutStep.label}
+              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-[0.64rem] font-black transition ${
+                checkoutStep.active ? 'bg-white text-emerald-950 shadow-sm ring-1 ring-emerald-950/10' : 'text-slate-400'
+              }`}
+            >
+              <span
+                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[0.52rem] ${
+                  checkoutStep.active ? 'bg-emerald-950 text-white' : 'bg-white text-slate-400 ring-1 ring-slate-200'
+                }`}
+              >
+                {index + 1}
+              </span>
+              <span className="truncate">{checkoutStep.label}</span>
+            </div>
+          ))}
         </div>
       )}
 

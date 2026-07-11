@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { WizardShell } from '../components/ui/WizardShell';
 import { ToastContainer } from '../components/ui/Toast';
+import { PageSkeleton } from '../components/ui/Skeleton';
 import { ChevronLeft, ChevronRight, Plus, Calendar, CalendarClock, CheckCircle2, AlertCircle, Search } from 'lucide-react';
 
 type EventType = 'paiement' | 'contrat' | 'intervention' | 'rendez_vous' | 'autre';
@@ -42,6 +43,7 @@ export function Calendrier() {
   const { profile, user } = useAuth();
   const toast = useToast();
   const [items, setItems] = useState<Evenement[]>([]);
+  const [loading, setLoading] = useState(true);
   const [bailleurs, setBailleurs] = useState<{ id: string; nom: string; prenom: string }[]>([]);
   const [immeubles, setImmeubles] = useState<{ id: string; nom: string }[]>([]);
   const [unites, setUnites] = useState<{ id: string; nom: string }[]>([]);
@@ -73,8 +75,12 @@ export function Calendrier() {
   const requestIdRef = useRef(0);
 
   const load = useCallback(async () => {
-    if (!profile?.agency_id) return;
+    if (!profile?.agency_id) {
+      setLoading(false);
+      return;
+    }
     const myRequestId = ++requestIdRef.current;
+    setLoading(true);
     try {
       const startStr = monthStart.toISOString().split('T')[0];
       const endStr = monthEnd.toISOString().split('T')[0];
@@ -100,6 +106,10 @@ export function Calendrier() {
       if (myRequestId !== requestIdRef.current) return;
       const msg = err instanceof Error ? err.message : 'Erreur';
       toast.error(msg);
+    } finally {
+      if (myRequestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [profile?.agency_id, monthStart, monthEnd, toast]);
 
@@ -225,6 +235,10 @@ export function Calendrier() {
       onClick: () => setSelectedTypeFilter(selectedTypeFilter === 'paiement' ? '' : 'paiement'),
     },
   ], [items.length, stats, selectedTypeFilter]);
+
+  if (loading && items.length === 0) {
+    return <PageSkeleton title="Calendrier" variant="dashboard" />;
+  }
 
   return (
     <div className="space-y-4 pt-2.5 sm:pt-3">

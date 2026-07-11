@@ -347,9 +347,7 @@ export default function Agences() {
       />
 
       {loading ? (
-        <div className="text-center py-12">
-          <PageSkeleton title="Agences" variant="table" className="p-0" />
-        </div>
+        <PageSkeleton title="Agences" variant="table" />
       ) : (
         <Table columns={columns} data={agencies} />
       )}

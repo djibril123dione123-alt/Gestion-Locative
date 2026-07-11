@@ -9,7 +9,7 @@ export type PremiumPageHeaderVariant = 'standard' | 'darkVault' | 'registry';
 
 export interface PremiumPageHeaderProps {
   /** Capsule eyebrow uppercase au-dessus du titre. */
-  eyebrow: string;
+  eyebrow?: string;
   /** Titre principal — affiché en police Serif. */
   title: React.ReactNode;
   /**
@@ -187,7 +187,7 @@ export function PremiumPageHeader({
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <div className="min-w-0">
-              <p className={`${isCompact ? `${isUltraCompact ? 'text-[0.48rem]' : 'text-[0.55rem]'}` : 'text-[0.68rem]'} font-black uppercase tracking-[0.2em] text-orange-600`}>{eyebrow}</p>
+              {eyebrow && <p className={`${isCompact ? `${isUltraCompact ? 'text-[0.48rem]' : 'text-[0.55rem]'}` : 'text-[0.68rem]'} font-black uppercase tracking-[0.2em] text-orange-600`}>{eyebrow}</p>}
               <h1 className={`${isUltraCompact ? 'mt-0' : 'mt-0.5'} font-serif font-black tracking-tight text-slate-950 ${isCompact ? `${isUltraCompact ? 'text-[1.18rem] sm:text-[1.32rem]' : 'text-[1.42rem]'}` : 'text-3xl sm:text-4xl'}`}>{title}</h1>
             </div>
 
@@ -239,7 +239,7 @@ export function PremiumPageHeader({
 
       {/* Colonne gauche : eyebrow + title + description + meta/children legacy */}
       <div className="min-w-0 flex-1 relative z-10">
-          <EyebrowBadge text={eyebrow} variant={variant} density={density} />
+          {eyebrow && <EyebrowBadge text={eyebrow} variant={variant} density={density} />}
 
           <h1 className={titleClass}>{title}</h1>
 

@@ -1108,11 +1108,11 @@ export function OccupantsBaux() {
             ) : (
               <>
                 <div className={`hidden md:block ${selectedRow ? 'overflow-hidden' : 'overflow-x-auto'}`}>
-                  <table className={`w-full border-collapse table-fixed ${selectedRow ? 'min-w-[620px]' : 'min-w-[840px]'}`}>
+                  <table className={`w-full border-collapse table-fixed ${selectedRow ? 'min-w-[520px]' : 'min-w-[840px]'}`}>
                     <thead className="bg-[#f8f3e8]/70 text-left border-b border-slate-100">
                       <tr>
                         {occupantColumns.isVisible('occupant') && (
-                          <th className={`${selectedRow ? 'w-[40%]' : 'w-[20%]'} py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>
+                          <th className={`${selectedRow ? 'w-[44%]' : 'w-[20%]'} py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>
                             <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 text-slate-400" /> Locataire</span>
                           </th>
                         )}
@@ -1137,17 +1137,17 @@ export function OccupantsBaux() {
                           </th>
                         )}
                         {occupantColumns.isVisible('loyer') && (
-                          <th className={`${selectedRow ? 'w-[22%]' : 'w-[11%]'} py-2.5 px-3 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>
+                          <th className={`${selectedRow ? 'w-[34%]' : 'w-[11%]'} py-2.5 px-3 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>
                             <span className="flex items-center justify-end gap-1.5"><Wallet className="h-3.5 w-3.5 text-slate-400" /> Loyer</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('periode') && (
-                          <th className={`${selectedRow ? 'w-[20%]' : 'w-[9%]'} py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500 hidden lg:table-cell`}>
+                          <th className={`w-[9%] py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
                             <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-slate-400" /> Période</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('statut') && (
-                          <th className={`${selectedRow ? 'w-[14%]' : 'w-[6%]'} py-2.5 px-3 text-center text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>
+                          <th className={`${selectedRow ? 'w-[18%]' : 'w-[6%]'} py-2.5 px-3 text-center text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>
                             <span className="flex items-center justify-center gap-1.5"><Activity className="h-3.5 w-3.5 text-slate-400" /> Statut</span>
                           </th>
                         )}
@@ -1392,7 +1392,7 @@ function DesktopRow({
       )}
       {/* Période */}
       {isVisible('periode') && (
-        <td className="py-2.5 px-3 text-[0.75rem] text-slate-700 font-medium hidden lg:table-cell">
+        <td className={`py-2.5 px-3 text-[0.75rem] text-slate-700 font-medium ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
           <p className="truncate">
             {formatDate(row.date_debut)}
             {row.date_fin ? ` → ${formatDate(row.date_fin)}` : <span className="text-slate-400"> → ouvert</span>}

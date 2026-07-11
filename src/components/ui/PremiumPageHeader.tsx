@@ -183,32 +183,39 @@ export function PremiumPageHeader({
 
   if (variant === 'standard') {
     return (
-      <header className={`flex flex-col ${isCompact ? `${isUltraCompact ? 'gap-1.5' : 'gap-2'}` : 'gap-3'} rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${isCompact ? `${isUltraCompact ? 'px-3 py-1.5 sm:px-3.5 sm:py-1.5' : 'px-3 py-1.5 sm:px-4 sm:py-2'}` : 'px-4 py-3 sm:px-5 sm:py-3.5'} lg:flex-row lg:items-center lg:justify-between ${className}`}>
-        <div className="min-w-0">
-          <p className={`${isCompact ? `${isUltraCompact ? 'text-[0.5rem]' : 'text-[0.55rem]'}` : 'text-[0.68rem]'} font-black uppercase tracking-[0.2em] text-orange-600`}>{eyebrow}</p>
-          <h1 className={`${isUltraCompact ? 'mt-0' : 'mt-0.5'} font-serif font-black tracking-tight text-slate-950 ${isCompact ? `${isUltraCompact ? 'text-[1.24rem]' : 'text-[1.42rem]'}` : 'text-3xl sm:text-4xl'}`}>{title}</h1>
+      <header className={`flex flex-col ${isCompact ? `${isUltraCompact ? 'gap-1' : 'gap-1.5'}` : 'gap-3'} rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${isCompact ? `${isUltraCompact ? 'px-3 py-1.5 sm:px-3.5 sm:py-1.5' : 'px-3 py-1.5 sm:px-4 sm:py-2'}` : 'px-4 py-3 sm:px-5 sm:py-3.5'} ${className}`}>
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <div className="min-w-0">
+            <p className={`${isCompact ? `${isUltraCompact ? 'text-[0.48rem]' : 'text-[0.55rem]'}` : 'text-[0.68rem]'} font-black uppercase tracking-[0.2em] text-orange-600`}>{eyebrow}</p>
+            <h1 className={`${isUltraCompact ? 'mt-0' : 'mt-0.5'} font-serif font-black tracking-tight text-slate-950 ${isCompact ? `${isUltraCompact ? 'text-[1.18rem] sm:text-[1.32rem]' : 'text-[1.42rem]'}` : 'text-3xl sm:text-4xl'}`}>{title}</h1>
+          </div>
 
-          {resolvedDescription && (
-            mobileDescription ? (
-              <>
-                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium text-slate-600 lg:hidden`}>{mobileDescription}</p>
-                <p className={`${isUltraCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium text-slate-600 lg:block ${isSplitOpen ? 'opacity-90' : ''}`}>{isSplitOpen ? mobileDescription : resolvedDescription}</p>
-              </>
-            ) : (
-              <p className={`${isUltraCompact ? 'mt-0.5' : 'mt-1'} max-w-2xl font-medium ${isCompact ? `${isUltraCompact ? 'text-[0.55rem]' : 'text-[0.58rem]'} leading-snug text-slate-500` : 'text-[0.7rem] leading-relaxed text-slate-600'}`}>{resolvedDescription}</p>
-            )
+          {sideContent && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              {sideContent}
+            </div>
           )}
-
-          {/* meta slot (rétrocompatibilité) */}
-          {meta && <div className="mt-2">{meta}</div>}
-
-          {/* children slot (rétrocompatibilité) */}
-          {children && <div className="mt-3">{children}</div>}
         </div>
 
-        {(hasActions || hasSideContent) && (
+        {resolvedDescription && (
+          mobileDescription ? (
+            <>
+              <p className={`${isUltraCompact ? 'mt-0 text-[0.64rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium text-slate-600 lg:hidden`}>{mobileDescription}</p>
+              <p className={`${isUltraCompact ? 'mt-0 text-[0.64rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium text-slate-600 lg:block ${isSplitOpen ? 'opacity-90' : ''}`}>{isSplitOpen ? mobileDescription : resolvedDescription}</p>
+            </>
+          ) : (
+            <p className={`${isUltraCompact ? 'mt-0' : 'mt-1'} max-w-2xl font-medium ${isCompact ? `${isUltraCompact ? 'text-[0.55rem]' : 'text-[0.58rem]'} leading-snug text-slate-500` : 'text-[0.7rem] leading-relaxed text-slate-600'}`}>{resolvedDescription}</p>
+          )
+        )}
+
+        {/* meta slot (rétrocompatibilité) */}
+        {meta && <div className="mt-1.5">{meta}</div>}
+
+        {/* children slot (rétrocompatibilité) */}
+        {children && <div className="mt-2">{children}</div>}
+
+        {hasActions && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
-            {sideContent}
             {resolvedSecondaryAction}
             {resolvedPrimaryAction}
             {legacyActions}

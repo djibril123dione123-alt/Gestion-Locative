@@ -130,7 +130,7 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
       if (navigator.share) {
         if (documentPayload.blob) {
           const file = new File([documentPayload.blob], documentPayload.fileName, {
-          type: documentPayload.mimeType ?? 'application/pdf',
+            type: documentPayload.mimeType ?? 'application/pdf',
           });
           if (!navigator.canShare || navigator.canShare({ files: [file] })) {
             await navigator.share({ title: documentPayload.title, text: shareText, files: [file] });
@@ -146,7 +146,7 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
       await navigator.clipboard.writeText(documentPayload.url);
       setFeedback('copied');
     } catch {
-      // User cancelled the native share sheet; no visible error needed.
+      // User cancelled native share sheet
     }
   };
 
@@ -167,141 +167,138 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
   };
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-slate-950/72 px-3 py-5 backdrop-blur-xl sm:px-6">
-      <div
-        className="absolute inset-0 opacity-80"
-        aria-hidden="true"
-        style={{
-          background:
-            'radial-gradient(circle at 52% 18%, rgba(249,115,22,0.22), transparent 24rem), radial-gradient(circle at 18% 82%, rgba(20,83,45,0.48), transparent 28rem)',
-        }}
-      />
-
+    <div className="fixed inset-0 z-[90] flex items-center justify-center overflow-y-auto bg-slate-950/75 p-3 backdrop-blur-md sm:p-5">
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative grid max-h-[94vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-white/12 bg-[#06130f]/94 shadow-[0_40px_140px_rgba(0,0,0,0.48)] animate-scaleIn lg:grid-cols-[0.95fr_1.05fr] lg:overflow-hidden"
+        className="relative grid max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl border border-white/15 bg-[#06130f] shadow-[0_30px_100px_rgba(0,0,0,0.65)] animate-scaleIn lg:grid-cols-[280px_minmax(0,1fr)] lg:overflow-hidden"
       >
+        {/* Bouton de fermeture à contraste élevé, hyper-visible */}
         <button
           type="button"
           onClick={close}
-          className="absolute right-4 top-4 z-10 rounded-full border border-white/10 bg-white/8 p-2 text-white/70 transition hover:bg-white/14 hover:text-white focus:outline-none focus:ring-2 focus:ring-action-400"
-          aria-label="Fermer"
+          className="absolute right-3.5 top-3.5 z-30 inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/95 px-3.5 py-1.5 text-xs font-black text-white shadow-lg transition hover:border-rose-500 hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-400"
+          aria-label="Fermer la fenêtre"
         >
-          <X className="h-5 w-5" />
+          <span>Fermer</span>
+          <X className="h-3.5 w-3.5 stroke-[3]" />
         </button>
 
-        <div className="relative overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,rgba(13,27,22,0.98),rgba(8,17,14,0.9))] p-5 text-white sm:p-8 lg:border-b-0 lg:border-r">
-          <div className="pointer-events-none absolute -left-16 -top-20 h-52 w-52 rounded-full bg-emerald-400/14 blur-3xl" />
-          <div className="pointer-events-none absolute bottom-0 right-0 h-48 w-48 rounded-full bg-action-500/16 blur-3xl" />
+        {/* Colonne Gauche : Résumé Compact & Métadonnées */}
+        <div className="relative overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,rgba(13,27,22,0.98),rgba(8,17,14,0.92))] p-4 text-white sm:p-5 lg:border-b-0 lg:border-r">
+          <div className="pointer-events-none absolute -left-16 -top-20 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-0 right-0 h-36 w-36 rounded-full bg-action-500/12 blur-3xl" />
 
-          <div className="relative">
-            <div className="mb-7 flex items-center gap-3">
-              <BrandMark size="sm" tone="dark" animated withTile={false} />
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.28em] text-action-300">
-                  {documentPayload.reused ? 'Archive retrouvee' : isTableExport ? 'Export prêt' : 'Document prêt'}
-                </p>
-                <p className="text-sm text-emerald-100/70">
-                  {documentPayload.reused ? 'Version existante reutilisee' : 'Téléchargement automatique terminé'}
-                </p>
+          <div className="relative flex flex-col justify-between h-full space-y-4">
+            <div>
+              <div className="mb-3 flex items-center gap-2.5">
+                <BrandMark size="sm" tone="dark" animated withTile={false} />
+                <div>
+                  <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-action-300">
+                    {documentPayload.reused ? 'Archive retrouvée' : isTableExport ? 'Export prêt' : 'Document prêt'}
+                  </p>
+                  <p className="text-[0.7rem] text-emerald-100/70">
+                    {documentPayload.reused ? 'Version existante réutilisée' : 'Téléchargement réussi'}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="mb-7 inline-flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-300/30 bg-emerald-300/12 shadow-[0_0_50px_rgba(52,211,153,0.2)]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400 text-brand-950 shadow-[0_0_30px_rgba(52,211,153,0.42)]">
-                <Check className="h-6 w-6 stroke-[3]" />
+              <div className="mb-3 flex items-center gap-2.5">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-emerald-300/30 bg-emerald-400/20 text-emerald-300">
+                  <Check className="h-4 w-4 stroke-[3]" />
+                </div>
+                <h2 id={titleId} className="text-base font-black tracking-tight text-white sm:text-lg">
+                  {documentPayload.reused ? `${kindLabel} déjà généré` : `${kindLabel} généré`}
+                </h2>
               </div>
-            </div>
 
-            <h2 id={titleId} className="max-w-md text-2xl font-black tracking-tight text-white sm:text-4xl">
-              {documentPayload.reused ? `${kindLabel} deja genere.` : `${kindLabel} généré avec succès.`}
-            </h2>
-            <p className="mt-4 max-w-lg text-sm leading-6 text-emerald-50/72 sm:text-base">
-              {documentPayload.reused ? (
-                <>
-                  Le fichier <span className="font-bold text-white">{documentPayload.fileName}</span> existe deja dans l'archive documentaire. Il est rouvert sans creer de doublon.
-                </>
-              ) : (
-                <>
-                  Le fichier <span className="font-bold text-white">{documentPayload.fileName}</span> a été créé et téléchargé. Vous pouvez maintenant le partager, l'imprimer ou l'ouvrir en un clic.
-                </>
-              )}
-            </p>
+              <p className="text-[0.75rem] leading-5 text-emerald-50/75">
+                {documentPayload.reused ? (
+                  <>
+                    Le fichier <span className="font-bold text-white">{documentPayload.fileName}</span> est déjà présent dans l'archive.
+                  </>
+                ) : (
+                  <>
+                    Le fichier <span className="font-bold text-white">{documentPayload.fileName}</span> est prêt.
+                  </>
+                )}
+              </p>
 
-            <div className="mt-7 grid gap-3 text-sm sm:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/70">Type</p>
-                <p className="mt-1 font-bold text-white">{kindLabel}</p>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-lg border border-white/10 bg-white/[0.05] p-2.5">
+                  <p className="text-[0.62rem] font-black uppercase tracking-wider text-emerald-200/70">Type</p>
+                  <p className="mt-0.5 font-bold text-white truncate">{kindLabel}</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/[0.05] p-2.5">
+                  <p className="text-[0.62rem] font-black uppercase tracking-wider text-emerald-200/70">Taille</p>
+                  <p className="mt-0.5 font-bold text-white truncate">{fileSize}</p>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/[0.05] p-2.5 col-span-2">
+                  <p className="text-[0.62rem] font-black uppercase tracking-wider text-emerald-200/70">Généré le</p>
+                  <p className="mt-0.5 font-bold text-white truncate">{generatedDate}</p>
+                </div>
+                {documentPayload.version != null && (
+                  <div className="rounded-lg border border-white/10 bg-white/[0.05] p-2.5">
+                    <p className="text-[0.62rem] font-black uppercase tracking-wider text-emerald-200/70">Version</p>
+                    <p className="mt-0.5 font-bold text-white">v{documentPayload.version}</p>
+                  </div>
+                )}
+                {documentPayload.preview?.rowCount != null && (
+                  <div className="rounded-lg border border-white/10 bg-white/[0.05] p-2.5">
+                    <p className="text-[0.62rem] font-black uppercase tracking-wider text-emerald-200/70">Lignes</p>
+                    <p className="mt-0.5 font-bold text-white">{documentPayload.preview.rowCount}</p>
+                  </div>
+                )}
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/70">Généré le</p>
-                <p className="mt-1 font-bold text-white">{generatedDate}</p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/70">Taille</p>
-                <p className="mt-1 font-bold text-white">{fileSize}</p>
-              </div>
-              {documentPayload.version != null && (
-                <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/70">Version</p>
-                  <p className="mt-1 font-bold text-white">v{documentPayload.version}</p>
+
+              {isVerifiableDocument && (
+                <div className="mt-4 rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-xs leading-5 text-emerald-50/85">
+                  <p className="font-bold text-white flex items-center justify-between">
+                    <span>QR de vérification</span>
+                    <TooltipHint label="Comprendre le QR de vérification">
+                      Le QR ouvre une page publique de contrôle pour confirmer la référence, le type de document et son authenticité.
+                    </TooltipHint>
+                  </p>
+                  <p className="mt-0.5 text-[0.7rem] text-emerald-100/75">
+                    Preuve documentaire vérifiable instantanément après partage.
+                  </p>
                 </div>
               )}
-              {documentPayload.preview?.rowCount != null && (
-                <div className="rounded-xl border border-white/10 bg-white/[0.06] p-4">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-200/70">Lignes</p>
-                  <p className="mt-1 font-bold text-white">{documentPayload.preview.rowCount}</p>
-                </div>
-              )}
             </div>
-
-            {isVerifiableDocument && (
-              <div className="mt-5 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-50/82">
-                <p className="font-black text-white">
-                  QR de verification
-                  <TooltipHint label="Comprendre le QR de verification">
-                    Le QR ouvre une page publique de controle pour confirmer la reference, le type de document, l'agence et son statut d'authenticite.
-                  </TooltipHint>
-                </p>
-                <p className="mt-1">
-                  Si le modele du document contient un QR, il sert de preuve documentaire et de point de controle apres partage ou impression.
-                </p>
-              </div>
-            )}
 
             {feedback && (
-              <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/12 px-4 py-2 text-sm font-bold text-emerald-100 animate-slideInUp">
-                <Sparkles className="h-4 w-4 text-action-300" />
-                {feedback === 'copied' && 'Lien temporaire copié'}
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-emerald-300/25 bg-emerald-300/15 px-3 py-1.5 text-xs font-bold text-emerald-100 animate-slideInUp">
+                <Sparkles className="h-3.5 w-3.5 text-action-300" />
+                {feedback === 'copied' && 'Lien copié'}
                 {feedback === 'shared' && 'Partage lancé'}
-                {feedback === 'printed' && 'Préparation de l’impression'}
-                {feedback === 'email' && 'Client email ouvert'}
+                {feedback === 'printed' && 'Impression lancée'}
+                {feedback === 'email' && 'Email ouvert'}
               </div>
             )}
           </div>
         </div>
 
-        <div className="overflow-y-auto bg-[linear-gradient(180deg,rgba(250,247,239,0.98),rgba(242,237,227,0.95))] p-4 sm:p-6 lg:p-8">
-          <div className="mb-5 overflow-hidden rounded-2xl border border-emerald-950/12 bg-white shadow-[0_24px_70px_rgba(6,17,13,0.16)]">
-            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-950 text-white">
-                  {isTableExport ? <FileSpreadsheet className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+        {/* Colonne Droite : Prévisualisation compacte & Actions rapides */}
+        <div className="flex flex-col justify-between overflow-y-auto bg-[linear-gradient(180deg,rgba(250,247,239,0.99),rgba(242,237,227,0.96))] p-4 sm:p-5">
+          <div className="mb-4 overflow-hidden rounded-xl border border-emerald-950/10 bg-white shadow-[0_12px_32px_rgba(6,17,13,0.08)]">
+            <div className="flex items-center justify-between border-b border-slate-200/80 bg-slate-50/90 px-3.5 py-2.5">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-brand-950 text-white">
+                  {isTableExport ? <FileSpreadsheet className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-slate-950">{documentPayload.title}</p>
-                  <p className="truncate text-xs font-semibold text-slate-500">{documentPayload.fileName}</p>
+                  <p className="truncate text-xs font-black text-slate-950">{documentPayload.title}</p>
+                  <p className="truncate text-[0.68rem] font-semibold text-slate-500">{documentPayload.fileName}</p>
                 </div>
               </div>
-              <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-brand-800">
+              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[0.68rem] font-black text-brand-800">
                 {isTableExport ? 'EXPORT' : 'PDF'}
               </span>
             </div>
 
             {isPdf ? (
-              <div className="hidden h-[min(420px,48vh)] bg-slate-100 md:block">
+              <div className="hidden h-[250px] bg-slate-100 md:block">
                 <iframe
                   title={`Aperçu ${documentPayload.fileName}`}
                   src={documentPayload.url}
@@ -309,23 +306,23 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
                 />
               </div>
             ) : (
-              <div className="max-h-[min(420px,48vh)] overflow-auto bg-white p-4">
+              <div className="max-h-[250px] overflow-auto bg-white p-3">
                 {documentPayload.preview?.stats?.length ? (
-                  <div className="mb-4 grid gap-3 sm:grid-cols-3">
+                  <div className="mb-3 grid gap-2 sm:grid-cols-3">
                     {documentPayload.preview.stats.map((stat) => (
-                      <div key={stat.label} className="rounded-xl border border-emerald-900/10 bg-emerald-50/70 p-3">
-                        <p className="text-[11px] font-black uppercase tracking-wide text-brand-700">{stat.label}</p>
-                        <p className="mt-1 text-lg font-black text-slate-950">{stat.value}</p>
+                      <div key={stat.label} className="rounded-lg border border-emerald-900/10 bg-emerald-50/70 p-2.5">
+                        <p className="text-[10px] font-black uppercase tracking-wide text-brand-700">{stat.label}</p>
+                        <p className="mt-0.5 text-sm font-black text-slate-950">{stat.value}</p>
                       </div>
                     ))}
                   </div>
                 ) : null}
                 {documentPayload.preview?.rows?.length ? (
-                  <table className="min-w-full overflow-hidden rounded-xl text-left text-sm">
+                  <table className="min-w-full overflow-hidden rounded-lg text-left text-xs">
                     <thead className="bg-brand-950 text-white">
                       <tr>
                         {documentPayload.preview.columns.slice(0, 6).map((column) => (
-                          <th key={column} className="px-3 py-2 text-xs font-black uppercase tracking-wide">
+                          <th key={column} className="px-2.5 py-1.5 text-[0.68rem] font-black uppercase tracking-wide">
                             {column}
                           </th>
                         ))}
@@ -335,7 +332,7 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
                       {documentPayload.preview.rows.map((row, index) => (
                         <tr key={index} className="bg-white">
                           {documentPayload.preview?.columns.slice(0, 6).map((column) => (
-                            <td key={column} className="max-w-[12rem] truncate px-3 py-2 font-semibold text-slate-700">
+                            <td key={column} className="max-w-[10rem] truncate px-2.5 py-1.5 font-semibold text-slate-700">
                               {row[column] ?? '—'}
                             </td>
                           ))}
@@ -344,9 +341,9 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
                     </tbody>
                   </table>
                 ) : (
-                  <div className="flex h-52 flex-col items-center justify-center text-center">
-                    <FileSpreadsheet className="h-10 w-10 text-brand-700" />
-                    <p className="mt-3 text-sm font-bold text-slate-700">Export prêt à ouvrir dans Excel.</p>
+                  <div className="flex h-40 flex-col items-center justify-center text-center">
+                    <FileSpreadsheet className="h-8 w-8 text-brand-700" />
+                    <p className="mt-2 text-xs font-bold text-slate-700">Export prêt à ouvrir dans Excel.</p>
                   </div>
                 )}
               </div>
@@ -354,45 +351,61 @@ export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalPro
             <button
               type="button"
               onClick={openFile}
-              className="flex h-56 w-full flex-col items-center justify-center gap-3 bg-white text-center md:hidden"
+              className="flex h-36 w-full flex-col items-center justify-center gap-2 bg-white text-center md:hidden"
             >
-              <div className="rounded-2xl bg-emerald-50 p-4 text-brand-800">
-                <FileText className="h-9 w-9" />
+              <div className="rounded-xl bg-emerald-50 p-3 text-brand-800">
+                <FileText className="h-7 w-7" />
               </div>
-              <span className="max-w-[14rem] text-sm font-bold text-slate-700">
+              <span className="max-w-[14rem] text-xs font-bold text-slate-700">
                 Touchez pour ouvrir le fichier
               </span>
             </button>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Button type="button" variant="primary" icon={Download} onClick={downloadAgain} fullWidth>
-              Télécharger à nouveau
-            </Button>
-            <Button type="button" variant="success" icon={ExternalLink} onClick={openFile} fullWidth>
-              Ouvrir le fichier
-            </Button>
-            <Button type="button" variant="secondary" icon={Share2} onClick={shareDocument} fullWidth>
-              Partager
-            </Button>
-            <Button type="button" variant="secondary" icon={Printer} onClick={printPdf} fullWidth>
-              Imprimer
-            </Button>
-            <Button type="button" variant="secondary" icon={Mail} onClick={sendEmail} fullWidth>
-              Envoyer par email
-            </Button>
-            <Button type="button" variant="secondary" icon={Copy} onClick={copyLink} fullWidth>
-              Copier le lien
-            </Button>
-          </div>
+          {/* Grille d'actions compacte et dé-zoomée */}
+          <div className="space-y-2.5">
+            <div className="grid grid-cols-2 gap-2">
+              <Button type="button" variant="success" size="sm" icon={ExternalLink} onClick={openFile} fullWidth>
+                Ouvrir le fichier
+              </Button>
+              <Button type="button" variant="primary" size="sm" icon={Download} onClick={downloadAgain} fullWidth>
+                Télécharger à nouveau
+              </Button>
+            </div>
 
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Button type="button" variant="ghost" icon={LayoutDashboard} onClick={goDashboard} fullWidth>
-              Retour au dashboard
-            </Button>
-            <Button type="button" variant="financial" icon={FilePlus2} onClick={close} fullWidth>
-              Générer un autre document
-            </Button>
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+              <Button type="button" variant="secondary" size="sm" icon={Share2} onClick={shareDocument} fullWidth className="!px-2 !text-xs">
+                Partager
+              </Button>
+              <Button type="button" variant="secondary" size="sm" icon={Printer} onClick={printPdf} fullWidth className="!px-2 !text-xs">
+                Imprimer
+              </Button>
+              <Button type="button" variant="secondary" size="sm" icon={Mail} onClick={sendEmail} fullWidth className="!px-2 !text-xs">
+                Par email
+              </Button>
+              <Button type="button" variant="secondary" size="sm" icon={Copy} onClick={copyLink} fullWidth className="!px-2 !text-xs">
+                Copier lien
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-slate-200/80 pt-2.5 text-xs">
+              <button
+                type="button"
+                onClick={goDashboard}
+                className="flex items-center gap-1.5 font-bold text-slate-600 hover:text-brand-900 transition"
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                <span>Tableau de bord</span>
+              </button>
+              <button
+                type="button"
+                onClick={close}
+                className="flex items-center gap-1.5 font-extrabold text-brand-800 hover:text-brand-950 transition"
+              >
+                <FilePlus2 className="h-3.5 w-3.5" />
+                <span>Nouveau document</span>
+              </button>
+            </div>
           </div>
         </div>
       </section>

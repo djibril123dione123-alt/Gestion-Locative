@@ -11,7 +11,8 @@ import { useToast } from '../hooks/useToast';
 import { WizardShell } from '../components/ui/WizardShell';
 import { ToastContainer } from '../components/ui/Toast';
 import { PageSkeleton } from '../components/ui/Skeleton';
-import { ChevronLeft, ChevronRight, Plus, Calendar, CalendarClock, CheckCircle2, AlertCircle, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Calendar, CalendarClock, CheckCircle2, AlertCircle, Search, SlidersHorizontal } from 'lucide-react';
+import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 
 type EventType = 'paiement' | 'contrat' | 'intervention' | 'rendez_vous' | 'autre';
 
@@ -56,6 +57,7 @@ export function Calendrier() {
   // Filtres du toolbar
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   const [form, setForm] = useState({
     titre: '',
@@ -281,7 +283,7 @@ export function Calendrier() {
           </div>
         }
         filters={
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="hidden lg:flex min-w-0 items-center gap-2">
             <SmartCombobox
               value={selectedTypeFilter}
               options={[
@@ -300,7 +302,18 @@ export function Calendrier() {
           </div>
         }
         secondaryActions={
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowFilters(true)}
+              className={`inline-flex h-8 flex-shrink-0 whitespace-nowrap items-center justify-center gap-1.5 rounded-[0.6rem] border px-3 py-1.5 text-xs font-bold shadow-sm transition lg:hidden ${selectedTypeFilter ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Filtres
+              {selectedTypeFilter && (
+                <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">1</span>
+              )}
+            </button>
             <button
               type="button"
               onClick={() => setCursor(new Date())}
@@ -311,6 +324,33 @@ export function Calendrier() {
           </div>
         }
       />
+
+      <MobileFilterSheet
+        isOpen={showFilters}
+        title="Filtres calendrier"
+        onClose={() => setShowFilters(false)}
+        onReset={() => setSelectedTypeFilter('')}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-700">Type d'événement</label>
+            <SmartCombobox
+              value={selectedTypeFilter}
+              options={[
+                { value: '', label: 'Tous les types' },
+                { value: 'rendez_vous', label: 'Rendez-vous' },
+                { value: 'intervention', label: 'Interventions' },
+                { value: 'paiement', label: 'Paiements' },
+                { value: 'contrat', label: 'Contrats' },
+                { value: 'autre', label: 'Autres' },
+              ]}
+              onChange={(val) => setSelectedTypeFilter(val || '')}
+              placeholder="Type d'événement"
+              fullWidth
+            />
+          </div>
+        </div>
+      </MobileFilterSheet>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 sm:p-5 mb-5">
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">

@@ -11,7 +11,8 @@ import { useToast } from '../hooks/useToast';
 import { WizardShell } from '../components/ui/WizardShell';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Wrench, Plus, ArrowRight, Phone, Building2, AlertTriangle, CheckCircle2, Clock, Search } from 'lucide-react';
+import { Wrench, Plus, ArrowRight, Phone, Building2, AlertTriangle, CheckCircle2, Clock, Search, SlidersHorizontal } from 'lucide-react';
+import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { formatCurrency, formatSenegalPhone, formatSenegalPhoneInput, getSenegalPhoneHref, normalizeSenegalPhone } from '../lib/formatters';
 import { PageSkeleton, SkeletonCards } from '../components/ui/Skeleton';
 import { useDirectRoute } from '../hooks/useDirectRoute';
@@ -79,6 +80,8 @@ export function Interventions() {
   const [filterCategorie, setFilterCategorie] = useState<CategorieFilter>('all');
   const [filterImmeuble, setFilterImmeuble] = useState<string>('all');
   const [filterStatut, setFilterStatut] = useState<'all' | Statut>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const activeFilterCount = (filterUrgence !== 'all' ? 1 : 0) + (filterCategorie !== 'all' ? 1 : 0) + (filterImmeuble !== 'all' ? 1 : 0);
   const [activeColumn, setActiveColumn] = useState<Statut>('a_faire');
 
   const [form, setForm] = useState({
@@ -286,7 +289,7 @@ export function Interventions() {
           </div>
         }
         filters={
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="hidden lg:flex min-w-0 items-center gap-2">
             <SmartCombobox
               value={filterUrgence}
               options={[
@@ -329,7 +332,76 @@ export function Interventions() {
             />
           </div>
         }
+        secondaryActions={
+          <button
+            type="button"
+            onClick={() => setShowFilters(true)}
+            className={`inline-flex h-8 flex-shrink-0 whitespace-nowrap items-center justify-center gap-1.5 rounded-[0.6rem] border px-3 py-1.5 text-xs font-bold shadow-sm transition lg:hidden ${activeFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Filtres
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">{activeFilterCount}</span>
+            )}
+          </button>
+        }
       />
+
+      <MobileFilterSheet
+        isOpen={showFilters}
+        title="Filtres maintenance"
+        onClose={() => setShowFilters(false)}
+        onReset={() => { setFilterUrgence('all'); setFilterCategorie('all'); setFilterImmeuble('all'); }}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-700">Urgence</label>
+            <SmartCombobox
+              value={filterUrgence}
+              options={[
+                { value: 'all', label: 'Toute urgence' },
+                { value: 'urgente', label: 'Urgente' },
+                { value: 'normale', label: 'Normale' },
+                { value: 'basse', label: 'Basse' },
+              ]}
+              onChange={(val) => setFilterUrgence((val || 'all') as UrgenceFilter)}
+              placeholder="Urgence"
+              fullWidth
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-700">Catégorie</label>
+            <SmartCombobox
+              value={filterCategorie}
+              options={[
+                { value: 'all', label: 'Toute catégorie' },
+                { value: 'plomberie', label: 'Plomberie' },
+                { value: 'electricite', label: 'Électricité' },
+                { value: 'peinture', label: 'Peinture' },
+                { value: 'serrurerie', label: 'Serrurerie' },
+                { value: 'climatisation', label: 'Climatisation' },
+                { value: 'autre', label: 'Autre' },
+              ]}
+              onChange={(val) => setFilterCategorie((val || 'all') as CategorieFilter)}
+              placeholder="Catégorie"
+              fullWidth
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-700">Immeuble</label>
+            <SmartCombobox
+              value={filterImmeuble}
+              options={[
+                { value: 'all', label: 'Tous immeubles' },
+                ...immeubles.map((i) => ({ value: i.id, label: i.nom })),
+              ]}
+              onChange={(val) => setFilterImmeuble(val || 'all')}
+              placeholder="Immeuble"
+              fullWidth
+            />
+          </div>
+        </div>
+      </MobileFilterSheet>
 
       {loading ? (
         <SkeletonCards count={4} />

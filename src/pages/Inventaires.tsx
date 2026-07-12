@@ -17,7 +17,8 @@ import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
-import { ClipboardList, Plus, Download, Trash2, Search, AlertTriangle, ArrowUpRight, ArrowDownRight, Building2, Layers } from 'lucide-react';
+import { ClipboardList, Plus, Download, Trash2, Search, AlertTriangle, ArrowUpRight, ArrowDownRight, Building2, Layers, SlidersHorizontal } from 'lucide-react';
+import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
@@ -83,6 +84,8 @@ export function Inventaires() {
   const [filterType, setFilterType] = useState<InventaireTypeFilter>('all');
   const [filterStatut, setFilterStatut] = useState<InventaireStatutFilter>('all');
   const [filterImmeuble, setFilterImmeuble] = useState<string>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const activeFilterCount = (filterType !== 'all' ? 1 : 0) + (filterStatut !== 'all' ? 1 : 0) + (filterImmeuble !== 'all' ? 1 : 0);
 
   const [deleteTarget, setDeleteTarget] = useState<Inventaire | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -515,7 +518,7 @@ export function Inventaires() {
           </div>
         }
         filters={
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="hidden lg:flex min-w-0 items-center gap-2">
             <SmartCombobox
               value={filterType}
               options={[
@@ -555,14 +558,80 @@ export function Inventaires() {
           </div>
         }
         secondaryActions={
-          <ColumnPicker
-            columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
-            visibility={colVis}
-            onToggle={colToggle}
-            onSetAll={colSetAll}
-          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowFilters(true)}
+              className={`inline-flex h-8 flex-shrink-0 whitespace-nowrap items-center justify-center gap-1.5 rounded-[0.6rem] border px-3 py-1.5 text-xs font-bold shadow-sm transition lg:hidden ${activeFilterCount > 0 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Filtres
+              {activeFilterCount > 0 && (
+                <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">{activeFilterCount}</span>
+              )}
+            </button>
+            <ColumnPicker
+              columns={allColumns.map((c) => ({ key: c.key, label: c.label, required: c.key === 'actions' }))}
+              visibility={colVis}
+              onToggle={colToggle}
+              onSetAll={colSetAll}
+              className="!py-1.5 !px-3 !text-xs !rounded-[0.6rem] !h-8 hidden lg:inline-flex"
+            />
+          </div>
         }
       />
+
+      <MobileFilterSheet
+        isOpen={showFilters}
+        title="Filtres états des lieux"
+        onClose={() => setShowFilters(false)}
+        onReset={() => { setFilterType('all'); setFilterStatut('all'); setFilterImmeuble('all'); }}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-700">Type d'état des lieux</label>
+            <SmartCombobox
+              value={filterType}
+              options={[
+                { value: 'all', label: 'Tous types' },
+                { value: 'entree', label: 'Entrée' },
+                { value: 'sortie', label: 'Sortie' },
+              ]}
+              onChange={(val) => setFilterType((val || 'all') as InventaireTypeFilter)}
+              placeholder="Type"
+              fullWidth
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-700">Statut</label>
+            <SmartCombobox
+              value={filterStatut}
+              options={[
+                { value: 'all', label: 'Tous statuts' },
+                { value: 'en_cours', label: 'En cours' },
+                { value: 'termine', label: 'Terminé' },
+                { value: 'litige', label: 'Litige' },
+              ]}
+              onChange={(val) => setFilterStatut((val || 'all') as InventaireStatutFilter)}
+              placeholder="Statut"
+              fullWidth
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-700">Immeuble</label>
+            <SmartCombobox
+              value={filterImmeuble}
+              options={[
+                { value: 'all', label: 'Tous immeubles' },
+                ...immeubles.map((im) => ({ value: im.id, label: im.nom })),
+              ]}
+              onChange={(val) => setFilterImmeuble(val || 'all')}
+              placeholder="Immeuble"
+              fullWidth
+            />
+          </div>
+        </div>
+      </MobileFilterSheet>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
         {loading ? (

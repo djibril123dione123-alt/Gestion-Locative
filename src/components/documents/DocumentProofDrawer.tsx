@@ -156,15 +156,28 @@ function InfoRow({ label, value, mono = false, strong = false }: { label: string
   );
 }
 
-function buildContextRows(document: DocumentProofDrawerData): Array<[string, string | null]> {
+function buildContextRows(document: DocumentProofDrawerData): Array<[string, ReactNode | null]> {
   const subject = document.businessContext?.subject || null;
   const location = document.businessContext?.location || null;
   const type = document.documentType;
 
+  const renderSubjectLink = (text: string | null, hash: string) => {
+    if (!text) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => { window.location.hash = hash; }}
+        className="inline-flex items-center gap-1 font-bold text-brand-700 hover:text-brand-900 underline underline-offset-2 transition"
+      >
+        {text} &rarr;
+      </button>
+    );
+  };
+
   if (type === 'quittance' || type === 'facture') {
-    const rows: Array<[string, string | null]> = [
-      ['Locataire', subject],
-      ['Bien / unité', location],
+    const rows: Array<[string, ReactNode | null]> = [
+      ['Locataire', renderSubjectLink(subject, '#/locataires')],
+      ['Bien / unité', renderSubjectLink(location, '#/patrimoine')],
       ['Période', formatPeriod(document.period)],
     ];
     if (document.entityId) rows.push(['Paiement lié', 'Enregistré']);
@@ -173,9 +186,9 @@ function buildContextRows(document: DocumentProofDrawerData): Array<[string, str
     return rows;
   }
   if (type === 'contrat') {
-    const rows: Array<[string, string | null]> = [
-      ['Locataire', subject],
-      ['Bien / unité', location],
+    const rows: Array<[string, ReactNode | null]> = [
+      ['Locataire', renderSubjectLink(subject, '#/locataires')],
+      ['Bien / unité', renderSubjectLink(location, '#/patrimoine')],
     ];
     const dateDebut = metadataText(document.metadata, ['date_debut', 'start_date']);
     const dateFin = metadataText(document.metadata, ['date_fin', 'end_date']);
@@ -187,15 +200,15 @@ function buildContextRows(document: DocumentProofDrawerData): Array<[string, str
   }
   if (type === 'mandat') {
     return [
-      ['Bailleur', subject],
+      ['Bailleur', renderSubjectLink(subject, '#/bailleurs')],
       ['Émetteur', document.verification?.agencyName || null],
       ['Date', formatDate(document.createdAt)],
       ['Statut', lifecycleLabel(document.lifecycleStatus)],
     ];
   }
   if (type === 'rapport' || type === 'rapport_bailleur' || type === 'rapport_proprietaire') {
-    const rows: Array<[string, string | null]> = [
-      ['Bailleur / propriétaire', subject],
+    const rows: Array<[string, ReactNode | null]> = [
+      ['Bailleur / propriétaire', renderSubjectLink(subject, '#/bailleurs')],
       ['Période', formatPeriod(document.period)],
     ];
     const totalEncaisse = metadataAmount(document.metadata, ['total_encaisse', 'total_collected']);
@@ -206,7 +219,7 @@ function buildContextRows(document: DocumentProofDrawerData): Array<[string, str
     return rows;
   }
   // Document libre
-  const rows: Array<[string, string | null]> = [];
+  const rows: Array<[string, ReactNode | null]> = [];
   if (subject) rows.push(['Élément lié', subject]);
   if (document.description) rows.push(['Description', document.description]);
   if (document.uploadedBy) rows.push(['Ajouté par', document.uploadedBy]);

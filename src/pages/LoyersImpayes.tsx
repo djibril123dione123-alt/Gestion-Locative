@@ -789,12 +789,45 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             <CompactLabelValue label="Reste dû" value={<MoneyText value={drawerLoyer.montant_du} className={drawerLoyer.montant_du > 3 ? 'font-black text-red-700' : 'font-black text-emerald-800'} />} />
                         </CompactSection>
                         <CompactSection title="Affectation">
-                            <CompactLabelValue label="Bien" value={`${drawerLoyer.immeuble_nom} · ${drawerLoyer.unite_nom}`} />
-                            <CompactLabelValue label={isIndividualOwner ? 'Propriétaire' : 'Bailleur'} value={`${drawerLoyer.bailleur_prenom} ${drawerLoyer.bailleur_nom}`} />
+                            <CompactLabelValue
+                                label="Bien"
+                                value={
+                                    <button
+                                        type="button"
+                                        onClick={() => { window.location.hash = '#/patrimoine'; }}
+                                        className="inline-flex items-center gap-1 text-[0.68rem] font-bold text-brand-700 hover:text-brand-900 underline underline-offset-2 transition"
+                                    >
+                                        {`${drawerLoyer.immeuble_nom} · ${drawerLoyer.unite_nom}`} &rarr;
+                                    </button>
+                                }
+                            />
+                            <CompactLabelValue
+                                label={isIndividualOwner ? 'Propriétaire' : 'Bailleur'}
+                                value={
+                                    <button
+                                        type="button"
+                                        onClick={() => { window.location.hash = '#/bailleurs'; }}
+                                        className="inline-flex items-center gap-1 text-[0.68rem] font-bold text-brand-700 hover:text-brand-900 underline underline-offset-2 transition"
+                                    >
+                                        {`${drawerLoyer.bailleur_prenom} ${drawerLoyer.bailleur_nom}`} &rarr;
+                                    </button>
+                                }
+                            />
                             <CompactLabelValue label="Période" value={new Date(drawerLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })} />
                         </CompactSection>
                         <CompactSection title="Contact">
-                            <CompactLabelValue label="Locataire" value={`${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`} />
+                            <CompactLabelValue
+                                label="Locataire"
+                                value={
+                                    <button
+                                        type="button"
+                                        onClick={() => { window.location.hash = `#/occupants-baux?id=${drawerLoyer.contrat_id}`; }}
+                                        className="inline-flex items-center gap-1 text-[0.68rem] font-bold text-brand-700 hover:text-brand-900 underline underline-offset-2 transition"
+                                    >
+                                        {`${drawerLoyer.locataire_prenom} ${drawerLoyer.locataire_nom}`} &rarr;
+                                    </button>
+                                }
+                            />
                             <CompactLabelValue label="Téléphone" value={drawerLoyer.telephone_locataire || '—'} />
                         </CompactSection>
                         <CompactSection title="Traçabilité certifiée">

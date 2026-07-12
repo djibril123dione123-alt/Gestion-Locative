@@ -39,7 +39,7 @@ import {
   YAxis,
 } from 'recharts';
 
-import { PageSkeleton } from '../components/ui/Skeleton';
+import { DashboardSkeleton } from '../components/ui/Skeleton';
 import { readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { DemoDataLoader } from '../components/billing/DemoDataLoader';
@@ -558,7 +558,7 @@ function AgencyDashboard({ onNavigate, onStartSetupWizard }: DashboardProps = {}
   const model = useMemo(() => buildDashboardModel(dashboardData, selectedMonth), [dashboardData, selectedMonth]);
 
   if (loading) {
-    return <PageSkeleton title="Tableau de bord" variant="dashboard" />;
+    return <DashboardSkeleton title="Tableau de bord" />;
   }
 
   if (error) {

@@ -137,6 +137,172 @@ interface PageSkeletonProps {
 }
 
 /**
+ * DashboardSkeleton : Structure fidèle à la page Tableau de bord (Header + 6 KPI Executive Cards + Graphique performance + Grille priorités/impayés)
+ */
+export function DashboardSkeleton({
+  title = 'Tableau de bord',
+  tone = 'light',
+  className = '',
+}: {
+  title?: string;
+  tone?: 'light' | 'dark';
+  className?: string;
+}) {
+  const dark = tone === 'dark';
+
+  return (
+    <div
+      className={`sk-page-transition w-full flex-1 min-w-0 space-y-5 pt-1 sm:pt-2 ${className}`}
+      role="status"
+      aria-live="polite"
+    >
+      {/* 1. Header du Dashboard */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1.5">
+          <Skeleton tone={tone} className="h-2.5 w-28" />
+          <div className="flex items-center gap-2">
+            <Skeleton tone={tone} className="h-6 w-48" />
+            <span className="sr-only">{title}</span>
+          </div>
+          <Skeleton tone={tone} className="h-3 w-72 max-w-full" />
+        </div>
+        <div className="flex items-center gap-2.5">
+          <Skeleton tone={tone} className="h-9 w-32 shrink-0" rounded="lg" />
+          <Skeleton tone={tone} className="h-9 w-44 shrink-0" rounded="lg" />
+        </div>
+      </div>
+
+      {/* 2. Banner Alerte compact */}
+      <div
+        className={`h-11 w-full rounded-xl border flex items-center px-4 gap-3 ${
+          dark ? 'border-white/10 bg-white/[0.03]' : 'border-slate-200/80 bg-white/70'
+        }`}
+      >
+        <Skeleton tone={tone} className="h-4 w-4 shrink-0" rounded="full" />
+        <Skeleton tone={tone} className="h-3 w-64 max-w-full" />
+        <div className="ml-auto">
+          <Skeleton tone={tone} className="h-6 w-24" rounded="md" />
+        </div>
+      </div>
+
+      {/* 3. 6 Executive KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className={`rounded-2xl border p-4 shadow-2xs flex flex-col justify-between h-28 ${
+              dark ? 'border-white/10 bg-white/[0.035]' : 'border-slate-200/80 bg-white/90'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <Skeleton tone={tone} className="h-2.5 w-20" />
+              <Skeleton tone={tone} className="h-5 w-5" rounded="md" />
+            </div>
+            <Skeleton tone={tone} className="h-5 w-28 my-1" />
+            <Skeleton tone={tone} className="h-2 w-16" />
+          </div>
+        ))}
+      </div>
+
+      {/* 4. Section Chart "Performance agence" */}
+      <div
+        className={`rounded-2xl border p-5 shadow-2xs space-y-5 ${
+          dark ? 'border-white/10 bg-white/[0.035]' : 'border-slate-200/80 bg-white/95'
+        }`}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1">
+            <Skeleton tone={tone} className="h-4 w-52" />
+            <Skeleton tone={tone} className="h-2.5 w-72 max-w-full" />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <Skeleton key={idx} tone={tone} className="h-10 w-28" rounded="lg" />
+            ))}
+          </div>
+        </div>
+        {/* Bar chart simulation */}
+        <div className="flex items-end justify-between gap-2.5 pt-6 pb-2 h-52 px-2 border-b border-slate-100">
+          {[45, 60, 38, 72, 85, 55, 90, 40, 65, 78, 50, 82].map((height, idx) => (
+            <div key={idx} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+              <div
+                className={`w-full max-w-[28px] rounded-t-md animate-pulse ${
+                  dark ? 'bg-white/10' : 'bg-slate-200/80'
+                }`}
+                style={{ height: `${height}%` }}
+              />
+              <Skeleton tone={tone} className="h-2.5 w-6" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 5. Grille du bas (Priorités + Top Impayés) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div
+          className={`lg:col-span-2 rounded-2xl border p-5 shadow-2xs space-y-4 ${
+            dark ? 'border-white/10 bg-white/[0.035]' : 'border-slate-200/80 bg-white/95'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Skeleton tone={tone} className="h-4 w-36" />
+              <Skeleton tone={tone} className="h-2.5 w-52" />
+            </div>
+            <Skeleton tone={tone} className="h-7 w-20" rounded="md" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className={`rounded-xl border p-3.5 flex items-center gap-3 ${
+                  dark ? 'border-white/10 bg-white/[0.02]' : 'border-slate-100 bg-slate-50/60'
+                }`}
+              >
+                <Skeleton tone={tone} className="h-9 w-9 shrink-0" rounded="lg" />
+                <div className="flex-1 space-y-1.5 min-w-0">
+                  <Skeleton tone={tone} className="h-3 w-28" />
+                  <Skeleton tone={tone} className="h-2.5 w-40 max-w-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div
+          className={`lg:col-span-1 rounded-2xl border p-5 shadow-2xs space-y-4 flex flex-col justify-between ${
+            dark ? 'border-white/10 bg-white/[0.035]' : 'border-slate-200/80 bg-white/95'
+          }`}
+        >
+          <div className="space-y-1">
+            <Skeleton tone={tone} className="h-4 w-40" />
+            <Skeleton tone={tone} className="h-2.5 w-48" />
+          </div>
+          <div className="space-y-3 py-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <Skeleton tone={tone} className="h-6 w-6" rounded="full" />
+                  <div className="space-y-1">
+                    <Skeleton tone={tone} className="h-3 w-28" />
+                    <Skeleton tone={tone} className="h-2 w-20" />
+                  </div>
+                </div>
+                <Skeleton tone={tone} className="h-3.5 w-20" />
+              </div>
+            ))}
+          </div>
+          <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+            <Skeleton tone={tone} className="h-3 w-24" />
+            <Skeleton tone={tone} className="h-3 w-16" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * PageSkeleton : Structure complète et fidèle des pages exécutives de Samay Këur (Header + KPI 1 ligne + Toolbar + Table)
  */
 export function PageSkeleton({
@@ -145,6 +311,10 @@ export function PageSkeleton({
   tone = 'light',
   className = '',
 }: PageSkeletonProps) {
+  if (variant === 'dashboard') {
+    return <DashboardSkeleton title={title} tone={tone} className={className} />;
+  }
+
   const dark = tone === 'dark';
 
   return (

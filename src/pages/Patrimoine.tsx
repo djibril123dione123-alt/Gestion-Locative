@@ -1073,12 +1073,12 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
             />
 
         <PremiumKpiGrid variant="dashboard" maxItems={6} density="ultraCompact" ariaLabel="Indicateurs patrimoine">
-          <MetricCard density="ultraCompact" label={isIndividualOwner ? 'Biens' : 'Biens'} value={pageStats.properties} icon={Building2} tone="emerald" />
-          <MetricCard density="ultraCompact" label="Unités" value={pageStats.units} icon={DoorOpen} tone="blue" />
-          <MetricCard density="ultraCompact" label="Occupées" value={pageStats.occupied} icon={Home} tone="emerald" />
-          <MetricCard density="ultraCompact" label="Occupation" value={`${pageStats.occupancyRate}%`} icon={Percent} tone="amber" />
-          <MetricCard density="ultraCompact" label="Loyers" value={<MoneyText value={pageStats.expectedRent} compact />} icon={Wallet} tone="green" />
-          <MetricCard density="ultraCompact" label="Reliquats" value={<MoneyText value={pageStats.reliquats} compact />} icon={AlertCircle} tone="red" />
+          <MetricCard density="ultraCompact" label={isIndividualOwner ? 'Biens' : 'Biens'} value={pageStats.properties} helper="Immeubles" icon={Building2} tone="emerald" />
+          <MetricCard density="ultraCompact" label="Unités" value={pageStats.units} helper="Lots enregistrés" icon={DoorOpen} tone="blue" />
+          <MetricCard density="ultraCompact" label="Occupées" value={pageStats.occupied} helper="Baux en cours" icon={Home} tone="emerald" />
+          <MetricCard density="ultraCompact" label="Occupation" value={`${pageStats.occupancyRate}%`} helper="Taux global" icon={Percent} tone="amber" />
+          <MetricCard density="ultraCompact" label="Loyers" value={<MoneyText value={pageStats.expectedRent} compact />} helper="Revenus attendus" icon={Wallet} tone="green" />
+          <MetricCard density="ultraCompact" label="Reliquats" value={<MoneyText value={pageStats.reliquats} compact />} helper="Impayés en cours" icon={AlertCircle} tone="red" />
         </PremiumKpiGrid>
 
         <PremiumToolbar

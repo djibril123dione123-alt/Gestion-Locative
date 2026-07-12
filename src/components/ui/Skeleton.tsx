@@ -83,7 +83,7 @@ export function SkeletonCards({ count = 4, tone = 'light' }: SkeletonCardsProps)
   const displayCount = Math.min(count, 4);
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-2.5">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5">
       {Array.from({ length: displayCount }).map((_, i) => (
         <div
           key={i}

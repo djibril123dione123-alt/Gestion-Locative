@@ -1569,7 +1569,7 @@ export function Bailleurs() {
 
     if (activeDrawerTab === 'biens') {
       return selectedSummary.immeubles.length === 0 ? (
-        <EmptyDrawerState title="Aucun bien rattaché" description="Ajoutez un bien pour commencer à suivre les unités, locataires et loyers de ce bailleur." actionLabel="Ajouter un bien" onAction={() => { window.location.hash = '#/patrimoine'; }} />
+        <EmptyDrawerState title="Aucun bien rattaché" description="Ajoutez un bien pour commencer à suivre les unités, locataires et loyers de ce bailleur." actionLabel="Ajouter un bien" onAction={() => { window.location.hash = `#/patrimoine?action=new&bailleurId=${selectedBailleur.id}`; }} />
       ) : (
         <div className="overflow-hidden rounded-xl border border-emerald-950/10 bg-white/50 shadow-sm">
           {selectedSummary.immeubles.map((immeuble) => {
@@ -1581,7 +1581,7 @@ export function Bailleurs() {
               <button
                 key={immeuble.id}
                 type="button"
-                onClick={() => { window.location.hash = '#/patrimoine'; }}
+                onClick={() => { window.location.hash = `#/patrimoine?id=${immeuble.id}`; }}
                 className="group flex w-full items-center justify-between gap-2 border-b border-emerald-950/5 px-2 py-1.5 text-left last:border-b-0 hover:bg-emerald-50/50 focus-visible:bg-emerald-50"
                 aria-label={`Ouvrir le bien ${immeuble.nom}`}
               >
@@ -1613,7 +1613,7 @@ export function Bailleurs() {
           subtitle: `Début ${formatDate(contrat.date_debut)} · Fin ${formatDate(contrat.date_fin)}`,
           value: <MoneyText value={contrat.loyer_mensuel} />,
           badge: contrat.statut ?? '—',
-          onClick: () => { window.location.hash = '#/occupants-baux'; },
+          onClick: () => { window.location.hash = `#/occupants-baux?id=${contrat.id}`; },
         }))} />
       );
     }
@@ -1628,7 +1628,7 @@ export function Bailleurs() {
           subtitle: `Le ${formatDate(paiement.date_paiement)} · Réf. ${paiement.reference || '—'}`,
           value: <MoneyText value={paiement.montant_total} />,
           badge: paiement.statut ?? undefined,
-          onClick: () => { window.location.hash = '#/paiements'; },
+          onClick: () => { window.location.hash = `#/paiements?id=${paiement.id}`; },
         }))} />
       );
     }
@@ -1643,7 +1643,7 @@ export function Bailleurs() {
           subtitle: `Le ${formatDate(depense.date_depense)} · ${depense.description || 'Autre'}`,
           value: <MoneyText value={depense.montant} />,
           badge: depense.actif === false ? 'Inactif' : undefined,
-          onClick: () => { window.location.hash = '#/depenses'; },
+          onClick: () => { window.location.hash = `#/depenses?id=${depense.id}`; },
         }))} />
       );
     }
@@ -1712,7 +1712,7 @@ export function Bailleurs() {
               title: document.name || 'Bilan',
               subtitle: `Le ${formatDate(document.created_at)}`,
               badge: 'PDF',
-              onClick: () => { window.location.hash = '#/documents'; },
+              onClick: () => { window.location.hash = document.id ? `#/documents?id=generated-${document.id}` : '#/documents'; },
             }))} />
           )}
         </div>
@@ -1727,7 +1727,7 @@ export function Bailleurs() {
         title: document.name || 'Document sans nom',
         subtitle: `Le ${formatDate(document.created_at)}`,
         badge: document.lifecycle_status || document.document_category || 'GED',
-        onClick: () => { window.location.hash = '#/documents'; },
+        onClick: () => { window.location.hash = document.id ? `#/documents?id=${document.source || 'generated'}-${document.id}` : '#/documents'; },
       }))} />
     );
   };

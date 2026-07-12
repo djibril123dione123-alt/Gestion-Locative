@@ -1894,7 +1894,7 @@ function DrawerDocuments({
         <button
           key={`${document.source}-${document.id}`}
           type="button"
-          onClick={() => { window.location.hash = '#/documents'; }}
+          onClick={() => { window.location.hash = document.id ? `#/documents?id=${document.source}-${document.id}` : '#/documents'; }}
           className="group flex w-full items-center justify-between gap-2 rounded-lg border border-emerald-950/10 bg-white px-2 py-1.5 text-left shadow-sm transition hover:bg-slate-50 hover:border-emerald-200"
           aria-label={`Ouvrir le document ${document.title}`}
         >

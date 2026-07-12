@@ -24,6 +24,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
+import { useDirectRoute } from '../hooks/useDirectRoute';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -128,6 +129,11 @@ export function Documents() {
   const [maintenanceAction, setMaintenanceAction] = useState<string | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<DocumentItem | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+
+  useDirectRoute({
+    onNew: () => setUploadOpen(true),
+    onSelectId: (id) => setSelectedDocumentId(id),
+  });
   const [query, setQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState<DocumentSourceFilter>('all');
   const [statusFilter, setStatusFilter] = useState<DocumentStatusFilter>('all');

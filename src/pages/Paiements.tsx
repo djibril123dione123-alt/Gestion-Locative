@@ -1086,10 +1086,54 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
               </CompactSection>
 
               <CompactSection title="Affectation">
-                <CompactLabelValue label="Locataire" value={formatPersonName(selectedPaiement.contrats?.locataires, '—')} />
-                <CompactLabelValue label="Bien / unité" value={`${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`} />
-                <CompactLabelValue label={isIndividualOwner ? 'Propriétaire' : 'Bailleur'} value={formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')} />
-                <CompactLabelValue label="Bail" value="Bail associé à cette occupation" />
+                <CompactLabelValue
+                  label="Locataire / Bail"
+                  value={
+                    selectedPaiement.contrat_id ? (
+                      <button
+                        type="button"
+                        onClick={() => { window.location.hash = `#/occupants-baux?id=${selectedPaiement.contrat_id}`; }}
+                        className="font-bold text-brand-700 hover:text-brand-900 hover:underline transition"
+                      >
+                        {formatPersonName(selectedPaiement.contrats?.locataires, 'Locataire')} &rarr;
+                      </button>
+                    ) : (
+                      formatPersonName(selectedPaiement.contrats?.locataires, '—')
+                    )
+                  }
+                />
+                <CompactLabelValue
+                  label="Bien / unité"
+                  value={
+                    selectedPaiement.contrats?.unite_id ? (
+                      <button
+                        type="button"
+                        onClick={() => { window.location.hash = `#/patrimoine?uniteId=${selectedPaiement.contrats?.unite_id}`; }}
+                        className="font-bold text-brand-700 hover:text-brand-900 hover:underline transition"
+                      >
+                        {`${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`} &rarr;
+                      </button>
+                    ) : (
+                      `${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`
+                    )
+                  }
+                />
+                <CompactLabelValue
+                  label={isIndividualOwner ? 'Propriétaire' : 'Bailleur'}
+                  value={
+                    selectedPaiement.contrats?.unites?.immeubles?.bailleurs?.id ? (
+                      <button
+                        type="button"
+                        onClick={() => { window.location.hash = `#/bailleurs?id=${selectedPaiement.contrats?.unites?.immeubles?.bailleurs?.id}`; }}
+                        className="font-bold text-brand-700 hover:text-brand-900 hover:underline transition"
+                      >
+                        {formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')} &rarr;
+                      </button>
+                    ) : (
+                      formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')
+                    )
+                  }
+                />
               </CompactSection>
 
               <CompactSection title="Impact financier">

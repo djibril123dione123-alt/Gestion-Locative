@@ -703,7 +703,22 @@ export function Depenses() {
               </CompactSection>
 
               <CompactSection title="Affectation & description">
-                <CompactLabelValue label="Bien / Immeuble" value={selectedDepense.immeubles?.nom || 'Général (non affecté)'} />
+                <CompactLabelValue
+                  label="Bien / Immeuble"
+                  value={
+                    selectedDepense.immeuble_id ? (
+                      <button
+                        type="button"
+                        onClick={() => { window.location.hash = `#/patrimoine?id=${selectedDepense.immeuble_id}`; }}
+                        className="font-bold text-brand-700 hover:text-brand-900 hover:underline transition"
+                      >
+                        {selectedDepense.immeubles?.nom || 'Bien immobilier'} &rarr;
+                      </button>
+                    ) : (
+                      selectedDepense.immeubles?.nom || 'Général (non affecté)'
+                    )
+                  }
+                />
                 <CompactLabelValue label="Bénéficiaire" value={selectedDepense.beneficiaire || '—'} />
                 <CompactLabelValue label="Description" value={selectedDepense.description || '—'} />
               </CompactSection>

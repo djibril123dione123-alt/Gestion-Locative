@@ -1776,7 +1776,7 @@ function PropertyDrawer({
                   icon: FileText,
                   title: document.name || document.document_category || 'Document',
                   subtitle: <span className="font-medium text-slate-500">PDF · {formatDate(document.created_at)}</span>,
-                  onClick: () => { window.location.hash = '#/documents'; },
+                  onClick: () => { window.location.hash = document.id ? `#/documents?id=${document.source || 'generated'}-${document.id}` : '#/documents'; },
                 }))} />
               ),
             },
@@ -1920,14 +1920,14 @@ function UnitDrawer({
               content: summary.payments.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-3.5 px-3 text-center">
                   <p className="text-[0.7rem] font-medium text-slate-600 mb-2">Aucun paiement enregistré.</p>
-                  <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-6 items-center justify-center gap-1 rounded border border-brand-200 bg-brand-50 px-2.5 text-[0.62rem] font-bold text-brand-900 transition hover:bg-brand-100">Encaisser un paiement</button>
+                  <button type="button" onClick={() => { window.location.hash = activeContract ? `#/paiements?action=new&contratId=${activeContract.id}` : '#/paiements?action=new'; }} className="inline-flex h-6 items-center justify-center gap-1 rounded border border-brand-200 bg-brand-50 px-2.5 text-[0.62rem] font-bold text-brand-900 transition hover:bg-brand-100">Encaisser un paiement</button>
                 </div>
               ) : (
                 <CompactList rows={summary.payments.slice(0, 4).map((payment) => ({
                   icon: Wallet,
                   title: <MoneyText value={payment.montant_total ?? 0} compact={false} />,
                   subtitle: <span className="font-medium text-slate-500">{formatDate(payment.date_paiement)} · {(payment.reliquat ?? 0) > 0 ? 'Partiel' : 'Payé'}</span>,
-                  onClick: () => { window.location.hash = '#/paiements'; },
+                  onClick: () => { window.location.hash = payment.id ? `#/paiements?id=${payment.id}` : '#/paiements'; },
                 }))} />
               ),
             },
@@ -1940,7 +1940,7 @@ function UnitDrawer({
                   icon: FileText,
                   title: document.name || document.document_category || 'Document',
                   subtitle: <span className="font-medium text-slate-500">PDF · {formatDate(document.created_at)}</span>,
-                  onClick: () => { window.location.hash = '#/documents'; },
+                  onClick: () => { window.location.hash = document.id ? `#/documents?id=${document.source || 'generated'}-${document.id}` : '#/documents'; },
                 }))} />
               ),
             },
@@ -2315,7 +2315,7 @@ function PropertyModal({
                 emptyActionLabel="Aller aux bailleurs"
                 onEmptyAction={() => {
                   onClose();
-                  window.location.hash = '#/bailleurs';
+                  window.location.hash = '#/bailleurs?action=new';
                 }}
               />
             </Field>

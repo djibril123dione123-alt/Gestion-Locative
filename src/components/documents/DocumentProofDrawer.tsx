@@ -167,7 +167,7 @@ function buildContextRows(document: DocumentProofDrawerData): Array<[string, Rea
       <button
         type="button"
         onClick={() => { window.location.hash = hash; }}
-        className="inline-flex items-center gap-1 font-bold text-brand-700 hover:text-brand-900 underline underline-offset-2 transition"
+        className="inline-flex items-center justify-end text-right gap-0.5 text-[0.64rem] font-bold text-brand-700 hover:text-brand-900 underline underline-offset-2 transition"
       >
         {text} &rarr;
       </button>

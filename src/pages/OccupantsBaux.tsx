@@ -1417,10 +1417,11 @@ function DesktopRow({
 
 function LocationMobileCard({ row, onSelect }: { row: OccupantBailRow; onSelect: () => void }) {
   return (
-    <div className="px-3 py-2">
+    <div className="px-2.5 py-1">
       <PremiumMobileCard
+        density="compact"
         title={fullName(row)}
-        subtitle={<>{row.immeuble_nom ?? 'Bien non renseigné'} · {row.unite_nom} · {ownerName(row)}{row.telephone ? <> · <a href={`tel:${row.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(row.telephone)}</a></> : ''}</>}
+        subtitle={<>{row.immeuble_nom ?? 'Bien non renseigné'} · {row.unite_nom} · {ownerName(row)}</>}
         initials={`${row.prenom?.[0] ?? ''}${row.nom?.[0] ?? ''}`.toUpperCase() || 'OB'}
         status={STATUT_BADGE[row.statut]?.label ?? row.statut}
         statusTone={row.statut === 'actif' ? 'emerald' : row.statut === 'expire' ? 'amber' : row.statut === 'resilie' ? 'red' : 'slate'}

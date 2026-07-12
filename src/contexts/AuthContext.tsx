@@ -392,6 +392,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         /* noop */
       }
     }
+    window.location.hash = '#/dashboard';
   };
 
   return (

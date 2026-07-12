@@ -170,15 +170,16 @@ function AppContent() {
 
     // Navigation helper - compatible avec l'interface onNavigate existante
     const handleNavigate = (page: string) => {
+        const cleanPage = page.replace(/^\/+/, '');
         if (import.meta.env.DEV) {
             console.debug('[Navigation] request', {
                 from: currentPage,
-                to: page,
+                to: cleanPage,
                 pathname: location.pathname,
                 search: location.search,
             });
         }
-        navigate('/' + page);
+        navigate('/' + cleanPage);
         setSidebarOpen(false);
     };
 
@@ -194,6 +195,17 @@ function AppContent() {
     }, [currentPage, location.key, location.pathname, location.search, routeKey]);
 
     useEffect(() => {
+        if (
+            currentPage === 'login' ||
+            currentPage === 'auth' ||
+            currentPage === 'register' ||
+            currentPage === 'signup' ||
+            currentPage === '' ||
+            currentPage.startsWith('login/')
+        ) {
+            navigate('/dashboard', { replace: true });
+            return;
+        }
         if (currentPage === 'locataires' || currentPage === 'contrats') {
             navigate('/occupants-baux', { replace: true });
         }
@@ -201,6 +213,12 @@ function AppContent() {
             navigate('/dashboard', { replace: true });
         }
     }, [currentPage, navigate]);
+
+    useEffect(() => {
+        if (user && window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase() === 'login') {
+            window.history.replaceState({}, '', window.location.origin + window.location.search + '#/dashboard');
+        }
+    }, [user]);
 
     useEffect(() => {
         try {

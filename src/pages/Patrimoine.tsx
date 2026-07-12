@@ -738,7 +738,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   const selectedUnit = drawer?.type === 'unite' ? data.units.find((unit) => unit.id === drawer.id) ?? null : null;
   const selectedPropertySummary = selectedProperty ? summaries.property.get(selectedProperty.id) ?? getPropertySummary(selectedProperty) : null;
   const selectedUnitSummary = selectedUnit ? summaries.unit.get(selectedUnit.id) ?? getUnitSummary(selectedUnit) : null;
-  const detailPanelOpen = drawer !== null;
+  const detailPanelOpen = drawer !== null && Boolean(selectedProperty || selectedUnit);
   const ownerFilterOptions = useMemo(
     () => [
       { value: 'all', label: 'Tous Bailleurs', subtitle: 'Portefeuille complet' },
@@ -1220,7 +1220,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           </div>
           }
           detail={
-            drawer ? (
+            detailPanelOpen ? (
               <PremiumDrawerShell
                 key={selectedProperty?.id || selectedUnit?.id || activeTab}
                 open={detailPanelOpen}

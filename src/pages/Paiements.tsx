@@ -1094,9 +1094,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                       <button
                         type="button"
                         onClick={() => { window.location.hash = `#/occupants-baux?id=${selectedPaiement.contrat_id}`; }}
-                        className="text-[0.72rem] font-semibold text-slate-700 hover:text-brand-700 hover:underline transition"
+                        className="inline-flex items-center gap-1 text-[0.68rem] font-bold text-brand-700 hover:text-brand-900 underline underline-offset-2 transition"
                       >
-                        {formatPersonName(selectedPaiement.contrats?.locataires, 'Locataire')}
+                        {formatPersonName(selectedPaiement.contrats?.locataires, 'Locataire')} &rarr;
                       </button>
                     ) : (
                       formatPersonName(selectedPaiement.contrats?.locataires, '—')
@@ -1110,9 +1110,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                       <button
                         type="button"
                         onClick={() => { window.location.hash = `#/patrimoine?uniteId=${selectedPaiement.contrats?.unite_id}`; }}
-                        className="text-[0.72rem] font-semibold text-slate-700 hover:text-brand-700 hover:underline transition"
+                        className="inline-flex items-center gap-1 text-[0.68rem] font-bold text-brand-700 hover:text-brand-900 underline underline-offset-2 transition"
                       >
-                        {`${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`}
+                        {`${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`} &rarr;
                       </button>
                     ) : (
                       `${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`
@@ -1126,9 +1126,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                       <button
                         type="button"
                         onClick={() => { window.location.hash = `#/bailleurs?id=${selectedPaiement.contrats?.unites?.immeubles?.bailleurs?.id}`; }}
-                        className="text-[0.72rem] font-semibold text-slate-700 hover:text-brand-700 hover:underline transition"
+                        className="inline-flex items-center gap-1 text-[0.68rem] font-bold text-brand-700 hover:text-brand-900 underline underline-offset-2 transition"
                       >
-                        {formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')}
+                        {formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')} &rarr;
                       </button>
                     ) : (
                       formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')

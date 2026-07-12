@@ -709,9 +709,9 @@ export function Depenses() {
                       <button
                         type="button"
                         onClick={() => { window.location.hash = `#/patrimoine?id=${selectedDepense.immeuble_id}`; }}
-                        className="text-[0.72rem] font-semibold text-slate-700 hover:text-brand-700 hover:underline transition"
+                        className="inline-flex items-center gap-1 text-[0.68rem] font-bold text-brand-700 hover:text-brand-900 underline underline-offset-2 transition"
                       >
-                        {selectedDepense.immeubles?.nom || 'Bien immobilier'}
+                        {selectedDepense.immeubles?.nom || 'Bien immobilier'} &rarr;
                       </button>
                     ) : (
                       selectedDepense.immeubles?.nom || 'Général (non affecté)'

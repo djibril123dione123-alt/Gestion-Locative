@@ -173,9 +173,9 @@ export function PremiumMobileCard({
           </div>
 
           {(amount !== undefined || meta.length > 0) && (
-            <div className={`${emphasis === 'identity' ? 'mt-2' : 'mt-3'} flex flex-wrap items-start justify-between gap-3`}>
+            <div className={`${emphasis === 'identity' ? 'mt-2' : 'mt-2.5'} flex items-center justify-between gap-2`}>
               {amount !== undefined ? (
-                <div className="min-w-0 flex flex-col gap-0.5">
+                <div className="shrink-0 flex flex-col gap-0.5">
                   <div className="flex items-baseline gap-1.5">
                     {amountLabel && <span className={`whitespace-nowrap text-[0.55rem] ${emphasis === 'identity' ? 'font-medium' : 'font-bold uppercase tracking-[0.09em]'} text-slate-400`}>{amountLabel}</span>}
                     <MoneyText value={amount} compact={amountCompact} suffix={amountSuffix} className={`${emphasis === 'identity' ? 'text-[0.75rem] font-semibold' : 'text-[0.8rem] font-black'} ${amountTone ? amountToneClass(amountTone) : 'text-slate-950'}`} />
@@ -189,9 +189,9 @@ export function PremiumMobileCard({
                 </div>
               ) : <span />}
               {meta.length > 0 && (
-                <div className="flex min-w-0 flex-wrap justify-end gap-1.5">
+                <div className={`flex shrink-0 ${meta.length > 1 ? 'flex-col items-end justify-center gap-1' : 'items-center justify-end'}`}>
                   {meta.slice(0, 3).map((item) => (
-                    <span key={item.label} className={`whitespace-nowrap rounded-lg border px-1.5 py-0.5 text-[0.55rem] font-bold ${toneClasses[item.tone ?? 'slate']}`}>
+                    <span key={item.label} className={`whitespace-nowrap rounded-md border px-1.5 py-0.5 text-[0.52rem] font-bold leading-tight ${toneClasses[item.tone ?? 'slate']}`}>
                       <span className="text-current opacity-65">{item.label}</span> <span>{item.value}</span>
                     </span>
                   ))}

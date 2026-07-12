@@ -1016,13 +1016,11 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                         amount={p.montant_total}
                         amountLabel="Encaissé"
                         amountTone="emerald"
-                        amountCompact
                         secondaryAmount={reliquat > 3 ? reliquat : undefined}
                         secondaryAmountLabel={reliquat > 3 ? 'Reliquat' : undefined}
                         secondaryAmountTone="red"
                         meta={[
                           { label: 'Période', value: periodLabel },
-                          { label: 'Mode', value: getPaymentModeLabel(p) },
                         ]}
                         selected={selectedPaiement?.id === p.id}
                         onClick={() => setSelectedPaiementId(p.id)}

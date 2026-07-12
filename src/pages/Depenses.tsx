@@ -634,7 +634,6 @@ export function Depenses() {
                         amount={d.montant}
                         amountLabel="Montant"
                         amountTone="slate"
-                        amountCompact
                         meta={[
                           { label: 'Date', value: new Date(d.date_depense).toLocaleDateString('fr-FR') },
                           { label: 'Affectation', value: d.immeubles?.nom || 'Général' },

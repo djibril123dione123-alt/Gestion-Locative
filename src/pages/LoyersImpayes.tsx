@@ -671,13 +671,11 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                         amount={i.montant_du}
                                         amountLabel="Reste dû"
                                         amountTone={i.montant_du > 3 ? 'red' : 'emerald'}
-                                        amountCompact
                                         secondaryAmount={i.montant_encaisse > 0 ? i.montant_encaisse : undefined}
                                         secondaryAmountLabel={i.montant_encaisse > 0 ? 'Déjà encaissé' : undefined}
                                         secondaryAmountTone="emerald"
                                         meta={[
                                             { label: 'Période', value: periodLabel },
-                                            { label: 'Échéance', value: new Date(i.date_echeance).toLocaleDateString('fr-FR') },
                                         ]}
                                         selected={drawerLoyer?.id === i.id}
                                         onClick={() => setSelectedDrawerId(i.id)}

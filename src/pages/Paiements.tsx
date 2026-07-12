@@ -853,18 +853,19 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                       Nouveau paiement
                     </PremiumButton>
                   }
-                />
-                <div className="flex items-center justify-start pt-1 pb-2">
-                  <Tabs
-                    size="compact"
-                    tabs={[
-                      { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
-                      { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
-                    ]}
-                    activeId="paiements"
-                    onChange={(id) => { window.location.hash = `#/${id}`; }}
-                  />
-                </div>
+                >
+                  <div className="mt-2.5 pt-2.5 border-t border-emerald-950/10 flex items-center justify-start">
+                    <Tabs
+                      size="compact"
+                      tabs={[
+                        { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
+                        { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
+                      ]}
+                      activeId="paiements"
+                      onChange={(id) => { window.location.hash = `#/${id}`; }}
+                    />
+                  </div>
+                </PremiumPageHeader>
               </>
             )}
 

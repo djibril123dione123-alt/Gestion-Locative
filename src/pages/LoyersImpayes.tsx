@@ -532,18 +532,19 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                     title={isIndividualOwner ? 'Mes créances à recouvrer' : 'Créances à recouvrer'}
                                     description="Retards, partiels et restes dus."
                                     mobileDescription="Suivi des impayés."
-                                />
-                                <div className="flex items-center justify-start pt-1 pb-2">
-                                    <Tabs
-                                        size="compact"
-                                        tabs={[
-                                            { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
-                                            { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle },
-                                        ]}
-                                        activeId="loyers-impayes"
-                                        onChange={(id) => { window.location.hash = `#/${id}`; }}
-                                    />
-                                </div>
+                                >
+                                    <div className="mt-2.5 pt-2.5 border-t border-emerald-950/10 flex items-center justify-start">
+                                        <Tabs
+                                            size="compact"
+                                            tabs={[
+                                                { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
+                                                { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle, badge: kpis.ouvertes > 0 ? kpis.ouvertes : undefined },
+                                            ]}
+                                            activeId="loyers-impayes"
+                                            onChange={(id) => { window.location.hash = `#/${id}`; }}
+                                        />
+                                    </div>
+                                </PremiumPageHeader>
                             </>
                         )}
 

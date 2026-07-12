@@ -302,26 +302,17 @@ export function Calendrier() {
           </div>
         }
         secondaryActions={
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setShowFilters(true)}
-              className={`inline-flex h-8 flex-shrink-0 whitespace-nowrap items-center justify-center gap-1.5 rounded-[0.6rem] border px-3 py-1.5 text-xs font-bold shadow-sm transition lg:hidden ${selectedTypeFilter ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
-            >
-              <SlidersHorizontal className="h-3.5 w-3.5" />
-              Filtres
-              {selectedTypeFilter && (
-                <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">1</span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setCursor(new Date())}
-              className="inline-flex !h-8 !min-h-8 items-center px-2.5 rounded-[0.6rem] border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm"
-            >
-              Aujourd'hui
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowFilters(true)}
+            className={`inline-flex h-8 flex-shrink-0 whitespace-nowrap items-center justify-center gap-1.5 rounded-[0.6rem] border px-3 py-1.5 text-xs font-bold shadow-sm transition lg:hidden ${selectedTypeFilter ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-[#fffdf8] text-slate-700 hover:border-emerald-100 hover:bg-emerald-50/60'}`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Filtres
+            {selectedTypeFilter && (
+              <span className="rounded-full bg-emerald-800 px-1.5 py-0.5 text-[10px] text-white">1</span>
+            )}
+          </button>
         }
       />
 

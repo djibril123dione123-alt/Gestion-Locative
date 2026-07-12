@@ -117,13 +117,13 @@ export function PremiumToolbar({
       className={`@container relative z-20 min-w-0 max-w-full ${isCompact ? `bg-[#fffdf8]/90 border border-emerald-950/10 shadow-sm ring-1 ring-white/50 ${isUltraCompact ? 'rounded-[0.7rem] px-1.5 py-1 sm:px-2 sm:py-1.5' : 'rounded-[0.85rem] px-2 py-1.5 sm:px-2.5 sm:py-2'}` : 'sk-premium-panel p-3'} ${className}`}
     >
       {/* 1ère ligne : Recherche (gauche) + Filtres & Actions (droite sur la même ligne) */}
-      <div className={`flex items-center justify-between flex-wrap xl:flex-nowrap ${isUltraCompact ? 'gap-1.5' : 'gap-2'}`}>
-        <div className="min-w-[160px] flex-1">
+      <div className={`flex items-center justify-between flex-nowrap ${isUltraCompact ? 'gap-1.5' : 'gap-2'}`}>
+        <div className="min-w-0 flex-1">
           {search ?? children}
         </div>
 
         {(filters || hasActions) && (
-          <div className={`flex flex-wrap sm:flex-nowrap items-center shrink-0 ${isUltraCompact ? 'gap-1.5' : 'gap-2'}`}>
+          <div className={`flex flex-nowrap items-center shrink-0 ${isUltraCompact ? 'gap-1.5' : 'gap-2'}`}>
             {filters}
             {secondaryActions ?? actions}
             {primaryAction && <div className="flex-shrink-0">{primaryAction}</div>}

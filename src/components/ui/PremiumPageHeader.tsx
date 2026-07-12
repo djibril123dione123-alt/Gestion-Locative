@@ -214,7 +214,7 @@ export function PremiumPageHeader({
         </div>
 
         {(hasActions || hasSideContent) && (
-          <div className="flex flex-wrap items-center gap-2 shrink-0 justify-end mt-1 sm:mt-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto shrink-0 justify-end mt-2.5 sm:mt-0 [&>*]:w-full sm:[&>*]:w-auto [&_button]:!w-full sm:[&_button]:!w-auto [&_a]:!w-full sm:[&_a]:!w-auto">
             {sideContent && (
               <div className="hidden sm:flex items-center gap-1.5">
                 {sideContent}
@@ -278,7 +278,7 @@ export function PremiumPageHeader({
 
         {/* Colonne droite : Actions et sideContent */}
         {(hasActions || hasSideContent) && (
-          <div className="relative z-10 flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
+          <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto shrink-0 justify-end mt-2.5 sm:mt-0 [&>*]:w-full sm:[&>*]:w-auto [&_button]:!w-full sm:[&_button]:!w-auto [&_a]:!w-full sm:[&_a]:!w-auto">
             {sideContent}
             {resolvedSecondaryAction}
             {resolvedPrimaryAction}

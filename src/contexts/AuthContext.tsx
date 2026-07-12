@@ -264,6 +264,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(newUser);
 
         if (newUser) {
+          // Nettoyage immédiat de l'URL des tokens OAuth (#access_token=...) après connexion
+          if (
+            typeof window !== 'undefined' &&
+            (window.location.hash.includes('access_token=') ||
+              window.location.hash.includes('refresh_token=') ||
+              window.location.hash.includes('error='))
+          ) {
+            window.history.replaceState(null, document.title, `${window.location.origin}/#/dashboard`);
+          }
+
           // Guard against concurrent calls (e.g. rapid auth state changes)
           if (loadingProfileRef.current) return;
           loadingProfileRef.current = true;

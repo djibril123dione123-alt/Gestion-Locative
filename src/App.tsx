@@ -161,7 +161,13 @@ function AppContent() {
 
     // Derive current page from URL (React Router)
     const externalAuthMode = getExternalAuthMode();
-    const hashPage = location.pathname.replace(/^\//, '') || 'dashboard';
+    const rawHashPage = location.pathname.replace(/^\//, '') || 'dashboard';
+    const hashPage =
+        rawHashPage.startsWith('access_token=') ||
+        rawHashPage.startsWith('refresh_token=') ||
+        rawHashPage.startsWith('error=')
+            ? 'dashboard'
+            : rawHashPage;
     const currentPage = externalAuthMode ? 'auth' : hashPage;
     const basePage = currentPage.includes('/') && currentPage !== 'documents/scan' && currentPage !== 'documents/studio'
         ? currentPage.split('/')[0]
@@ -195,13 +201,43 @@ function AppContent() {
     }, [currentPage, location.key, location.pathname, location.search, routeKey]);
 
     useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [currentPage]);
+
+    useEffect(() => {
+        const routeNames: Record<string, string> = {
+            dashboard: 'Tableau de bord',
+            bailleurs: 'Bailleurs',
+            patrimoine: 'Biens & Patrimoine',
+            'occupants-baux': 'Locations & Baux',
+            paiements: 'Encaissements',
+            'loyers-impayes': 'Créances & Recouvrement',
+            depenses: 'Dépenses',
+            documents: 'Documents GED',
+            calendrier: 'Calendrier',
+            maintenance: 'Maintenance',
+            'etats-des-lieux': 'États des lieux',
+            parametres: 'Paramètres agence',
+            equipe: 'Équipe & Accès',
+            abonnement: 'Abonnement & Formules',
+            audit: 'Journal & Audit',
+            console: 'Console Administration',
+        };
+        const pageTitle = routeNames[basePage] || 'Samay Këur';
+        document.title = `${pageTitle} — Gestion immobilière`;
+    }, [basePage]);
+
+    useEffect(() => {
+        if (!user) return;
         if (
             currentPage === 'login' ||
             currentPage === 'auth' ||
             currentPage === 'register' ||
             currentPage === 'signup' ||
             currentPage === '' ||
-            currentPage.startsWith('login/')
+            currentPage.startsWith('login/') ||
+            currentPage.startsWith('access_token=') ||
+            currentPage.startsWith('refresh_token=')
         ) {
             navigate('/dashboard', { replace: true });
             return;
@@ -212,13 +248,18 @@ function AppContent() {
         if (currentPage === 'tableau-de-bord-financier' || currentPage === 'filtres-avances') {
             navigate('/dashboard', { replace: true });
         }
-    }, [currentPage, navigate]);
+    }, [currentPage, navigate, user]);
 
     useEffect(() => {
-        if (user && window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase() === 'login') {
-            window.history.replaceState({}, '', window.location.origin + window.location.search + '#/dashboard');
+        if (
+            user &&
+            (window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase() === 'login' ||
+                window.location.hash.includes('access_token=') ||
+                window.location.hash.includes('refresh_token='))
+        ) {
+            window.history.replaceState({}, document.title, `${window.location.origin}/#/dashboard`);
         }
-    }, [user]);
+    }, [user, location]);
 
     useEffect(() => {
         try {

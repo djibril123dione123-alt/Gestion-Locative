@@ -13,6 +13,7 @@ import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useDirectRoute } from '../hooks/useDirectRoute';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { getOpenReceivables, type OpenReceivableStatus } from '../services/api/financeApi';
@@ -114,7 +115,16 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [selectedLoyer, setSelectedLoyer] = useState<LoyerImpaye | null>(null);
-    const [drawerLoyer, setDrawerLoyer] = useState<LoyerImpaye | null>(null);
+    const [selectedDrawerId, setSelectedDrawerId] = useState<string | null>(null);
+    const { clearDirectRouteParams } = useDirectRoute({
+        onSelectId: (id) => {
+            setSelectedDrawerId(id);
+        },
+    });
+    const drawerLoyer = useMemo(
+        () => impayes.find((i) => i.id === selectedDrawerId || i.contrat_id === selectedDrawerId) ?? null,
+        [impayes, selectedDrawerId],
+    );
     const [submitting, setSubmitting] = useState(false);
     const [paymentForm, setPaymentForm] = useState({
         montant: '',
@@ -267,7 +277,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
             mode_paiement: 'especes',
             reference: '',
         });
-        setDrawerLoyer(null);
+        setSelectedDrawerId(null);
         setShowModal(true);
     };
 
@@ -646,7 +656,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             compact
                             columns={columns}
                             data={paginated}
-                            onRowClick={(i) => setDrawerLoyer(i)}
+                            onRowClick={(i) => setSelectedDrawerId(i.id)}
                             selectedId={drawerLoyer?.id}
                             mobileRender={(i) => {
                                 const status = STATUS_META[i.statut] || STATUS_META['en_retard'];
@@ -670,7 +680,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                             { label: 'Échéance', value: new Date(i.date_echeance).toLocaleDateString('fr-FR') },
                                         ]}
                                         selected={drawerLoyer?.id === i.id}
-                                        onClick={() => setDrawerLoyer(i)}
+                                        onClick={() => setSelectedDrawerId(i.id)}
                                         density="compact"
                                         emphasis="identity"
                                     />
@@ -753,7 +763,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 </p>
                             </div>
                         }
-                        onClose={() => setDrawerLoyer(null)}
+                        onClose={() => {
+                            setSelectedDrawerId(null);
+                            clearDirectRouteParams();
+                        }}
                         actions={
                             <>
                                 {drawerLoyer.montant_du > 0 && (

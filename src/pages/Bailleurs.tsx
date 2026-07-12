@@ -779,16 +779,12 @@ export function Bailleurs() {
   }, [activeFilter, searchedBailleurs, summariesByBailleur]);
 
   useEffect(() => {
-    if (filteredBailleurs.length === 0) {
-      setSelectedBailleurId(null);
-      setDetailOpen(false);
-      return;
-    }
-    if (selectedBailleurId && !filteredBailleurs.some((item) => item.id === selectedBailleurId)) {
+    if (loading || bailleurs.length === 0) return;
+    if (selectedBailleurId && !bailleurs.some((item) => item.id === selectedBailleurId)) {
       setSelectedBailleurId(null);
       setDetailOpen(false);
     }
-  }, [filteredBailleurs, selectedBailleurId]);
+  }, [loading, bailleurs, selectedBailleurId]);
 
   const selectedBailleur = useMemo(
     () => bailleurs.find((item) => item.id === selectedBailleurId) ?? null,

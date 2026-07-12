@@ -748,7 +748,7 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
     amount: toNumber(payment.montant_total),
     tone: 'emerald' as const,
     icon: Wallet,
-    page: 'paiements',
+    page: payment.id ? `paiements?id=${payment.id}` : 'paiements',
   }));
   const documentActivities = documents.slice(0, 4).map((document) => ({
     id: `document-${document.id}`,
@@ -758,7 +758,7 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
     sortAt: document.created_at,
     tone: 'slate' as const,
     icon: FileText,
-    page: 'documents',
+    page: document.id ? `documents?id=${document.id}` : 'documents',
   }));
   const activities = [...eventActivities, ...paymentActivities, ...documentActivities]
     .sort((a, b) => {
@@ -776,7 +776,7 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
       subtitle: `${contrat.unites?.nom ?? 'Unité'} · expire dans ${days} jour${days > 1 ? 's' : ''}`,
       value: contrat.date_fin ? formatDate(contrat.date_fin) : 'Sans date',
       tone: 'amber' as const,
-      page: 'occupants-baux',
+      page: contrat.id ? `occupants-baux?id=${contrat.id}` : 'occupants-baux',
     })),
     ...vacantUnits.slice(0, 2).map((unit) => ({
       id: `watch-unit-${unit.id}`,
@@ -784,7 +784,7 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
       subtitle: unit.immeubles?.nom ?? 'Bien non renseigné',
       value: <MoneyText value={unit.loyer_base ?? 0} compact />,
       tone: 'slate' as const,
-      page: 'patrimoine',
+      page: unit.id ? `patrimoine?id=${unit.id}` : 'patrimoine',
     })),
     ...pendingDocuments.slice(0, 2).map((document) => ({
       id: `watch-document-${document.id}`,
@@ -792,7 +792,7 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
       subtitle: document.document_category ?? 'GED',
       value: 'À traiter',
       tone: 'amber' as const,
-      page: 'documents',
+      page: document.id ? `documents?id=${document.id}` : 'documents',
     })),
   ].slice(0, 6);
 
@@ -802,7 +802,7 @@ function buildDashboardModel(data: DashboardData, selectedMonth: string) {
     subtitle: `${item.unit} · ${item.property}`,
     value: formatCurrency(item.remaining),
     tone: 'red',
-    page: 'paiements',
+    page: item.id ? `occupants-baux?id=${item.id}` : 'occupants-baux',
   }));
 
   const healthMessage = reliquats > 0
@@ -866,7 +866,8 @@ function mapEventToActivity(event: EventRow): ActivityItem {
   } else {
     title = 'Mise à jour système';
   }
-  const page = type.includes('paiement')
+  const entityId = firstText(payload, ['id', 'contrat_id', 'bailleur_id', 'paiement_id', 'immeuble_id', 'unite_id']);
+  const basePage = type.includes('paiement')
     ? 'paiements'
     : type.includes('contrat') || type.includes('bail')
       ? 'occupants-baux'
@@ -877,6 +878,7 @@ function mapEventToActivity(event: EventRow): ActivityItem {
           : type.includes('immeuble') || type.includes('unite')
             ? 'patrimoine'
             : 'notifications';
+  const page = entityId && basePage !== 'notifications' ? `${basePage}?id=${entityId}` : basePage;
 
   return {
     id: `event-${event.id}`,

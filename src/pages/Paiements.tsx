@@ -95,8 +95,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       setIsModalOpen(true);
     },
     onSelectId: (id) => {
-      const match = paiements.find((p) => p.id === id);
-      if (match) setSelectedPaiement(match);
+      setSelectedPaiementId(id);
     },
   });
 
@@ -114,7 +113,11 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
   const [isSaving, setIsSaving] = useState(false);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null);
-  const [selectedPaiement, setSelectedPaiement] = useState<PaiementRow | null>(null);
+  const [selectedPaiementId, setSelectedPaiementId] = useState<string | null>(null);
+  const selectedPaiement = useMemo(
+    () => paiements.find((p) => p.id === selectedPaiementId) ?? null,
+    [paiements, selectedPaiementId]
+  );
   const [financeSummary, setFinanceSummary] = useState<AgencyFinancialSummary | null>(null);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const submittingRef = useRef(false);
@@ -997,7 +1000,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                   compact
                   columns={columns}
                   data={filtered}
-                  onRowClick={(p) => setSelectedPaiement(p)}
+                  onRowClick={(p) => setSelectedPaiementId(p.id)}
                   selectedId={selectedPaiement?.id}
                   mobileRender={(p) => {
                     const status = getPaiementStatusMeta(p);
@@ -1022,7 +1025,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                           { label: 'Mode', value: getPaymentModeLabel(p) },
                         ]}
                         selected={selectedPaiement?.id === p.id}
-                        onClick={() => setSelectedPaiement(p)}
+                        onClick={() => setSelectedPaiementId(p.id)}
                         density="compact"
                         emphasis="identity"
                       />
@@ -1059,7 +1062,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                 </div>
               }
               onClose={() => {
-                setSelectedPaiement(null);
+                setSelectedPaiementId(null);
                 clearDirectRouteParams();
               }}
               actions={
@@ -1202,7 +1205,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                     icon={<Pencil className="h-3.5 w-3.5" />}
                     onClick={() => {
                       handleEdit(selectedPaiement);
-                      setSelectedPaiement(null);
+                      setSelectedPaiementId(null);
                     }}
                     className="!h-8 !text-[0.72rem]"
                     fullWidth
@@ -1215,7 +1218,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                     icon={<XCircle className="h-3.5 w-3.5" />}
                     onClick={() => {
                       handleDelete(selectedPaiement);
-                      setSelectedPaiement(null);
+                      setSelectedPaiementId(null);
                     }}
                     className="!h-8 !text-[0.72rem]"
                     fullWidth

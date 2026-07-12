@@ -317,14 +317,10 @@ export function OccupantsBaux() {
           }));
         }
       }
-    },
     onSelectId: (id, params) => {
-      const match = rows.find((r) => r.contrat_id === id);
-      if (match) {
-        setSelectedRow(match);
-        const tab = params.get('tab') as DrawerTab | null;
-        if (tab) setActiveDrawerTab(tab);
-      }
+      setSelectedContratId(id);
+      const tab = params.get('tab') as DrawerTab | null;
+      if (tab) setActiveDrawerTab(tab);
     },
   });
 
@@ -334,7 +330,11 @@ export function OccupantsBaux() {
   const [activeTab, setActiveTab] = useState<FilterTab>('tous');
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
-  const [selectedRow, setSelectedRow] = useState<OccupantBailRow | null>(null);
+  const [selectedContratId, setSelectedContratId] = useState<string | null>(null);
+  const selectedRow = useMemo(() => {
+    if (!selectedContratId) return null;
+    return rows.find((r) => r.contrat_id === selectedContratId || r.locataire_id === selectedContratId) ?? null;
+  }, [rows, selectedContratId]);
   const [activeDrawerTab, setActiveDrawerTab] = useState<DrawerTab>('resume');
   const [details, setDetails] = useState<OccupantBailDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -643,7 +643,7 @@ export function OccupantsBaux() {
           contratId: openContratId,
         });
         if (!error && createdRow) {
-          setSelectedRow(createdRow);
+          setSelectedContratId(createdRow.contrat_id);
           setActiveDrawerTab('resume');
         }
       }
@@ -731,7 +731,7 @@ export function OccupantsBaux() {
       });
       notifySuccess('Bail archivé.');
       setArchiveTarget(null);
-      setSelectedRow(null);
+      setSelectedContratId(null);
       await refreshAfterLifecycle();
     } catch (err) {
       console.error('[OccupantsBaux] archive failed', err);
@@ -763,7 +763,7 @@ export function OccupantsBaux() {
       });
       notifySuccess('Bail renouvelé avec une nouvelle période.');
       setRenewTarget(null);
-      setSelectedRow(null);
+      setSelectedContratId(null);
       await refreshAfterLifecycle();
     } catch (err) {
       console.error('[OccupantsBaux] renewal failed', err);
@@ -883,11 +883,6 @@ export function OccupantsBaux() {
     setPage(1);
   }, [searchTerm, activeTab, ownerFilter, propertyFilter, periodFilter]);
 
-  useEffect(() => {
-    if (selectedRow && !rows.some((row) => row.contrat_id === selectedRow.contrat_id)) {
-      setSelectedRow(null);
-    }
-  }, [rows, selectedRow]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
@@ -1163,7 +1158,7 @@ export function OccupantsBaux() {
                           compact={Boolean(selectedRow)}
                           isVisible={occupantColumns.isVisible}
                           onSelect={() => {
-                            setSelectedRow(row);
+                        setSelectedContratId(row.contrat_id);
                             setActiveDrawerTab('resume');
                           }}
                         />
@@ -1178,7 +1173,7 @@ export function OccupantsBaux() {
                       key={row.contrat_id}
                       row={row}
                       onSelect={() => {
-                        setSelectedRow(row);
+                        setSelectedContratId(row.contrat_id);
                         setActiveDrawerTab('resume');
                       }}
                     />
@@ -1234,7 +1229,7 @@ export function OccupantsBaux() {
                 activeTab={activeDrawerTab}
                 onTabChange={setActiveDrawerTab}
                 onClose={() => {
-                  setSelectedRow(null);
+                  setSelectedContratId(null);
                   clearDirectRouteParams();
                 }}
                 onEditOccupant={openEditOccupant}

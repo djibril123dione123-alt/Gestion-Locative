@@ -17,7 +17,18 @@ export function useDirectRoute(config: DirectRouteConfig) {
 
   useEffect(() => {
     const action = searchParams.get('action');
-    const id = searchParams.get('id') || searchParams.get('bienId') || searchParams.get('uniteId') || searchParams.get('docId');
+    const id =
+      searchParams.get('id') ||
+      searchParams.get('bailleurId') ||
+      searchParams.get('bienId') ||
+      searchParams.get('uniteId') ||
+      searchParams.get('locationId') ||
+      searchParams.get('locataireId') ||
+      searchParams.get('contratId') ||
+      searchParams.get('paiementId') ||
+      searchParams.get('creanceId') ||
+      searchParams.get('depenseId') ||
+      searchParams.get('docId');
     const isNewRoute = location.pathname.endsWith('/nouveau') || location.pathname.endsWith('/nouvelle') || location.pathname.endsWith('/nouveau-locataire') || location.pathname.endsWith('/nouvelle-location');
 
     if (action === 'new' || action?.startsWith('new-') || isNewRoute) {
@@ -30,7 +41,22 @@ export function useDirectRoute(config: DirectRouteConfig) {
   const clearDirectRouteParams = () => {
     const next = new URLSearchParams(searchParams);
     let changed = false;
-    const keysToRemove = ['action', 'id', 'bienId', 'uniteId', 'locataireId', 'contratId', 'docId', 'userId', 'tab'];
+    const keysToRemove = [
+      'action',
+      'id',
+      'bailleurId',
+      'bienId',
+      'uniteId',
+      'locationId',
+      'locataireId',
+      'contratId',
+      'paiementId',
+      'creanceId',
+      'depenseId',
+      'docId',
+      'userId',
+      'tab',
+    ];
     for (const key of keysToRemove) {
       if (next.has(key)) {
         next.delete(key);

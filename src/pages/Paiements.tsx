@@ -1094,9 +1094,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                       <button
                         type="button"
                         onClick={() => { window.location.hash = `#/occupants-baux?id=${selectedPaiement.contrat_id}`; }}
-                        className="font-bold text-brand-700 hover:text-brand-900 hover:underline transition"
+                        className="text-[0.72rem] font-semibold text-slate-700 hover:text-brand-700 hover:underline transition"
                       >
-                        {formatPersonName(selectedPaiement.contrats?.locataires, 'Locataire')} &rarr;
+                        {formatPersonName(selectedPaiement.contrats?.locataires, 'Locataire')}
                       </button>
                     ) : (
                       formatPersonName(selectedPaiement.contrats?.locataires, '—')
@@ -1110,9 +1110,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                       <button
                         type="button"
                         onClick={() => { window.location.hash = `#/patrimoine?uniteId=${selectedPaiement.contrats?.unite_id}`; }}
-                        className="font-bold text-brand-700 hover:text-brand-900 hover:underline transition"
+                        className="text-[0.72rem] font-semibold text-slate-700 hover:text-brand-700 hover:underline transition"
                       >
-                        {`${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`} &rarr;
+                        {`${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`}
                       </button>
                     ) : (
                       `${selectedPaiement.contrats?.unites?.immeubles?.nom || '—'} · ${selectedPaiement.contrats?.unites?.nom || '—'}`
@@ -1126,9 +1126,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                       <button
                         type="button"
                         onClick={() => { window.location.hash = `#/bailleurs?id=${selectedPaiement.contrats?.unites?.immeubles?.bailleurs?.id}`; }}
-                        className="font-bold text-brand-700 hover:text-brand-900 hover:underline transition"
+                        className="text-[0.72rem] font-semibold text-slate-700 hover:text-brand-700 hover:underline transition"
                       >
-                        {formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')} &rarr;
+                        {formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')}
                       </button>
                     ) : (
                       formatPersonName(selectedPaiement.contrats?.unites?.immeubles?.bailleurs, '—')

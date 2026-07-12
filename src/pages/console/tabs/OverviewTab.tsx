@@ -2,7 +2,7 @@ import { AlertTriangle, Building2, CreditCard, FileText, LifeBuoy, Radar, Shield
 import { buildRequiredActions, summarizeSaasRevenue } from '../../../lib/admin/adminInsights';
 import { formatAdminCurrency, formatAdminDateTime } from '../../../lib/admin/adminFormatters';
 import { humanizeAuditAction } from '../../../services/admin/adminAuditService';
-import { AdminEmptyState, AdminMetricCard, AdminPanel, AdminStatusBadge } from '../../../components/console/AdminPrimitives';
+import { AdminEmptyState, AdminKpiGrid, AdminMetricCard, AdminPanel, AdminStatusBadge } from '../../../components/console/AdminPrimitives';
 import type { AdminAgency, AdminConsoleData } from '../../../services/admin/adminConsoleService';
 
 export function OverviewTab({ data, onOpenAgency, onOpenProof }: {
@@ -28,16 +28,16 @@ export function OverviewTab({ data, onOpenAgency, onOpenProof }: {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+      <AdminKpiGrid maxItems={6}>
         <AdminMetricCard label="Organisations" value={data.platform.totalOrganizations} helper={`${data.platform.activeOrganizations} actives`} icon={Building2} tone="emerald" />
         <AdminMetricCard label="MRR estimé" value={formatAdminCurrency(revenue.mrr)} helper={`${formatAdminCurrency(revenue.arr)} ARR`} icon={TrendingUp} tone="orange" />
         <AdminMetricCard label="Paiements" value={data.platform.pendingProofs} helper={`${formatAdminCurrency(revenue.pendingAmount)} en attente`} icon={CreditCard} tone={data.platform.pendingProofs ? 'amber' : 'emerald'} />
         <AdminMetricCard label="Support" value={data.platform.openTickets} helper={`${data.platform.pendingRequests} demande(s)`} icon={LifeBuoy} tone={data.platform.openTickets ? 'amber' : 'slate'} />
         <AdminMetricCard label="Documents" value={data.platform.totalDocuments} helper={`${data.platform.documentsThisMonth} ce mois`} icon={FileText} tone="blue" />
         <AdminMetricCard label="QR vérifiés" value={verifiedQr} helper={`${data.documentVerifications.length} QR suivis`} icon={Radar} tone="emerald" />
-      </div>
+      </AdminKpiGrid>
 
-      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid items-start gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <AdminPanel title="À traiter maintenant" subtitle="File prioritaire construite depuis paiements, demandes, essais, support, incidents et documents.">
           {actions.length === 0 ? (
             <AdminEmptyState title="Aucune action critique détectée" text="Les paiements, demandes, essais, incidents et anomalies documentaires apparaîtront ici." />
@@ -77,14 +77,14 @@ export function OverviewTab({ data, onOpenAgency, onOpenProof }: {
         </AdminPanel>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+      <div className="grid items-start gap-4 xl:grid-cols-[0.85fr_1.15fr]">
         <AdminPanel title="Santé business" subtitle="Répartition opérationnelle et revenus SaaS, séparés de la finance locative.">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <AdminKpiGrid maxItems={4}>
             <AdminMetricCard label="Essais" value={data.platform.trialOrganizations} icon={Users} tone="blue" />
             <AdminMetricCard label="Suspendues" value={data.platform.suspendedOrganizations} icon={AlertTriangle} tone={data.platform.suspendedOrganizations ? 'red' : 'slate'} />
             <AdminMetricCard label="Bailleurs individuels" value={data.platform.individualLandlords} icon={Building2} />
             <AdminMetricCard label="Clients payants" value={revenue.payingClients} icon={ShieldCheck} tone="emerald" />
-          </div>
+          </AdminKpiGrid>
           <div className="mt-3 grid gap-2">
             {revenue.byPlan.map(({ plan, count, revenue: planRevenue }) => (
               <div key={plan.id} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">

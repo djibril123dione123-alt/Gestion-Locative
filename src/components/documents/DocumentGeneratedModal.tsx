@@ -47,7 +47,7 @@ const KIND_LABELS: Partial<Record<GeneratedDocumentPayload['kind'], string>> = {
   document: 'Document officiel',
 };
 
-export function DocumentGeneratedModal({ onNavigate: _onNavigate }: DocumentGeneratedModalProps) {
+export function DocumentGeneratedModal({ onNavigate }: DocumentGeneratedModalProps) {
   const [documentPayload, setDocumentPayload] = useState<GeneratedDocumentPayload | null>(null);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
@@ -464,6 +464,19 @@ export function DocumentGeneratedModal({ onNavigate: _onNavigate }: DocumentGene
                   <Copy className="h-3.5 w-3.5 text-amber-600" />
                   <span>Copier lien</span>
                 </button>
+                {onNavigate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      close();
+                      onNavigate('documents');
+                    }}
+                    className="flex flex-1 items-center justify-center gap-1.5 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50 hover:text-slate-950"
+                  >
+                    <FileText className="h-3.5 w-3.5 text-brand-700" />
+                    <span>GED</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

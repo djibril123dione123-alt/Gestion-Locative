@@ -85,15 +85,57 @@ export function Console() {
     void load('initial');
   }, [load]);
 
-  useEffect(() => {
-    const handler = () => setSpace(getConsoleSpaceFromHash(window.location.hash));
-    window.addEventListener('hashchange', handler);
-    return () => window.removeEventListener('hashchange', handler);
+  const clearDetail = useCallback(() => {
+    setSelectedAgency(null);
+    setSelectedRequest(null);
+    setSelectedProof(null);
+    setSelectedUser(null);
   }, []);
 
+  useEffect(() => {
+    const handler = () => {
+      const next = getConsoleSpaceFromHash(window.location.hash);
+      setSpace((current) => {
+        if (current !== next) clearDetail();
+        return next;
+      });
+    };
+    window.addEventListener('hashchange', handler);
+    return () => window.removeEventListener('hashchange', handler);
+  }, [clearDetail]);
+
   const changeSpace = (next: ConsoleSpace) => {
+    clearDetail();
     setSpace(next);
     window.history.replaceState(null, '', getConsoleRoute(next));
+  };
+
+  const selectAgency = (agency: AdminAgency | null) => {
+    setSelectedRequest(null);
+    setSelectedProof(null);
+    setSelectedUser(null);
+    setSelectedAgency(agency);
+  };
+
+  const selectRequest = (request: AgencyCreationRequest | null) => {
+    setSelectedAgency(null);
+    setSelectedProof(null);
+    setSelectedUser(null);
+    setSelectedRequest(request);
+  };
+
+  const selectProof = (proof: SubscriptionPaymentProof | null) => {
+    setSelectedAgency(null);
+    setSelectedRequest(null);
+    setSelectedUser(null);
+    setSelectedProof(proof);
+  };
+
+  const selectUser = (user: AdminUser | null) => {
+    setSelectedAgency(null);
+    setSelectedRequest(null);
+    setSelectedProof(null);
+    setSelectedUser(user);
   };
 
   const runAction = (request: AdminActionRequest) => setAction(request);
@@ -111,13 +153,13 @@ export function Console() {
   const openAgencyById = (agencyId: string | null | undefined) => {
     if (!agencyId || !data) return;
     const agency = data.agencies.find((item) => item.id === agencyId);
-    if (agency) setSelectedAgency(agency);
+    if (agency) selectAgency(agency);
   };
 
   const openProofById = (proofId: string | null | undefined) => {
     if (!proofId || !data) return;
     const proof = data.proofs.find((item) => item.id === proofId);
-    if (proof) setSelectedProof(proof);
+    if (proof) selectProof(proof);
   };
 
   const handleUpdateTicket = (ticket: AdminTicket, status: string, note: string) => {
@@ -188,20 +230,30 @@ export function Console() {
       return (
         <OverviewTab
           data={data}
-          onOpenAgency={setSelectedAgency}
+          onOpenAgency={selectAgency}
           onOpenProof={openProofById}
         />
       );
     }
-    if (space === 'organizations') return <OrganizationsTab data={data} onOpenAgency={setSelectedAgency} />;
-    if (space === 'billing') return <BillingTab data={data} onOpenProof={setSelectedProof} />;
-    if (space === 'users-access') return <UsersAccessTab data={data} onOpenUser={setSelectedUser} />;
+    if (space === 'organizations') return <OrganizationsTab data={data} onOpenAgency={selectAgency} selectedAgencyId={selectedAgency?.id ?? null} />;
+    if (space === 'billing') return <BillingTab data={data} onOpenProof={selectProof} selectedProofId={selectedProof?.id ?? null} />;
+    if (space === 'users-access') return <UsersAccessTab data={data} onOpenUser={selectUser} selectedUserId={selectedUser?.id ?? null} />;
     if (space === 'support-ops') {
       return (
         <SupportOpsTab
           data={data}
-          onOpenRequest={setSelectedRequest}
+          onOpenRequest={selectRequest}
+          selectedRequestId={selectedRequest?.id ?? null}
           onUpdateTicket={handleUpdateTicket}
+          onCreateTicket={(payload) => runAction({
+            title: 'Créer ce ticket support ?',
+            message: 'Le ticket sera rattaché à l’organisation et suivi dans Support & opérations.',
+            confirmLabel: 'Créer ticket',
+            onConfirm: (reason) => withRefresh(
+              () => createSupportTicket(payload.organizationId, payload.subject, payload.category, payload.priority, payload.description, reason, auditContext),
+              'Ticket support créé.',
+            ),
+          })}
           onRecordIncident={handleRecordIncident}
           onResolveIncident={handleResolveIncident}
         />
@@ -210,6 +262,7 @@ export function Console() {
     return (
       <SystemConfigTab
         data={data}
+        onOpenAgencyById={openAgencyById}
         onToggleFlag={(flag, nextActive) => runAction({
           title: nextActive ? 'Activer ce feature flag ?' : 'Désactiver ce feature flag ?',
           message: 'La modification passe par la gouvernance feature flag et sera tracée avant mutation.',
@@ -230,6 +283,126 @@ export function Console() {
     );
   };
 
+  const detailSlot = !data ? null : selectedAgency ? (
+      <OrganizationDrawer
+      agency={selectedAgency}
+      users={selectedUsers}
+      subscriptions={selectedSubscriptions}
+      proofs={selectedProofs}
+      notes={selectedNotes}
+      tickets={selectedTickets}
+      incidents={selectedIncidents}
+      documents={selectedDocuments}
+      verifications={selectedVerifications}
+      metrics={selectedMetrics}
+      auditLogs={selectedAuditLogs}
+      onClose={() => setSelectedAgency(null)}
+      onChangeStatus={(agency, nextStatus) => runAction({
+        title: nextStatus === 'suspended' ? 'Suspendre cette organisation ?' : 'Réactiver cette organisation ?',
+        message: "Cette action impacte l'acces client et sera tracee avant mutation.",
+        confirmLabel: nextStatus === 'suspended' ? 'Suspendre' : 'Réactiver',
+        destructive: nextStatus === 'suspended',
+        onConfirm: (reason) => withRefresh(() => changeAgencyStatus(agency, nextStatus, reason, auditContext), 'Statut organisation mis a jour.'),
+      })}
+      onChangePlan={(agency, subscription, plan) => runAction({
+        title: `Changer le plan vers ${plan} ?`,
+        message: "Le plan agence et l'abonnement actif seront alignes si une souscription existe.",
+        confirmLabel: 'Changer le plan',
+        onConfirm: (reason) => withRefresh(() => changeAgencyPlan(agency, subscription, plan, reason, auditContext), 'Plan organisation mis a jour.'),
+      })}
+      onExtendTrial={(agency, days) => runAction({
+        title: `Prolonger l'essai de ${days} jours ?`,
+        message: "La periode d'essai sera recalculee depuis aujourd'hui.",
+        confirmLabel: 'Prolonger',
+        onConfirm: (reason) => withRefresh(() => extendAgencyTrial(agency, days, reason, auditContext), 'Essai prolonge.'),
+      })}
+      onDelete={(agency) => runAction({
+        title: 'Supprimer cette organisation ?',
+        message: 'Action destructive : la RPC de suppression cascade sera appelee apres audit strict.',
+        confirmLabel: 'Supprimer définitivement',
+        destructive: true,
+        requireText: agency.name,
+        minReasonLength: 12,
+        onConfirm: (reason) => withRefresh(() => deleteAgencyCascade(agency, reason, auditContext), 'Organisation supprimee.'),
+      })}
+      onCreateNote={(agency, note, visibility) => runAction({
+        title: 'Ajouter cette note interne ?',
+        message: 'La note sera rattachée à la fiche organisation et visible selon sa catégorie.',
+        confirmLabel: 'Ajouter note',
+        onConfirm: (reason) => withRefresh(
+          () => createAdminNote(agency.id, note, visibility, reason, auditContext),
+          'Note interne ajoutee.',
+        ),
+      })}
+      onCreateTicket={(agency, subject, category, priority, description) => runAction({
+        title: 'Creer ce ticket support ?',
+        message: "Le ticket sera rattaché à l'organisation et suivi dans Support & opérations.",
+        confirmLabel: 'Creer ticket',
+        onConfirm: (reason) => withRefresh(
+          () => createSupportTicket(agency.id, subject, category, priority, description, reason, auditContext),
+          'Ticket support cree.',
+        ),
+      })}
+    />
+  ) : selectedRequest ? (
+    <AgencyRequestReviewDrawer
+      request={selectedRequest}
+      agencies={data.agencies}
+      onClose={() => setSelectedRequest(null)}
+      onApprove={(request) => runAction({
+        title: 'Approuver la demande ?',
+        message: "La RPC d'approbation creera l'espace selon la logique backend existante.",
+        confirmLabel: 'Approuver',
+        onConfirm: (reason) => withRefresh(() => approveAgencyRequest(request.id, reason, auditContext), 'Demande approuvee.'),
+      })}
+      onReject={(request) => runAction({
+        title: 'Rejeter la demande ?',
+        message: "Le motif sera transmis a la RPC de rejet et conserve dans l'audit.",
+        confirmLabel: 'Rejeter',
+        destructive: true,
+        onConfirm: (reason) => withRefresh(() => rejectAgencyRequest(request.id, reason, auditContext), 'Demande rejetee.'),
+      })}
+    />
+  ) : selectedProof ? (
+    <PaymentValidationDrawer
+      proof={selectedProof}
+      onClose={() => setSelectedProof(null)}
+      onApprove={(proof) => runAction({
+        title: 'Valider cette preuve ?',
+        message: "Le plan sera active apres mise a jour de la preuve, de l'abonnement et de l'organisation.",
+        confirmLabel: 'Valider et activer',
+        onConfirm: (reason) => withRefresh(() => approvePaymentProof(proof, reason, auditContext), 'Preuve validee et plan active.'),
+      })}
+      onReject={(proof) => runAction({
+        title: 'Rejeter cette preuve ?',
+        message: 'Le plan ne sera pas active. Le motif restera visible dans le suivi support.',
+        confirmLabel: 'Rejeter la preuve',
+        destructive: true,
+        onConfirm: (reason) => withRefresh(() => rejectPaymentProof(proof, reason, auditContext), 'Preuve rejetee.'),
+      })}
+    />
+  ) : selectedUser ? (
+    <UserAccessDrawer
+      user={selectedUser}
+      users={data.users}
+      onClose={() => setSelectedUser(null)}
+      onChangeRole={(user, nextRole) => runAction({
+        title: `Changer le rôle vers ${nextRole} ?`,
+        message: 'Le rôle impacte les pages visibles et les capacités dans le tenant. Les garde-fous bloquent le retrait du dernier admin actif.',
+        confirmLabel: 'Changer le rôle',
+        destructive: user.role === 'admin' && nextRole !== 'admin',
+        onConfirm: (reason) => withRefresh(() => changeUserRole(user, data.users, nextRole, reason, auditContext), 'Rôle utilisateur mis à jour.'),
+      })}
+      onChangeStatus={(user, nextActive) => runAction({
+        title: nextActive ? 'Réactiver ce compte ?' : 'Désactiver ce compte ?',
+        message: "Le profil est conservé. La désactivation bloque l'exploitation côté agence et reste auditée.",
+        confirmLabel: nextActive ? 'Réactiver' : 'Désactiver',
+        destructive: !nextActive,
+        onConfirm: (reason) => withRefresh(() => changeUserStatus(user, data.users, nextActive, reason, auditContext), 'Statut utilisateur mis a jour.'),
+      })}
+    />
+  ) : null;
+
   return (
     <>
       <ConsoleShell
@@ -240,13 +413,15 @@ export function Console() {
         onSignOut={() => void signOut()}
         lastLoadedAt={data?.generatedAt}
         partialErrors={data?.partialErrors ?? []}
+        detailSlot={detailSlot}
+        isDetailOpen={Boolean(detailSlot)}
         searchSlot={data ? (
           <AdminGlobalSearch
             data={data}
-            onOpenAgency={setSelectedAgency}
-            onOpenProof={setSelectedProof}
-            onOpenRequest={setSelectedRequest}
-            onOpenUser={setSelectedUser}
+            onOpenAgency={selectAgency}
+            onOpenProof={selectProof}
+            onOpenRequest={selectRequest}
+            onOpenUser={selectUser}
             onOpenAgencyById={openAgencyById}
             onChangeSpace={changeSpace}
           />
@@ -255,123 +430,6 @@ export function Console() {
         {renderSpace()}
       </ConsoleShell>
 
-      <OrganizationDrawer
-        agency={selectedAgency}
-        users={selectedUsers}
-        subscriptions={selectedSubscriptions}
-        proofs={selectedProofs}
-        notes={selectedNotes}
-        tickets={selectedTickets}
-        incidents={selectedIncidents}
-        documents={selectedDocuments}
-        verifications={selectedVerifications}
-        metrics={selectedMetrics}
-        auditLogs={selectedAuditLogs}
-        onClose={() => setSelectedAgency(null)}
-        onChangeStatus={(agency, nextStatus) => runAction({
-          title: nextStatus === 'suspended' ? 'Suspendre cette organisation ?' : 'Réactiver cette organisation ?',
-          message: 'Cette action impacte l’accès client et sera tracée avant mutation.',
-          confirmLabel: nextStatus === 'suspended' ? 'Suspendre' : 'Réactiver',
-          destructive: nextStatus === 'suspended',
-          onConfirm: (reason) => withRefresh(() => changeAgencyStatus(agency, nextStatus, reason, auditContext), 'Statut organisation mis à jour.'),
-        })}
-        onChangePlan={(agency, subscription, plan) => runAction({
-          title: `Changer le plan vers ${plan} ?`,
-          message: 'Le plan agence et l’abonnement actif seront alignés si une souscription existe.',
-          confirmLabel: 'Changer le plan',
-          onConfirm: (reason) => withRefresh(() => changeAgencyPlan(agency, subscription, plan, reason, auditContext), 'Plan organisation mis à jour.'),
-        })}
-        onExtendTrial={(agency, days) => runAction({
-          title: `Prolonger l’essai de ${days} jours ?`,
-          message: 'La période d’essai sera recalculée depuis aujourd’hui.',
-          confirmLabel: 'Prolonger',
-          onConfirm: (reason) => withRefresh(() => extendAgencyTrial(agency, days, reason, auditContext), 'Essai prolongé.'),
-        })}
-        onDelete={(agency) => runAction({
-          title: 'Supprimer cette organisation ?',
-          message: 'Action destructive : la RPC de suppression cascade sera appelée après audit strict.',
-          confirmLabel: 'Supprimer définitivement',
-          destructive: true,
-          requireText: agency.name,
-          minReasonLength: 12,
-          onConfirm: (reason) => withRefresh(() => deleteAgencyCascade(agency, reason, auditContext), 'Organisation supprimée.'),
-        })}
-        onCreateNote={(agency, note, visibility) => runAction({
-          title: 'Ajouter cette note interne ?',
-          message: 'La note sera rattachée à la fiche organisation et visible selon sa catégorie.',
-          confirmLabel: 'Ajouter note',
-          onConfirm: (reason) => withRefresh(
-            () => createAdminNote(agency.id, note, visibility, reason, auditContext),
-            'Note interne ajoutée.',
-          ),
-        })}
-        onCreateTicket={(agency, subject, category, priority, description) => runAction({
-          title: 'Créer ce ticket support ?',
-          message: 'Le ticket sera rattaché à l’organisation et suivi dans Support & opérations.',
-          confirmLabel: 'Créer ticket',
-          onConfirm: (reason) => withRefresh(
-            () => createSupportTicket(agency.id, subject, category, priority, description, reason, auditContext),
-            'Ticket support créé.',
-          ),
-        })}
-      />
-
-      <AgencyRequestReviewDrawer
-        request={selectedRequest}
-        agencies={data?.agencies ?? []}
-        onClose={() => setSelectedRequest(null)}
-        onApprove={(request) => runAction({
-          title: 'Approuver la demande ?',
-          message: 'La RPC d’approbation créera l’espace selon la logique backend existante.',
-          confirmLabel: 'Approuver',
-          onConfirm: (reason) => withRefresh(() => approveAgencyRequest(request.id, reason, auditContext), 'Demande approuvée.'),
-        })}
-        onReject={(request) => runAction({
-          title: 'Rejeter la demande ?',
-          message: 'Le motif sera transmis à la RPC de rejet et conservé dans l’audit.',
-          confirmLabel: 'Rejeter',
-          destructive: true,
-          onConfirm: (reason) => withRefresh(() => rejectAgencyRequest(request.id, reason, auditContext), 'Demande rejetée.'),
-        })}
-      />
-
-      <PaymentValidationDrawer
-        proof={selectedProof}
-        onClose={() => setSelectedProof(null)}
-        onApprove={(proof) => runAction({
-          title: 'Valider cette preuve ?',
-          message: 'Le plan sera activé après mise à jour de la preuve, de l’abonnement et de l’organisation.',
-          confirmLabel: 'Valider et activer',
-          onConfirm: (reason) => withRefresh(() => approvePaymentProof(proof, reason, auditContext), 'Preuve validée et plan activé.'),
-        })}
-        onReject={(proof) => runAction({
-          title: 'Rejeter cette preuve ?',
-          message: 'Le plan ne sera pas activé. Le motif restera visible dans le suivi support.',
-          confirmLabel: 'Rejeter la preuve',
-          destructive: true,
-          onConfirm: (reason) => withRefresh(() => rejectPaymentProof(proof, reason, auditContext), 'Preuve rejetée.'),
-        })}
-      />
-
-      <UserAccessDrawer
-        user={selectedUser}
-        users={data?.users ?? []}
-        onClose={() => setSelectedUser(null)}
-        onChangeRole={(user, nextRole) => runAction({
-          title: `Changer le rôle vers ${nextRole} ?`,
-          message: 'Le rôle impacte les pages visibles et les capacités dans le tenant. Les garde-fous bloquent le retrait du dernier admin actif.',
-          confirmLabel: 'Changer le rôle',
-          destructive: user.role === 'admin' && nextRole !== 'admin',
-          onConfirm: (reason) => withRefresh(() => changeUserRole(user, data?.users ?? [], nextRole, reason, auditContext), 'Rôle utilisateur mis à jour.'),
-        })}
-        onChangeStatus={(user, nextActive) => runAction({
-          title: nextActive ? 'Réactiver ce compte ?' : 'Désactiver ce compte ?',
-          message: 'Le profil est conservé. La désactivation bloque l’exploitation côté agence et reste auditée.',
-          confirmLabel: nextActive ? 'Réactiver' : 'Désactiver',
-          destructive: !nextActive,
-          onConfirm: (reason) => withRefresh(() => changeUserStatus(user, data?.users ?? [], nextActive, reason, auditContext), 'Statut utilisateur mis à jour.'),
-        })}
-      />
 
       <AdminActionDialog
         action={action}

@@ -3,7 +3,7 @@ import { Bell, Database, FileText, Flag, Megaphone, QrCode, ShieldCheck, Wrench 
 import { documentTypeLabel } from '../../../lib/admin/adminInsights';
 import { formatAdminDateTime } from '../../../lib/admin/adminFormatters';
 import { humanizeAuditAction } from '../../../services/admin/adminAuditService';
-import { AdminButton, AdminEmptyState, AdminMetricCard, AdminPanel, AdminStatusBadge } from '../../../components/console/AdminPrimitives';
+import { AdminButton, AdminEmptyState, AdminKpiGrid, AdminMetricCard, AdminPanel, AdminStatusBadge } from '../../../components/console/AdminPrimitives';
 import type { AdminConsoleData, AdminFeatureFlag } from '../../../services/admin/adminConsoleService';
 
 function flagKey(flag: AdminFeatureFlag) {
@@ -25,10 +25,12 @@ export function SystemConfigTab({
   data,
   onToggleFlag,
   onCreateAnnouncement,
+  onOpenAgencyById,
 }: {
   data: AdminConsoleData;
   onToggleFlag: (flag: AdminFeatureFlag, active: boolean) => void;
   onCreateAnnouncement: (title: string, message: string, status: string) => void;
+  onOpenAgencyById?: (agencyId: string | null | undefined) => void;
 }) {
   const [announcementTitle, setAnnouncementTitle] = useState('');
   const [announcementMessage, setAnnouncementMessage] = useState('');
@@ -48,39 +50,41 @@ export function SystemConfigTab({
     setAnnouncementStatus('draft');
   };
 
+  const healthRows = [
+    ['Application', data.partialErrors.length ? 'À vérifier' : 'Opérationnel', data.partialErrors.length ? 'amber' : 'emerald'],
+    ['Supabase Auth', 'Opérationnel', 'emerald'],
+    ['Storage', data.documentRegistry.some((doc) => doc.storage_path) ? 'Suivi actif' : 'À instrumenter', data.documentRegistry.some((doc) => doc.storage_path) ? 'emerald' : 'slate'],
+    ['Documents PDF', data.documentRegistry.length ? 'Registry actif' : 'Aucun document à vérifier', data.documentRegistry.length ? 'emerald' : 'slate'],
+    ['Paiements', data.platform.pendingProofs ? 'Validation requise' : 'Aucun blocage détecté', data.platform.pendingProofs ? 'amber' : 'emerald'],
+    ['Audit owner', data.auditLogs.length ? 'Traçabilité active' : 'À vérifier', data.auditLogs.length ? 'emerald' : 'amber'],
+  ] as const;
+
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="space-y-3">
+      <AdminKpiGrid maxItems={5}>
         <AdminMetricCard label="Documents" value={data.documentRegistry.length || data.platform.totalDocuments} helper={`${documentIssues.length} à vérifier`} icon={FileText} tone={documentIssues.length ? 'amber' : 'blue'} />
-        <AdminMetricCard label="QR Verify" value={verifiedQr.length} helper={`${data.documentVerifications.length} QR suivis`} icon={QrCode} tone="emerald" />
-        <AdminMetricCard label="Incidents ouverts" value={openIncidents.length} icon={Wrench} tone={openIncidents.length ? 'red' : 'emerald'} />
-        <AdminMetricCard label="Flags actifs" value={activeFlags} icon={Flag} tone={activeFlags ? 'amber' : 'slate'} />
-        <AdminMetricCard label="Audit" value={data.auditLogs.length} helper="Actions récentes" icon={ShieldCheck} />
-      </div>
+        <AdminMetricCard label="QR Verify" value={verifiedQr.length} helper={`${data.documentVerifications.length} suivis`} icon={QrCode} tone="emerald" />
+        <AdminMetricCard label="Incidents" value={openIncidents.length} helper="Ouverts" icon={Wrench} tone={openIncidents.length ? 'red' : 'emerald'} />
+        <AdminMetricCard label="Flags" value={activeFlags} helper="Actifs" icon={Flag} tone={activeFlags ? 'amber' : 'slate'} />
+        <AdminMetricCard label="Audit" value={data.auditLogs.length} helper="Actions" icon={ShieldCheck} />
+      </AdminKpiGrid>
 
       <AdminPanel title="Santé système" subtitle="Statuts synthétiques sans exposer de secret, token ou stack trace.">
         <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-          {[
-            ['Application', data.partialErrors.length ? 'À vérifier' : 'Opérationnel', data.partialErrors.length ? 'amber' : 'emerald'],
-            ['Supabase Auth', 'Opérationnel', 'emerald'],
-            ['Storage', data.documentRegistry.some((doc) => doc.storage_path) ? 'Suivi actif' : 'À instrumenter', data.documentRegistry.some((doc) => doc.storage_path) ? 'emerald' : 'slate'],
-            ['Documents PDF', data.documentRegistry.length ? 'Registry actif' : 'Donnée non disponible', data.documentRegistry.length ? 'emerald' : 'slate'],
-            ['Paiements', data.platform.pendingProofs ? 'Validation requise' : 'Aucun blocage détecté', data.platform.pendingProofs ? 'amber' : 'emerald'],
-            ['Audit owner', data.auditLogs.length ? 'Traçabilité active' : 'À vérifier', data.auditLogs.length ? 'emerald' : 'amber'],
-          ].map(([label, value, tone]) => (
+          {healthRows.map(([label, value, tone]) => (
             <div key={label} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
               <span className="text-sm font-bold text-slate-800">{label}</span>
-              <AdminStatusBadge tone={tone as 'emerald' | 'amber' | 'slate'}>{value}</AdminStatusBadge>
+              <AdminStatusBadge tone={tone}>{value}</AdminStatusBadge>
             </div>
           ))}
         </div>
       </AdminPanel>
 
-      <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+      <div className="grid items-start gap-3 xl:grid-cols-[0.95fr_1.05fr]">
         <AdminPanel title="Communication plateforme" subtitle="Annonces maintenance, incidents planifiés et messages owner.">
           <div className="grid gap-3">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <div className="grid gap-2 sm:grid-cols-[1fr_150px]">
+              <div className="grid gap-2 sm:grid-cols-[1fr_140px]">
                 <input
                   value={announcementTitle}
                   onChange={(event) => setAnnouncementTitle(event.target.value)}
@@ -132,7 +136,7 @@ export function SystemConfigTab({
           </div>
         </AdminPanel>
 
-        <AdminPanel title="Documents & QR Verify" subtitle="Supervision du registry documentaire, sans ouvrir les PDF privés.">
+        <AdminPanel title="Documents & QR Verify" subtitle="Supervision du registry documentaire, reliée aux fiches organisations.">
           <div className="grid gap-3 lg:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-3">
               <div className="mb-2 flex items-center justify-between">
@@ -140,11 +144,11 @@ export function SystemConfigTab({
                 <AdminStatusBadge tone={documentIssues.length ? 'amber' : 'emerald'}>{documentIssues.length ? 'À vérifier' : 'Stable'}</AdminStatusBadge>
               </div>
               <div className="space-y-2">
-                {(documentIssues.length ? documentIssues : data.documentRegistry).slice(0, 5).map((entry) => (
-                  <div key={entry.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                {(documentIssues.length ? documentIssues : data.documentRegistry).slice(0, 6).map((entry) => (
+                  <button key={entry.id} type="button" onClick={() => onOpenAgencyById?.(entry.agency_id)} className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-left transition hover:border-emerald-200 hover:bg-emerald-50/45">
                     <p className="text-sm font-black text-slate-900">{documentTypeLabel(entry.document_type)}</p>
                     <p className="text-xs font-semibold text-slate-500">{entry.agencies?.name ?? 'Organisation'} · {entry.reference ?? 'sans référence'} · {entry.status ?? 'statut inconnu'}</p>
-                  </div>
+                  </button>
                 ))}
                 {data.documentRegistry.length === 0 && <p className="text-xs font-semibold text-slate-500">Aucune entrée registry chargée.</p>}
               </div>
@@ -155,11 +159,11 @@ export function SystemConfigTab({
                 <AdminStatusBadge tone="blue">{verifiedQr.length} vérifiées</AdminStatusBadge>
               </div>
               <div className="space-y-2">
-                {data.documentVerifications.slice(0, 5).map((verification) => (
-                  <div key={verification.id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                {data.documentVerifications.slice(0, 6).map((verification) => (
+                  <button key={verification.id} type="button" onClick={() => onOpenAgencyById?.(verification.agency_id)} className="w-full rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-left transition hover:border-emerald-200 hover:bg-emerald-50/45">
                     <p className="text-sm font-black text-slate-900">{documentTypeLabel(verification.document_type)}</p>
                     <p className="text-xs font-semibold text-slate-500">{verification.agencies?.name ?? 'Organisation'} · {verification.verification_count ?? 0} vérification(s) · {formatAdminDateTime(verification.last_verified_at)}</p>
-                  </div>
+                  </button>
                 ))}
                 {data.documentVerifications.length === 0 && <p className="text-xs font-semibold text-slate-500">Aucun QR suivi chargé.</p>}
               </div>
@@ -168,7 +172,7 @@ export function SystemConfigTab({
         </AdminPanel>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid items-start gap-3 xl:grid-cols-2">
         <AdminPanel title="Feature flags" subtitle="Activation contrôlée avec audit. Les flags archivés restent visibles mais non modifiables.">
           {data.featureFlags.length === 0 ? (
             <AdminEmptyState title="Aucun feature flag actif" text="Les flags globaux ou ciblés apparaîtront ici avec leur état." />
@@ -227,7 +231,7 @@ export function SystemConfigTab({
         </AdminPanel>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid items-start gap-3 xl:grid-cols-[0.9fr_1.1fr]">
         <AdminPanel title="Événements système" subtitle="Journal lisible des signaux plateforme récents.">
           {data.systemEvents.length === 0 && data.notifications.length === 0 ? (
             <AdminEmptyState title="Aucun événement chargé" text="Les signaux système et notifications admin apparaîtront ici." />
@@ -260,7 +264,7 @@ export function SystemConfigTab({
           ) : (
             <div className="space-y-2">
               {data.auditLogs.slice(0, 20).map((log) => (
-                <div key={log.id} className="grid gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 md:grid-cols-[1fr_180px_150px] md:items-center">
+                <div key={log.id} className="grid gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 md:grid-cols-[1fr_160px_130px] md:items-center">
                   <div>
                     <p className="text-sm font-black text-slate-950">{humanizeAuditAction(log.action)}</p>
                     <p className="text-xs font-semibold text-slate-500">{log.target_label ?? log.target_type ?? 'Plateforme'}{log.reason ? ` · ${log.reason}` : ''}</p>

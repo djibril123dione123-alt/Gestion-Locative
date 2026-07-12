@@ -305,11 +305,110 @@ function readSnapshotPlatform(snapshot: Record<string, unknown> | null | undefin
   };
 }
 
+function inferAgenciesFromRelatedSources({
+  users,
+  subscriptions,
+  proofs,
+  metrics,
+  documents,
+  verifications,
+}: {
+  users: AdminUser[];
+  subscriptions: AdminSubscription[];
+  proofs: SubscriptionPaymentProof[];
+  metrics: AdminOrganizationMetric[];
+  documents: AdminDocumentRegistryEntry[];
+  verifications: AdminDocumentVerification[];
+}) {
+  const map = new Map<string, AdminAgency>();
+  const ensureAgency = (id: string | null | undefined, name?: string | null) => {
+    if (!id) return null;
+    const existing = map.get(id);
+    if (existing) {
+      if ((!existing.name || existing.name === id) && name) existing.name = name;
+      return existing;
+    }
+    const agency: AdminAgency = {
+      id,
+      name: name || id,
+      status: 'active',
+      plan: null,
+      nb_users: 0,
+      nb_unites: 0,
+      nb_contrats: 0,
+      nb_paiements: 0,
+      volume_paiements: 0,
+      total_documents: 0,
+    };
+    map.set(id, agency);
+    return agency;
+  };
+
+  for (const user of users) {
+    const agency = ensureAgency(user.agency_id, user.agency_name);
+    if (!agency) continue;
+    agency.nb_users = numberValue(agency.nb_users) + 1;
+    agency.email = agency.email ?? user.email ?? null;
+    agency.created_at = agency.created_at ?? user.created_at ?? null;
+    agency.derniere_activite = agency.derniere_activite ?? user.created_at ?? null;
+    if (user.role === 'bailleur') {
+      agency.is_bailleur_account = agency.is_bailleur_account ?? true;
+      agency.organization_type = agency.organization_type ?? 'individual_landlord';
+    }
+  }
+
+  for (const subscription of subscriptions) {
+    const agency = ensureAgency(subscription.agency_id, subscription.agency_name);
+    if (!agency) continue;
+    agency.plan = agency.plan ?? subscription.plan_id;
+    agency.status = subscription.status ?? agency.status;
+    agency.created_at = agency.created_at ?? subscription.created_at ?? null;
+    agency.derniere_activite = agency.derniere_activite ?? subscription.current_period_end ?? subscription.created_at ?? null;
+  }
+
+  for (const proof of proofs) {
+    const agency = ensureAgency(proof.agency_id, proof.agencies?.name);
+    if (!agency) continue;
+    agency.plan = agency.plan ?? proof.plan_key;
+    agency.organization_type = agency.organization_type ?? proof.agencies?.organization_type ?? null;
+    agency.is_bailleur_account = agency.is_bailleur_account ?? proof.agencies?.is_bailleur_account ?? null;
+    agency.volume_paiements = numberValue(agency.volume_paiements) + numberValue(proof.amount);
+    agency.derniere_activite = agency.derniere_activite ?? proof.created_at ?? null;
+  }
+
+  for (const metric of metrics) {
+    const agency = ensureAgency(metric.organization_id);
+    if (!agency) continue;
+    agency.nb_unites = numberValue(agency.nb_unites) || numberValue(metric.total_units);
+    agency.nb_contrats = numberValue(agency.nb_contrats) || numberValue(metric.total_contracts);
+    agency.nb_paiements = numberValue(agency.nb_paiements) || numberValue(metric.payments_count);
+    agency.volume_paiements = numberValue(agency.volume_paiements) || numberValue(metric.payments_amount);
+    agency.total_documents = numberValue(agency.total_documents) || numberValue(metric.total_documents);
+    agency.derniere_activite = agency.derniere_activite ?? metric.last_activity_at ?? metric.metric_date ?? null;
+  }
+
+  for (const document of documents) {
+    const agency = ensureAgency(document.agency_id, document.agencies?.name);
+    if (!agency) continue;
+    agency.total_documents = numberValue(agency.total_documents) + 1;
+    agency.derniere_activite = agency.derniere_activite ?? document.created_at ?? document.generated_at ?? null;
+  }
+
+  for (const verification of verifications) {
+    const agency = ensureAgency(verification.agency_id, verification.agencies?.name);
+    if (!agency) continue;
+    agency.derniere_activite = agency.derniere_activite ?? verification.last_verified_at ?? verification.created_at ?? null;
+  }
+
+  return Array.from(map.values()).sort((a, b) => new Date(b.derniere_activite ?? b.created_at ?? 0).getTime() - new Date(a.derniere_activite ?? a.created_at ?? 0).getTime());
+}
+
 export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
   const admin = supabase.schema('samay_admin');
   const results = await Promise.allSettled([
     supabase.rpc('admin_console_snapshot'),
     supabase.from('vw_owner_agency_stats').select('*').order('created_at', { ascending: false }),
+    supabase.from('agencies').select('id,name,status,plan,organization_type,is_bailleur_account,email,phone,created_at,trial_ends_at,derniere_activite').order('created_at', { ascending: false }).limit(500),
     supabase.from('user_profiles').select('*, agencies(name)').order('created_at', { ascending: false }).limit(500),
     supabase.from('subscriptions').select('*, agencies(name)').order('created_at', { ascending: false }).limit(300),
     supabase.from('subscription_payment_proofs').select('*, agencies(name, organization_type, is_bailleur_account)').order('created_at', { ascending: false }).limit(200),
@@ -327,36 +426,35 @@ export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
   ]);
 
   const partialErrors: string[] = [];
-  const unpack = <T,>(index: number, label: string, fallback: T): T => {
+  const unpack = <T,>(index: number, _label: string, fallback: T): T => {
     const result = results[index];
     if (result.status === 'rejected') {
-      partialErrors.push(`${label} indisponible`);
       return fallback;
     }
     const response = result.value as { data?: unknown; error?: { message?: string } | null };
     if (response.error) {
-      partialErrors.push(`${label} indisponible`);
       return fallback;
     }
     return (response.data ?? fallback) as T;
   };
 
   const snapshot = unpack<Record<string, unknown> | null>(0, 'Snapshot plateforme', null);
-  const agencies = unpack<AdminAgency[]>(1, 'Organisations', []);
-  const usersRaw = unpack<Array<AdminUser & { agencies?: { name?: string | null } | null }>>(2, 'Utilisateurs', []);
-  const subscriptionsRaw = unpack<Array<AdminSubscription & { agencies?: { name?: string | null } | null }>>(3, 'Abonnements', []);
-  const proofs = unpack<SubscriptionPaymentProof[]>(4, 'Paiements manuels', []);
-  const requests = unpack<AgencyCreationRequest[]>(5, 'Demandes', []);
-  const legacyLogs = unpack<AdminAuditLog[]>(6, 'Audit historique', []);
-  const legacyFlags = unpack<AdminFeatureFlag[]>(7, 'Feature flags', []);
-  const configRows = unpack<SaasConfigRow[]>(8, 'Configuration SaaS', []);
-  const notes = unpack<AdminNote[]>(9, 'Notes internes', []);
-  const notifications = unpack<AdminNotification[]>(10, 'Notifications admin', []);
-  const systemEvents = unpack<AdminSystemEvent[]>(11, 'Événements système', []);
-  const organizationMetrics = unpack<AdminOrganizationMetric[]>(12, 'Métriques organisations', []);
-  const announcements = unpack<AdminMaintenanceAnnouncement[]>(13, 'Annonces maintenance', []);
-  const documentRegistry = unpack<AdminDocumentRegistryEntry[]>(14, 'Registry documents', []);
-  const documentVerifications = unpack<AdminDocumentVerification[]>(15, 'QR Verify', []);
+  const agenciesView = unpack<AdminAgency[]>(1, 'Vue organisations', []);
+  const agenciesFallback = unpack<AdminAgency[]>(2, 'Organisations', []);
+  const usersRaw = unpack<Array<AdminUser & { agencies?: { name?: string | null } | null }>>(3, 'Utilisateurs', []);
+  const subscriptionsRaw = unpack<Array<AdminSubscription & { agencies?: { name?: string | null } | null }>>(4, 'Abonnements', []);
+  const proofs = unpack<SubscriptionPaymentProof[]>(5, 'Paiements manuels', []);
+  const requests = unpack<AgencyCreationRequest[]>(6, 'Demandes', []);
+  const legacyLogs = unpack<AdminAuditLog[]>(7, 'Audit historique', []);
+  const legacyFlags = unpack<AdminFeatureFlag[]>(8, 'Feature flags', []);
+  const configRows = unpack<SaasConfigRow[]>(9, 'Configuration SaaS', []);
+  const notes = unpack<AdminNote[]>(10, 'Notes internes', []);
+  const notifications = unpack<AdminNotification[]>(11, 'Notifications admin', []);
+  const systemEvents = unpack<AdminSystemEvent[]>(12, 'Événements système', []);
+  const organizationMetrics = unpack<AdminOrganizationMetric[]>(13, 'Métriques organisations', []);
+  const announcements = unpack<AdminMaintenanceAnnouncement[]>(14, 'Annonces maintenance', []);
+  const documentRegistry = unpack<AdminDocumentRegistryEntry[]>(15, 'Registry documents', []);
+  const documentVerifications = unpack<AdminDocumentVerification[]>(16, 'QR Verify', []);
 
   const platformFromSnapshot = readSnapshotPlatform(snapshot);
   const auditLogs = ((snapshot?.audit_logs as AdminAuditLog[] | undefined) ?? legacyLogs).slice(0, 120);
@@ -366,6 +464,15 @@ export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
 
   const users = usersRaw.map((user) => ({ ...user, agency_name: user.agency_name ?? user.agencies?.name ?? null }));
   const subscriptions = subscriptionsRaw.map((sub) => ({ ...sub, agency_name: sub.agency_name ?? sub.agencies?.name ?? null }));
+  const inferredAgencies = inferAgenciesFromRelatedSources({
+    users,
+    subscriptions,
+    proofs,
+    metrics: organizationMetrics,
+    documents: documentRegistry,
+    verifications: documentVerifications,
+  });
+  const agencies = agenciesView.length > 0 ? agenciesView : agenciesFallback.length > 0 ? agenciesFallback : inferredAgencies;
   const estimatedMrr = agencies
     .filter((agency) => ['active', 'trial', null, undefined].includes(agency.status))
     .reduce((sum, agency) => sum + getAdminPlanPrice(normalizeAdminPlanId(agency.plan)), 0);

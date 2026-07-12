@@ -2,10 +2,18 @@ import { CreditCard, Hourglass, ReceiptText, TrendingUp } from 'lucide-react';
 import { ADMIN_PLAN_DEFINITIONS, getAdminPlan } from '../../../lib/admin/adminPricingCatalog';
 import { paymentExpectedAmount, paymentHasAmountAnomaly, summarizeSaasRevenue } from '../../../lib/admin/adminInsights';
 import { formatAdminCurrency, formatAdminDate } from '../../../lib/admin/adminFormatters';
-import { AdminEmptyState, AdminMetricCard, AdminPanel, AdminStatusBadge, ResponsiveTable } from '../../../components/console/AdminPrimitives';
+import { AdminEmptyState, AdminKpiGrid, AdminMetricCard, AdminPanel, AdminStatusBadge, ResponsiveTable } from '../../../components/console/AdminPrimitives';
 import type { AdminConsoleData, SubscriptionPaymentProof } from '../../../services/admin/adminConsoleService';
 
-export function BillingTab({ data, onOpenProof }: { data: AdminConsoleData; onOpenProof: (proof: SubscriptionPaymentProof) => void }) {
+export function BillingTab({
+  data,
+  onOpenProof,
+  selectedProofId,
+}: {
+  data: AdminConsoleData;
+  onOpenProof: (proof: SubscriptionPaymentProof) => void;
+  selectedProofId?: string | null;
+}) {
   const pendingProofs = data.proofs.filter((proof) => proof.status === 'pending');
   const approvedProofs = data.proofs.filter((proof) => proof.status === 'approved');
   const rejectedProofs = data.proofs.filter((proof) => proof.status === 'rejected');
@@ -17,19 +25,22 @@ export function BillingTab({ data, onOpenProof }: { data: AdminConsoleData; onOp
   }));
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <AdminMetricCard label="MRR estimé" value={formatAdminCurrency(revenue.mrr)} helper="Source opérationnelle" icon={TrendingUp} tone="orange" />
-        <AdminMetricCard label="ARR estimé" value={formatAdminCurrency(revenue.arr)} helper="Projection annuelle" icon={TrendingUp} tone="blue" />
-        <AdminMetricCard label="Abonnements actifs" value={data.subscriptions.filter((sub) => sub.status === 'active').length} icon={CreditCard} tone="emerald" />
-        <AdminMetricCard label="Preuves en attente" value={pendingProofs.length} helper={formatAdminCurrency(revenue.pendingAmount)} icon={Hourglass} tone={pendingProofs.length ? 'amber' : 'emerald'} />
-        <AdminMetricCard label="Anomalies" value={anomalies.length} helper="Montant / preuve" icon={ReceiptText} tone={anomalies.length ? 'red' : 'slate'} />
-      </div>
+    <div className="space-y-3">
+      <AdminKpiGrid maxItems={5}>
+        <AdminMetricCard label="MRR" value={formatAdminCurrency(revenue.mrr)} helper="Mensuel estimé" icon={TrendingUp} tone="orange" />
+        <AdminMetricCard label="ARR" value={formatAdminCurrency(revenue.arr)} helper="Annuel estimé" icon={TrendingUp} tone="blue" />
+        <AdminMetricCard label="Actifs" value={data.subscriptions.filter((sub) => sub.status === 'active').length} helper="Abonnements" icon={CreditCard} tone="emerald" />
+        <AdminMetricCard label="Preuves" value={pendingProofs.length} helper={formatAdminCurrency(revenue.pendingAmount)} icon={Hourglass} tone={pendingProofs.length ? 'amber' : 'emerald'} />
+        <AdminMetricCard label="Anomalies" value={anomalies.length} helper="Montant" icon={ReceiptText} tone={anomalies.length ? 'red' : 'slate'} />
+      </AdminKpiGrid>
 
       <AdminPanel title="Paiements manuels à valider" subtitle="Validation avec audit strict, contrôle montant attendu et activation du plan après confirmation.">
-        <ResponsiveTable
+        <ResponsiveTable<SubscriptionPaymentProof>
           rows={pendingProofs}
           getKey={(proof) => proof.id}
+          selectedKey={selectedProofId}
+          onRowClick={onOpenProof}
+          rowAriaLabel={(proof) => `Examiner la preuve ${proof.reference ?? proof.id}`}
           empty={<AdminEmptyState title="Aucun paiement manuel en attente" text="Les preuves transmises par les agences apparaîtront ici pour validation." />}
           columns={[
             { key: 'org', label: 'Organisation', render: (proof) => <span className="font-black text-slate-950">{proof.agencies?.name ?? proof.agency_id}</span> },
@@ -39,7 +50,6 @@ export function BillingTab({ data, onOpenProof }: { data: AdminConsoleData; onOp
             { key: 'method', label: 'Moyen', render: (proof) => proof.method },
             { key: 'ref', label: 'Référence', render: (proof) => proof.reference ?? 'Non renseignée' },
             { key: 'date', label: 'Soumis', render: (proof) => formatAdminDate(proof.created_at) },
-            { key: 'action', label: 'Action', align: 'right', render: (proof) => <button type="button" onClick={() => onOpenProof(proof)} className="rounded-xl border border-emerald-900 bg-emerald-950 px-3 py-2 text-xs font-black text-white">Examiner</button> },
           ]}
           renderCard={(proof) => (
             <button type="button" onClick={() => onOpenProof(proof)} className="rounded-2xl border border-slate-200 bg-white p-3 text-left">
@@ -56,7 +66,7 @@ export function BillingTab({ data, onOpenProof }: { data: AdminConsoleData; onOp
         />
       </AdminPanel>
 
-      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid items-start gap-3 xl:grid-cols-[0.9fr_1.1fr]">
         <AdminPanel title="Répartition par plan" subtitle="Catalogue unique Starter, Pro, Business, Enterprise.">
           <div className="grid gap-2">
             {planCounts.map(({ plan, count }) => (

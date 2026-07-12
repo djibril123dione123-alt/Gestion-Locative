@@ -4,12 +4,20 @@ import { getAdminPlan } from '../../../lib/admin/adminPricingCatalog';
 import { buildRequiredActions, organizationTypeLabel } from '../../../lib/admin/adminInsights';
 import { formatAdminCurrency, formatAdminDate, numberValue } from '../../../lib/admin/adminFormatters';
 import { computeOrganizationHealth } from '../../../lib/admin/adminRiskScoring';
-import { AdminEmptyState, AdminMetricCard, AdminPanel, AdminStatusBadge, ResponsiveTable } from '../../../components/console/AdminPrimitives';
+import { AdminEmptyState, AdminKpiGrid, AdminMetricCard, AdminPanel, AdminStatusBadge, ResponsiveTable } from '../../../components/console/AdminPrimitives';
 import type { AdminAgency, AdminConsoleData } from '../../../services/admin/adminConsoleService';
 
 type SortKey = 'created' | 'activity' | 'plan' | 'revenue' | 'users' | 'units' | 'risk';
 
-export function OrganizationsTab({ data, onOpenAgency }: { data: AdminConsoleData; onOpenAgency: (agency: AdminAgency) => void }) {
+export function OrganizationsTab({
+  data,
+  onOpenAgency,
+  selectedAgencyId,
+}: {
+  data: AdminConsoleData;
+  onOpenAgency: (agency: AdminAgency) => void;
+  selectedAgencyId?: string | null;
+}) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
   const [type, setType] = useState('all');
@@ -45,23 +53,23 @@ export function OrganizationsTab({ data, onOpenAgency }: { data: AdminConsoleDat
   const mismatches = data.agencies.filter((agency) => agency.is_bailleur_account && agency.organization_type && agency.organization_type !== 'individual_landlord').length;
 
   return (
-    <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <AdminMetricCard label="Agences" value={agencies} helper="Organisations professionnelles" tone="emerald" />
-        <AdminMetricCard label="Bailleurs individuels" value={individuals} helper="Profils propriétaires" tone="blue" />
-        <AdminMetricCard label="Paiement en attente" value={pendingPaymentIds.size} helper="Validation manuelle" tone={pendingPaymentIds.size ? 'amber' : 'emerald'} />
-        <AdminMetricCard label="À vérifier" value={mismatches + riskyIds.size} helper="Types, santé ou paiement" icon={AlertTriangle} tone={mismatches + riskyIds.size ? 'amber' : 'slate'} />
-      </div>
+    <div className="space-y-3">
+      <AdminKpiGrid maxItems={4}>
+        <AdminMetricCard label="Agences" value={agencies} helper="Comptes pro" tone="emerald" />
+        <AdminMetricCard label="Bailleurs" value={individuals} helper="Profils owner" tone="blue" />
+        <AdminMetricCard label="Paiements" value={pendingPaymentIds.size} helper="À valider" tone={pendingPaymentIds.size ? 'amber' : 'emerald'} />
+        <AdminMetricCard label="À vérifier" value={mismatches + riskyIds.size} helper="Risque ou type" icon={AlertTriangle} tone={mismatches + riskyIds.size ? 'amber' : 'slate'} />
+      </AdminKpiGrid>
 
       <AdminPanel
         title="Organisations"
         subtitle="Recherche, filtres, santé, plan, activité et signaux de risque."
         action={<span className="text-xs font-black text-slate-500">{rows.length} résultat(s)</span>}
       >
-        <div className="mb-3 grid gap-2 xl:grid-cols-[1fr_160px_170px_150px_170px]">
+        <div className="mb-3 grid gap-2 xl:grid-cols-[1fr_150px_150px_140px_150px]">
           <label className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
             <Search className="h-4 w-4 text-slate-400" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher nom, email, téléphone, référence..." className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-slate-400" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher nom, email, téléphone..." className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-slate-400" />
           </label>
           <select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold">
             <option value="all">Tous statuts</option>
@@ -74,7 +82,7 @@ export function OrganizationsTab({ data, onOpenAgency }: { data: AdminConsoleDat
           <select value={type} onChange={(event) => setType(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold">
             <option value="all">Tous types</option>
             <option value="agency">Agences</option>
-            <option value="individual">Bailleurs individuels</option>
+            <option value="individual">Bailleurs</option>
             <option value="mismatch">Type incohérent</option>
           </select>
           <select value={plan} onChange={(event) => setPlan(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold">
@@ -86,7 +94,7 @@ export function OrganizationsTab({ data, onOpenAgency }: { data: AdminConsoleDat
           </select>
           <select value={sort} onChange={(event) => setSort(event.target.value as SortKey)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold">
             <option value="risk">Tri risque</option>
-            <option value="activity">Dernière activité</option>
+            <option value="activity">Activité</option>
             <option value="created">Création</option>
             <option value="plan">Plan</option>
             <option value="revenue">Volume</option>
@@ -94,19 +102,23 @@ export function OrganizationsTab({ data, onOpenAgency }: { data: AdminConsoleDat
             <option value="units">Unités</option>
           </select>
         </div>
-        <ResponsiveTable
+
+        <ResponsiveTable<AdminAgency>
           rows={rows}
           getKey={(agency) => agency.id}
+          selectedKey={selectedAgencyId}
+          onRowClick={onOpenAgency}
+          rowAriaLabel={(agency) => `Ouvrir la fiche organisation ${agency.name}`}
           empty={<AdminEmptyState title="Aucune organisation" text="Ajustez la recherche ou les filtres." />}
           columns={[
             {
               key: 'name',
               label: 'Organisation',
               render: (agency) => (
-                <button type="button" onClick={() => onOpenAgency(agency)} className="text-left font-black text-slate-950 hover:text-emerald-800">
+                <span className="text-left font-black text-slate-950">
                   {agency.name}
                   <span className="block text-xs font-semibold text-slate-500">{agency.email ?? 'Email non renseigné'}</span>
-                </button>
+                </span>
               ),
             },
             { key: 'type', label: 'Type', render: (agency) => <AdminStatusBadge tone="slate">{organizationTypeLabel(agency)}</AdminStatusBadge> },

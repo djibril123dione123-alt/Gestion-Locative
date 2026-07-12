@@ -158,6 +158,7 @@ interface ExpenseRow {
 interface DocumentRow {
   id: string;
   name?: string | null;
+  source?: string | null;
   document_category?: string | null;
   entity_type?: string | null;
   entity_id?: string | null;

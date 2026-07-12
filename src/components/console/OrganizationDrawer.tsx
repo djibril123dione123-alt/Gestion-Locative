@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { CalendarDays, CreditCard, FileText, LifeBuoy, Mail, MessageCircle, ShieldAlert, Users, X } from 'lucide-react';
+import { CalendarDays, CreditCard, FileText, LifeBuoy, Mail, MessageCircle, ShieldAlert, Users } from 'lucide-react';
+import { PremiumDrawerShell } from '../ui/PremiumDrawerShell';
 import { getAdminPlan } from '../../lib/admin/adminPricingCatalog';
 import { documentTypeLabel, organizationTypeLabel } from '../../lib/admin/adminInsights';
 import { formatAdminCurrency, formatAdminDate, textValue } from '../../lib/admin/adminFormatters';
 import { computeOrganizationHealth } from '../../lib/admin/adminRiskScoring';
-import { AdminButton, AdminMetricCard, AdminPanel, AdminStatusBadge } from './AdminPrimitives';
+import { AdminButton, AdminKpiGrid, AdminMetricCard, AdminPanel, AdminStatusBadge } from './AdminPrimitives';
 import type {
   AdminAgency,
   AdminAuditLog,
@@ -79,40 +80,37 @@ export function OrganizationDrawer({
   const whatsappUrl = whatsappPhone ? `https://wa.me/${whatsappPhone}` : undefined;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <button type="button" aria-label="Fermer la fiche organisation" className="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" onClick={onClose} />
-      <aside className="relative h-full w-full max-w-5xl overflow-y-auto border-l border-slate-200 bg-[#f7f3ea] p-3 shadow-2xl sm:p-4">
-        <div className="sticky top-0 z-10 -mx-3 -mt-3 border-b border-slate-200 bg-[#f7f3ea]/95 px-3 py-3 backdrop-blur sm:-mx-4 sm:-mt-4 sm:px-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                <AdminStatusBadge status={agency.status} />
-                <AdminStatusBadge tone={health.level === 'healthy' ? 'emerald' : health.level === 'watch' ? 'amber' : 'red'}>{health.label}</AdminStatusBadge>
-                <AdminStatusBadge tone="slate">{typeLabel}</AdminStatusBadge>
-                {openTickets.length > 0 && <AdminStatusBadge tone="amber">{openTickets.length} ticket(s)</AdminStatusBadge>}
-                {openIncidents.length > 0 && <AdminStatusBadge tone="red">{openIncidents.length} incident(s)</AdminStatusBadge>}
-              </div>
-              <h2 className="truncate text-xl font-black text-slate-950">{agency.name}</h2>
-              <p className="mt-1 text-xs font-semibold text-slate-500">
-                Créée {formatAdminDate(agency.created_at)} · Dernière activité {formatAdminDate(agency.derniere_activite)}
-              </p>
-            </div>
-            <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
+    <PremiumDrawerShell
+      open={!!agency}
+      onClose={onClose}
+      size="wide"
+      density="compact"
+      desktopMode="floating"
+      desktopAt="lg"
+      className="h-full"
+      eyebrow={(
+        <div className="flex flex-wrap items-center gap-1.5">
+          <AdminStatusBadge status={agency.status} />
+          <AdminStatusBadge tone={health.level === 'healthy' ? 'emerald' : health.level === 'watch' ? 'amber' : 'red'}>{health.label}</AdminStatusBadge>
+          <AdminStatusBadge tone="slate">{typeLabel}</AdminStatusBadge>
+          {openTickets.length > 0 && <AdminStatusBadge tone="amber">{openTickets.length} ticket(s)</AdminStatusBadge>}
+          {openIncidents.length > 0 && <AdminStatusBadge tone="red">{openIncidents.length} incident(s)</AdminStatusBadge>}
         </div>
+      )}
+      title={agency.name}
+      description={`Creee ${formatAdminDate(agency.created_at)} - Derniere activite ${formatAdminDate(agency.derniere_activite)}`}
+    >
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+      <AdminKpiGrid maxItems={6}>
           <AdminMetricCard label="Score santé" value={`${metrics?.health_score ?? health.score}/100`} icon={ShieldAlert} tone={health.level === 'healthy' ? 'emerald' : 'amber'} />
           <AdminMetricCard label="Plan" value={plan.name} helper={plan.priceLabel} icon={CreditCard} tone="orange" />
           <AdminMetricCard label="Utilisateurs" value={agency.nb_users ?? users.length} icon={Users} />
           <AdminMetricCard label="Documents" value={metrics?.total_documents ?? agency.total_documents ?? documents.length} icon={FileText} />
           <AdminMetricCard label="QR Verify" value={qrVerified} helper={`${verifications.length} QR suivis`} icon={FileText} tone="blue" />
           <AdminMetricCard label="Support" value={openTickets.length + openIncidents.length} icon={LifeBuoy} tone={openTickets.length + openIncidents.length ? 'amber' : 'slate'} />
-        </div>
+        </AdminKpiGrid>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_0.9fr]">
+        <div className="mt-4 grid items-start gap-4 xl:grid-cols-[1fr_0.9fr]">
           <AdminPanel title="Résumé opérationnel" subtitle="Identité, contact, plan et signaux de santé.">
             <div className="grid gap-2 text-sm">
               {[
@@ -178,7 +176,7 @@ export function OrganizationDrawer({
           </AdminPanel>
         </div>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-3">
+        <div className="mt-4 grid items-start gap-4 xl:grid-cols-3">
           <AdminPanel title="Risques détectés" subtitle="Signaux à traiter avant friction client.">
             <div className="space-y-2">
               {health.reasons.map((reason) => (
@@ -222,7 +220,7 @@ export function OrganizationDrawer({
           </AdminPanel>
         </div>
 
-        <div className="mt-4 grid gap-4 xl:grid-cols-2">
+        <div className="mt-4 grid items-start gap-4 xl:grid-cols-2">
           <AdminPanel title="Documents & QR" subtitle="Métadonnées uniquement par défaut : aucun PDF privé n’est ouvert ici.">
             <div className="space-y-2">
               {documents.length === 0 ? (
@@ -303,7 +301,6 @@ export function OrganizationDrawer({
             </AdminButton>
           </div>
         </AdminPanel>
-      </aside>
-    </div>
+    </PremiumDrawerShell>
   );
 }

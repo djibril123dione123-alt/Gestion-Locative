@@ -142,19 +142,19 @@ export function AdminGlobalSearch({
   }, [data, normalizedQuery, onChangeSpace, onOpenAgency, onOpenAgencyById, onOpenProof, onOpenRequest, onOpenUser]);
 
   return (
-    <div className="relative w-full max-w-2xl">
-      <div className="flex items-center gap-2 rounded-2xl border border-emerald-950/10 bg-white px-3 py-2 shadow-[0_12px_34px_rgba(15,23,42,0.045)]">
+    <div className="relative w-full max-w-xl">
+      <div className="flex min-h-9 items-center gap-2 rounded-[0.9rem] border border-emerald-950/10 bg-white/95 px-3 py-1.5 shadow-[0_9px_24px_rgba(15,23,42,0.045)] ring-1 ring-white/70">
         <Search className="h-4 w-4 shrink-0 text-slate-400" />
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Rechercher agence, paiement, utilisateur, ticket, document..."
-          className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400"
+          className="min-w-0 flex-1 bg-transparent text-[0.8rem] font-semibold text-slate-800 outline-none placeholder:text-slate-400"
         />
       </div>
 
       {normalizedQuery.length >= 2 && (
-        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-[1.05rem] border border-slate-200 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.16)]">
           {results.length === 0 ? (
             <div className="px-4 py-4 text-sm font-semibold text-slate-500">Aucun résultat exploitable.</div>
           ) : (

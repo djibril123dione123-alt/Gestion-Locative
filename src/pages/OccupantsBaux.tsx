@@ -317,6 +317,7 @@ export function OccupantsBaux() {
           }));
         }
       }
+    },
     onSelectId: (id, params) => {
       setSelectedContratId(id);
       const tab = params.get('tab') as DrawerTab | null;

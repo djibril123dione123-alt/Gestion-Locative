@@ -2,6 +2,7 @@ import { AlertTriangle, CheckCircle2, Clock, MinusCircle, XCircle } from 'lucide
 import type { LucideIcon } from 'lucide-react';
 
 export interface PaiementContrats {
+  unite_id?: string | null;
   loyer_mensuel: number;
   commission: number | null;
   pourcentage_agence?: number | null;

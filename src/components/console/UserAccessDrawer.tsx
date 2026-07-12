@@ -61,11 +61,11 @@ export function UserAccessDrawer({
       eyebrow="Fiche utilisateur"
       description="Contrôlez le rôle, le statut et les garde-fous avant toute mutation."
       onClose={onClose}
-      size="compact"
+      size="standard"
       density="compact"
       desktopMode="floating"
       desktopAt="lg"
-      className="h-full"
+      className="h-full lg:!w-full"
       avatar={
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-950 text-sm font-black text-white shadow-sm">
           {initials(user)}

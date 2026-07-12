@@ -56,7 +56,7 @@ export function UsersAccessTab({
       </AdminKpiGrid>
 
       <AdminPanel title="Utilisateurs & accès" subtitle="Comptes, rôles, rattachements tenant et garde-fous d’administration.">
-        <div className="mb-3 grid gap-2 lg:grid-cols-[1fr_160px]">
+        <div className="mb-3 grid gap-2 2xl:grid-cols-[1fr_160px]">
           <label className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
             <Search className="h-4 w-4 text-slate-400" />
             <input

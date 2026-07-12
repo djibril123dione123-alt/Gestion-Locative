@@ -337,12 +337,12 @@ export function PageSkeleton({
       </div>
 
       {/* 2. KPI Grid sur 1 seule ligne compacte (4 cartes) */}
-      {(variant === 'table' || variant === 'dashboard' || variant === 'analytics') && (
+      {(variant === 'table' || variant === 'analytics') && (
         <SkeletonCards tone={tone} count={4} />
       )}
 
       {/* 3. Toolbar Executive */}
-      {(variant === 'table' || variant === 'dashboard' || variant === 'analytics') && (
+      {(variant === 'table' || variant === 'analytics') && (
         <SkeletonToolbar tone={tone} />
       )}
 
@@ -362,7 +362,7 @@ export function PageSkeleton({
           ))}
         </div>
       ) : (
-        <SkeletonTable tone={tone} rows={variant === 'dashboard' ? 5 : 7} cols={variant === 'analytics' ? 5 : 6} />
+        <SkeletonTable tone={tone} rows={7} cols={variant === 'analytics' ? 5 : 6} />
       )}
     </div>
   );

@@ -66,7 +66,7 @@ export function OrganizationsTab({
         subtitle="Recherche, filtres, santé, plan, activité et signaux de risque."
         action={<span className="text-xs font-black text-slate-500">{rows.length} résultat(s)</span>}
       >
-        <div className="mb-3 grid gap-2 xl:grid-cols-[1fr_150px_150px_140px_150px]">
+        <div className="mb-3 grid gap-2 2xl:grid-cols-[1fr_150px_150px_140px_150px]">
           <label className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
             <Search className="h-4 w-4 text-slate-400" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher nom, email, téléphone..." className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-slate-400" />

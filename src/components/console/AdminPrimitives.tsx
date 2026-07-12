@@ -30,7 +30,7 @@ const metricToneByAdminTone: Record<AdminTone, MetricTone> = {
 export function AdminStatusBadge({ status, children, tone }: { status?: string | null; children?: React.ReactNode; tone?: AdminTone }) {
   const nextTone = tone ?? getStatusTone(status);
   return (
-    <span className={`inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.09em] ${toneClasses[nextTone]}`}>
+    <span className={`inline-flex max-w-full items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.09em] ${toneClasses[nextTone]}`}>
       {children ?? getStatusLabel(status)}
     </span>
   );
@@ -87,25 +87,25 @@ export function AdminPanel({
 }) {
   return (
     <PremiumTableSurface density="compact" className={classNames('bg-white/95', className)}>
-      <div className="flex flex-col gap-2 border-b border-slate-100 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-2 border-b border-slate-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <h2 className="text-[0.92rem] font-black leading-tight text-slate-950">{title}</h2>
           {subtitle && <p className="mt-0.5 text-[0.72rem] font-medium leading-4 text-slate-500">{subtitle}</p>}
         </div>
         {action}
       </div>
-      <div className="p-3">{children}</div>
+      <div className="p-2.5 sm:p-3">{children}</div>
     </PremiumTableSurface>
   );
 }
 
 export function AdminEmptyState({ title, text, action }: { title: string; text: string; action?: React.ReactNode }) {
   return (
-    <div className="rounded-[1.05rem] border border-dashed border-slate-200 bg-slate-50/70 p-4 text-center">
-      <CheckCircle2 className="mx-auto h-5 w-5 text-emerald-700" />
-      <p className="mt-2 text-sm font-black text-slate-900">{title}</p>
+    <div className="rounded-[1.05rem] border border-dashed border-slate-200 bg-slate-50/70 p-3 text-center">
+      <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-700" />
+      <p className="mt-1.5 text-[0.82rem] font-black text-slate-900">{title}</p>
       <p className="mx-auto mt-1 max-w-md text-[0.72rem] font-medium leading-4 text-slate-500">{text}</p>
-      {action && <div className="mt-4">{action}</div>}
+      {action && <div className="mt-3">{action}</div>}
     </div>
   );
 }
@@ -211,7 +211,7 @@ export function ResponsiveTable<T>({
                   )}
                 >
                   {columns.map((column) => (
-                    <td key={column.key} className={classNames('px-3 py-2 align-middle text-[0.82rem]', column.align === 'right' ? 'text-right' : 'text-left')}>
+                    <td key={column.key} className={classNames('px-3 py-1.5 align-middle text-[0.78rem]', column.align === 'right' ? 'text-right' : 'text-left')}>
                       {column.render(row)}
                     </td>
                   ))}

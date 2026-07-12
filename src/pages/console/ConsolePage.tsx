@@ -335,9 +335,9 @@ export function Console() {
         ),
       })}
       onCreateTicket={(agency, subject, category, priority, description) => runAction({
-        title: 'Creer ce ticket support ?',
+        title: 'Créer ce ticket support ?',
         message: "Le ticket sera rattaché à l'organisation et suivi dans Support & opérations.",
-        confirmLabel: 'Creer ticket',
+        confirmLabel: 'Créer ticket',
         onConfirm: (reason) => withRefresh(
           () => createSupportTicket(agency.id, subject, category, priority, description, reason, auditContext),
           'Ticket support cree.',

@@ -27,7 +27,7 @@ export function OverviewTab({ data, onOpenAgency, onOpenProof }: {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <AdminKpiGrid maxItems={6}>
         <AdminMetricCard label="Organisations" value={data.platform.totalOrganizations} helper={`${data.platform.activeOrganizations} actives`} icon={Building2} tone="emerald" />
         <AdminMetricCard label="MRR estimé" value={formatAdminCurrency(revenue.mrr)} helper={`${formatAdminCurrency(revenue.arr)} ARR`} icon={TrendingUp} tone="orange" />
@@ -37,7 +37,7 @@ export function OverviewTab({ data, onOpenAgency, onOpenProof }: {
         <AdminMetricCard label="QR vérifiés" value={verifiedQr} helper={`${data.documentVerifications.length} QR suivis`} icon={Radar} tone="emerald" />
       </AdminKpiGrid>
 
-      <div className="grid items-start gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+      <div className="grid items-start gap-3 2xl:grid-cols-[1.15fr_0.85fr]">
         <AdminPanel title="À traiter maintenant" subtitle="File prioritaire construite depuis paiements, demandes, essais, support, incidents et documents.">
           {actions.length === 0 ? (
             <AdminEmptyState title="Aucune action critique détectée" text="Les paiements, demandes, essais, incidents et anomalies documentaires apparaîtront ici." />
@@ -77,7 +77,7 @@ export function OverviewTab({ data, onOpenAgency, onOpenProof }: {
         </AdminPanel>
       </div>
 
-      <div className="grid items-start gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+      <div className="grid items-start gap-3 2xl:grid-cols-[0.85fr_1.15fr]">
         <AdminPanel title="Santé business" subtitle="Répartition opérationnelle et revenus SaaS, séparés de la finance locative.">
           <AdminKpiGrid maxItems={4}>
             <AdminMetricCard label="Essais" value={data.platform.trialOrganizations} icon={Users} tone="blue" />

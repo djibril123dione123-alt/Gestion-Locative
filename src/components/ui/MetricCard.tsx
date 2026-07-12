@@ -144,7 +144,7 @@ export function MetricCard({
           )}
 
           <div className={isCompact ? `${isUltraCompact ? 'mt-0.5' : 'mt-1 sm:mt-0.5'}` : 'mt-1.5'} {...(valueA11yLabel ? { 'aria-hidden': true } : {})}>
-            <div className={`w-full max-w-full whitespace-nowrap font-black tracking-tight ${isCompact ? `${isUltraCompact ? 'text-[0.72rem] sm:text-[0.68rem]' : 'text-[0.85rem] sm:text-[0.75rem]'}` : 'text-sm sm:text-base'} ${tones.text}`}>
+            <div className={`w-full max-w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-black tracking-tight ${isCompact ? `${isUltraCompact ? 'text-[0.72rem] sm:text-[0.68rem]' : 'text-[0.85rem] sm:text-[0.75rem]'}` : 'text-sm sm:text-base'} ${tones.text}`}>
               {value}
             </div>
           </div>
@@ -183,7 +183,7 @@ export function MiniMetric({ label, value, tone = 'slate', density = 'comfortabl
   return (
     <div className={`@container flex w-full flex-col rounded-xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] ${isCompact ? 'px-2 py-1.5' : 'px-2.5 py-2'} ${toneClass} ${className}`}>
       <p className={`${isCompact ? 'text-[8px] leading-tight min-h-[2.2em]' : 'text-[9px] min-h-[2.5em]'} font-bold uppercase tracking-[0.12em] text-current opacity-60 line-clamp-2`}>{label}</p>
-      <p className={`${isCompact ? 'text-[0.68rem]' : 'text-xs'} mt-0.5 w-full whitespace-nowrap font-black tracking-tight text-current`}>{value}</p>
+      <p className={`${isCompact ? 'text-[0.68rem]' : 'text-xs'} mt-0.5 w-full min-w-0 overflow-hidden text-ellipsis whitespace-nowrap font-black tracking-tight text-current`}>{value}</p>
     </div>
   );
 }

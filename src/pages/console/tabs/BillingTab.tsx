@@ -66,7 +66,7 @@ export function BillingTab({
         />
       </AdminPanel>
 
-      <div className="grid items-start gap-3 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid items-start gap-3 2xl:grid-cols-[0.9fr_1.1fr]">
         <AdminPanel title="Répartition par plan" subtitle="Catalogue unique Starter, Pro, Business, Enterprise.">
           <div className="grid gap-2">
             {planCounts.map(({ plan, count }) => (
@@ -98,7 +98,7 @@ export function BillingTab({
       </div>
 
       <AdminPanel title="Historique preuves" subtitle="Vue compacte des paiements validés et rejetés, sans mélanger avec la finance locative.">
-        <div className="grid gap-2 lg:grid-cols-2">
+        <div className="grid gap-2 2xl:grid-cols-2">
           {[...approvedProofs, ...rejectedProofs].slice(0, 12).map((proof) => (
             <button key={proof.id} type="button" onClick={() => onOpenProof(proof)} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left">
               <div className="min-w-0">

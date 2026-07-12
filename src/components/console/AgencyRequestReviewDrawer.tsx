@@ -32,22 +32,22 @@ export function AgencyRequestReviewDrawer({
     <PremiumDrawerShell
       open={!!request}
       onClose={onClose}
-      size="compact"
+      size="standard"
       density="compact"
       desktopMode="floating"
       desktopAt="lg"
-      className="h-full"
+      className="h-full lg:!w-full"
       eyebrow={<AdminStatusBadge status={request.status} />}
       title={name}
-      description={`Demande recue ${formatAdminDate(request.created_at)}`}
+      description={`Demande reçue ${formatAdminDate(request.created_at)}`}
     >
       <div className="grid gap-3">
-        <AdminPanel title="Resume demandeur" subtitle="Informations fournies pendant l'onboarding.">
+        <AdminPanel title="Résumé demandeur" subtitle="Informations fournies pendant l'onboarding.">
           <div className="grid gap-2 text-sm">
             {[
               ['Email', textValue(email)],
-              ['Telephone', textValue(request.phone)],
-              ['Type demande', request.is_bailleur_account ? 'Bailleur individuel' : textValue(request.organization_type, 'Agence immobiliere')],
+              ['Téléphone', textValue(request.phone)],
+              ['Type demandé', request.is_bailleur_account ? 'Bailleur individuel' : textValue(request.organization_type, 'Agence immobilière')],
               ['Plan initial', plan.name],
             ].map(([label, value]) => (
               <div key={label} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 last:border-0">
@@ -58,12 +58,12 @@ export function AgencyRequestReviewDrawer({
           </div>
         </AdminPanel>
 
-        <AdminPanel title="Checklist avant approbation" subtitle="Chaque validation est tracee dans le journal super-admin.">
+        <AdminPanel title="Checklist avant approbation" subtitle="Chaque validation est tracée dans le journal super-admin.">
           <div className="grid gap-2">
             {[
               ['Email exploitable', Boolean(email)],
               ['Nom organisation', Boolean(name)],
-              ['Plan initial identifie', Boolean(plan.id)],
+              ['Plan initial identifié', Boolean(plan.id)],
               ['Aucun doublon visible', duplicates.length === 0],
             ].map(([label, ok]) => (
               <div key={String(label)} className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-bold ${ok ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
@@ -73,7 +73,7 @@ export function AgencyRequestReviewDrawer({
             ))}
             {duplicates.length > 0 && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-900">
-                Doublon a verifier : {duplicates.map((agency) => agency.name).join(', ')}
+                Doublon à vérifier : {duplicates.map((agency) => agency.name).join(', ')}
               </div>
             )}
           </div>

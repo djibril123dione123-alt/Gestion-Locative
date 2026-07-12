@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CalendarDays, CreditCard, FileText, LifeBuoy, Mail, MessageCircle, ShieldAlert, Users } from 'lucide-react';
+import { CalendarDays, CreditCard, FileText, Mail, MessageCircle, ShieldAlert, Users } from 'lucide-react';
 import { PremiumDrawerShell } from '../ui/PremiumDrawerShell';
 import { getAdminPlan } from '../../lib/admin/adminPricingCatalog';
 import { documentTypeLabel, organizationTypeLabel } from '../../lib/admin/adminInsights';
@@ -74,7 +74,6 @@ export function OrganizationDrawer({
   const typeLabel = organizationTypeLabel(agency);
   const openTickets = tickets.filter((ticket) => !['resolved', 'closed'].includes(ticket.status ?? ''));
   const openIncidents = incidents.filter((incident) => !['resolved', 'ignored'].includes(incident.status ?? ''));
-  const qrVerified = verifications.filter((item) => item.last_verified_at || Number(item.verification_count ?? 0) > 0).length;
   const contactEmail = agency.email ? `mailto:${agency.email}?subject=Samay%20Keur%20-%20Suivi%20compte` : undefined;
   const whatsappPhone = agency.phone?.replace(/\D/g, '');
   const whatsappUrl = whatsappPhone ? `https://wa.me/${whatsappPhone}` : undefined;
@@ -87,7 +86,7 @@ export function OrganizationDrawer({
       density="compact"
       desktopMode="floating"
       desktopAt="lg"
-      className="h-full"
+      className="h-full lg:!w-full"
       eyebrow={(
         <div className="flex flex-wrap items-center gap-1.5">
           <AdminStatusBadge status={agency.status} />
@@ -98,19 +97,17 @@ export function OrganizationDrawer({
         </div>
       )}
       title={agency.name}
-      description={`Creee ${formatAdminDate(agency.created_at)} - Derniere activite ${formatAdminDate(agency.derniere_activite)}`}
+      description={`Créée ${formatAdminDate(agency.created_at)} · Dernière activité ${formatAdminDate(agency.derniere_activite)}`}
     >
 
-      <AdminKpiGrid maxItems={6}>
+      <AdminKpiGrid maxItems={4}>
           <AdminMetricCard label="Score santé" value={`${metrics?.health_score ?? health.score}/100`} icon={ShieldAlert} tone={health.level === 'healthy' ? 'emerald' : 'amber'} />
           <AdminMetricCard label="Plan" value={plan.name} helper={plan.priceLabel} icon={CreditCard} tone="orange" />
           <AdminMetricCard label="Utilisateurs" value={agency.nb_users ?? users.length} icon={Users} />
           <AdminMetricCard label="Documents" value={metrics?.total_documents ?? agency.total_documents ?? documents.length} icon={FileText} />
-          <AdminMetricCard label="QR Verify" value={qrVerified} helper={`${verifications.length} QR suivis`} icon={FileText} tone="blue" />
-          <AdminMetricCard label="Support" value={openTickets.length + openIncidents.length} icon={LifeBuoy} tone={openTickets.length + openIncidents.length ? 'amber' : 'slate'} />
         </AdminKpiGrid>
 
-        <div className="mt-4 grid items-start gap-4 xl:grid-cols-[1fr_0.9fr]">
+        <div className="mt-3 grid items-start gap-3">
           <AdminPanel title="Résumé opérationnel" subtitle="Identité, contact, plan et signaux de santé.">
             <div className="grid gap-2 text-sm">
               {[
@@ -176,7 +173,7 @@ export function OrganizationDrawer({
           </AdminPanel>
         </div>
 
-        <div className="mt-4 grid items-start gap-4 xl:grid-cols-3">
+        <div className="mt-3 grid items-start gap-3">
           <AdminPanel title="Risques détectés" subtitle="Signaux à traiter avant friction client.">
             <div className="space-y-2">
               {health.reasons.map((reason) => (
@@ -220,8 +217,12 @@ export function OrganizationDrawer({
           </AdminPanel>
         </div>
 
-        <div className="mt-4 grid items-start gap-4 xl:grid-cols-2">
-          <AdminPanel title="Documents & QR" subtitle="Métadonnées uniquement par défaut : aucun PDF privé n’est ouvert ici.">
+        <div className="mt-3 grid items-start gap-3">
+          <AdminPanel
+            title="Documents & QR"
+            subtitle="Métadonnées uniquement par défaut : aucun PDF privé n’est ouvert ici."
+            action={<AdminStatusBadge tone="blue">{verifications.length} QR suivis</AdminStatusBadge>}
+          >
             <div className="space-y-2">
               {documents.length === 0 ? (
                 <p className="text-xs font-semibold text-slate-500">Aucun document registry chargé pour cette organisation.</p>
@@ -269,8 +270,8 @@ export function OrganizationDrawer({
           </AdminPanel>
         </div>
 
-        <AdminPanel title="Timeline & audit" subtitle="Dernières actions sensibles liées à cette organisation." className="mt-4">
-          <div className="grid gap-2 lg:grid-cols-2">
+        <AdminPanel title="Timeline & audit" subtitle="Dernières actions sensibles liées à cette organisation." className="mt-3">
+          <div className="grid gap-2">
             {latestAudit.length === 0 ? (
               <p className="text-xs font-semibold text-slate-500">Aucune action auditée liée à cette organisation.</p>
             ) : latestAudit.map((log) => (
@@ -282,8 +283,8 @@ export function OrganizationDrawer({
           </div>
         </AdminPanel>
 
-        <AdminPanel title="Actions sensibles" subtitle="Audit strict obligatoire avant mutation." className="mt-4">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <AdminPanel title="Actions sensibles" subtitle="Audit strict obligatoire avant mutation." className="mt-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             {['starter', 'pro', 'business', 'enterprise'].map((planId) => (
               <AdminButton key={planId} disabled={plan.id === planId} onClick={() => onChangePlan(agency, activeSub, planId)}>
                 Plan {getAdminPlan(planId).name}

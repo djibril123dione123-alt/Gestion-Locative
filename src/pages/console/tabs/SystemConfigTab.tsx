@@ -70,7 +70,7 @@ export function SystemConfigTab({
       </AdminKpiGrid>
 
       <AdminPanel title="Santé système" subtitle="Statuts synthétiques sans exposer de secret, token ou stack trace.">
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
           {healthRows.map(([label, value, tone]) => (
             <div key={label} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2">
               <span className="text-sm font-bold text-slate-800">{label}</span>
@@ -80,7 +80,7 @@ export function SystemConfigTab({
         </div>
       </AdminPanel>
 
-      <div className="grid items-start gap-3 xl:grid-cols-[0.95fr_1.05fr]">
+      <div className="grid items-start gap-3 2xl:grid-cols-[0.95fr_1.05fr]">
         <AdminPanel title="Communication plateforme" subtitle="Annonces maintenance, incidents planifiés et messages owner.">
           <div className="grid gap-3">
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
@@ -137,7 +137,7 @@ export function SystemConfigTab({
         </AdminPanel>
 
         <AdminPanel title="Documents & QR Verify" subtitle="Supervision du registry documentaire, reliée aux fiches organisations.">
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid gap-3 2xl:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-3">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">Registry documents</p>
@@ -172,7 +172,7 @@ export function SystemConfigTab({
         </AdminPanel>
       </div>
 
-      <div className="grid items-start gap-3 xl:grid-cols-2">
+      <div className="grid items-start gap-3 2xl:grid-cols-2">
         <AdminPanel title="Feature flags" subtitle="Activation contrôlée avec audit. Les flags archivés restent visibles mais non modifiables.">
           {data.featureFlags.length === 0 ? (
             <AdminEmptyState title="Aucun feature flag actif" text="Les flags globaux ou ciblés apparaîtront ici avec leur état." />
@@ -231,7 +231,7 @@ export function SystemConfigTab({
         </AdminPanel>
       </div>
 
-      <div className="grid items-start gap-3 xl:grid-cols-[0.9fr_1.1fr]">
+      <div className="grid items-start gap-3 2xl:grid-cols-[0.9fr_1.1fr]">
         <AdminPanel title="Événements système" subtitle="Journal lisible des signaux plateforme récents.">
           {data.systemEvents.length === 0 && data.notifications.length === 0 ? (
             <AdminEmptyState title="Aucun événement chargé" text="Les signaux système et notifications admin apparaîtront ici." />
@@ -279,12 +279,12 @@ export function SystemConfigTab({
       </div>
 
       <AdminPanel title="Modules globaux" subtitle="Lecture owner : la configuration détaillée reste gouvernée par type de compte et feature flags.">
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-5">
           {['Portefeuille locatif', 'Finance SaaS', 'Documents & QR', 'Support', 'Audit'].map((module) => (
             <div key={module} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
               <Database className="mb-2 h-4 w-4 text-emerald-800" />
               <p className="text-sm font-black text-slate-900">{module}</p>
-              <p className="mt-1 text-xs font-semibold text-slate-500">Supervision active selon instrumentation disponible.</p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">Instrumentation active.</p>
             </div>
           ))}
         </div>

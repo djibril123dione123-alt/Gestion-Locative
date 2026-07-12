@@ -98,7 +98,7 @@ export function SupportOpsTab({
         />
       </AdminPanel>
 
-      <div className="grid items-start gap-3 xl:grid-cols-[1.08fr_0.92fr]">
+      <div className="grid items-start gap-3 2xl:grid-cols-3">
         <AdminPanel title="Tickets support" subtitle="Traitement client avec notes internes et statut audité.">
           {data.tickets.length === 0 ? (
             <AdminEmptyState title="Aucun ticket support ouvert" text="Créez un ticket depuis cette page ou depuis une fiche organisation." />
@@ -106,7 +106,7 @@ export function SupportOpsTab({
             <div className="grid gap-2">
               {data.tickets.slice(0, 12).map((ticket: AdminTicket) => (
                 <div key={ticket.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                  <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-col gap-2 2xl:flex-row 2xl:items-center 2xl:justify-between">
                     <div className="min-w-0">
                       <p className="text-sm font-black text-slate-950">{ticket.subject}</p>
                       <p className="text-xs font-semibold text-slate-500">{ticket.category ?? 'Support'} · {formatAdminDate(ticket.created_at)}</p>
@@ -128,7 +128,7 @@ export function SupportOpsTab({
           )}
         </AdminPanel>
 
-        <div className="space-y-3">
+        <div className="grid gap-3 2xl:col-span-2 2xl:grid-cols-2">
           <AdminPanel title="Créer ticket support" subtitle="Action opérationnelle rattachée à une organisation.">
             <div className="grid gap-2">
               <select value={ticketOrganizationId} onChange={(event) => setTicketOrganizationId(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold">
@@ -195,7 +195,7 @@ export function SupportOpsTab({
         ) : (
           <div className="grid gap-2">
             {data.incidents.slice(0, 12).map((incident) => (
-              <div key={incident.id} className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 lg:flex-row lg:items-center lg:justify-between">
+              <div key={incident.id} className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 2xl:flex-row 2xl:items-center 2xl:justify-between">
                 <div>
                   <p className="text-sm font-black text-slate-950">{incident.type}</p>
                   <p className="text-xs font-semibold text-slate-500">{incident.message ?? 'Incident système'} · {formatAdminDate(incident.last_seen_at ?? incident.created_at)}</p>

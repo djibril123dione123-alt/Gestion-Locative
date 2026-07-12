@@ -126,7 +126,7 @@ export function ConsoleShell({
           <div className="mx-auto h-full max-w-[1680px] px-2.5 py-2.5 sm:px-4">
             <SplitViewShell
               isDetailOpen={isDetailOpen}
-              size="compact"
+              size="wide"
               desktopAt="lg"
               className="h-full min-h-0 items-stretch"
               mainClassName={classNames('h-full min-h-0', isDetailOpen && 'hidden lg:block')}
@@ -154,13 +154,9 @@ export function ConsoleShell({
                     />
 
                     {searchSlot && (
-                      <PremiumToolbar
-                        density="ultraCompact"
-                        layout="list"
-                        search={searchSlot}
-                        ariaLabel="Recherche globale console"
-                        className="max-w-[760px]"
-                      />
+                      <div className="max-w-[560px]">
+                        {searchSlot}
+                      </div>
                     )}
 
                     <PremiumToolbar

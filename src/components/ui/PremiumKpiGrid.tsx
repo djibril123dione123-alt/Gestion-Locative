@@ -53,20 +53,20 @@ export function PremiumKpiGrid({
   let gridClasses = "";
   if (variant === "dashboard") {
     if (itemCount === 4) {
-      gridClasses = isCompact ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-2 @4xl:grid-cols-4";
+      gridClasses = "grid-cols-2 @4xl:grid-cols-4";
     } else if (itemCount === 5) {
-      gridClasses = isCompact ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5" : "grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-5";
+      gridClasses = "grid-cols-2 @2xl:grid-cols-3 @5xl:grid-cols-5";
     } else if (itemCount === 3) {
-      gridClasses = isCompact ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-1 @2xl:grid-cols-3";
+      gridClasses = "grid-cols-1 @md:grid-cols-3";
     } else if (itemCount === 2) {
       gridClasses = "grid-cols-2";
     } else if (itemCount === 1) {
       gridClasses = "grid-cols-1";
     } else {
-      gridClasses = isCompact ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" : "grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4 @6xl:grid-cols-6";
+      gridClasses = "grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-4 @6xl:grid-cols-6";
     }
   } else {
-    gridClasses = isCompact ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2 @4xl:grid-cols-4";
+    gridClasses = "grid-cols-2 @4xl:grid-cols-4";
   }
 
   return (

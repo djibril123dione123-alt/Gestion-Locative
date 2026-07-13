@@ -337,7 +337,8 @@ export function PaiementFormModal({
               <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">
                 Montant encaissé <span className="text-red-600">*</span>
               </label>
-              <input aria-label="Champ de saisie"
+              <input
+                aria-label="Champ de saisie"
                 type="number"
                 required
                 min="1"
@@ -345,7 +346,7 @@ export function PaiementFormModal({
                 inputMode="numeric"
                 value={formData.montant_total}
                 onChange={(event) => setFormData((previous) => ({ ...previous, montant_total: event.target.value }))}
-                className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[0.95rem] font-semibold tabular-nums text-slate-950 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-2.5 py-1 text-xs font-bold tabular-nums text-slate-900 shadow-sm outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-1 focus:ring-emerald-900/15"
               />
               {selectedContrat && (
                 <div className="mt-2 rounded-xl border border-emerald-100 bg-emerald-50/75 p-2.5">
@@ -364,7 +365,7 @@ export function PaiementFormModal({
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-[0.7rem] font-semibold text-slate-600">Date du paiement <span className="text-red-600">*</span></label>
                 <input aria-label="Champ de saisie"
@@ -372,7 +373,7 @@ export function PaiementFormModal({
                   required
                   value={formData.date_paiement}
                   onChange={(event) => setFormData((previous) => ({ ...previous, date_paiement: event.target.value }))}
-                  className="h-8 min-h-8 w-full rounded-[0.55rem] border border-emerald-950/10 bg-[#fffdf8]/95 px-2.5 py-0 text-[0.72rem] font-semibold leading-4 text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_4px_10px_rgba(15,23,42,0.025)] outline-none transition hover:border-emerald-200 focus:border-brand-700 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+                  className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-2.5 py-1 text-xs font-bold text-slate-800 shadow-sm outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-1 focus:ring-emerald-900/15"
                 />
               </div>
               <div>
@@ -402,7 +403,7 @@ export function PaiementFormModal({
                 value={formData.reference}
                 onChange={(event) => setFormData((previous) => ({ ...previous, reference: event.target.value }))}
                 placeholder="Numéro Wave, chèque ou virement (facultatif)"
-                className="h-9 w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-900 shadow-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-2.5 py-1 text-xs font-bold text-slate-800 shadow-sm outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-1 focus:ring-emerald-900/15"
               />
             </div>
 

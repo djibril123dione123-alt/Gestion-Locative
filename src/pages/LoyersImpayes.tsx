@@ -859,48 +859,35 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                     title="Encaisser ce loyer"
                     description="Enregistrement d'un paiement partiel ou complet avec traçabilité et quittance."
                 >
-                    <div className="space-y-4 pt-0.5">
-                        {/* En-tête / Badge d'encaissement premium */}
-                        <div className="relative overflow-hidden rounded-xl border border-emerald-900/15 bg-gradient-to-br from-[#0A3F30] via-[#073125] to-[#041E16] p-3 text-white shadow-md">
-                            <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 border border-white/15">
-                                        <HandCoins className="h-4 w-4 text-emerald-300" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="text-[0.62rem] font-bold uppercase tracking-widest text-emerald-300/90">Encaissement & Recouvrement</div>
-                                        <div className="truncate text-xs font-black text-white">
-                                            {selectedLoyer.locataire_prenom} {selectedLoyer.locataire_nom}
-                                        </div>
-                                    </div>
+                    <div className="space-y-3 pt-0.5">
+                        {/* En-tête / Résumé compact harmonisé avec le style Wizard */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-950/15 bg-gradient-to-r from-emerald-900 via-emerald-800 to-[#073125] px-3 py-2 text-white shadow-sm">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 border border-white/15">
+                                    <HandCoins className="h-3.5 w-3.5 text-emerald-300" />
                                 </div>
-                                <div className="text-right shrink-0">
-                                    <div className="text-[0.62rem] font-bold uppercase tracking-widest text-emerald-300/90">Période</div>
-                                    <div className="text-xs font-black text-emerald-100 capitalize">
-                                        {new Date(selectedLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-black truncate">{selectedLoyer.locataire_prenom} {selectedLoyer.locataire_nom}</span>
+                                        <span className="rounded bg-emerald-700/80 px-1.5 py-0.5 text-[0.62rem] font-bold capitalize text-emerald-100">
+                                            {new Date(selectedLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+                                        </span>
+                                    </div>
+                                    <div className="text-[0.65rem] font-medium text-emerald-200/90 truncate">
+                                        {selectedLoyer.immeuble_nom} · {selectedLoyer.unite_nom}
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Détails créance structurés */}
-                        <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/80 bg-slate-50/70 p-2.5 text-xs">
-                            <div className="flex flex-col gap-0.5 border-r border-slate-200/70 pr-2">
-                                <span className="text-[0.64rem] font-bold uppercase tracking-wider text-slate-400">Lot concerné</span>
-                                <span className="font-bold text-slate-800 truncate" title={`${selectedLoyer.immeuble_nom} · ${selectedLoyer.unite_nom}`}>
-                                    {selectedLoyer.immeuble_nom} · {selectedLoyer.unite_nom}
-                                </span>
-                            </div>
-                            <div className="flex flex-col gap-0.5 pl-1">
-                                <span className="text-[0.64rem] font-bold uppercase tracking-wider text-slate-400">Reste à encaisser</span>
-                                <span className="font-black text-red-600 text-sm">
+                            <div className="flex items-center gap-1.5 rounded-lg bg-black/25 px-2.5 py-1 border border-white/10 shrink-0">
+                                <span className="text-[0.62rem] font-bold uppercase tracking-wider text-emerald-200">Reste à encaisser :</span>
+                                <span className="font-black text-amber-300 text-xs">
                                     {formatCurrency(selectedLoyer.montant_du)}
                                 </span>
                             </div>
                         </div>
 
-                        {/* Saisie rapide (Pills de délice utilisateur) */}
-                        <div className="flex items-center justify-between gap-2 bg-emerald-50/60 rounded-lg p-2 border border-emerald-100">
+                        {/* Saisie rapide (Pills compactes) */}
+                        <div className="flex items-center justify-between gap-2 bg-emerald-50/70 rounded-lg px-2.5 py-1.5 border border-emerald-100">
                             <span className="text-[0.68rem] font-bold text-emerald-900 flex items-center gap-1">
                                 <Sparkles className="h-3 w-3 text-emerald-700" />
                                 Remplissage rapide :
@@ -925,8 +912,8 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             </div>
                         </div>
 
-                        {/* Formulaire de paiement */}
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-0.5">
+                        {/* Formulaire de paiement avec champs strictement alignés (hauteur h-8 / min-h-8 et fond bg-[#fffdf8]/95 uniformes) */}
+                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-0.5">
                             <div>
                                 <label className="mb-1 block text-xs font-bold text-slate-700">
                                     Montant encaissé <span className="text-red-600">*</span>
@@ -939,10 +926,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                     value={paymentForm.montant}
                                     onChange={(e) => setPaymentForm({ ...paymentForm, montant: e.target.value })}
                                     placeholder="Ex: 100000"
-                                    className="h-8 min-h-8 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-900 shadow-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                                    className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-2.5 py-1 text-xs font-bold text-slate-800 shadow-sm outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600/15"
                                 />
                                 {paymentAmount > 0 && (
-                                    <p className="mt-1 text-[0.68rem] font-bold text-emerald-700">
+                                    <p className="mt-0.5 text-[0.66rem] font-bold text-emerald-700">
                                         Saisi : {formatCurrency(paymentAmount)}
                                     </p>
                                 )}
@@ -956,7 +943,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                     type="date"
                                     value={paymentForm.date_paiement}
                                     onChange={(e) => setPaymentForm({ ...paymentForm, date_paiement: e.target.value })}
-                                    className="h-8 min-h-8 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                                    className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-2.5 py-1 text-xs font-bold text-slate-800 shadow-sm outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600/15"
                                 />
                             </div>
                             <div>
@@ -979,26 +966,26 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 <input
                                     value={paymentForm.reference}
                                     onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
-                                    className="h-8 min-h-8 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-800 shadow-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                                    className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-2.5 py-1 text-xs font-bold text-slate-800 shadow-sm outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600/15"
                                     placeholder="N° Wave, chèque ou virement..."
                                 />
                             </div>
                         </div>
 
-                        {/* Simulation & Nouveau Statut Financier */}
-                        <div className={`rounded-xl border p-3 text-xs flex items-center justify-between transition ${
+                        {/* Simulation & Nouveau Statut Financier compacte */}
+                        <div className={`rounded-xl border px-3 py-2 text-xs flex items-center justify-between transition ${
                             remainingAfterPayment > 0
                                 ? 'border-orange-200 bg-orange-50/70 text-orange-950'
                                 : 'border-emerald-200 bg-emerald-50/70 text-emerald-950'
                         }`}>
-                            <div className="flex items-center gap-2.5 min-w-0">
-                                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                            <div className="flex items-center gap-2 min-w-0">
+                                <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg ${
                                     remainingAfterPayment > 0 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
                                 }`}>
-                                    {remainingAfterPayment > 0 ? <Clock className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                                    {remainingAfterPayment > 0 ? <Clock className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500">
+                                    <div className="text-[0.64rem] font-bold uppercase tracking-wider text-slate-500">
                                         Nouveau statut du loyer
                                     </div>
                                     <div className={`text-xs font-black ${
@@ -1009,7 +996,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 </div>
                             </div>
                             <div className="text-right shrink-0">
-                                <div className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500">
+                                <div className="text-[0.64rem] font-bold uppercase tracking-wider text-slate-500">
                                     Reliquat restant
                                 </div>
                                 <div className={`text-xs font-black ${remainingAfterPayment > 0 ? 'text-orange-700' : 'text-emerald-800'}`}>
@@ -1019,7 +1006,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                         </div>
 
                         {/* Actions boutons */}
-                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                        <div className="flex items-center justify-end gap-2 pt-1.5 border-t border-slate-100">
                             <PremiumButton
                                 variant="secondary"
                                 size="sm"

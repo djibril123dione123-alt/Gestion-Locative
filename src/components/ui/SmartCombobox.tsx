@@ -43,6 +43,7 @@ type MenuPlacement = {
   maxHeight: number;
   top?: number;
   bottom?: number;
+  openAbove?: boolean;
 };
 
 export function SmartCombobox({
@@ -78,7 +79,7 @@ export function SmartCombobox({
     const rect = wrapperRef.current.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const gap = 8;
+    const gap = 4;
 
     if (viewportWidth < 640) {
       setMenuPlacement({
@@ -106,7 +107,9 @@ export function SmartCombobox({
       left,
       width,
       maxHeight,
-      top: shouldOpenAbove ? Math.max(12, rect.top - gap - maxHeight) : rect.bottom + gap,
+      openAbove: shouldOpenAbove,
+      top: !shouldOpenAbove ? rect.bottom + gap : undefined,
+      bottom: shouldOpenAbove ? viewportHeight - rect.top + gap : undefined,
     });
   }, [isCompact, isDense]);
 
@@ -222,7 +225,9 @@ export function SmartCombobox({
       maxHeight: menuPlacement.maxHeight,
       ...(menuPlacement.mobile
         ? { bottom: menuPlacement.bottom }
-        : { top: menuPlacement.top }),
+        : menuPlacement.openAbove
+          ? { bottom: menuPlacement.bottom }
+          : { top: menuPlacement.top }),
     }
     : undefined;
 

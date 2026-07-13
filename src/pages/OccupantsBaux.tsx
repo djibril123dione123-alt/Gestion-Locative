@@ -2795,7 +2795,7 @@ function OccupationFormModal({
                               numero_piece: formatIdentityNumberInput(e.target.value, form.newOccupant.type_piece || 'CNI'),
                             },
                           })}
-                          className="mt-0.5 h-10 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:h-8.5 sm:rounded-[0.56rem] sm:text-[0.8rem]"
+                          className="mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:!h-8 sm:!min-h-8 sm:rounded-[0.6rem] sm:text-[0.8rem]"
                           placeholder={getIdentityPlaceholder(form.newOccupant.type_piece || 'CNI')}
                           maxLength={getIdentityMaxLength(form.newOccupant.type_piece || 'CNI')}
                           inputMode={(form.newOccupant.type_piece || 'CNI').toLowerCase().includes('cni') ? 'numeric' : 'text'}
@@ -3025,7 +3025,7 @@ function TextField({
           max={max}
           maxLength={maxLength}
           inputMode={inputMode || (type === 'number' ? 'numeric' : type === 'tel' ? 'tel' : undefined)}
-          className={`mt-0.5 h-10 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 disabled:bg-slate-50 disabled:text-slate-500 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-8.5 sm:rounded-[0.56rem] sm:text-[0.8rem] ${suffix ? 'pl-3 pr-8' : 'px-3'}`}
+          className={`mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 disabled:bg-slate-50 disabled:text-slate-500 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:!h-8 sm:!min-h-8 sm:rounded-[0.6rem] sm:text-[0.8rem] ${suffix ? 'pl-3 pr-8' : 'px-3'}`}
         />
         {suffix && <span className="absolute bottom-3 right-3 text-[0.72rem] font-semibold text-slate-400 sm:bottom-2 sm:text-[0.68rem]">{suffix}</span>}
       </div>

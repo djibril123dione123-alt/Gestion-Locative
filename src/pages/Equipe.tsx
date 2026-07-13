@@ -23,7 +23,12 @@ import {
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
-import { WizardShell } from '../components/ui/WizardShell';
+import {
+  WizardShell,
+  wizardPrimaryActionClass,
+  wizardSecondaryActionClass,
+} from '../components/ui/WizardShell';
+import { WizardRail } from '../components/ui/WizardRail';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { PremiumKpiGrid } from '../components/ui/PremiumKpiGrid';
@@ -693,33 +698,37 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
   ];
   const selectedInviteGuide = INVITE_ROLE_GUIDE[formData.role];
   const inviteWizardRail = (
-    <div className="flex h-full flex-col gap-3">
-      <div className="rounded-2xl border border-white/10 bg-white/[0.065] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-        <p className="text-[0.58rem] font-black uppercase tracking-[0.16em] text-amber-200">Console équipe</p>
-        <h3 className="mt-1 text-[1rem] font-black leading-tight text-white">
-          {generatedLink ? 'Invitation prête' : 'Nouvel accès'}
-        </h3>
-        <p className="mt-1 text-[0.68rem] font-semibold leading-4 text-emerald-50/72">
-          {generatedLink
-            ? 'Copiez le lien sécurisé et transmettez-le au collaborateur.'
-            : 'Définissez le rôle, le preset et la limite de siège avant l’envoi.'}
-        </p>
-        <div className="mt-3 inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-2 py-1 text-[0.62rem] font-black text-emerald-50">
+    <WizardRail
+      eyebrow="Console équipe"
+      title={generatedLink ? 'Invitation prête' : 'Nouvel accès'}
+      description={generatedLink
+        ? 'Copiez le lien sécurisé et transmettez-le au collaborateur.'
+        : 'Définissez le rôle, le preset et la limite de siège avant l’envoi.'}
+      steps={generatedLink ? [] : inviteSteps}
+      currentStep={inviteStep - 1}
+      badge={(
+        <div className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-white/10 bg-white/10 px-2 py-1 text-[0.62rem] font-bold text-emerald-50">
           <UsersIcon className="h-3.5 w-3.5 text-amber-200" />
           Utilisateurs {userUsageLabel}
         </div>
-      </div>
-
-      {!generatedLink ? (
+      )}
+      footer={(
+        <span className="flex items-start gap-1.5">
+          <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-200" />
+          Les accès restent ajustables après acceptation et les modules désactivés restent verrouillés par RBAC.
+        </span>
+      )}
+    >
+      {!generatedLink && inviteStep > 1 ? (
         <>
-          <div className="rounded-2xl border border-white/10 bg-white/[0.055] p-3">
+          <div className="rounded-xl border border-white/10 bg-white/[0.055] p-2.5">
             <p className="text-[0.58rem] font-black uppercase tracking-[0.16em] text-emerald-100/75">
               Rôle sélectionné
             </p>
             <p className="mt-1 text-[0.92rem] font-black text-white">{ROLE_LABELS[formData.role]}</p>
             <p className="mt-1 text-[0.66rem] font-semibold leading-4 text-emerald-50/68">{selectedInviteGuide.summary}</p>
-            <div className="mt-2 space-y-1.5">
-              {selectedInviteGuide.access.map((item) => (
+            <div className="mt-2 space-y-1">
+              {selectedInviteGuide.access.slice(0, 2).map((item) => (
                 <div key={item} className="flex items-start gap-1.5 text-[0.62rem] font-bold leading-4 text-emerald-50/84">
                   <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-200" />
                   <span>{item}</span>
@@ -728,45 +737,19 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             </div>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.055] p-3">
-            <p className="text-[0.58rem] font-black uppercase tracking-[0.16em] text-emerald-100/75">
-              Preset prévu
-            </p>
-            <div className="mt-2 grid grid-cols-2 gap-1.5">
-              {(['standard', 'restricted', 'finance', 'custom'] as AccessPreset[]).map((preset) => {
-                const active = invitePreset === preset;
-                return (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => setInvitePreset(preset)}
-                    className={`rounded-xl border px-2 py-1.5 text-left text-[0.6rem] font-black transition ${
-                      active
-                        ? 'border-amber-200/70 bg-amber-200/16 text-white'
-                        : 'border-white/10 bg-white/[0.06] text-emerald-50/68 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    {ACCESS_PRESETS[preset].label}
-                  </button>
-                );
-              })}
+          <div className="rounded-xl border border-white/10 bg-white/[0.055] p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[0.54rem] font-black uppercase tracking-[0.14em] text-emerald-100/70">Preset</p>
+              <p className="truncate text-[0.65rem] font-black text-white">{ACCESS_PRESETS[invitePreset].label}</p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-1.5 rounded-2xl border border-white/10 bg-white/[0.055] p-2">
-            <MiniStat label="Visibles" value={invitePreview.visible} />
-            <MiniStat label="Masquées" value={invitePreview.hidden} />
-            <MiniStat label="Actions" value={invitePreview.actions} />
-            <MiniStat label="Modules off" value={invitePreview.disabled} />
+            <div className="mt-2 grid grid-cols-2 gap-1.5">
+              <MiniStat label="Visibles" value={invitePreview.visible} />
+              <MiniStat label="Masquées" value={invitePreview.hidden} />
+            </div>
           </div>
         </>
       ) : null}
-
-      <div className="mt-auto rounded-2xl border border-white/10 bg-white/[0.055] p-3 text-[0.62rem] font-semibold leading-4 text-emerald-50/70">
-        <ShieldCheck className="mb-1 h-4 w-4 text-amber-200" />
-        Les accès pourront être ajustés après acceptation. Les modules désactivés restent verrouillés par RBAC.
-      </div>
-    </div>
+    </WizardRail>
   );
 
   if (loading && members.length === 0) {
@@ -1174,52 +1157,71 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         currentStep={inviteStep - 1}
         variant="workstation"
         tone="agency"
-        size="standard"
+        size="compact"
         mobileMode="fullscreen"
         rail={inviteWizardRail}
-        bodyClassName="p-3 sm:p-4"
+        secondaryAction={
+          <button
+            type="button"
+            onClick={generatedLink || inviteStep === 1 ? closeInviteModal : () => setInviteStep((previous) => (previous === 3 ? 2 : 1))}
+            className={wizardSecondaryActionClass}
+          >
+            {generatedLink || inviteStep === 1 ? 'Fermer' : 'Retour'}
+          </button>
+        }
+        primaryAction={generatedLink ? (
+          <button
+            type="button"
+            onClick={() => copyLink(generatedLink)}
+            data-testid="button-copy-generated"
+            className={wizardPrimaryActionClass}
+          >
+            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+            {copied ? 'Copié' : 'Copier le lien'}
+          </button>
+        ) : inviteStep < 3 ? (
+          <button
+            type="button"
+            disabled={!canInviteMore || (inviteStep === 1 && !inviteEmailIsValid)}
+            onClick={() => setInviteStep((previous) => (previous === 1 ? 2 : 3))}
+            className={wizardPrimaryActionClass}
+          >
+            Continuer
+          </button>
+        ) : (
+          <button
+            type="submit"
+            form={inviteFormId}
+            disabled={submitting || !canInviteMore}
+            data-testid="button-submit-invitation"
+            className={wizardPrimaryActionClass}
+          >
+            {submitting ? 'Création...' : "Envoyer l'invitation"}
+          </button>
+        )}
       >
         {generatedLink ? (
           <div className="space-y-3">
             <p className="text-[0.76rem] leading-5 text-slate-700">
               Invitation créée. Envoyez ce lien à votre collaborateur pour qu'il rejoigne l'agence.
             </p>
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div>
               <input aria-label="Champ de saisie"
                 type="text"
                 readOnly
                 value={generatedLink}
                 data-testid="input-invite-link"
-                className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[0.74rem] font-semibold text-slate-700"
+                className="h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-[0.74rem] font-semibold text-slate-700"
               />
-              <button
-                type="button"
-                onClick={() => copyLink(generatedLink)}
-                data-testid="button-copy-generated"
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-3 text-[0.72rem] font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F]"
-              >
-                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                {copied ? 'Copié' : 'Copier'}
-              </button>
             </div>
           </div>
         ) : (
           <form id={inviteFormId} onSubmit={handleInvite} className="space-y-2.5">
-            <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
-              <p className="text-[0.56rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">Nouvel accès</p>
-              <h3 className="mt-0.5 text-[0.84rem] font-extrabold text-slate-950">Inviter un collaborateur</h3>
-              <p className="mt-0.5 text-[0.66rem] font-medium leading-4 text-slate-600">
-                Les accès pourront être ajustés ensuite dans Équipe & accès.
+            {!canInviteMore ? (
+              <p className="rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-2 text-[0.64rem] font-bold text-orange-800">
+                Limite du plan atteinte. <a href="#/pricing" className="underline underline-offset-2">Changer de plan</a> avant d'ajouter un collaborateur.
               </p>
-              <p className="mt-1.5 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-[0.58rem] font-black text-emerald-800">
-                Utilisateurs : {userUsageLabel}
-              </p>
-              {!canInviteMore ? (
-                <p className="mt-1.5 rounded-lg border border-orange-200 bg-orange-50 px-2 py-1 text-[0.62rem] font-bold text-orange-800">
-                  Limite du plan atteinte. <a href="#/pricing" className="underline underline-offset-2">Changer de plan</a> avant d'ajouter un collaborateur.
-                </p>
-              ) : null}
-            </div>
+            ) : null}
 
             <div className={inviteStep === 1 ? 'space-y-2' : 'hidden'}>
               <label className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Email professionnel</label>
@@ -1250,7 +1252,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             <div className={inviteStep === 2 ? '' : 'hidden'}>
               <label className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Rôle et preset d’accès</label>
               <SmartCombobox
-                density="wizard"
+                density="compact"
                 value={formData.role}
                 options={[
                   { value: 'agent', label: 'Agent', subtitle: 'Biens, locations et documents autorisés' },
@@ -1347,34 +1349,6 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 </p>
               </div>
             ) : null}
-            <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={inviteStep === 1 ? closeInviteModal : () => setInviteStep((prev) => (prev === 3 ? 2 : 1))}
-                className="h-9 rounded-lg border border-slate-200 px-3 text-[0.72rem] font-bold text-slate-700 transition hover:bg-slate-50"
-              >
-                {inviteStep === 1 ? 'Annuler' : 'Retour'}
-              </button>
-              {inviteStep < 3 ? (
-                <button
-                  type="button"
-                  disabled={!canInviteMore || (inviteStep === 1 && !inviteEmailIsValid)}
-                  onClick={() => setInviteStep((prev) => (prev === 1 ? 2 : 3))}
-                  className="h-9 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-3 text-[0.72rem] font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Continuer
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={submitting || !canInviteMore}
-                  data-testid="button-submit-invitation"
-                  className="h-9 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-3 text-[0.72rem] font-black text-white transition hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {submitting ? 'Création...' : "Envoyer l'invitation"}
-                </button>
-              )}
-            </div>
           </form>
         )}
       </WizardShell>

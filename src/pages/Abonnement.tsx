@@ -4,7 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 import { CheckoutModal } from '../components/billing/CheckoutModal';
-import { WizardShell } from '../components/ui/WizardShell';
+import {
+  WizardShell,
+  wizardPrimaryActionClass,
+  wizardSecondaryActionClass,
+} from '../components/ui/WizardShell';
+import { WizardRail } from '../components/ui/WizardRail';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import {
@@ -797,18 +802,15 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
         mobileDescription="Changer de plan."
         variant="workstation"
         tone="finance"
-        size="business"
+        size="compact"
         mobileMode="fullscreen"
-        bodyClassName="p-3 sm:p-4"
         rail={
-          <div className="flex h-full flex-col gap-3">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-              <p className="text-[0.58rem] font-black uppercase tracking-[0.16em] text-emerald-200/90">Plan actuel</p>
-              <h3 className="mt-1 truncate text-lg font-black text-white">{displayedPlanName}</h3>
-              <p className="mt-1 text-xs font-semibold text-emerald-100/75">
-                {catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)}/mois` : 'Sur devis'}
-              </p>
-            </div>
+          <WizardRail
+            eyebrow="Plan actuel"
+            title={displayedPlanName}
+            description={catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)}/mois` : 'Tarification sur devis'}
+            footer="Activation instantanée après paiement confirmé. Les paiements manuels restent validés par le support avant activation."
+          >
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-white/[0.07] p-2">
                 <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Utilisateurs</p>
@@ -827,10 +829,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                 <p className="mt-1 text-sm font-black text-white">{statusCfg.label}</p>
               </div>
             </div>
-            <div className="mt-auto rounded-2xl border border-amber-200/20 bg-amber-300/[0.08] p-3 text-xs font-semibold leading-5 text-amber-50/85">
-              Activation instantanée après paiement confirmé. Les paiements manuels restent validés par le support avant activation.
-            </div>
-          </div>
+          </WizardRail>
         }
       >
         <div className="space-y-3">
@@ -866,7 +865,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                       openPayment(plan.id);
                     }
                   }}
-                  className={`group relative flex min-h-[8.25rem] flex-col justify-between overflow-hidden rounded-2xl border p-3 text-left transition ${
+                  className={`group relative flex min-h-[7.5rem] flex-col justify-between overflow-hidden rounded-xl border p-3 text-left transition ${
                     isCurr
                       ? 'cursor-default border-emerald-700/25 bg-emerald-50/55 shadow-xs'
                       : 'border-slate-200/90 bg-white hover:-translate-y-0.5 hover:border-emerald-600/45 hover:shadow-lg'
@@ -932,16 +931,15 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
         mobileDescription="Preuve de paiement."
         variant="workstation"
         tone="finance"
-        size="standard"
+        size="compact"
         mobileMode="fullscreen"
-        bodyClassName="p-3 sm:p-4"
         rail={
-          <div className="flex h-full flex-col gap-3">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-3">
-              <p className="text-[0.58rem] font-black uppercase tracking-[0.16em] text-emerald-200/90">Déclaration</p>
-              <h3 className="mt-1 truncate text-lg font-black text-white">Plan {proofCatalogPlan.name}</h3>
-              <p className="mt-1 text-xs font-semibold text-emerald-100/75">Validation support avant activation.</p>
-            </div>
+          <WizardRail
+            eyebrow="Déclaration"
+            title={`Plan ${proofCatalogPlan.name}`}
+            description="Validation support avant activation."
+            footer="Formats conseillés : reçu mobile money, capture lisible, lien Drive ou référence de virement."
+          >
             <div className="grid grid-cols-2 gap-2">
               <div className="rounded-xl bg-white/[0.07] p-2">
                 <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Montant</p>
@@ -957,35 +955,32 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             <div className="rounded-2xl border border-amber-200/20 bg-amber-300/[0.08] p-3 text-xs font-semibold leading-5 text-amber-50/85">
               Le plan n’est pas activé automatiquement. Une preuve claire accélère la validation par le support.
             </div>
-            <div className="mt-auto rounded-2xl border border-white/10 bg-white/[0.055] p-3 text-xs font-semibold leading-5 text-emerald-50/80">
-              Formats conseillés : reçu mobile money, capture lisible, lien Drive ou référence de virement.
-            </div>
-          </div>
+          </WizardRail>
         }
-        footer={
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-            <button
-              type="button"
-              onClick={() => setManualProofOpen(false)}
-              className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-extrabold text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              form={manualProofFormId}
-              disabled={submittingProof}
-              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-5 text-xs font-extrabold text-white shadow-sm transition hover:from-[#073b2f] hover:to-emerald-950 disabled:opacity-60"
-            >
-              {submittingProof ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-white" />
-              ) : (
-                <Send className="h-3.5 w-3.5 text-emerald-300" />
-              )}
-              Transmettre la preuve
-            </button>
-          </div>
-        }
+        secondaryAction={(
+          <button
+            type="button"
+            onClick={() => setManualProofOpen(false)}
+            className={wizardSecondaryActionClass}
+          >
+            Annuler
+          </button>
+        )}
+        primaryAction={(
+          <button
+            type="submit"
+            form={manualProofFormId}
+            disabled={submittingProof}
+            className={wizardPrimaryActionClass}
+          >
+            {submittingProof ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-white" />
+            ) : (
+              <Send className="h-3.5 w-3.5 text-emerald-300" />
+            )}
+            Transmettre la preuve
+          </button>
+        )}
       >
         <form id={manualProofFormId} onSubmit={submitManualProof} className="space-y-3">
           <div className="flex items-center justify-between rounded-xl border border-emerald-950/15 bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-3 py-2 text-white shadow-sm">

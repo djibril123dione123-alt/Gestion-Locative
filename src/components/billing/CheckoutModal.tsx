@@ -18,7 +18,12 @@ import whatsappLogo from '../../assets/support/whatsapp.jpg';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrency, formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
 import { supabase } from '../../lib/supabase';
-import { WizardShell, type WizardStep } from '../ui/WizardShell';
+import {
+  WizardShell,
+  wizardPrimaryActionClass,
+  wizardSecondaryActionClass,
+  type WizardStep,
+} from '../ui/WizardShell';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -316,7 +321,25 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
       tone="finance"
       size="standard"
       mobileMode="fullscreen"
-      bodyClassName="p-3 sm:p-4"
+      secondaryAction={step === 'enter_phone' ? (
+        <button
+          type="button"
+          onClick={() => setStep('select_provider')}
+          className={wizardSecondaryActionClass}
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Changer de moyen
+        </button>
+      ) : undefined}
+      primaryAction={step === 'enter_phone' && selectedProvider ? (
+        <button
+          type="button"
+          onClick={handlePay}
+          className={wizardPrimaryActionClass}
+        >
+          Payer {formatCurrency(priceXof)}
+        </button>
+      ) : undefined}
     >
       {step !== 'success' && step !== 'error' && (
         <div className="mb-4 overflow-hidden rounded-2xl border border-emerald-950/15 bg-gradient-to-br from-[#fffefc] via-[#fffcf6] to-emerald-50/20 p-4 shadow-sm">
@@ -390,15 +413,6 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
 
       {step === 'enter_phone' && selectedProvider && (
         <div className="space-y-3.5">
-          <button
-            type="button"
-            onClick={() => setStep('select_provider')}
-            className="inline-flex items-center gap-1.5 text-[0.7rem] font-bold text-slate-500 transition hover:text-slate-800"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Changer de moyen
-          </button>
-
           <div className="flex items-center gap-2.5 rounded-xl border p-2.5" style={{ backgroundColor: selectedProvider.bg, borderColor: `${selectedProvider.color}30` }}>
             <LogoBadge src={selectedProvider.logo} label={selectedProvider.label} fallback={selectedProvider.fallback} className="h-8 w-8" />
             <div className="min-w-0">
@@ -434,15 +448,6 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
             ) : null}
             <p className="mt-1.5 text-[0.64rem] font-medium text-slate-500">Vous recevrez une notification à confirmer sur ce numéro.</p>
           </div>
-
-          <button
-            type="button"
-            onClick={handlePay}
-            className="flex h-11 w-full items-center justify-center rounded-xl text-[0.82rem] font-black text-white shadow-lg shadow-emerald-900/10 transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
-            style={{ background: `linear-gradient(135deg, ${selectedProvider.color} 0%, ${selectedProvider.color}CC 100%)` }}
-          >
-            Payer {formatCurrency(priceXof)}
-          </button>
         </div>
       )}
 

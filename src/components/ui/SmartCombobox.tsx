@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -64,6 +65,7 @@ export function SmartCombobox({
   const isWizard = density === 'wizard';
   const isCompact = density === 'compact' || density === 'dense';
   const isDense = density === 'dense';
+  const listboxId = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState<number>(-1);
@@ -272,7 +274,7 @@ export function SmartCombobox({
             </div>
           ) : (
             <div
-              id="smart-combobox-listbox"
+              id={listboxId}
               ref={listboxRef}
               className={`overflow-y-auto overscroll-contain touch-pan-y ${isDense ? 'p-0.5' : isCompact ? 'p-1' : 'p-1.5'}`}
               style={{ maxHeight: Math.max(isCompact ? 128 : 160, menuPlacement.maxHeight - (isCompact ? 32 : 42)) }}
@@ -385,7 +387,7 @@ export function SmartCombobox({
           placeholder={placeholder}
           role="combobox"
           aria-expanded={open}
-          aria-controls="smart-combobox-listbox"
+          aria-controls={listboxId}
           aria-autocomplete="list"
           className={`${isCompact ? '!h-8 !min-h-8 py-0 rounded-[0.6rem] !pl-8 !pr-7 text-xs leading-4 shadow-sm focus:ring-1' : isWizard ? '!h-11 !min-h-11 py-0 rounded-xl !pl-10 !pr-9 text-xs leading-4 shadow-sm focus:ring-2' : '!h-12 rounded-2xl !pl-11 !pr-11 text-sm leading-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.78),0_8px_20px_rgba(15,23,42,0.035)] focus:ring-4'} w-full min-w-0 border border-emerald-950/15 bg-[#fffdf8]/95 font-bold text-slate-800 outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-emerald-600/15 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-50 hover:border-emerald-300`}
         />

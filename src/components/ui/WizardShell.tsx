@@ -55,6 +55,12 @@ const sizeClasses: Record<WizardSize | 'compact', string> = {
   business: 'sm:max-w-[1120px]',
 };
 
+export const wizardPrimaryActionClass =
+  'inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#0A3F30]/70 bg-gradient-to-br from-[#072F24] to-[#041812] px-4 text-[0.72rem] font-black text-white shadow-sm transition hover:from-[#0A3F30] hover:to-[#06281F] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/30 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+
+export const wizardSecondaryActionClass =
+  'inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white/85 px-4 text-[0.72rem] font-bold text-slate-700 shadow-sm transition hover:border-emerald-950/20 hover:bg-white hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+
 const toneAccent: Record<WizardTone, string> = {
   agency: 'from-emerald-600 to-amber-500',
   owner: 'from-emerald-700 to-amber-500',
@@ -117,7 +123,7 @@ export function WizardShell({
 
   const panelClasses = isWorkstation
     ? `relative flex w-full flex-col overflow-hidden border border-emerald-950/10 bg-[#f8f3e8]/95 shadow-[0_30px_96px_rgba(6,17,13,0.2)] ring-1 ring-white/60 ${
-        isFullscreenMobile ? 'min-h-dvh rounded-none' : 'max-h-[91dvh] rounded-t-[1.35rem]'
+        isFullscreenMobile ? 'min-h-dvh rounded-none sm:min-h-0' : 'max-h-[91dvh] rounded-t-[1.35rem]'
       } sm:max-h-[min(680px,calc(100vh-36px))] sm:w-[min(92vw,920px)] sm:max-w-[920px] sm:rounded-[1.6rem] ${
         hasRail ? 'sm:grid sm:grid-cols-[minmax(11.75rem,0.53fr)_minmax(0,1.47fr)]' : ''
       } ${panelClassName}`
@@ -150,7 +156,7 @@ export function WizardShell({
           </aside>
         )}
 
-        <div className={isWorkstation ? 'flex min-h-0 flex-col overflow-hidden' : 'flex min-h-0 flex-1 flex-col overflow-hidden'}>
+        <div className={isWorkstation ? 'flex min-h-0 min-w-0 flex-col overflow-hidden' : 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'}>
           <div
             className={
               isWorkstation

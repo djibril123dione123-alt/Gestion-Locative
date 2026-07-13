@@ -264,10 +264,10 @@ export function Interventions() {
       />
 
       <PremiumKpiGrid density="compact">
-        <MetricCard density="compact" label="Total interventions" value={stats.total} icon={Wrench} tone="emerald" />
-        <MetricCard density="compact" label="À faire" value={stats.aFaire} icon={Clock} tone="amber" />
-        <MetricCard density="compact" label="En cours" value={stats.enCours} icon={AlertTriangle} tone="blue" />
-        <MetricCard density="compact" label="Terminées" value={stats.termine} icon={CheckCircle2} tone="green" />
+        <MetricCard density="compact" label="Total interventions" value={stats.total} helper="Demandes & tickets" icon={Wrench} tone="emerald" />
+        <MetricCard density="compact" label="À faire" value={stats.aFaire} helper="Planification requise" icon={Clock} tone="amber" />
+        <MetricCard density="compact" label="En cours" value={stats.enCours} helper="Travaux en exécution" icon={AlertTriangle} tone="blue" />
+        <MetricCard density="compact" label="Terminées" value={stats.termine} helper="Chantiers clôturés" icon={CheckCircle2} tone="green" />
       </PremiumKpiGrid>
 
       <PremiumToolbar

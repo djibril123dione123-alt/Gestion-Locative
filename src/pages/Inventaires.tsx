@@ -493,10 +493,10 @@ export function Inventaires() {
       />
 
       <PremiumKpiGrid density="compact">
-        <MetricCard density="compact" label="Total états des lieux" value={stats.total} icon={ClipboardList} tone="emerald" />
-        <MetricCard density="compact" label="Entrées (Baux neufs)" value={stats.entrees} icon={ArrowUpRight} tone="blue" />
-        <MetricCard density="compact" label="Sorties (Fin de bail)" value={stats.sorties} icon={ArrowDownRight} tone="green" />
-        <MetricCard density="compact" label="En litige" value={stats.litiges} icon={AlertTriangle} tone="amber" />
+        <MetricCard density="compact" label="Total états des lieux" value={stats.total} helper="Rapports enregistrés" icon={ClipboardList} tone="emerald" />
+        <MetricCard density="compact" label="Entrées (Baux neufs)" value={stats.entrees} helper="Remise des clés" icon={ArrowUpRight} tone="blue" />
+        <MetricCard density="compact" label="Sorties (Fin de bail)" value={stats.sorties} helper="Restitution & chiffrage" icon={ArrowDownRight} tone="green" />
+        <MetricCard density="compact" label="En litige" value={stats.litiges} helper="Dossiers à arbitrer" icon={AlertTriangle} tone="amber" />
       </PremiumKpiGrid>
 
       <PremiumToolbar

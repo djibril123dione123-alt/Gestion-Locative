@@ -73,6 +73,8 @@ export interface OccupantBailPersonInput {
   email: string | null;
   adresse_personnelle: string | null;
   piece_identite: string | null;
+  type_piece?: string | null;
+  numero_piece?: string | null;
 }
 
 export type OccupantBailContractPdfData = ContratPDFData;

@@ -72,6 +72,15 @@ import {
 } from '../repositories/occupantsBauxRepository';
 import { readWithCache, invalidateOperationalCaches, notifyDataChanged } from '../services/offlineReadCache';
 import { formatCurrency, formatDate, formatSenegalPhone, normalizeSenegalPhone } from '../lib/formatters';
+import {
+  IDENTITY_PIECE_OPTIONS,
+  formatIdentityNumberInput,
+  validateIdentityNumber,
+  preventNonDigitKey,
+  getIdentityPlaceholder,
+  getIdentityMaxLength,
+  getIdentityHint,
+} from '../lib/senegalIdentity';
 import { createContratViaEdge, renewContratViaEdge, updateContratViaEdge } from '../services/api/contratApi';
 import { generateContratPDF } from '../lib/pdf';
 
@@ -104,6 +113,8 @@ interface OccupantFormState {
   email: string;
   adresse_personnelle: string;
   piece_identite: string;
+  type_piece: string;
+  numero_piece: string;
 }
 
 interface OccupationFormState {
@@ -198,6 +209,8 @@ function emptyOccupantForm(): OccupantFormState {
     email: '',
     adresse_personnelle: '',
     piece_identite: '',
+    type_piece: 'CNI',
+    numero_piece: '',
   };
 }
 
@@ -219,13 +232,23 @@ function emptyOccupationForm(): OccupationFormState {
 }
 
 function occupantFormFromRow(row: OccupantBailRow): OccupantFormState {
+  const rawPiece = row.piece_identite ?? '';
+  let parsedType = 'CNI';
+  let parsedNum = rawPiece;
+  if (rawPiece.includes(' - ')) {
+    const parts = rawPiece.split(' - ');
+    parsedType = parts[0] || 'CNI';
+    parsedNum = parts.slice(1).join(' - ');
+  }
   return {
     prenom: row.prenom ?? '',
     nom: row.nom ?? '',
     telephone: row.telephone ? formatSenegalPhone(row.telephone, '') : '',
     email: row.email ?? '',
     adresse_personnelle: row.adresse_personnelle ?? '',
-    piece_identite: row.piece_identite ?? '',
+    piece_identite: rawPiece,
+    type_piece: parsedType,
+    numero_piece: parsedNum,
   };
 }
 
@@ -238,9 +261,18 @@ function personInputFromForm(form: OccupantFormState): { data: OccupantBailPerso
   if (!prenom) return { data: null, error: "Le prénom du locataire est obligatoire." };
   if (!nom) return { data: null, error: "Le nom du locataire est obligatoire." };
   if (!normalizedPhone) return { data: null, error: 'Le téléphone doit être un numéro sénégalais valide.' };
-  if (email && !/^[^s@]+@[^s@]+.[^s@]+$/.test(email)) {
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { data: null, error: "L'email du locataire n'est pas valide." };
   }
+
+  const identityError = validateIdentityNumber(form.numero_piece, form.type_piece);
+  if (identityError) {
+    return { data: null, error: identityError };
+  }
+
+  const numeroPiece = form.numero_piece?.trim() || null;
+  const typePiece = form.type_piece || 'CNI';
+  const formattedPiece = numeroPiece ? `${typePiece} - ${numeroPiece}` : (form.piece_identite.trim() || null);
 
   return {
     data: {
@@ -249,7 +281,9 @@ function personInputFromForm(form: OccupantFormState): { data: OccupantBailPerso
       telephone: normalizedPhone,
       email: email || null,
       adresse_personnelle: form.adresse_personnelle.trim() || null,
-      piece_identite: form.piece_identite.trim() || null,
+      piece_identite: formattedPiece,
+      type_piece: numeroPiece ? typePiece : null,
+      numero_piece: numeroPiece,
     },
     error: null,
   };
@@ -2299,15 +2333,55 @@ function OccupantFormModal({
           description="Ces informations alimentent le bail, les documents et les futures fiches Locations."
         />
         <div className="grid gap-3 sm:grid-cols-2">
-          <TextField label="Prénom" value={form.prenom} onChange={(value) => onChange({ ...form, prenom: value })} />
-          <TextField label="Nom" value={form.nom} onChange={(value) => onChange({ ...form, nom: value })} />
+          <TextField label="Prénom" value={form.prenom} onChange={(value) => onChange({ ...form, prenom: value })} required />
+          <TextField label="Nom" value={form.nom} onChange={(value) => onChange({ ...form, nom: value })} required />
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <TextField label="Téléphone" value={form.telephone} onChange={(value) => onChange({ ...form, telephone: value })} placeholder="77 123 45 67" />
-          <TextField label="Email" value={form.email} onChange={(value) => onChange({ ...form, email: value })} placeholder="locataire@email.com" />
+          <TextField label="Téléphone" value={form.telephone} onChange={(value) => onChange({ ...form, telephone: value })} placeholder="77 123 45 67" required />
+          <label className="block">
+            <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
+              Type de pièce
+            </span>
+            <div className="mt-1">
+              <SmartCombobox
+                density="compact"
+                value={form.type_piece || 'CNI'}
+                options={IDENTITY_PIECE_OPTIONS}
+                onChange={(val) => onChange({
+                  ...form,
+                  type_piece: val,
+                  numero_piece: formatIdentityNumberInput(form.numero_piece || '', val),
+                })}
+                placeholder="Sélectionner le type"
+              />
+            </div>
+          </label>
         </div>
+        <label className="block">
+          <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
+            Numéro de pièce
+          </span>
+          <div className="relative mt-1">
+            <input
+              type="text"
+              value={form.numero_piece || ''}
+              onChange={(e) => onChange({
+                ...form,
+                numero_piece: formatIdentityNumberInput(e.target.value, form.type_piece || 'CNI'),
+              })}
+              className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]"
+              placeholder={getIdentityPlaceholder(form.type_piece || 'CNI')}
+              maxLength={getIdentityMaxLength(form.type_piece || 'CNI')}
+              inputMode={(form.type_piece || 'CNI').toLowerCase().includes('cni') ? 'numeric' : 'text'}
+              onKeyDown={(form.type_piece || 'CNI').toLowerCase().includes('cni') ? preventNonDigitKey : undefined}
+              autoCapitalize="characters"
+            />
+          </div>
+          <p className="mt-1 text-[0.66rem] text-slate-500 sm:text-[10px]">
+            {getIdentityHint(form.type_piece || 'CNI')}
+          </p>
+        </label>
         <TextField label="Adresse" value={form.adresse_personnelle} onChange={(value) => onChange({ ...form, adresse_personnelle: value })} placeholder="Adresse personnelle" />
-        <TextField label="Pièce d'identité" value={form.piece_identite} onChange={(value) => onChange({ ...form, piece_identite: value })} placeholder="CNI, passeport..." />
         <ModalActions
           submitting={submitting}
           submitLabel={mode === 'edit' ? 'Enregistrer' : 'Créer le locataire'}
@@ -2677,15 +2751,60 @@ function OccupationFormModal({
                   density="compact"
                 />
               ) : (
-                <div className="space-y-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
+                <div className="space-y-2.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <TextField label="Prénom" value={form.newOccupant.prenom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, prenom: value } })} required placeholder="Boury" />
                     <TextField label="Nom" value={form.newOccupant.nom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, nom: value } })} required placeholder="Diallo" />
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <TextField label="Téléphone" value={form.newOccupant.telephone} onChange={(value) => update({ newOccupant: { ...form.newOccupant, telephone: value } })} required placeholder="77 123 45 67" />
-                    <TextField label="Email" value={form.newOccupant.email} onChange={(value) => update({ newOccupant: { ...form.newOccupant, email: value } })} placeholder="nom@domaine.com" />
+                    <label className="block">
+                      <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
+                        Type de pièce
+                      </span>
+                      <div className="mt-1">
+                        <SmartCombobox
+                          density="compact"
+                          value={form.newOccupant.type_piece || 'CNI'}
+                          options={IDENTITY_PIECE_OPTIONS}
+                          onChange={(val) => update({
+                            newOccupant: {
+                              ...form.newOccupant,
+                              type_piece: val,
+                              numero_piece: formatIdentityNumberInput(form.newOccupant.numero_piece || '', val),
+                            },
+                          })}
+                          placeholder="Sélectionner le type"
+                        />
+                      </div>
+                    </label>
                   </div>
+                  <label className="block">
+                    <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
+                      Numéro de pièce
+                    </span>
+                    <div className="relative mt-1">
+                      <input
+                        type="text"
+                        value={form.newOccupant.numero_piece || ''}
+                        onChange={(e) => update({
+                          newOccupant: {
+                            ...form.newOccupant,
+                            numero_piece: formatIdentityNumberInput(e.target.value, form.newOccupant.type_piece || 'CNI'),
+                          },
+                        })}
+                        className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]"
+                        placeholder={getIdentityPlaceholder(form.newOccupant.type_piece || 'CNI')}
+                        maxLength={getIdentityMaxLength(form.newOccupant.type_piece || 'CNI')}
+                        inputMode={(form.newOccupant.type_piece || 'CNI').toLowerCase().includes('cni') ? 'numeric' : 'text'}
+                        onKeyDown={(form.newOccupant.type_piece || 'CNI').toLowerCase().includes('cni') ? preventNonDigitKey : undefined}
+                        autoCapitalize="characters"
+                      />
+                    </div>
+                    <p className="mt-1 text-[0.66rem] text-slate-500 sm:text-[10px]">
+                      {getIdentityHint(form.newOccupant.type_piece || 'CNI')}
+                    </p>
+                  </label>
                 </div>
               )}
             </div>
@@ -2741,8 +2860,14 @@ function OccupationFormModal({
                       }
                     />
                     <SummaryLine
-                      label="Email"
-                      value={selectedOccupant?.email || form.newOccupant.email || 'Non renseigné'}
+                      label="Pièce d'identité"
+                      value={
+                        selectedOccupant
+                          ? selectedOccupant.piece_identite || 'Non renseignée'
+                          : form.newOccupant.numero_piece
+                            ? `${form.newOccupant.type_piece || 'CNI'} - ${form.newOccupant.numero_piece}`
+                            : 'Non renseignée'
+                      }
                     />
                   </dl>
                 </div>

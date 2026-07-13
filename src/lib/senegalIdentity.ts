@@ -47,3 +47,76 @@ export function validateSenegalCni(value?: string | null, allowIncomplete = true
   if (!isValidPastDate(digits.slice(3, 11))) return SENEGAL_CNI_MESSAGES.birthDate;
   return null;
 }
+
+export const IDENTITY_PIECE_OPTIONS = [
+  { value: 'CNI', label: 'CNI' },
+  { value: 'Passeport', label: 'Passeport' },
+  { value: 'Carte consulaire', label: 'Carte consulaire' },
+];
+
+const PASSPORT_PATTERN = /^(?:[A-Z]{2}\d{7}|[A-Z]\d{8})$/;
+
+export function formatIdentityNumberInput(value: string, type?: string | null): string {
+  const normalizedType = (type ?? '').toLowerCase();
+  if (normalizedType.includes('passeport')) {
+    const raw = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let result = '';
+    for (const char of raw) {
+      const index = result.length;
+      if (index === 0 && /[A-Z]/.test(char)) {
+        result += char;
+      } else if (index === 1 && /[A-Z0-9]/.test(char)) {
+        result += char;
+      } else if (index >= 2 && /\d/.test(char)) {
+        result += char;
+      }
+      if (result.length >= 9) break;
+    }
+    return result;
+  }
+  if (normalizedType.includes('cni')) {
+    return formatSenegalCniInput(value);
+  }
+  return value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 24);
+}
+
+export function validateIdentityNumber(value?: string | null, type?: string | null, allowIncomplete = true): string | null {
+  const cleaned = value?.replace(/\s+/g, ' ').trim() || null;
+  if (!cleaned) return null;
+  const normalizedType = (type ?? '').toLowerCase();
+  if (normalizedType.includes('cni')) {
+    return validateSenegalCni(cleaned, allowIncomplete);
+  }
+  if (normalizedType.includes('passeport')) {
+    return PASSPORT_PATTERN.test(cleaned) ? null : 'Le format du passeport est incorrect. Exemple : A01234567.';
+  }
+  return null;
+}
+
+export function preventNonDigitKey(event: React.KeyboardEvent<HTMLInputElement>): void {
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.key.length === 1 && !/^\d$/.test(event.key)) {
+    event.preventDefault();
+  }
+}
+
+export function getIdentityPlaceholder(type?: string | null): string {
+  const normalizedType = (type ?? '').toLowerCase();
+  if (normalizedType.includes('passeport')) return 'A01234567';
+  if (normalizedType.includes('cni')) return '1 01 19950825 00123 4';
+  return 'Référence officielle';
+}
+
+export function getIdentityMaxLength(type?: string | null): number {
+  const normalizedType = (type ?? '').toLowerCase();
+  if (normalizedType.includes('passeport')) return 9;
+  if (normalizedType.includes('cni')) return 21;
+  return 24;
+}
+
+export function getIdentityHint(type?: string | null): string {
+  const normalizedType = (type ?? '').toLowerCase();
+  if (normalizedType.includes('passeport')) return 'Exemple : A01234567';
+  if (normalizedType.includes('cni')) return '17 chiffres (format biométrique CEDEAO)';
+  return 'Référence officielle';
+}

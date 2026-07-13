@@ -2836,6 +2836,26 @@ function OccupationFormModal({
                 density="compact"
               />
             </div>
+
+            {form.occupantMode === 'existing' && (
+              <div className="rounded-xl border border-emerald-950/10 bg-white/50 px-3 py-2.5 shadow-[0_5px_14px_rgba(15,23,42,0.014)]">
+                <div className="min-w-0">
+                  <p className="text-[0.58rem] font-semibold uppercase tracking-[0.14em] text-emerald-800/70">
+                    Structure de la location
+                  </p>
+                  <p className="mt-0.5 text-[0.68rem] font-medium leading-snug text-slate-600">
+                    Ce contrat rattachera le locataire sélectionné à l’unité pour en activer la gestion complète.
+                  </p>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[0.62rem] font-semibold text-slate-600">
+                  {['Quittances auto', 'Suivi loyers', 'Échéancier', 'Historique'].map((item) => (
+                    <span key={item} className="rounded-full border border-emerald-950/10 bg-[#fffdf8]/90 px-2.5 py-1 shadow-2xs">
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

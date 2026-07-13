@@ -2369,7 +2369,7 @@ function OccupantFormModal({
                 ...form,
                 numero_piece: formatIdentityNumberInput(e.target.value, form.type_piece || 'CNI'),
               })}
-              className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]"
+              className="mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:!h-8 sm:!min-h-8 sm:rounded-[0.6rem] sm:text-[0.8rem]"
               placeholder={getIdentityPlaceholder(form.type_piece || 'CNI')}
               maxLength={getIdentityMaxLength(form.type_piece || 'CNI')}
               inputMode={(form.type_piece || 'CNI').toLowerCase().includes('cni') ? 'numeric' : 'text'}

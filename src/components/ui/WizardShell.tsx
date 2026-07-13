@@ -300,7 +300,7 @@ export function WizardShell({
               {footer ? (
                 footer
               ) : (
-                <div className={`flex flex-col-reverse gap-2 sm:flex-row sm:items-center ${isWorkstation ? 'sm:justify-between' : 'sm:justify-end'}`}>
+                <div className={`flex flex-col-reverse gap-2 sm:flex-row sm:items-center ${isWorkstation && steps.length > 0 ? 'sm:justify-between' : 'sm:justify-end'}`}>
                   {isWorkstation && steps.length > 0 && (
                     <p className="hidden text-[0.68rem] font-semibold text-slate-500 sm:block">
                       Étape {currentStep + 1} sur {steps.length} · {currentStepData?.label}

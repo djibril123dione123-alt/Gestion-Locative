@@ -2668,7 +2668,7 @@ function OccupationFormModal({
       steps={LOCATION_WIZARD_STEPS}
       currentStep={locationWizardStepIndex}
       contentDescription="Créez un contrat de location rattachant un locataire à une unité."
-      stepContext={<LocationWizardStepContext step={wizardStep} />}
+      stepContext={(wizardStep !== 'occupant' && wizardStep !== 'unite') ? <LocationWizardStepContext step={wizardStep} /> : undefined}
       rail={
         <LocationWizardRail
           steps={LOCATION_WIZARD_STEPS}
@@ -2710,10 +2710,10 @@ function OccupationFormModal({
         </button>
       }
     >
-      <div className="space-y-2.5 sm:space-y-3 lg:space-y-4">
+      <div className="space-y-2 sm:space-y-2.5">
         {/* ETAPE 1 : LOCATAIRE ET UNITÉ FUSIONNÉS */}
         {(wizardStep === 'occupant' || wizardStep === 'unite') && (
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             <div>
               <div className="mb-1 flex items-center justify-between">
                 <label className="text-[0.7rem] font-semibold text-slate-600">
@@ -2751,7 +2751,7 @@ function OccupationFormModal({
                   density="compact"
                 />
               ) : (
-                <div className="space-y-2.5 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
+                <div className="space-y-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm">
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <TextField label="Prénom" value={form.newOccupant.prenom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, prenom: value } })} required placeholder="Boury" />
                     <TextField label="Nom" value={form.newOccupant.nom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, nom: value } })} required placeholder="Diallo" />
@@ -2765,7 +2765,7 @@ function OccupationFormModal({
                       <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
                         Type de pièce
                       </span>
-                      <div className="mt-1">
+                      <div className="mt-0.5">
                         <SmartCombobox
                           density="compact"
                           value={form.newOccupant.type_piece || 'CNI'}
@@ -2785,7 +2785,7 @@ function OccupationFormModal({
                       <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
                         Numéro de pièce
                       </span>
-                      <div className="relative mt-1">
+                      <div className="relative mt-0.5">
                         <input
                           type="text"
                           value={form.newOccupant.numero_piece || ''}
@@ -2795,7 +2795,7 @@ function OccupationFormModal({
                               numero_piece: formatIdentityNumberInput(e.target.value, form.newOccupant.type_piece || 'CNI'),
                             },
                           })}
-                          className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]"
+                          className="mt-0.5 h-10 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:h-8.5 sm:rounded-[0.56rem] sm:text-[0.8rem]"
                           placeholder={getIdentityPlaceholder(form.newOccupant.type_piece || 'CNI')}
                           maxLength={getIdentityMaxLength(form.newOccupant.type_piece || 'CNI')}
                           inputMode={(form.newOccupant.type_piece || 'CNI').toLowerCase().includes('cni') ? 'numeric' : 'text'}
@@ -2803,7 +2803,7 @@ function OccupationFormModal({
                           autoCapitalize="characters"
                         />
                       </div>
-                      <p className="mt-1 text-[0.66rem] text-slate-500 sm:text-[10px]">
+                      <p className="mt-0.5 text-[0.66rem] text-slate-500 sm:text-[10px]">
                         {getIdentityHint(form.newOccupant.type_piece || 'CNI')}
                       </p>
                     </label>
@@ -3025,7 +3025,7 @@ function TextField({
           max={max}
           maxLength={maxLength}
           inputMode={inputMode || (type === 'number' ? 'numeric' : type === 'tel' ? 'tel' : undefined)}
-          className={`mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 disabled:bg-slate-50 disabled:text-slate-500 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem] ${suffix ? 'pl-3 pr-8' : 'px-3'}`}
+          className={`mt-0.5 h-10 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 disabled:bg-slate-50 disabled:text-slate-500 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:h-8.5 sm:rounded-[0.56rem] sm:text-[0.8rem] ${suffix ? 'pl-3 pr-8' : 'px-3'}`}
         />
         {suffix && <span className="absolute bottom-3 right-3 text-[0.72rem] font-semibold text-slate-400 sm:bottom-2 sm:text-[0.68rem]">{suffix}</span>}
       </div>

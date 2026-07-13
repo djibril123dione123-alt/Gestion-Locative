@@ -2758,7 +2758,10 @@ function OccupationFormModal({
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <TextField label="Téléphone" value={form.newOccupant.telephone} onChange={(value) => update({ newOccupant: { ...form.newOccupant, telephone: value } })} required placeholder="77 123 45 67" />
-                    <label className="block">
+                    <TextField label="Email" value={form.newOccupant.email} onChange={(value) => update({ newOccupant: { ...form.newOccupant, email: value } })} placeholder="nom@domaine.com" />
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
+                    <label className="block sm:col-span-4">
                       <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
                         Type de pièce
                       </span>
@@ -2774,37 +2777,37 @@ function OccupationFormModal({
                               numero_piece: formatIdentityNumberInput(form.newOccupant.numero_piece || '', val),
                             },
                           })}
-                          placeholder="Sélectionner le type"
+                          placeholder="Type"
                         />
                       </div>
                     </label>
+                    <label className="block sm:col-span-8">
+                      <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
+                        Numéro de pièce
+                      </span>
+                      <div className="relative mt-1">
+                        <input
+                          type="text"
+                          value={form.newOccupant.numero_piece || ''}
+                          onChange={(e) => update({
+                            newOccupant: {
+                              ...form.newOccupant,
+                              numero_piece: formatIdentityNumberInput(e.target.value, form.newOccupant.type_piece || 'CNI'),
+                            },
+                          })}
+                          className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]"
+                          placeholder={getIdentityPlaceholder(form.newOccupant.type_piece || 'CNI')}
+                          maxLength={getIdentityMaxLength(form.newOccupant.type_piece || 'CNI')}
+                          inputMode={(form.newOccupant.type_piece || 'CNI').toLowerCase().includes('cni') ? 'numeric' : 'text'}
+                          onKeyDown={(form.newOccupant.type_piece || 'CNI').toLowerCase().includes('cni') ? preventNonDigitKey : undefined}
+                          autoCapitalize="characters"
+                        />
+                      </div>
+                      <p className="mt-1 text-[0.66rem] text-slate-500 sm:text-[10px]">
+                        {getIdentityHint(form.newOccupant.type_piece || 'CNI')}
+                      </p>
+                    </label>
                   </div>
-                  <label className="block">
-                    <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
-                      Numéro de pièce
-                    </span>
-                    <div className="relative mt-1">
-                      <input
-                        type="text"
-                        value={form.newOccupant.numero_piece || ''}
-                        onChange={(e) => update({
-                          newOccupant: {
-                            ...form.newOccupant,
-                            numero_piece: formatIdentityNumberInput(e.target.value, form.newOccupant.type_piece || 'CNI'),
-                          },
-                        })}
-                        className="mt-1 h-11 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:h-9 sm:rounded-[0.56rem] sm:text-[0.8rem]"
-                        placeholder={getIdentityPlaceholder(form.newOccupant.type_piece || 'CNI')}
-                        maxLength={getIdentityMaxLength(form.newOccupant.type_piece || 'CNI')}
-                        inputMode={(form.newOccupant.type_piece || 'CNI').toLowerCase().includes('cni') ? 'numeric' : 'text'}
-                        onKeyDown={(form.newOccupant.type_piece || 'CNI').toLowerCase().includes('cni') ? preventNonDigitKey : undefined}
-                        autoCapitalize="characters"
-                      />
-                    </div>
-                    <p className="mt-1 text-[0.66rem] text-slate-500 sm:text-[10px]">
-                      {getIdentityHint(form.newOccupant.type_piece || 'CNI')}
-                    </p>
-                  </label>
                 </div>
               )}
             </div>
@@ -2833,62 +2836,6 @@ function OccupationFormModal({
                 density="compact"
               />
             </div>
-
-            {(selectedOccupant || form.occupantMode === 'new' || selectedUnit) && (
-              <section className="grid gap-2 rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm sm:grid-cols-2">
-                <div className="rounded-lg border border-slate-200/80 bg-white/90 p-2.5">
-                  <p className="text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-emerald-800">Identité du locataire</p>
-                  <dl className="mt-1 text-[0.72rem]">
-                    <SummaryLine
-                      label="Locataire"
-                      value={
-                        selectedOccupant
-                          ? `${selectedOccupant.prenom} ${selectedOccupant.nom}`.trim()
-                          : form.occupantMode === 'new' && (form.newOccupant.prenom || form.newOccupant.nom)
-                            ? `${form.newOccupant.prenom} ${form.newOccupant.nom}`.trim()
-                            : 'Non sélectionné'
-                      }
-                    />
-                    <SummaryLine
-                      label="Téléphone"
-                      value={
-                        selectedOccupant?.telephone
-                          ? formatSenegalPhone(selectedOccupant.telephone)
-                          : form.newOccupant.telephone
-                            ? formatSenegalPhone(form.newOccupant.telephone)
-                            : 'Non renseigné'
-                      }
-                    />
-                    <SummaryLine
-                      label="Pièce d'identité"
-                      value={
-                        selectedOccupant
-                          ? selectedOccupant.piece_identite || 'Non renseignée'
-                          : form.newOccupant.numero_piece
-                            ? `${form.newOccupant.type_piece || 'CNI'} - ${form.newOccupant.numero_piece}`
-                            : 'Non renseignée'
-                      }
-                    />
-                  </dl>
-                </div>
-                <div className="rounded-lg border border-emerald-100 bg-emerald-50/60 p-2.5">
-                  <p className="text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-emerald-800">Lot & Loyer conseillé</p>
-                  <dl className="mt-1 text-[0.72rem]">
-                    <SummaryLine label="Bien / Immeuble" value={selectedUnit?.immeuble_nom || 'Non sélectionné'} />
-                    <SummaryLine label="Unité" value={selectedUnit?.nom || 'Non sélectionnée'} />
-                    <SummaryLine
-                      label="Propriétaire"
-                      value={
-                        selectedUnit
-                          ? `${selectedUnit.bailleur_prenom ?? ''} ${selectedUnit.bailleur_nom ?? ''}`.trim() || 'Non renseigné'
-                          : 'Non sélectionné'
-                      }
-                    />
-                    <SummaryLine label="Loyer de base" value={selectedUnit ? formatCurrency(selectedUnit.loyer_base ?? 0) : '—'} />
-                  </dl>
-                </div>
-              </section>
-            )}
           </div>
         )}
 

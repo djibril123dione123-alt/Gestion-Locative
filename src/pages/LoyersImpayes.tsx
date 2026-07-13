@@ -857,7 +857,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                     isOpen={showModal && Boolean(selectedLoyer)}
                     onClose={() => setShowModal(false)}
                     title="Encaisser ce loyer"
-                    description="Enregistrement d'un paiement partiel ou complet avec traçabilité et quittance."
+                    description="Paiement partiel ou complet avec traçabilité et quittance."
                 >
                     <div className="space-y-3 pt-0.5">
                         {/* En-tête / Résumé compact harmonisé avec le style Wizard */}

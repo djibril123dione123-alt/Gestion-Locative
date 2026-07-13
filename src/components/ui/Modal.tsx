@@ -44,7 +44,7 @@ export function Modal({ isOpen, onClose, title, description, children }: ModalPr
               </p>
               <h2 className="mt-1 truncate pr-4 text-base font-black text-slate-950 sm:text-xl">{title}</h2>
               {description && (
-                <p className="mt-1 text-xs text-slate-500 max-w-sm leading-tight">{description}</p>
+                <p className="mt-0.5 text-xs text-slate-500 max-w-2xl truncate sm:whitespace-nowrap leading-tight">{description}</p>
               )}
             </div>
           </div>

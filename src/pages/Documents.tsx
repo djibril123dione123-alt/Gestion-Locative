@@ -606,20 +606,18 @@ export function Documents() {
             {profile?.role === 'admin' && (
               <PremiumButton
                 variant="secondary"
-                size="sm"
                 onClick={() => navigate('/documents/studio')}
                 icon={<PanelsTopLeft className="h-3.5 w-3.5" />}
-                className="!h-8 flex-1 border-white/15 bg-white/10 !px-3 !text-xs text-white hover:bg-white/15 sm:flex-none"
+                className="!h-7 !min-h-7 flex-1 border-white/15 bg-white/10 !px-2.5 !py-1 !text-[0.7rem] text-white hover:bg-white/15 sm:flex-none"
               >
                 Studio
               </PremiumButton>
             )}
             <PremiumButton
               variant="secondary"
-              size="sm"
               onClick={() => navigate('/documents/scan')}
               icon={<ShieldCheck className="h-3.5 w-3.5" />}
-              className="!h-8 flex-1 border-white/15 bg-white/10 !px-3 !text-xs text-white hover:bg-white/15 sm:flex-none"
+              className="!h-7 !min-h-7 flex-1 border-white/15 bg-white/10 !px-2.5 !py-1 !text-[0.7rem] text-white hover:bg-white/15 sm:flex-none"
             >
               Scanner
             </PremiumButton>
@@ -628,11 +626,10 @@ export function Documents() {
         primaryAction={
           <PremiumButton
             variant="create"
-            size="sm"
             onClick={() => setUploadOpen(true)}
             data-testid="button-upload-document"
             icon={<Upload className="h-3.5 w-3.5" />}
-            className="!h-8 w-full !px-3 !text-xs sm:w-auto"
+            className="w-full sm:w-auto !h-7 !min-h-7 !px-2.5 !py-1 !text-[0.7rem]"
           >
             Ajouter au coffre
           </PremiumButton>

@@ -849,7 +849,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                   description="Encaissements validés et quittances."
                   mobileDescription="Suivi des encaissements."
                   primaryAction={
-                    <PremiumButton variant="primary" icon={<Plus className="h-4 w-4" />} onClick={openCreateModal}>
+                    <PremiumButton variant="create" icon={<Plus className="h-3.5 w-3.5" />} onClick={openCreateModal} className="w-full sm:w-auto !h-7 !min-h-7 !px-2.5 !py-1 !text-[0.7rem]">
                       Nouveau paiement
                     </PremiumButton>
                   }

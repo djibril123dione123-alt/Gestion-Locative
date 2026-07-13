@@ -971,7 +971,7 @@ export function OccupantsBaux() {
                 type="button"
                 onClick={openCreateOccupation}
                 icon={<Plus className="h-3.5 w-3.5" />}
-                className="w-full sm:w-auto !h-[29px] !px-2.5 !py-1 !text-[0.72rem]"
+                className="w-full sm:w-auto !h-7 !min-h-7 !px-2.5 !py-1 !text-[0.7rem]"
               >
                 Nouvelle location
               </PremiumButton>

@@ -214,7 +214,7 @@ export function PremiumPageHeader({
         </div>
 
         {(hasActions || hasSideContent) && (
-          <div className="flex flex-row flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto shrink-0 justify-end mt-2.5 sm:mt-0 [&>*]:flex-1 sm:[&>*]:flex-initial [&_button]:!w-full sm:[&_button]:!w-auto [&_a]:!w-full sm:[&_a]:!w-auto">
+          <div className={`flex flex-row flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto shrink-0 justify-end mt-2.5 sm:mt-0 [&>*]:flex-1 sm:[&>*]:flex-initial [&_button]:!w-full sm:[&_button]:!w-auto [&_a]:!w-full sm:[&_a]:!w-auto ${isCompact ? '[&_button]:!h-7 [&_button]:!min-h-7 [&_button]:!px-2.5 [&_button]:!py-1 [&_button]:!text-[0.7rem] [&_a]:!h-7 [&_a]:!min-h-7 [&_a]:!px-2.5 [&_a]:!py-1 [&_a]:!text-[0.7rem]' : ''}`}>
             {sideContent && (
               <div className="hidden sm:flex items-center gap-1.5">
                 {sideContent}
@@ -278,7 +278,7 @@ export function PremiumPageHeader({
 
         {/* Colonne droite : Actions et sideContent */}
         {(hasActions || hasSideContent) && (
-          <div className="relative z-10 flex flex-row flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto shrink-0 justify-end mt-2.5 sm:mt-0 [&>*]:flex-1 sm:[&>*]:flex-initial [&_button]:!w-full sm:[&_button]:!w-auto [&_a]:!w-full sm:[&_a]:!w-auto">
+          <div className={`relative z-10 flex flex-row flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto shrink-0 justify-end mt-2.5 sm:mt-0 [&>*]:flex-1 sm:[&>*]:flex-initial [&_button]:!w-full sm:[&_button]:!w-auto [&_a]:!w-full sm:[&_a]:!w-auto ${isCompact ? '[&_button]:!h-7 [&_button]:!min-h-7 [&_button]:!px-2.5 [&_button]:!py-1 [&_button]:!text-[0.7rem] [&_a]:!h-7 [&_a]:!min-h-7 [&_a]:!px-2.5 [&_a]:!py-1 [&_a]:!text-[0.7rem]' : ''}`}>
             {sideContent}
             {resolvedSecondaryAction}
             {resolvedPrimaryAction}

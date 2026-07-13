@@ -683,12 +683,12 @@ export function Depenses() {
                     href={selectedDepense.piece_justificative}
                     target="_blank"
                     rel="noreferrer"
-                    className="flex h-8 w-full items-center justify-center gap-1.5 rounded-[0.6rem] bg-emerald-700 px-3 text-[0.72rem] font-bold text-white shadow-sm transition hover:bg-emerald-800"
+                    className="flex !h-7 !min-h-7 w-full items-center justify-center gap-1.5 rounded-[0.6rem] bg-emerald-700 px-3 text-[0.7rem] font-bold text-white shadow-sm transition hover:bg-emerald-800"
                   >
                     <ReceiptText className="h-3.5 w-3.5" /> Voir justificatif
                   </a>
                 ) : (
-                  <PremiumButton variant="secondary" size="sm" icon={<ReceiptText className="h-3.5 w-3.5" />} disabled className="!h-8 !text-[0.72rem]" fullWidth>
+                  <PremiumButton variant="secondary" size="sm" icon={<ReceiptText className="h-3.5 w-3.5" />} disabled className="!h-7 !min-h-7 !text-[0.7rem]" fullWidth>
                     Aucun justificatif
                   </PremiumButton>
                 )

@@ -234,7 +234,7 @@ export function Locataires() {
   if (loading) return <PageSkeleton title="Locataires" variant="table" />;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 lg:space-y-8">
+    <div className="space-y-4 pt-2.5 sm:pt-3 pb-8">
       <OfflineDataNotice
         cachedAt={cacheTimestamp}
         onRetry={loadData}

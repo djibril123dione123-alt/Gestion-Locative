@@ -9,7 +9,6 @@ import {
   FileCheck2,
   FileText,
   FolderOpen,
-  HardDrive,
   LockKeyhole,
   RefreshCw,
   Search,
@@ -633,28 +632,6 @@ export function Documents() {
           >
             Ajouter au coffre
           </PremiumButton>
-        }
-        sideContent={
-          drawerOpen ? undefined : (
-            <div className="hidden min-w-0 rounded-lg border border-white/10 bg-white/[0.07] p-1.5 backdrop-blur sm:block sm:w-auto sm:min-w-[132px] sm:max-w-[150px]">
-              <div className="flex items-center justify-between gap-1.5">
-                <div className="min-w-0">
-                  <p className="truncate text-[0.52rem] font-semibold uppercase tracking-[0.12em] text-emerald-100/50">Espace sécurisé</p>
-                  <p className="mt-0.5 whitespace-nowrap text-[0.68rem] font-bold text-white">
-                    {formatStorageSize(usage?.used_bytes)}{' '}
-                    <span className="text-[0.56rem] font-semibold text-emerald-100/45">/ {formatStorageSize(usage?.limit_bytes)}</span>
-                  </p>
-                </div>
-                <HardDrive className="h-3 w-3 flex-shrink-0 text-emerald-200/60" />
-              </div>
-              <div className="mt-1 h-0.5 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className={'h-full rounded-full transition-all duration-700 ' + usageTone(usedPercent)}
-                  {...({ style: { width: usedPercent + '%' } } as React.HTMLAttributes<HTMLDivElement>)}
-                />
-              </div>
-            </div>
-          )
         }
       />
 

@@ -35,14 +35,14 @@ export function FinancePageHeader({
   secondaryDisabled,
 }: FinancePageHeaderProps) {
   return (
-    <header className="flex flex-col gap-4 rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] p-4 shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
-      <div className="min-w-0">
-        <p className="text-[0.68rem] font-black uppercase tracking-[0.2em] text-orange-600">{eyebrow}</p>
-        <h1 className="mt-1 font-serif text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">{title}</h1>
-        <p className="mt-1 max-w-2xl text-sm font-medium leading-6 text-slate-600 lg:hidden">{mobileDescription ?? description}</p>
-        <p className="mt-1 hidden max-w-2xl text-sm font-medium leading-6 text-slate-600 lg:block">{description}</p>
+    <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 px-3.5 py-2 sm:px-4 sm:py-2">
+      <div className="min-w-0 flex-1">
+        <p className="text-[0.52rem] font-black uppercase tracking-[0.2em] text-orange-600">{eyebrow}</p>
+        <h1 className="mt-0.5 font-serif font-black tracking-tight text-slate-950 text-[1.28rem] sm:text-[1.35rem] leading-[1.12]">{title}</h1>
+        <p className="mt-0.5 text-[0.66rem] leading-snug max-w-2xl font-medium text-slate-600 sm:hidden">{mobileDescription ?? description}</p>
+        <p className="mt-0.5 text-[0.66rem] leading-snug hidden max-w-2xl font-medium text-slate-600 sm:block">{description}</p>
       </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:justify-end">
+      <div className="flex flex-row flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto shrink-0 justify-end mt-2 sm:mt-0 [&>*]:flex-1 sm:[&>*]:flex-initial [&_button]:!h-7 [&_button]:!min-h-7 [&_button]:!w-full sm:[&_button]:!w-auto [&_button]:!px-2.5 [&_button]:!py-1 [&_button]:!text-[0.7rem]">
         {secondaryLabel && (
           <PremiumButton
             variant="secondary"
@@ -50,7 +50,7 @@ export function FinancePageHeader({
             onClick={onSecondary}
             disabled={secondaryDisabled}
             fullWidth
-            className="sm:w-auto !h-[29px] !px-2.5 !py-1 !text-[0.72rem]"
+            className="sm:w-auto !h-7 !min-h-7 !px-2.5 !py-1 !text-[0.7rem]"
           >
             {secondaryLabel}
           </PremiumButton>
@@ -62,7 +62,7 @@ export function FinancePageHeader({
             onClick={onPrimary}
             disabled={primaryDisabled}
             fullWidth
-            className="sm:w-auto !h-[29px] !px-2.5 !py-1 !text-[0.72rem]"
+            className="sm:w-auto !h-7 !min-h-7 !px-2.5 !py-1 !text-[0.7rem]"
           >
             {primaryLabel}
           </PremiumButton>

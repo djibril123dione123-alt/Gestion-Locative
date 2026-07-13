@@ -1072,7 +1072,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
                   icon={<ReceiptText className="h-3.5 w-3.5" />}
                   onClick={() => exportFacture(selectedPaiement.id)}
                   disabled={exportingId === selectedPaiement.id}
-                  className="!h-8 !text-[0.72rem]"
+                  className="!h-7 !min-h-7 !text-[0.7rem]"
                   fullWidth
                 >
                   Voir quittance

@@ -484,15 +484,29 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           if (expensesRes.error) throw expensesRes.error;
 
           let documents: DocumentRow[] = [];
-          const documentsRes = await supabase
-            .from('documents')
-            .select('id, name, document_category, entity_type, entity_id, created_at')
-            .eq('agency_id', profile.agency_id)
-            .limit(350);
+          const [documentsRes, registryRes] = await Promise.all([
+            supabase
+              .from('documents')
+              .select('id, name, document_category, entity_type, entity_id, created_at')
+              .eq('agency_id', profile.agency_id)
+              .limit(350),
+            supabase
+              .from('document_registry')
+              .select('id, reference, document_type, entity_id, status, generated_at')
+              .eq('agency_id', profile.agency_id)
+              .limit(350),
+          ]);
 
-          if (!documentsRes.error) {
-            documents = (documentsRes.data || []) as DocumentRow[];
-          }
+          const rawDocs = (documentsRes.data || []) as DocumentRow[];
+          const regDocs: DocumentRow[] = (registryRes.data || []).map((r: any) => ({
+            id: r.id,
+            name: r.reference || r.document_type || 'Document généré',
+            document_category: r.document_type,
+            entity_type: 'registry',
+            entity_id: r.entity_id,
+            created_at: r.generated_at || new Date().toISOString(),
+          }));
+          documents = [...rawDocs, ...regDocs];
 
           return {
             bailleurs: (bailleursRes.data || []) as BailleurRow[],
@@ -1716,15 +1730,15 @@ function PropertyDrawer({
       <div className="mb-3">
         <CompactSection title="Actions & Gestion" icon={Pencil}>
           <div className="grid grid-cols-2 gap-1.5">
-            <button type="button" onClick={onEdit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <button type="button" onClick={onEdit} className="inline-flex !h-7 !min-h-7 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
               <Pencil className="h-3.5 w-3.5 text-slate-400" />
               Modifier le bien
             </button>
-            <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex !h-7 !min-h-7 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
               <Wallet className="h-3.5 w-3.5 text-slate-400" />
               Paiements liés
             </button>
-            <button type="button" onClick={() => onNavigate('/documents')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 col-span-2">
+            <button type="button" onClick={() => onNavigate('/documents')} className="inline-flex !h-7 !min-h-7 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 col-span-2">
               <FileText className="h-3.5 w-3.5 text-slate-400" />
               Documents associés
             </button>
@@ -1770,15 +1784,32 @@ function PropertyDrawer({
             },
             {
               label: 'Documents',
-              content: summary.documents.length === 0 ? (
-                <SoftEmpty text="Aucun document." />
-              ) : (
-                <CompactList rows={summary.documents.slice(0, 6).map((document) => ({
-                  icon: FileText,
-                  title: document.name || document.document_category || 'Document',
-                  subtitle: <span className="font-medium text-slate-500">PDF · {formatDate(document.created_at)}</span>,
-                  onClick: () => { window.location.hash = document.id ? `#/documents?id=${document.source || 'generated'}-${document.id}` : '#/documents'; },
-                }))} />
+              content: (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2 rounded-xl border border-emerald-950/10 bg-emerald-50/40 p-2.5">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">Documents du bien</p>
+                      <p className="text-[0.62rem] text-slate-600">Baux, diagnostics, mandats et rapports</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { window.location.hash = '#/documents'; }}
+                      className="inline-flex !h-7 !min-h-7 items-center gap-1 rounded-lg bg-emerald-800 px-2.5 text-[0.68rem] font-semibold text-white shadow-sm hover:bg-emerald-700"
+                    >
+                      + Coffre GED
+                    </button>
+                  </div>
+                  {summary.documents.length === 0 ? (
+                    <SoftEmpty text="Aucun document lié. Cliquez sur Coffre GED pour en importer." />
+                  ) : (
+                    <CompactList rows={summary.documents.slice(0, 8).map((document) => ({
+                      icon: FileText,
+                      title: document.name || document.document_category || 'Document',
+                      subtitle: <span className="font-medium text-slate-500">PDF · {formatDate(document.created_at)}</span>,
+                      onClick: () => { window.location.hash = document.id ? `#/documents?id=${document.source || 'generated'}-${document.id}` : '#/documents'; },
+                    }))} />
+                  )}
+                </div>
               ),
             },
           ]}
@@ -1883,27 +1914,27 @@ function UnitDrawer({
         <CompactSection title="Actions & Gestion" icon={Pencil}>
           <div className="grid grid-cols-2 gap-1.5">
             {activeContract ? (
-              <button type="button" onClick={() => { window.location.hash = `#/occupants-baux?id=${activeContract.id}`; }} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+              <button type="button" onClick={() => { window.location.hash = `#/occupants-baux?id=${activeContract.id}`; }} className="inline-flex !h-7 !min-h-7 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
                 <ClipboardList className="h-3.5 w-3.5 text-brand-700" />
                 Voir la location
               </button>
             ) : (
-              <button type="button" onClick={() => { window.location.hash = `#/occupants-baux?action=new-location&uniteId=${unit.id}`; }} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
+              <button type="button" onClick={() => { window.location.hash = `#/occupants-baux?action=new-location&uniteId=${unit.id}`; }} className="inline-flex !h-7 !min-h-7 col-span-2 items-center justify-center gap-1.5 rounded-lg border border-brand-200/60 bg-brand-50 px-2 text-[0.65rem] font-bold text-brand-900 shadow-sm transition hover:bg-brand-100">
                 <Plus className="h-3.5 w-3.5 text-brand-700" />
                 Créer une location
               </button>
             )}
             
-            <button type="button" onClick={onEdit} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <button type="button" onClick={onEdit} className="inline-flex !h-7 !min-h-7 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
               <Pencil className="h-3.5 w-3.5 text-slate-400" />
               Modifier l'unité
             </button>
-            <button type="button" onClick={() => onNavigate('/documents')} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <button type="button" onClick={() => onNavigate('/documents')} className="inline-flex !h-7 !min-h-7 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
               <FileText className="h-3.5 w-3.5 text-slate-400" />
               Documents associés
             </button>
             {hasReliquat && (
-              <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex h-8 col-span-2 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200/60 px-2 text-[0.65rem] font-bold text-emerald-900 shadow-sm transition hover:bg-emerald-100">
+              <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex !h-7 !min-h-7 col-span-2 items-center justify-center gap-1.5 rounded-lg bg-emerald-50 border border-emerald-200/60 px-2 text-[0.65rem] font-bold text-emerald-900 shadow-sm transition hover:bg-emerald-100">
                 <Wallet className="h-3.5 w-3.5 text-emerald-700" />
                 Encaisser le reliquat
               </button>
@@ -1934,15 +1965,32 @@ function UnitDrawer({
             },
             {
               label: 'Documents',
-              content: summary.documents.length === 0 ? (
-                <SoftEmpty text="Aucun document." />
-              ) : (
-                <CompactList rows={summary.documents.slice(0, 4).map((document) => ({
-                  icon: FileText,
-                  title: document.name || document.document_category || 'Document',
-                  subtitle: <span className="font-medium text-slate-500">PDF · {formatDate(document.created_at)}</span>,
-                  onClick: () => { window.location.hash = document.id ? `#/documents?id=${document.source || 'generated'}-${document.id}` : '#/documents'; },
-                }))} />
+              content: (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2 rounded-xl border border-emerald-950/10 bg-emerald-50/40 p-2.5">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">Documents de l'unité</p>
+                      <p className="text-[0.62rem] text-slate-600">Baux, états des lieux, quittances</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { window.location.hash = '#/documents'; }}
+                      className="inline-flex !h-7 !min-h-7 items-center gap-1 rounded-lg bg-emerald-800 px-2.5 text-[0.68rem] font-semibold text-white shadow-sm hover:bg-emerald-700"
+                    >
+                      + Coffre GED
+                    </button>
+                  </div>
+                  {summary.documents.length === 0 ? (
+                    <SoftEmpty text="Aucun document lié. Cliquez sur Coffre GED pour en importer." />
+                  ) : (
+                    <CompactList rows={summary.documents.slice(0, 6).map((document) => ({
+                      icon: FileText,
+                      title: document.name || document.document_category || 'Document',
+                      subtitle: <span className="font-medium text-slate-500">PDF · {formatDate(document.created_at)}</span>,
+                      onClick: () => { window.location.hash = document.id ? `#/documents?id=${document.source || 'generated'}-${document.id}` : '#/documents'; },
+                    }))} />
+                  )}
+                </div>
               ),
             },
           ]}

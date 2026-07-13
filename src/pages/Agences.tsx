@@ -332,7 +332,7 @@ export default function Agences() {
   ];
 
   return (
-    <div className="p-6">
+    <div className="space-y-4 pt-2.5 sm:pt-3 pb-8">
       <PremiumPageHeader
         density="compact"
         eyebrow="PARAMÈTRES AGENCE"

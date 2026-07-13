@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
-import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, CreditCard, Wallet, Building2, CalendarDays, SlidersHorizontal } from 'lucide-react';
+import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, CreditCard, Wallet, Building2, CalendarDays, SlidersHorizontal, CheckCircle2, User, FileText, Sparkles, Hash, Banknote, ShieldCheck, Check, Clock } from 'lucide-react';
 import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -36,6 +36,14 @@ import { buildMonthFilterOptions, resolveMonthFilter } from '../lib/monthFilters
 const ITEMS_PER_PAGE = 20;
 const LOOKBACK_MONTHS = 12;
 const LOOKAHEAD_MONTHS = 2;
+
+const PAYMENT_MODE_OPTIONS = [
+    { value: 'especes', label: 'Espèces' },
+    { value: 'mobile_money', label: 'Mobile Money (Wave / OM)' },
+    { value: 'virement', label: 'Virement bancaire' },
+    { value: 'cheque', label: 'Chèque' },
+    { value: 'autre', label: 'Autre mode' },
+];
 
 type LoyerStatut = OpenReceivableStatus;
 
@@ -775,7 +783,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                         size="sm"
                                         icon={<HandCoins className="h-3.5 w-3.5" />}
                                         onClick={() => handlePayerClick(drawerLoyer)}
-                                        className="!h-8 !text-[0.72rem]"
+                                        className="!h-7 !min-h-7 !text-[0.7rem]"
                                         fullWidth
                                     >
                                         Encaisser ce loyer
@@ -848,94 +856,188 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                 <Modal
                     isOpen={showModal && Boolean(selectedLoyer)}
                     onClose={() => setShowModal(false)}
-                    title="Payer ce loyer"
-                    description="Enregistrement d'un paiement partiel ou complet"
+                    title="Encaisser ce loyer"
+                    description="Enregistrement d'un paiement partiel ou complet avec traçabilité et quittance."
                 >
-                    <div className="space-y-4 pt-1">
-                        <CompactSection title="Détails créance">
-                            <CompactLabelValue label="Locataire" value={`${selectedLoyer.locataire_prenom} ${selectedLoyer.locataire_nom}`} />
-                            <CompactLabelValue label="Bien" value={`${selectedLoyer.immeuble_nom} · ${selectedLoyer.unite_nom}`} />
-                            <CompactLabelValue label="Période" value={new Date(selectedLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })} />
-                            <CompactLabelValue label="Reste dû" value={<span className="font-black text-red-600">{formatCurrency(selectedLoyer.montant_du)}</span>} />
-                        </CompactSection>
+                    <div className="space-y-4 pt-0.5">
+                        {/* En-tête / Badge d'encaissement premium */}
+                        <div className="relative overflow-hidden rounded-xl border border-emerald-900/15 bg-gradient-to-br from-[#0A3F30] via-[#073125] to-[#041E16] p-3 text-white shadow-md">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 border border-white/15">
+                                        <HandCoins className="h-4 w-4 text-emerald-300" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="text-[0.62rem] font-bold uppercase tracking-widest text-emerald-300/90">Encaissement & Recouvrement</div>
+                                        <div className="truncate text-xs font-black text-white">
+                                            {selectedLoyer.locataire_prenom} {selectedLoyer.locataire_nom}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <div className="text-[0.62rem] font-bold uppercase tracking-widest text-emerald-300/90">Période</div>
+                                    <div className="text-xs font-black text-emerald-100 capitalize">
+                                        {new Date(selectedLoyer.mois_concerne).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-1">
+                        {/* Détails créance structurés */}
+                        <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200/80 bg-slate-50/70 p-2.5 text-xs">
+                            <div className="flex flex-col gap-0.5 border-r border-slate-200/70 pr-2">
+                                <span className="text-[0.64rem] font-bold uppercase tracking-wider text-slate-400">Lot concerné</span>
+                                <span className="font-bold text-slate-800 truncate" title={`${selectedLoyer.immeuble_nom} · ${selectedLoyer.unite_nom}`}>
+                                    {selectedLoyer.immeuble_nom} · {selectedLoyer.unite_nom}
+                                </span>
+                            </div>
+                            <div className="flex flex-col gap-0.5 pl-1">
+                                <span className="text-[0.64rem] font-bold uppercase tracking-wider text-slate-400">Reste à encaisser</span>
+                                <span className="font-black text-red-600 text-sm">
+                                    {formatCurrency(selectedLoyer.montant_du)}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Saisie rapide (Pills de délice utilisateur) */}
+                        <div className="flex items-center justify-between gap-2 bg-emerald-50/60 rounded-lg p-2 border border-emerald-100">
+                            <span className="text-[0.68rem] font-bold text-emerald-900 flex items-center gap-1">
+                                <Sparkles className="h-3 w-3 text-emerald-700" />
+                                Remplissage rapide :
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                                <button
+                                    type="button"
+                                    onClick={() => setPaymentForm({ ...paymentForm, montant: String(selectedLoyer.montant_du) })}
+                                    className="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-2 py-0.5 text-[0.66rem] font-bold text-white shadow-sm transition hover:bg-emerald-800"
+                                >
+                                    Solde complet ({formatCurrency(selectedLoyer.montant_du)})
+                                </button>
+                                {selectedLoyer.montant_du > 1000 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentForm({ ...paymentForm, montant: String(Math.round(selectedLoyer.montant_du / 2)) })}
+                                        className="inline-flex items-center rounded-md border border-emerald-300 bg-white px-2 py-0.5 text-[0.66rem] font-bold text-emerald-800 transition hover:bg-emerald-50"
+                                    >
+                                        50%
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Formulaire de paiement */}
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 pt-0.5">
                             <div>
-                                <label className="mb-1 block text-xs font-bold text-slate-700">Montant encaissé</label>
-                                <input aria-label="Champ de saisie"
+                                <label className="mb-1 block text-xs font-bold text-slate-700">
+                                    Montant encaissé <span className="text-red-600">*</span>
+                                </label>
+                                <input
+                                    aria-label="Champ de saisie"
                                     type="number"
                                     min="1"
                                     step="1"
                                     value={paymentForm.montant}
                                     onChange={(e) => setPaymentForm({ ...paymentForm, montant: e.target.value })}
-                                    className="sk-input !h-8 !text-xs"
+                                    placeholder="Ex: 100000"
+                                    className="h-8 min-h-8 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-bold text-slate-900 shadow-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                                 />
+                                {paymentAmount > 0 && (
+                                    <p className="mt-1 text-[0.68rem] font-bold text-emerald-700">
+                                        Saisi : {formatCurrency(paymentAmount)}
+                                    </p>
+                                )}
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-bold text-slate-700">Date paiement</label>
-                                <input aria-label="Champ de saisie"
+                                <label className="mb-1 block text-xs font-bold text-slate-700">
+                                    Date paiement <span className="text-red-600">*</span>
+                                </label>
+                                <input
+                                    aria-label="Champ de saisie"
                                     type="date"
                                     value={paymentForm.date_paiement}
                                     onChange={(e) => setPaymentForm({ ...paymentForm, date_paiement: e.target.value })}
-                                    className="sk-input !h-8 !text-xs"
+                                    className="h-8 min-h-8 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 shadow-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-bold text-slate-700">Mode paiement</label>
-                                <select aria-label="Sélection"
+                                <label className="mb-1 block text-xs font-bold text-slate-700">
+                                    Mode de paiement <span className="text-red-600">*</span>
+                                </label>
+                                <SmartCombobox
                                     value={paymentForm.mode_paiement}
-                                    onChange={(e) => setPaymentForm({ ...paymentForm, mode_paiement: e.target.value })}
-                                    className="sk-input !h-8 !text-xs"
-                                >
-                                    <option value="especes">Espèces</option>
-                                    <option value="mobile_money">Mobile money</option>
-                                    <option value="virement">Virement</option>
-                                    <option value="cheque">Chèque</option>
-                                    <option value="autre">Autre</option>
-                                </select>
+                                    options={PAYMENT_MODE_OPTIONS}
+                                    onChange={(val) => setPaymentForm({ ...paymentForm, mode_paiement: val })}
+                                    placeholder="Sélectionner le mode"
+                                    searchPlaceholder="Rechercher un mode..."
+                                    density="compact"
+                                />
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-bold text-slate-700">Référence</label>
+                                <label className="mb-1 block text-xs font-bold text-slate-700">
+                                    Référence transaction
+                                </label>
                                 <input
                                     value={paymentForm.reference}
                                     onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
-                                    className="sk-input !h-8 !text-xs"
-                                    placeholder="Optionnel..."
+                                    className="h-8 min-h-8 w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-800 shadow-sm outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
+                                    placeholder="N° Wave, chèque ou virement..."
                                 />
                             </div>
                         </div>
 
-                        <div className="rounded-lg bg-slate-100/80 p-2.5 text-xs grid grid-cols-2 gap-2 border border-slate-200/60">
-                            <div>
-                                <span className="text-[10px] uppercase font-bold text-slate-500">Nouveau statut:</span>{' '}
-                                <span className={`font-black ${remainingAfterPayment > 0 ? 'text-orange-700' : 'text-emerald-700'}`}>
-                                    {remainingAfterPayment > 0 ? 'Partiel' : 'Soldé'}
-                                </span>
+                        {/* Simulation & Nouveau Statut Financier */}
+                        <div className={`rounded-xl border p-3 text-xs flex items-center justify-between transition ${
+                            remainingAfterPayment > 0
+                                ? 'border-orange-200 bg-orange-50/70 text-orange-950'
+                                : 'border-emerald-200 bg-emerald-50/70 text-emerald-950'
+                        }`}>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                                    remainingAfterPayment > 0 ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'
+                                }`}>
+                                    {remainingAfterPayment > 0 ? <Clock className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500">
+                                        Nouveau statut du loyer
+                                    </div>
+                                    <div className={`text-xs font-black ${
+                                        remainingAfterPayment > 0 ? 'text-orange-700' : 'text-emerald-700'
+                                    }`}>
+                                        {remainingAfterPayment > 0 ? 'PAIEMENT PARTIEL' : 'SOLDÉ (APURÉ COMPLET)'}
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <span className="text-[10px] uppercase font-bold text-slate-500">Reliquat:</span>{' '}
-                                <span className="font-black text-slate-900">{formatCurrency(remainingAfterPayment)}</span>
+                            <div className="text-right shrink-0">
+                                <div className="text-[0.66rem] font-bold uppercase tracking-wider text-slate-500">
+                                    Reliquat restant
+                                </div>
+                                <div className={`text-xs font-black ${remainingAfterPayment > 0 ? 'text-orange-700' : 'text-emerald-800'}`}>
+                                    {formatCurrency(remainingAfterPayment)}
+                                </div>
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                        {/* Actions boutons */}
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                             <PremiumButton
                                 variant="secondary"
                                 size="sm"
                                 onClick={() => setShowModal(false)}
                                 disabled={submitting}
-                                className="!h-8 !text-xs"
+                                className="!h-8 !min-h-8 !text-xs"
                             >
                                 Annuler
                             </PremiumButton>
                             <PremiumButton
                                 variant="create"
                                 size="sm"
+                                icon={<HandCoins className="h-3.5 w-3.5" />}
                                 onClick={handleConfirmPaiement}
                                 disabled={submitting || paymentAmount <= 0}
-                                className="!h-8 !text-xs"
+                                className="!h-8 !min-h-8 !text-xs font-bold"
                             >
-                                {submitting ? 'Enregistrement...' : 'Enregistrer'}
+                                {submitting ? 'Enregistrement en cours...' : `Enregistrer (${formatCurrency(paymentAmount)})`}
                             </PremiumButton>
                         </div>
                     </div>

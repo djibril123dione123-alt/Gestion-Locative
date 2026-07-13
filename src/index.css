@@ -104,11 +104,11 @@
 
 @layer components {
   .sk-page-shell {
-    @apply mx-auto min-h-full w-full max-w-[110rem] bg-brand-paper/70 px-4 py-4 sm:px-6 lg:px-7 lg:py-5 2xl:px-8;
+    @apply mx-auto min-h-full w-full max-w-[110rem] bg-brand-paper/70 px-4 pt-2.5 pb-6 sm:px-6 sm:pt-3 lg:px-7 2xl:px-8;
   }
 
   .sk-mobile-page {
-    @apply mx-auto w-full max-w-[110rem] px-4 py-4 sm:px-6 lg:px-7 2xl:px-8;
+    @apply mx-auto w-full max-w-[110rem] px-4 pt-2.5 pb-6 sm:px-6 sm:pt-3 lg:px-7 2xl:px-8;
     box-sizing: border-box;
   }
 

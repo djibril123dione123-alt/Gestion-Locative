@@ -2205,7 +2205,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   }
 
   return (
-    <div className={embedded ? 'space-y-4 sm:space-y-5' : 'space-y-4 px-4 py-4 sm:space-y-5 sm:px-0 sm:py-0'}>
+    <div className={embedded ? 'space-y-4 sm:space-y-5' : 'space-y-4 pt-2.5 sm:pt-3 pb-8'}>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
       {!embedded && (

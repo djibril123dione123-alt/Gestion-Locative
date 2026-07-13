@@ -100,12 +100,7 @@ function EyebrowBadge({
   variant: PremiumPageHeaderVariant;
   density?: PremiumPageHeaderProps['density'];
 }) {
-  const compactBadge =
-    density === 'ultraCompact'
-      ? 'px-2 py-0.5 text-[0.5rem] tracking-[0.12em]'
-      : density === 'compact'
-        ? 'px-2.5 py-0.5 text-[0.55rem] tracking-[0.13em]'
-        : 'px-3 py-1 text-[10px] tracking-[0.14em]';
+  const compactBadge = 'px-2 py-0.5 text-[0.52rem] tracking-[0.12em]';
 
   if (variant === 'darkVault') {
     return (
@@ -158,24 +153,14 @@ export function PremiumPageHeader({
   const resolvedSecondaryAction = secondaryAction;
   const legacyActions = actions; // actions non-migrées affichées après les nouvelles
 
-  const isUltraCompact = density === 'ultraCompact';
-  const isCompact = density === 'compact' || isUltraCompact;
-
   // La couleur du titre change selon le variant (blanc sur darkVault)
   const titleColorClass =
     variant === 'darkVault' ? 'text-brand-950' : styles.title;
-  // Sur darkVault, le titre doit être blanc
-  const compactTitleClass =
-    isUltraCompact
-      ? 'mt-0.5 text-[1.24rem] leading-[1.12]'
-      : isCompact
-        ? 'mt-0.5 text-[1.42rem] leading-[1.12]'
-        : 'mt-1 text-3xl leading-tight sm:text-4xl';
 
   const titleClass =
     variant === 'darkVault'
-      ? `min-w-0 font-serif font-black tracking-tight text-white ${isCompact ? compactTitleClass : 'mt-1 text-[clamp(1.25rem,1.8vw,1.6rem)] leading-[1.15]'}`
-      : `min-w-0 font-serif font-black tracking-tight ${titleColorClass} ${compactTitleClass}`;
+      ? 'min-w-0 font-serif font-black tracking-tight text-white mt-0.5 text-[1.28rem] sm:text-[1.35rem] leading-[1.12]'
+      : `min-w-0 font-serif font-black tracking-tight ${titleColorClass} mt-0.5 text-[1.28rem] sm:text-[1.35rem] leading-[1.12]`;
 
   const hasActions =
     resolvedPrimaryAction || resolvedSecondaryAction || legacyActions;
@@ -183,12 +168,12 @@ export function PremiumPageHeader({
 
   if (variant === 'standard') {
     return (
-      <header className={`flex flex-col sm:flex-row sm:items-center sm:justify-between ${isCompact ? `${isUltraCompact ? 'gap-1.5' : 'gap-2'}` : 'gap-3'} rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${isCompact ? `${isUltraCompact ? 'px-3 py-1.5 sm:px-3.5 sm:py-1.5' : 'px-3 py-1.5 sm:px-4 sm:py-2'}` : 'px-4 py-3 sm:px-5 sm:py-3.5'} ${className}`}>
+      <header className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 px-3.5 py-2 sm:px-4 sm:py-2 ${className}`}>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <div className="min-w-0">
-              {eyebrow && <p className={`${isCompact ? `${isUltraCompact ? 'text-[0.48rem]' : 'text-[0.55rem]'}` : 'text-[0.68rem]'} font-black uppercase tracking-[0.2em] text-orange-600`}>{eyebrow}</p>}
-              <h1 className={`${isUltraCompact ? 'mt-0' : 'mt-0.5'} font-serif font-black tracking-tight text-slate-950 ${isCompact ? `${isUltraCompact ? 'text-[1.18rem] sm:text-[1.32rem]' : 'text-[1.42rem]'}` : 'text-3xl sm:text-4xl'}`}>{title}</h1>
+              {eyebrow && <p className="text-[0.52rem] font-black uppercase tracking-[0.2em] text-orange-600">{eyebrow}</p>}
+              <h1 className="mt-0.5 font-serif font-black tracking-tight text-slate-950 text-[1.28rem] sm:text-[1.35rem] leading-[1.12]">{title}</h1>
             </div>
 
             {sideContent && (
@@ -201,11 +186,11 @@ export function PremiumPageHeader({
           {resolvedDescription && (
             mobileDescription ? (
               <>
-                <p className={`${isUltraCompact ? 'mt-0 text-[0.64rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium text-slate-600 sm:hidden`}>{mobileDescription}</p>
-                <p className={`${isUltraCompact ? 'mt-0 text-[0.64rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium text-slate-600 sm:block ${isSplitOpen ? 'opacity-90' : ''}`}>{isSplitOpen ? mobileDescription : resolvedDescription}</p>
+                <p className="mt-0.5 text-[0.66rem] leading-snug max-w-2xl font-medium text-slate-600 sm:hidden">{mobileDescription}</p>
+                <p className={`mt-0.5 text-[0.66rem] leading-snug hidden max-w-2xl font-medium text-slate-600 sm:block ${isSplitOpen ? 'opacity-90' : ''}`}>{isSplitOpen ? mobileDescription : resolvedDescription}</p>
               </>
             ) : (
-              <p className={`${isUltraCompact ? 'mt-0' : 'mt-1'} max-w-2xl font-medium ${isCompact ? `${isUltraCompact ? 'text-[0.55rem]' : 'text-[0.58rem]'} leading-snug text-slate-500` : 'text-[0.7rem] leading-relaxed text-slate-600'}`}>{resolvedDescription}</p>
+              <p className="mt-0.5 text-[0.66rem] leading-snug max-w-2xl font-medium text-slate-600">{resolvedDescription}</p>
             )
           )}
 
@@ -214,7 +199,7 @@ export function PremiumPageHeader({
         </div>
 
         {(hasActions || hasSideContent) && (
-          <div className={`flex flex-row flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto shrink-0 justify-end mt-2.5 sm:mt-0 [&>*]:flex-1 sm:[&>*]:flex-initial [&_button]:!w-full sm:[&_button]:!w-auto [&_a]:!w-full sm:[&_a]:!w-auto ${isCompact ? '[&_button]:!h-7 [&_button]:!min-h-7 [&_button]:!px-2.5 [&_button]:!py-1 [&_button]:!text-[0.7rem] [&_a]:!h-7 [&_a]:!min-h-7 [&_a]:!px-2.5 [&_a]:!py-1 [&_a]:!text-[0.7rem]' : ''}`}>
+          <div className="flex flex-row flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto shrink-0 justify-end mt-2 sm:mt-0 [&>*]:flex-1 sm:[&>*]:flex-initial [&_button]:!h-7 [&_button]:!min-h-7 [&_button]:!w-full sm:[&_button]:!w-auto [&_button]:!px-2.5 [&_button]:!py-1 [&_button]:!text-[0.7rem] [&_a]:!h-7 [&_a]:!min-h-7 [&_a]:!w-full sm:[&_a]:!w-auto [&_a]:!px-2.5 [&_a]:!py-1 [&_a]:!text-[0.7rem]">
             {sideContent && (
               <div className="hidden sm:flex items-center gap-1.5">
                 {sideContent}
@@ -231,7 +216,7 @@ export function PremiumPageHeader({
 
   return (
     <header
-      className={`@container ${styles.shell} flex flex-col ${isUltraCompact ? 'gap-1.5 !px-3 !py-2' : isCompact ? 'gap-2.5 !px-4 !py-3' : 'gap-4'} sm:flex-row sm:items-center sm:justify-between ${className}`}
+      className={`@container ${styles.shell} flex flex-col gap-2 !px-3.5 !py-2 sm:!px-4 sm:!py-2 sm:flex-row sm:items-center sm:justify-between ${className}`}
       role="banner"
     >
       {/* Bulle décorative */}
@@ -248,21 +233,15 @@ export function PremiumPageHeader({
             <>
               {mobileDescription ? (
                 <>
-                  <p
-                    className={`${isCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium @md:hidden ${styles.description}`}
-                  >
+                  <p className={`mt-0.5 text-[0.66rem] leading-snug max-w-2xl font-medium @md:hidden ${styles.description}`}>
                     {mobileDescription}
                   </p>
-                  <p
-                    className={`${isCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} hidden max-w-2xl font-medium @md:block ${styles.description} ${isSplitOpen ? 'opacity-90' : ''}`}
-                  >
+                  <p className={`mt-0.5 text-[0.66rem] leading-snug hidden max-w-2xl font-medium @md:block ${styles.description} ${isSplitOpen ? 'opacity-90' : ''}`}>
                     {isSplitOpen ? mobileDescription : resolvedDescription}
                   </p>
                 </>
               ) : (
-                <p
-                  className={`${isCompact ? 'mt-0.5 text-[0.62rem] leading-snug' : 'mt-1 text-[0.7rem] leading-relaxed'} max-w-2xl font-medium line-clamp-2 ${styles.description}`}
-                >
+                <p className={`mt-0.5 text-[0.66rem] leading-snug max-w-2xl font-medium line-clamp-2 ${styles.description}`}>
                   {resolvedDescription}
                 </p>
               )}
@@ -273,12 +252,12 @@ export function PremiumPageHeader({
           {meta && <div className="mt-2">{meta}</div>}
 
           {/* children slot (rétrocompatibilité) */}
-          {children && <div className="mt-3">{children}</div>}
+          {children && <div className="mt-2">{children}</div>}
         </div>
 
         {/* Colonne droite : Actions et sideContent */}
         {(hasActions || hasSideContent) && (
-          <div className={`relative z-10 flex flex-row flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto shrink-0 justify-end mt-2.5 sm:mt-0 [&>*]:flex-1 sm:[&>*]:flex-initial [&_button]:!w-full sm:[&_button]:!w-auto [&_a]:!w-full sm:[&_a]:!w-auto ${isCompact ? '[&_button]:!h-7 [&_button]:!min-h-7 [&_button]:!px-2.5 [&_button]:!py-1 [&_button]:!text-[0.7rem] [&_a]:!h-7 [&_a]:!min-h-7 [&_a]:!px-2.5 [&_a]:!py-1 [&_a]:!text-[0.7rem]' : ''}`}>
+          <div className="relative z-10 flex flex-row flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto shrink-0 justify-end mt-2 sm:mt-0 [&>*]:flex-1 sm:[&>*]:flex-initial [&_button]:!h-7 [&_button]:!min-h-7 [&_button]:!w-full sm:[&_button]:!w-auto [&_button]:!px-2.5 [&_button]:!py-1 [&_button]:!text-[0.7rem] [&_a]:!h-7 [&_a]:!min-h-7 [&_a]:!w-full sm:[&_a]:!w-auto [&_a]:!px-2.5 [&_a]:!py-1 [&_a]:!text-[0.7rem]">
             {sideContent}
             {resolvedSecondaryAction}
             {resolvedPrimaryAction}

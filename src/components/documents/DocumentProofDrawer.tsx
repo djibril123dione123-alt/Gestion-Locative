@@ -334,19 +334,19 @@ export function DocumentProofDrawer({
           <InfoSection title="Actions de preuve" icon={QrCode}>
             <div className="grid grid-cols-2 gap-1.5 py-0.5">
               {document.reference && (
-                <button type="button" onClick={copyReference} className="sk-action sk-action-secondary h-8 min-w-0 justify-center px-2 text-[0.68rem]">
+                <button type="button" onClick={copyReference} className="sk-action sk-action-secondary !h-7 !min-h-7 min-w-0 justify-center px-2 text-[0.68rem]">
                   {referenceCopied ? <Check className="h-3.5 w-3.5 text-emerald-700" /> : <Copy className="h-3.5 w-3.5" />}
                   Copier réf.
                 </button>
               )}
               {onVerify && document.verification && (
-                <button type="button" onClick={() => onVerify(document)} className="sk-action sk-action-secondary h-8 min-w-0 justify-center px-2 text-[0.68rem]">
+                <button type="button" onClick={() => onVerify(document)} className="sk-action sk-action-secondary !h-7 !min-h-7 min-w-0 justify-center px-2 text-[0.68rem]">
                   <QrCode className="h-3.5 w-3.5" />
                   Vérifier QR
                 </button>
               )}
               {onCopyLink && document.verification && (
-                <button type="button" onClick={() => run('copy-link', () => onCopyLink(document))} disabled={pendingAction !== null} className="sk-action sk-action-secondary col-span-2 h-8 min-w-0 justify-center px-2 text-[0.68rem] disabled:opacity-60">
+                <button type="button" onClick={() => run('copy-link', () => onCopyLink(document))} disabled={pendingAction !== null} className="sk-action sk-action-secondary col-span-2 !h-7 !min-h-7 min-w-0 justify-center px-2 text-[0.68rem] disabled:opacity-60">
                   {pendingAction === 'copy-link' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
                   Copier le lien de vérification
                 </button>

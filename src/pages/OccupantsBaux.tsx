@@ -1555,7 +1555,7 @@ function OccupantBailDrawer({
           type="button"
           onClick={() => onGeneratePdf(row)}
           disabled={pdfGenerating}
-          className="inline-flex h-7 px-3.5 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-emerald-700/90 text-[0.72rem] font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex !h-7 !min-h-7 px-3 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-emerald-700/90 text-[0.7rem] font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Download className="h-3.5 w-3.5" />
           {pdfGenerating ? 'Génération...' : 'Contrat PDF'}
@@ -1621,7 +1621,7 @@ function OccupantBailDrawer({
             <button
               type="button"
               onClick={() => onResiliate(row)}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-red-50/50 px-3 py-2 text-[0.65rem] font-bold text-red-700 transition hover:bg-red-50 hover:border-red-300"
+              className="inline-flex w-full !h-7 !min-h-7 items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-red-50/50 px-3 text-[0.65rem] font-bold text-red-700 transition hover:bg-red-50 hover:border-red-300"
             >
               <Ban className="h-3.5 w-3.5" />
               Résilier la location
@@ -1631,7 +1631,7 @@ function OccupantBailDrawer({
             <button
               type="button"
               onClick={() => onArchive(row)}
-              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-red-50/50 px-3 py-2 text-[0.65rem] font-bold text-red-700 transition hover:bg-red-50 hover:border-red-300"
+              className="inline-flex w-full !h-7 !min-h-7 items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-red-50/50 px-3 text-[0.65rem] font-bold text-red-700 transition hover:bg-red-50 hover:border-red-300"
             >
               <Archive className="h-3.5 w-3.5" />
               Archiver

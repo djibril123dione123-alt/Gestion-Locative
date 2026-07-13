@@ -677,14 +677,29 @@ export function Bailleurs() {
           if (settingsRes.error) throw settingsRes.error;
 
           let documents: DetailDocument[] = [];
-          const documentsRes = await supabase
-            .from('documents')
-            .select('id, name, document_category, entity_type, entity_id, lifecycle_status, created_at')
-            .eq('agency_id', profile.agency_id)
-            .limit(300);
-          if (!documentsRes.error) {
-            documents = (documentsRes.data || []) as DetailDocument[];
-          }
+          const [documentsRes, registryRes] = await Promise.all([
+            supabase
+              .from('documents')
+              .select('id, name, document_category, entity_type, entity_id, lifecycle_status, created_at')
+              .eq('agency_id', profile.agency_id)
+              .limit(300),
+            supabase
+              .from('document_registry')
+              .select('id, reference, document_type, entity_id, status, generated_at')
+              .eq('agency_id', profile.agency_id)
+              .limit(300),
+          ]);
+          const rawDocs = (documentsRes.data || []) as DetailDocument[];
+          const regDocs: DetailDocument[] = (registryRes.data || []).map((r: any) => ({
+            id: r.id,
+            name: r.reference || r.document_type || 'Document généré',
+            document_category: r.document_type,
+            entity_type: 'registry',
+            entity_id: r.entity_id,
+            lifecycle_status: r.status,
+            created_at: r.generated_at || new Date().toISOString(),
+          }));
+          documents = [...rawDocs, ...regDocs];
 
           return {
             bailleurs: (bailleursRes.data || []) as Bailleur[],
@@ -1716,16 +1731,33 @@ export function Bailleurs() {
       );
     }
 
-    return selectedSummary.documents.length === 0 ? (
-      <EmptyDrawerState title="Aucun document lié" description="Mandats, contrats, quittances et rapports apparaîtront ici lorsqu'ils seront générés ou uploadés." />
-    ) : (
-      <CompactList rows={selectedSummary.documents.slice(0, 8).map((document) => ({
-        id: document.id,
-        title: document.name || 'Document sans nom',
-        subtitle: `Le ${formatDate(document.created_at)}`,
-        badge: document.lifecycle_status || document.document_category || 'GED',
-        onClick: () => { window.location.hash = document.id ? `#/documents?id=${document.source || 'generated'}-${document.id}` : '#/documents'; },
-      }))} />
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-emerald-950/10 bg-emerald-50/40 p-3">
+          <div>
+            <p className="text-xs font-bold text-slate-800">Documents & Preuves</p>
+            <p className="text-[0.65rem] text-slate-600">Mandats, contrats, quittances et rapports associés</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => { window.location.hash = '#/documents'; }}
+            className="inline-flex !h-7 !min-h-7 items-center gap-1.5 rounded-lg bg-emerald-800 px-2.5 text-[0.68rem] font-semibold text-white shadow-sm hover:bg-emerald-700"
+          >
+            + Coffre GED
+          </button>
+        </div>
+        {selectedSummary.documents.length === 0 ? (
+          <EmptyDrawerState title="Aucun document lié" description="Mandats, contrats, quittances et rapports apparaîtront ici. Cliquez sur Coffre GED pour en importer." />
+        ) : (
+          <CompactList rows={selectedSummary.documents.slice(0, 10).map((document) => ({
+            id: document.id,
+            title: document.name || 'Document sans nom',
+            subtitle: `Le ${formatDate(document.created_at)}`,
+            badge: document.lifecycle_status || document.document_category || 'GED',
+            onClick: () => { window.location.hash = document.id ? `#/documents?id=${document.source || 'generated'}-${document.id}` : '#/documents'; },
+          }))} />
+        )}
+      </div>
     );
   };
 
@@ -2011,7 +2043,7 @@ export function Bailleurs() {
               >
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-start">
-                    <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex h-7 px-3.5 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-emerald-700/90 text-[0.72rem] font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50">
+                    <button type="button" onClick={() => void handleGenerateBailleurReport(selectedBailleur)} disabled={generatingReport} className="inline-flex !h-7 !min-h-7 px-3 items-center justify-center gap-1.5 rounded-lg border border-transparent bg-emerald-700/90 text-[0.7rem] font-semibold text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50">
                       <BarChart3 className="h-3.5 w-3.5" />
                       {generatingReport ? 'Génération...' : 'Rapport PDF'}
                     </button>

@@ -27,8 +27,8 @@ const TONE_MAP: Record<PageShellTone, string> = {
 
 const VERTICAL_INSET_MAP: Record<'none' | 'compact' | 'standard', string> = {
   none: '',
-  compact: 'pt-3 sm:pt-4',
-  standard: 'pt-4 sm:pt-5',
+  compact: 'pt-2.5 sm:pt-3',
+  standard: 'pt-2.5 sm:pt-3',
 };
 
 /**
@@ -43,7 +43,7 @@ export function PageShell({
   spacing = 'standard',
   variant = 'standard',
   tone = 'default',
-  verticalInset = 'none',
+  verticalInset = 'compact',
   ariaLabel,
 }: PageShellProps) {
   const baseClasses = 'flex flex-col w-full min-w-0 max-w-full';

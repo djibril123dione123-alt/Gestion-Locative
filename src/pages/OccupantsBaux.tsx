@@ -71,7 +71,7 @@ import {
   type OccupantBailPersonOption,
 } from '../repositories/occupantsBauxRepository';
 import { readWithCache, invalidateOperationalCaches, notifyDataChanged } from '../services/offlineReadCache';
-import { formatCurrency, formatDate, formatSenegalPhone, normalizeSenegalPhone } from '../lib/formatters';
+import { formatDate, formatSenegalPhone, normalizeSenegalPhone } from '../lib/formatters';
 import {
   IDENTITY_PIECE_OPTIONS,
   formatIdentityNumberInput,
@@ -2498,15 +2498,6 @@ function LocationWizardRail({ steps, currentStep }: { steps: WizardStep[]; curre
           Cette location activera automatiquement les quittances et le suivi des loyers.
         </p>
       </div>
-    </div>
-  );
-}
-
-function SummaryLine({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex min-w-0 items-start justify-between gap-3 border-b border-slate-100/70 py-1 last:border-b-0">
-      <span className="shrink-0 text-[0.66rem] font-medium text-slate-500">{label}</span>
-      <span className="min-w-0 truncate text-right text-[0.68rem] font-semibold text-slate-900" title={value}>{value}</span>
     </div>
   );
 }

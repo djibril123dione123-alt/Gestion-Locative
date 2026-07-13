@@ -498,7 +498,15 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
           ]);
 
           const rawDocs = (documentsRes.data || []) as DocumentRow[];
-          const regDocs: DocumentRow[] = (registryRes.data || []).map((r: any) => ({
+          type RegistryDocumentRow = {
+            id: string;
+            reference: string | null;
+            document_type: string | null;
+            entity_id: string | null;
+            status: string | null;
+            generated_at: string | null;
+          };
+          const regDocs: DocumentRow[] = ((registryRes.data || []) as RegistryDocumentRow[]).map((r) => ({
             id: r.id,
             name: r.reference || r.document_type || 'Document généré',
             document_category: r.document_type,

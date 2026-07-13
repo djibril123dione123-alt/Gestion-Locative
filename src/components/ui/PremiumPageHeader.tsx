@@ -100,7 +100,12 @@ function EyebrowBadge({
   variant: PremiumPageHeaderVariant;
   density?: PremiumPageHeaderProps['density'];
 }) {
-  const compactBadge = 'px-2 py-0.5 text-[0.52rem] tracking-[0.12em]';
+  const compactBadge =
+    density === 'ultraCompact'
+      ? 'px-1.5 py-0.5 text-[0.48rem] tracking-[0.1em]'
+      : density === 'compact'
+        ? 'px-2 py-0.5 text-[0.52rem] tracking-[0.12em]'
+        : 'px-2.5 py-0.5 text-[0.56rem] tracking-[0.14em]';
 
   if (variant === 'darkVault') {
     return (
@@ -144,6 +149,12 @@ export function PremiumPageHeader({
   children,
 }: PremiumPageHeaderProps) {
   const styles = VARIANT_STYLES[variant];
+  const densityShellClass =
+    density === 'ultraCompact'
+      ? '!px-3 !py-1.5 sm:!px-3.5 sm:!py-1.5'
+      : density === 'compact'
+        ? '!px-3.5 !py-2 sm:!px-4 sm:!py-2'
+        : '!px-4 !py-2.5 sm:!px-5 sm:!py-3';
 
   // Résolution rétrocompatible de la description
   const resolvedDescription = description ?? subtitle;
@@ -168,7 +179,7 @@ export function PremiumPageHeader({
 
   if (variant === 'standard') {
     return (
-      <header className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 px-3.5 py-2 sm:px-4 sm:py-2 ${className}`}>
+      <header className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-[1.35rem] border border-emerald-950/10 bg-[linear-gradient(135deg,rgba(255,252,245,0.96),rgba(255,255,255,0.91))] shadow-[0_14px_34px_rgba(15,23,42,0.06)] ring-1 ring-white/70 ${densityShellClass} ${className}`}>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2 min-w-0">
             <div className="min-w-0">
@@ -216,7 +227,7 @@ export function PremiumPageHeader({
 
   return (
     <header
-      className={`@container ${styles.shell} flex flex-col gap-2 !px-3.5 !py-2 sm:!px-4 sm:!py-2 sm:flex-row sm:items-center sm:justify-between ${className}`}
+      className={`@container ${styles.shell} flex flex-col gap-2 ${densityShellClass} sm:flex-row sm:items-center sm:justify-between ${className}`}
       role="banner"
     >
       {/* Bulle décorative */}

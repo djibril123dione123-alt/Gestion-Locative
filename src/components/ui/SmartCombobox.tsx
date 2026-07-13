@@ -32,6 +32,7 @@ interface SmartComboboxProps {
   emptyActionLabel?: string;
   onEmptyAction?: () => void;
   className?: string;
+  fullWidth?: boolean;
   disabled?: boolean;
   density?: 'default' | 'compact' | 'dense' | 'wizard';
 }
@@ -56,6 +57,7 @@ export function SmartCombobox({
   emptyActionLabel,
   onEmptyAction,
   className = '',
+  fullWidth = false,
   disabled = false,
   density = 'default',
 }: SmartComboboxProps) {
@@ -355,7 +357,7 @@ export function SmartCombobox({
     : null;
 
   return (
-    <div ref={wrapperRef} className={`relative min-w-0 ${className}`}>
+    <div ref={wrapperRef} className={`relative min-w-0 ${fullWidth ? 'w-full' : ''} ${className}`}>
       <div className="relative flex items-center">
         <Search className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-emerald-800/60 ${isCompact ? 'left-2.5 h-3.5 w-3.5' : 'left-3.5 h-4 w-4'}`} />
         <input

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState, useCallback, type FormEvent } from 'react';
+﻿import { useEffect, useMemo, useState, useCallback, type FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
 import { CheckoutModal } from '../components/billing/CheckoutModal';
-import { Modal } from '../components/ui/Modal';
+import { WizardShell } from '../components/ui/WizardShell';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import {
@@ -235,6 +235,9 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
   const catalogPlan   = PLAN_CATALOG.find((p) => p.id === currentPlanId) ?? PLAN_CATALOG[0];
   const displayedPlanName = catalogPlan.name;
   const selectedCatalogPlan = PLAN_CATALOG.find((p) => p.id === selectedPlanId) ?? PLAN_CATALOG[1];
+  const manualProofFormId = 'manual-proof-wizard-form';
+  const proofCatalogPlan = PLAN_CATALOG.find((plan) => plan.id === proofForm.plan_key) ?? selectedCatalogPlan;
+  const proofAmount = Number(proofForm.amount || 0);
   const latestManualProof = useMemo(() => manualProofs[0] ?? null, [manualProofs]);
   const getPlanFeatures = (plan: (typeof PLAN_CATALOG)[number]) => {
     if (!isIndividualOwner) return plan.features;
@@ -785,154 +788,206 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
         </div>
       )}
 
-      {/* ── Modal changement de plan ── */}
-      {upgradeOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-brand-950/70 p-0 backdrop-blur-md sm:items-center sm:p-4"
-          onClick={() => setUpgradeOpen(false)}
-        >
-          <div
-            className="w-full max-w-2xl overflow-hidden rounded-t-3xl border border-emerald-950/15 bg-gradient-to-b from-[#fffefb] to-white shadow-2xl shadow-emerald-950/30 sm:rounded-3xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header premium */}
-            <div className="border-b border-emerald-950/10 bg-gradient-to-r from-emerald-950/[0.04] via-transparent to-transparent px-6 py-4.5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-800 to-emerald-950 text-white shadow-md">
-                    <Crown className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="text-[0.62rem] font-black uppercase tracking-[0.16em] text-emerald-800">FACTURATION & PLAN</p>
-                    <h3 className="text-lg font-black tracking-tight text-slate-950">Changer de plan</h3>
-                    <p className="mt-0.5 text-xs font-medium text-slate-600">
-                      Sélectionnez la capacité adaptée à votre croissance. Le paiement s'effectue en ligne via nos partenaires sécurisés.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setUpgradeOpen(false)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-emerald-950/10 bg-white text-slate-500 shadow-2xs transition hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
-                  aria-label="Fermer le changement de plan"
-                >
-                  ×
-                </button>
+      <WizardShell
+        open={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+        title="Changer de plan"
+        eyebrow="FACTURATION & PLAN"
+        description="Comparez les capacités et activez le plan adapté à votre croissance."
+        mobileDescription="Changer de plan."
+        variant="workstation"
+        tone="finance"
+        size="business"
+        mobileMode="fullscreen"
+        bodyClassName="p-3 sm:p-4"
+        rail={
+          <div className="flex h-full flex-col gap-3">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+              <p className="text-[0.58rem] font-black uppercase tracking-[0.16em] text-emerald-200/90">Plan actuel</p>
+              <h3 className="mt-1 truncate text-lg font-black text-white">{displayedPlanName}</h3>
+              <p className="mt-1 text-xs font-semibold text-emerald-100/75">
+                {catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)}/mois` : 'Sur devis'}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl bg-white/[0.07] p-2">
+                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Utilisateurs</p>
+                <p className="mt-1 text-sm font-black text-white">{catalogPlan.max_users === -1 ? 'Illimité' : catalogPlan.max_users}</p>
+              </div>
+              <div className="rounded-xl bg-white/[0.07] p-2">
+                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Unités</p>
+                <p className="mt-1 text-sm font-black text-white">{catalogPlan.max_unites === -1 ? 'Illimité' : catalogPlan.max_unites}</p>
+              </div>
+              <div className="rounded-xl bg-white/[0.07] p-2">
+                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Stockage</p>
+                <p className="mt-1 text-sm font-black text-white">{catalogPlan.storage_gb === -1 ? 'Illimité' : `${catalogPlan.storage_gb} Go`}</p>
+              </div>
+              <div className="rounded-xl bg-white/[0.07] p-2">
+                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Statut</p>
+                <p className="mt-1 text-sm font-black text-white">{statusCfg.label}</p>
               </div>
             </div>
-
-            <div className="space-y-4 p-6">
-              {/* Carte Plan Actuel */}
-              <div className="rounded-2xl border border-emerald-900/15 bg-gradient-to-r from-emerald-50/70 to-emerald-50/20 p-3.5 shadow-2xs">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-3 w-3 rounded-full bg-emerald-600 ring-4 ring-emerald-600/20" />
-                    <div>
-                      <p className="text-[0.6rem] font-black uppercase tracking-[0.14em] text-emerald-800">VOTRE PLAN ACTUEL</p>
-                      <p className="text-sm font-black text-slate-950">{displayedPlanName}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <span className="rounded-full border border-emerald-600/30 bg-emerald-600/10 px-2.5 py-0.5 text-[0.68rem] font-extrabold text-emerald-900">
-                      {catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)}/mois` : 'Sur devis'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Grille des plans */}
-              <div className="grid gap-3 sm:grid-cols-2">
-                {PLAN_CATALOG.map((plan) => {
-                  const Icon = plan.icon;
-                  const isCurr = currentPlanId === plan.id;
-                  return (
-                    <button
-                      key={plan.id}
-                      disabled={isCurr}
-                      onClick={() => {
-                        setUpgradeOpen(false);
-                        if (plan.id === 'enterprise') {
-                          window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux passer au plan Enterprise Samay Këur.')}`, '_blank');
-                        } else {
-                          openPayment(plan.id);
-                        }
-                      }}
-                      className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-4 text-left transition ${
-                        isCurr
-                          ? 'cursor-default border-emerald-700/30 bg-emerald-50/40 shadow-xs'
-                          : 'border-slate-200/90 bg-white hover:-translate-y-0.5 hover:border-emerald-600/50 hover:shadow-lg'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2.5">
-                            <div
-                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-2xs transition group-hover:scale-105"
-                              style={{ backgroundColor: plan.color + '18' }}
-                            >
-                              <Icon className="h-5 w-5" style={{ color: plan.color }} />
-                            </div>
-                            <div>
-                              <p className="text-sm font-black text-slate-950">{plan.name}</p>
-                              <p className="text-xs font-extrabold" style={{ color: plan.color }}>
-                                {plan.price_xof > 0 ? `${formatCurrency(plan.price_xof)}/mois` : 'Sur devis'}
-                              </p>
-                            </div>
-                          </div>
-                          {isCurr ? (
-                            <span
-                              className="rounded-full px-2 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.08em] text-white shadow-2xs"
-                              style={{ backgroundColor: plan.color }}
-                            >
-                              Actuel
-                            </span>
-                          ) : (
-                            <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-100 bg-slate-50 text-slate-400 transition group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700">
-                              <ArrowUpRight className="h-4 w-4" />
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-3 gap-1.5 pt-3 border-t border-slate-100">
-                        <div className="rounded-lg bg-slate-50/80 px-2 py-1.5 text-center">
-                          <p className="text-[0.56rem] font-bold uppercase tracking-wider text-slate-400">Collaborateurs</p>
-                          <p className="text-xs font-black text-slate-800">{plan.max_users === -1 ? 'Illimitées' : `${plan.max_users}`}</p>
-                        </div>
-                        <div className="rounded-lg bg-slate-50/80 px-2 py-1.5 text-center">
-                          <p className="text-[0.56rem] font-bold uppercase tracking-wider text-slate-400">Unités</p>
-                          <p className="text-xs font-black text-slate-800">{plan.max_unites === -1 ? 'Illimitées' : `${plan.max_unites}`}</p>
-                        </div>
-                        <div className="rounded-lg bg-slate-50/80 px-2 py-1.5 text-center">
-                          <p className="text-[0.56rem] font-bold uppercase tracking-wider text-slate-400">Stockage</p>
-                          <p className="text-xs font-black text-slate-800">{plan.storage_gb === -1 ? 'Illimitée' : `${plan.storage_gb} Go`}</p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Note d'assistance bas */}
-              <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-950/10 bg-slate-50/80 px-4 py-3 text-xs font-medium text-slate-600">
-                <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-700" />
-                <span>
-                  Activation instantanée après confirmation du paiement en ligne. En cas de virement ou paiement manuel, notre support valide votre preuve sous 15 minutes.
-                </span>
-              </div>
+            <div className="mt-auto rounded-2xl border border-amber-200/20 bg-amber-300/[0.08] p-3 text-xs font-semibold leading-5 text-amber-50/85">
+              Activation instantanée après paiement confirmé. Les paiements manuels restent validés par le support avant activation.
             </div>
           </div>
-        </div>
-      )}
+        }
+      >
+        <div className="space-y-3">
+          <div className="rounded-2xl border border-emerald-900/15 bg-emerald-50/60 p-3 shadow-2xs">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-600 ring-4 ring-emerald-600/15" />
+                <div className="min-w-0">
+                  <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-emerald-800">Votre plan actuel</p>
+                  <p className="truncate text-sm font-black text-slate-950">{displayedPlanName}</p>
+                </div>
+              </div>
+              <span className="rounded-full border border-emerald-600/30 bg-white px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.08em] text-emerald-900">
+                {catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)}/mois` : 'Sur devis'}
+              </span>
+            </div>
+          </div>
 
-      <Modal
-        isOpen={manualProofOpen}
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            {PLAN_CATALOG.map((plan) => {
+              const Icon = plan.icon;
+              const isCurr = currentPlanId === plan.id;
+              return (
+                <button
+                  key={plan.id}
+                  type="button"
+                  disabled={isCurr}
+                  onClick={() => {
+                    setUpgradeOpen(false);
+                    if (plan.id === 'enterprise') {
+                      window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux passer au plan Enterprise Samay Këur.')}`, '_blank');
+                    } else {
+                      openPayment(plan.id);
+                    }
+                  }}
+                  className={`group relative flex min-h-[8.25rem] flex-col justify-between overflow-hidden rounded-2xl border p-3 text-left transition ${
+                    isCurr
+                      ? 'cursor-default border-emerald-700/25 bg-emerald-50/55 shadow-xs'
+                      : 'border-slate-200/90 bg-white hover:-translate-y-0.5 hover:border-emerald-600/45 hover:shadow-lg'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <div
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-2xs transition group-hover:scale-105"
+                        style={{ backgroundColor: plan.color + '18' }}
+                      >
+                        <Icon className="h-4.5 w-4.5" style={{ color: plan.color }} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-slate-950">{plan.name}</p>
+                        <p className="text-xs font-extrabold" style={{ color: plan.color }}>
+                          {plan.price_xof > 0 ? `${formatCurrency(plan.price_xof)}/mois` : 'Sur devis'}
+                        </p>
+                      </div>
+                    </div>
+                    {isCurr ? (
+                      <span className="rounded-full bg-emerald-700 px-2 py-0.5 text-[0.56rem] font-black uppercase tracking-[0.08em] text-white">
+                        Actuel
+                      </span>
+                    ) : (
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-100 bg-slate-50 text-slate-400 transition group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700">
+                        <ArrowUpRight className="h-4 w-4" />
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-1.5 border-t border-slate-100 pt-2.5">
+                    <div className="rounded-lg bg-slate-50/90 px-2 py-1.5 text-center">
+                      <p className="text-[0.52rem] font-bold uppercase tracking-wider text-slate-400">Users</p>
+                      <p className="text-xs font-black text-slate-800">{plan.max_users === -1 ? '∞' : plan.max_users}</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50/90 px-2 py-1.5 text-center">
+                      <p className="text-[0.52rem] font-bold uppercase tracking-wider text-slate-400">Unités</p>
+                      <p className="text-xs font-black text-slate-800">{plan.max_unites === -1 ? '∞' : plan.max_unites}</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50/90 px-2 py-1.5 text-center">
+                      <p className="text-[0.52rem] font-bold uppercase tracking-wider text-slate-400">Stockage</p>
+                      <p className="text-xs font-black text-slate-800">{plan.storage_gb === -1 ? '∞' : `${plan.storage_gb} Go`}</p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-950/10 bg-slate-50/80 px-3 py-2.5 text-xs font-medium text-slate-600">
+            <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-700" />
+            <span>Le changement de plan conserve les données existantes. Seules les capacités et limites sont ajustées après confirmation.</span>
+          </div>
+        </div>
+      </WizardShell>
+      <WizardShell
+        open={manualProofOpen}
         onClose={() => setManualProofOpen(false)}
         title="Déclarer une preuve"
+        eyebrow="PAIEMENT MANUEL"
         description="Le support valide la preuve puis active le plan si le paiement est confirmé."
+        mobileDescription="Preuve de paiement."
+        variant="workstation"
+        tone="finance"
+        size="standard"
+        mobileMode="fullscreen"
+        bodyClassName="p-3 sm:p-4"
+        rail={
+          <div className="flex h-full flex-col gap-3">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.07] p-3">
+              <p className="text-[0.58rem] font-black uppercase tracking-[0.16em] text-emerald-200/90">Déclaration</p>
+              <h3 className="mt-1 truncate text-lg font-black text-white">Plan {proofCatalogPlan.name}</h3>
+              <p className="mt-1 text-xs font-semibold text-emerald-100/75">Validation support avant activation.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl bg-white/[0.07] p-2">
+                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Montant</p>
+                <p className="mt-1 text-sm font-black text-white">{formatCurrency(Number.isFinite(proofAmount) ? proofAmount : 0)}</p>
+              </div>
+              <div className="rounded-xl bg-white/[0.07] p-2">
+                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Méthode</p>
+                <p className="mt-1 truncate text-sm font-black text-white">
+                  {MANUAL_PAYMENT_METHODS.find((method) => method.id === proofForm.method)?.label ?? proofForm.method}
+                </p>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-amber-200/20 bg-amber-300/[0.08] p-3 text-xs font-semibold leading-5 text-amber-50/85">
+              Le plan n’est pas activé automatiquement. Une preuve claire accélère la validation par le support.
+            </div>
+            <div className="mt-auto rounded-2xl border border-white/10 bg-white/[0.055] p-3 text-xs font-semibold leading-5 text-emerald-50/80">
+              Formats conseillés : reçu mobile money, capture lisible, lien Drive ou référence de virement.
+            </div>
+          </div>
+        }
+        footer={
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setManualProofOpen(false)}
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-extrabold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              form={manualProofFormId}
+              disabled={submittingProof}
+              className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-5 text-xs font-extrabold text-white shadow-sm transition hover:from-[#073b2f] hover:to-emerald-950 disabled:opacity-60"
+            >
+              {submittingProof ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-white" />
+              ) : (
+                <Send className="h-3.5 w-3.5 text-emerald-300" />
+              )}
+              Transmettre la preuve
+            </button>
+          </div>
+        }
       >
-        <form onSubmit={submitManualProof} className="space-y-3">
-          {/* Bandeau de synthèse officiel premium */}
+        <form id={manualProofFormId} onSubmit={submitManualProof} className="space-y-3">
           <div className="flex items-center justify-between rounded-xl border border-emerald-950/15 bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-3 py-2 text-white shadow-sm">
             <div className="flex min-w-0 items-center gap-2.5">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-emerald-300 ring-1 ring-white/15">
@@ -940,115 +995,105 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
               </div>
               <div className="min-w-0">
                 <p className="text-[0.52rem] font-black uppercase tracking-[0.16em] text-emerald-300">Déclaration officielle</p>
-                <h3 className="truncate text-xs font-extrabold text-white">
-                  Plan {PLAN_CATALOG.find((plan) => plan.id === proofForm.plan_key)?.name ?? proofForm.plan_key}
-                </h3>
+                <h3 className="truncate text-xs font-extrabold text-white">Plan {proofCatalogPlan.name}</h3>
               </div>
             </div>
             <div className="shrink-0 text-right">
               <p className="text-[0.52rem] font-black uppercase tracking-[0.14em] text-emerald-300">Montant estimé</p>
-              <p className="text-xs font-extrabold text-amber-300">
-                {formatCurrency(Number(proofForm.amount || 0))}
-              </p>
+              <p className="text-xs font-extrabold text-amber-300">{formatCurrency(Number.isFinite(proofAmount) ? proofAmount : 0)}</p>
             </div>
           </div>
 
-          {/* Grille de champs ultra dense et uniforme (hauteur h-11 exacte pour tous les champs) */}
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div>
-                <span className="mb-1 block text-xs font-bold text-slate-700">Plan</span>
-                <SmartCombobox
-                  value={proofForm.plan_key}
-                  options={PLAN_CATALOG.filter((plan) => plan.id !== 'enterprise').map((plan) => ({
-                    value: plan.id,
-                    label: plan.name,
-                    subtitle: `${formatCurrency(plan.price_xof)} / mois`,
-                  }))}
-                  onChange={(val) => {
-                    setProofForm((form) => ({
-                      ...form,
-                      plan_key: val,
-                      amount: String(PLAN_CATALOG.find((plan) => plan.id === val)?.price_xof || form.amount),
-                    }));
-                  }}
-                  placeholder="Sélectionner un plan..."
-                  density="wizard"
-                />
-              </div>
-
-              <label>
-                <span className="mb-1 block text-xs font-bold text-slate-700">Montant (XOF)</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={proofForm.amount}
-                  onChange={(event) => setProofForm((form) => ({ ...form, amount: event.target.value }))}
-                  className="h-11 w-full rounded-xl border border-emerald-950/15 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
-                />
-              </label>
-
-              <label>
-                <span className="mb-1 block text-xs font-bold text-slate-700">Date de paiement</span>
-                <input
-                  type="date"
-                  value={proofForm.payment_date}
-                  onChange={(event) => setProofForm((form) => ({ ...form, payment_date: event.target.value }))}
-                  className="h-11 w-full rounded-xl border border-emerald-950/15 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
-                />
-              </label>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <div>
+              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Plan</span>
+              <SmartCombobox
+                value={proofForm.plan_key}
+                options={PLAN_CATALOG.filter((plan) => plan.id !== 'enterprise').map((plan) => ({
+                  value: plan.id,
+                  label: plan.name,
+                  subtitle: `${formatCurrency(plan.price_xof)} / mois`,
+                }))}
+                onChange={(val) => {
+                  setProofForm((form) => ({
+                    ...form,
+                    plan_key: val,
+                    amount: String(PLAN_CATALOG.find((plan) => plan.id === val)?.price_xof || form.amount),
+                  }));
+                }}
+                placeholder="Sélectionner un plan..."
+                density="compact"
+              />
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
-                <span className="mb-1 block text-xs font-bold text-slate-700">Moyen de paiement</span>
-                <SmartCombobox
-                  value={proofForm.method}
-                  options={MANUAL_PAYMENT_METHODS.map((method) => ({
-                    value: method.id,
-                    label: method.label,
-                  }))}
-                  onChange={(val) => setProofForm((form) => ({ ...form, method: val }))}
-                  placeholder="Moyen de paiement..."
-                  density="wizard"
-                />
-              </div>
+            <label>
+              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Montant (XOF)</span>
+              <input
+                type="number"
+                min="0"
+                value={proofForm.amount}
+                onChange={(event) => setProofForm((form) => ({ ...form, amount: event.target.value }))}
+                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-3 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/15"
+              />
+            </label>
 
-              <label>
-                <span className="mb-1 block text-xs font-bold text-slate-700">Référence</span>
-                <input
-                  type="text"
-                  value={proofForm.reference}
-                  onChange={(event) => setProofForm((form) => ({ ...form, reference: event.target.value }))}
-                  placeholder="Ex : WAVE-1289"
-                  className="h-11 w-full rounded-xl border border-emerald-950/15 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
-                />
-              </label>
+            <label>
+              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Date paiement</span>
+              <input
+                type="date"
+                value={proofForm.payment_date}
+                onChange={(event) => setProofForm((form) => ({ ...form, payment_date: event.target.value }))}
+                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-3 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/15"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <div>
+              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Moyen de paiement</span>
+              <SmartCombobox
+                value={proofForm.method}
+                options={MANUAL_PAYMENT_METHODS.map((method) => ({ value: method.id, label: method.label }))}
+                onChange={(val) => setProofForm((form) => ({ ...form, method: val }))}
+                placeholder="Moyen de paiement..."
+                density="compact"
+              />
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label>
-                <span className="mb-1 block text-xs font-bold text-slate-700">Lien preuve (optionnel)</span>
-                <input
-                  type="url"
-                  value={proofForm.proof_file_url}
-                  onChange={(event) => setProofForm((form) => ({ ...form, proof_file_url: event.target.value }))}
-                  placeholder="Lien Drive, reçu ou capture"
-                  className="h-11 w-full rounded-xl border border-emerald-950/15 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
-                />
-              </label>
+            <label>
+              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Référence</span>
+              <input
+                type="text"
+                value={proofForm.reference}
+                onChange={(event) => setProofForm((form) => ({ ...form, reference: event.target.value }))}
+                placeholder="Ex : WAVE-1289"
+                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-3 text-xs font-bold text-slate-800 outline-none transition placeholder:font-semibold placeholder:text-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/15"
+              />
+            </label>
+          </div>
 
-              <label>
-                <span className="mb-1 block text-xs font-bold text-slate-700">Commentaire</span>
-                <input
-                  type="text"
-                  value={proofForm.comment}
-                  onChange={(event) => setProofForm((form) => ({ ...form, comment: event.target.value }))}
-                  placeholder="Ex : paiement transmis par Wave au nom de l'agence"
-                  className="h-11 w-full rounded-xl border border-emerald-950/15 bg-white px-3 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/15"
-                />
-              </label>
-            </div>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <label>
+              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Lien preuve</span>
+              <input
+                type="url"
+                value={proofForm.proof_file_url}
+                onChange={(event) => setProofForm((form) => ({ ...form, proof_file_url: event.target.value }))}
+                placeholder="Lien Drive, reçu ou capture"
+                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-3 text-xs font-bold text-slate-800 outline-none transition placeholder:font-semibold placeholder:text-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/15"
+              />
+            </label>
+
+            <label>
+              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Commentaire</span>
+              <input
+                type="text"
+                value={proofForm.comment}
+                onChange={(event) => setProofForm((form) => ({ ...form, comment: event.target.value }))}
+                placeholder="Ex : paiement transmis par Wave"
+                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-3 text-xs font-bold text-slate-800 outline-none transition placeholder:font-semibold placeholder:text-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/15"
+              />
+            </label>
           </div>
 
           <div className="grid gap-2 rounded-2xl border border-orange-200/70 bg-orange-50/70 p-3 text-xs text-orange-950 sm:grid-cols-[1fr_auto] sm:items-center">
@@ -1062,31 +1107,8 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
               En attente
             </span>
           </div>
-
-          {/* Actions du bas */}
-          <div className="mt-3 flex items-center justify-end gap-3 border-t border-slate-100 pt-3">
-            <button
-              type="button"
-              onClick={() => setManualProofOpen(false)}
-              className="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-extrabold text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={submittingProof}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-5 text-xs font-extrabold text-white shadow-sm transition hover:from-[#073b2f] hover:to-emerald-950 disabled:opacity-60"
-            >
-              {submittingProof ? (
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-white" />
-              ) : (
-                <Send className="h-3.5 w-3.5 text-emerald-300" />
-              )}
-              Transmettre la preuve
-            </button>
-          </div>
         </form>
-      </Modal>
+      </WizardShell>
 
       {/* ── Checkout modal ── */}
       <CheckoutModal

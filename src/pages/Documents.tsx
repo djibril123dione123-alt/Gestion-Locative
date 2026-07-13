@@ -36,7 +36,6 @@ import {
   markOrphanDocumentRecords,
   optimizeDocumentStorage,
   uploadUserDocument,
-  formatStorageSize,
   DOCUMENT_CATEGORY_LABELS,
   type StorageBreakdown,
   type StorageUsage,
@@ -86,7 +85,6 @@ import {
   singleRelation,
   toDocumentItem,
   usageMessage,
-  usageTone,
 } from '../lib/documents/documentFormatters';
 
 const CATEGORY_ICONS: Record<UserDocumentCategory, typeof FileText> = {

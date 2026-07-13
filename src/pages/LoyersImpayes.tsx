@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
-import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, CreditCard, Wallet, Building2, CalendarDays, SlidersHorizontal, CheckCircle2, User, FileText, Sparkles, Hash, Banknote, ShieldCheck, Check, Clock } from 'lucide-react';
+import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, CreditCard, Wallet, Building2, CalendarDays, SlidersHorizontal, CheckCircle2, Sparkles, Clock } from 'lucide-react';
 import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';

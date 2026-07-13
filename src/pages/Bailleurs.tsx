@@ -690,7 +690,15 @@ export function Bailleurs() {
               .limit(300),
           ]);
           const rawDocs = (documentsRes.data || []) as DetailDocument[];
-          const regDocs: DetailDocument[] = (registryRes.data || []).map((r: any) => ({
+          type RegistryDocumentRow = {
+            id: string;
+            reference: string | null;
+            document_type: string | null;
+            entity_id: string | null;
+            status: string | null;
+            generated_at: string | null;
+          };
+          const regDocs: DetailDocument[] = ((registryRes.data || []) as RegistryDocumentRow[]).map((r) => ({
             id: r.id,
             name: r.reference || r.document_type || 'Document généré',
             document_category: r.document_type,

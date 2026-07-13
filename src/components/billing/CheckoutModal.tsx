@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
@@ -18,7 +18,7 @@ import whatsappLogo from '../../assets/support/whatsapp.jpg';
 import { useAuth } from '../../contexts/AuthContext';
 import { formatCurrency, formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
 import { supabase } from '../../lib/supabase';
-import { Modal } from '../ui/Modal';
+import { WizardShell, type WizardStep } from '../ui/WizardShell';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -272,14 +272,52 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
   const timeLeft = Math.max(0, POLL_MAX_ATTEMPTS - pollCount) * (POLL_INTERVAL_MS / 1000);
   const minutesLeft = Math.floor(timeLeft / 60);
   const secondsLeft = timeLeft % 60;
-  const checkoutSteps = [
-    { label: 'Moyen', active: step === 'select_provider' },
-    { label: 'Détails', active: step === 'enter_phone' || step === 'processing' },
-    { label: 'Confirmation', active: step === 'polling' || step === 'card_redirect' || step === 'success' },
+  const checkoutSteps: WizardStep[] = [
+    {
+      id: 'provider',
+      label: 'Moyen de paiement',
+      shortLabel: 'Moyen',
+      description: 'Orange Money, Wave, Djamo ou carte',
+      icon: <CreditCard className="h-3.5 w-3.5" />,
+    },
+    {
+      id: 'details',
+      label: 'Détails',
+      shortLabel: 'Détails',
+      description: 'Numéro ou page sécurisée',
+      icon: <Shield className="h-3.5 w-3.5" />,
+    },
+    {
+      id: 'confirmation',
+      label: 'Confirmation',
+      shortLabel: 'Statut',
+      description: 'Validation transaction',
+      icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+    },
   ];
+  const checkoutStepIndex =
+    step === 'select_provider'
+      ? 0
+      : step === 'enter_phone' || step === 'processing'
+        ? 1
+        : 2;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title={`Activer le plan ${planName}`}>
+    <WizardShell
+      open={isOpen}
+      onClose={handleClose}
+      title={`Activer le plan ${planName}`}
+      eyebrow="FACTURATION & PAIEMENT"
+      description="Choisissez un moyen sécurisé. Activation après confirmation du paiement."
+      mobileDescription="Paiement sécurisé."
+      steps={step === 'success' || step === 'error' ? [] : checkoutSteps}
+      currentStep={checkoutStepIndex}
+      variant="workstation"
+      tone="finance"
+      size="standard"
+      mobileMode="fullscreen"
+      bodyClassName="p-3 sm:p-4"
+    >
       {step !== 'success' && step !== 'error' && (
         <div className="mb-4 overflow-hidden rounded-2xl border border-emerald-950/15 bg-gradient-to-br from-[#fffefc] via-[#fffcf6] to-emerald-50/20 p-4 shadow-sm">
           <div className="flex items-center justify-between gap-4">
@@ -301,27 +339,6 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
         </div>
       )}
 
-      {step !== 'success' && step !== 'error' && (
-        <div className="mb-4 grid grid-cols-3 gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-1.5">
-          {checkoutSteps.map((checkoutStep, index) => (
-            <div
-              key={checkoutStep.label}
-              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-[0.64rem] font-black transition ${
-                checkoutStep.active ? 'bg-white text-emerald-950 shadow-sm ring-1 ring-emerald-950/10' : 'text-slate-400'
-              }`}
-            >
-              <span
-                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[0.52rem] ${
-                  checkoutStep.active ? 'bg-emerald-950 text-white' : 'bg-white text-slate-400 ring-1 ring-slate-200'
-                }`}
-              >
-                {index + 1}
-              </span>
-              <span className="truncate">{checkoutStep.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
 
       {step === 'select_provider' && (
         <div className="space-y-4">
@@ -584,6 +601,6 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
           </div>
         </div>
       )}
-    </Modal>
+    </WizardShell>
   );
 }

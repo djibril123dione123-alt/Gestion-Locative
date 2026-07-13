@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -6,11 +6,14 @@ import {
   CheckCircle2,
   FileImage,
   FileText,
+  FolderOpen,
   Loader2,
   ShieldCheck,
   Upload,
-} from 'lucide-react';
-import { Modal } from '../ui/Modal';
+} from "lucide-react";
+import { WizardShell } from "../ui/WizardShell";
+import { SmartCombobox } from "../ui/SmartCombobox";
+import type { SmartComboboxOption } from "../ui/SmartCombobox";
 import {
   DOCUMENT_CATEGORY_LABELS,
   DOCUMENT_ENTITY_LABELS,
@@ -19,7 +22,7 @@ import {
   type RetentionPolicy,
   type UserDocumentCategory,
   type UserDocumentEntityType,
-} from '../../services/documentStorage';
+} from "../../services/documentStorage";
 
 export interface DocumentEntityOption {
   id: string;
@@ -30,7 +33,7 @@ export interface DocumentUploadValue {
   file: File;
   name: string;
   category: UserDocumentCategory;
-  entityType: UserDocumentEntityType | '';
+  entityType: UserDocumentEntityType | "";
   entityId: string;
   retentionPolicy: RetentionPolicy;
   description: string;
@@ -47,36 +50,47 @@ interface DocumentUploadWizardProps {
 }
 
 const ENTITY_BY_CATEGORY: Partial<Record<UserDocumentCategory, UserDocumentEntityType>> = {
-  bailleurs: 'bailleur',
-  locataires: 'locataire',
-  immeubles: 'immeuble',
-  unites: 'unite',
-  contrats: 'contrat',
+  bailleurs: "bailleur",
+  locataires: "locataire",
+  immeubles: "immeuble",
+  unites: "unite",
+  contrats: "contrat",
 };
 
-const EMPTY_VALUE: Omit<DocumentUploadValue, 'file'> & { file: File | null } = {
+const EMPTY_VALUE: Omit<DocumentUploadValue, "file"> & { file: File | null } = {
   file: null,
-  name: '',
-  category: 'administratif',
-  entityType: '',
-  entityId: '',
-  retentionPolicy: 'standard',
-  description: '',
-  tags: '',
+  name: "",
+  category: "administratif",
+  entityType: "",
+  entityId: "",
+  retentionPolicy: "standard",
+  description: "",
+  tags: "",
 };
 
-const STEPS = [
-  { id: 1, label: 'Fichier' },
-  { id: 2, label: 'Classement' },
-  { id: 3, label: 'Confirmation' },
-] as const;
+const WIZARD_STEPS = [
+  { id: 1, label: "Fichier", shortLabel: "Fichier" },
+  { id: 2, label: "Classement", shortLabel: "Classement" },
+  { id: 3, label: "Confirmation", shortLabel: "Confirmer" },
+];
+
+const RETENTION_OPTIONS: SmartComboboxOption[] = [
+  { value: "standard", label: "Standard", subtitle: "Durée légale habituelle" },
+  { value: "critical", label: "Longue durée", subtitle: "Conservation renforcée" },
+  { value: "temporary", label: "Temporaire", subtitle: "Court terme" },
+];
+
+const primaryActionClass =
+  "inline-flex h-8 min-h-0 w-full min-w-[7rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-3 py-1 text-[0.72rem] font-semibold leading-none text-white shadow-[0_10px_22px_rgba(6,45,35,0.16)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] focus-visible:ring-2 focus-visible:ring-emerald-700/20 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto";
+const secondaryActionClass =
+  "inline-flex h-8 min-h-0 w-full min-w-[6rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-emerald-950/10 bg-white/85 px-3 py-1 text-[0.72rem] font-semibold leading-none text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 disabled:opacity-50 sm:w-auto";
 
 function fileTypeLabel(file: File) {
-  if (file.type === 'application/pdf') return 'Document PDF';
-  if (file.type.startsWith('image/')) return 'Image';
-  if (file.type.includes('sheet') || file.type.includes('excel')) return 'Feuille Excel';
-  if (file.type === 'text/csv') return 'Fichier CSV';
-  return file.type || 'Type non renseigné';
+  if (file.type === "application/pdf") return "Document PDF";
+  if (file.type.startsWith("image/")) return "Image";
+  if (file.type.includes("sheet") || file.type.includes("excel")) return "Feuille Excel";
+  if (file.type === "text/csv") return "Fichier CSV";
+  return file.type || "Type non renseigné";
 }
 
 export function DocumentUploadWizard({
@@ -104,7 +118,7 @@ export function DocumentUploadWizard({
   }, [isOpen]);
 
   useEffect(() => {
-    if (!value.file?.type.startsWith('image/')) {
+    if (!value.file?.type.startsWith("image/")) {
       setPreviewUrl(null);
       return undefined;
     }
@@ -113,26 +127,44 @@ export function DocumentUploadWizard({
     return () => URL.revokeObjectURL(url);
   }, [value.file]);
 
-  const selectedEntityType = value.entityType || ENTITY_BY_CATEGORY[value.category] || '';
+  const selectedEntityType = value.entityType || ENTITY_BY_CATEGORY[value.category] || "";
   const selectedOptions = selectedEntityType ? entityOptions[selectedEntityType] ?? [] : [];
   const selectedEntity = selectedOptions.find((option) => option.id === value.entityId);
   const classificationValid = !selectedEntityType || (selectedOptions.length > 0 && Boolean(value.entityId));
 
-  const title = complete ? 'Document ajouté' : `Ajouter un document · ${step}/3`;
   const categoryLabel = (category: UserDocumentCategory) => {
-    if (isIndividualOwner && category === 'bailleurs') return 'Propriétaire';
+    if (isIndividualOwner && category === "bailleurs") return "Propriétaire";
     return DOCUMENT_CATEGORY_LABELS[category];
   };
   const entityLabel = (entityType: UserDocumentEntityType) => {
-    if (isIndividualOwner && entityType === 'agency') return 'Compte propriétaire';
-    if (isIndividualOwner && entityType === 'bailleur') return 'Propriétaire';
+    if (isIndividualOwner && entityType === "agency") return "Compte propriétaire";
+    if (isIndividualOwner && entityType === "bailleur") return "Propriétaire";
     return DOCUMENT_ENTITY_LABELS[entityType];
   };
 
   const displayName = useMemo(
-    () => value.name.trim() || value.file?.name || 'Document sans nom',
+    () => value.name.trim() || value.file?.name || "Document sans nom",
     [value.file?.name, value.name]
   );
+
+  const categoryOptions: SmartComboboxOption[] = categories.map((cat) => ({
+    value: cat,
+    label: categoryLabel(cat),
+  }));
+
+  const entityTypeOptions: SmartComboboxOption[] = [
+    { value: "", label: "Aucun élément" },
+    ...(Object.keys(DOCUMENT_ENTITY_LABELS) as UserDocumentEntityType[])
+      .filter((id) => id !== "operation" && !(isIndividualOwner && id === "bailleur"))
+      .map((id) => ({ value: id, label: entityLabel(id) })),
+  ];
+
+  const linkedItemOptions: SmartComboboxOption[] = selectedEntityType
+    ? [
+        { value: "", label: "Sélectionner" },
+        ...selectedOptions.map((o) => ({ value: o.id, label: o.label })),
+      ]
+    : [{ value: "", label: "Aucun lien" }];
 
   const chooseFile = (file: File | null) => {
     if (!file) return;
@@ -141,17 +173,15 @@ export function DocumentUploadWizard({
       setValue((current) => ({
         ...current,
         file,
-        name: current.name || file.name.replace(/\.[^.]+$/, ''),
+        name: current.name || file.name.replace(/\.[^.]+$/, ""),
       }));
       setError(null);
     } catch (nextError) {
-      setError(nextError instanceof Error ? nextError.message : 'Fichier non pris en charge.');
+      setError(nextError instanceof Error ? nextError.message : "Fichier non pris en charge.");
     }
   };
 
-  const close = () => {
-    if (!submitting) onClose();
-  };
+  const close = () => { if (!submitting) onClose(); };
 
   const submit = async () => {
     if (!value.file || !classificationValid) return;
@@ -167,15 +197,67 @@ export function DocumentUploadWizard({
     }
   };
 
+  const currentStepIndex = step - 1;
+
+  const secondaryAction = complete ? undefined : (
+    <button
+      type="button"
+      onClick={() => step === 1 ? close() : setStep((step - 1) as 1 | 2)}
+      disabled={submitting}
+      className={secondaryActionClass}
+    >
+      <ArrowLeft className="h-3.5 w-3.5" />
+      {step === 1 ? "Annuler" : "Retour"}
+    </button>
+  );
+
+  const primaryAction = complete ? (
+    <button type="button" onClick={onClose} className={primaryActionClass}>
+      <Check className="h-3.5 w-3.5" />
+      Voir dans la GED
+    </button>
+  ) : step < 3 ? (
+    <button
+      type="button"
+      onClick={() => setStep((step + 1) as 2 | 3)}
+      disabled={(step === 1 && !value.file) || (step === 2 && !classificationValid)}
+      className={primaryActionClass}
+    >
+      Continuer
+      <ArrowRight className="h-3.5 w-3.5" />
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={() => void submit()}
+      disabled={submitting}
+      className={primaryActionClass}
+    >
+      {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+      {submitting ? "Ajout au coffre..." : "Ajouter au coffre"}
+    </button>
+  );
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={close}
-      title={title}
+    <WizardShell
+      open={isOpen}
+      title={complete ? "Document ajouté" : `Ajouter un document · ${step}/3`}
+      eyebrow="DOCUMENTS GED"
       description="Ajoutez une preuve terrain et classez-la dans son contexte métier."
+      steps={WIZARD_STEPS}
+      currentStep={currentStepIndex}
+      size="compact"
+      variant="workstation"
+      tone="documents"
+      onClose={close}
+      secondaryAction={secondaryAction}
+      primaryAction={primaryAction}
+      panelClassName="sm:!w-[min(90vw,600px)] sm:!max-w-[600px]"
+      bodyClassName="!py-2.5 sm:!py-3"
+      footerClassName="!py-1.5"
     >
       {complete ? (
-        <div className="flex min-h-[17rem] flex-col items-center justify-center text-center">
+        <div className="flex min-h-[14rem] flex-col items-center justify-center text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm">
             <CheckCircle2 className="h-6 w-6" />
           </div>
@@ -184,235 +266,170 @@ export function DocumentUploadWizard({
           <p className="mt-2 max-w-sm text-xs font-semibold leading-5 text-slate-500">
             {displayName} est maintenant disponible dans la GED avec son classement métier.
           </p>
-          <button type="button" onClick={onClose} className="sk-action sk-action-primary mt-5 h-8 justify-center px-3 text-xs">
-            <Check className="h-3.5 w-3.5" />
-            Voir dans la GED
-          </button>
         </div>
       ) : (
-        <form className="flex min-h-[22rem] flex-col overflow-hidden" onSubmit={(event) => event.preventDefault()}>
-          <ol className="mb-3 grid grid-cols-3 gap-2" aria-label="Progression de l’ajout">
-            {STEPS.map((item) => {
-              const active = item.id === step;
-              const done = item.id < step;
-              return (
-                <li key={item.id} className="min-w-0">
-                  <div className={`h-1 rounded-full ${active || done ? 'bg-emerald-700' : 'bg-slate-200'}`} />
-                  <div className="mt-2 flex min-w-0 items-center gap-1.5">
-                    <span className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-black ${done ? 'bg-emerald-700 text-white' : active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-400'}`}>
-                      {done ? <Check className="h-3 w-3" /> : item.id}
-                    </span>
-                    <span className={`truncate text-[10px] font-black uppercase tracking-[0.05em] sm:text-xs ${active ? 'text-slate-950' : 'text-slate-400'}`}>
-                      {item.label}
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-
+        <div className="flex flex-col gap-3">
           {error && (
-            <div className="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-700" role="alert">
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-700" role="alert">
               {error}
             </div>
           )}
 
-          <div className="flex flex-col flex-1">
-            {step === 1 && (
-              <div className="flex flex-col gap-3">
-                <div
-                  className="overflow-hidden rounded-2xl border border-dashed border-emerald-700/25 bg-emerald-50/35 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] sm:p-2.5"
-                  onDragOver={(event) => event.preventDefault()}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    chooseFile(event.dataTransfer.files?.[0] ?? null);
-                  }}
-                >
-                  <label className="flex min-h-[8.5rem] cursor-pointer flex-col items-center justify-center rounded-xl bg-white/90 px-3 py-4 text-center shadow-sm ring-1 ring-white/80 transition hover:bg-emerald-50/40 sm:min-h-[9.5rem] sm:px-4 sm:py-5">
-                    <Upload className="mb-2.5 h-6 w-6 text-emerald-800 sm:h-7 sm:w-7" />
-                    <span className="block text-center text-sm font-extrabold text-slate-950">
-                      Déposez ou sélectionnez un fichier
-                    </span>
-                    <span className="mt-1 block max-w-[280px] break-words text-center text-[11px] font-semibold leading-5 text-slate-500 sm:max-w-sm">
-                      PDF, PNG, JPG, WEBP, SVG, CSV ou Excel · 50 Mo max
-                    </span>
-                    <input
-                      type="file"
-                      accept=".pdf,.png,.jpg,.jpeg,.webp,.svg,.csv,.xls,.xlsx"
-                      onChange={(event) => chooseFile(event.target.files?.[0] ?? null)}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-
-                {value.file && (
-                  <div className="flex items-center gap-2.5 overflow-hidden rounded-2xl border border-slate-200 bg-white/90 p-2.5 shadow-sm">
-                    <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-emerald-800">
-                      {previewUrl ? (
-                        <img src={previewUrl} alt="Aperçu du document" className="h-full w-full object-cover" />
-                      ) : value.file.type.startsWith('image/') ? (
-                        <FileImage className="h-5 w-5 flex-shrink-0" />
-                      ) : (
-                        <FileText className="h-5 w-5 flex-shrink-0" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-extrabold text-slate-950">{value.file.name}</p>
-                      <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">
-                        {fileTypeLabel(value.file)} · {formatStorageSize(value.file.size)}
-                      </p>
-                    </div>
-                    <ShieldCheck className="hidden h-4 w-4 flex-shrink-0 text-emerald-700 sm:block" />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="grid max-w-full gap-3 sm:grid-cols-2">
-                <label className="sm:col-span-2 min-w-0">
-                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Nom du document</span>
+          {step === 1 && (
+            <div className="flex flex-col gap-2.5">
+              <div
+                className="overflow-hidden rounded-2xl border border-dashed border-emerald-700/25 bg-emerald-50/35 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => { e.preventDefault(); chooseFile(e.dataTransfer.files?.[0] ?? null); }}
+              >
+                <label className="flex min-h-[8rem] cursor-pointer flex-col items-center justify-center rounded-xl bg-white/90 px-3 py-4 text-center shadow-sm ring-1 ring-white/80 transition hover:bg-emerald-50/40">
+                  <Upload className="mb-2 h-6 w-6 text-emerald-800" />
+                  <span className="block text-sm font-extrabold text-slate-950">Déposez ou sélectionnez un fichier</span>
+                  <span className="mt-1 block text-[11px] font-semibold leading-5 text-slate-500">
+                    PDF, PNG, JPG, WEBP, SVG, CSV ou Excel · 50 Mo max
+                  </span>
                   <input
-                    value={value.name}
-                    onChange={(event) => setValue((current) => ({ ...current, name: event.target.value }))}
-                    placeholder="Ex : CNI locataire, titre foncier..."
-                    className="h-9 min-w-0 max-w-full w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-2.5 py-1.5 text-[0.8rem] font-semibold outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
-                  />
-                </label>
-
-                <label className="min-w-0">
-                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Dossier métier</span>
-                  <select
-                    value={value.category}
-                    className="h-9 min-w-0 max-w-full w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-2.5 py-1.5 text-[0.8rem] font-semibold outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
-                    onChange={(event) => {
-                      const category = event.target.value as UserDocumentCategory;
-                      setValue((current) => ({
-                        ...current,
-                        category,
-                        entityType: ENTITY_BY_CATEGORY[category] ?? '',
-                        entityId: '',
-                      }));
-                    }}
-                  >
-                    {categories.map((category) => <option key={category} value={category}>{categoryLabel(category)}</option>)}
-                  </select>
-                </label>
-
-                <label className="min-w-0">
-                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Conservation</span>
-                  <select
-                    value={value.retentionPolicy}
-                    className="h-9 min-w-0 max-w-full w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-2.5 py-1.5 text-[0.8rem] font-semibold outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
-                    onChange={(event) => setValue((current) => ({ ...current, retentionPolicy: event.target.value as RetentionPolicy }))}
-                  >
-                    <option value="standard">Standard</option>
-                    <option value="critical">Longue durée</option>
-                    <option value="temporary">Temporaire</option>
-                  </select>
-                </label>
-
-                <label className="min-w-0">
-                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Lier à</span>
-                  <select
-                    value={selectedEntityType}
-                    className="h-9 min-w-0 max-w-full w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-2.5 py-1.5 text-[0.8rem] font-semibold outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
-                    onChange={(event) => setValue((current) => ({ ...current, entityType: event.target.value as UserDocumentEntityType | '', entityId: '' }))}
-                  >
-                    <option value="">Aucun élément</option>
-                    {(Object.keys(DOCUMENT_ENTITY_LABELS) as UserDocumentEntityType[])
-                      .filter((id) => id !== 'operation' && !(isIndividualOwner && id === 'bailleur'))
-                      .map((id) => <option key={id} value={id}>{entityLabel(id)}</option>)}
-                  </select>
-                </label>
-
-                <label className="min-w-0">
-                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Élément lié</span>
-                  <select
-                    value={value.entityId}
-                    disabled={!selectedEntityType || selectedOptions.length === 0}
-                    className="h-9 min-w-0 max-w-full w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-2.5 py-1.5 text-[0.8rem] font-semibold outline-none transition disabled:bg-slate-50 disabled:text-slate-400 focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
-                    onChange={(event) => setValue((current) => ({ ...current, entityId: event.target.value }))}
-                  >
-                    <option value="">{selectedEntityType ? 'Sélectionner' : 'Aucun lien'}</option>
-                    {selectedOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
-                  </select>
-                </label>
-
-                {selectedEntityType && selectedOptions.length === 0 && (
-                  <p className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
-                    Aucun élément disponible pour ce type de classement.
-                  </p>
-                )}
-
-                <label className="sm:col-span-2 min-w-0">
-                  <span className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-slate-500">Description courte</span>
-                  <textarea
-                    value={value.description}
-                    onChange={(event) => setValue((current) => ({ ...current, description: event.target.value }))}
-                    rows={2}
-                    maxLength={300}
-                    className="min-w-0 max-w-full w-full resize-none rounded-xl border border-emerald-950/10 bg-[#fffdf8] px-2.5 py-1.5 text-[0.8rem] font-semibold outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
-                    placeholder="Contexte, validité ou observation interne..."
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg,.webp,.svg,.csv,.xls,.xlsx"
+                    onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
+                    className="hidden"
                   />
                 </label>
               </div>
-            )}
+              {value.file && (
+                <div className="flex items-center gap-2.5 overflow-hidden rounded-2xl border border-emerald-200 bg-white/90 p-2.5 shadow-sm">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-emerald-50 text-emerald-800">
+                    {previewUrl ? (
+                      <img src={previewUrl} alt="Aperçu du document" className="h-full w-full object-cover" />
+                    ) : value.file.type.startsWith("image/") ? (
+                      <FileImage className="h-5 w-5 flex-shrink-0" />
+                    ) : (
+                      <FileText className="h-5 w-5 flex-shrink-0" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-extrabold text-slate-950">{value.file.name}</p>
+                    <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500">
+                      {fileTypeLabel(value.file)} · {formatStorageSize(value.file.size)}
+                    </p>
+                  </div>
+                  <ShieldCheck className="hidden h-4 w-4 flex-shrink-0 text-emerald-700 sm:block" />
+                </div>
+              )}
+            </div>
+          )}
 
-            {step === 3 && value.file && (
-              <div className="space-y-3">
-                <div className="max-w-full overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/90 p-3 shadow-sm">
+          {step === 2 && (
+            <div className="grid max-w-full gap-2.5 sm:grid-cols-2">
+              <div className="sm:col-span-2 min-w-0">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">Nom du document</p>
+                <input
+                  value={value.name}
+                  onChange={(e) => setValue((c) => ({ ...c, name: e.target.value }))}
+                  placeholder="Ex : CNI locataire, titre foncier..."
+                  className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-2.5 text-xs font-bold text-slate-800 shadow-sm outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600/15"
+                />
+              </div>
+
+              <div className="min-w-0">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">Dossier métier</p>
+                <SmartCombobox
+                  value={value.category}
+                  options={categoryOptions}
+                  onChange={(val) => {
+                    const category = val as UserDocumentCategory;
+                    setValue((c) => ({ ...c, category, entityType: ENTITY_BY_CATEGORY[category] ?? "", entityId: "" }));
+                  }}
+                  placeholder="Choisir un dossier"
+                  searchPlaceholder="Rechercher un dossier..."
+                  density="compact"
+                />
+              </div>
+
+              <div className="min-w-0">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">Conservation</p>
+                <SmartCombobox
+                  value={value.retentionPolicy}
+                  options={RETENTION_OPTIONS}
+                  onChange={(val) => setValue((c) => ({ ...c, retentionPolicy: val as RetentionPolicy }))}
+                  placeholder="Durée de conservation"
+                  searchPlaceholder="Rechercher..."
+                  density="compact"
+                />
+              </div>
+
+              <div className="min-w-0">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">Lier à</p>
+                <SmartCombobox
+                  value={selectedEntityType}
+                  options={entityTypeOptions}
+                  onChange={(val) => setValue((c) => ({ ...c, entityType: val as UserDocumentEntityType | "", entityId: "" }))}
+                  placeholder="Type d'entité"
+                  searchPlaceholder="Rechercher un type..."
+                  density="compact"
+                />
+              </div>
+
+              <div className="min-w-0">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">Élément lié</p>
+                <SmartCombobox
+                  value={value.entityId}
+                  options={linkedItemOptions}
+                  onChange={(val) => setValue((c) => ({ ...c, entityId: val }))}
+                  placeholder={selectedEntityType ? "Sélectionner" : "Aucun lien"}
+                  searchPlaceholder="Rechercher..."
+                  density="compact"
+                  disabled={!selectedEntityType || selectedOptions.length === 0}
+                />
+              </div>
+
+              {selectedEntityType && selectedOptions.length === 0 && (
+                <p className="sm:col-span-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  Aucun élément disponible pour ce type de classement.
+                </p>
+              )}
+
+              <div className="sm:col-span-2 min-w-0">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">Description courte</p>
+                <textarea
+                  value={value.description}
+                  onChange={(e) => setValue((c) => ({ ...c, description: e.target.value }))}
+                  rows={2}
+                  maxLength={300}
+                  className="w-full resize-none rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-2.5 py-1.5 text-xs font-bold text-slate-800 shadow-sm outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600/15"
+                  placeholder="Contexte, validité ou observation interne..."
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 3 && value.file && (
+            <div className="space-y-2.5">
+              <div className="overflow-hidden rounded-2xl border border-emerald-950/10 bg-white/90 px-3 py-2.5 shadow-sm">
+                <div className="flex items-center gap-2 mb-2">
+                  <FolderOpen className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
                   <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-700">Résumé avant ajout</p>
-                  <h3 className="mt-1.5 break-words text-base font-extrabold text-slate-950">{displayName}</h3>
-                  <dl className="mt-3 divide-y divide-slate-100 text-xs">
-                    <div className="flex justify-between gap-4 py-1.5"><dt className="font-semibold text-slate-500">Fichier</dt><dd className="min-w-0 truncate text-right font-bold text-slate-800">{value.file.name}</dd></div>
-                    <div className="flex justify-between gap-4 py-1.5"><dt className="font-semibold text-slate-500">Taille</dt><dd className="font-bold text-slate-800">{formatStorageSize(value.file.size)}</dd></div>
-                    <div className="flex justify-between gap-4 py-1.5"><dt className="font-semibold text-slate-500">Dossier</dt><dd className="font-bold text-slate-800">{categoryLabel(value.category)}</dd></div>
-                    <div className="flex justify-between gap-4 py-1.5"><dt className="font-semibold text-slate-500">Contexte</dt><dd className="min-w-0 text-right font-bold text-slate-800">{selectedEntity?.label || 'Document à classer'}</dd></div>
-                    <div className="flex justify-between gap-4 py-1.5"><dt className="font-semibold text-slate-500">Statut initial</dt><dd className="font-bold text-emerald-700">{value.category === 'archives' ? 'Archivé' : (selectedEntity ? 'Classé' : 'À classer')}</dd></div>
-                  </dl>
                 </div>
-                <div className="flex max-w-full items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 p-2.5 text-[0.72rem] font-semibold leading-5 text-emerald-900">
-                  <ShieldCheck className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                  Le fichier reste privé. Son accès passe par une URL signée temporaire et les règles de votre organisation.
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 mb-2.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-600 shrink-0" />
+                  <span className="text-xs font-black text-slate-950 truncate max-w-[24rem]">{displayName}</span>
                 </div>
+                <dl className="divide-y divide-slate-100 text-xs">
+                  <div className="flex justify-between gap-4 py-1.5"><dt className="font-semibold text-slate-500 shrink-0">Fichier</dt><dd className="min-w-0 truncate text-right font-bold text-slate-800">{value.file.name}</dd></div>
+                  <div className="flex justify-between gap-4 py-1.5"><dt className="font-semibold text-slate-500 shrink-0">Taille</dt><dd className="font-bold text-slate-800">{formatStorageSize(value.file.size)}</dd></div>
+                  <div className="flex justify-between gap-4 py-1.5"><dt className="font-semibold text-slate-500 shrink-0">Dossier</dt><dd className="font-bold text-slate-800">{categoryLabel(value.category)}</dd></div>
+                  <div className="flex justify-between gap-4 py-1.5"><dt className="font-semibold text-slate-500 shrink-0">Contexte</dt><dd className="min-w-0 text-right font-bold text-slate-800">{selectedEntity?.label || "Document à classer"}</dd></div>
+                  <div className="flex justify-between gap-4 py-1.5"><dt className="font-semibold text-slate-500 shrink-0">Statut initial</dt><dd className="font-bold text-emerald-700">{value.category === "archives" ? "Archivé" : (selectedEntity ? "Classé" : "À classer")}</dd></div>
+                </dl>
               </div>
-            )}
-          </div>
-          <div className="sticky -bottom-4 z-10 mt-3 flex w-full flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 pb-1 pt-2.5 backdrop-blur sm:-bottom-5 sm:flex-row sm:justify-between">
-            <button
-              type="button"
-              onClick={() => step === 1 ? close() : setStep((step - 1) as 1 | 2)}
-              disabled={submitting}
-              className="sk-action sk-action-secondary h-8 justify-center px-3 text-xs"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              {step === 1 ? 'Annuler' : 'Retour'}
-            </button>
-            {step < 3 ? (
-              <button
-                type="button"
-                onClick={() => setStep((step + 1) as 2 | 3)}
-                disabled={(step === 1 && !value.file) || (step === 2 && !classificationValid)}
-                className="sk-action sk-action-primary h-8 justify-center px-3 text-xs disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                Continuer
-                <ArrowRight className="h-3.5 w-3.5" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => void submit()}
-                disabled={submitting}
-                className="sk-action sk-action-financial h-8 justify-center px-3 text-xs disabled:cursor-wait disabled:opacity-60"
-              >
-                {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                {submitting ? 'Ajout au coffre...' : 'Ajouter au coffre'}
-              </button>
-            )}
-          </div>
-        </form>
+              <div className="flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50/60 px-2.5 py-2 text-[0.7rem] font-semibold leading-5 text-emerald-900">
+                <ShieldCheck className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                Le fichier reste privé. Son accès passe par une URL signée temporaire et les règles de votre organisation.
+              </div>
+            </div>
+          )}
+        </div>
       )}
-    </Modal>
+    </WizardShell>
   );
 }

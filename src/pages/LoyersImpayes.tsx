@@ -533,9 +533,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                     description="Retards, partiels et restes dus."
                                     mobileDescription="Suivi des impayés."
                                 >
-                                    <div className="mt-2.5 pt-2.5 border-t border-emerald-950/10 flex items-center justify-start">
+                                    <div className="mt-2.5 pt-2.5 border-t border-emerald-950/10 flex items-center justify-start w-full sm:w-auto">
                                         <Tabs
                                             size="compact"
+                                            fullWidthMobile
                                             tabs={[
                                                 { id: 'paiements', label: 'Paiements reçus', icon: CreditCard },
                                                 { id: 'loyers-impayes', label: 'Créances à recouvrer', icon: AlertCircle, badge: kpis.ouvertes > 0 ? kpis.ouvertes : undefined },

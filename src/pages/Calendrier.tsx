@@ -258,10 +258,10 @@ export function Calendrier() {
       />
 
       <PremiumKpiGrid density="compact">
-        <MetricCard density="compact" label="Événements du mois" value={stats.total} icon={Calendar} tone="emerald" />
-        <MetricCard density="compact" label="Rendez-vous" value={stats.rdv} icon={CalendarClock} tone="blue" />
-        <MetricCard density="compact" label="Interventions" value={stats.interventions} icon={AlertCircle} tone="amber" />
-        <MetricCard density="compact" label="Échéances de paiement" value={stats.paiements} icon={CheckCircle2} tone="green" />
+        <MetricCard density="compact" label="Événements du mois" value={stats.total} helper="Planning mensuel" icon={Calendar} tone="emerald" />
+        <MetricCard density="compact" label="Rendez-vous" value={stats.rdv} helper="Visites & états des lieux" icon={CalendarClock} tone="blue" />
+        <MetricCard density="compact" label="Interventions" value={stats.interventions} helper="Maintenance & travaux" icon={AlertCircle} tone="amber" />
+        <MetricCard density="compact" label="Échéances de paiement" value={stats.paiements} helper="Loyers & rappels" icon={CheckCircle2} tone="green" />
       </PremiumKpiGrid>
 
       <PremiumToolbar

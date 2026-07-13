@@ -1152,12 +1152,12 @@ export function OccupantsBaux() {
                           </th>
                         )}
                         {occupantColumns.isVisible('bien') && (
-                          <th className={`w-[17%] py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500 ${selectedRow ? 'hidden' : ''}`}>
+                          <th className={`w-[15%] py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500 ${selectedRow ? 'hidden' : ''}`}>
                             <span className="flex items-center gap-1.5"><Building2 className="h-3.5 w-3.5 text-slate-400" /> Bien / Unité</span>
                           </th>
                         )}
                         {occupantColumns.isVisible('proprietaire') && (
-                          <th className={`w-[13%] py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
+                          <th className={`w-[12%] py-2.5 px-3 text-left text-[0.62rem] font-bold uppercase tracking-wider text-slate-500 ${selectedRow ? 'hidden' : 'hidden lg:table-cell'}`}>
                             <span className="flex items-center gap-1.5"><Home className="h-3.5 w-3.5 text-slate-400" /> Propriétaire</span>
                           </th>
                         )}
@@ -1167,7 +1167,7 @@ export function OccupantsBaux() {
                           </th>
                         )}
                         {occupantColumns.isVisible('loyer') && (
-                          <th className={`${selectedRow ? 'w-[34%]' : 'w-[11%]'} py-2.5 px-3 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>
+                          <th className={`${selectedRow ? 'w-[36%]' : 'w-[14%]'} py-2.5 px-3 text-right text-[0.62rem] font-bold uppercase tracking-wider text-slate-500`}>
                             <span className="flex items-center justify-end gap-1.5"><Wallet className="h-3.5 w-3.5 text-slate-400" /> Loyer</span>
                           </th>
                         )}
@@ -1415,7 +1415,7 @@ function DesktopRow({
       )}
       {/* Loyer */}
       {isVisible('loyer') && (
-        <td className="py-2.5 px-3 text-right text-[0.75rem] font-semibold text-slate-700">
+        <td className="py-2.5 px-3 text-right text-[0.75rem] font-semibold text-slate-700 whitespace-nowrap">
           <MoneyText value={row.loyer_mensuel} compact={false} />
           <span className="ml-1 text-[0.65rem] font-normal text-slate-400">/ mois</span>
         </td>

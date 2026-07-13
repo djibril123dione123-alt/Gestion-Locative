@@ -246,7 +246,7 @@ export function Unites() {
     { key: 'numero', label: 'Numéro', render: (u: Unite) => <span className="text-[0.7rem] font-medium text-slate-600">{u.numero || '-'}</span> },
     { key: 'etage', label: 'Étage', render: (u: Unite) => <span className="text-[0.7rem] font-medium text-slate-600">{u.etage || '-'}</span> },
     { key: 'immeuble', label: 'Immeuble', render: (u: Unite) => <span className="text-[0.7rem] font-medium text-slate-600">{u.immeubles?.nom || '-'}</span> },
-    { key: 'loyer_base', label: 'Loyer', render: (u: Unite) => <span className="text-[0.72rem] font-semibold text-slate-700 tabular-nums"><MoneyText value={u.loyer_base} /></span> },
+    { key: 'loyer_base', label: 'Loyer', render: (u: Unite) => <span className="text-[0.72rem] font-semibold text-slate-700 tabular-nums whitespace-nowrap"><MoneyText value={u.loyer_base} /></span> },
     { key: 'statut', label: 'Statut', render: (u: Unite) => getStatutBadge(u.statut) },
   ];
   const columns = allColumns.filter((c) => colIsVisible(c.key));

@@ -26,7 +26,7 @@ import { PremiumToolbar } from '../components/ui/PremiumToolbar';
 import { PremiumTableSurface } from '../components/ui/PremiumTableSurface';
 import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
 import { CompactSection, CompactLabelValue } from '../components/ui/CompactSection';
-import { Modal } from '../components/ui/Modal';
+import { WizardShell } from '../components/ui/WizardShell';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { MoneyText } from '../components/ui/MoneyText';
@@ -853,14 +853,42 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
 
         {/* Workflow de paiement */}
             {showModal && selectedLoyer && (
-                <Modal
-                    isOpen={showModal && Boolean(selectedLoyer)}
-                    onClose={() => setShowModal(false)}
+                <WizardShell
+                    open={showModal && Boolean(selectedLoyer)}
                     title="Encaisser ce loyer"
+                    eyebrow="CRÉANCES & RECOUVREMENT"
                     description="Paiement partiel ou complet avec traçabilité et quittance."
+                    size="compact"
+                    variant="workstation"
+                    tone="finance"
+                    onClose={() => setShowModal(false)}
+                    panelClassName="sm:!w-[min(90vw,580px)] sm:!max-w-[580px]"
+                    bodyClassName="!py-2.5 sm:!py-3"
+                    footerClassName="!py-1.5"
+                    secondaryAction={
+                        <button
+                            type="button"
+                            onClick={() => setShowModal(false)}
+                            disabled={submitting}
+                            className="inline-flex h-8 min-h-0 w-full min-w-[6rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-emerald-950/10 bg-white/85 px-3 py-1 text-[0.72rem] font-semibold leading-none text-slate-600 shadow-sm outline-none transition hover:bg-white disabled:opacity-50 sm:w-auto"
+                        >
+                            Annuler
+                        </button>
+                    }
+                    primaryAction={
+                        <button
+                            type="button"
+                            onClick={handleConfirmPaiement}
+                            disabled={submitting || paymentAmount <= 0}
+                            className="inline-flex h-8 min-h-0 w-full min-w-[7rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-3 py-1 text-[0.72rem] font-semibold leading-none text-white shadow-[0_10px_22px_rgba(6,45,35,0.16)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                        >
+                            <HandCoins className="h-3.5 w-3.5" />
+                            {submitting ? 'Enregistrement...' : `Enregistrer (${formatCurrency(paymentAmount)})`}
+                        </button>
+                    }
                 >
-                    <div className="space-y-3 pt-0.5">
-                        {/* En-tête / Résumé compact harmonisé avec le style Wizard */}
+                    <div className="flex flex-col gap-3">
+                        {/* Bandeau locataire / lot / créance */}
                         <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-950/15 bg-gradient-to-r from-emerald-900 via-emerald-800 to-[#073125] px-3 py-2 text-white shadow-sm">
                             <div className="flex items-center gap-2 min-w-0">
                                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10 border border-white/15">
@@ -880,13 +908,11 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             </div>
                             <div className="flex items-center gap-1.5 rounded-lg bg-black/25 px-2.5 py-1 border border-white/10 shrink-0">
                                 <span className="text-[0.62rem] font-bold uppercase tracking-wider text-emerald-200">Reste à encaisser :</span>
-                                <span className="font-black text-amber-300 text-xs">
-                                    {formatCurrency(selectedLoyer.montant_du)}
-                                </span>
+                                <span className="font-black text-amber-300 text-xs">{formatCurrency(selectedLoyer.montant_du)}</span>
                             </div>
                         </div>
 
-                        {/* Saisie rapide (Pills compactes) */}
+                        {/* Saisie rapide */}
                         <div className="flex items-center justify-between gap-2 bg-emerald-50/70 rounded-lg px-2.5 py-1.5 border border-emerald-100">
                             <span className="text-[0.68rem] font-bold text-emerald-900 flex items-center gap-1">
                                 <Sparkles className="h-3 w-3 text-emerald-700" />
@@ -912,12 +938,10 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             </div>
                         </div>
 
-                        {/* Formulaire de paiement avec champs strictement alignés (hauteur h-8 / min-h-8 et fond bg-[#fffdf8]/95 uniformes) */}
-                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-0.5">
+                        {/* Champs de saisie */}
+                        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                             <div>
-                                <label className="mb-1 block text-xs font-bold text-slate-700">
-                                    Montant encaissé <span className="text-red-600">*</span>
-                                </label>
+                                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">Montant encaissé <span className="text-red-500">*</span></p>
                                 <input
                                     aria-label="Champ de saisie"
                                     type="number"
@@ -929,15 +953,11 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                     className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-2.5 py-1 text-xs font-bold text-slate-800 shadow-sm outline-none transition placeholder:font-medium placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-1 focus:ring-emerald-600/15"
                                 />
                                 {paymentAmount > 0 && (
-                                    <p className="mt-0.5 text-[0.66rem] font-bold text-emerald-700">
-                                        Saisi : {formatCurrency(paymentAmount)}
-                                    </p>
+                                    <p className="mt-0.5 text-[0.66rem] font-bold text-emerald-700">Saisi : {formatCurrency(paymentAmount)}</p>
                                 )}
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-bold text-slate-700">
-                                    Date paiement <span className="text-red-600">*</span>
-                                </label>
+                                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">Date paiement <span className="text-red-500">*</span></p>
                                 <input
                                     aria-label="Champ de saisie"
                                     type="date"
@@ -947,9 +967,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-bold text-slate-700">
-                                    Mode de paiement <span className="text-red-600">*</span>
-                                </label>
+                                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">Mode de paiement <span className="text-red-500">*</span></p>
                                 <SmartCombobox
                                     value={paymentForm.mode_paiement}
                                     options={PAYMENT_MODE_OPTIONS}
@@ -960,9 +978,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-bold text-slate-700">
-                                    Référence transaction
-                                </label>
+                                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-500">Référence transaction</p>
                                 <input
                                     value={paymentForm.reference}
                                     onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
@@ -972,7 +988,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             </div>
                         </div>
 
-                        {/* Simulation & Nouveau Statut Financier compacte */}
+                        {/* Simulation statut */}
                         <div className={`rounded-xl border px-3 py-2 text-xs flex items-center justify-between transition ${
                             remainingAfterPayment > 0
                                 ? 'border-orange-200 bg-orange-50/70 text-orange-950'
@@ -985,9 +1001,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                     {remainingAfterPayment > 0 ? <Clock className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="text-[0.64rem] font-bold uppercase tracking-wider text-slate-500">
-                                        Nouveau statut du loyer
-                                    </div>
+                                    <div className="text-[0.64rem] font-bold uppercase tracking-wider text-slate-500">Nouveau statut du loyer</div>
                                     <div className={`text-xs font-black ${
                                         remainingAfterPayment > 0 ? 'text-orange-700' : 'text-emerald-700'
                                     }`}>
@@ -996,39 +1010,14 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                 </div>
                             </div>
                             <div className="text-right shrink-0">
-                                <div className="text-[0.64rem] font-bold uppercase tracking-wider text-slate-500">
-                                    Reliquat restant
-                                </div>
+                                <div className="text-[0.64rem] font-bold uppercase tracking-wider text-slate-500">Reliquat restant</div>
                                 <div className={`text-xs font-black ${remainingAfterPayment > 0 ? 'text-orange-700' : 'text-emerald-800'}`}>
                                     {formatCurrency(remainingAfterPayment)}
                                 </div>
                             </div>
                         </div>
-
-                        {/* Actions boutons */}
-                        <div className="flex items-center justify-end gap-2 pt-1.5 border-t border-slate-100">
-                            <PremiumButton
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => setShowModal(false)}
-                                disabled={submitting}
-                                className="!h-8 !min-h-8 !text-xs"
-                            >
-                                Annuler
-                            </PremiumButton>
-                            <PremiumButton
-                                variant="create"
-                                size="sm"
-                                icon={<HandCoins className="h-3.5 w-3.5" />}
-                                onClick={handleConfirmPaiement}
-                                disabled={submitting || paymentAmount <= 0}
-                                className="!h-8 !min-h-8 !text-xs font-bold"
-                            >
-                                {submitting ? 'Enregistrement en cours...' : `Enregistrer (${formatCurrency(paymentAmount)})`}
-                            </PremiumButton>
-                        </div>
                     </div>
-                </Modal>
+                </WizardShell>
             )}
             <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
         </PageShell>

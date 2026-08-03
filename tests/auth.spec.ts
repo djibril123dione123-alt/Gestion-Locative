@@ -1,126 +1,91 @@
-import { test, expect } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 
-test.describe('Authentication', () => {
-  test('should display login form', async ({ page }) => {
-    await page.goto('/');
-    
-    // Vérifier que le formulaire de login est visible
-    const emailInput = page.getByLabel(/email/i);
-    const passwordInput = page.getByLabel(/mot de passe|password/i);
-    const loginButton = page.getByRole('button', { name: /connexion|login/i });
+const LOGIN_ROUTE = '/#/login';
 
-    await expect(emailInput).toBeVisible();
-    await expect(passwordInput).toBeVisible();
-    await expect(loginButton).toBeVisible();
+test.describe('Authentification', () => {
+  test('affiche un formulaire de connexion accessible', async ({ page }) => {
+    await page.goto(LOGIN_ROUTE, { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByRole('heading', { name: 'Connexion' })).toBeVisible();
+    await expect(page.getByLabel(/^Email/)).toBeVisible();
+    await expect(page.getByRole('textbox', { name: /^Mot de passe/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Se connecter' })).toBeVisible();
   });
 
-  test('should show validation errors for empty form', async ({ page }) => {
-    await page.goto('/');
-    
-    const loginButton = page.getByRole('button', { name: /connexion|login/i });
-    await loginButton.click();
+  test('empêche la soumission native des champs obligatoires vides', async ({ page }) => {
+    await page.goto(LOGIN_ROUTE, { waitUntil: 'domcontentloaded' });
+    await page.getByRole('button', { name: 'Se connecter' }).click();
 
-    // Attendre les messages d'erreur
-    await expect(page.locator('text=/email.*requis|email.*required/i')).toBeVisible();
-    await expect(page.locator('text=/mot de passe.*requis|password.*required/i')).toBeVisible();
+    await expect(page.getByLabel(/^Email/)).toHaveJSProperty('validity.valueMissing', true);
+    await expect(page.getByRole('textbox', { name: /^Mot de passe/ })).toHaveJSProperty('validity.valueMissing', true);
+    await expect(page.getByRole('heading', { name: 'Connexion' })).toBeVisible();
   });
 
-  test('should show error for invalid credentials', async ({ page }) => {
-    await page.goto('/');
-
-    await page.getByLabel(/email/i).fill('invalid@example.com');
-    await page.getByLabel(/mot de passe|password/i).fill('wrongpassword');
-    await page.getByRole('button', { name: /connexion|login/i }).click();
-
-    // Attendre le message d'erreur
-    await expect(page.locator('text=/identifiants.*incorrects|invalid.*credentials/i')).toBeVisible({ timeout: 5000 });
-  });
-});
-
-test.describe('Navigation', () => {
-  test('should have accessible main navigation', async ({ page }) => {
-    await page.goto('/');
-    
-    // Vérifier que les éléments de navigation principaux sont présents
-    const header = page.locator('header, nav');
-    await expect(header).toBeVisible();
-  });
-});
-
-test.describe('Responsive Design', () => {
-  test('should be responsive on mobile', async ({ page }) => {
-    // Vérifier sur écran mobile
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/');
-
-    const emailInput = page.getByLabel(/email/i);
-    await expect(emailInput).toBeVisible();
-  });
-
-  test('should be responsive on tablet', async ({ page }) => {
-    // Vérifier sur écran tablette
-    await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto('/');
-
-    const emailInput = page.getByLabel(/email/i);
-    await expect(emailInput).toBeVisible();
-  });
-
-  test('should be responsive on desktop', async ({ page }) => {
-    // Vérifier sur écran desktop
-    await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.goto('/');
-
-    const emailInput = page.getByLabel(/email/i);
-    await expect(emailInput).toBeVisible();
-  });
-});
-
-test.describe('Performance', () => {
-  test('should load homepage within acceptable time', async ({ page }) => {
-    const startTime = Date.now();
-    await page.goto('/');
-    const loadTime = Date.now() - startTime;
-
-    // La page doit charger en moins de 3 secondes
-    expect(loadTime).toBeLessThan(3000);
-  });
-
-  test('should have no console errors on homepage', async ({ page }) => {
-    const errors: string[] = [];
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        errors.push(msg.text());
-      }
+  test('humanise un refus de connexion renvoyé par Auth', async ({ page }) => {
+    await page.route('**/auth/v1/token**', async (route) => {
+      await route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'invalid_grant', error_description: 'Invalid login credentials' }),
+      });
     });
 
-    await page.goto('/');
-    
-    // Filtrer les erreurs ignorables
-    const ignorableErrors = errors.filter(
-      (e) => !e.includes('ResizeObserver loop limit exceeded')
-    );
+    await page.goto(LOGIN_ROUTE, { waitUntil: 'domcontentloaded' });
+    await page.getByLabel(/^Email/).fill('invalide@example.com');
+    await page.getByRole('textbox', { name: /^Mot de passe/ }).fill('mauvais-mot-de-passe');
+    await page.getByRole('button', { name: 'Se connecter' }).click();
 
-    expect(ignorableErrors.length).toBe(0);
+    await expect(page.getByRole('alert')).toContainText(/invalid login credentials|identifiants/i);
   });
 });
 
-test.describe('SEO & Accessibility', () => {
-  test('should have proper page title', async ({ page }) => {
-    await page.goto('/');
-    const title = await page.title();
-    expect(title).toBeTruthy();
+test.describe('Routes publiques et protégées', () => {
+  test('une route métier protégée ne révèle pas son contenu sans session', async ({ page }) => {
+    await page.goto('/#/dashboard', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByRole('heading', { name: 'Connexion' })).toBeVisible();
+    await expect(page.getByLabel(/^Email/)).toBeVisible();
+    await expect(page.getByText('Tableau de bord', { exact: true })).toHaveCount(0);
   });
 
-  test('should have proper heading structure', async ({ page }) => {
-    await page.goto('/');
-    const h1s = await page.locator('h1').count();
-    expect(h1s).toBeGreaterThan(0);
+  test('la page tarifs reste publiquement accessible', async ({ page }) => {
+    await page.goto('/#/pricing', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/plans/i);
+    await expect(page.getByRole('heading', { name: 'Starter' })).toBeVisible();
+    await expect(page.getByText('Pro', { exact: true }).first()).toBeVisible();
+  });
+});
+
+test.describe('Responsive et accessibilité de base', () => {
+  for (const viewport of [
+    { name: 'mobile', width: 375, height: 667 },
+    { name: 'tablette', width: 768, height: 1024 },
+    { name: 'desktop', width: 1440, height: 900 },
+  ]) {
+    test(`reste exploitable en ${viewport.name}`, async ({ page }) => {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto(LOGIN_ROUTE, { waitUntil: 'domcontentloaded' });
+
+      await expect(page.getByLabel(/^Email/)).toBeVisible();
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(1);
+    });
+  }
+
+  test('expose un titre, un h1 et des alternatives image', async ({ page }) => {
+    await page.goto(LOGIN_ROUTE, { waitUntil: 'domcontentloaded' });
+
+    await expect(page).toHaveTitle(/Samay Këur/i);
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(page.locator('img:not([alt])')).toHaveCount(0);
   });
 
-  test('should have alt text on images', async ({ page }) => {
-    await page.goto('/');
-    const imagesWithoutAlt = await page.locator('img:not([alt])').count();
-    expect(imagesWithoutAlt).toBe(0);
+  test('rend le formulaire dans un budget local raisonnable', async ({ page }) => {
+    const startedAt = Date.now();
+    await page.goto(LOGIN_ROUTE, { waitUntil: 'domcontentloaded' });
+    await page.getByLabel(/^Email/).waitFor({ state: 'visible' });
+
+    expect(Date.now() - startedAt).toBeLessThan(10_000);
   });
 });

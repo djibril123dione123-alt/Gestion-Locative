@@ -63,6 +63,14 @@ import { EmptyState } from '../ui/EmptyState';
 import { Modal } from '../ui/Modal';
 import { ToastContainer } from '../ui/Toast';
 import { MoneyText } from '../ui/MoneyText';
+import { createOwnerReportSnapshot } from '../../services/api/documentSnapshotApi';
+import {
+  deleteAgencyIdentityAsset,
+  resolveAgencySettingsAssets,
+  uploadAgencyIdentityAsset,
+} from '../../services/agencyIdentityAssets';
+import { updateTenantOwnerProfile } from '../../services/tenantProfileCommands';
+import { runDocumentGeneration } from '../../lib/documentGeneration';
 
 type OwnerNavigate = (page: string) => void;
 
@@ -169,16 +177,6 @@ const PROPERTY_ACCENTS = [
   { bg: 'from-sky-50 to-cyan-100/70', icon: Store, color: 'text-sky-800', ring: 'ring-sky-200' },
   { bg: 'from-violet-50 to-purple-100/70', icon: Landmark, color: 'text-violet-800', ring: 'ring-violet-200' },
 ];
-
-const AGENCY_ASSETS_BUCKET = 'agency-assets';
-const MAX_OWNER_AVATAR_SIZE = 5 * 1024 * 1024;
-
-function getImageExtension(file: File) {
-  if (file.type === 'image/webp') return 'webp';
-  if (file.type === 'image/jpeg') return 'jpg';
-  if (file.type === 'image/svg+xml') return 'svg';
-  return 'png';
-}
 
 function getCurrentMonthBounds() {
   const now = new Date();
@@ -385,7 +383,10 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         { timeoutMs: 8_000 },
       );
 
-      setData(result.data);
+      const resolvedSettings = result.data.settings
+        ? await resolveAgencySettingsAssets(result.data.settings)
+        : null;
+      setData({ ...result.data, settings: resolvedSettings });
       setCacheTimestamp(result.source === 'cache' ? result.timestamp : null);
       setError(null);
     } catch (err) {
@@ -636,26 +637,11 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
 
   const uploadOwnerAvatar = async () => {
     if (!profileAvatarFile || !profile?.agency_id) return null;
-    if (!profileAvatarFile.type.startsWith('image/')) {
-      throw new Error('La photo de profil doit être une image.');
-    }
-    if (profileAvatarFile.size > MAX_OWNER_AVATAR_SIZE) {
-      throw new Error('La photo de profil doit peser moins de 5 Mo.');
-    }
-
-    const fileExt = getImageExtension(profileAvatarFile);
-    const filePath = `${profile.agency_id}/owners/profile-${Date.now()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage
-      .from(AGENCY_ASSETS_BUCKET)
-      .upload(filePath, profileAvatarFile, {
-        cacheControl: '31536000',
-        contentType: profileAvatarFile.type,
-        upsert: false,
-      });
-    if (uploadError) throw uploadError;
-
-    const { data: publicUrlData } = supabase.storage.from(AGENCY_ASSETS_BUCKET).getPublicUrl(filePath);
-    return `${publicUrlData.publicUrl}?v=${Date.now()}`;
+    return uploadAgencyIdentityAsset({
+      agencyId: profile.agency_id,
+      kind: 'logo',
+      file: profileAvatarFile,
+    });
   };
 
   const handleSaveOwnerProfile = async () => {
@@ -676,83 +662,46 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
     try {
       const email = profileForm.email.trim() || null;
       const adresse = profileForm.adresse.trim() || null;
-      const uploadedAvatarUrl = await uploadOwnerAvatar();
+      const uploadedAvatar = await uploadOwnerAvatar();
+      const removedAvatar = removeProfileAvatar && !uploadedAvatar
+        ? await deleteAgencyIdentityAsset({ agencyId: profile.agency_id, kind: 'logo' })
+        : null;
       const existingOwnerAvatarUrl = data.settings?.logo_url || agency?.logo_url || null;
-      const nextAvatarUrl = removeProfileAvatar ? null : uploadedAvatarUrl || existingOwnerAvatarUrl;
+      const nextAvatarStored = removeProfileAvatar && !uploadedAvatar
+        ? null
+        : uploadedAvatar?.path || existingOwnerAvatarUrl;
+      const nextAvatarPreview = removedAvatar
+        ? null
+        : uploadedAvatar?.signedUrl || existingOwnerAvatarUrl;
 
-      const updates = [
-        supabase
-          .from('agency_settings')
-          .upsert({
-            agency_id: profile.agency_id,
-            nom_agence: ownerFullName,
-            telephone: normalizedPhone,
-            email,
-            adresse,
-            logo_url: nextAvatarUrl,
-          }),
-        supabase
-          .from('agencies')
-          .update({
-            name: ownerFullName,
-            phone: normalizedPhone,
-            address: adresse,
-            logo_url: nextAvatarUrl,
-          })
-          .eq('id', profile.agency_id),
-      ];
-
-      if (profile.id) {
-        updates.push(
-          supabase
-            .from('user_profiles')
-            .update({
-              prenom: prenom || null,
-              nom: nom || null,
-              telephone: normalizedPhone,
-            })
-            .eq('id', profile.id),
-        );
-      }
-
-      if (data.ownerBailleur?.id) {
-        updates.push(
-          supabase
-            .from('bailleurs')
-            .update({
-              prenom: prenom || data.ownerBailleur.prenom,
-              nom: nom || data.ownerBailleur.nom,
-              telephone: normalizedPhone,
-              email,
-              adresse,
-            })
-            .eq('id', data.ownerBailleur.id)
-            .eq('agency_id', profile.agency_id),
-        );
-      }
-
-      const results = await Promise.all(updates);
-      const firstError = results.find((result) => result.error)?.error;
-      if (firstError) throw firstError;
+      const savedProfile = await updateTenantOwnerProfile({
+        firstName: prenom || null,
+        lastName: nom || null,
+        phone: normalizedPhone,
+        email,
+        address: adresse,
+        logoUrl: nextAvatarStored,
+        ownerBailleurId: data.ownerBailleur?.id ?? null,
+      });
 
       setData((current) => ({
         ...current,
         settings: {
           ...current.settings,
-          nom_agence: ownerFullName,
-          telephone: normalizedPhone,
-          email,
-          adresse,
-          logo_url: nextAvatarUrl,
+          nom_agence: savedProfile.fullName,
+          telephone: savedProfile.phone,
+          email: savedProfile.email,
+          adresse: savedProfile.address,
+          logo_url: nextAvatarPreview,
         },
         ownerBailleur: current.ownerBailleur
           ? {
               ...current.ownerBailleur,
-              prenom: prenom || current.ownerBailleur.prenom,
-              nom: nom || current.ownerBailleur.nom,
-              telephone: normalizedPhone,
-              email,
-              adresse,
+              prenom: savedProfile.firstName,
+              nom: savedProfile.lastName,
+              telephone: savedProfile.phone,
+              email: savedProfile.email,
+              adresse: savedProfile.address,
             }
           : current.ownerBailleur,
       }));
@@ -774,11 +723,29 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
 
   const handleGenerateOwnerReport = async () => {
     if (!profile?.agency_id) return;
+    const agencyId = profile.agency_id;
+    const userId = profile.id;
     setGeneratingReport(true);
     try {
+      await runDocumentGeneration({
+        key: `rapport-proprietaire:${agencyId}:${data.ownerBailleur?.id ?? 'owner'}:${reportPeriod}`,
+        kind: 'bilan',
+        title: 'Préparation du résumé propriétaire',
+        source: 'owner-workspace',
+        archiveExpected: true,
+        verificationExpected: true,
+      }, async (generation) => {
+      if (!data.ownerBailleur?.id) throw new Error('Profil propriétaire introuvable.');
+      const financialSnapshot = await createOwnerReportSnapshot({
+        agencyId,
+        bailleurId: data.ownerBailleur.id,
+        month: reportPeriod,
+        documentKind: 'rapport_proprietaire',
+      });
+      const reportData = financialSnapshot.payload;
       const periodLabel = formatMonthLabel(reportPeriod);
       const settings: Partial<AgencySettings> = {
-        agency_id: profile.agency_id,
+        agency_id: agencyId,
         is_bailleur_account: true,
         organization_type: 'individual_landlord',
         document_mode: 'simple',
@@ -791,7 +758,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         couleur_secondaire: '#F59E0B',
         pied_page_personnalise: `${ownerName} - Résumé propriétaire`,
       };
-      const reportTemplate = await resolvePublishedDocumentTemplate('rapport_proprietaire', profile.agency_id);
+      const reportTemplate = await resolvePublishedDocumentTemplate('rapport_proprietaire', agencyId);
       settings.document_preferences = {
         ...(settings.document_preferences ?? {}),
         header_style: reportTemplate.content.style.header,
@@ -805,12 +772,13 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       );
       const reportRef = await allocateDocumentReference({
         documentType: 'rapport_proprietaire',
-        entityId: data.ownerBailleur?.id ?? profile.agency_id,
+        entityId: data.ownerBailleur?.id ?? agencyId,
         periodKey: reportPeriod,
         format: data.settings?.document_preferences?.numbering_format,
         prefix: data.settings?.document_preferences?.prefixes?.rapport ?? 'RPT',
         fallback: createOwnerReportReference(reportPeriod),
       });
+      generation.report('building-document', { reference: reportRef });
 
       const doc = new jsPDF('p', 'mm', 'a4');
       drawPageBorder(doc, settings);
@@ -836,22 +804,22 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         y,
         doc.internal.pageSize.getWidth() - 28,
         [
-          ...(enabledReportSections.has('collections') ? [{ label: 'Loyers encaissés', value: formatCurrency(reportSummary.collected) }] : []),
-          ...(enabledReportSections.has('arrears') ? [{ label: 'Reliquats', value: formatCurrency(reportSummary.reliquats) }] : []),
-          ...(enabledReportSections.has('expenses') ? [{ label: 'Dépenses', value: formatCurrency(reportSummary.expenses) }] : []),
-          { label: 'Net propriétaire', value: formatCurrency(reportSummary.netOwner), emphasis: true },
+          ...(enabledReportSections.has('collections') ? [{ label: 'Loyers encaissés', value: formatCurrency(Number(reportData.totals.collected)) }] : []),
+          ...(enabledReportSections.has('arrears') ? [{ label: 'Reliquats', value: formatCurrency(Number(reportData.totals.arrears)) }] : []),
+          ...(enabledReportSections.has('expenses') ? [{ label: 'Dépenses', value: formatCurrency(Number(reportData.totals.expenses)) }] : []),
+          { label: 'Net propriétaire', value: formatCurrency(Number(reportData.totals.netToPay)), emphasis: true },
         ],
         settings,
       );
 
-      const rows = reportSummary.rows.map((row) => [
-        row.contract.unites?.immeubles?.nom ?? 'Bien',
-        row.contract.unites?.nom ?? 'Unité',
-        formatPersonName(row.contract.locataires, 'Locataire'),
-        formatCurrency(row.rent),
-        formatCurrency(row.paid),
-        formatCurrency(row.remaining),
-        row.status,
+      const rows = reportData.contracts.map((contract) => [
+        contract.immeuble || 'Bien',
+        contract.unite || 'Unité',
+        contract.locataire || 'Locataire',
+        formatCurrency(Number(contract.loyer_mensuel)),
+        formatCurrency(Number(contract.encaisse)),
+        formatCurrency(Number(contract.reliquat)),
+        Number(contract.reliquat) > 0 ? 'Partiel' : 'Soldé',
       ]);
 
       if (enabledReportSections.has('collections') || enabledReportSections.has('occupancy')) autoTable(doc, {
@@ -874,7 +842,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       doc.setFont(undefined as unknown as string, 'bold');
       doc.setFontSize(8.4);
       doc.setTextColor(15, 23, 42);
-      doc.text(`Taux de recouvrement : ${reportSummary.recoveryRate}%`, 14, Math.min(tableEnd + 9, 258));
+      doc.text(`Taux de recouvrement : ${Number(reportData.totals.recoveryRate)}%`, 14, Math.min(tableEnd + 9, 258));
 
       const pageHeight = doc.internal.pageSize.getHeight();
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -887,7 +855,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
       }
       const closingY = drawSectionFrame(doc, 14, closingTop, pageWidth - 28, 30, settings, {
         title: 'Synthèse de reversement',
-        subtitle: `Net propriétaire : ${formatCurrency(reportSummary.netOwner)}`,
+        subtitle: `Net propriétaire : ${formatCurrency(Number(reportData.totals.netToPay))}`,
         accent: 'neutral',
       });
       doc.setFont(undefined as unknown as string, 'normal');
@@ -902,7 +870,14 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         closingY,
       );
 
-      if (reportTemplate.content.style.showQr && enabledReportSections.has('qr_verification')) {
+      const reportQrEnabled =
+        reportTemplate.content.style.showQr &&
+        enabledReportSections.has('qr_verification');
+      if (reportQrEnabled) {
+        generation.report('securing-document', {
+          reference: reportRef,
+          verificationStatus: 'pending',
+        });
         await drawLegalVerificationFooter(doc, {
           ref: reportRef,
           type: 'rapport_bailleur',
@@ -919,20 +894,37 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         fileName: `resume-proprietaire-${reportPeriod}.pdf`,
         source: 'owner-workspace',
         documentType: 'rapport_bailleur',
-        entityId: data.ownerBailleur?.id ?? profile.agency_id,
+        entityId: data.ownerBailleur?.id ?? agencyId,
         period: reportPeriod,
         reference: reportRef,
+        generation,
+        verificationExpected: reportQrEnabled,
+        metadata: {
+          documentType: 'rapport_proprietaire',
+          reference: reportRef,
+          agencyName: ownerName,
+          subject: 'Rapport financier de gestion locative',
+          partyName: ownerName,
+          period: periodLabel,
+          createdAt: new Date(),
+        },
         data: {
           document: 'rapport_bailleur',
           accountType: 'individual_landlord',
           reportPeriod,
           ownerName,
+          financialSnapshot: {
+            id: financialSnapshot.snapshotId,
+            fingerprint: financialSnapshot.fingerprint,
+            createdAt: financialSnapshot.createdAt,
+            schemaVersion: reportData.schemaVersion,
+          },
           totals: {
-            collected: reportSummary.collected,
-            reliquats: reportSummary.reliquats,
-            expenses: reportSummary.expenses,
-            netOwner: reportSummary.netOwner,
-            recoveryRate: reportSummary.recoveryRate,
+            collected: Number(reportData.totals.collected),
+            reliquats: Number(reportData.totals.arrears),
+            expenses: Number(reportData.totals.expenses),
+            netOwner: Number(reportData.totals.netToPay),
+            recoveryRate: Number(reportData.totals.recoveryRate),
           },
           template: {
             revisionId: reportTemplate.revisionId,
@@ -950,30 +942,31 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         },
         preview: {
           columns: ['Bien', 'Unité', 'Locataire', 'Loyer', 'Encaissé', 'Reliquat', 'Statut'],
-          rows: reportSummary.rows.slice(0, 6).map((row) => ({
-            Bien: row.contract.unites?.immeubles?.nom ?? 'Bien',
-            Unite: row.contract.unites?.nom ?? 'Unité',
-            Locataire: formatPersonName(row.contract.locataires, 'Locataire'),
-            Loyer: formatCurrency(row.rent),
-            Encaisse: formatCurrency(row.paid),
-            Reliquat: formatCurrency(row.remaining),
-            Statut: row.status,
+          rows: reportData.contracts.slice(0, 6).map((contract) => ({
+            Bien: contract.immeuble || 'Bien',
+            Unite: contract.unite || 'Unité',
+            Locataire: contract.locataire || 'Locataire',
+            Loyer: formatCurrency(Number(contract.loyer_mensuel)),
+            Encaisse: formatCurrency(Number(contract.encaisse)),
+            Reliquat: formatCurrency(Number(contract.reliquat)),
+            Statut: Number(contract.reliquat) > 0 ? 'Partiel' : 'Soldé',
           })),
-          rowCount: reportSummary.rows.length,
+          rowCount: reportData.contracts.length,
           period: periodLabel,
           stats: [
-            { label: 'Loyers encaissés', value: formatCurrency(reportSummary.collected) },
-            { label: 'Reliquats', value: formatCurrency(reportSummary.reliquats) },
-            { label: 'Net propriétaire', value: formatCurrency(reportSummary.netOwner) },
-            { label: 'Recouvrement', value: `${reportSummary.recoveryRate}%` },
+            { label: 'Loyers encaissés', value: formatCurrency(Number(reportData.totals.collected)) },
+            { label: 'Reliquats', value: formatCurrency(Number(reportData.totals.arrears)) },
+            { label: 'Net propriétaire', value: formatCurrency(Number(reportData.totals.netToPay)) },
+            { label: 'Recouvrement', value: `${Number(reportData.totals.recoveryRate)}%` },
           ],
         },
       });
 
-      await invalidateOperationalCaches({ agencyId: profile.agency_id, userId: profile.id }, ['dashboard', 'documents', 'finances']);
+      await invalidateOperationalCaches({ agencyId, userId }, ['dashboard', 'documents', 'finances']);
       notifyDataChanged(['dashboard', 'documents', 'finances']);
       toast.success('Résumé mensuel propriétaire généré et archivé.');
       void loadOwnerWorkspace();
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Impossible de générer le rapport propriétaire.';
       toast.error(message);

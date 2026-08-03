@@ -21,8 +21,28 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
 );
 
 -- Immutabilité : aucun UPDATE ni DELETE permis sur le ledger
-CREATE OR REPLACE RULE ledger_no_update AS ON UPDATE TO ledger_entries DO INSTEAD NOTHING;
-CREATE OR REPLACE RULE ledger_no_delete AS ON DELETE TO ledger_entries DO INSTEAD NOTHING;
+CREATE OR REPLACE FUNCTION public.fn_prevent_ledger_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF current_setting('samay.allow_ledger_mutation', true) = 'agency_closure'
+     AND public.is_super_admin() THEN
+    IF TG_OP = 'DELETE' THEN
+      RETURN OLD;
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  RAISE EXCEPTION 'LEDGER_IMMUTABLE' USING ERRCODE = '42501';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_prevent_ledger_mutation ON public.ledger_entries;
+CREATE TRIGGER trg_prevent_ledger_mutation
+BEFORE UPDATE OR DELETE ON public.ledger_entries
+FOR EACH ROW EXECUTE FUNCTION public.fn_prevent_ledger_mutation();
 
 -- Index
 CREATE INDEX IF NOT EXISTS idx_ledger_agency_id       ON ledger_entries(agency_id);

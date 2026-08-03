@@ -17,11 +17,14 @@
  */
 
 import posthog from 'posthog-js';
+import { safeTelemetryPath, sanitizeTelemetryData } from './telemetryPrivacy';
 
 const POSTHOG_KEY = (import.meta.env.VITE_POSTHOG_KEY as string | undefined) ?? '';
 const POSTHOG_HOST =
   (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ??
   'https://eu.posthog.com';
+const SESSION_RECORDING_ENABLED =
+  import.meta.env.VITE_POSTHOG_SESSION_RECORDING_ENABLED === 'true';
 
 let _initialized = false;
 
@@ -34,7 +37,9 @@ export function initAnalytics(): void {
     capture_pageview: false,
     capture_pageleave: true,
     autocapture: false,
-    disable_session_recording: false,
+    disable_session_recording: !SESSION_RECORDING_ENABLED,
+    mask_all_text: true,
+    mask_all_element_attributes: true,
   });
 
   _initialized = true;
@@ -43,21 +48,20 @@ export function initAnalytics(): void {
 export function identifyUser(
   userId: string,
   props: {
-    email?: string;
     role?: string;
-    agency_id?: string | null;
+    account_type?: string;
     [key: string]: unknown;
   } = {},
 ): void {
   if (!_initialized) return;
-  posthog.identify(userId, props);
+  posthog.identify(userId, sanitizeTelemetryData(props) as Record<string, unknown>);
 }
 
 export function trackPageView(page: string): void {
   if (!_initialized) return;
   posthog.capture('$pageview', {
-    $current_url: window.location.href,
-    page,
+    $current_url: `${window.location.origin}${safeTelemetryPath(window.location.pathname)}`,
+    page: safeTelemetryPath(page),
   });
 }
 
@@ -66,7 +70,7 @@ export function trackEvent(
   props: Record<string, unknown> = {},
 ): void {
   if (!_initialized) return;
-  posthog.capture(event, props);
+  posthog.capture(event, sanitizeTelemetryData(props) as Record<string, unknown>);
 }
 
 export function resetAnalytics(): void {

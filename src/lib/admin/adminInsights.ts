@@ -205,27 +205,5 @@ export function buildRequiredActions(data: AdminConsoleData): RequiredAction[] {
     });
   }
 
-  if (data.auditLogs.length === 0) {
-    actions.push({
-      id: 'audit-missing',
-      title: 'Audit log indisponible',
-      description: 'Aucune action sensible récente n’est visible dans la console.',
-      tone: 'red',
-      domain: 'security',
-      priority: 98,
-    });
-  }
-
-  if (data.partialErrors.length > 0) {
-    actions.push({
-      id: 'partial-data',
-      title: 'Données console partielles',
-      description: data.partialErrors.slice(0, 2).join(' · '),
-      tone: 'amber',
-      domain: 'system',
-      priority: 76,
-    });
-  }
-
   return actions.sort((a, b) => b.priority - a.priority);
 }

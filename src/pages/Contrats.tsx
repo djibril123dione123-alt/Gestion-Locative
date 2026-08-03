@@ -15,6 +15,7 @@ import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '.
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { PremiumButton } from '../components/ui/PremiumButton';
+import { runDocumentGeneration } from '../lib/documentGeneration';
 
 // =========================
 //  PALETTE CONFORT IMMO ARCHI
@@ -507,29 +508,37 @@ export function Contrats() {
 
     setDownloadingId(contratId);
     try {
-      const { data: contrat, error } = await supabase
-        .from('contrats')
-        .select(`
-          *,
-          locataires(nom, prenom, telephone, email, adresse_personnelle, piece_identite),
-          unites(
-            nom,
-            loyer_base,
-            immeubles(
+      await runDocumentGeneration({
+        key: `contrat:${profile.agency_id}:${contratId}`,
+        kind: 'contrat',
+        title: 'Préparation du contrat',
+        source: 'contrats',
+        archiveExpected: true,
+        verificationExpected: true,
+      }, async (generation) => {
+        const { data: contrat, error } = await supabase
+          .from('contrats')
+          .select(`
+            *,
+            locataires(nom, prenom, telephone, email, adresse_personnelle, piece_identite),
+            unites(
               nom,
-              adresse,
-              bailleurs(nom, prenom, telephone, adresse)
+              loyer_base,
+              immeubles(
+                nom,
+                adresse,
+                bailleurs(nom, prenom, telephone, adresse)
+              )
             )
-          )
-        `)
-        .eq('id', contratId)
-        .eq('agency_id', profile.agency_id)
-        .single();
+          `)
+          .eq('id', contratId)
+          .eq('agency_id', profile.agency_id)
+          .single();
 
-      if (error) throw error;
-      if (contrat) {
-        await generateContratPDF(contrat);
-      }
+        if (error) throw error;
+        if (!contrat) throw new Error('Contrat introuvable.');
+        await generateContratPDF(contrat, generation);
+      });
     } catch (err: unknown) {
       console.error('Erreur PDF:', err);
       const message = err instanceof Error ? err.message : 'Erreur inconnue';

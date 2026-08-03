@@ -83,43 +83,38 @@ begin
     raise exception 'Only an administrator or the individual owner can reset demo data';
   end if;
 
-  create temporary table if not exists pg_temp.demo_bailleurs(id uuid primary key) on commit drop;
-  create temporary table if not exists pg_temp.demo_immeubles(id uuid primary key) on commit drop;
-  create temporary table if not exists pg_temp.demo_unites(id uuid primary key) on commit drop;
-  create temporary table if not exists pg_temp.demo_locataires(id uuid primary key) on commit drop;
-  create temporary table if not exists pg_temp.demo_contrats(id uuid primary key) on commit drop;
-  create temporary table if not exists pg_temp.demo_paiements(id uuid primary key) on commit drop;
+  execute 'create temporary table if not exists pg_temp.demo_bailleurs(id uuid primary key) on commit drop';
+  execute 'create temporary table if not exists pg_temp.demo_immeubles(id uuid primary key) on commit drop';
+  execute 'create temporary table if not exists pg_temp.demo_unites(id uuid primary key) on commit drop';
+  execute 'create temporary table if not exists pg_temp.demo_locataires(id uuid primary key) on commit drop';
+  execute 'create temporary table if not exists pg_temp.demo_contrats(id uuid primary key) on commit drop';
+  execute 'create temporary table if not exists pg_temp.demo_paiements(id uuid primary key) on commit drop';
 
-  truncate pg_temp.demo_bailleurs;
-  truncate pg_temp.demo_immeubles;
-  truncate pg_temp.demo_unites;
-  truncate pg_temp.demo_locataires;
-  truncate pg_temp.demo_contrats;
-  truncate pg_temp.demo_paiements;
+  execute 'truncate pg_temp.demo_bailleurs';
+  execute 'truncate pg_temp.demo_immeubles';
+  execute 'truncate pg_temp.demo_unites';
+  execute 'truncate pg_temp.demo_locataires';
+  execute 'truncate pg_temp.demo_contrats';
+  execute 'truncate pg_temp.demo_paiements';
 
-  insert into pg_temp.demo_bailleurs(id)
-  select id from public.bailleurs
-  where agency_id = p_agency_id and is_demo_data = true;
-
-  insert into pg_temp.demo_immeubles(id)
-  select id from public.immeubles
-  where agency_id = p_agency_id and is_demo_data = true;
-
-  insert into pg_temp.demo_unites(id)
-  select id from public.unites
-  where agency_id = p_agency_id and is_demo_data = true;
-
-  insert into pg_temp.demo_locataires(id)
-  select id from public.locataires
-  where agency_id = p_agency_id and is_demo_data = true;
-
-  insert into pg_temp.demo_contrats(id)
-  select id from public.contrats
-  where agency_id = p_agency_id and is_demo_data = true;
-
-  insert into pg_temp.demo_paiements(id)
-  select id from public.paiements
-  where agency_id = p_agency_id and is_demo_data = true;
+  execute 'insert into pg_temp.demo_bailleurs(id)
+    select id from public.bailleurs where agency_id = $1 and is_demo_data = true'
+    using p_agency_id;
+  execute 'insert into pg_temp.demo_immeubles(id)
+    select id from public.immeubles where agency_id = $1 and is_demo_data = true'
+    using p_agency_id;
+  execute 'insert into pg_temp.demo_unites(id)
+    select id from public.unites where agency_id = $1 and is_demo_data = true'
+    using p_agency_id;
+  execute 'insert into pg_temp.demo_locataires(id)
+    select id from public.locataires where agency_id = $1 and is_demo_data = true'
+    using p_agency_id;
+  execute 'insert into pg_temp.demo_contrats(id)
+    select id from public.contrats where agency_id = $1 and is_demo_data = true'
+    using p_agency_id;
+  execute 'insert into pg_temp.demo_paiements(id)
+    select id from public.paiements where agency_id = $1 and is_demo_data = true'
+    using p_agency_id;
 
   -- Verification registry: optional schema across deployments, so every column
   -- is checked before it appears in dynamic SQL.
@@ -355,34 +350,34 @@ begin
     end if;
   end if;
 
-  delete from public.paiements
-  where agency_id = p_agency_id
-    and id in (select id from pg_temp.demo_paiements);
+  execute 'delete from public.paiements
+    where agency_id = $1 and id in (select id from pg_temp.demo_paiements)'
+    using p_agency_id;
   get diagnostics v_deleted_paiements = row_count;
 
-  delete from public.contrats
-  where agency_id = p_agency_id
-    and id in (select id from pg_temp.demo_contrats);
+  execute 'delete from public.contrats
+    where agency_id = $1 and id in (select id from pg_temp.demo_contrats)'
+    using p_agency_id;
   get diagnostics v_deleted_contrats = row_count;
 
-  delete from public.locataires
-  where agency_id = p_agency_id
-    and id in (select id from pg_temp.demo_locataires);
+  execute 'delete from public.locataires
+    where agency_id = $1 and id in (select id from pg_temp.demo_locataires)'
+    using p_agency_id;
   get diagnostics v_deleted_locataires = row_count;
 
-  delete from public.unites
-  where agency_id = p_agency_id
-    and id in (select id from pg_temp.demo_unites);
+  execute 'delete from public.unites
+    where agency_id = $1 and id in (select id from pg_temp.demo_unites)'
+    using p_agency_id;
   get diagnostics v_deleted_unites = row_count;
 
-  delete from public.immeubles
-  where agency_id = p_agency_id
-    and id in (select id from pg_temp.demo_immeubles);
+  execute 'delete from public.immeubles
+    where agency_id = $1 and id in (select id from pg_temp.demo_immeubles)'
+    using p_agency_id;
   get diagnostics v_deleted_immeubles = row_count;
 
-  delete from public.bailleurs
-  where agency_id = p_agency_id
-    and id in (select id from pg_temp.demo_bailleurs);
+  execute 'delete from public.bailleurs
+    where agency_id = $1 and id in (select id from pg_temp.demo_bailleurs)'
+    using p_agency_id;
   get diagnostics v_deleted_bailleurs = row_count;
 
   if exists (

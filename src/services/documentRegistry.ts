@@ -25,7 +25,7 @@ export interface DocumentRegistryEntry {
   data_hash: string;
   generated_at: string;
   generated_by: string | null;
-  status: 'active' | 'archived' | 'orphaned' | 'corrupt' | 'deleted';
+  status: 'pending' | 'active' | 'archived' | 'orphaned' | 'corrupt' | 'deleted';
   retention_policy?: RetentionPolicy;
   file_size: number;
   mime_type: string;
@@ -210,27 +210,16 @@ async function createSignedDocumentUrl(storagePath: string) {
   return data.signedUrl;
 }
 
-async function getLatestEntry(params: {
-  agencyId: string;
-  documentType: ManagedDocumentType;
-  entityId: string;
-  period: string | null;
-}) {
-  let query = supabase
-    .from('document_registry')
-    .select('*')
-    .eq('agency_id', params.agencyId)
-    .eq('document_type', params.documentType)
-    .eq('entity_id', params.entityId)
-    .eq('status', 'active')
-    .order('version', { ascending: false })
-    .limit(1);
-
-  query = params.period ? query.eq('period', params.period) : query.is('period', null);
-
-  const { data, error } = await query.maybeSingle();
+export async function touchManagedDocument(
+  registryId: string,
+  options: { markCorrupt?: boolean; reason?: string | null } = {},
+) {
+  const { error } = await supabase.rpc('fn_touch_managed_document', {
+    p_registry_id: registryId,
+    p_mark_corrupt: options.markCorrupt ?? false,
+    p_reason: options.reason ?? null,
+  });
   if (error) throw error;
-  return data as DocumentRegistryEntry | null;
 }
 
 export async function saveManagedDocument(
@@ -246,20 +235,45 @@ export async function saveManagedDocument(
     templateChecksum: input.template?.checksum ?? null,
     assetChecksums,
   }));
-  const latest = await getLatestEntry({
-    agencyId: context.agencyId,
-    documentType: input.documentType,
-    entityId: input.entityId,
-    period,
-  });
+  await assertCanUploadDocument(context.agencyId, input.blob.size);
+  const metadata = {
+    file_name: input.fileName,
+    template_catalog_version: input.template?.catalogVersion,
+    template_source: input.template?.source,
+    ...(input.metadata ?? {}),
+  };
+  const mimeType = input.mimeType ?? input.blob.type ?? 'application/pdf';
+  const { data: reservationData, error: reservationError } = await supabase.rpc(
+    'fn_prepare_managed_document',
+    {
+      p_document_type: input.documentType,
+      p_entity_id: input.entityId,
+      p_period: period,
+      p_reference: input.reference,
+      p_data_hash: dataHash,
+      p_file_size: input.blob.size,
+      p_mime_type: mimeType,
+      p_retention_policy: input.retentionPolicy ?? 'critical',
+      p_metadata: metadata,
+      p_template_revision_id: input.template?.revisionId ?? null,
+      p_template_checksum: input.template?.checksum ?? null,
+      p_renderer_version: input.template?.rendererVersion ?? null,
+      p_asset_checksums: assetChecksums,
+    },
+  );
+  if (reservationError) throw reservationError;
 
-  if (latest?.data_hash === dataHash) {
+  const reservation = reservationData as unknown as {
+    reused: boolean;
+    entry: DocumentRegistryEntry;
+  };
+  if (!reservation?.entry?.id) throw new Error('Réservation documentaire invalide.');
+
+  if (reservation.reused) {
+    const latest = reservation.entry;
     try {
       const url = await createSignedDocumentUrl(latest.storage_path);
-      await supabase
-        .from('document_registry')
-        .update({ last_accessed_at: new Date().toISOString() })
-        .eq('id', latest.id);
+      await touchManagedDocument(latest.id);
       return {
         url,
         storagePath: latest.storage_path,
@@ -271,22 +285,15 @@ export async function saveManagedDocument(
         entry: latest,
       };
     } catch {
-      await supabase
-        .from('document_registry')
-        .update({
-          status: 'corrupt',
-          metadata: {
-            ...(latest.metadata ?? {}),
-            corrupt_reason: 'storage_signed_url_failed',
-            corrupt_at: new Date().toISOString(),
-          },
-        })
-        .eq('id', latest.id);
+      await touchManagedDocument(latest.id, {
+        markCorrupt: true,
+        reason: 'storage_signed_url_failed',
+      });
+      return saveManagedDocument(input);
     }
   }
 
-  const version = latest ? latest.version + 1 : 1;
-  await assertCanUploadDocument(context.agencyId, input.blob.size);
+  const version = reservation.entry.version;
 
   const storagePath = buildStoragePath({
     agencyId: context.agencyId,
@@ -296,8 +303,6 @@ export async function saveManagedDocument(
     version,
     fileName: input.fileName,
   });
-  const fileHash = await sha256Blob(input.blob);
-
   const { error: uploadError } = await supabase.storage
     .from(DOCUMENT_BUCKET)
     .upload(storagePath, input.blob, {
@@ -306,40 +311,27 @@ export async function saveManagedDocument(
       upsert: false,
     });
 
-  if (uploadError) throw uploadError;
+  if (uploadError) {
+    await supabase.rpc('fn_abort_managed_document', { p_registry_id: reservation.entry.id });
+    throw uploadError;
+  }
 
-  const { data: entry, error: insertError } = await supabase
-    .from('document_registry')
-    .insert({
-      agency_id: context.agencyId,
-      document_type: input.documentType,
-      entity_id: input.entityId,
-      period,
-      reference: input.reference,
-      version,
-      storage_path: storagePath,
-      file_hash: fileHash,
-      data_hash: dataHash,
-      generated_by: context.userId,
-      status: 'active',
-      retention_policy: input.retentionPolicy ?? 'critical',
-      file_size: input.blob.size,
-      mime_type: input.mimeType ?? input.blob.type ?? 'application/pdf',
-      metadata: {
-        file_name: input.fileName,
-        template_catalog_version: input.template?.catalogVersion,
-        template_source: input.template?.source,
-        ...(input.metadata ?? {}),
+  const { data: finalizeResponse, error: finalizeError } = await supabase.functions.invoke(
+    'finalize-managed-document',
+    {
+      body: {
+        registryId: reservation.entry.id,
+        storagePath,
       },
-      template_revision_id: input.template?.revisionId ?? null,
-      template_checksum: input.template?.checksum ?? null,
-      renderer_version: input.template?.rendererVersion ?? null,
-      asset_checksums: assetChecksums,
-    })
-    .select('*')
-    .single();
+    },
+  );
 
-  if (insertError) throw insertError;
+  const finalizedEntry = finalizeResponse?.data as DocumentRegistryEntry | undefined;
+  if (finalizeError || !finalizedEntry) {
+    await supabase.storage.from(DOCUMENT_BUCKET).remove([storagePath]);
+    await supabase.rpc('fn_abort_managed_document', { p_registry_id: reservation.entry.id });
+    throw finalizeError ?? new Error('Le document n’a pas pu être finalisé.');
+  }
 
   const url = await createSignedDocumentUrl(storagePath);
 
@@ -347,10 +339,10 @@ export async function saveManagedDocument(
     url,
     storagePath,
     fileSize: input.blob.size,
-    fileHash,
+    fileHash: finalizedEntry.file_hash,
     dataHash,
     version,
     reused: false,
-    entry: entry as DocumentRegistryEntry,
+    entry: finalizedEntry,
   };
 }

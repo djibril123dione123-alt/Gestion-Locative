@@ -111,9 +111,9 @@ export function PremiumDrawerShell({
             )}
             <div className="min-w-0 flex-1">
               {eyebrow && (
-                <p className={`mb-0.5 uppercase tracking-[0.14em] text-[#9a5b17] ${isCompact ? 'text-[0.6rem] font-bold' : 'text-[11px] font-black'}`}>
+                <div className={`mb-0.5 uppercase tracking-[0.14em] text-[#9a5b17] ${isCompact ? 'text-[0.6rem] font-bold' : 'text-[11px] font-black'}`}>
                   {eyebrow}
-                </p>
+                </div>
               )}
               {title && (
                 <h2 className={`truncate text-brand-950 ${isCompact ? 'text-[0.95rem] font-semibold leading-tight tracking-normal' : 'text-lg sm:text-xl font-black'}`}>
@@ -134,9 +134,9 @@ export function PremiumDrawerShell({
           )}
         </div>
         {description && (
-          <p className={`font-medium text-slate-600 line-clamp-2 ${isCompact ? 'text-[0.72rem] leading-snug sm:text-xs' : 'text-sm'}`}>
+          <div className={`font-medium text-slate-600 line-clamp-2 ${isCompact ? 'text-[0.72rem] leading-snug sm:text-xs' : 'text-sm'}`}>
             {description}
-          </p>
+          </div>
         )}
         {actions && (
           <div className={`flex flex-wrap items-center gap-2 ${isCompact ? 'mt-1' : 'mt-2'}`}>

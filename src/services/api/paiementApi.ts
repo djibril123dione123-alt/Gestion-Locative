@@ -10,6 +10,7 @@ export interface CreatePaiementInput {
   idempotency_key?: string | null;
   reference?: string | null;
   notes?: string | null;
+  is_demo_data?: boolean;
 }
 
 export interface UpdatePaiementInput {
@@ -24,7 +25,7 @@ export interface UpdatePaiementInput {
 
 export interface CancelPaiementInput {
   id: string;
-  raison?: string;
+  raison: string;
 }
 
 export interface PaiementApiResult {
@@ -112,5 +113,13 @@ export async function updatePaiementViaEdge(
 export async function cancelPaiementViaEdge(
   input: CancelPaiementInput,
 ): Promise<{ id: string; statut: string; already_cancelled?: boolean }> {
-  return invokePaiementFn('cancel-paiement', input);
+  const raison = input.raison.trim();
+  if (raison.length < 5) {
+    throw new PaiementApiError(
+      'Indiquez une raison de 5 caracteres minimum.',
+      'INVALID_CANCELLATION_REASON',
+    );
+  }
+
+  return invokePaiementFn('cancel-paiement', { ...input, raison });
 }

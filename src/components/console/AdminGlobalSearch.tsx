@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Building2, CreditCard, FileText, Search, Ticket, UserRound } from 'lucide-react';
 import { formatAdminCurrency, formatAdminDate, textValue } from '../../lib/admin/adminFormatters';
 import { documentTypeLabel, organizationTypeLabel } from '../../lib/admin/adminInsights';
+import { getStatusLabel } from '../../lib/admin/adminStatusMapping';
 import type {
   AdminAgency,
   AdminConsoleData,
@@ -94,7 +95,7 @@ export function AdminGlobalSearch({
         id: `proof-${proof.id}`,
         type: 'proof',
         label: proof.reference ?? `Paiement ${proof.plan_key}`,
-        description: `${proof.agencies?.name ?? 'Organisation'} · ${formatAdminCurrency(proof.amount)} · ${proof.status}`,
+        description: `${proof.agencies?.name ?? 'Organisation'} · ${formatAdminCurrency(proof.amount)} · ${getStatusLabel(proof.status)}`,
         action: () => onOpenProof(proof),
       });
     }
@@ -105,7 +106,7 @@ export function AdminGlobalSearch({
         id: `request-${request.id}`,
         type: 'request',
         label: request.organization_name ?? request.agency_name ?? 'Demande organisation',
-        description: `${request.requester_email ?? request.email ?? 'email non renseigné'} · ${request.status}`,
+        description: `${request.requester_email ?? request.email ?? 'email non renseigné'} · ${getStatusLabel(request.status)}`,
         action: () => onOpenRequest(request),
       });
     }
@@ -130,7 +131,7 @@ export function AdminGlobalSearch({
         id: `document-${document.id}`,
         type: 'document',
         label: `${documentTypeLabel(document.document_type)} · ${document.reference ?? 'sans référence'}`,
-        description: `${document.agencies?.name ?? 'Organisation'} · ${document.status ?? 'statut non défini'} · ${formatAdminDate(document.created_at)}`,
+        description: `${document.agencies?.name ?? 'Organisation'} · ${getStatusLabel(document.status)} · ${formatAdminDate(document.created_at)}`,
         action: () => {
           onChangeSpace('system-config');
           onOpenAgencyById(document.agency_id);

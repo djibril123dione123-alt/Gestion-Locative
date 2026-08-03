@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowLeft,
@@ -319,7 +319,7 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
       currentStep={checkoutStepIndex}
       variant="workstation"
       tone="finance"
-      size="standard"
+      size="compact"
       mobileMode="fullscreen"
       secondaryAction={step === 'enter_phone' ? (
         <button
@@ -438,7 +438,7 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
                 placeholder="77 123 45 67"
                 maxLength={14}
                 autoFocus
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-14 pr-3 text-[0.88rem] font-semibold tracking-wide text-slate-950 outline-none transition focus:border-emerald-700/40 focus:ring-2 focus:ring-emerald-700/15"
+                className="mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 pl-14 pr-3 text-[0.88rem] font-medium text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all tracking-wide placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:!h-8 sm:rounded-[0.6rem]"
               />
             </div>
             {phoneError ? (

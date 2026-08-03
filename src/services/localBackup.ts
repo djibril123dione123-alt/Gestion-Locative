@@ -70,10 +70,6 @@ export async function loadSnapshot(
 ): Promise<{ data: unknown[]; timestamp: number } | null> {
   try {
     const snap = await dbGet('snapshots', buildSnapshotId(key, scope));
-    if (!snap && scope?.agencyId && scope?.userId) {
-      const legacySnap = await dbGet('snapshots', key);
-      if (legacySnap) return { data: legacySnap.data as unknown[], timestamp: legacySnap.timestamp };
-    }
     if (!snap) return null;
     return { data: snap.data as unknown[], timestamp: snap.timestamp };
   } catch {

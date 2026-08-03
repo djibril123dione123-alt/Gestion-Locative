@@ -3,7 +3,8 @@ import { supabase, UserProfile } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { deriveAccountProfile, type AccountProfile } from '../lib/accountProfile';
 import type { Agency } from '../types/database';
-import { clearCachedValuesForUser, isOfflineError, withReadTimeout } from '../services/offlineReadCache';
+import { clearOfflineClientData, isOfflineError, withReadTimeout } from '../services/offlineReadCache';
+import { acceptTenantLegalTerms } from '../services/tenantProfileCommands';
 
 interface AuthContextType {
   user: User | null;
@@ -206,21 +207,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let nextProfile = data as UserProfile;
         const pendingTerms = readPendingOAuthTerms();
         if (pendingTerms?.acceptedTermsAt && !nextProfile.accepted_terms_at) {
-          const { data: updatedProfile, error: termsError } = await supabase
-            .from('user_profiles')
-            .update({
-              accepted_terms_at: pendingTerms.acceptedTermsAt,
-              accepted_privacy_at: pendingTerms.acceptedPrivacyAt ?? pendingTerms.acceptedTermsAt,
-              terms_version: pendingTerms.termsVersion ?? null,
-              privacy_version: pendingTerms.privacyVersion ?? null,
-            })
-            .eq('id', userId)
-            .select('*')
-            .maybeSingle();
-
-          if (!termsError && updatedProfile) {
-            nextProfile = updatedProfile as UserProfile;
+          try {
+            const accepted = await acceptTenantLegalTerms({
+              acceptedTermsAt: pendingTerms.acceptedTermsAt,
+              acceptedPrivacyAt: pendingTerms.acceptedPrivacyAt ?? pendingTerms.acceptedTermsAt,
+              termsVersion: pendingTerms.termsVersion ?? null,
+              privacyVersion: pendingTerms.privacyVersion ?? null,
+            });
+            nextProfile = {
+              ...nextProfile,
+              accepted_terms_at: accepted.acceptedTermsAt,
+              accepted_privacy_at: accepted.acceptedPrivacyAt,
+              terms_version: accepted.termsVersion,
+              privacy_version: accepted.privacyVersion,
+            };
             clearPendingOAuthTerms();
+          } catch {
+            // Keep the pending acceptance so a later authenticated refresh can retry safely.
           }
         }
 
@@ -397,7 +400,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (userId) {
       try {
         localStorage.removeItem(`${AUTH_CACHE_PREFIX}${userId}`);
-        await clearCachedValuesForUser(userId);
+        await clearOfflineClientData();
       } catch {
         /* noop */
       }

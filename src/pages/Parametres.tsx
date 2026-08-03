@@ -32,6 +32,12 @@ import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 import { formatSenegalCniInput, validateSenegalCni } from '../lib/senegalIdentity';
+import {
+  deleteAgencyIdentityAsset,
+  resolveAgencySettingsAssets,
+  uploadAgencyIdentityAsset,
+  validateAgencyIdentityFile,
+} from '../services/agencyIdentityAssets';
 
 type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
   created_at?: string;
@@ -41,7 +47,6 @@ type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
 type SettingsTab = 'general' | 'documents' | 'appearance' | 'modules';
 type EmbeddedMode = 'single' | 'documentsIdentity';
 type LogoUploadState = 'idle' | 'preview' | 'uploading' | 'done';
-type AgencyAssetKind = 'logo' | 'signature';
 type DocumentPreviewType = 'quittance' | 'contrat' | 'mandat' | 'rapport' | 'rapport_proprietaire' | 'facture';
 type ModuleFieldToggleKey =
   | 'module_depenses_actif'
@@ -73,8 +78,6 @@ interface ParametresProps {
   embeddedMode?: EmbeddedMode;
 }
 
-const AGENCY_ASSETS_BUCKET = 'agency-assets';
-const LOGO_MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
 const LOGO_COMPRESSION_THRESHOLD = 1.4 * 1024 * 1024;
 const LOGO_MAX_DIMENSION = 1200;
 
@@ -676,33 +679,8 @@ function updateModuleToggle(settings: SettingsState, target: ModuleToggleTarget)
   };
 }
 
-function getLogoExtension(file: File) {
-  if (file.type === 'image/svg+xml') return 'svg';
-  if (file.type === 'image/webp') return 'webp';
-  if (file.type === 'image/jpeg') return 'jpg';
-  return 'png';
-}
-
-function extractAgencyAssetPath(url: string | null | undefined, agencyId: string): string | null {
-  if (!url) return null;
-  const marker = `/storage/v1/object/public/${AGENCY_ASSETS_BUCKET}/`;
-  const markerIndex = url.indexOf(marker);
-  if (markerIndex === -1) return null;
-
-  const rawPath = url.slice(markerIndex + marker.length).split('?')[0];
-  const path = decodeURIComponent(rawPath);
-  if (
-    path.startsWith(`${agencyId}/logos/`) ||
-    path.startsWith(`${agencyId}/signatures/`) ||
-    path.startsWith(`logos/${agencyId}-logo.`)
-  ) {
-    return path;
-  }
-  return null;
-}
-
 async function compressLogoFile(file: File): Promise<File> {
-  if (file.type === 'image/svg+xml' || file.size <= LOGO_COMPRESSION_THRESHOLD) {
+  if (file.size <= LOGO_COMPRESSION_THRESHOLD) {
     return file;
   }
 
@@ -798,17 +776,19 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         }
         setSettings(nextSettings);
         setLastSavedSnapshot(JSON.stringify(nextSettings));
-        setLogoPreview(data.logo_url ?? '');
-        setSignaturePreview(data.signature_url ?? '');
-        setStampPreview(data.stamp_url ?? '');
+        const resolved = await resolveAgencySettingsAssets(nextSettings);
+        setLogoPreview(resolved.logo_url ?? '');
+        setSignaturePreview(resolved.signature_url ?? '');
+        setStampPreview(resolved.stamp_url ?? '');
       } else {
         const created = await createDefaultSettings(agencyId);
         if (created) {
           setSettings(created as SettingsState);
           setLastSavedSnapshot(JSON.stringify(created));
-          setLogoPreview(created.logo_url ?? '');
-          setSignaturePreview(created.signature_url ?? '');
-          setStampPreview(created.stamp_url ?? '');
+          const resolved = await resolveAgencySettingsAssets(created);
+          setLogoPreview(resolved.logo_url ?? '');
+          setSignaturePreview(resolved.signature_url ?? '');
+          setStampPreview(resolved.stamp_url ?? '');
         }
       }
     } catch (err) {
@@ -1011,291 +991,99 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     }
   };
 
-  const validateLogoFile = (file: File): string | null => {
-    const allowedTypes = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      return 'Formats acceptés : PNG, SVG, JPG ou WEBP.';
-    }
-    if (file.size > LOGO_MAX_UPLOAD_SIZE) {
-      return "L'image ne doit pas dépasser 5 Mo.";
-    }
-    return null;
-  };
-
-  const uploadLogoFile = async (file: File) => {
-    if (!file || !profile?.agency_id || !settings) return;
-
-    const validationError = validateLogoFile(file);
+  const uploadIdentityAsset = async (
+    kind: 'logo' | 'signature' | 'stamp',
+    file: File,
+    previousPreview: string,
+    setPreview: React.Dispatch<React.SetStateAction<string>>,
+    setUploadState: React.Dispatch<React.SetStateAction<LogoUploadState>>,
+  ) => {
+    if (!profile?.agency_id || !settings) return;
+    const validationError = validateAgencyIdentityFile(file);
     if (validationError) {
       showToast(validationError, 'error');
       return;
     }
 
-    const previousPreview = logoPreview;
-    const previousLogoUrl = settings.logo_url;
     const localPreview = URL.createObjectURL(file);
-    setLogoPreview(localPreview);
-    setLogoUploadState('preview');
-
+    setPreview(localPreview);
+    setUploadState('preview');
     try {
-      setLogoUploadState('uploading');
+      setUploadState('uploading');
       const uploadFile = await compressLogoFile(file);
-      const fileExt = getLogoExtension(uploadFile);
-      const fileName = `logo-${Date.now()}.${fileExt}`;
-      const filePath = `${profile.agency_id}/logos/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from(AGENCY_ASSETS_BUCKET)
-        .upload(filePath, uploadFile, {
-          cacheControl: '31536000',
-          contentType: uploadFile.type,
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: publicUrl } = supabase.storage
-        .from(AGENCY_ASSETS_BUCKET)
-        .getPublicUrl(filePath);
-
-      const versionedLogoUrl = `${publicUrl.publicUrl}?v=${Date.now()}`;
-      const { data: savedSettings, error: updateError } = await supabase
-        .from('agency_settings')
-        .update({ logo_url: versionedLogoUrl })
-        .eq('agency_id', profile.agency_id)
-        .select()
-        .maybeSingle();
-
-      if (updateError) {
-        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([filePath]);
-        throw updateError;
-      }
-
-      if (!savedSettings) {
-        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([filePath]);
-        throw new Error("Logo uploadé, mais la sauvegarde des paramètres a été refusée par les permissions.");
-      }
-
-      const oldAssetPath = extractAgencyAssetPath(previousLogoUrl, profile.agency_id);
-      if (oldAssetPath && oldAssetPath !== filePath) {
-        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([oldAssetPath]);
-      }
-
-      setSettings(savedSettings as SettingsState);
-      setLastSavedSnapshot(JSON.stringify(savedSettings));
-      setLogoPreview(versionedLogoUrl);
-      setLogoUploadState('done');
+      const compressedValidationError = validateAgencyIdentityFile(uploadFile);
+      if (compressedValidationError) throw new Error(compressedValidationError);
+      const result = await uploadAgencyIdentityAsset({ agencyId: profile.agency_id, kind, file: uploadFile });
+      setSettings(result.settings as SettingsState);
+      setLastSavedSnapshot(JSON.stringify(result.settings));
+      setPreview(result.signedUrl ?? '');
+      setUploadState('done');
       invalidateAgencySettingsCache(profile.agency_id);
-      showToast('Logo uploadé et sauvegardé avec succès', 'success');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("Erreur upload logo:", msg);
-      setLogoUploadState('idle');
-      setLogoPreview(previousPreview);
-      showToast(`Erreur upload logo : ${msg}`, 'error');
-    } finally {
-      URL.revokeObjectURL(localPreview);
-    }
-  };
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await uploadLogoFile(file);
-    e.target.value = '';
-  };
-
-  const handleLogoDrop = async (e: React.DragEvent<HTMLLabelElement>) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file) await uploadLogoFile(file);
-  };
-
-  const uploadSignatureFile = async (file: File) => {
-    if (!file || !profile?.agency_id || !settings) return;
-
-    const validationError = validateLogoFile(file);
-    if (validationError) {
-      showToast(validationError, 'error');
-      return;
-    }
-
-    const assetKind: AgencyAssetKind = 'signature';
-    const previousPreview = signaturePreview;
-    const previousSignatureUrl = settings.signature_url;
-    const localPreview = URL.createObjectURL(file);
-    setSignaturePreview(localPreview);
-    setSignatureUploadState('preview');
-
-    try {
-      setSignatureUploadState('uploading');
-      const uploadFile = await compressLogoFile(file);
-      const fileExt = getLogoExtension(uploadFile);
-      const fileName = `${assetKind}-${Date.now()}.${fileExt}`;
-      const filePath = `${profile.agency_id}/signatures/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from(AGENCY_ASSETS_BUCKET)
-        .upload(filePath, uploadFile, {
-          cacheControl: '31536000',
-          contentType: uploadFile.type,
-          upsert: false,
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: publicUrl } = supabase.storage
-        .from(AGENCY_ASSETS_BUCKET)
-        .getPublicUrl(filePath);
-
-      const versionedSignatureUrl = `${publicUrl.publicUrl}?v=${Date.now()}`;
-      const { data: savedSettings, error: updateError } = await supabase
-        .from('agency_settings')
-        .update({ signature_url: versionedSignatureUrl })
-        .eq('agency_id', profile.agency_id)
-        .select()
-        .maybeSingle();
-
-      if (updateError) {
-        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([filePath]);
-        throw updateError;
-      }
-
-      if (!savedSettings) {
-        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([filePath]);
-        throw new Error("Signature uploadée, mais la sauvegarde des paramètres a été refusée par les permissions.");
-      }
-
-      const oldAssetPath = extractAgencyAssetPath(previousSignatureUrl, profile.agency_id);
-      if (oldAssetPath && oldAssetPath !== filePath) {
-        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([oldAssetPath]);
-      }
-
-      setSettings(savedSettings as SettingsState);
-      setLastSavedSnapshot(JSON.stringify(savedSettings));
-      setSignaturePreview(versionedSignatureUrl);
-      setSignatureUploadState('done');
-      invalidateAgencySettingsCache(profile.agency_id);
-      showToast('Signature / cachet sauvegardé dans les documents.', 'success');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('Erreur upload signature:', msg);
-      setSignatureUploadState('idle');
-      setSignaturePreview(previousPreview);
-      showToast(`Erreur upload signature : ${msg}`, 'error');
-    } finally {
-      URL.revokeObjectURL(localPreview);
-    }
-  };
-
-  const handleSignatureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) await uploadSignatureFile(file);
-    e.target.value = '';
-  };
-
-  const handleSignatureDrop = async (e: React.DragEvent<HTMLElement>) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (file) await uploadSignatureFile(file);
-  };
-
-  const handleSignatureRemove = async () => {
-    if (!profile?.agency_id || !settings?.signature_url) return;
-
-    const previousSignatureUrl = settings.signature_url;
-    setSignatureUploadState('uploading');
-    try {
-      const { data: savedSettings, error } = await supabase
-        .from('agency_settings')
-        .update({ signature_url: null })
-        .eq('agency_id', profile.agency_id)
-        .select()
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!savedSettings) {
-        throw new Error("La suppression a été refusée par les permissions.");
-      }
-
-      const oldAssetPath = extractAgencyAssetPath(previousSignatureUrl, profile.agency_id);
-      if (oldAssetPath) {
-        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([oldAssetPath]);
-      }
-
-      setSettings(savedSettings as SettingsState);
-      setLastSavedSnapshot(JSON.stringify(savedSettings));
-      setSignaturePreview('');
-      setSignatureUploadState('idle');
-      invalidateAgencySettingsCache(profile.agency_id);
-      showToast('Signature / cachet retiré des prochains documents.', 'success');
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('Erreur suppression signature:', msg);
-      setSignatureUploadState('idle');
-      showToast(`Erreur suppression signature : ${msg}`, 'error');
-    }
-  };
-
-  const uploadStampFile = async (file: File) => {
-    if (!file || !profile?.agency_id || !settings) return;
-    const validationError = validateLogoFile(file);
-    if (validationError) {
-      showToast(validationError, 'error');
-      return;
-    }
-
-    const previousPreview = stampPreview;
-    const previousStampUrl = settings.stamp_url;
-    const localPreview = URL.createObjectURL(file);
-    setStampPreview(localPreview);
-    setStampUploadState('preview');
-
-    try {
-      setStampUploadState('uploading');
-      const uploadFile = await compressLogoFile(file);
-      const fileName = `stamp-${Date.now()}.${getLogoExtension(uploadFile)}`;
-      const filePath = `${profile.agency_id}/stamps/${fileName}`;
-      const { error: uploadError } = await supabase.storage
-        .from(AGENCY_ASSETS_BUCKET)
-        .upload(filePath, uploadFile, {
-          cacheControl: '31536000',
-          contentType: uploadFile.type,
-          upsert: false,
-        });
-      if (uploadError) throw uploadError;
-
-      const { data: publicUrl } = supabase.storage.from(AGENCY_ASSETS_BUCKET).getPublicUrl(filePath);
-      const versionedStampUrl = `${publicUrl.publicUrl}?v=${Date.now()}`;
-      const { data: savedSettings, error: updateError } = await supabase
-        .from('agency_settings')
-        .update({ stamp_url: versionedStampUrl })
-        .eq('agency_id', profile.agency_id)
-        .select()
-        .maybeSingle();
-      if (updateError || !savedSettings) {
-        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([filePath]);
-        throw updateError ?? new Error('La sauvegarde du cachet a été refusée.');
-      }
-
-      const oldAssetPath = extractAgencyAssetPath(previousStampUrl, profile.agency_id);
-      if (oldAssetPath && oldAssetPath !== filePath) {
-        await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([oldAssetPath]);
-      }
-
-      setSettings(savedSettings as SettingsState);
-      setLastSavedSnapshot(JSON.stringify(savedSettings));
-      setStampPreview(versionedStampUrl);
-      setStampUploadState('done');
-      invalidateAgencySettingsCache(profile.agency_id);
-      showToast('Cachet officiel sauvegardé.', 'success');
+      showToast(
+        kind === 'logo' ? 'Logo sauvegardé.' : kind === 'signature' ? 'Signature sauvegardée.' : 'Cachet officiel sauvegardé.',
+        'success',
+      );
     } catch (error) {
-      setStampPreview(previousPreview);
-      setStampUploadState('idle');
-      showToast(`Erreur upload cachet : ${error instanceof Error ? error.message : String(error)}`, 'error');
+      setPreview(previousPreview);
+      setUploadState('idle');
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[identity-asset] ${kind} upload failed`, message);
+      showToast(message, 'error');
     } finally {
       URL.revokeObjectURL(localPreview);
     }
   };
+
+  const removeIdentityAsset = async (
+    kind: 'signature' | 'stamp',
+    setPreview: React.Dispatch<React.SetStateAction<string>>,
+    setUploadState: React.Dispatch<React.SetStateAction<LogoUploadState>>,
+  ) => {
+    if (!profile?.agency_id || !settings) return;
+    setUploadState('uploading');
+    try {
+      const result = await deleteAgencyIdentityAsset({ agencyId: profile.agency_id, kind });
+      setSettings(result.settings as SettingsState);
+      setLastSavedSnapshot(JSON.stringify(result.settings));
+      setPreview('');
+      setUploadState('idle');
+      invalidateAgencySettingsCache(profile.agency_id);
+      showToast(kind === 'signature' ? 'Signature retirée des prochains documents.' : 'Cachet retiré des prochains documents.', 'success');
+    } catch (error) {
+      setUploadState('idle');
+      showToast(error instanceof Error ? error.message : String(error), 'error');
+    }
+  };
+
+  const uploadLogoFile = (file: File) => uploadIdentityAsset('logo', file, logoPreview, setLogoPreview, setLogoUploadState);
+  const uploadSignatureFile = (file: File) => uploadIdentityAsset('signature', file, signaturePreview, setSignaturePreview, setSignatureUploadState);
+  const uploadStampFile = (file: File) => uploadIdentityAsset('stamp', file, stampPreview, setStampPreview, setStampUploadState);
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) await uploadLogoFile(file);
+    event.target.value = '';
+  };
+
+  const handleLogoDrop = async (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (file) await uploadLogoFile(file);
+  };
+
+  const handleSignatureUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) await uploadSignatureFile(file);
+    event.target.value = '';
+  };
+
+  const handleSignatureDrop = async (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (file) await uploadSignatureFile(file);
+  };
+
+  const handleSignatureRemove = () => removeIdentityAsset('signature', setSignaturePreview, setSignatureUploadState);
 
   const handleStampUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -1303,32 +1091,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     event.target.value = '';
   };
 
-  const handleStampRemove = async () => {
-    if (!profile?.agency_id || !settings?.stamp_url) return;
-    const previousStampUrl = settings.stamp_url;
-    setStampUploadState('uploading');
-    try {
-      const { data: savedSettings, error } = await supabase
-        .from('agency_settings')
-        .update({ stamp_url: null, stamp_enabled: false })
-        .eq('agency_id', profile.agency_id)
-        .select()
-        .maybeSingle();
-      if (error || !savedSettings) throw error ?? new Error('La suppression du cachet a été refusée.');
-
-      const oldAssetPath = extractAgencyAssetPath(previousStampUrl, profile.agency_id);
-      if (oldAssetPath) await supabase.storage.from(AGENCY_ASSETS_BUCKET).remove([oldAssetPath]);
-      setSettings(savedSettings as SettingsState);
-      setLastSavedSnapshot(JSON.stringify(savedSettings));
-      setStampPreview('');
-      setStampUploadState('idle');
-      invalidateAgencySettingsCache(profile.agency_id);
-      showToast('Cachet retiré des prochains documents.', 'success');
-    } catch (error) {
-      setStampUploadState('idle');
-      showToast(`Erreur suppression cachet : ${error instanceof Error ? error.message : String(error)}`, 'error');
-    }
-  };
+  const handleStampRemove = () => removeIdentityAsset('stamp', setStampPreview, setStampUploadState);
 
   const tabs = [
     { id: 'general', label: 'Informations générales', icon: Building },

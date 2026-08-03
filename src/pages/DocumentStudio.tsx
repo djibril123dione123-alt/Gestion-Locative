@@ -18,6 +18,8 @@ import { DocumentTemplateEditor } from '../components/documents/DocumentTemplate
 import { DocumentTemplatePreview } from '../components/documents/DocumentTemplatePreview';
 import { useToast } from '../hooks/useToast';
 import { createDocumentTemplateTestPdf } from '../lib/documents/templatePreviewPdf';
+import { runDocumentGeneration } from '../lib/documentGeneration';
+import { saveGeneratedPdf } from '../lib/pdf';
 import {
   stableTemplateStringify,
   validateDocumentTemplate,
@@ -251,11 +253,37 @@ export function DocumentStudio() {
     }
   };
 
-  const downloadTest = () => {
+  const downloadTest = async () => {
     if (!content) return;
     try {
-      const doc = createDocumentTemplateTestPdf(content);
-      doc.save(`TEST-${documentType.toUpperCase()}.pdf`);
+      const reference = `TEST-${documentType.toUpperCase()}`;
+      await runDocumentGeneration(
+        {
+          key: `document-studio:${documentType}`,
+          kind: 'document',
+          title: `Préparation du modèle ${DOCUMENT_CHOICES.find((choice) => choice.type === documentType)?.label ?? ''}`,
+          source: 'document-studio',
+          reference,
+        },
+        async (generation) => {
+          generation.report('building-document', { reference });
+          const doc = createDocumentTemplateTestPdf(content);
+          generation.report('securing-document', { reference });
+          await saveGeneratedPdf(doc, {
+            kind: 'document',
+            title: `PDF test — ${DOCUMENT_CHOICES.find((choice) => choice.type === documentType)?.label ?? 'Document'}`,
+            fileName: `${reference}.pdf`,
+            source: 'document-studio',
+            reference,
+            generation,
+            metadata: {
+              documentType,
+              reference,
+              title: `Modèle test — ${DOCUMENT_CHOICES.find((choice) => choice.type === documentType)?.label ?? 'Document'}`,
+            },
+          });
+        },
+      );
     } catch (error) {
       toast.error(getFriendlyError(error));
     }

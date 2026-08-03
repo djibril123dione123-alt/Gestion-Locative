@@ -1,3 +1,9 @@
+import type {
+  DocumentArchiveStatus,
+  DocumentVerificationStatus,
+} from './documentGeneration';
+import { completeDocumentGeneration } from './documentGeneration';
+
 export type GeneratedDocumentKind =
   | 'contrat'
   | 'quittance'
@@ -35,6 +41,10 @@ export interface GeneratedDocumentPayload {
   reused?: boolean;
   version?: number;
   storagePath?: string;
+  generationKey?: string;
+  reference?: string;
+  archiveStatus?: DocumentArchiveStatus;
+  verificationStatus?: DocumentVerificationStatus;
 }
 
 export const DOCUMENT_GENERATED_EVENT = 'samaykeur:document-generated';
@@ -42,14 +52,18 @@ export const DOCUMENT_GENERATED_EVENT = 'samaykeur:document-generated';
 export function announceGeneratedDocument(
   payload: Omit<GeneratedDocumentPayload, 'generatedAt'> & { generatedAt?: string }
 ) {
-  if (typeof window === 'undefined') return;
+  const detail: GeneratedDocumentPayload = {
+    ...payload,
+    generatedAt: payload.generatedAt ?? new Date().toISOString(),
+  };
+
+  completeDocumentGeneration(detail);
+  if (typeof window === 'undefined') return detail;
 
   window.dispatchEvent(
     new CustomEvent<GeneratedDocumentPayload>(DOCUMENT_GENERATED_EVENT, {
-      detail: {
-        ...payload,
-        generatedAt: payload.generatedAt ?? new Date().toISOString(),
-      },
+      detail,
     })
   );
+  return detail;
 }

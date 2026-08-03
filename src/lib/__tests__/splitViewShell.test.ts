@@ -94,7 +94,7 @@ describe('SplitViewShell', () => {
       detail: React.createElement('div'),
       size: 'standard'
     });
-    expect(render1.detailWrapper?.props.className).toContain('@5xl:w-[clamp(24rem,35cqw,31.5rem)]');
+    expect(render1.detailWrapper?.props.className).toContain('xl:w-[clamp(24rem,35vw,31.5rem)]');
 
     // Wide
     const render2 = renderSplitViewPure({
@@ -102,6 +102,6 @@ describe('SplitViewShell', () => {
       detail: React.createElement('div'),
       size: 'wide'
     });
-    expect(render2.detailWrapper?.props.className).toContain('@5xl:w-[clamp(28rem,40cqw,36rem)]');
+    expect(render2.detailWrapper?.props.className).toContain('xl:w-[clamp(28rem,40vw,36rem)]');
   });
 });

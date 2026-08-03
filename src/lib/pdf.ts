@@ -16,12 +16,28 @@ import {
   type GeneratedDocumentPreview,
 } from './documentGenerated';
 import { saveManagedDocument, type ManagedDocumentType } from '../services/documentRegistry';
+import { resolveAgencySettingsAssets } from '../services/agencyIdentityAssets';
+import {
+  linkDocumentVerificationRegistryCommand,
+  registerDocumentVerificationCommand,
+  revokeDocumentVerificationCommand,
+} from '../services/api/documentVerificationCommands';
 import {
   allocateDocumentReference,
   resolvePublishedDocumentTemplate,
 } from '../services/documentTemplateService';
 import { renderDocumentTemplate } from './documents/templateEngine';
 import type { ResolvedDocumentTemplate } from '../types/documentStudio';
+import type {
+  DocumentArchiveStatus,
+  DocumentGenerationLifecycle,
+  DocumentVerificationStatus,
+} from './documentGeneration';
+import {
+  applyPdfMetadata,
+  type PdfMetadataDocumentType,
+  type PdfMetadataInput,
+} from './pdfMetadata';
 
 export { formatCurrency };
 
@@ -153,16 +169,55 @@ export async function saveGeneratedPdf(
     data?: unknown;
     template?: ResolvedDocumentTemplate;
     assetUrls?: Record<string, string | null | undefined>;
+    generation?: DocumentGenerationLifecycle;
+    verificationExpected?: boolean;
+    metadata?: Omit<PdfMetadataInput, 'documentType'> & {
+      documentType?: PdfMetadataDocumentType;
+    };
   }
 ) {
+  const metadataDocumentType: PdfMetadataDocumentType =
+    options.metadata?.documentType ??
+    (options.documentType === 'rapport_bailleur'
+      ? 'rapport_bailleur'
+      : options.documentType === 'contrat' ||
+          options.documentType === 'mandat' ||
+          options.documentType === 'quittance' ||
+          options.documentType === 'facture'
+        ? options.documentType
+        : options.kind === 'commission'
+          ? 'rapport_bailleur'
+          : options.kind === 'inventaire'
+            ? 'inventaire'
+            : 'document');
+  applyPdfMetadata(doc, {
+    ...options.metadata,
+    documentType: metadataDocumentType,
+    reference: options.metadata?.reference ?? options.reference,
+  });
+
   const blob = doc.output('blob');
-  let url = URL.createObjectURL(blob);
+  let url = '';
   let fileSize = blob.size;
   let reused = false;
   let version: number | undefined;
   let storagePath: string | undefined;
+  const managedExpected = Boolean(
+    options.documentType && options.entityId && options.reference,
+  );
+  let archiveStatus: DocumentArchiveStatus = managedExpected
+    ? 'pending'
+    : 'not-applicable';
+  let verificationStatus: DocumentVerificationStatus = options.verificationExpected
+    ? 'pending'
+    : 'not-applicable';
 
   if (options.documentType && options.entityId && options.reference) {
+    options.generation?.report('archiving-document', {
+      reference: options.reference,
+      archiveStatus: 'pending',
+      verificationStatus,
+    });
     try {
       const managed = await saveManagedDocument({
         blob,
@@ -193,48 +248,58 @@ export async function saveGeneratedPdf(
       storagePath = managed.storagePath;
       const verificationId = pendingVerificationByReference.get(options.reference);
       if (verificationId && managed.entry) {
-        await supabase
-          .from('document_verifications')
-          .update({
-            document_registry_id: managed.entry.id,
+        await linkDocumentVerificationRegistryCommand({
+          verificationId,
+          registryId: managed.entry.id,
+          registryVersion: managed.version,
+          templateChecksum: options.template?.checksum ?? null,
+          metadata: {
+            source: 'pdf_generation',
             registry_version: managed.version,
-            template_checksum: options.template?.checksum ?? null,
-            metadata: {
-              source: 'pdf_generation',
-              registry_version: managed.version,
-              renderer_version: options.template?.rendererVersion ?? null,
-            },
-          })
-          .eq('id', verificationId);
+            renderer_version: options.template?.rendererVersion ?? null,
+          },
+        });
         pendingVerificationByReference.delete(options.reference);
+        verificationStatus = 'active';
+      } else if (options.verificationExpected) {
+        verificationStatus = 'unavailable';
       }
+      archiveStatus = 'ready';
     } catch (error) {
       const verificationId = pendingVerificationByReference.get(options.reference);
       if (verificationId) {
-        await supabase
-          .from('document_verifications')
-          .update({
-            document_status: 'revoked',
-            metadata: {
-              source: 'pdf_generation',
-              reason: 'registry_archive_failed',
-            },
-          })
-          .eq('id', verificationId);
+        await revokeDocumentVerificationCommand(verificationId, 'registry_archive_failed');
         pendingVerificationByReference.delete(options.reference);
       }
       console.error('[DocumentRegistry] Émission officielle interrompue.', error);
+      options.generation?.report('archiving-document', {
+        reference: options.reference,
+        archiveStatus: 'incomplete',
+        verificationStatus: options.verificationExpected
+          ? 'unavailable'
+          : 'not-applicable',
+      });
       throw new Error(
         "L'archivage sécurisé du document a échoué. Aucun document officiel n'a été émis.",
       );
     }
   }
 
+  if (!url) {
+    url = URL.createObjectURL(blob);
+  }
+
+  options.generation?.report('loading-preview', {
+    reference: options.reference,
+    archiveStatus,
+    verificationStatus,
+  });
+
   if (!reused) {
     doc.save(options.fileName);
   }
 
-  announceGeneratedDocument({
+  return announceGeneratedDocument({
     kind: options.kind,
     title: reused ? `${options.title} déjà généré` : options.title,
     fileName: options.fileName,
@@ -247,6 +312,10 @@ export async function saveGeneratedPdf(
     reused,
     version,
     storagePath,
+    generationKey: options.generation?.key,
+    reference: options.reference,
+    archiveStatus,
+    verificationStatus,
   });
 }
 
@@ -286,29 +355,25 @@ function getPublicVerifyBaseUrl() {
   return configuredBase.replace(/\/+$/, '') || 'https://samaykeur.com';
 }
 
-async function createDocumentVerificationToken(payload: DocumentVerificationPayload): Promise<string> {
-  if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
-    throw new Error('Un générateur aléatoire sécurisé est requis pour créer le QR documentaire.');
-  }
-
-  const random = new Uint8Array(32);
-  crypto.getRandomValues(random);
-  const entropy = Array.from(random).map((byte) => byte.toString(16).padStart(2, '0')).join('');
-  return sha256Hex([entropy, payload.ref, payload.type, payload.agency, Date.now()].join('|'));
-}
-
 type DocumentVerificationRegistration =
   | { id: string; token: string; url: string; registered: true }
   | { token: null; url: null; registered: false };
 
-async function registerDocumentVerification(payload: DocumentVerificationPayload): Promise<DocumentVerificationRegistration> {
+async function registerDocumentVerification(
+  payload: DocumentVerificationPayload,
+  required = false,
+): Promise<DocumentVerificationRegistration> {
   if (!payload.agencyId) {
+    if (required) {
+      throw new Error(
+        "L'organisation emettrice est requise pour generer un document avec QR Verify.",
+      );
+    }
     console.warn('[PDF] QR omis : organisation émettrice absente.');
     return { token: null, url: null, registered: false };
   }
 
   try {
-    const token = await createDocumentVerificationToken(payload);
     const issuedAt = payload.date ? new Date(payload.date).toISOString() : new Date().toISOString();
     const payloadHash = await sha256Hex([
       payload.type,
@@ -320,62 +385,20 @@ async function registerDocumentVerification(payload: DocumentVerificationPayload
       payload.paymentStatus ?? '',
     ].join('|'));
 
-    const existing = await supabase
-      .from('document_verifications')
-      .select('id, token')
-      .eq('agency_id', payload.agencyId)
-      .eq('document_ref', payload.ref)
-      .eq('document_type', payload.type)
-      .eq('payload_hash', payloadHash)
-      .eq('document_status', 'authentic')
-      .maybeSingle();
-
-    if (!existing.error && existing.data?.token) {
-      pendingVerificationByReference.set(payload.ref, existing.data.id);
-      return {
-        id: existing.data.id,
-        token: existing.data.token,
-        registered: true,
-        url: buildVerificationUrl({
-          type: payload.type,
-          ref: payload.ref,
-          token: existing.data.token,
-        }),
-      };
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: inserted, error } = await supabase.from('document_verifications').insert({
-      token,
-      agency_id: payload.agencyId,
-      document_ref: payload.ref,
-      document_type: payload.type,
-      agency_name: payload.agency,
-      issued_at: issuedAt,
-      amount_xof: payload.amount ?? null,
-      payment_status: payload.paymentStatus ?? null,
-      document_status: 'authentic',
-      payload_hash: payloadHash,
-      created_by: user?.id ?? null,
+    const inserted = await registerDocumentVerificationCommand({
+      agencyId: payload.agencyId,
+      documentRef: payload.ref,
+      documentType: payload.type,
+      agencyName: payload.agency,
+      issuedAt,
+      amountXof: payload.amount ?? null,
+      paymentStatus: payload.paymentStatus ?? null,
+      payloadHash,
       metadata: {
         source: 'pdf_generation',
         version: 1,
       },
-    }).select('id, token').single();
-
-    if (error || !inserted) {
-      console.warn('[PDF] QR omis : enregistrement de vérification impossible:', error?.message ?? 'réponse vide');
-      return { token: null, url: null, registered: false };
-    }
-
-    await supabase
-      .from('document_verifications')
-      .update({ document_status: 'superseded' })
-      .eq('agency_id', payload.agencyId)
-      .eq('document_ref', payload.ref)
-      .eq('document_type', payload.type)
-      .eq('document_status', 'authentic')
-      .neq('id', inserted.id);
+    });
 
     pendingVerificationByReference.set(payload.ref, inserted.id);
     return {
@@ -385,6 +408,12 @@ async function registerDocumentVerification(payload: DocumentVerificationPayload
       url: buildVerificationUrl({ type: payload.type, ref: payload.ref, token: inserted.token }),
     };
   } catch (error) {
+    if (required) {
+      console.error('[PDF] Échec bloquant du registre QR Verify.', error);
+      throw new Error(
+        "Le registre QR Verify est indisponible. Le document n'a pas été généré.",
+      );
+    }
     console.warn('[PDF] QR omis : preuve documentaire non enregistrée.', error);
     return { token: null, url: null, registered: false };
   }
@@ -453,7 +482,7 @@ async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
 
     const organizationType = agency?.organization_type
       ?? (agency?.is_bailleur_account ? 'individual_landlord' : 'agency');
-    const settings = ({
+    const rawSettings = ({
       ...PDF_SETTINGS_FALLBACK,
       ...(data ?? {}),
       agency_id: profile.agency_id,
@@ -466,6 +495,7 @@ async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
             ? 'groupe'
             : 'agence',
     }) as Partial<AgencySettings>;
+    const settings = await resolveAgencySettingsAssets(rawSettings);
     settingsCache.set(profile.agency_id, {
       settings,
       expiresAt: Date.now() + CACHE_TTL_MS,
@@ -1401,7 +1431,7 @@ async function drawVerificationBlock(
     amount,
     date,
     paymentStatus,
-  });
+  }, true);
   const qrDataUrl = verification.registered
     ? await QRCode.toDataURL(verification.url, {
         width: 192,
@@ -1486,7 +1516,7 @@ export async function drawLegalVerificationFooter(
     agency,
     agencyId: settings?.agency_id,
     date,
-  });
+  }, true);
   const qrDataUrl = verification.registered
     ? await QRCode.toDataURL(verification.url, {
         width: 192,
@@ -1593,7 +1623,10 @@ async function drawEditorialSignatureSection(
 // PDF generators
 // ---------------------------------------------------------------------------
 
-export async function generateContratPDF(contrat: ContratPDFData): Promise<void> {
+export async function generateContratPDF(
+  contrat: ContratPDFData,
+  generation?: DocumentGenerationLifecycle,
+): Promise<void> {
   if (!contrat) throw new Error('Aucun contrat fourni');
 
   const loadedSettings = await loadAgencySettings();
@@ -1614,6 +1647,7 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
     prefix: getPdfDocumentPreferences(settings).prefixes.contrat,
     fallback: contractRefFallback,
   });
+  generation?.report('building-document', { reference: contractRef });
 
   const bailleur = (contrat.unites?.immeubles?.bailleurs ?? {}) as {
     prenom?: string;
@@ -1735,7 +1769,14 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
   }
 
   addFooter(doc, settings);
-  if (contractTemplate.content.style.showQr && isDocumentQrEnabled(settings, 'contrat')) {
+  const contractQrEnabled =
+    contractTemplate.content.style.showQr &&
+    isDocumentQrEnabled(settings, 'contrat');
+  if (contractQrEnabled) {
+    generation?.report('securing-document', {
+      reference: contractRef,
+      verificationStatus: 'pending',
+    });
     await drawLegalVerificationFooter(doc, {
       ref: contractRef,
       type: 'contrat',
@@ -1767,6 +1808,15 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
       },
     },
     template: contractTemplate,
+    generation,
+    verificationExpected: contractQrEnabled,
+    metadata: {
+      documentType: 'contrat',
+      reference: contractRef,
+      agencyName: settings.nom_agence ?? undefined,
+      partyName: `${locataire.prenom ?? ''} ${locataire.nom ?? ''}`.trim(),
+      createdAt: new Date(),
+    },
     assetUrls: {
       logo: settings.logo_url,
       signature: settings.signature_enabled ? settings.signature_url : null,
@@ -1789,7 +1839,10 @@ export async function generateContratPDF(contrat: ContratPDFData): Promise<void>
   });
 }
 
-export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Promise<void> {
+export async function generatePaiementFacturePDF(
+  paiement: PaiementPDFData,
+  generation?: DocumentGenerationLifecycle,
+): Promise<void> {
   if (!paiement) throw new Error('Aucun paiement fourni');
 
   // Validation des champs critiques avant génération
@@ -1840,6 +1893,7 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
     prefix: getPdfDocumentPreferences(settings).prefixes[paiementDocumentType],
     fallback: referenceFallback,
   });
+  generation?.report('building-document', { reference: ref });
   const enabledReceiptSections = new Set(
     receiptTemplate.content.blocks
       .filter((block) => block.enabled && block.systemKey)
@@ -2014,6 +2068,10 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
   await drawCompactSignatureSeal(doc, leftMargin, finalY, mentionsWidth, finalBlockHeight, settings);
 
   if (receiptQrEnabled) {
+    generation?.report('securing-document', {
+      reference: ref,
+      verificationStatus: 'pending',
+    });
     await drawVerificationBlock(doc, {
       x: leftMargin + mentionsWidth + qrGap,
       y: finalY,
@@ -2030,8 +2088,11 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
 
   addFooter(doc, settings);
   await saveGeneratedPdf(doc, {
-    kind: 'facture',
-    title: 'Facture / quittance de loyer',
+    kind: paiementDocumentType === 'quittance' ? 'quittance' : 'facture',
+    title:
+      paiementDocumentType === 'quittance'
+        ? 'Quittance de loyer'
+        : 'Facture de loyer',
     fileName: `${ref}.pdf`,
     source: 'paiements',
     documentType: paiementDocumentType,
@@ -2057,6 +2118,16 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
       },
     },
     template: receiptTemplate,
+    generation,
+    verificationExpected: receiptQrEnabled,
+    metadata: {
+      documentType: paiementDocumentType,
+      reference: ref,
+      agencyName: settings.nom_agence ?? undefined,
+      partyName: tenantName,
+      period: moisConcerne,
+      createdAt: paiement.date_paiement ?? new Date(),
+    },
     assetUrls: {
       logo: settings.logo_url,
       signature: settings.signature_enabled ? settings.signature_url : null,
@@ -2081,7 +2152,10 @@ export async function generatePaiementFacturePDF(paiement: PaiementPDFData): Pro
   });
 }
 
-export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promise<void> {
+export async function generateMandatBailleurPDF(
+  bailleur: MandatPDFData,
+  generation?: DocumentGenerationLifecycle,
+): Promise<void> {
   if (!bailleur) throw new Error('Aucun bailleur fourni');
 
   const loadedSettings = await loadAgencySettings();
@@ -2104,6 +2178,7 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
     prefix: getPdfDocumentPreferences(settings).prefixes.mandat,
     fallback: mandateRefFallback,
   });
+  generation?.report('building-document', { reference: mandatRef });
 
   try {
     const bienAdresse = cleanDocumentText(bailleur.bien_adresse, '');
@@ -2197,7 +2272,14 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
   }
 
   addFooter(doc, settings);
-  if (mandateTemplate.content.style.showQr && isDocumentQrEnabled(settings, 'mandat')) {
+  const mandateQrEnabled =
+    mandateTemplate.content.style.showQr &&
+    isDocumentQrEnabled(settings, 'mandat');
+  if (mandateQrEnabled) {
+    generation?.report('securing-document', {
+      reference: mandatRef,
+      verificationStatus: 'pending',
+    });
     await drawLegalVerificationFooter(doc, {
       ref: mandatRef,
       type: 'mandat',
@@ -2229,6 +2311,15 @@ export async function generateMandatBailleurPDF(bailleur: MandatPDFData): Promis
       },
     },
     template: mandateTemplate,
+    generation,
+    verificationExpected: mandateQrEnabled,
+    metadata: {
+      documentType: 'mandat',
+      reference: mandatRef,
+      agencyName: settings.nom_agence ?? undefined,
+      partyName: `${bailleur.prenom ?? ''} ${bailleur.nom ?? ''}`.trim(),
+      createdAt: new Date(),
+    },
     assetUrls: {
       logo: settings.logo_url,
       signature: settings.signature_enabled ? settings.signature_url : null,

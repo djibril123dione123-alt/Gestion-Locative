@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
 import { CalendarDays, CreditCard, FileText, Mail, MessageCircle, ShieldAlert, Users } from 'lucide-react';
 import { PremiumDrawerShell } from '../ui/PremiumDrawerShell';
+import { SmartCombobox } from '../ui/SmartCombobox';
+import { getStatusLabel } from '../../lib/admin/adminStatusMapping';
 import { getAdminPlan } from '../../lib/admin/adminPricingCatalog';
 import { documentTypeLabel, organizationTypeLabel } from '../../lib/admin/adminInsights';
 import { formatAdminCurrency, formatAdminDate, textValue } from '../../lib/admin/adminFormatters';
 import { computeOrganizationHealth } from '../../lib/admin/adminRiskScoring';
+import { humanizeAuditAction } from '../../services/admin/adminAuditService';
 import { AdminButton, AdminKpiGrid, AdminMetricCard, AdminPanel, AdminStatusBadge } from './AdminPrimitives';
 import type {
   AdminAgency,
@@ -114,7 +117,7 @@ export function OrganizationDrawer({
                 ['Type', typeLabel],
                 ['Email', textValue(agency.email)],
                 ['Téléphone', textValue(agency.phone)],
-                ['Statut', agency.status ?? 'active'],
+                ['Statut', getStatusLabel(agency.status ?? 'active')],
                 ['Plan actif', plan.name],
                 ['Renouvellement / essai', formatAdminDate(activeSub?.current_period_end ?? agency.trial_ends_at)],
                 ['Unités / contrats', `${agency.nb_unites ?? metrics?.total_units ?? 0} unités · ${agency.nb_contrats ?? metrics?.total_contracts ?? 0} contrats`],
@@ -147,20 +150,32 @@ export function OrganizationDrawer({
               <div className="grid gap-2 rounded-xl border border-slate-200 bg-white p-3">
                 <input value={ticketSubject} onChange={(event) => setTicketSubject(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold outline-none" placeholder="Créer ticket : sujet..." />
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <select value={ticketCategory} onChange={(event) => setTicketCategory(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold">
-                    <option value="support_general">Support général</option>
-                    <option value="billing">Paiement</option>
-                    <option value="access">Accès</option>
-                    <option value="documents">Documents</option>
-                    <option value="qr">QR Verify</option>
-                    <option value="bug">Bug</option>
-                  </select>
-                  <select value={ticketPriority} onChange={(event) => setTicketPriority(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold">
-                    <option value="low">Basse</option>
-                    <option value="normal">Normale</option>
-                    <option value="high">Haute</option>
-                    <option value="urgent">Urgente</option>
-                  </select>
+                  <SmartCombobox
+                    value={ticketCategory}
+                    onChange={setTicketCategory}
+                    density="compact"
+                    fullWidth
+                    options={[
+                      { value: 'support_general', label: 'Support général' },
+                      { value: 'billing', label: 'Paiement' },
+                      { value: 'access', label: 'Accès' },
+                      { value: 'documents', label: 'Documents' },
+                      { value: 'qr', label: 'QR Verify' },
+                      { value: 'bug', label: 'Anomalie' },
+                    ]}
+                  />
+                  <SmartCombobox
+                    value={ticketPriority}
+                    onChange={setTicketPriority}
+                    density="compact"
+                    fullWidth
+                    options={[
+                      { value: 'low', label: 'Basse' },
+                      { value: 'normal', label: 'Normale' },
+                      { value: 'high', label: 'Haute' },
+                      { value: 'urgent', label: 'Urgente' },
+                    ]}
+                  />
                 </div>
                 <AdminButton disabled={ticketSubject.trim().length < 3} onClick={() => {
                   onCreateTicket(agency, ticketSubject.trim(), ticketCategory, ticketPriority, 'Créé depuis la fiche organisation.');
@@ -225,7 +240,7 @@ export function OrganizationDrawer({
           >
             <div className="space-y-2">
               {documents.length === 0 ? (
-                <p className="text-xs font-semibold text-slate-500">Aucun document registry chargé pour cette organisation.</p>
+                <p className="text-xs font-semibold text-slate-500">Aucun document enregistré pour cette organisation.</p>
               ) : documents.slice(0, 6).map((document) => (
                 <div key={document.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
                   <div>
@@ -238,17 +253,25 @@ export function OrganizationDrawer({
             </div>
           </AdminPanel>
 
-          <AdminPanel title="Notes internes" subtitle="Support, commercial, sécurité ou suivi owner.">
+          <AdminPanel title="Notes internes" subtitle="Support, commercial, sécurité ou suivi administratif.">
             <div className="space-y-2">
               <div className="rounded-xl border border-slate-200 bg-white p-3">
                 <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold outline-none" placeholder="Ajouter une note interne..." />
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <select value={noteVisibility} onChange={(event) => setNoteVisibility(event.target.value as typeof noteVisibility)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold">
-                    <option value="internal">Interne</option>
-                    <option value="support">Support</option>
-                    <option value="commercial">Commercial</option>
-                    <option value="security">Sécurité</option>
-                  </select>
+                  <div className="min-w-[10rem]">
+                    <SmartCombobox
+                      value={noteVisibility}
+                      onChange={(value) => setNoteVisibility(value as typeof noteVisibility)}
+                      density="compact"
+                      fullWidth
+                      options={[
+                        { value: 'internal', label: 'Interne' },
+                        { value: 'support', label: 'Support' },
+                        { value: 'commercial', label: 'Commercial' },
+                        { value: 'security', label: 'Sécurité' },
+                      ]}
+                    />
+                  </div>
                   <AdminButton disabled={note.trim().length < 3} onClick={() => {
                     onCreateNote(agency, note.trim(), noteVisibility);
                     setNote('');
@@ -260,7 +283,7 @@ export function OrganizationDrawer({
               {notes.slice(0, 4).map((item) => (
                 <div key={item.id} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
                   <div className="flex items-center justify-between">
-                    <AdminStatusBadge tone="slate">{item.visibility ?? 'internal'}</AdminStatusBadge>
+                    <AdminStatusBadge tone="slate">{item.visibility === 'internal' ? 'Interne' : item.visibility === 'support' ? 'Support' : item.visibility ?? 'Interne'}</AdminStatusBadge>
                     <span className="text-xs font-semibold text-slate-400">{formatAdminDate(item.created_at)}</span>
                   </div>
                   <p className="mt-2 text-sm font-semibold text-slate-700">{item.note}</p>
@@ -276,8 +299,8 @@ export function OrganizationDrawer({
               <p className="text-xs font-semibold text-slate-500">Aucune action auditée liée à cette organisation.</p>
             ) : latestAudit.map((log) => (
               <div key={log.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <p className="text-sm font-black text-slate-950">{log.action}</p>
-                <p className="text-xs font-semibold text-slate-500">{log.reason ?? log.target_type ?? 'Action owner'} · {formatAdminDate(log.created_at)}</p>
+                <p className="text-sm font-black text-slate-950">{humanizeAuditAction(log.action)}</p>
+                <p className="text-xs font-semibold text-slate-500">{log.reason ?? log.target_type ?? 'Action administrateur'} · {formatAdminDate(log.created_at)}</p>
               </div>
             ))}
           </div>
@@ -298,7 +321,7 @@ export function OrganizationDrawer({
               {agency.status === 'suspended' ? 'Réactiver' : 'Suspendre'}
             </AdminButton>
             <AdminButton variant="danger" onClick={() => onDelete(agency)}>
-              Supprimer
+              Clôturer le compte
             </AdminButton>
           </div>
         </AdminPanel>

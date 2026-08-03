@@ -1,315 +1,59 @@
-/**
- * Edge Function : update-contrat
- *
- * Garanties :
- *   1. JWT + agency_id injecté côté serveur
- *   2. Validation Zod
- *   3. Vérification propriété du contrat
- *   4. Libération de l'unité si statut → 'resilie' ou 'expire'
- *   5. Log event_log (contrat.updated)
- *
- * Appelé via : supabase.functions.invoke('update-contrat', { body })
- */
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Content-Type": "application/json",
-};
-
-const ContratStatuts = ["actif", "expire", "resilie", "archive"] as const;
+import {
+  CONTRACT_CORS,
+  contractError,
+  contractJson,
+  contractRpcFailure,
+  resolveContractCommandContext,
+} from "../_shared/contract-context.ts";
 
 const UpdateContratSchema = z.object({
-  id: z.string().uuid({ message: "id doit être un UUID valide" }),
-  statut: z.enum(ContratStatuts).optional(),
-  date_fin: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "format YYYY-MM-DD" })
-    .nullable()
-    .optional(),
-  commission: z
-    .number()
-    .min(0)
-    .max(100, { message: "commission entre 0 et 100" })
-    .nullable()
-    .optional(),
-  caution: z.number().min(0).nullable().optional(),
+  id: z.string().uuid(),
+  statut: z.enum(["actif", "expire", "resilie", "archive"]).optional(),
+  date_fin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  commission: z.coerce.number().min(0).max(100).nullable().optional(),
+  caution: z.coerce.number().min(0).nullable().optional(),
   resiliation_motif: z.string().trim().min(3).max(240).nullable().optional(),
   resiliation_observations: z.string().trim().max(1000).nullable().optional(),
 });
 
-type UpdateContratInput = z.infer<typeof UpdateContratSchema>;
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: CORS });
-}
-function err(message: string, status = 400, code?: string) {
-  return json({ error: message, ...(code ? { code } : {}) }, status);
-}
-
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CONTRACT_CORS });
   if (req.method !== "PATCH" && req.method !== "POST") {
-    return err("Méthode non autorisée — utilisez PATCH ou POST.", 405);
+    return contractError("Méthode non autorisée.", 405, "METHOD_NOT_ALLOWED");
   }
 
   try {
-    // ── 1. Authentification ──────────────────────────────────────────────────
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return err("Token manquant.", 401, "NOT_AUTHENTICATED");
-    }
+    const context = await resolveContractCommandContext(req, "update");
+    if (context instanceof Response) return context;
 
-    const supabaseUser = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-
-    const { data: { user }, error: authErr } = await supabaseUser.auth.getUser();
-    if (authErr || !user) return err("Token invalide.", 401, "INVALID_TOKEN");
-
-    // ── 2. Profil + agency_id serveur ────────────────────────────────────────
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-
-    const { data: profile, error: profileErr } = await supabaseAdmin
-      .from("user_profiles")
-      .select("agency_id, role, actif")
-      .eq("id", user.id)
-      .single();
-
-    if (profileErr || !profile) return err("Profil introuvable.", 403, "PROFILE_NOT_FOUND");
-    if (!profile.actif) return err("Compte désactivé.", 403, "ACCOUNT_DISABLED");
-
-    const agencyId: string = profile.agency_id;
-    if (!agencyId) return err("Aucune agence associée.", 403, "NO_AGENCY");
-
-    const { data: agency, error: agencyErr } = await supabaseAdmin
-      .from("agencies")
-      .select("is_bailleur_account")
-      .eq("id", agencyId)
-      .single();
-    if (agencyErr || !agency) return err("Espace introuvable.", 403, "AGENCY_NOT_FOUND");
-    const isIndividualOwnerAccount = agency.is_bailleur_account === true;
-
-    if (profile.role === "bailleur" && !isIndividualOwnerAccount) return err("Accès refusé.", 403, "FORBIDDEN_ROLE");
-
-    if (!(isIndividualOwnerAccount && profile.role === "bailleur")) {
-      const { data: canUpdateContrat, error: permissionErr } = await supabaseAdmin.rpc(
-        "fn_user_can",
-        { p_user_id: user.id, p_page: "contrats", p_action: "update" },
-      );
-      if (permissionErr) {
-        console.error("[update-contrat] RBAC check failed", permissionErr.message);
-        return err("Vérification des permissions indisponible.", 500, "RBAC_CHECK_FAILED");
-      }
-      if (!canUpdateContrat) {
-        return err("Action refusée par les permissions de l'agence.", 403, "RBAC_FORBIDDEN");
-      }
-    }
-
-    // ── 3. Validation Zod ────────────────────────────────────────────────────
-    let rawBody: unknown;
-    try { rawBody = await req.json(); } catch {
-      return err("JSON invalide.", 400, "INVALID_JSON");
-    }
-
-    const parsed = UpdateContratSchema.safeParse(rawBody);
+    const raw = await req.json().catch(() => null);
+    const parsed = UpdateContratSchema.safeParse(raw);
     if (!parsed.success) {
-      const details = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
-      return err(`Données invalides — ${details}`, 422, "VALIDATION_ERROR");
+      return contractError(
+        "Les modifications du bail sont invalides.",
+        422,
+        "VALIDATION_ERROR",
+        parsed.error.flatten(),
+      );
+    }
+    if (parsed.data.statut === "resilie" && !parsed.data.date_fin) {
+      return contractError("La date de résiliation est obligatoire.", 422, "RESILIATION_DATE_REQUIRED");
     }
 
-    const input: UpdateContratInput = parsed.data;
-    if (input.statut === "resilie" && !input.date_fin) {
-      return err("La date de résiliation est obligatoire.", 422, "RESILIATION_DATE_REQUIRED");
-    }
-
-    // ── 4. Récupération contrat (propriété + unite_id) ────────────────────────
-    const { data: existing, error: fetchErr } = await supabaseAdmin
-      .from("contrats")
-      .select("id, statut, unite_id, agency_id, date_fin, commission, caution")
-      .eq("id", input.id)
-      .eq("agency_id", agencyId)
-      .single();
-
-    if (fetchErr || !existing) {
-      return err("Contrat introuvable ou accès refusé.", 404, "NOT_FOUND");
-    }
-
-    // ── 4b. State machine — validation transition ─────────────────────────────
-    const CONTRAT_TRANSITIONS: Record<string, string[]> = {
-      actif:   ["expire", "resilie"],
-      expire:  ["actif", "archive"],
-      resilie: ["archive"],
-      archive: [],
-    };
-
-    if (input.statut && input.statut !== existing.statut) {
-      const allowed = CONTRAT_TRANSITIONS[existing.statut as string] ?? [];
-      if (!allowed.includes(input.statut)) {
-        return err(
-          `Transition invalide : "${existing.statut}" → "${input.statut}". Autorisées depuis "${existing.statut}" : ${allowed.join(", ") || "aucune"}.`,
-          422,
-          "INVALID_TRANSITION",
-        );
-      }
-    }
-
-    if (input.statut === "actif" && existing.statut !== "actif") {
-      const { data: activeConflict, error: activeConflictErr } = await supabaseAdmin
-        .from("contrats")
-        .select("id")
-        .eq("agency_id", agencyId)
-        .eq("unite_id", existing.unite_id)
-        .eq("statut", "actif")
-        .neq("id", input.id)
-        .maybeSingle();
-
-      if (activeConflictErr) {
-        return err("Verification de disponibilite de l'unite impossible.", 500, "UNIT_AVAILABILITY_CHECK_FAILED");
-      }
-      if (activeConflict) {
-        return err("Un autre bail actif existe deja pour cette unite.", 409, "CONTRAT_ALREADY_EXISTS");
-      }
-    }
-
-    // ── 5. Construction du patch ─────────────────────────────────────────────
-    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (input.statut !== undefined) patch.statut = input.statut;
-    if (input.date_fin !== undefined) patch.date_fin = input.date_fin;
-    if (input.commission !== undefined) patch.commission = isIndividualOwnerAccount ? 0 : input.commission;
-    if (input.caution !== undefined) patch.caution = input.caution;
-
-    // ── 6. UPDATE contrat ────────────────────────────────────────────────────
-    const { data: updated, error: updateErr } = await supabaseAdmin
-      .from("contrats")
-      .update(patch)
-      .eq("id", input.id)
-      .eq("agency_id", agencyId)
-      .select()
-      .single();
-
-    if (updateErr) {
-      return err(updateErr.message, 422, updateErr.code ?? "DB_ERROR");
-    }
-
-    const rollbackContrat = async () => {
-      await supabaseAdmin
-        .from("contrats")
-        .update({
-          statut: existing.statut,
-          date_fin: existing.date_fin,
-          commission: existing.commission,
-          caution: existing.caution,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", input.id)
-        .eq("agency_id", agencyId);
-    };
-
-    // ── 7. Libération unité si résiliation / expiration ──────────────────────
-    const uniteFinalStatuts = ["resilie", "expire"] as const;
-    const newStatut = input.statut;
-    const wasNotTerminated = existing.statut === "actif";
-    let unitStatusChangedTo: "libre" | "loue" | null = null;
-
-    if (newStatut && uniteFinalStatuts.includes(newStatut as typeof uniteFinalStatuts[number]) && wasNotTerminated) {
-      const { error: uniteErr } = await supabaseAdmin
-        .from("unites")
-        .update({ statut: "libre" })
-        .eq("id", existing.unite_id)
-        .eq("agency_id", agencyId);
-      if (uniteErr) {
-        await rollbackContrat();
-        return err(
-          "Le bail n'a pas ete modifie car l'unite n'a pas pu etre liberee.",
-          409,
-          "UNITE_RELEASE_FAILED",
-        );
-      }
-      unitStatusChangedTo = "libre";
-    }
-
-    if (newStatut === "actif" && existing.statut !== "actif") {
-      const { error: occupyErr } = await supabaseAdmin
-        .from("unites")
-        .update({ statut: "loue" })
-        .eq("id", existing.unite_id)
-        .eq("agency_id", agencyId);
-      if (occupyErr) {
-        await rollbackContrat();
-        return err(
-          "Le bail n'a pas ete reactive car l'unite n'a pas pu etre occupee.",
-          409,
-          "UNITE_OCCUPATION_FAILED",
-        );
-      }
-      unitStatusChangedTo = "loue";
-    }
-
-    // ── 8. Log event ─────────────────────────────────────────────────────────
-    const lifecycleAction = input.statut === "resilie"
-      ? "resiliation"
-      : input.statut === "expire"
-        ? "expiration"
-        : input.statut === "archive"
-          ? "archivage"
-          : input.statut === "actif" && existing.statut === "expire"
-            ? "renouvellement_prepare"
-            : null;
-
-    const eventType = lifecycleAction === "resiliation"
-      ? "contrat.resiliated"
-      : lifecycleAction === "archivage"
-        ? "contrat.archived"
-        : lifecycleAction === "renouvellement_prepare"
-          ? "contrat.renewal_prepared"
-          : "contrat.updated";
-
-    const { error: eventErr } = await supabaseAdmin.from("event_log").insert({
-      agency_id: agencyId,
-      event_type: eventType,
-      entity_type: "contrats",
-      entity_id: input.id,
-      payload: {
-        patch,
-        previous_statut: existing.statut,
-        updated_by: user.id,
-        lifecycle: lifecycleAction
-          ? {
-              action: lifecycleAction,
-              date: input.date_fin,
-              motif: input.resiliation_motif ?? null,
-              observations: input.resiliation_observations ?? null,
-              unit_status_changed_to: unitStatusChangedTo,
-            }
-          : null,
-      },
-      created_by: user.id,
+    const { id, ...patch } = parsed.data;
+    const { data, error } = await context.admin.rpc("fn_update_contrat_command", {
+      p_agency_id: context.agencyId,
+      p_user_id: context.userId,
+      p_id: id,
+      p_patch: patch,
     });
-    if (eventErr) {
-      await rollbackContrat();
-      if (unitStatusChangedTo) {
-        await supabaseAdmin
-          .from("unites")
-          .update({ statut: unitStatusChangedTo === "libre" ? "loue" : "libre" })
-          .eq("id", existing.unite_id)
-          .eq("agency_id", agencyId);
-      }
-      return err("Le bail n'a pas ete modifie car l'historique n'a pas pu etre enregistre.", 500, "CONTRAT_EVENT_LOG_FAILED");
-    }
 
-    return json({ data: updated }, 200);
-  } catch {
-    return err("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
+    if (error) return contractRpcFailure(error);
+    return contractJson({ data });
+  } catch (error) {
+    console.error("[update-contrat] unexpected failure", error);
+    return contractError("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
   }
 });

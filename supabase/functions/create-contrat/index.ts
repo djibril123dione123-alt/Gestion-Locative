@@ -1,307 +1,64 @@
-/**
- * Edge Function : create-contrat
- *
- * Garanties :
- *   1. JWT + agency_id injecté côté serveur
- *   2. Validation Zod complète
- *   3. Vérification disponibilité de l'unité (statut != 'loue') côté serveur
- *   4. INSERT contrat + UPDATE unite en séquence avec rollback manuel
- *   5. Log event_log (contrat.created)
- *   6. Tracking pilot : first_contract_at sur l'agence
- *
- * Appelé via : supabase.functions.invoke('create-contrat', { body })
- */
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Content-Type": "application/json",
-};
-
-const ContratStatuts = ["actif", "expire", "resilie"] as const;
+import {
+  CONTRACT_CORS,
+  contractError,
+  contractJson,
+  contractRpcFailure,
+  resolveContractCommandContext,
+} from "../_shared/contract-context.ts";
 
 const CreateContratSchema = z.object({
-  locataire_id: z.string().uuid({ message: "locataire_id invalide" }),
-  unite_id: z.string().uuid({ message: "unite_id invalide" }),
-  date_debut: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "date_debut format YYYY-MM-DD" }),
-  date_fin: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "date_fin format YYYY-MM-DD" })
-    .nullable()
-    .optional(),
-  loyer_mensuel: z.coerce
-    .number({ invalid_type_error: "loyer_mensuel doit être un nombre" })
-    .positive({ message: "loyer_mensuel doit être strictement positif" }),
-  commission: z.coerce
-    .number()
-    .min(0)
-    .max(100, { message: "commission entre 0 et 100" })
-    .nullable()
-    .optional(),
-  caution: z.coerce
-    .number()
-    .min(0)
-    .nullable()
-    .optional(),
-  statut: z.enum(ContratStatuts, {
-    errorMap: () => ({ message: `statut doit être : ${ContratStatuts.join(", ")}` }),
-  }),
-  destination: z.string().max(200).nullable().optional(),
+  locataire_id: z.string().uuid(),
+  unite_id: z.string().uuid(),
+  date_debut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  date_fin: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  loyer_mensuel: z.coerce.number().positive(),
+  commission: z.coerce.number().min(0).max(100).nullable().optional(),
+  caution: z.coerce.number().min(0).nullable().optional(),
+  statut: z.literal("actif"),
+  destination: z.string().trim().max(200).nullable().optional(),
+  is_demo_data: z.boolean().optional().default(false),
 });
 
-type CreateContratInput = z.infer<typeof CreateContratSchema>;
-const DEFAULT_CONTRAT_COMMISSION = 10;
-
-function addYearsToDateString(dateString: string, years: number): string {
-  const [year, month, day] = dateString.split("-").map(Number);
-  const date = new Date(Date.UTC(year + years, month - 1, day));
-  return date.toISOString().slice(0, 10);
-}
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: CORS });
-}
-function err(message: string, status = 400, code?: string, details?: unknown) {
-  return json({ error: message, ...(code ? { code } : {}), ...(details ? { details } : {}) }, status);
-}
-
-async function readBody(req: Request): Promise<unknown> {
-  try {
-    return await req.json();
-  } catch {
-    return null;
-  }
-}
-
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (req.method !== "POST") return err("Méthode non autorisée — utilisez POST.", 405);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CONTRACT_CORS });
+  if (req.method !== "POST") return contractError("Méthode non autorisée.", 405, "METHOD_NOT_ALLOWED");
 
   try {
-    // ── 1. Authentification ──────────────────────────────────────────────────
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return err("Token manquant.", 401, "NOT_AUTHENTICATED");
-    }
+    const context = await resolveContractCommandContext(req, "create");
+    if (context instanceof Response) return context;
 
-    const supabaseUser = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-
-    const { data: { user }, error: authErr } = await supabaseUser.auth.getUser();
-    if (authErr || !user) return err("Token invalide.", 401, "INVALID_TOKEN");
-
-    // ── 2. Profil + agency_id serveur ────────────────────────────────────────
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-
-    const { data: profile, error: profileErr } = await supabaseAdmin
-      .from("user_profiles")
-      .select("agency_id, role, actif")
-      .eq("id", user.id)
-      .single();
-
-    if (profileErr || !profile) return err("Profil introuvable.", 403, "PROFILE_NOT_FOUND");
-    if (!profile.actif) return err("Compte désactivé.", 403, "ACCOUNT_DISABLED");
-
-    const agencyId: string = profile.agency_id;
-    if (!agencyId) return err("Aucune agence associée.", 403, "NO_AGENCY");
-
-    const { data: agency, error: agencyErr } = await supabaseAdmin
-      .from("agencies")
-      .select("is_bailleur_account")
-      .eq("id", agencyId)
-      .single();
-    if (agencyErr || !agency) return err("Espace introuvable.", 403, "AGENCY_NOT_FOUND");
-    const isIndividualOwnerAccount = agency.is_bailleur_account === true;
-
-    if (profile.role === "bailleur" && !isIndividualOwnerAccount) return err("Accès refusé.", 403, "FORBIDDEN_ROLE");
-
-    if (!(isIndividualOwnerAccount && profile.role === "bailleur")) {
-      const { data: canCreateContrat, error: permissionErr } = await supabaseAdmin.rpc(
-        "fn_user_can",
-        { p_user_id: user.id, p_page: "contrats", p_action: "create" },
-      );
-      if (permissionErr) {
-        console.error("[create-contrat] RBAC check failed", permissionErr.message);
-        return err("Vérification des permissions indisponible.", 500, "RBAC_CHECK_FAILED");
-      }
-      if (!canCreateContrat) {
-        return err("Action refusée par les permissions de l'agence.", 403, "RBAC_FORBIDDEN");
-      }
-    }
-
-    // ── 3. Validation Zod ────────────────────────────────────────────────────
-    const rawBody = await readBody(req);
-    if (!rawBody) return err("JSON invalide.", 400, "INVALID_JSON");
-
-    const parsed = CreateContratSchema.safeParse(rawBody);
+    const raw = await req.json().catch(() => null);
+    const parsed = CreateContratSchema.safeParse(raw);
     if (!parsed.success) {
-      const details = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
-      return err(`Données invalides — ${details}`, 422, "VALIDATION_ERROR");
-    }
-
-    const input: CreateContratInput = parsed.data;
-    if (input.statut !== "actif") {
-      return err(
-        "La creation directe d'un bail doit demarrer avec le statut actif.",
+      return contractError(
+        "Les informations du bail sont incomplètes ou invalides.",
         422,
-        "CONTRAT_CREATE_STATUS_INVALID",
+        "VALIDATION_ERROR",
+        parsed.error.flatten(),
       );
     }
 
-    // ── 4. Vérification propriété locataire + unité ──────────────────────────
-    const [{ data: locataire, error: locErr }, { data: unite, error: uniteErr }] =
-      await Promise.all([
-        supabaseAdmin
-          .from("locataires")
-          .select("id")
-          .eq("id", input.locataire_id)
-          .eq("agency_id", agencyId)
-          .single(),
-        supabaseAdmin
-          .from("unites")
-          .select("id, statut")
-          .eq("id", input.unite_id)
-          .eq("agency_id", agencyId)
-          .single(),
-      ]);
-
-    if (locErr || !locataire) {
-      return err("Locataire introuvable ou n'appartient pas à cette agence.", 404, "LOCATAIRE_NOT_FOUND");
-    }
-    if (uniteErr || !unite) {
-      return err("Unité introuvable ou n'appartient pas à cette agence.", 404, "UNITE_NOT_FOUND");
-    }
-    const { data: existingContrat } = await supabaseAdmin
-      .from("contrats")
-      .select("id")
-      .eq("agency_id", agencyId)
-      .eq("unite_id", input.unite_id)
-      .eq("statut", "actif")
-      .maybeSingle();
-
-    if (unite.statut === "loue" || existingContrat) {
-      return err(
-        existingContrat
-          ? "Un contrat actif existe déjà pour cette unité."
-          : "Ce produit est déjà occupé. Veuillez en sélectionner un autre.",
-        409,
-        existingContrat ? "CONTRAT_ALREADY_EXISTS" : "UNITE_ALREADY_LOUE",
-      );
-    }
-
-    // ── 5. INSERT contrat ────────────────────────────────────────────────────
-
-    const defaultCaution = input.loyer_mensuel * 2;
-    const defaultDateFin = addYearsToDateString(input.date_debut, 2);
-
-    const { data: contrat, error: insertErr } = await supabaseAdmin
-      .from("contrats")
-      .insert({
-        locataire_id: input.locataire_id,
-        unite_id: input.unite_id,
-        date_debut: input.date_debut,
-        date_fin: input.date_fin ?? defaultDateFin,
-        loyer_mensuel: input.loyer_mensuel,
-        commission: isIndividualOwnerAccount ? 0 : input.commission ?? DEFAULT_CONTRAT_COMMISSION,
-        caution: input.caution ?? defaultCaution,
-        statut: input.statut,
-        destination: input.destination ?? null,
-        agency_id: agencyId,
-        created_by: user.id,
-      })
-      .select()
-      .single();
-
-    if (insertErr) {
-      return err(insertErr.message, 422, insertErr.code ?? "DB_CONTRAT_ERROR");
-    }
-
-    // ── 6. UPDATE unité → 'loue' (non-fatal : le contrat est déjà créé) ───────
-    const { error: uniteUpdateErr } = await supabaseAdmin
-      .from("unites")
-      .update({ statut: "loue" })
-      .eq("id", input.unite_id)
-      .eq("agency_id", agencyId);
-
-    // On ne fait plus de rollback : si la mise à jour de l'unité échoue, le
-    // contrat reste valide. Le statut de l'unité sera corrigé par le prochain
-    // rechargement ou une tâche de maintenance.
-    const warnings: string[] = [];
-    if (uniteUpdateErr) {
-      warnings.push(`unite_statut_non_mis_a_jour: ${uniteUpdateErr.message}`);
-      await supabaseAdmin
-        .from("contrats")
-        .delete()
-        .eq("id", contrat.id)
-        .eq("agency_id", agencyId);
-      return err(
-        "Le bail n'a pas ete cree car l'unite n'a pas pu etre marquee comme occupee.",
-        409,
-        "UNITE_OCCUPATION_FAILED",
-        uniteUpdateErr.message,
-      );
-    }
-
-    const { error: eventErr } = await supabaseAdmin.from("event_log").insert({
-      agency_id: agencyId,
-      event_type: "contrat.created",
-      entity_type: "contrats",
-      entity_id: contrat.id,
-      payload: {
-        locataire_id: input.locataire_id,
-        unite_id: input.unite_id,
-        statut: input.statut,
-        date_debut: input.date_debut,
-        date_fin: contrat.date_fin,
-        loyer_mensuel: input.loyer_mensuel,
-        destination: input.destination ?? null,
-        lifecycle: { action: "occupation_unite" },
-      },
-      created_by: user.id,
+    const input = parsed.data;
+    const { data, error } = await context.admin.rpc("fn_create_contrat_command", {
+      p_agency_id: context.agencyId,
+      p_user_id: context.userId,
+      p_locataire_id: input.locataire_id,
+      p_unite_id: input.unite_id,
+      p_date_debut: input.date_debut,
+      p_date_fin: input.date_fin ?? null,
+      p_loyer_mensuel: input.loyer_mensuel,
+      p_commission: input.commission ?? null,
+      p_caution: input.caution ?? null,
+      p_destination: input.destination ?? null,
+      p_is_demo_data: input.is_demo_data,
     });
 
-    if (eventErr) {
-      await supabaseAdmin
-        .from("unites")
-        .update({ statut: "libre" })
-        .eq("id", input.unite_id)
-        .eq("agency_id", agencyId);
-      await supabaseAdmin
-        .from("contrats")
-        .delete()
-        .eq("id", contrat.id)
-        .eq("agency_id", agencyId);
-      return err(
-        "Le bail n'a pas ete cree car l'historique n'a pas pu etre enregistre.",
-        500,
-        "CONTRAT_EVENT_LOG_FAILED",
-        eventErr.message,
-      );
-    }
-
-    // ── 7. Pilot tracking : first_contract_at ────────────────────────────────
-    await supabaseAdmin
-      .from("agencies")
-      .update({ first_contract_at: new Date().toISOString() })
-      .eq("id", agencyId)
-      .is("first_contract_at", null);
-
-    return json({ data: contrat, ...(warnings.length ? { warnings } : {}) }, 201);
-  } catch (caughtErr) {
-    const message = caughtErr instanceof Error ? caughtErr.message : "Erreur serveur inattendue.";
-    return json({ error: message, code: "INTERNAL_ERROR" }, 500);
+    if (error) return contractRpcFailure(error);
+    return contractJson({ data }, 201);
+  } catch (error) {
+    console.error("[create-contrat] unexpected failure", error);
+    return contractError("Erreur serveur inattendue.", 500, "INTERNAL_ERROR");
   }
 });

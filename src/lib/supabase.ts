@@ -22,8 +22,8 @@ export type { UserProfile };
 
 
 // Interceptor logic for human-readable errors
-const originalFetch = window.fetch;
-window.fetch = async (...args) => {
+const originalFetch = globalThis.fetch.bind(globalThis);
+globalThis.fetch = async (...args) => {
   const response = await originalFetch(...args);
   if (!response.ok) {
     try {

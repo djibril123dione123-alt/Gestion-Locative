@@ -83,6 +83,7 @@ import {
 } from '../lib/senegalIdentity';
 import { createContratViaEdge, renewContratViaEdge, updateContratViaEdge } from '../services/api/contratApi';
 import { generateContratPDF } from '../lib/pdf';
+import { runDocumentGeneration } from '../lib/documentGeneration';
 
 // ─── Types locaux ────────────────────────────────────────────────────────────
 
@@ -692,15 +693,25 @@ export function OccupantsBaux() {
 
   const generateContractPdf = useCallback(async (row: OccupantBailRow) => {
     if (!profile?.agency_id) return;
+    const agencyId = profile.agency_id;
     setPdfGeneratingId(row.contrat_id);
     try {
-      const { data, error } = await occupantsBauxRepository.contractPdfData({
-        agencyId: profile.agency_id,
-        contratId: row.contrat_id,
+      await runDocumentGeneration({
+        key: `contrat:${agencyId}:${row.contrat_id}`,
+        kind: 'contrat',
+        title: 'Préparation du contrat',
+        source: 'occupants-baux',
+        archiveExpected: true,
+        verificationExpected: true,
+      }, async (generation) => {
+        const { data, error } = await occupantsBauxRepository.contractPdfData({
+          agencyId,
+          contratId: row.contrat_id,
+        });
+        if (error) throw error;
+        if (!data) throw new Error('Contrat introuvable.');
+        await generateContratPDF(data, generation);
       });
-      if (error) throw error;
-      if (!data) throw new Error('Contrat introuvable.');
-      await generateContratPDF(data);
       notifySuccess('PDF contrat généré.');
     } catch (err) {
       console.error('[OccupantsBaux] contract PDF failed', err);

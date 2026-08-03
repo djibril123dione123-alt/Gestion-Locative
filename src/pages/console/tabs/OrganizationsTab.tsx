@@ -1,13 +1,55 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Search } from 'lucide-react';
+import { AlertTriangle, Building2, CircleDollarSign, UserRound } from 'lucide-react';
 import { getAdminPlan } from '../../../lib/admin/adminPricingCatalog';
 import { buildRequiredActions, organizationTypeLabel } from '../../../lib/admin/adminInsights';
 import { formatAdminCurrency, formatAdminDate, numberValue } from '../../../lib/admin/adminFormatters';
 import { computeOrganizationHealth } from '../../../lib/admin/adminRiskScoring';
-import { AdminEmptyState, AdminKpiGrid, AdminMetricCard, AdminPanel, AdminStatusBadge, ResponsiveTable } from '../../../components/console/AdminPrimitives';
+import {
+  AdminEmptyState,
+  AdminKpiGrid,
+  AdminListToolbar,
+  AdminMetricCard,
+  AdminPanel,
+  AdminStatusBadge,
+  ResponsiveTable,
+} from '../../../components/console/AdminPrimitives';
 import type { AdminAgency, AdminConsoleData } from '../../../services/admin/adminConsoleService';
 
 type SortKey = 'created' | 'activity' | 'plan' | 'revenue' | 'users' | 'units' | 'risk';
+
+const statusOptions = [
+  { value: 'all', label: 'Statut' },
+  { value: 'active', label: 'Actives' },
+  { value: 'trial', label: 'En essai' },
+  { value: 'suspended', label: 'Suspendues' },
+  { value: 'cancelled', label: 'Clôturées' },
+  { value: 'payment_pending', label: 'Paiement à valider' },
+];
+
+const typeOptions = [
+  { value: 'all', label: 'Type' },
+  { value: 'agency', label: 'Agences' },
+  { value: 'individual', label: 'Bailleurs individuels' },
+  { value: 'mismatch', label: 'Type incohérent' },
+];
+
+const planOptions = [
+  { value: 'all', label: 'Plan' },
+  { value: 'starter', label: 'Starter' },
+  { value: 'pro', label: 'Pro' },
+  { value: 'business', label: 'Business' },
+  { value: 'enterprise', label: 'Enterprise' },
+];
+
+const sortOptions = [
+  { value: 'risk', label: 'Risque' },
+  { value: 'activity', label: 'Activité récente' },
+  { value: 'created', label: 'Création récente' },
+  { value: 'plan', label: 'Plan supérieur' },
+  { value: 'revenue', label: 'Volume financier' },
+  { value: 'users', label: 'Utilisateurs' },
+  { value: 'units', label: 'Unités' },
+];
 
 export function OrganizationsTab({
   data,
@@ -25,15 +67,25 @@ export function OrganizationsTab({
   const [sort, setSort] = useState<SortKey>('risk');
 
   const requiredActions = useMemo(() => buildRequiredActions(data), [data]);
-  const riskyIds = new Set(requiredActions.filter((action) => action.organizationId && action.priority >= 75).map((action) => action.organizationId));
-  const pendingPaymentIds = useMemo(() => new Set(data.proofs.filter((proof) => proof.status === 'pending').map((proof) => proof.agency_id)), [data.proofs]);
+  const riskyIds = useMemo(
+    () => new Set(requiredActions.filter((action) => action.organizationId && action.priority >= 75).map((action) => action.organizationId)),
+    [requiredActions],
+  );
+  const pendingPaymentIds = useMemo(
+    () => new Set(data.proofs.filter((proof) => proof.status === 'pending').map((proof) => proof.agency_id)),
+    [data.proofs],
+  );
 
   const rows = useMemo(() => data.agencies.filter((agency) => {
     const haystack = `${agency.name} ${agency.email ?? ''} ${agency.phone ?? ''} ${agency.id}`.toLowerCase();
     const matchQuery = !query || haystack.includes(query.toLowerCase());
-    const matchStatus = status === 'all' || (agency.status ?? 'active') === status || (status === 'payment_pending' && pendingPaymentIds.has(agency.id));
+    const matchStatus = status === 'all'
+      || (agency.status ?? 'active') === status
+      || (status === 'payment_pending' && pendingPaymentIds.has(agency.id));
     const agencyType = agency.is_bailleur_account || agency.organization_type === 'individual_landlord' ? 'individual' : 'agency';
-    const matchType = type === 'all' || agencyType === type || (type === 'mismatch' && Boolean(agency.is_bailleur_account && agency.organization_type && agency.organization_type !== 'individual_landlord'));
+    const matchType = type === 'all'
+      || agencyType === type
+      || (type === 'mismatch' && Boolean(agency.is_bailleur_account && agency.organization_type && agency.organization_type !== 'individual_landlord'));
     const matchPlan = plan === 'all' || getAdminPlan(agency.plan).id === plan;
     return matchQuery && matchStatus && matchType && matchPlan;
   }).sort((a, b) => {
@@ -52,56 +104,42 @@ export function OrganizationsTab({
   const individuals = data.agencies.length - agencies;
   const mismatches = data.agencies.filter((agency) => agency.is_bailleur_account && agency.organization_type && agency.organization_type !== 'individual_landlord').length;
 
+  const resetFilters = () => {
+    setQuery('');
+    setStatus('all');
+    setType('all');
+    setPlan('all');
+    setSort('risk');
+  };
+
   return (
     <div className="space-y-3">
       <AdminKpiGrid maxItems={4}>
-        <AdminMetricCard label="Agences" value={agencies} helper="Comptes pro" tone="emerald" />
-        <AdminMetricCard label="Bailleurs" value={individuals} helper="Profils owner" tone="blue" />
-        <AdminMetricCard label="Paiements" value={pendingPaymentIds.size} helper="À valider" tone={pendingPaymentIds.size ? 'amber' : 'emerald'} />
-        <AdminMetricCard label="À vérifier" value={mismatches + riskyIds.size} helper="Risque ou type" icon={AlertTriangle} tone={mismatches + riskyIds.size ? 'amber' : 'slate'} />
+        <AdminMetricCard label="Agences" value={agencies} helper="Comptes professionnels" icon={Building2} tone="emerald" onClick={() => setType('agency')} />
+        <AdminMetricCard label="Bailleurs" value={individuals} helper="Profils propriétaires" icon={UserRound} tone="blue" onClick={() => setType('individual')} />
+        <AdminMetricCard label="Paiements" value={pendingPaymentIds.size} helper="Preuves à valider" icon={CircleDollarSign} tone={pendingPaymentIds.size ? 'amber' : 'emerald'} onClick={() => setStatus('payment_pending')} />
+        <AdminMetricCard label="À vérifier" value={mismatches + riskyIds.size} helper="Risques ou types" icon={AlertTriangle} tone={mismatches + riskyIds.size ? 'amber' : 'slate'} onClick={() => { setType(mismatches ? 'mismatch' : 'all'); setSort('risk'); }} />
       </AdminKpiGrid>
 
       <AdminPanel
         title="Organisations"
-        subtitle="Recherche, filtres, santé, plan, activité et signaux de risque."
-        action={<span className="text-xs font-black text-slate-500">{rows.length} résultat(s)</span>}
+        subtitle="Comptes, santé opérationnelle, plans et usage."
+        bodyClassName="p-2 sm:p-2"
       >
-        <div className="mb-3 grid gap-2 2xl:grid-cols-[1fr_150px_150px_140px_150px]">
-          <label className="flex min-h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
-            <Search className="h-4 w-4 text-slate-400" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher nom, email, téléphone..." className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none placeholder:text-slate-400" />
-          </label>
-          <select value={status} onChange={(event) => setStatus(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold">
-            <option value="all">Tous statuts</option>
-            <option value="active">Actif</option>
-            <option value="trial">Essai</option>
-            <option value="suspended">Suspendu</option>
-            <option value="cancelled">Annulé</option>
-            <option value="payment_pending">Paiement attente</option>
-          </select>
-          <select value={type} onChange={(event) => setType(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold">
-            <option value="all">Tous types</option>
-            <option value="agency">Agences</option>
-            <option value="individual">Bailleurs</option>
-            <option value="mismatch">Type incohérent</option>
-          </select>
-          <select value={plan} onChange={(event) => setPlan(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold">
-            <option value="all">Tous plans</option>
-            <option value="starter">Starter</option>
-            <option value="pro">Pro</option>
-            <option value="business">Business</option>
-            <option value="enterprise">Enterprise</option>
-          </select>
-          <select value={sort} onChange={(event) => setSort(event.target.value as SortKey)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold">
-            <option value="risk">Tri risque</option>
-            <option value="activity">Activité</option>
-            <option value="created">Création</option>
-            <option value="plan">Plan</option>
-            <option value="revenue">Volume</option>
-            <option value="users">Utilisateurs</option>
-            <option value="units">Unités</option>
-          </select>
-        </div>
+        <AdminListToolbar
+          query={query}
+          onQueryChange={setQuery}
+          placeholder="Rechercher une organisation, un email ou un téléphone..."
+          resultCount={rows.length}
+          onReset={resetFilters}
+          isSplitOpen={Boolean(selectedAgencyId)}
+          filters={[
+            { value: status, placeholder: 'Statut', options: statusOptions, onChange: setStatus, defaultValue: 'all' },
+            { value: type, placeholder: 'Type', options: typeOptions, onChange: setType, defaultValue: 'all' },
+            { value: plan, placeholder: 'Plan', options: planOptions, onChange: setPlan, defaultValue: 'all' },
+            { value: sort, placeholder: 'Trier', options: sortOptions, onChange: (value) => setSort(value as SortKey), defaultValue: 'risk' },
+          ]}
+        />
 
         <ResponsiveTable<AdminAgency>
           rows={rows}
@@ -109,20 +147,24 @@ export function OrganizationsTab({
           selectedKey={selectedAgencyId}
           onRowClick={onOpenAgency}
           rowAriaLabel={(agency) => `Ouvrir la fiche organisation ${agency.name}`}
-          empty={<AdminEmptyState title="Aucune organisation" text="Ajustez la recherche ou les filtres." />}
+          empty={<AdminEmptyState title="Aucune organisation" text="Aucune organisation ne correspond à ces filtres." />}
           columns={[
             {
               key: 'name',
               label: 'Organisation',
+              className: selectedAgencyId ? 'w-[48%]' : undefined,
               render: (agency) => (
-                <span className="text-left font-black text-slate-950">
-                  {agency.name}
-                  <span className="block text-xs font-semibold text-slate-500">{agency.email ?? 'Email non renseigné'}</span>
+                <span className="block min-w-0 text-left">
+                  <span className="block truncate font-black text-slate-950">{agency.name}</span>
+                  <span className="block truncate text-[0.68rem] font-semibold text-slate-500">
+                    {agency.email ?? 'Email non renseigné'}
+                    {selectedAgencyId ? ` · ${getAdminPlan(agency.plan).name} · ${organizationTypeLabel(agency)}` : ''}
+                  </span>
                 </span>
               ),
             },
-            { key: 'type', label: 'Type', render: (agency) => <AdminStatusBadge tone="slate">{organizationTypeLabel(agency)}</AdminStatusBadge> },
-            { key: 'plan', label: 'Plan', render: (agency) => <AdminStatusBadge tone="orange">{getAdminPlan(agency.plan).name}</AdminStatusBadge> },
+            { key: 'type', label: 'Type', hideWhenDetail: true, render: (agency) => <AdminStatusBadge tone="slate">{organizationTypeLabel(agency)}</AdminStatusBadge> },
+            { key: 'plan', label: 'Plan', hideWhenDetail: true, render: (agency) => <AdminStatusBadge tone="orange">{getAdminPlan(agency.plan).name}</AdminStatusBadge> },
             { key: 'status', label: 'Statut', render: (agency) => <AdminStatusBadge status={agency.status} /> },
             {
               key: 'health',
@@ -132,20 +174,20 @@ export function OrganizationsTab({
                 return <AdminStatusBadge tone={health.level === 'healthy' ? 'emerald' : health.level === 'watch' ? 'amber' : 'red'}>{health.score}/100</AdminStatusBadge>;
               },
             },
-            { key: 'usage', label: 'Usage', render: (agency) => `${agency.nb_users ?? 0} users · ${agency.nb_unites ?? 0} unités` },
-            { key: 'volume', label: 'Volume', align: 'right', render: (agency) => <span className="font-black">{formatAdminCurrency(agency.volume_paiements)}</span> },
-            { key: 'last', label: 'Activité', render: (agency) => formatAdminDate(agency.derniere_activite) },
+            { key: 'usage', label: 'Usage', hideWhenDetail: true, render: (agency) => `${agency.nb_users ?? 0} utilisateur(s) · ${agency.nb_unites ?? 0} unité(s)` },
+            { key: 'volume', label: 'Volume', align: 'right', hideWhenDetail: true, render: (agency) => <span className="font-black">{formatAdminCurrency(agency.volume_paiements)}</span> },
+            { key: 'last', label: 'Activité', hideWhenDetail: true, render: (agency) => formatAdminDate(agency.derniere_activite) },
           ]}
           renderCard={(agency) => (
-            <button type="button" onClick={() => onOpenAgency(agency)} className="rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm">
+            <button type="button" onClick={() => onOpenAgency(agency)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50/30">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="font-black text-slate-950">{agency.name}</p>
-                  <p className="text-xs font-semibold text-slate-500">{agency.email ?? 'Email non renseigné'}</p>
+                <div className="min-w-0">
+                  <p className="truncate font-black text-slate-950">{agency.name}</p>
+                  <p className="truncate text-xs font-semibold text-slate-500">{agency.email ?? 'Email non renseigné'}</p>
                 </div>
                 <AdminStatusBadge status={agency.status} />
               </div>
-              <p className="mt-3 text-xs font-bold text-slate-600">{getAdminPlan(agency.plan).name} · {agency.nb_users ?? 0} users · {agency.nb_unites ?? 0} unités</p>
+              <p className="mt-2 text-xs font-bold text-slate-600">{getAdminPlan(agency.plan).name} · {agency.nb_users ?? 0} utilisateur(s) · {agency.nb_unites ?? 0} unité(s)</p>
             </button>
           )}
         />

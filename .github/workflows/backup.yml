@@ -1,62 +1,76 @@
-name: Backup Database
+name: Encrypted database backup
 
 on:
   schedule:
-    # Tous les jours à 2h du matin UTC
     - cron: '0 2 * * *'
-  workflow_dispatch: # Permet de déclencher manuellement
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: database-backup
+  cancel-in-progress: false
 
 jobs:
   backup:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+      BACKUP_BUCKET: ${{ secrets.BACKUP_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Create backups directory
-        run: mkdir -p .backups
-
-      - name: Run database backup
-        env:
-          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      - name: Install PostgreSQL and encryption tools
         run: |
-          # Installer pg_dump si nécessaire
           sudo apt-get update
-          sudo apt-get install -y postgresql-client
-          
-          # Exécuter le script de backup
-          bash scripts/backup-supabase.sh
+          sudo apt-get install -y postgresql-client openssl
 
-      - name: Upload backup to artifact storage
+      - name: Create encrypted backup
+        id: backup
+        run: bash scripts/backup-supabase.sh
+
+      - name: Upload encrypted backup artifact
         uses: actions/upload-artifact@v4
         with:
-          name: database-backup
-          path: .backups/
+          name: database-backup-${{ github.run_id }}
+          path: |
+            ${{ steps.backup.outputs.backup_file }}
+            ${{ steps.backup.outputs.checksum_file }}
+          if-no-files-found: error
           retention-days: 30
 
-      - name: Upload to S3 (optionnel)
-        if: env.AWS_ACCESS_KEY_ID != ''
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+      - name: Copy encrypted backup to off-site storage
+        if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.BACKUP_BUCKET != '' }}
         run: |
-          aws s3 cp .backups/ s3://${{ secrets.BACKUP_BUCKET }}/samay-keur/ --recursive
+          aws s3 cp "${{ steps.backup.outputs.backup_file }}" "s3://${BACKUP_BUCKET}/samay-keur/"
+          aws s3 cp "${{ steps.backup.outputs.checksum_file }}" "s3://${BACKUP_BUCKET}/samay-keur/"
 
-      - name: Notify on failure
+      - name: Open an incident on failure
         if: failure()
         uses: actions/github-script@v7
         with:
           script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
+            const title = `Database backup failed (${context.runId})`;
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '❌ Database backup failed'
-            })
+              state: 'open',
+              labels: 'backup-failure'
+            });
+            if (!existing.some((issue) => issue.title === title)) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                labels: ['backup-failure'],
+                body: `The encrypted database backup workflow failed. Inspect run ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}.`
+              });
+            }

@@ -1,5 +1,6 @@
-﻿import { useEffect, useMemo, useState, useCallback, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, useCallback, type FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
+import { submitSubscriptionPaymentProof } from '../services/tenantAdministrationCommands';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { ToastContainer } from '../components/ui/Toast';
@@ -283,30 +284,25 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
     }
 
     setSubmittingProof(true);
-    const { error } = await supabase.from('subscription_payment_proofs').insert({
-      agency_id: profile.agency_id,
-      subscription_id: subscription?.id ?? null,
-      plan_key: proofForm.plan_key,
-      amount,
-      currency: 'XOF',
-      method: proofForm.method,
-      reference: proofForm.reference.trim() || null,
-      payment_date: proofForm.payment_date || null,
-      proof_file_url: proofForm.proof_file_url.trim() || null,
-      comment: proofForm.comment.trim() || null,
-      status: 'pending',
-      submitted_by: profile.id,
-    });
-    setSubmittingProof(false);
-
-    if (error) {
+    try {
+      await submitSubscriptionPaymentProof({
+        subscriptionId: subscription?.id ?? null,
+        planKey: proofForm.plan_key,
+        amount,
+        method: proofForm.method,
+        reference: proofForm.reference.trim() || null,
+        paymentDate: proofForm.payment_date,
+        proofFileUrl: proofForm.proof_file_url.trim() || null,
+        comment: proofForm.comment.trim() || null,
+      });
+      toast.success('Preuve transmise au support.');
+      setManualProofOpen(false);
+      load();
+    } catch {
       toast.error("Impossible d'enregistrer la preuve pour le moment.");
-      return;
+    } finally {
+      setSubmittingProof(false);
     }
-
-    toast.success('Preuve transmise au support.');
-    setManualProofOpen(false);
-    load();
   };
 
   const renderUsageBar = (
@@ -918,11 +914,12 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
 
           <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-950/10 bg-slate-50/80 px-3 py-2.5 text-xs font-medium text-slate-600">
             <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-700" />
-            <span>Le changement de plan conserve les données existantes. Seules les capacités et limites sont ajustées après confirmation.</span>
-          </div>
-        </div>
-      </WizardShell>
-      <WizardShell
+                  <span>Le changement de plan conserve les données existantes. Seules les capacités et limites sont ajustées après confirmation.</span>
+                </div>
+              </div>
+            </WizardShell>
+
+            <WizardShell
         open={manualProofOpen}
         onClose={() => setManualProofOpen(false)}
         title="Déclarer une preuve"
@@ -976,7 +973,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             {submittingProof ? (
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-b-2 border-white" />
             ) : (
-              <Send className="h-3.5 w-3.5 text-emerald-300" />
+              <Send className="h-3.5 w-3.5" />
             )}
             Transmettre la preuve
           </button>
@@ -1001,7 +998,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
 
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
             <div>
-              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Plan</span>
+              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Plan</span>
               <SmartCombobox
                 value={proofForm.plan_key}
                 options={PLAN_CATALOG.filter((plan) => plan.id !== 'enterprise').map((plan) => ({
@@ -1021,31 +1018,31 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
               />
             </div>
 
-            <label>
-              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Montant (XOF)</span>
+            <label className="block">
+              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Montant (XOF)</span>
               <input
                 type="number"
                 min="0"
                 value={proofForm.amount}
                 onChange={(event) => setProofForm((form) => ({ ...form, amount: event.target.value }))}
-                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-3 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/15"
+                className="mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.8rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:!h-8 sm:rounded-[0.6rem]"
               />
             </label>
 
-            <label>
-              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Date paiement</span>
+            <label className="block">
+              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Date paiement</span>
               <input
                 type="date"
                 value={proofForm.payment_date}
                 onChange={(event) => setProofForm((form) => ({ ...form, payment_date: event.target.value }))}
-                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-3 text-xs font-bold text-slate-800 outline-none transition focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/15"
+                className="mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.8rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:!h-8 sm:rounded-[0.6rem]"
               />
             </label>
           </div>
 
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             <div>
-              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Moyen de paiement</span>
+              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Moyen de paiement</span>
               <SmartCombobox
                 value={proofForm.method}
                 options={MANUAL_PAYMENT_METHODS.map((method) => ({ value: method.id, label: method.label }))}
@@ -1055,38 +1052,38 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
               />
             </div>
 
-            <label>
-              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Référence</span>
+            <label className="block">
+              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Référence</span>
               <input
                 type="text"
                 value={proofForm.reference}
                 onChange={(event) => setProofForm((form) => ({ ...form, reference: event.target.value }))}
                 placeholder="Ex : WAVE-1289"
-                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-3 text-xs font-bold text-slate-800 outline-none transition placeholder:font-semibold placeholder:text-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/15"
+                className="mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.8rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:!h-8 sm:rounded-[0.6rem]"
               />
             </label>
           </div>
 
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            <label>
-              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Lien preuve</span>
+            <label className="block">
+              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Lien preuve</span>
               <input
                 type="url"
                 value={proofForm.proof_file_url}
                 onChange={(event) => setProofForm((form) => ({ ...form, proof_file_url: event.target.value }))}
                 placeholder="Lien Drive, reçu ou capture"
-                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-3 text-xs font-bold text-slate-800 outline-none transition placeholder:font-semibold placeholder:text-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/15"
+                className="mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.8rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:!h-8 sm:rounded-[0.6rem]"
               />
             </label>
 
-            <label>
-              <span className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500">Commentaire</span>
+            <label className="block">
+              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Commentaire</span>
               <input
                 type="text"
                 value={proofForm.comment}
                 onChange={(event) => setProofForm((form) => ({ ...form, comment: event.target.value }))}
                 placeholder="Ex : paiement transmis par Wave"
-                className="!h-8 !min-h-8 w-full rounded-[0.6rem] border border-emerald-950/15 bg-[#fffdf8]/95 px-3 text-xs font-bold text-slate-800 outline-none transition placeholder:font-semibold placeholder:text-slate-400 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/15"
+                className="mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.8rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:!h-8 sm:rounded-[0.6rem]"
               />
             </label>
           </div>

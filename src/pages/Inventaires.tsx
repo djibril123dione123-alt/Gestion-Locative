@@ -23,6 +23,7 @@ import { formatCurrency } from '../lib/formatters';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { addFooter, drawPageBorder, drawSectionFrame, saveGeneratedPdf } from '../lib/pdf';
+import { runDocumentGeneration } from '../lib/documentGeneration';
 
 interface Piece {
   nom: string;
@@ -177,76 +178,99 @@ export function Inventaires() {
   };
 
   const generatePDF = async (inv: Inventaire) => {
-    const loc = `${inv.contrats?.locataires?.prenom ?? ''} ${inv.contrats?.locataires?.nom ?? ''}`;
-    const bien = `${inv.contrats?.unites?.immeubles?.nom ?? ''} - ${inv.contrats?.unites?.nom ?? ''}`;
-    const typeTitle = inv.type === 'entree' ? 'ÉTAT DES LIEUX D’ENTRÉE' : 'ÉTAT DES LIEUX DE SORTIE';
+    const reference = `EDL-${inv.id.slice(0, 8).toUpperCase()}`;
+    await runDocumentGeneration(
+      {
+        key: `inventaire:${inv.id}`,
+        kind: 'inventaire',
+        title: "Préparation de l'état des lieux",
+        source: 'inventaires',
+        reference,
+      },
+      async (generation) => {
+        const loc = `${inv.contrats?.locataires?.prenom ?? ''} ${inv.contrats?.locataires?.nom ?? ''}`.trim();
+        const bien = `${inv.contrats?.unites?.immeubles?.nom ?? ''} - ${inv.contrats?.unites?.nom ?? ''}`;
+        const typeTitle = inv.type === 'entree' ? 'ÉTAT DES LIEUX D’ENTRÉE' : 'ÉTAT DES LIEUX DE SORTIE';
 
-    let agenceInfo = {
-      nom: 'SAMAY KEUR',
-      adresse: 'Sénégal',
-      contact: '',
-    };
-    if (profile?.agency_id) {
-      const { data } = await supabase.from('agencies').select('name, address, email, phone').eq('id', profile.agency_id).maybeSingle();
-      if (data) {
-        agenceInfo = {
-          nom: data.name || 'SAMAY KEUR',
-          adresse: data.address || 'Sénégal',
-          contact: [data.phone, data.email].filter(Boolean).join(' · '),
+        let agenceInfo = {
+          nom: 'SAMAY KEUR',
+          adresse: 'Sénégal',
+          contact: '',
         };
-      }
-    }
+        if (profile?.agency_id) {
+          const { data } = await supabase.from('agencies').select('name, address, email, phone').eq('id', profile.agency_id).maybeSingle();
+          if (data) {
+            agenceInfo = {
+              nom: data.name || 'SAMAY KEUR',
+              adresse: data.address || 'Sénégal',
+              contact: [data.phone, data.email].filter(Boolean).join(' · '),
+            };
+          }
+        }
 
-    const doc = new jsPDF();
-    let y = 16;
+        generation.report('building-document', { reference });
+        const doc = new jsPDF();
+        let y = 16;
 
-    drawPageBorder(doc);
+        drawPageBorder(doc);
 
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 41, 59);
-    doc.text(typeTitle, 14, y);
-    y += 7;
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text(typeTitle, 14, y);
+        y += 7;
 
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 116, 139);
-    doc.text(`${agenceInfo.nom} — Date : ${new Date(inv.date).toLocaleDateString('fr-FR')}`, 14, y);
-    y += 10;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 116, 139);
+        doc.text(`${agenceInfo.nom} — Date : ${new Date(inv.date).toLocaleDateString('fr-FR')}`, 14, y);
+        y += 10;
 
-    y = drawSectionFrame(doc, 14, y, 182, 32);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 41, 59);
-    doc.text('INFORMATIONS CONTRAT & BIEN', 18, y + 6);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Locataire : ${loc}`, 18, y + 14);
-    doc.text(`Bien : ${bien}`, 18, y + 21);
-    doc.text(`Statut : ${inv.statut === 'termine' ? 'Terminé' : inv.statut === 'litige' ? 'En litige' : 'En cours'}`, 115, y + 14);
-    y += 38;
+        y = drawSectionFrame(doc, 14, y, 182, 32);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('INFORMATIONS CONTRAT & BIEN', 18, y + 6);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Locataire : ${loc}`, 18, y + 14);
+        doc.text(`Bien : ${bien}`, 18, y + 21);
+        doc.text(`Statut : ${inv.statut === 'termine' ? 'Terminé' : inv.statut === 'litige' ? 'En litige' : 'En cours'}`, 115, y + 14);
+        y += 38;
 
-    autoTable(doc, {
-      startY: y,
-      head: [['Pièce / Élément', 'État constaté', 'Observations']],
-      body: (inv.pieces || []).map((p) => [
-        p.nom,
-        p.etat === 'bon' ? 'Bon état' : p.etat === 'moyen' ? 'État moyen' : 'Mauvais état',
-        p.observations || '-',
-      ]),
-      headStyles: { fillColor: [24, 160, 88], textColor: 255 },
-      styles: { fontSize: 9 },
-    });
+        autoTable(doc, {
+          startY: y,
+          head: [['Pièce / Élément', 'État constaté', 'Observations']],
+          body: (inv.pieces || []).map((p) => [
+            p.nom,
+            p.etat === 'bon' ? 'Bon état' : p.etat === 'moyen' ? 'État moyen' : 'Mauvais état',
+            p.observations || '-',
+          ]),
+          headStyles: { fillColor: [24, 160, 88], textColor: 255 },
+          styles: { fontSize: 9 },
+        });
 
-    addFooter(doc);
+        addFooter(doc);
 
-    const fileName = `Etat_des_lieux_${inv.type}_${loc.replace(/\s+/g, '_')}.pdf`;
-    await saveGeneratedPdf(doc, {
-      kind: 'inventaire',
-      title: 'État des lieux',
-      fileName,
-      source: 'inventaires',
-    });
+        const fileName = `Etat_des_lieux_${inv.type}_${loc.replace(/\s+/g, '_')}.pdf`;
+        generation.report('securing-document', { reference });
+        await saveGeneratedPdf(doc, {
+          kind: 'inventaire',
+          title: 'État des lieux',
+          fileName,
+          source: 'inventaires',
+          reference,
+          generation,
+          metadata: {
+            documentType: 'inventaire',
+            reference,
+            agencyName: agenceInfo.nom,
+            partyName: loc,
+            createdAt: inv.date,
+          },
+        });
+      },
+    );
   };
 
   const updateStatut = async (id: string, statut: Inventaire['statut']) => {

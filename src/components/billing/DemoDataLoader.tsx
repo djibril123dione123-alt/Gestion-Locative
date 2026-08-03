@@ -4,8 +4,10 @@ import { AlertTriangle, CheckCircle2, Loader2, Sparkles, Trash2 } from 'lucide-r
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { supabase } from '../../lib/supabase';
+import { createContratViaEdge } from '../../services/api/contratApi';
 import { createPaiementViaEdge } from '../../services/api/paiementApi';
 import { getOrCreateIndividualOwnerBailleur } from '../../services/individualOwner';
+import { markTenantDemoDataLoaded } from '../../services/tenantProfileCommands';
 import { ToastContainer } from '../ui/Toast';
 
 interface DemoDataLoaderProps {
@@ -172,9 +174,8 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
       if (!locataires || locataires.length < 2) throw new Error('Les locataires de demo n ont pas pu etre crees.');
 
       const today = new Date().toISOString().split('T')[0];
-      const contratsData = [
-        {
-          agency_id: agencyId,
+      const contrats = await Promise.all([
+        createContratViaEdge({
           unite_id: unites[0].id,
           locataire_id: locataires[0].id,
           loyer_mensuel: DEMO_DATA.unites[0].loyer_base,
@@ -182,9 +183,8 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
           date_debut: today,
           statut: 'actif',
           is_demo_data: true,
-        },
-        {
-          agency_id: agencyId,
+        }),
+        createContratViaEdge({
           unite_id: unites[1].id,
           locataire_id: locataires[1].id,
           loyer_mensuel: DEMO_DATA.unites[1].loyer_base,
@@ -192,21 +192,8 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
           date_debut: today,
           statut: 'actif',
           is_demo_data: true,
-        },
-      ];
-
-      const { data: contrats, error: contratsError } = await supabase
-        .from('contrats')
-        .insert(contratsData)
-        .select('id');
-      if (contratsError) throw contratsError;
-      if (!contrats || contrats.length < 2) throw new Error('Les contrats de demo n ont pas pu etre crees.');
-
-      const { error: updateUnitesError } = await supabase
-        .from('unites')
-        .update({ statut: 'loue' })
-        .in('id', [unites[0].id, unites[1].id]);
-      if (updateUnitesError) throw updateUnitesError;
+        }),
+      ]);
 
       const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
       const loyerComplet = DEMO_DATA.unites[0].loyer_base;
@@ -222,6 +209,7 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
           statut: 'paye',
           reference: 'DEMO-001',
           idempotency_key: `demo:${agencyId}:${contrats[0].id}:${currentMonth}:full`,
+          is_demo_data: true,
         }),
         createPaiementViaEdge({
           contrat_id: contrats[1].id,
@@ -232,32 +220,19 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
           statut: 'partiel',
           reference: 'DEMO-002',
           idempotency_key: `demo:${agencyId}:${contrats[1].id}:${currentMonth}:partial`,
+          is_demo_data: true,
         }),
       ]);
 
       const paiementFailures = paiementResults.filter((result) => result.status === 'rejected');
-      const paiementIds = paiementResults
-        .flatMap((result) => result.status === 'fulfilled' ? [result.value.id] : []);
-      if (paiementIds.length > 0) {
-        const { error: markPaymentsError } = await supabase
-          .from('paiements')
-          .update({ is_demo_data: true })
-          .in('id', paiementIds)
-          .eq('agency_id', agencyId);
-        if (markPaymentsError) {
-          throw new Error("Les paiements exemples ont ete crees mais n'ont pas pu etre marques comme exemples. Reset bloque par securite.");
-        }
-      }
       if (paiementFailures.length > 0) {
         console.warn('[DemoDataLoader] paiements demo partiellement indisponibles', paiementFailures);
       }
 
-      const { error: demoFlagError } = await supabase
-        .from('agencies')
-        .update({ demo_data_loaded: true })
-        .eq('id', agencyId);
-      if (demoFlagError) {
-        console.warn('[DemoDataLoader] demo_data_loaded flag skipped', demoFlagError.message);
+      try {
+        await markTenantDemoDataLoaded();
+      } catch (demoFlagError) {
+        console.warn('[DemoDataLoader] demo_data_loaded flag skipped', demoFlagError);
       }
 
       setDone(true);

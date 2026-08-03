@@ -59,6 +59,9 @@ import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { DocumentProofDrawer } from '../components/documents/DocumentProofDrawer';
 import { DocumentUploadWizard, type DocumentUploadValue } from '../components/documents/DocumentUploadWizard';
 import { supportsPublicVerification, getDocumentProofState } from '../components/documents/documentProofState';
+import { touchManagedDocument } from '../services/documentRegistry';
+import { announceGeneratedDocument, type GeneratedDocumentPayload } from '../lib/documentGenerated';
+import { runDocumentGeneration } from '../lib/documentGeneration';
 
 import {
   type DocumentItem,
@@ -393,15 +396,66 @@ export function Documents() {
     if (item.source === 'uploaded') {
       void supabase.from('documents').update({ last_accessed_at: new Date().toISOString() }).eq('id', item.id);
     } else {
-      void supabase.from('document_registry').update({ last_accessed_at: new Date().toISOString() }).eq('id', item.id);
+      void touchManagedDocument(item.id).catch(() => undefined);
     }
     return url;
   };
 
+  const prepareStoredDocument = async (item: DocumentItem): Promise<GeneratedDocumentPayload> => {
+    const generationKey = `stored-document:${item.source}:${item.id}`;
+    const verificationExpected = supportsPublicVerification(item.documentType);
+    const verificationStatus = item.verification?.status === 'authentic'
+      ? 'active'
+      : verificationExpected
+        ? 'unavailable'
+        : 'not-applicable';
+
+    return runDocumentGeneration(
+      {
+        key: generationKey,
+        kind: 'document',
+        title: `Préparation de ${item.title}`,
+        source: 'Registre documentaire',
+        reference: item.reference,
+        archiveExpected: true,
+        verificationExpected,
+        steps: ['loading-data', 'loading-preview'],
+      },
+      async (lifecycle) => {
+        const signedUrl = await resolveDocumentUrl(item);
+        lifecycle.report('loading-preview', {
+          archiveStatus: 'ready',
+          verificationStatus,
+        });
+
+        const response = await fetch(signedUrl);
+        if (!response.ok) {
+          throw new Error('Le document enregistré ne peut pas être chargé pour le moment.');
+        }
+
+        const blob = await response.blob();
+        const previewUrl = URL.createObjectURL(blob);
+        return announceGeneratedDocument({
+          kind: 'document',
+          title: item.title,
+          fileName: item.fileName || `${item.reference || 'document'}.pdf`,
+          url: previewUrl,
+          blob,
+          mimeType: item.mimeType || blob.type || 'application/pdf',
+          fileSize: blob.size || item.size,
+          source: 'Registre documentaire',
+          generationKey,
+          reference: item.reference,
+          archiveStatus: 'ready',
+          verificationStatus,
+        });
+      },
+    );
+  };
+
   const openDocument = async (item: DocumentItem) => {
     try {
-      const url = await resolveDocumentUrl(item);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      await prepareStoredDocument(item);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Ouverture du document impossible');
     }
@@ -409,17 +463,13 @@ export function Documents() {
 
   const downloadDocument = async (item: DocumentItem) => {
     try {
-      const url = await resolveDocumentUrl(item);
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Téléchargement du document impossible');
-      const blobUrl = URL.createObjectURL(await response.blob());
+      const preparedDocument = await prepareStoredDocument(item);
       const anchor = document.createElement('a');
-      anchor.href = blobUrl;
+      anchor.href = preparedDocument.url;
       anchor.download = item.fileName || `${item.reference || 'document'}.pdf`;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      URL.revokeObjectURL(blobUrl);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Téléchargement du document impossible');
     }
@@ -526,6 +576,7 @@ export function Documents() {
     [isIndividualOwner]
   );
   const agencyId = profile?.agency_id ?? '';
+  const canMaintainDocuments = profile?.role === 'admin';
   const usedPercent = Math.min(100, Number(usage?.usage_percent ?? 0));
   const currentUsageMessage = usageMessage(usedPercent);
   const uploadedBucket = bucketValue(breakdown, 'uploaded');
@@ -642,15 +693,17 @@ export function Documents() {
               <p className="mt-1 text-sm font-medium opacity-80">{currentUsageMessage.text}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={() => runMaintenance('optimize', () => optimizeDocumentStorage(agencyId))}
-            disabled={maintenanceAction !== null || !agencyId}
-            className="sk-action sk-action-secondary justify-center disabled:opacity-60"
-          >
-            <Sparkles className="h-4 w-4" />
-            Optimiser
-          </button>
+          {canMaintainDocuments && (
+            <button
+              type="button"
+              onClick={() => runMaintenance('optimize', () => optimizeDocumentStorage(agencyId))}
+              disabled={maintenanceAction !== null || !agencyId}
+              className="sk-action sk-action-secondary justify-center disabled:opacity-60"
+            >
+              <Sparkles className="h-4 w-4" />
+              Optimiser
+            </button>
+          )}
         </div>
       )}
 
@@ -1056,6 +1109,7 @@ export function Documents() {
           )}
 
           {/* MAINTENANCE — masquée par défaut, vocabulaire métier */}
+          {canMaintainDocuments && (
           <details className="sk-premium-panel group/details min-w-0 overflow-hidden">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-sm font-bold text-slate-700 sm:px-4">
               <span className="flex min-w-0 items-center gap-2">
@@ -1085,6 +1139,7 @@ export function Documents() {
               </div>
             </div>
           </details>
+          )}
         </section>
       </div>
 

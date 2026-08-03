@@ -10,6 +10,7 @@ import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
+import { closeAgencyAccount } from '../services/admin/adminActionsService';
 
 type AgencyPlan = 'basic' | 'pro' | 'enterprise';
 type AgencyStatus = 'active' | 'suspended' | 'trial' | 'cancelled';
@@ -148,77 +149,22 @@ export default function Agences() {
     if (!deleteTargetId) return;
     setIsDeleting(true);
     try {
-      // Vérification des données orphelines avant suppression
-      const [
-        { count: nbUsers },
-        { count: nbBailleurs },
-        { count: nbImmeubles },
-        { count: nbContrats },
-        { count: nbPaiements },
-      ] = await Promise.all([
-        supabase.from('user_profiles').select('id', { count: 'exact', head: true }).eq('agency_id', deleteTargetId),
-        supabase.from('bailleurs').select('id', { count: 'exact', head: true }).eq('agency_id', deleteTargetId),
-        supabase.from('immeubles').select('id', { count: 'exact', head: true }).eq('agency_id', deleteTargetId),
-        supabase.from('contrats').select('id', { count: 'exact', head: true }).eq('agency_id', deleteTargetId),
-        supabase.from('paiements').select('id', { count: 'exact', head: true }).eq('agency_id', deleteTargetId),
-      ]);
-
-      const total = (nbUsers ?? 0) + (nbBailleurs ?? 0) + (nbImmeubles ?? 0) + (nbContrats ?? 0) + (nbPaiements ?? 0);
-      if (total > 0) {
-        const details = [
-          nbUsers    ? `${nbUsers} utilisateur(s)` : null,
-          nbBailleurs ? `${nbBailleurs} bailleur(s)` : null,
-          nbImmeubles ? `${nbImmeubles} immeuble(s)` : null,
-          nbContrats  ? `${nbContrats} contrat(s)` : null,
-          nbPaiements ? `${nbPaiements} paiement(s)` : null,
-        ].filter(Boolean).join(', ');
-        const confirmed = window.confirm(
-          `⚠️ Cette agence contient des données liées : ${details}.\n\nSupprimer quand même ? Toutes ces données seront perdues définitivement.`
-        );
-        if (!confirmed) {
-          setIsDeleting(false);
-          setDeleteTargetId(null);
-          return;
-        }
-      }
-
-      // Récupérer les infos de l'agence avant suppression pour l'audit log
       const targetAgency = agencies.find((a) => a.id === deleteTargetId);
+      if (!targetAgency) throw new Error('Organisation introuvable.');
 
-      const { error } = await supabase.rpc('delete_agency_cascade', {
-        p_agency_id: deleteTargetId,
-        p_reason: `Suppression depuis l'ancien écran Agences super-admin : ${targetAgency?.name ?? deleteTargetId}`,
-      });
-      if (error) throw error;
+      const { data: { user } } = await supabase.auth.getUser();
+      await closeAgencyAccount(
+        targetAgency,
+        `Clôture depuis l'écran Agences super-admin : ${targetAgency.name}`,
+        { actorId: user?.id, actorEmail: user?.email },
+      );
 
-      // Trace de l'action dans owner_actions_log (best-effort, ne bloque pas)
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        await supabase.from('owner_actions_log').insert({
-          actor_id: user?.id ?? null,
-          actor_email: user?.email ?? null,
-          action: 'agency.delete',
-          target_type: 'agency',
-          target_id: deleteTargetId,
-          target_label: targetAgency?.name ?? null,
-          details: targetAgency
-            ? {
-                plan: targetAgency.plan,
-                status: targetAgency.status,
-                email: targetAgency.email,
-              }
-            : {},
-        });
-      } catch (logErr) {
-        console.warn('owner_actions_log insert failed:', logErr);
-      }
-
-      showToast('Agence supprimée avec succès', 'success');
+      showToast('Organisation clôturée et accès révoqués', 'success');
       setDeleteTargetId(null);
       loadAgencies();
     } catch (error) {
-      console.error('Error deleting agency:', error);
-      showToast('Erreur lors de la suppression', 'error');
+      console.error('Error closing agency:', error);
+      showToast('La clôture de l’organisation a échoué', 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -512,9 +458,9 @@ export default function Agences() {
         isOpen={!!deleteTargetId}
         onClose={() => setDeleteTargetId(null)}
         onConfirm={confirmDelete}
-        title="Supprimer cette agence"
-        message="Êtes-vous sûr de vouloir supprimer cette agence ? Cette action est irréversible et supprimera toutes les données associées."
-        confirmText="Supprimer"
+        title="Clôturer cette organisation"
+        message="Les accès seront révoqués et l’abonnement annulé. Les contrats, paiements, documents et journaux financiers seront conservés pour audit et restitution."
+        confirmText="Clôturer"
         cancelText="Annuler"
         variant="danger"
         isLoading={isDeleting}

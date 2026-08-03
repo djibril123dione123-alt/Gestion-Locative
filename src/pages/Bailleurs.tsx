@@ -81,6 +81,8 @@ import { MetricCard } from '../components/ui/MetricCard';
 import { SplitViewShell } from '../components/ui/SplitViewShell';
 import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
 import { BrandMark } from '../components/brand/BrandLogo';
+import { createOwnerReportSnapshot } from '../services/api/documentSnapshotApi';
+import { runDocumentGeneration } from '../lib/documentGeneration';
 
 /**
  * Interface Bailleur avec les champs commission et debut_contrat
@@ -1105,7 +1107,19 @@ export function Bailleurs() {
    */
   const handleGenerateMandat = async (bailleur: Bailleur) => {
     try {
-      await generateMandatBailleurPDF(bailleur as unknown as Parameters<typeof generateMandatBailleurPDF>[0]);
+      await runDocumentGeneration({
+        key: `mandat:${profile?.agency_id ?? 'tenant'}:${bailleur.id}`,
+        kind: 'mandat',
+        title: 'Préparation du mandat de gestion',
+        source: 'bailleurs',
+        archiveExpected: true,
+        verificationExpected: true,
+      }, async (generation) => {
+        await generateMandatBailleurPDF(
+          bailleur as unknown as Parameters<typeof generateMandatBailleurPDF>[0],
+          generation,
+        );
+      });
     } catch (err) {
       console.error('Erreur génération PDF:', err);
       setError('Impossible de générer le mandat PDF.');
@@ -1113,23 +1127,30 @@ export function Bailleurs() {
   };
 
   const handleGenerateBailleurReport = async (bailleur: Bailleur) => {
-    const summary = summariesByBailleur[bailleur.id] ?? emptySummary();
-    const reportPaiements = summary.paiements.filter((paiement) => String(paiement.mois_concerne ?? paiement.date_paiement ?? '').startsWith(reportMonth));
-    const reportDepenses = summary.depenses.filter((depense) => String(depense.date_depense ?? '').startsWith(reportMonth));
-    const getPaymentNet = (paiement: DetailPaiement) => Number(paiement.part_bailleur ?? (Number(paiement.montant_total ?? 0) - Number(paiement.part_agence ?? 0)));
-    const totalLoyers = reportPaiements.reduce((sum, paiement) => sum + Number(paiement.montant_total ?? 0), 0);
-    const totalReliquats = reportPaiements.reduce((sum, paiement) => sum + Math.max(Number(paiement.reliquat ?? 0), 0), 0);
-    const totalCommissions = reportPaiements.reduce((sum, paiement) => sum + Number(paiement.part_agence ?? 0), 0);
-    const totalNet = reportPaiements.reduce((sum, paiement) => sum + getPaymentNet(paiement), 0);
-    const totalDepenses = reportDepenses.reduce((sum, depense) => sum + Number(depense.montant ?? 0), 0);
-
-    if (reportPaiements.length === 0 && summary.immeubles.length === 0) {
-      toast.warning('Aucune donnée à consolider pour ce bailleur sur la période sélectionnée.');
-      return;
-    }
-
     try {
       setGeneratingReport(true);
+      await runDocumentGeneration({
+        key: `rapport-bailleur:${profile?.agency_id ?? 'tenant'}:${bailleur.id}:${reportMonth}`,
+        kind: 'bilan',
+        title: accountProfile.isIndividualOwner ? 'Préparation du résumé propriétaire' : 'Préparation du rapport bailleur',
+        source: 'bailleurs',
+        archiveExpected: true,
+        verificationExpected: true,
+      }, async (generation) => {
+      if (!profile?.agency_id) throw new Error('Organisation introuvable.');
+      const snapshot = await createOwnerReportSnapshot({
+        agencyId: profile.agency_id,
+        bailleurId: bailleur.id,
+        month: reportMonth,
+        documentKind: accountProfile.isIndividualOwner ? 'rapport_proprietaire' : 'rapport_bailleur',
+      });
+      const reportData = snapshot.payload;
+      const reportDepenses = reportData.expenses;
+      const totalLoyers = Number(reportData.totals.collected);
+      const totalReliquats = Number(reportData.totals.arrears);
+      const totalCommissions = Number(reportData.totals.commissions);
+      const totalDepenses = Number(reportData.totals.expenses);
+      const totalNet = Number(reportData.totals.netToPay);
       const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -1161,11 +1182,11 @@ export function Bailleurs() {
         prefix: settings.document_preferences?.prefixes?.rapport ?? 'RPT',
         fallback: `RBL-${reportMonth}-${bailleur.id.slice(0, 8).toUpperCase()}`,
       });
+      generation.report('building-document', { reference: reportRef });
       const reportTitle = accountProfile.isIndividualOwner ? 'Résumé mensuel propriétaire' : 'Rapport mensuel bailleur';
       const netLabel = accountProfile.isIndividualOwner ? 'Revenus nets' : 'Net à reverser';
       const tableTheme = getAutoTableTheme(settings);
-      const recoveryBase = totalLoyers + totalReliquats;
-      const recoveryRate = recoveryBase > 0 ? Math.round((totalLoyers / recoveryBase) * 100) : 100;
+      const recoveryRate = Number(reportData.totals.recoveryRate);
 
       drawPageBorder(doc, settings);
       let y = await drawDocumentHeader(doc, settings, reportTitle, formatPersonName(bailleur, ''), {
@@ -1214,7 +1235,10 @@ export function Bailleurs() {
         [netLabel, formatCurrency(totalNet)],
         ['Taux de recouvrement', `${recoveryRate}%`],
         ...(enabledReportSections.has('occupancy')
-          ? [['Biens concernés', String(summary.immeubles.length)] as [string, string]]
+          ? [[
+              'Biens concernés',
+              String(new Set(reportData.contracts.map((contract) => contract.immeuble_id)).size),
+            ] as [string, string]]
           : []),
       ];
       const indicatorBody: string[][] = [];
@@ -1260,24 +1284,17 @@ export function Bailleurs() {
       doc.text(summaryLines, 14, y);
       y += summaryLines.length * 4.7 + 9;
 
-      const contractById = new Map(summary.contrats.map((contrat) => [contrat.id, contrat]));
-      const unitById = new Map(summary.unites.map((unite) => [unite.id, unite]));
-      const rows = reportPaiements.map((paiement) => {
-        const contrat = paiement.contrat_id ? contractById.get(paiement.contrat_id) : null;
-        const unite = contrat?.unite_id ? unitById.get(contrat.unite_id) : null;
-        const immeuble = summary.immeubles.find((item) => item.id === unite?.immeuble_id);
-        return {
-          id: paiement.id,
-          immeuble: immeuble?.nom ?? 'Bien non renseigné',
-          unite: unite?.nom ?? 'Unité non renseignée',
-          locataire: contrat?.locataires ? formatPersonName(contrat.locataires, '') : 'Locataire non renseigné',
-          loyer: formatCurrency(contrat?.loyer_mensuel ?? 0),
-          statut: Number(paiement.reliquat ?? 0) > 0 ? 'Partiel' : 'Soldé',
-          encaisse: formatCurrency(paiement.montant_total),
-          reliquat: formatCurrency(paiement.reliquat),
-          net: formatCurrency(getPaymentNet(paiement)),
-        };
-      });
+      const rows = reportData.contracts.map((contract) => ({
+        id: contract.contrat_id,
+        immeuble: contract.immeuble || 'Bien non renseigné',
+        unite: contract.unite || 'Unité non renseignée',
+        locataire: contract.locataire || 'Locataire non renseigné',
+        loyer: formatCurrency(Number(contract.loyer_mensuel)),
+        statut: Number(contract.reliquat) > 0 ? 'Partiel' : 'Soldé',
+        encaisse: formatCurrency(Number(contract.encaisse)),
+        reliquat: formatCurrency(Number(contract.reliquat)),
+        net: formatCurrency(Number(contract.part_bailleur)),
+      }));
 
       if (enabledReportSections.has('collections') || enabledReportSections.has('occupancy')) {
       sectionTitle('Détail par bien', 'Lecture par immeuble, unité, locataire et situation financière.');
@@ -1365,7 +1382,14 @@ export function Bailleurs() {
       doc.text(closingLines, 19, closingY);
       y += 38;
 
-      if (reportTemplate.content.style.showQr && enabledReportSections.has('qr_verification')) {
+      const reportQrEnabled =
+        reportTemplate.content.style.showQr &&
+        enabledReportSections.has('qr_verification');
+      if (reportQrEnabled) {
+        generation.report('securing-document', {
+          reference: reportRef,
+          verificationStatus: 'pending',
+        });
         await drawLegalVerificationFooter(doc, {
           ref: reportRef,
           type: 'rapport_bailleur',
@@ -1385,10 +1409,31 @@ export function Bailleurs() {
         entityId: bailleur.id,
         period: reportMonth,
         reference: reportRef,
+        generation,
+        verificationExpected: reportQrEnabled,
+        metadata: {
+          documentType: accountProfile.isIndividualOwner
+            ? 'rapport_proprietaire'
+            : 'rapport_bailleur',
+          reference: reportRef,
+          agencyName: settings.nom_agence ?? 'Samay Këur',
+          subject: accountProfile.isIndividualOwner
+            ? 'Résumé financier mensuel propriétaire'
+            : 'Rapport financier de gestion locative',
+          partyName: formatPersonName(bailleur, ''),
+          period: periodLabel,
+          createdAt: new Date(),
+        },
         data: {
           document: 'rapport_bailleur',
           reportMonth,
           bailleur,
+          financialSnapshot: {
+            id: snapshot.snapshotId,
+            fingerprint: snapshot.fingerprint,
+            createdAt: snapshot.createdAt,
+            schemaVersion: reportData.schemaVersion,
+          },
           totals: { totalLoyers, totalReliquats, totalCommissions, totalDepenses, totalNet, recoveryRate },
           template: {
             revisionId: reportTemplate.revisionId,
@@ -1436,6 +1481,7 @@ export function Bailleurs() {
       }
       await loadBailleurs();
       setActiveDrawerTab('rapports');
+      });
     } catch (err) {
       console.error('Erreur génération rapport bailleur:', err);
       const errorMessage = translateSupabaseError(err);

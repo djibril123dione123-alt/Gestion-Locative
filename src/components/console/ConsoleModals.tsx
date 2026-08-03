@@ -82,6 +82,13 @@ const labelCls = 'block text-xs font-semibold text-gray-400 uppercase tracking-w
 const primaryBtn = 'px-4 py-2 rounded bg-orange-600 hover:bg-orange-500 text-white text-sm font-semibold disabled:opacity-50';
 const secondaryBtn = 'px-4 py-2 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-medium';
 
+function adminCommandKey(command: string, targetId: string) {
+  const nonce = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${command}:${targetId}:${nonce}`;
+}
+
 // ─── 1) Création d'agence ───────────────────────────────────────────────────
 
 interface CreateAgencyProps {
@@ -104,6 +111,9 @@ export function CreateAgencyModal({ open, onClose, actorId, actorEmail, onCreate
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  void actorId;
+  void actorEmail;
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -115,33 +125,16 @@ export function CreateAgencyModal({ open, onClose, actorId, actorEmail, onCreate
         setBusy(false);
         return;
       }
-      const trialEnd = form.status === 'trial'
-        ? new Date(Date.now() + form.trial_days * 24 * 3600 * 1000).toISOString()
-        : null;
-
-      const { data, error } = await supabase
-        .from('agencies')
-        .insert({
-          name: form.name.trim(),
-          email: form.email.trim(),
-          phone: normalizedPhone,
-          plan: form.plan,
-          status: form.status,
-          trial_ends_at: trialEnd,
-        })
-        .select('id, name')
-        .single();
-      if (error) throw error;
-
-      await supabase.from('owner_actions_log').insert({
-        actor_id: actorId,
-        actor_email: actorEmail,
-        action: 'agency_created',
-        target_type: 'agency',
-        target_id: data.id,
-        target_label: data.name,
-        details: { plan: form.plan, status: form.status, trial_days: form.status === 'trial' ? form.trial_days : null },
+      const { error } = await supabase.rpc('admin_create_agency', {
+        p_name: form.name.trim(),
+        p_email: form.email.trim().toLowerCase(),
+        p_phone: normalizedPhone,
+        p_plan: form.plan,
+        p_status: form.status,
+        p_trial_days: form.status === 'trial' ? form.trial_days : 30,
+        p_idempotency_key: adminCommandKey('create-agency', form.email.trim().toLowerCase()),
       });
+      if (error) throw error;
 
       onCreated();
       onClose();
@@ -226,41 +219,28 @@ export function InviteUserModal({ open, onClose, agencies, actorId, actorEmail, 
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  void actorId;
+  void actorEmail;
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setErr(null);
     try {
-      const token = crypto.randomUUID() + '-' + crypto.randomUUID();
-      const expires = new Date(Date.now() + form.days_valid * 24 * 3600 * 1000).toISOString();
-
-      const { data, error } = await supabase
-        .from('invitations')
-        .insert({
-          email: form.email.trim().toLowerCase(),
-          agency_id: form.agency_id,
-          role: form.role,
-          token,
-          message: form.message.trim() || null,
-          expires_at: expires,
-          invited_by: actorId,
-        })
-        .select('id, token, email')
-        .single();
+      const { data, error } = await supabase.rpc('admin_create_invitation', {
+        p_email: form.email.trim().toLowerCase(),
+        p_agency_id: form.agency_id,
+        p_role: form.role,
+        p_message: form.message.trim() || '',
+        p_days_valid: form.days_valid,
+        p_idempotency_key: adminCommandKey('create-invitation', `${form.agency_id}:${form.email.trim().toLowerCase()}`),
+      });
       if (error) throw error;
 
-      const url = `${window.location.origin}/?token=${data.token}`;
+      const result = data as { token?: string } | null;
+      if (!result?.token) throw new Error('Invitation créée sans jeton exploitable.');
+      const url = `${window.location.origin}/?token=${result.token}`;
       setLink(url);
-
-      await supabase.from('owner_actions_log').insert({
-        actor_id: actorId,
-        actor_email: actorEmail,
-        action: 'user_invited',
-        target_type: 'invitation',
-        target_id: data.id,
-        target_label: data.email,
-        details: { agency_id: form.agency_id, role: form.role, expires_at: expires },
-      });
 
       onInvited();
     } catch (e: unknown) {
@@ -374,6 +354,10 @@ export function EditUserModal({ open, onClose, user, agencies, actorId, actorEma
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [confirmRoleChange, setConfirmRoleChange] = useState(false);
+  const [reason, setReason] = useState('');
+
+  void actorId;
+  void actorEmail;
 
   React.useEffect(() => {
     if (user) {
@@ -382,6 +366,7 @@ export function EditUserModal({ open, onClose, user, agencies, actorId, actorEma
       setActif(user.actif);
       setErr(null);
       setConfirmRoleChange(false);
+      setReason('');
     }
   }, [user]);
 
@@ -393,32 +378,31 @@ export function EditUserModal({ open, onClose, user, agencies, actorId, actorEma
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (roleEscalation && !confirmRoleChange) return;
+    if (reason.trim().length < 8) {
+      setErr('Indiquez un motif d’au moins 8 caractères pour assurer la traçabilité.');
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
-      const patch: Record<string, unknown> = {};
-      if (role !== user.role) patch.role = role;
-      if (agencyChanged) patch.agency_id = agencyId || null;
-      if (actif !== user.actif) patch.actif = actif;
-
-      if (Object.keys(patch).length === 0) {
+      const hasRoleChange = role !== user.role;
+      const hasStatusChange = actif !== user.actif;
+      if (!hasRoleChange && !agencyChanged && !hasStatusChange) {
         onClose();
         setBusy(false);
         return;
       }
 
-      const { error } = await supabase.from('user_profiles').update(patch).eq('id', user.id);
-      if (error) throw error;
-
-      await supabase.from('owner_actions_log').insert({
-        actor_id: actorId,
-        actor_email: actorEmail,
-        action: 'user_updated',
-        target_type: 'user',
-        target_id: user.id,
-        target_label: user.email,
-        details: patch,
+      const { error } = await supabase.rpc('admin_update_user_access', {
+        p_target_user_id: user.id,
+        p_next_role: hasRoleChange ? role : null,
+        p_next_active: hasStatusChange ? actif : null,
+        p_next_agency_id: agencyChanged ? agencyId || null : null,
+        p_change_agency: agencyChanged,
+        p_reason: reason.trim(),
+        p_idempotency_key: adminCommandKey('user-access', user.id),
       });
+      if (error) throw error;
 
       onSaved();
       onClose();
@@ -481,10 +465,25 @@ export function EditUserModal({ open, onClose, user, agencies, actorId, actorEma
           </div>
         )}
 
+        <div>
+          <label className={labelCls}>Motif de la modification *</label>
+          <textarea
+            rows={2}
+            minLength={8}
+            required
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className={inputCls}
+            placeholder="Ex. Changement validé par le responsable de compte"
+            data-testid="input-edit-user-reason"
+          />
+          <p className="mt-1 text-xs text-gray-500">Ce motif est conservé dans le journal d’audit.</p>
+        </div>
+
         {err && <p className="text-sm text-red-400">{err}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className={secondaryBtn}>Annuler</button>
-          <button type="submit" disabled={busy || (roleEscalation && !confirmRoleChange) || role === 'super_admin'} className={primaryBtn} data-testid="button-submit-edit-user">
+          <button type="submit" disabled={busy || reason.trim().length < 8 || (roleEscalation && !confirmRoleChange) || role === 'super_admin'} className={primaryBtn} data-testid="button-submit-edit-user">
             {busy ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>
@@ -517,6 +516,10 @@ export function EditSubscriptionModal({ open, onClose, subscription, actorId, ac
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [reason, setReason] = useState('');
+
+  void actorId;
+  void actorEmail;
 
   React.useEffect(() => {
     if (subscription) {
@@ -526,6 +529,7 @@ export function EditSubscriptionModal({ open, onClose, subscription, actorId, ac
       setPeriodEnd(toDateInput(subscription.current_period_end));
       setErr(null);
       setConfirmCancel(false);
+      setReason('');
     }
   }, [subscription]);
 
@@ -537,33 +541,27 @@ export function EditSubscriptionModal({ open, onClose, subscription, actorId, ac
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cancelling && !confirmCancel) return;
+    if (reason.trim().length < 8) {
+      setErr('Indiquez un motif d’au moins 8 caractères pour assurer la traçabilité.');
+      return;
+    }
+    if (!periodStart || !periodEnd || new Date(periodEnd) <= new Date(periodStart)) {
+      setErr('La période d’abonnement doit comporter une date de fin postérieure à la date de début.');
+      return;
+    }
     setBusy(true);
     setErr(null);
     try {
-      const patch: Record<string, unknown> = {
-        plan_id: planId,
-        status,
-        current_period_start: periodStart ? new Date(periodStart).toISOString() : null,
-        current_period_end: periodEnd ? new Date(periodEnd).toISOString() : null,
-      };
-      const { error } = await supabase.from('subscriptions').update(patch).eq('id', subscription.id);
-      if (error) throw error;
-
-      // Si le plan change, on aligne aussi agencies.plan pour cohérence avec
-      // les check_plan_limits et l'UI agences.
-      if (planChanging) {
-        await supabase.from('agencies').update({ plan: planId }).eq('id', subscription.agency_id);
-      }
-
-      await supabase.from('owner_actions_log').insert({
-        actor_id: actorId,
-        actor_email: actorEmail,
-        action: 'subscription_updated',
-        target_type: 'subscription',
-        target_id: subscription.id,
-        target_label: subscription.agency_name,
-        details: patch,
+      const { error } = await supabase.rpc('admin_update_subscription', {
+        p_subscription_id: subscription.id,
+        p_plan_id: planId,
+        p_status: status,
+        p_period_start: new Date(periodStart).toISOString(),
+        p_period_end: new Date(periodEnd).toISOString(),
+        p_reason: reason.trim(),
+        p_idempotency_key: adminCommandKey('subscription-update', subscription.id),
       });
+      if (error) throw error;
 
       onSaved();
       onClose();
@@ -622,10 +620,25 @@ export function EditSubscriptionModal({ open, onClose, subscription, actorId, ac
           </div>
         )}
 
+        <div>
+          <label className={labelCls}>Motif de la modification *</label>
+          <textarea
+            rows={2}
+            minLength={8}
+            required
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className={inputCls}
+            placeholder="Ex. Renouvellement confirmé par le support"
+            data-testid="input-edit-sub-reason"
+          />
+          <p className="mt-1 text-xs text-gray-500">Le plan, la période et le journal d’audit sont mis à jour dans une seule transaction.</p>
+        </div>
+
         {err && <p className="text-sm text-red-400">{err}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className={secondaryBtn}>Annuler</button>
-          <button type="submit" disabled={busy || (cancelling && !confirmCancel)} className={primaryBtn} data-testid="button-submit-edit-sub">
+          <button type="submit" disabled={busy || reason.trim().length < 8 || (cancelling && !confirmCancel)} className={primaryBtn} data-testid="button-submit-edit-sub">
             {busy ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>

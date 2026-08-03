@@ -24,7 +24,6 @@ declare
   v_storage_deleted integer := 0;
   v_requests_detached integer := 0;
   v_deleted_counts jsonb := '{}'::jsonb;
-  v_ledger_rule_disabled boolean := false;
 begin
   if p_agency_id is null then
     raise exception 'Agency id is required' using errcode = '22023';
@@ -118,19 +117,9 @@ begin
     );
   end if;
 
-  -- Ledger rows are intentionally immutable for normal users. A tenant deletion
-  -- by a super-admin is an exceptional administrative cleanup, so the immutable
-  -- delete rule is disabled only inside this audited transaction.
-  if exists (
-    select 1
-    from pg_rules
-    where schemaname = 'public'
-      and tablename = 'ledger_entries'
-      and rulename = 'ledger_no_delete'
-  ) then
-    execute 'alter table public.ledger_entries disable rule ledger_no_delete';
-    v_ledger_rule_disabled := true;
-  end if;
+  -- The immutable ledger trigger accepts this transaction-local, audited bypass
+  -- only for a verified super-admin tenant closure.
+  perform set_config('samay.allow_ledger_mutation', 'agency_closure', true);
 
   if to_regclass('public.document_verifications') is not null then
     update public.document_verifications
@@ -172,39 +161,40 @@ begin
     get diagnostics v_requests_detached = row_count;
   end if;
 
-  foreach v_table in array array[
-    'notification_queue',
-    'payment_transactions',
-    'document_verifications',
-    'document_registry',
-    'documents',
-    'inventaires',
-    'interventions',
-    'evenements',
-    'bilans_mensuels',
-    'financial_snapshots',
-    'kpi_daily',
-    'kpi_monthly',
-    'agency_cohort',
-    'event_outbox',
-    'event_log',
-    'ledger_entries',
-    'revenus',
-    'commissions',
-    'depenses',
-    'paiements',
-    'contrats',
-    'locataires',
-    'unites',
-    'immeubles',
-    'bailleurs',
-    'notifications',
-    'invitations',
-    'user_page_permissions',
-    'subscriptions',
-    'agency_settings',
-    'user_profiles'
-  ]
+  for v_table in
+    select unnest(array[
+      'notification_queue',
+      'payment_transactions',
+      'document_verifications',
+      'document_registry',
+      'documents',
+      'inventaires',
+      'interventions',
+      'evenements',
+      'bilans_mensuels',
+      'financial_snapshots',
+      'kpi_daily',
+      'kpi_monthly',
+      'agency_cohort',
+      'event_outbox',
+      'event_log',
+      'ledger_entries',
+      'revenus',
+      'commissions',
+      'depenses',
+      'paiements',
+      'contrats',
+      'locataires',
+      'unites',
+      'immeubles',
+      'bailleurs',
+      'notifications',
+      'invitations',
+      'user_page_permissions',
+      'subscriptions',
+      'agency_settings',
+      'user_profiles'
+    ]::text[])
   loop
     if to_regclass(format('public.%I', v_table)) is not null
       and exists (
@@ -292,10 +282,6 @@ begin
     raise exception 'Agency deletion failed' using errcode = 'P0002';
   end if;
 
-  if v_ledger_rule_disabled then
-    execute 'alter table public.ledger_entries enable rule ledger_no_delete';
-  end if;
-
   return jsonb_build_object(
     'success', true,
     'agency_id', p_agency_id,
@@ -306,16 +292,6 @@ begin
     'storage_objects_deleted', v_storage_deleted,
     'deleted', v_deleted_counts
   );
-exception
-  when others then
-    if v_ledger_rule_disabled then
-      begin
-        execute 'alter table public.ledger_entries enable rule ledger_no_delete';
-      exception when others then
-        null;
-      end;
-    end if;
-    raise;
 end;
 $$;
 

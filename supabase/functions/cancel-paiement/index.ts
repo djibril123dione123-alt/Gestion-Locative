@@ -18,7 +18,7 @@ const CORS = {
 
 const CancelPaiementSchema = z.object({
   id: z.string().uuid({ message: "id doit etre un UUID valide" }),
-  raison: z.string().max(300).optional(),
+  raison: z.string().trim().min(5, { message: "la raison doit contenir au moins 5 caracteres" }).max(300),
 });
 
 function json(body: unknown, status = 200) {
@@ -115,52 +115,25 @@ serve(async (req: Request) => {
 
     const { id, raison } = parsed.data;
 
-    const { data: paiement, error: fetchErr } = await supabaseAdmin
-      .from("paiements")
-      .select("id, statut, montant_total, agency_id")
-      .eq("id", id)
-      .eq("agency_id", agencyId)
-      .single();
+    const { data: cancelled, error: cancelErr } = await supabaseAdmin.rpc(
+      "fn_cancel_paiement_financial",
+      {
+        p_agency_id: agencyId,
+        p_user_id: user.id,
+        p_id: id,
+        p_reason: raison,
+      },
+    );
 
-    if (fetchErr || !paiement) {
-      return err("Paiement introuvable ou acces refuse.", 404, "NOT_FOUND");
+    if (cancelErr) {
+      const code = cancelErr.message.includes("PAYMENT_NOT_FOUND") ? "NOT_FOUND" : "DB_ERROR";
+      const status = code === "NOT_FOUND" ? 404 : 422;
+      return err(
+        code === "NOT_FOUND" ? "Paiement introuvable ou acces refuse." : cancelErr.message,
+        status,
+        code,
+      );
     }
-
-    if (paiement.statut === "annule") {
-      return json({ data: { id, statut: "annule", already_cancelled: true } }, 200);
-    }
-
-    const { data: cancelled, error: cancelErr } = await supabaseAdmin
-      .from("paiements")
-      .update({
-        statut: "annule",
-        notes: raison ? `Annule : ${raison}` : "Annule",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id)
-      .eq("agency_id", agencyId)
-      .select()
-      .single();
-
-    if (cancelErr) return err(cancelErr.message, 422, cancelErr.code ?? "DB_ERROR");
-
-    const { error: revenusErr } = await supabaseAdmin
-      .from("revenus")
-      .delete()
-      .eq("paiement_id", id);
-    if (revenusErr) {
-      console.warn("[cancel-paiement] revenus cleanup failed", revenusErr.message);
-    }
-
-    const { error: eventErr } = await supabaseAdmin.from("event_log").insert({
-      agency_id: agencyId,
-      event_type: "paiement.cancelled",
-      entity_type: "paiements",
-      entity_id: id,
-      payload: { raison: raison ?? null, montant: paiement.montant_total, cancelled_by: user.id },
-      created_by: user.id,
-    });
-    if (eventErr) console.warn("[cancel-paiement] event_log insert failed", eventErr.message);
 
     return json({ data: cancelled }, 200);
   } catch (unexpected) {

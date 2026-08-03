@@ -1,4 +1,4 @@
-import { dbPut, dbGet, dbGetAll, dbDelete } from './db';
+import { dbPut, dbGet, dbGetAll, dbDelete, dbClear } from './db';
 
 export interface CacheScope {
   agencyId: string | null;
@@ -11,6 +11,17 @@ export interface CachedValue<T> {
 }
 
 export const DEFAULT_READ_TIMEOUT_MS = 8_000;
+export const DEFAULT_CACHE_TTL_MS = 60 * 60 * 1000;
+
+const CACHE_TTL_BY_DOMAIN: ReadonlyArray<[RegExp, number]> = [
+  [/^(paiements|loyers-impayes|financial-dashboard|dashboard)/, 15 * 60 * 1000],
+  [/^(contrats|documents)/, 30 * 60 * 1000],
+  [/^(bailleurs|patrimoine|immeubles|unites|locataires|depenses)/, 60 * 60 * 1000],
+];
+
+export function getCacheTtlMs(key: string): number {
+  return CACHE_TTL_BY_DOMAIN.find(([pattern]) => pattern.test(key))?.[1] ?? DEFAULT_CACHE_TTL_MS;
+}
 
 export class NetworkReadTimeoutError extends Error {
   constructor(timeoutMs: number) {
@@ -20,8 +31,20 @@ export class NetworkReadTimeoutError extends Error {
 }
 
 export function isOfflineError(error: unknown): boolean {
-  if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
   const message = error instanceof Error ? error.message.toLowerCase() : String(error ?? '').toLowerCase();
+  const isApplicationError = [
+    'permission denied',
+    'not authorized',
+    'unauthorized',
+    'forbidden',
+    'row-level security',
+    'violates row-level security',
+    'invalid input',
+    'validation failed',
+  ].some((pattern) => message.includes(pattern));
+
+  if (isApplicationError) return false;
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
   return (
     message.includes('failed to fetch') ||
     message.includes('network') ||
@@ -57,10 +80,19 @@ export async function saveCachedValue<T>(scope: CacheScope, key: string, data: T
   });
 }
 
-export async function loadCachedValue<T>(scope: CacheScope, key: string): Promise<CachedValue<T> | null> {
+export async function loadCachedValue<T>(
+  scope: CacheScope,
+  key: string,
+  maxAgeMs: number = getCacheTtlMs(key),
+): Promise<CachedValue<T> | null> {
   if (!scope.agencyId || !scope.userId) return null;
-  const snap = await dbGet('snapshots', cacheId(scope, key));
+  const id = cacheId(scope, key);
+  const snap = await dbGet('snapshots', id);
   if (!snap) return null;
+  if (!Number.isFinite(snap.timestamp) || Date.now() - snap.timestamp > maxAgeMs) {
+    await dbDelete('snapshots', id);
+    return null;
+  }
   return { data: snap.data[0] as T, timestamp: snap.timestamp };
 }
 
@@ -155,13 +187,17 @@ export async function readWithCache<T>(
     timeoutMs?: number;
     preferCacheWhenOffline?: boolean;
     validate?: (data: T) => boolean;
+    maxCacheAgeMs?: number;
   } = {},
 ): Promise<CachedValue<T> & { source: 'network' | 'cache' }> {
   const preferCacheWhenOffline = options.preferCacheWhenOffline ?? true;
-  const cached = await loadCachedValue<T>(scope, key);
+  const cached = await loadCachedValue<T>(scope, key, options.maxCacheAgeMs ?? getCacheTtlMs(key));
 
-  if (preferCacheWhenOffline && typeof navigator !== 'undefined' && !navigator.onLine && cached) {
-    return { ...cached, source: 'cache' };
+  const validCached = cached && (!options.validate || options.validate(cached.data)) ? cached : null;
+  if (cached && !validCached) await invalidateCachedValue(scope, key);
+
+  if (preferCacheWhenOffline && typeof navigator !== 'undefined' && !navigator.onLine && validCached) {
+    return { ...validCached, source: 'cache' };
   }
 
   try {
@@ -177,8 +213,8 @@ export async function readWithCache<T>(
     await saveCachedValue(scope, key, data);
     return { data, timestamp: Date.now(), source: 'network' };
   } catch (error) {
-    if (cached) {
-      return { ...cached, source: 'cache' };
+    if (isOfflineError(error) && validCached) {
+      return { ...validCached, source: 'cache' };
     }
     throw error;
   }
@@ -191,4 +227,15 @@ export async function clearCachedValuesForUser(userId: string): Promise<void> {
       .filter((snap) => snap.id.startsWith('read:') && snap.id.includes(`:${userId}:`))
       .map((snap) => dbDelete('snapshots', snap.id)),
   );
+}
+
+/** Purges all tenant-scoped browser data when authentication context changes. */
+export async function clearOfflineClientData(): Promise<void> {
+  await Promise.all([dbClear('snapshots'), dbClear('pending_mutations')]);
+  localStorage.removeItem('samay_last_backup_ts');
+
+  if ('serviceWorker' in navigator) {
+    const registration = await navigator.serviceWorker.getRegistration();
+    registration?.active?.postMessage({ type: 'PURGE_PRIVATE_DATA' });
+  }
 }

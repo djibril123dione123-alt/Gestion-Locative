@@ -12,6 +12,7 @@ export interface CreateContratInput {
   caution?: number | null;
   statut: Exclude<ContratStatut, 'archive'>;
   destination?: string | null;
+  is_demo_data?: boolean;
 }
 
 export interface UpdateContratInput {

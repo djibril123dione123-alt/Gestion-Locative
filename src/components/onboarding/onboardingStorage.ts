@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { markTenantOnboardingComplete } from '../../services/tenantProfileCommands';
 
 function getOnboardingKey(agencyId: string) {
   return `sk_onboarding_completed_${agencyId}`;
@@ -64,14 +65,7 @@ export async function getOnboardingCompletionStatus(agencyId: string): Promise<O
 }
 
 export async function markOnboardingCompletePersisted(agencyId: string, completedAt = new Date().toISOString()) {
-  const { error } = await supabase
-    .from('agency_settings')
-    .upsert({
-      agency_id: agencyId,
-      onboarding_completed_at: completedAt,
-    });
-
-  if (error) throw error;
+  const persistedAt = await markTenantOnboardingComplete(completedAt);
   markOnboardingComplete(agencyId);
-  return completedAt;
+  return persistedAt;
 }

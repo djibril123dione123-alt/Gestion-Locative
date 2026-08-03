@@ -1,13 +1,13 @@
 /**
- * useExport — export Excel (.xlsx) et PDF pour les données métier.
- * Génération 100% côté client. Librairies : xlsx (SheetJS) + jsPDF (déjà installées).
+ * useExport — export Excel (.xlsx) pour les données métier.
+ * Génération 100% côté client avec ExcelJS.
  *
  * Usage:
  *   const { exportLocataires, exportPaiements, exportContrats, exporting } = useExport();
  */
 
 import { useState, useCallback } from 'react';
-import * as XLSX from 'xlsx';
+import type { Workbook, Worksheet } from 'exceljs';
 import { announceGeneratedDocument, type GeneratedDocumentPreview } from '../lib/documentGenerated';
 import { formatSenegalPhone } from '../lib/formatters';
 
@@ -41,13 +41,13 @@ export interface ExportContrat {
   destination?: string | null;
 }
 
-function downloadWorkbook(
-  wb: XLSX.WorkBook,
+async function downloadWorkbook(
+  workbook: Workbook,
   filename: string,
   title: string,
   preview: GeneratedDocumentPreview
-): void {
-  const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+): Promise<void> {
+  const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   });
@@ -69,6 +69,39 @@ function downloadWorkbook(
     source: 'exports',
     preview,
   });
+}
+
+function addWorksheet(
+  workbook: Workbook,
+  name: string,
+  rows: Array<Record<string, string | number | null>>,
+  widths: number[],
+): Worksheet {
+  const worksheet = workbook.addWorksheet(name, {
+    views: [{ state: 'frozen', ySplit: 1 }],
+  });
+  const headers = rows[0] ? Object.keys(rows[0]) : [];
+  worksheet.columns = headers.map((header, index) => ({
+    header,
+    key: header,
+    width: widths[index] ?? 18,
+  }));
+  worksheet.addRows(rows);
+  worksheet.getRow(1).font = { bold: true, color: { argb: 'FF0B3B2E' } };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFEAF7F1' },
+  };
+  worksheet.autoFilter = headers.length
+    ? { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } }
+    : undefined;
+  return worksheet;
+}
+
+async function createWorkbook(): Promise<Workbook> {
+  const { Workbook: ExcelWorkbook } = await import('exceljs');
+  return new ExcelWorkbook();
 }
 
 function fmt(v: unknown): string | number | null {
@@ -97,23 +130,23 @@ function buildPreview(
 
 export interface UseExportReturn {
   exporting: boolean;
-  exportLocataires: (data: ExportLocataire[], filename?: string) => void;
-  exportPaiements: (data: ExportPaiement[], filename?: string) => void;
-  exportContrats: (data: ExportContrat[], filename?: string) => void;
+  exportLocataires: (data: ExportLocataire[], filename?: string) => Promise<void>;
+  exportPaiements: (data: ExportPaiement[], filename?: string) => Promise<void>;
+  exportContrats: (data: ExportContrat[], filename?: string) => Promise<void>;
   exportAll: (data: {
     locataires?: ExportLocataire[];
     paiements?: ExportPaiement[];
     contrats?: ExportContrat[];
-  }) => void;
+  }) => Promise<void>;
 }
 
 export function useExport(): UseExportReturn {
   const [exporting, setExporting] = useState(false);
 
-  const run = useCallback(<T>(fn: () => T): T => {
+  const run = useCallback(async (fn: () => Promise<void>): Promise<void> => {
     setExporting(true);
     try {
-      return fn();
+      await fn();
     } finally {
       setExporting(false);
     }
@@ -121,7 +154,7 @@ export function useExport(): UseExportReturn {
 
   const exportLocataires = useCallback(
     (data: ExportLocataire[], filename = 'locataires.xlsx') => {
-      run(() => {
+      return run(async () => {
         const rows = data.map((l) => ({
           Prénom: fmt(l.prenom),
           Nom: fmt(l.nom),
@@ -129,11 +162,9 @@ export function useExport(): UseExportReturn {
           Email: fmt(l.email),
           Adresse: fmt(l.adresse_personnelle),
         }));
-        const ws = XLSX.utils.json_to_sheet(rows);
-        ws['!cols'] = [20, 20, 18, 28, 35].map((w) => ({ wch: w }));
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Locataires');
-        downloadWorkbook(wb, filename, 'Export locataires', buildPreview(rows));
+        const workbook = await createWorkbook();
+        addWorksheet(workbook, 'Locataires', rows, [20, 20, 18, 28, 35]);
+        await downloadWorkbook(workbook, filename, 'Export locataires', buildPreview(rows));
       });
     },
     [run],
@@ -141,7 +172,7 @@ export function useExport(): UseExportReturn {
 
   const exportPaiements = useCallback(
     (data: ExportPaiement[], filename = 'paiements.xlsx') => {
-      run(() => {
+      return run(async () => {
         const rows = data.map((p) => ({
           Référence: fmt(p.reference),
           Date: fmt(p.date_paiement),
@@ -152,13 +183,11 @@ export function useExport(): UseExportReturn {
           Locataire: fmt(p.locataire_nom),
           Unité: fmt(p.unite_nom),
         }));
-        const ws = XLSX.utils.json_to_sheet(rows);
-        ws['!cols'] = [18, 14, 14, 14, 12, 18, 24, 20].map((w) => ({ wch: w }));
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Paiements');
+        const workbook = await createWorkbook();
+        addWorksheet(workbook, 'Paiements', rows, [18, 14, 14, 14, 12, 18, 24, 20]);
         const total = data.reduce((sum, p) => sum + Number(p.montant_total ?? 0), 0);
-        downloadWorkbook(
-          wb,
+        await downloadWorkbook(
+          workbook,
           filename,
           'Export paiements',
           buildPreview(rows, [{ label: 'Montant total', value: total.toLocaleString('fr-FR') }])
@@ -170,7 +199,7 @@ export function useExport(): UseExportReturn {
 
   const exportContrats = useCallback(
     (data: ExportContrat[], filename = 'contrats.xlsx') => {
-      run(() => {
+      return run(async () => {
         const rows = data.map((c) => ({
           Locataire: fmt(c.locataire_nom),
           Unité: fmt(c.unite_nom),
@@ -181,11 +210,9 @@ export function useExport(): UseExportReturn {
           Statut: fmt(c.statut),
           Destination: fmt(c.destination),
         }));
-        const ws = XLSX.utils.json_to_sheet(rows);
-        ws['!cols'] = [24, 18, 20, 14, 14, 16, 12, 14].map((w) => ({ wch: w }));
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Contrats');
-        downloadWorkbook(wb, filename, 'Export contrats', buildPreview(rows));
+        const workbook = await createWorkbook();
+        addWorksheet(workbook, 'Contrats', rows, [24, 18, 20, 14, 14, 16, 12, 14]);
+        await downloadWorkbook(workbook, filename, 'Export contrats', buildPreview(rows));
       });
     },
     [run],
@@ -197,8 +224,8 @@ export function useExport(): UseExportReturn {
       paiements?: ExportPaiement[];
       contrats?: ExportContrat[];
     }) => {
-      run(() => {
-        const wb = XLSX.utils.book_new();
+      return run(async () => {
+        const workbook = await createWorkbook();
         const date = new Date().toISOString().slice(0, 10);
 
         if (data.locataires?.length) {
@@ -208,9 +235,7 @@ export function useExport(): UseExportReturn {
             Téléphone: fmtPhone(l.telephone),
             Email: fmt(l.email),
           }));
-          const ws = XLSX.utils.json_to_sheet(rows);
-          ws['!cols'] = [20, 20, 18, 28].map((w) => ({ wch: w }));
-          XLSX.utils.book_append_sheet(wb, ws, 'Locataires');
+          addWorksheet(workbook, 'Locataires', rows, [20, 20, 18, 28]);
         }
 
         if (data.paiements?.length) {
@@ -222,9 +247,7 @@ export function useExport(): UseExportReturn {
             Statut: fmt(p.statut),
             Locataire: fmt(p.locataire_nom),
           }));
-          const ws = XLSX.utils.json_to_sheet(rows);
-          ws['!cols'] = [18, 14, 14, 14, 12, 24].map((w) => ({ wch: w }));
-          XLSX.utils.book_append_sheet(wb, ws, 'Paiements');
+          addWorksheet(workbook, 'Paiements', rows, [18, 14, 14, 14, 12, 24]);
         }
 
         if (data.contrats?.length) {
@@ -235,18 +258,21 @@ export function useExport(): UseExportReturn {
             'Loyer (F CFA)': fmt(c.loyer_mensuel),
             Statut: fmt(c.statut),
           }));
-          const ws = XLSX.utils.json_to_sheet(rows);
-          ws['!cols'] = [24, 18, 14, 16, 12].map((w) => ({ wch: w }));
-          XLSX.utils.book_append_sheet(wb, ws, 'Contrats');
+          addWorksheet(workbook, 'Contrats', rows, [24, 18, 14, 16, 12]);
         }
 
-        if (wb.SheetNames.length === 0) return;
+        if (workbook.worksheets.length === 0) return;
         const rows = [
           { Feuille: 'Locataires', Lignes: data.locataires?.length ?? 0 },
           { Feuille: 'Paiements', Lignes: data.paiements?.length ?? 0 },
           { Feuille: 'Contrats', Lignes: data.contrats?.length ?? 0 },
         ];
-        downloadWorkbook(wb, `samay-keur-export-${date}.xlsx`, 'Export complet Samay Këur', buildPreview(rows));
+        await downloadWorkbook(
+          workbook,
+          `samay-keur-export-${date}.xlsx`,
+          'Export complet Samay Këur',
+          buildPreview(rows),
+        );
       });
     },
     [run],

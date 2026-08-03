@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Building2, UserPlus } from 'lucide-react';
+import {
+  CreateConsoleAgencyWizard,
+  InviteConsoleUserWizard,
+} from '../../components/console/ConsoleCreationWizards';
 import { ToastContainer } from '../../components/ui/Toast';
+import { PremiumButton } from '../../components/ui/PremiumButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
 import { AdminActionDialog, type AdminActionRequest } from '../../components/console/AdminActionDialog';
@@ -21,7 +26,7 @@ import {
   createAdminNote,
   createMaintenanceAnnouncement,
   createSupportTicket,
-  deleteAgencyCascade,
+  closeAgencyAccount,
   extendAgencyTrial,
   recordIncident,
   rejectAgencyRequest,
@@ -61,6 +66,8 @@ export function Console() {
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [action, setAction] = useState<AdminActionRequest | null>(null);
   const [actionBusy, setActionBusy] = useState(false);
+  const [createAgencyOpen, setCreateAgencyOpen] = useState(false);
+  const [inviteUserOpen, setInviteUserOpen] = useState(false);
 
   const auditContext = useMemo(() => ({
     actorId: profile?.id ?? null,
@@ -106,6 +113,8 @@ export function Console() {
 
   const changeSpace = (next: ConsoleSpace) => {
     clearDetail();
+    setCreateAgencyOpen(false);
+    setInviteUserOpen(false);
     setSpace(next);
     window.history.replaceState(null, '', getConsoleRoute(next));
   };
@@ -232,11 +241,21 @@ export function Console() {
           data={data}
           onOpenAgency={selectAgency}
           onOpenProof={openProofById}
+          onNavigate={changeSpace}
         />
       );
     }
     if (space === 'organizations') return <OrganizationsTab data={data} onOpenAgency={selectAgency} selectedAgencyId={selectedAgency?.id ?? null} />;
-    if (space === 'billing') return <BillingTab data={data} onOpenProof={selectProof} selectedProofId={selectedProof?.id ?? null} />;
+    if (space === 'billing') {
+      return (
+        <BillingTab
+          data={data}
+          onOpenProof={selectProof}
+          onOpenAgencyById={openAgencyById}
+          selectedProofId={selectedProof?.id ?? null}
+        />
+      );
+    }
     if (space === 'users-access') return <UsersAccessTab data={data} onOpenUser={selectUser} selectedUserId={selectedUser?.id ?? null} />;
     if (space === 'support-ops') {
       return (
@@ -264,11 +283,11 @@ export function Console() {
         data={data}
         onOpenAgencyById={openAgencyById}
         onToggleFlag={(flag, nextActive) => runAction({
-          title: nextActive ? 'Activer ce feature flag ?' : 'Désactiver ce feature flag ?',
-          message: 'La modification passe par la gouvernance feature flag et sera tracée avant mutation.',
-          confirmLabel: nextActive ? 'Activer le flag' : 'Désactiver le flag',
+          title: nextActive ? 'Activer cette fonctionnalité ?' : 'Désactiver cette fonctionnalité ?',
+          message: 'La modification passe par la gouvernance des fonctionnalités et sera tracée avant mutation.',
+          confirmLabel: nextActive ? 'Activer' : 'Désactiver',
           destructive: !nextActive,
-          onConfirm: (reason) => withRefresh(() => toggleFeatureFlag(flag, nextActive, reason, auditContext), 'Feature flag mis à jour.'),
+          onConfirm: (reason) => withRefresh(() => toggleFeatureFlag(flag, nextActive, reason, auditContext), 'Fonctionnalité mise à jour.'),
         })}
         onCreateAnnouncement={(title, message, status) => runAction({
           title: 'Créer cette annonce plateforme ?',
@@ -299,31 +318,31 @@ export function Console() {
       onClose={() => setSelectedAgency(null)}
       onChangeStatus={(agency, nextStatus) => runAction({
         title: nextStatus === 'suspended' ? 'Suspendre cette organisation ?' : 'Réactiver cette organisation ?',
-        message: "Cette action impacte l'acces client et sera tracee avant mutation.",
+        message: "Cette action impacte l'accès client et sera tracée avant mutation.",
         confirmLabel: nextStatus === 'suspended' ? 'Suspendre' : 'Réactiver',
         destructive: nextStatus === 'suspended',
-        onConfirm: (reason) => withRefresh(() => changeAgencyStatus(agency, nextStatus, reason, auditContext), 'Statut organisation mis a jour.'),
+        onConfirm: (reason) => withRefresh(() => changeAgencyStatus(agency, nextStatus, reason, auditContext), 'Statut de l’organisation mis à jour.'),
       })}
       onChangePlan={(agency, subscription, plan) => runAction({
         title: `Changer le plan vers ${plan} ?`,
-        message: "Le plan agence et l'abonnement actif seront alignes si une souscription existe.",
+        message: "Le plan de l’organisation et l’abonnement actif seront alignés si une souscription existe.",
         confirmLabel: 'Changer le plan',
-        onConfirm: (reason) => withRefresh(() => changeAgencyPlan(agency, subscription, plan, reason, auditContext), 'Plan organisation mis a jour.'),
+        onConfirm: (reason) => withRefresh(() => changeAgencyPlan(agency, subscription, plan, reason, auditContext), 'Plan de l’organisation mis à jour.'),
       })}
       onExtendTrial={(agency, days) => runAction({
         title: `Prolonger l'essai de ${days} jours ?`,
-        message: "La periode d'essai sera recalculee depuis aujourd'hui.",
+        message: "La période d’essai sera recalculée depuis aujourd’hui.",
         confirmLabel: 'Prolonger',
-        onConfirm: (reason) => withRefresh(() => extendAgencyTrial(agency, days, reason, auditContext), 'Essai prolonge.'),
+        onConfirm: (reason) => withRefresh(() => extendAgencyTrial(agency, days, reason, auditContext), 'Essai prolongé.'),
       })}
       onDelete={(agency) => runAction({
-        title: 'Supprimer cette organisation ?',
-        message: 'Action destructive : la RPC de suppression cascade sera appelee apres audit strict.',
-        confirmLabel: 'Supprimer définitivement',
+        title: 'Clôturer cette organisation ?',
+        message: "Les accès seront révoqués et l'abonnement annulé. Les contrats, paiements, documents, snapshots et journaux financiers resteront conservés pour audit et restitution.",
+        confirmLabel: "Clôturer l'organisation",
         destructive: true,
         requireText: agency.name,
         minReasonLength: 12,
-        onConfirm: (reason) => withRefresh(() => deleteAgencyCascade(agency, reason, auditContext), 'Organisation supprimee.'),
+        onConfirm: (reason) => withRefresh(() => closeAgencyAccount(agency, reason, auditContext), 'Organisation clôturée et accès révoqués.'),
       })}
       onCreateNote={(agency, note, visibility) => runAction({
         title: 'Ajouter cette note interne ?',
@@ -331,7 +350,7 @@ export function Console() {
         confirmLabel: 'Ajouter note',
         onConfirm: (reason) => withRefresh(
           () => createAdminNote(agency.id, note, visibility, reason, auditContext),
-          'Note interne ajoutee.',
+          'Note interne ajoutée.',
         ),
       })}
       onCreateTicket={(agency, subject, category, priority, description) => runAction({
@@ -340,7 +359,7 @@ export function Console() {
         confirmLabel: 'Créer ticket',
         onConfirm: (reason) => withRefresh(
           () => createSupportTicket(agency.id, subject, category, priority, description, reason, auditContext),
-          'Ticket support cree.',
+          'Ticket support créé.',
         ),
       })}
     />
@@ -351,16 +370,16 @@ export function Console() {
       onClose={() => setSelectedRequest(null)}
       onApprove={(request) => runAction({
         title: 'Approuver la demande ?',
-        message: "La RPC d'approbation creera l'espace selon la logique backend existante.",
+        message: "L’approbation créera l’espace selon la logique serveur existante.",
         confirmLabel: 'Approuver',
-        onConfirm: (reason) => withRefresh(() => approveAgencyRequest(request.id, reason, auditContext), 'Demande approuvee.'),
+        onConfirm: (reason) => withRefresh(() => approveAgencyRequest(request.id, reason, auditContext), 'Demande approuvée.'),
       })}
       onReject={(request) => runAction({
         title: 'Rejeter la demande ?',
-        message: "Le motif sera transmis a la RPC de rejet et conserve dans l'audit.",
+        message: "Le motif sera transmis au service de rejet et conservé dans le journal d’audit.",
         confirmLabel: 'Rejeter',
         destructive: true,
-        onConfirm: (reason) => withRefresh(() => rejectAgencyRequest(request.id, reason, auditContext), 'Demande rejetee.'),
+        onConfirm: (reason) => withRefresh(() => rejectAgencyRequest(request.id, reason, auditContext), 'Demande rejetée.'),
       })}
     />
   ) : selectedProof ? (
@@ -369,16 +388,16 @@ export function Console() {
       onClose={() => setSelectedProof(null)}
       onApprove={(proof) => runAction({
         title: 'Valider cette preuve ?',
-        message: "Le plan sera active apres mise a jour de la preuve, de l'abonnement et de l'organisation.",
+        message: "Le plan sera activé après mise à jour de la preuve, de l’abonnement et de l’organisation.",
         confirmLabel: 'Valider et activer',
-        onConfirm: (reason) => withRefresh(() => approvePaymentProof(proof, reason, auditContext), 'Preuve validee et plan active.'),
+        onConfirm: (reason) => withRefresh(() => approvePaymentProof(proof, reason, auditContext), 'Preuve validée et plan activé.'),
       })}
       onReject={(proof) => runAction({
         title: 'Rejeter cette preuve ?',
-        message: 'Le plan ne sera pas active. Le motif restera visible dans le suivi support.',
+        message: 'Le plan ne sera pas activé. Le motif restera visible dans le suivi support.',
         confirmLabel: 'Rejeter la preuve',
         destructive: true,
-        onConfirm: (reason) => withRefresh(() => rejectPaymentProof(proof, reason, auditContext), 'Preuve rejetee.'),
+        onConfirm: (reason) => withRefresh(() => rejectPaymentProof(proof, reason, auditContext), 'Preuve rejetée.'),
       })}
     />
   ) : selectedUser ? (
@@ -403,6 +422,26 @@ export function Console() {
     />
   ) : null;
 
+  const primaryAction = space === 'organizations' ? (
+    <PremiumButton
+      variant="primary"
+      size="sm"
+      onClick={() => setCreateAgencyOpen(true)}
+      icon={<Building2 className="h-3.5 w-3.5" />}
+    >
+      Nouvelle agence
+    </PremiumButton>
+  ) : space === 'users-access' ? (
+    <PremiumButton
+      variant="primary"
+      size="sm"
+      onClick={() => setInviteUserOpen(true)}
+      icon={<UserPlus className="h-3.5 w-3.5" />}
+    >
+      Inviter
+    </PremiumButton>
+  ) : undefined;
+
   return (
     <>
       <ConsoleShell
@@ -412,7 +451,7 @@ export function Console() {
         refreshing={refreshing}
         onSignOut={() => void signOut()}
         lastLoadedAt={data?.generatedAt}
-        partialErrors={data?.partialErrors ?? []}
+        primaryAction={primaryAction}
         detailSlot={detailSlot}
         isDetailOpen={Boolean(detailSlot)}
         searchSlot={data ? (
@@ -430,6 +469,28 @@ export function Console() {
         {renderSpace()}
       </ConsoleShell>
 
+      <CreateConsoleAgencyWizard
+        open={createAgencyOpen}
+        onClose={() => setCreateAgencyOpen(false)}
+        onCreated={async () => {
+          toast.success('Espace agence créé. Vous pouvez maintenant inviter son administrateur.');
+          await load();
+        }}
+      />
+      <InviteConsoleUserWizard
+        open={inviteUserOpen}
+        agencies={(data?.agencies ?? []).map((agency) => ({
+          id: agency.id,
+          name: agency.name,
+          plan: agency.plan,
+          status: agency.status,
+        }))}
+        onClose={() => setInviteUserOpen(false)}
+        onInvited={async () => {
+          toast.success('Invitation créée. Le lien est prêt à être partagé.');
+          await load();
+        }}
+      />
 
       <AdminActionDialog
         action={action}

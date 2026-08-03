@@ -52,6 +52,11 @@ import {
 } from '../lib/rbac';
 import { getPricingPlan } from '../lib/pricingCatalog';
 import { supabase, type UserRole } from '../lib/supabase';
+import {
+  createTeamInvitation,
+  deactivateTeamMember,
+  replaceMemberPermissions,
+} from '../services/tenantAdministrationCommands';
 import type { AgencySettings } from '../types/agency';
 
 interface Member {
@@ -522,20 +527,11 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
 
     setSavingPermissions(true);
     try {
-      const { error: deleteErr } = await supabase
-        .from('user_page_permissions')
-        .delete()
-        .eq('agency_id', profile.agency_id)
-        .eq('user_id', permissionTarget.id);
-      if (deleteErr) throw deleteErr;
-
       const rows = Object.values(permissionDraft)
         .filter((permission) => permission.access_level !== 'inherit' && isModuleEnabled(permission.page, agencySettings))
         .map((permission) => {
           const constrained = constrainPermissionActions(permission);
           return {
-            agency_id: profile.agency_id,
-            user_id: permissionTarget.id,
             page: constrained.page,
             access_level: constrained.access_level as AccessLevel,
             can_create: constrained.access_level !== 'none' && constrained.can_create,
@@ -543,18 +539,13 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             can_delete: constrained.access_level !== 'none' && constrained.can_delete,
             can_export: constrained.access_level !== 'none' && constrained.can_export,
             can_manage: constrained.access_level === 'admin' && constrained.can_manage,
-            created_by: profile.id,
           };
         });
-
-      if (rows.length > 0) {
-        const { error: insertErr } = await supabase.from('user_page_permissions').insert(rows);
-        if (insertErr) throw insertErr;
-      }
+      const savedRows = await replaceMemberPermissions(permissionTarget.id, rows);
 
       setPermissionsByUser((prev) => ({
         ...prev,
-        [permissionTarget.id]: permissionRowsToMap(rows),
+        [permissionTarget.id]: permissionRowsToMap(savedRows),
       }));
       toast.success('Permissions mises à jour');
       setPermissionTarget(null);
@@ -583,20 +574,13 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     }
     setSubmitting(true);
     try {
-      const token = crypto.randomUUID();
-      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      const { error } = await supabase.from('invitations').insert({
+      const invitation = await createTeamInvitation({
         email: formData.email.trim().toLowerCase(),
-        agency_id: profile.agency_id,
         role: formData.role,
-        token,
-        invited_by: profile.id,
         message: JSON.stringify({ access_preset: invitePreset, note: inviteNote.trim() || null }),
-        expires_at: expiresAt,
-        status: 'pending',
+        daysValid: 7,
       });
-      if (error) throw error;
-      const link = `${window.location.origin}/?token=${token}`;
+      const link = `${window.location.origin}/?token=${invitation.token}`;
       setGeneratedLink(link);
       toast.success("Invitation créée. Copiez le lien pour l'envoyer.");
       loadData();
@@ -638,11 +622,10 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     }
     setDeactivating(true);
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({ actif: false })
-        .eq('id', deactivateTarget.id);
-      if (error) throw error;
+      await deactivateTeamMember(
+        deactivateTarget.id,
+        "Désactivation manuelle depuis la console Équipe & accès",
+      );
       toast.success('Membre désactivé');
       setDeactivateTarget(null);
       loadData();

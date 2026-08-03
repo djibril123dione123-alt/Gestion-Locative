@@ -1,89 +1,85 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Script de sauvegarde automatique Supabase
-# À adapter avec vos credentials Supabase
+set -Eeuo pipefail
+umask 077
 
-set -e
-
-# Configuration
 BACKUP_DIR="${BACKUP_DIR:-.backups}"
-RETENTION_DAYS="${RETENTION_DAYS:=30}"
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="${BACKUP_DIR}/backup_${TIMESTAMP}.sql"
+RETENTION_DAYS="${RETENTION_DAYS:-30}"
+TIMESTAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+RAW_DUMP="${BACKUP_DIR}/samay-keur-${TIMESTAMP}.dump"
+ENCRYPTED_DUMP="${RAW_DUMP}.enc"
+CHECKSUM_FILE="${ENCRYPTED_DUMP}.sha256"
 
-# Vérifier les variables d'environnement requises
-if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_KEY" ]; then
-  echo "❌ Erreur: SUPABASE_URL et SUPABASE_SERVICE_KEY sont requis"
-  exit 1
-fi
+cleanup() {
+  rm -f "$RAW_DUMP"
+}
+trap cleanup EXIT
 
-# Créer le répertoire de backup s'il n'existe pas
-mkdir -p "${BACKUP_DIR}"
-
-echo "📦 Sauvegarde de la base de données Supabase..."
-echo "   Destination: ${BACKUP_FILE}"
-
-# Extraire l'ID du projet depuis l'URL
-PROJECT_ID=$(echo "$SUPABASE_URL" | sed 's/.*\/\/\([^.]*\).*/\1/')
-
-if [ -z "$PROJECT_ID" ]; then
-  echo "❌ Erreur: Impossible d'extraire l'ID du projet de SUPABASE_URL"
-  exit 1
-fi
-
-# Utiliser Supabase CLI pour créer une sauvegarde
-# Note: Supabase CLI doit être installé: npm install -g supabase
-if command -v supabase &> /dev/null; then
-  echo "✅ Supabase CLI trouvé"
-  
-  # Créer une sauvegarde via l'API Supabase
-  # Cette commande nécessite une authentification préalable
-  supabase db dump --project-id "$PROJECT_ID" > "$BACKUP_FILE" || {
-    echo "⚠️  Supabase CLI dump a échoué, utilisation de pg_dump comme fallback"
-    
-    # Fallback: utiliser pg_dump si disponible
-    if command -v pg_dump &> /dev/null; then
-      # Construire la chaîne de connexion PostgreSQL
-      PG_CONN="postgresql://postgres:${SUPABASE_SERVICE_KEY}@${PROJECT_ID}.db.supabase.co:5432/postgres"
-      pg_dump "$PG_CONN" --no-password > "$BACKUP_FILE"
-    else
-      echo "❌ Ni Supabase CLI ni pg_dump n'est disponible"
-      exit 1
-    fi
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || {
+    echo "Required command is missing: $1" >&2
+    exit 1
   }
-else
-  echo "⚠️  Supabase CLI non trouvé, utilisation de l'API REST Supabase"
-  
-  # Alternative: utiliser l'API REST de Supabase
-  curl -X POST "https://api.supabase.com/v1/projects/${PROJECT_ID}/backups" \
-    -H "Authorization: Bearer ${SUPABASE_SERVICE_KEY}" \
-    -H "Content-Type: application/json" \
-    -d '{"description": "Automated backup"}' \
-    > "${BACKUP_DIR}/backup_info_${TIMESTAMP}.json"
-  
-  echo "✅ Sauvegarde créée via l'API Supabase"
-fi
+}
 
-# Vérifier que le fichier de backup a été créé
-if [ ! -f "$BACKUP_FILE" ]; then
-  echo "❌ Erreur: Le fichier de backup n'a pas été créé"
+require_secret() {
+  local name="$1"
+  if [[ -z "${!name:-}" ]]; then
+    echo "Required environment variable is missing: ${name}" >&2
+    exit 1
+  fi
+}
+
+require_secret SUPABASE_DB_URL
+require_secret BACKUP_ENCRYPTION_PASSPHRASE
+require_command pg_dump
+require_command pg_restore
+require_command openssl
+require_command sha256sum
+
+if ! [[ "$RETENTION_DAYS" =~ ^[0-9]+$ ]]; then
+  echo "RETENTION_DAYS must be a non-negative integer." >&2
   exit 1
 fi
 
-# Compresser le backup
-gzip -f "$BACKUP_FILE"
-BACKUP_FILE="${BACKUP_FILE}.gz"
+mkdir -p "$BACKUP_DIR"
 
-FILE_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
-echo "✅ Sauvegarde complétée: ${BACKUP_FILE} (${FILE_SIZE})"
+echo "Creating a tenant database backup at ${TIMESTAMP}..."
+pg_dump "$SUPABASE_DB_URL" \
+  --format=custom \
+  --no-owner \
+  --no-privileges \
+  --file="$RAW_DUMP"
 
-# Nettoyer les anciens backups
-echo "🧹 Suppression des backups de plus de ${RETENTION_DAYS} jours..."
-find "${BACKUP_DIR}" -name "backup_*.sql.gz" -type f -mtime +${RETENTION_DAYS} -delete
+# A custom archive that cannot be listed is not a usable backup.
+pg_restore --list "$RAW_DUMP" >/dev/null
 
-# Compter les backups restants
-BACKUP_COUNT=$(ls -1 "${BACKUP_DIR}"/backup_*.sql.gz 2>/dev/null | wc -l)
-echo "📊 Backups conservés: ${BACKUP_COUNT}"
+openssl enc -aes-256-cbc \
+  -salt \
+  -pbkdf2 \
+  -iter 200000 \
+  -in "$RAW_DUMP" \
+  -out "$ENCRYPTED_DUMP" \
+  -pass env:BACKUP_ENCRYPTION_PASSPHRASE
 
-echo "✅ Processus de sauvegarde terminé"
-exit 0
+(
+  cd "$BACKUP_DIR"
+  sha256sum "$(basename "$ENCRYPTED_DUMP")" > "$(basename "$CHECKSUM_FILE")"
+)
+
+if [[ ! -s "$ENCRYPTED_DUMP" || ! -s "$CHECKSUM_FILE" ]]; then
+  echo "Backup output is empty or incomplete." >&2
+  exit 1
+fi
+
+find "$BACKUP_DIR" -maxdepth 1 -type f \
+  \( -name 'samay-keur-*.dump.enc' -o -name 'samay-keur-*.dump.enc.sha256' \) \
+  -mtime "+${RETENTION_DAYS}" -delete
+
+echo "Encrypted backup created: ${ENCRYPTED_DUMP}"
+if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+  {
+    echo "backup_file=${ENCRYPTED_DUMP}"
+    echo "checksum_file=${CHECKSUM_FILE}"
+  } >> "$GITHUB_OUTPUT"
+fi

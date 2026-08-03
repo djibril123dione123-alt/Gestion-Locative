@@ -35,7 +35,6 @@ import { warmOfflineRouteCache } from './services/offlineRoutePreloader';
 import { getOnboardingCompletionStatus, markOnboardingComplete } from './components/onboarding/onboardingStorage';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
-const Agences = lazy(() => import('./pages/Agences'));
 const Bailleurs = lazy(() => import('./pages/Bailleurs').then(m => ({ default: m.Bailleurs })));
 const Patrimoine = lazy(() => import('./pages/Patrimoine').then(m => ({ default: m.Patrimoine })));
 const Locataires = lazy(() => import('./pages/Locataires').then(m => ({ default: m.Locataires })));
@@ -278,9 +277,8 @@ function AppContent() {
     useEffect(() => {
         if (profile) {
             identifyUser(profile.id, {
-                email: profile.email,
                 role: profile.role,
-                agency_id: profile.agency_id,
+                account_type: profile.role === 'bailleur' ? 'owner' : 'agency',
             });
         }
     }, [profile]);
@@ -556,8 +554,6 @@ function AppContent() {
         switch (routeTarget) {
             case 'dashboard':
                 return <Dashboard onNavigate={handleNavigate} onStartSetupWizard={() => setShowOnboardingWizard(true)} />;
-            case 'agences':
-                return profile?.role === 'super_admin' ? <Console /> : <Agences />;
             case 'bailleurs':
                 return <Bailleurs />;
             case 'patrimoine':

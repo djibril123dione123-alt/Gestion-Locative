@@ -17,6 +17,7 @@ import {
 } from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { FinancePageHeader } from '../components/finance/FinancePrimitives';
+import { runDocumentGeneration } from '../lib/documentGeneration';
 
 interface CommissionRow {
   id: string;
@@ -138,73 +139,94 @@ export function Commissions() {
   }, [loadCommissions, profile?.agency_id]);
 
   const exportPDF = async () => {
-    const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-    const monthName = new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
+    const agencyId = profile?.agency_id;
+    const reference = `COMM-${selectedMonth}`;
+    await runDocumentGeneration(
+      {
+        key: `commission:${agencyId ?? 'agency'}:${selectedMonth}`,
+        kind: 'commission',
+        title: 'Préparation du rapport des commissions',
+        source: 'commissions',
+        reference,
+        archiveExpected: true,
+      },
+      async (generation) => {
+        generation.report('building-document', { reference });
+        const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+        const monthName = new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });
 
-    drawPageBorder(doc);
-    const headerY = await drawDocumentHeader(doc, {}, 'Rapport des commissions', `Période : ${monthName}`, {
-      reference: `COMM-${selectedMonth}`,
-      issueDate: new Date().toLocaleDateString('fr-FR'),
-      documentType: 'Rapport financier',
-    });
-    const tableTheme = getAutoTableTheme();
-    const y = drawTotalsBlock(
-      doc,
-      14,
-      headerY + 6,
-      182,
-      [
-        { label: 'Total commissions', value: formatCurrency(stats.totalCommission), emphasis: true },
-        { label: 'Nombre de paiements', value: stats.nombrePaiements.toString() },
-        { label: 'Commission moyenne', value: formatCurrency(stats.commissionMoyenne) },
-        { label: 'Période', value: monthName },
-      ]
+        drawPageBorder(doc);
+        const headerY = await drawDocumentHeader(doc, {}, 'Rapport des commissions', `Période : ${monthName}`, {
+          reference,
+          issueDate: new Date().toLocaleDateString('fr-FR'),
+          documentType: 'Rapport financier',
+        });
+        const tableTheme = getAutoTableTheme();
+        const y = drawTotalsBlock(
+          doc,
+          14,
+          headerY + 6,
+          182,
+          [
+            { label: 'Total commissions', value: formatCurrency(stats.totalCommission), emphasis: true },
+            { label: 'Nombre de paiements', value: stats.nombrePaiements.toString() },
+            { label: 'Commission moyenne', value: formatCurrency(stats.commissionMoyenne) },
+            { label: 'Période', value: monthName },
+          ]
+        );
+
+        const detailsY = y + 2;
+        drawSectionFrame(doc, 14, detailsY, 182, 12, undefined, {
+          title: 'Détail des commissions',
+          accent: 'primary',
+          fill: false,
+        });
+        autoTable(doc, {
+          head: [['Locataire', 'Unité', 'Immeuble', 'Montant', 'Commission']],
+          body: commissions.map((c) => [
+            c.locataire,
+            c.unite,
+            c.immeuble,
+            formatCurrency(c.montant_total),
+            formatCurrency(c.part_agence),
+          ]),
+          startY: detailsY + 16,
+          theme: 'grid',
+          ...tableTheme,
+          styles: { ...tableTheme.styles, fontSize: 8.2, overflow: 'linebreak' },
+          headStyles: { ...tableTheme.headStyles, fontSize: 7.8 },
+          margin: { left: 14, right: 14 },
+          columnStyles: {
+            3: { halign: 'right' },
+            4: { halign: 'right', fontStyle: 'bold' },
+          },
+        });
+
+        addFooter(doc);
+        generation.report('securing-document', { reference });
+        await saveGeneratedPdf(doc, {
+          kind: 'commission',
+          title: 'Rapport des commissions',
+          fileName: `commissions-${selectedMonth}.pdf`,
+          source: 'commissions',
+          documentType: 'rapport_bailleur',
+          entityId: agencyId ? `commissions-${agencyId}` : 'commissions',
+          period: selectedMonth,
+          reference,
+          data: {
+            document: 'commissions',
+            selectedMonth,
+            commissions,
+          },
+          generation,
+          metadata: {
+            documentType: 'commission',
+            reference,
+            period: monthName,
+          },
+        });
+      },
     );
-
-    // Détails
-    const detailsY = y + 2;
-    drawSectionFrame(doc, 14, detailsY, 182, 12, undefined, {
-      title: 'Détail des commissions',
-      accent: 'primary',
-      fill: false,
-    });
-    autoTable(doc, {
-      head: [['Locataire', 'Unité', 'Immeuble', 'Montant', 'Commission']],
-      body: commissions.map((c) => [
-        c.locataire,
-        c.unite,
-        c.immeuble,
-        formatCurrency(c.montant_total),
-        formatCurrency(c.part_agence),
-      ]),
-      startY: detailsY + 16,
-      theme: 'grid',
-      ...tableTheme,
-      styles: { ...tableTheme.styles, fontSize: 8.2, overflow: 'linebreak' },
-      headStyles: { ...tableTheme.headStyles, fontSize: 7.8 },
-      margin: { left: 14, right: 14 },
-      columnStyles: {
-        3: { halign: 'right' },
-        4: { halign: 'right', fontStyle: 'bold' },
-      },
-    });
-
-    addFooter(doc);
-    await saveGeneratedPdf(doc, {
-      kind: 'commission',
-      title: 'Rapport des commissions',
-      fileName: `commissions-${selectedMonth}.pdf`,
-      source: 'commissions',
-      documentType: 'rapport_bailleur',
-      entityId: profile?.agency_id ? `commissions-${profile.agency_id}` : 'commissions',
-      period: selectedMonth,
-      reference: `COMM-${selectedMonth}`,
-      data: {
-        document: 'commissions',
-        selectedMonth,
-        commissions,
-      },
-    });
   };
 
   const exportSignedLedger = async () => {

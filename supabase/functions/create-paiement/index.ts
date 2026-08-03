@@ -51,6 +51,7 @@ const CreatePaiementSchema = z.object({
   idempotency_key: z.string().min(12).max(120).nullable().optional(),
   reference: z.string().max(100).nullable().optional(),
   notes: z.string().max(500).nullable().optional(),
+  is_demo_data: z.boolean().optional().default(false),
 });
 
 type CreatePaiementInput = z.infer<typeof CreatePaiementSchema>;
@@ -72,6 +73,27 @@ async function readBody(req: Request): Promise<unknown> {
 }
 
 function mapDbError(message: string): { message: string; status: number; code: string } {
+  if (message.includes("PAYMENT_IDEMPOTENCY_CONFLICT")) {
+    return {
+      message: "Cette demande de paiement a deja ete utilisee avec des informations differentes. Rechargez la page avant de recommencer.",
+      status: 409,
+      code: "PAYMENT_IDEMPOTENCY_CONFLICT",
+    };
+  }
+  if (message.includes("PAYMENT_IDEMPOTENCY_LEGACY_UNVERIFIABLE")) {
+    return {
+      message: "Ce paiement ancien ne peut pas etre rejoue automatiquement. Rechargez la page pour obtenir une nouvelle reference.",
+      status: 409,
+      code: "PAYMENT_IDEMPOTENCY_LEGACY_UNVERIFIABLE",
+    };
+  }
+  if (message.includes("PAYMENT_IDEMPOTENCY_KEY_INVALID")) {
+    return {
+      message: "La reference de securisation du paiement est invalide. Rechargez la page puis reessayez.",
+      status: 422,
+      code: "PAYMENT_IDEMPOTENCY_KEY_INVALID",
+    };
+  }
   if (message.includes("OVERPAYMENT")) {
     if (message.includes("total deja encaisse")) {
       return {
@@ -219,21 +241,11 @@ serve(async (req: Request) => {
         p_reference: input.reference ?? null,
         p_notes: input.notes ?? null,
         p_idempotency_key: idempotencyKey,
+        p_is_demo_data: input.is_demo_data,
       },
     );
 
     if (rpcErr) {
-      if (rpcErr.code === "23505" && idempotencyKey) {
-        const { data: existingPayment } = await supabaseAdmin
-          .from("paiements")
-          .select()
-          .eq("agency_id", profile.agency_id)
-          .eq("idempotency_key", idempotencyKey)
-          .maybeSingle();
-
-        if (existingPayment) return json({ data: existingPayment, idempotent: true }, 200);
-      }
-
       const mapped = mapDbError(rpcErr.message);
       return err(mapped.message, mapped.status, mapped.code);
     }

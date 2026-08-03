@@ -1,11 +1,14 @@
 import React from 'react';
-import { CheckCircle2, Loader2, type LucideIcon } from 'lucide-react';
+import { CheckCircle2, Loader2, RotateCcw, type LucideIcon } from 'lucide-react';
 import { classNames } from '../../lib/admin/adminFormatters';
 import { getStatusLabel, getStatusTone, type AdminTone } from '../../lib/admin/adminStatusMapping';
 import { MetricCard, type MetricTone } from '../ui/MetricCard';
 import { PremiumButton } from '../ui/PremiumButton';
+import { PremiumFilterSelect, type PremiumFilterSelectOption } from '../ui/PremiumFilterSelect';
 import { PremiumKpiGrid } from '../ui/PremiumKpiGrid';
+import { PremiumSearchInput } from '../ui/PremiumSearchInput';
 import { PremiumTableSurface } from '../ui/PremiumTableSurface';
+import { PremiumToolbar, type QuickChip } from '../ui/PremiumToolbar';
 
 const toneClasses: Record<AdminTone, string> = {
   emerald: 'border-emerald-200 bg-emerald-50 text-emerald-800',
@@ -78,12 +81,14 @@ export function AdminPanel({
   action,
   children,
   className,
+  bodyClassName,
 }: {
   title: string;
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  bodyClassName?: string;
 }) {
   return (
     <PremiumTableSurface density="compact" className={classNames('bg-white/95', className)}>
@@ -94,8 +99,135 @@ export function AdminPanel({
         </div>
         {action}
       </div>
-      <div className="p-2.5 sm:p-3">{children}</div>
+      <div className={classNames('p-2.5 sm:p-3', bodyClassName)}>{children}</div>
     </PremiumTableSurface>
+  );
+}
+
+export type AdminToolbarFilter = {
+  value: string;
+  placeholder: string;
+  options: PremiumFilterSelectOption[];
+  onChange: (value: string) => void;
+  defaultValue?: string;
+  className?: string;
+};
+
+export function AdminListToolbar({
+  query,
+  onQueryChange,
+  placeholder,
+  filters = [],
+  resultCount,
+  onReset,
+  isSplitOpen = false,
+  primaryAction,
+  quickChips,
+  className,
+}: {
+  query: string;
+  onQueryChange: (value: string) => void;
+  placeholder: string;
+  filters?: AdminToolbarFilter[];
+  resultCount?: number;
+  onReset?: () => void;
+  isSplitOpen?: boolean;
+  primaryAction?: React.ReactNode;
+  quickChips?: QuickChip[];
+  className?: string;
+}) {
+  const hasActiveFilters = Boolean(query.trim()) || filters.some((filter) => filter.value !== (filter.defaultValue ?? 'all'));
+
+  return (
+    <PremiumToolbar
+      layout="list"
+      density="ultraCompact"
+      isSplitOpen={isSplitOpen}
+      className={classNames('mb-2 border-slate-200/80 bg-slate-50/65 shadow-none', className)}
+      search={(
+        <PremiumSearchInput
+          value={query}
+          onChange={onQueryChange}
+          placeholder={placeholder}
+          className="min-w-[12rem]"
+          aria-label={placeholder}
+        />
+      )}
+      filters={filters.length > 0 ? (
+        <div className="flex min-w-0 items-center gap-1.5">
+          {filters.map((filter) => (
+            <PremiumFilterSelect
+              key={filter.placeholder}
+              value={filter.value}
+              placeholder={filter.placeholder}
+              options={filter.options}
+              onChange={(value) => filter.onChange(value || filter.defaultValue || 'all')}
+              className={classNames('w-[8.5rem]', filter.className)}
+            />
+          ))}
+        </div>
+      ) : undefined}
+      secondaryActions={(
+        <div className="flex shrink-0 items-center gap-1.5">
+          {typeof resultCount === 'number' && (
+            <span className="hidden whitespace-nowrap text-[0.66rem] font-black text-slate-500 xl:inline">
+              {resultCount} résultat{resultCount > 1 ? 's' : ''}
+            </span>
+          )}
+          {onReset && hasActiveFilters && (
+            <button
+              type="button"
+              onClick={onReset}
+              title="Réinitialiser les filtres"
+              aria-label="Réinitialiser les filtres"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-[0.6rem] border border-slate-200 bg-white text-slate-500 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+      primaryAction={primaryAction}
+      quickChips={quickChips}
+    />
+  );
+}
+
+export function AdminSectionTabs({
+  value,
+  onChange,
+  items,
+  ariaLabel = 'Vues de la section',
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  items: Array<{ value: string; label: string; count?: number }>;
+  ariaLabel?: string;
+}) {
+  return (
+    <div role="tablist" aria-label={ariaLabel} className="scrollbar-hide flex max-w-full items-center gap-1 overflow-x-auto rounded-[0.75rem] border border-emerald-950/10 bg-white/80 p-1">
+      {items.map((item) => {
+        const active = item.value === value;
+        return (
+          <button
+            key={item.value}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(item.value)}
+            className={classNames(
+              'inline-flex h-7 flex-none items-center gap-1.5 whitespace-nowrap rounded-[0.55rem] px-2.5 text-[0.68rem] font-black transition',
+              active ? 'bg-emerald-950 text-white shadow-sm' : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-900',
+            )}
+          >
+            {item.label}
+            {typeof item.count === 'number' && (
+              <span className={classNames('text-[0.58rem]', active ? 'text-emerald-100' : 'text-slate-400')}>{item.count}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -108,11 +240,6 @@ export function AdminEmptyState({ title, text, action }: { title: string; text: 
       {action && <div className="mt-3">{action}</div>}
     </div>
   );
-}
-
-export function AdminPartialDataNotice({ errors }: { errors: string[] }) {
-  void errors;
-  return null;
 }
 
 export function AdminLoadingState({ label = 'Chargement console...' }: { label?: string }) {
@@ -165,7 +292,14 @@ export function ResponsiveTable<T>({
   rowAriaLabel,
 }: {
   rows: T[];
-  columns: Array<{ key: string; label: string; render: (row: T) => React.ReactNode; align?: 'left' | 'right' }>;
+  columns: Array<{
+    key: string;
+    label: string;
+    render: (row: T) => React.ReactNode;
+    align?: 'left' | 'right';
+    hideWhenDetail?: boolean;
+    className?: string;
+  }>;
   getKey: (row: T) => string;
   renderCard: (row: T) => React.ReactNode;
   empty: React.ReactNode;
@@ -174,14 +308,15 @@ export function ResponsiveTable<T>({
   rowAriaLabel?: (row: T) => string;
 }) {
   if (rows.length === 0) return <>{empty}</>;
+  const visibleColumns = selectedKey ? columns.filter((column) => !column.hideWhenDetail) : columns;
   return (
     <>
       <PremiumTableSurface density="dense" withHorizontalScroll className="hidden bg-white md:block" ariaLabel="Table console">
-        <table className="w-full min-w-[680px] text-sm">
+        <table className={classNames('w-full text-sm', selectedKey ? 'min-w-[520px]' : 'min-w-[680px]')}>
           <thead className="bg-slate-50">
             <tr>
-              {columns.map((column) => (
-                <th key={column.key} className={classNames('px-3 py-2 text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500', column.align === 'right' ? 'text-right' : 'text-left')}>
+              {visibleColumns.map((column) => (
+                <th key={column.key} className={classNames('px-3 py-2 text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500', column.align === 'right' ? 'text-right' : 'text-left', column.className)}>
                   {column.label}
                 </th>
               ))}
@@ -210,8 +345,8 @@ export function ResponsiveTable<T>({
                     isSelected ? 'bg-emerald-50/70 shadow-[inset_3px_0_0_#047857]' : 'hover:bg-slate-50/70',
                   )}
                 >
-                  {columns.map((column) => (
-                    <td key={column.key} className={classNames('px-3 py-1.5 align-middle text-[0.78rem]', column.align === 'right' ? 'text-right' : 'text-left')}>
+                  {visibleColumns.map((column) => (
+                    <td key={column.key} className={classNames('px-3 py-1.5 align-middle text-[0.78rem]', column.align === 'right' ? 'text-right' : 'text-left', column.className)}>
                       {column.render(row)}
                     </td>
                   ))}

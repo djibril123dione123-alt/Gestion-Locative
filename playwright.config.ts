@@ -1,5 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const useProductionPreview = process.env.PLAYWRIGHT_USE_PREVIEW === '1';
+const localServerUrl = useProductionPreview
+  ? 'http://127.0.0.1:4173'
+  : 'http://localhost:5000';
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -24,7 +29,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5000',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || localServerUrl,
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
@@ -59,8 +64,11 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:5000',
-    reuseExistingServer: !process.env.CI,
+    command: useProductionPreview
+      ? 'npm run preview -- --host 127.0.0.1 --port 4173'
+      : 'npm run dev',
+    url: localServerUrl,
+    reuseExistingServer: !process.env.CI && !useProductionPreview,
+    timeout: 120_000,
   },
 });

@@ -71,6 +71,9 @@ import {
 } from '../components/paiements/paiementTypes';
 import { formatPersonName } from '../lib/people';
 import { buildMonthFilterOptions, resolveMonthFilter } from '../lib/monthFilters';
+import { createPaymentReceiptSnapshot } from '../services/api/documentSnapshotApi';
+import type { PaiementPDFData } from '../types';
+import { runDocumentGeneration } from '../lib/documentGeneration';
 
 interface PaiementsProps {
   embedded?: boolean;
@@ -570,18 +573,45 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
 
   const exportFacture = async (paiementId: string) => {
     if (!profile?.agency_id) return;
+    const agencyId = profile.agency_id;
+    const userId = profile.id;
     setExportingId(paiementId);
     try {
-      const { data: pmt, error: e1 } = await supabase
-        .from('paiements')
-        .select(
-          `id, created_at, date_paiement, mois_concerne, montant_total, montant_attendu, montant_encaisse_cumul, reliquat, reference, statut,
-           contrats(id, loyer_mensuel, commission, locataires(nom, prenom), unites(id, nom))`,
-        )
-        .eq('agency_id', profile.agency_id)
-        .eq('id', paiementId)
-        .single();
-
+      await runDocumentGeneration({
+        key: `paiement-pdf:${agencyId}:${paiementId}`,
+        kind: 'quittance',
+        title: 'Préparation du justificatif de paiement',
+        source: 'paiements',
+        archiveExpected: true,
+        verificationExpected: true,
+      }, async (generation) => {
+        const snapshot = await createPaymentReceiptSnapshot({
+          agencyId,
+          paymentId: paiementId,
+        });
+        const { payment, context } = snapshot.payload;
+      const pmt = {
+        id: payment.id,
+        created_at: payment.createdAt,
+        date_paiement: payment.date,
+        mois_concerne: payment.period,
+        montant_total: Number(payment.amount),
+        montant_attendu: Number(payment.expected),
+        montant_encaisse_cumul: Number(payment.paidToDate),
+        reliquat: Number(payment.remaining),
+        reference: payment.reference,
+        statut: payment.remaining > 0 ? 'partiel' : 'paye',
+        mode_paiement: payment.mode,
+        part_agence: Number(payment.agencyShare),
+        part_bailleur: Number(payment.ownerShare),
+        contrats: {
+          id: context.contractId,
+          loyer_mensuel: Number(context.rent),
+          commission: 0,
+          locataires: { nom: context.tenant.nom, prenom: context.tenant.prenom },
+          unites: { id: context.unit.id, nom: context.unit.nom },
+        },
+      };
       const paiement = pmt as unknown as {
         id: string;
         created_at: string;
@@ -593,6 +623,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         reliquat?: number | null;
         reference: string | null;
         statut: string;
+        mode_paiement: string;
+        part_agence: number;
+        part_bailleur: number;
         contrats: {
           id: string;
           loyer_mensuel: number;
@@ -602,49 +635,43 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         } | null;
       };
 
-      if (e1 || !paiement?.contrats?.locataires || !paiement.contrats.unites) {
+      if (!paiement?.contrats?.locataires || !paiement.contrats.unites) {
         throw new Error('Données de facturation incomplètes.');
       }
 
-      let adresse = '—';
-      const paiementCreatedAt = new Date(paiement.created_at).getTime();
-      const paiementsPrecedents = paiements
-        .filter((row) => {
-          if (row.id === paiement.id) return false;
-          if (row.contrat_id !== paiement.contrats?.id) return false;
-          if ((row.mois_concerne || '').slice(0, 7) !== paiement.mois_concerne.slice(0, 7)) return false;
-          if (row.statut !== 'paye' && row.statut !== 'partiel') return false;
-          return new Date(row.created_at ?? '').getTime() < paiementCreatedAt;
-        })
-        .reduce((sum, row) => sum + Number(row.montant_total || 0), 0);
-      const totalPayeMois = paiement.montant_encaisse_cumul ?? (paiementsPrecedents + Number(paiement.montant_total || 0));
+      const adresse = context.property.adresse || '-';
+      const paiementsPrecedents = Number(payment.previousPayments);
+      const totalPayeMois = Number(payment.paidToDate);
 
-      try {
-        const { data: u } = await supabase
-          .from('unites')
-          .select('immeubles(adresse)')
-          .eq('agency_id', profile.agency_id)
-          .eq('id', paiement.contrats.unites.id)
-          .maybeSingle();
-        const uniteRow = u as unknown as { immeubles: { adresse: string } | null } | null;
-        if (uniteRow?.immeubles?.adresse) adresse = uniteRow.immeubles.adresse;
-      } catch {
-        /* fallback silencieux uniquement pour l'adresse */
-      }
-
-      const payload = {
+      const payload: PaiementPDFData = {
         ...paiement,
+        agency_id: agencyId,
+        contrat_id: context.contractId,
+        montant_attendu: Number(payment.expected),
+        montant_encaisse_cumul: Number(payment.paidToDate),
+        reliquat: Number(payment.remaining),
+        statut: payment.remaining > 0 ? 'partiel' : 'paye',
+        mode_paiement: paiement.mode_paiement as PaiementPDFData['mode_paiement'],
+        part_agence: paiement.part_agence,
+        part_bailleur: paiement.part_bailleur,
+        piece_justificative: null,
+        notes: `Snapshot financier ${snapshot.snapshotId}`,
+        updated_at: paiement.created_at,
+        created_by: userId,
+        actif: true,
+        deleted_at: null,
         paiements_precedents: paiementsPrecedents,
         total_paye_mois: totalPayeMois,
-        statut_reel_mois: Number(paiement.reliquat || 0) > 0 ? 'Partiel' : 'Soldé',
+        statut_reel_mois: Number(paiement.reliquat || 0) > 0 ? 'Partiel' : 'Solde',
         contrats: {
-          ...paiement.contrats,
-          unites: { ...paiement.contrats.unites, immeubles: { adresse } },
+          loyer_mensuel: paiement.contrats.loyer_mensuel,
+          locataires: paiement.contrats.locataires,
+          unites: { immeubles: { adresse } },
         },
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await generatePaiementFacturePDF(payload as any);
+        await generatePaiementFacturePDF(payload, generation);
+      });
       success('Facture générée avec succès');
     } catch (err: unknown) {
       showError(

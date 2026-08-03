@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { AlertCircle, Eye, EyeOff, LogIn, ShieldCheck, Sparkles, UserPlus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { BrandLogo, BrandMark } from '../components/brand/BrandLogo';
@@ -211,6 +211,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                   </button>
                   <button
                     type="button"
+                    aria-label="Inscription"
                     onClick={() => switchMode('register')}
                     className={`min-h-9 rounded-lg px-2.5 text-xs font-black transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 ${
                       mode === 'register'
@@ -256,7 +257,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                 </div>
 
                 {error && (
-                  <div id="auth-error" className="mb-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 animate-slideInUp">
+                  <div id="auth-error" role="alert" aria-live="polite" className="mb-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 animate-slideInUp">
                     <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600" />
                     <p className="text-xs font-semibold leading-5 text-red-800">{error}</p>
                   </div>
@@ -338,11 +339,12 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                       )}
 
                       <div>
-                        <label className="mb-1.5 block text-xs font-black text-slate-700">
+                        <label htmlFor="auth-password" className="mb-1.5 block text-xs font-black text-slate-700">
                           Mot de passe <span className="text-red-500">*</span>
                         </label>
                         <div className="relative">
                           <input
+                            id="auth-password"
                             type={showPassword ? 'text' : 'password'}
                             required
                             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
@@ -446,12 +448,16 @@ type FieldProps = {
 };
 
 function Field({ label, required = false, inputProps }: FieldProps) {
+  const generatedId = useId();
+  const inputId = inputProps.id ?? `auth-field-${generatedId.replace(/:/g, '')}`;
+
   return (
     <div>
-      <label className="mb-1 block text-[0.7rem] font-black text-slate-700">
+      <label htmlFor={inputId} className="mb-1 block text-[0.7rem] font-black text-slate-700">
         {label} {required && <span className="text-red-500">*</span>}
       </label>
       <input
+        id={inputId}
         required={required}
         aria-invalid={inputProps['aria-invalid']}
         {...inputProps}

@@ -1,12 +1,51 @@
 import { supabase } from '../../lib/supabase';
-import { writeAdminAudit, type AdminAuditPayload } from './adminAuditService';
 import type { AdminAgency, AdminFeatureFlag, AdminSubscription, AdminUser, SubscriptionPaymentProof } from './adminConsoleService';
+import { writeAdminAudit } from './adminAuditService';
 
-type AuditContext = Pick<AdminAuditPayload, 'actorId' | 'actorEmail'>;
+type AuditContext = {
+  actorId?: string | null;
+  actorEmail?: string | null;
+  idempotencyKey?: string;
+};
 
-async function auditedAction(payload: AdminAuditPayload, mutation: () => Promise<void>) {
-  await writeAdminAudit(payload);
-  await mutation();
+function commandKey(context: AuditContext, command: string, targetId: string) {
+  if (context.idempotencyKey) return context.idempotencyKey;
+  const nonce = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${command}:${targetId}:${nonce}`;
+}
+
+async function runAdminCommand(name: string, args: Record<string, unknown>) {
+  const { data, error } = await supabase.rpc(name, args);
+  if (error) throw error;
+  return data;
+}
+
+async function recordContextualAudit(input: {
+  action: string;
+  reason: string;
+  context: AuditContext;
+  targetOrganizationId?: string | null;
+  targetUserId?: string | null;
+  targetType: string;
+  targetLabel?: string | null;
+  metadata?: Record<string, unknown>;
+}) {
+  return writeAdminAudit({
+    action: input.action,
+    reason: input.reason,
+    targetOrganizationId: input.targetOrganizationId,
+    targetUserId: input.targetUserId,
+    targetType: input.targetType,
+    targetLabel: input.targetLabel,
+    actorId: input.context.actorId,
+    actorEmail: input.context.actorEmail,
+    metadata: {
+      ...(input.metadata ?? {}),
+      idempotency_key: input.context.idempotencyKey ?? null,
+    },
+  });
 }
 
 export async function changeAgencyStatus(
@@ -15,17 +54,11 @@ export async function changeAgencyStatus(
   reason: string,
   context: AuditContext,
 ) {
-  await auditedAction({
-    ...context,
-    action: 'agency_status_changed',
-    reason,
-    targetOrganizationId: agency.id,
-    targetType: 'agency',
-    targetLabel: agency.name,
-    metadata: { previous_status: agency.status, next_status: nextStatus },
-  }, async () => {
-    const { error } = await supabase.from('agencies').update({ status: nextStatus }).eq('id', agency.id);
-    if (error) throw error;
+  await runAdminCommand('admin_change_agency_status', {
+    p_agency_id: agency.id,
+    p_next_status: nextStatus,
+    p_reason: reason,
+    p_idempotency_key: commandKey(context, 'agency-status', agency.id),
   });
 }
 
@@ -36,21 +69,12 @@ export async function changeAgencyPlan(
   reason: string,
   context: AuditContext,
 ) {
-  await auditedAction({
-    ...context,
-    action: 'agency_plan_changed',
-    reason,
-    targetOrganizationId: agency.id,
-    targetType: 'agency',
-    targetLabel: agency.name,
-    metadata: { previous_plan: agency.plan ?? subscription?.plan_id, next_plan: nextPlan, subscription_id: subscription?.id ?? null },
-  }, async () => {
-    const agencyUpdate = await supabase.from('agencies').update({ plan: nextPlan }).eq('id', agency.id);
-    if (agencyUpdate.error) throw agencyUpdate.error;
-    if (subscription?.id) {
-      const subUpdate = await supabase.from('subscriptions').update({ plan_id: nextPlan }).eq('id', subscription.id);
-      if (subUpdate.error) throw subUpdate.error;
-    }
+  void subscription;
+  await runAdminCommand('admin_change_agency_plan', {
+    p_agency_id: agency.id,
+    p_next_plan: nextPlan,
+    p_reason: reason,
+    p_idempotency_key: commandKey(context, 'agency-plan', agency.id),
   });
 }
 
@@ -60,38 +84,30 @@ export async function extendAgencyTrial(
   reason: string,
   context: AuditContext,
 ) {
-  const nextDate = new Date(Date.now() + days * 86_400_000).toISOString();
-  await auditedAction({
-    ...context,
-    action: 'agency_trial_extended',
-    reason,
-    targetOrganizationId: agency.id,
-    targetType: 'agency',
-    targetLabel: agency.name,
-    metadata: { days, trial_ends_at: nextDate },
-  }, async () => {
-    const { error } = await supabase.from('agencies').update({ status: 'trial', trial_ends_at: nextDate }).eq('id', agency.id);
-    if (error) throw error;
+  await runAdminCommand('admin_extend_agency_trial', {
+    p_agency_id: agency.id,
+    p_days: days,
+    p_reason: reason,
+    p_idempotency_key: commandKey(context, 'agency-trial', agency.id),
   });
 }
 
-export async function deleteAgencyCascade(
-  agency: AdminAgency,
+export async function closeAgencyAccount(
+  agency: Pick<AdminAgency, 'id'>,
   reason: string,
   context: AuditContext,
 ) {
-  await auditedAction({
-    ...context,
-    action: 'agency_deleted',
-    reason,
-    targetOrganizationId: agency.id,
-    targetType: 'agency',
-    targetLabel: agency.name,
-    metadata: { confirmation: agency.name, rpc: 'delete_agency_cascade' },
-  }, async () => {
-    const { error } = await supabase.rpc('delete_agency_cascade', { p_agency_id: agency.id });
-    if (error) throw error;
+  const { data, error } = await supabase.functions.invoke('close-agency-account', {
+    body: {
+      agencyId: agency.id,
+      reason,
+      idempotencyKey: commandKey(context, 'agency-closure', agency.id),
+    },
   });
+
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return data?.data;
 }
 
 export async function approvePaymentProof(
@@ -99,58 +115,11 @@ export async function approvePaymentProof(
   reason: string,
   context: AuditContext,
 ) {
-  await auditedAction({
-    ...context,
-    action: 'payment_proof_approved',
-    reason,
-    targetOrganizationId: proof.agency_id,
-    targetType: 'subscription_payment_proof',
-    targetLabel: proof.reference ?? proof.id,
-    metadata: { proof_id: proof.id, amount: proof.amount, plan_key: proof.plan_key, method: proof.method },
-  }, async () => {
-    const now = new Date().toISOString();
-    const proofUpdate = await supabase
-      .from('subscription_payment_proofs')
-      .update({ status: 'approved', reviewed_at: now, reviewed_by: context.actorId ?? null, rejection_reason: null })
-      .eq('id', proof.id);
-    if (proofUpdate.error) throw proofUpdate.error;
-
-    const periodEnd = new Date();
-    periodEnd.setMonth(periodEnd.getMonth() + 1);
-
-    const existingSub = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('agency_id', proof.agency_id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (existingSub.error) throw existingSub.error;
-
-    if (existingSub.data?.id) {
-      const subUpdate = await supabase
-        .from('subscriptions')
-        .update({
-          plan_id: proof.plan_key,
-          status: 'active',
-          current_period_start: now,
-          current_period_end: periodEnd.toISOString(),
-        })
-        .eq('id', existingSub.data.id);
-      if (subUpdate.error) throw subUpdate.error;
-    } else {
-      const subInsert = await supabase.from('subscriptions').insert({
-        agency_id: proof.agency_id,
-        plan_id: proof.plan_key,
-        status: 'active',
-        current_period_start: now,
-        current_period_end: periodEnd.toISOString(),
-      });
-      if (subInsert.error) throw subInsert.error;
-    }
-
-    const agencyUpdate = await supabase.from('agencies').update({ plan: proof.plan_key, status: 'active' }).eq('id', proof.agency_id);
-    if (agencyUpdate.error) throw agencyUpdate.error;
+  await runAdminCommand('admin_review_subscription_payment_proof', {
+    p_proof_id: proof.id,
+    p_decision: 'approved',
+    p_reason: reason,
+    p_idempotency_key: commandKey(context, 'proof-approve', proof.id),
   });
 }
 
@@ -159,53 +128,29 @@ export async function rejectPaymentProof(
   reason: string,
   context: AuditContext,
 ) {
-  await auditedAction({
-    ...context,
-    action: 'payment_proof_rejected',
-    reason,
-    targetOrganizationId: proof.agency_id,
-    targetType: 'subscription_payment_proof',
-    targetLabel: proof.reference ?? proof.id,
-    metadata: { proof_id: proof.id, amount: proof.amount, plan_key: proof.plan_key, method: proof.method },
-  }, async () => {
-    const { error } = await supabase
-      .from('subscription_payment_proofs')
-      .update({
-        status: 'rejected',
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: context.actorId ?? null,
-        rejection_reason: reason,
-      })
-      .eq('id', proof.id);
-    if (error) throw error;
+  await runAdminCommand('admin_review_subscription_payment_proof', {
+    p_proof_id: proof.id,
+    p_decision: 'rejected',
+    p_reason: reason,
+    p_idempotency_key: commandKey(context, 'proof-reject', proof.id),
   });
 }
 
 export async function approveAgencyRequest(requestId: string, reason: string, context: AuditContext) {
-  await auditedAction({
-    ...context,
-    action: 'agency_request_approved',
-    reason,
-    targetType: 'agency_creation_request',
-    targetLabel: requestId,
-    metadata: { request_id: requestId },
-  }, async () => {
-    const { error } = await supabase.rpc('approve_agency_request', { p_request_id: requestId });
-    if (error) throw error;
+  await runAdminCommand('admin_review_agency_request', {
+    p_request_id: requestId,
+    p_decision: 'approved',
+    p_reason: reason,
+    p_idempotency_key: commandKey(context, 'agency-request-approve', requestId),
   });
 }
 
 export async function rejectAgencyRequest(requestId: string, reason: string, context: AuditContext) {
-  await auditedAction({
-    ...context,
-    action: 'agency_request_rejected',
-    reason,
-    targetType: 'agency_creation_request',
-    targetLabel: requestId,
-    metadata: { request_id: requestId },
-  }, async () => {
-    const { error } = await supabase.rpc('reject_agency_request', { p_request_id: requestId, p_reason: reason });
-    if (error) throw error;
+  await runAdminCommand('admin_review_agency_request', {
+    p_request_id: requestId,
+    p_decision: 'rejected',
+    p_reason: reason,
+    p_idempotency_key: commandKey(context, 'agency-request-reject', requestId),
   });
 }
 
@@ -216,21 +161,20 @@ export async function createAdminNote(
   reason: string,
   context: AuditContext,
 ) {
-  await auditedAction({
-    ...context,
-    action: 'admin_note_created_from_console',
+  const { data, error } = await supabase.rpc('admin_create_admin_note', {
+    p_organization_id: organizationId,
+    p_note: note,
+    p_visibility: visibility,
+  });
+  if (error) throw error;
+  await recordContextualAudit({
+    action: 'admin_note_created',
     reason,
+    context,
     targetOrganizationId: organizationId,
     targetType: 'admin_note',
-    targetLabel: visibility,
+    targetLabel: String(data ?? 'note'),
     metadata: { visibility },
-  }, async () => {
-    const { error } = await supabase.rpc('admin_create_admin_note', {
-      p_organization_id: organizationId,
-      p_note: note,
-      p_visibility: visibility,
-    });
-    if (error) throw error;
   });
 }
 
@@ -243,23 +187,22 @@ export async function createSupportTicket(
   reason: string,
   context: AuditContext,
 ) {
-  await auditedAction({
-    ...context,
-    action: 'support_ticket_created_from_console',
+  const { data, error } = await supabase.rpc('admin_create_support_ticket', {
+    p_organization_id: organizationId,
+    p_subject: subject,
+    p_category: category,
+    p_priority: priority,
+    p_description: description || null,
+  });
+  if (error) throw error;
+  await recordContextualAudit({
+    action: 'support_ticket_created',
     reason,
+    context,
     targetOrganizationId: organizationId,
     targetType: 'support_ticket',
     targetLabel: subject,
-    metadata: { category, priority },
-  }, async () => {
-    const { error } = await supabase.rpc('admin_create_support_ticket', {
-      p_organization_id: organizationId,
-      p_subject: subject,
-      p_category: category,
-      p_priority: priority,
-      p_description: description || null,
-    });
-    if (error) throw error;
+    metadata: { ticket_id: data ?? null, category, priority },
   });
 }
 
@@ -270,20 +213,19 @@ export async function updateSupportTicket(
   reason: string,
   context: AuditContext,
 ) {
-  await auditedAction({
-    ...context,
-    action: 'support_ticket_status_changed',
+  const { error } = await supabase.rpc('admin_update_support_ticket', {
+    p_ticket_id: ticketId,
+    p_status: status,
+    p_internal_notes: internalNotes || null,
+  });
+  if (error) throw error;
+  await recordContextualAudit({
+    action: 'support_ticket_updated',
     reason,
+    context,
     targetType: 'support_ticket',
     targetLabel: ticketId,
     metadata: { ticket_id: ticketId, status },
-  }, async () => {
-    const { error } = await supabase.rpc('admin_update_support_ticket', {
-      p_ticket_id: ticketId,
-      p_status: status,
-      p_internal_notes: internalNotes || null,
-    });
-    if (error) throw error;
   });
 }
 
@@ -295,23 +237,22 @@ export async function recordIncident(
   reason: string,
   context: AuditContext,
 ) {
-  await auditedAction({
-    ...context,
-    action: 'incident_recorded_from_console',
+  const { data, error } = await supabase.rpc('admin_record_incident', {
+    p_type: type,
+    p_severity: severity,
+    p_message: message,
+    p_organization_id: organizationId,
+    p_metadata: {},
+  });
+  if (error) throw error;
+  await recordContextualAudit({
+    action: 'incident_recorded',
     reason,
+    context,
     targetOrganizationId: organizationId,
     targetType: 'incident',
     targetLabel: type,
-    metadata: { severity },
-  }, async () => {
-    const { error } = await supabase.rpc('admin_record_incident', {
-      p_type: type,
-      p_severity: severity,
-      p_message: message,
-      p_organization_id: organizationId,
-      p_metadata: {},
-    });
-    if (error) throw error;
+    metadata: { incident_id: data ?? null, severity },
   });
 }
 
@@ -321,19 +262,18 @@ export async function resolveIncident(
   reason: string,
   context: AuditContext,
 ) {
-  await auditedAction({
-    ...context,
-    action: 'incident_resolved_from_console',
+  const { error } = await supabase.rpc('admin_resolve_incident', {
+    p_incident_id: incidentId,
+    p_resolution: resolution,
+  });
+  if (error) throw error;
+  await recordContextualAudit({
+    action: 'incident_resolved',
     reason,
+    context,
     targetType: 'incident',
     targetLabel: incidentId,
-    metadata: { incident_id: incidentId },
-  }, async () => {
-    const { error } = await supabase.rpc('admin_resolve_incident', {
-      p_incident_id: incidentId,
-      p_resolution: resolution,
-    });
-    if (error) throw error;
+    metadata: { incident_id: incidentId, resolution },
   });
 }
 
@@ -344,23 +284,22 @@ export async function createMaintenanceAnnouncement(
   reason: string,
   context: AuditContext,
 ) {
-  await auditedAction({
-    ...context,
-    action: 'maintenance_announcement_created_from_console',
+  const { data, error } = await supabase.rpc('admin_create_maintenance_announcement', {
+    p_title: title,
+    p_message: message,
+    p_status: status,
+    p_target: { type: 'all' },
+    p_starts_at: null,
+    p_ends_at: null,
+  });
+  if (error) throw error;
+  await recordContextualAudit({
+    action: 'maintenance_announcement_created',
     reason,
+    context,
     targetType: 'maintenance_announcement',
     targetLabel: title,
-    metadata: { status },
-  }, async () => {
-    const { error } = await supabase.rpc('admin_create_maintenance_announcement', {
-      p_title: title,
-      p_message: message,
-      p_status: status,
-      p_target: { type: 'all' },
-      p_starts_at: null,
-      p_ends_at: null,
-    });
-    if (error) throw error;
+    metadata: { announcement_id: data ?? null, status },
   });
 }
 
@@ -392,18 +331,14 @@ export async function changeUserStatus(
   context: AuditContext,
 ) {
   assertUserCanBeChanged(user, users, undefined, nextActive);
-  await auditedAction({
-    ...context,
-    action: 'user_status_changed',
-    reason,
-    targetOrganizationId: user.agency_id ?? null,
-    targetUserId: user.id,
-    targetType: 'user_profile',
-    targetLabel: user.email ?? user.id,
-    metadata: { previous_active: user.actif !== false, next_active: nextActive, role: user.role },
-  }, async () => {
-    const { error } = await supabase.from('user_profiles').update({ actif: nextActive }).eq('id', user.id);
-    if (error) throw error;
+  await runAdminCommand('admin_update_user_access', {
+    p_target_user_id: user.id,
+    p_next_role: null,
+    p_next_active: nextActive,
+    p_next_agency_id: null,
+    p_change_agency: false,
+    p_reason: reason,
+    p_idempotency_key: commandKey(context, 'user-status', user.id),
   });
 }
 
@@ -415,18 +350,14 @@ export async function changeUserRole(
   context: AuditContext,
 ) {
   assertUserCanBeChanged(user, users, nextRole, undefined);
-  await auditedAction({
-    ...context,
-    action: 'user_role_changed',
-    reason,
-    targetOrganizationId: user.agency_id ?? null,
-    targetUserId: user.id,
-    targetType: 'user_profile',
-    targetLabel: user.email ?? user.id,
-    metadata: { previous_role: user.role, next_role: nextRole },
-  }, async () => {
-    const { error } = await supabase.from('user_profiles').update({ role: nextRole }).eq('id', user.id);
-    if (error) throw error;
+  await runAdminCommand('admin_update_user_access', {
+    p_target_user_id: user.id,
+    p_next_role: nextRole,
+    p_next_active: null,
+    p_next_agency_id: null,
+    p_change_agency: false,
+    p_reason: reason,
+    p_idempotency_key: commandKey(context, 'user-role', user.id),
   });
 }
 
@@ -441,24 +372,23 @@ export async function toggleFeatureFlag(
   context: AuditContext,
 ) {
   const key = featureFlagKey(flag);
-  if (!key) throw new Error("Ce feature flag n'a pas de clé exploitable.");
+  if (!key) throw new Error("Ce paramètre de fonctionnalité n'a pas de clé exploitable.");
 
-  await auditedAction({
-    ...context,
+  const rpc = await supabase.rpc('admin_upsert_feature_flag', {
+    p_key: key,
+    p_name: flag.name ?? key,
+    p_description: flag.description ?? null,
+    p_status: nextActive ? 'active' : 'draft',
+    p_owner: flag.owner ?? null,
+    p_expires_at: flag.expires_at ?? null,
+  });
+  if (rpc.error) throw rpc.error;
+  await recordContextualAudit({
     action: 'feature_flag_toggled',
     reason,
+    context,
     targetType: 'feature_flag',
     targetLabel: key,
-    metadata: { flag_id: flag.id, key, previous_status: flag.status, next_status: nextActive ? 'active' : 'draft' },
-  }, async () => {
-    const rpc = await supabase.rpc('admin_upsert_feature_flag', {
-      p_key: key,
-      p_name: flag.name ?? key,
-      p_description: flag.description ?? null,
-      p_status: nextActive ? 'active' : 'draft',
-      p_owner: flag.owner ?? null,
-      p_expires_at: flag.expires_at ?? null,
-    });
-    if (rpc.error) throw rpc.error;
+    metadata: { active: nextActive },
   });
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeAll, describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { WizardShell } from '../../components/ui/WizardShell';
 
@@ -12,6 +12,29 @@ vi.mock('react', async (importOriginal) => {
     useRef: () => ({ current: null }),
   };
 });
+
+vi.mock('react-dom', () => ({
+  createPortal: (node: React.ReactNode) => node,
+}));
+
+beforeAll(() => {
+  vi.stubGlobal('document', { body: {} });
+});
+
+function findElement(
+  node: React.ReactNode,
+  predicate: (element: React.ReactElement) => boolean,
+): React.ReactElement | undefined {
+  if (!React.isValidElement(node)) return undefined;
+  if (predicate(node)) return node;
+
+  for (const child of React.Children.toArray(node.props.children)) {
+    const match = findElement(child, predicate);
+    if (match) return match;
+  }
+
+  return undefined;
+}
 
 describe('WizardShell', () => {
   it('ne rend rien si open est false', () => {
@@ -38,56 +61,46 @@ describe('WizardShell', () => {
 
   it('applique les classes de size', () => {
     const children = React.createElement('div');
-    const resultSimple = WizardShell({ title: "T", size: "simple", children }) as React.ReactElement;
+    const resultSimple = WizardShell({ open: true, title: "T", size: "simple", children }) as React.ReactElement;
     const panelSimple = resultSimple.props.children[1];
     expect(panelSimple.props.className).toContain('sm:max-w-[720px]');
 
-    const resultRich = WizardShell({ title: "T", size: "rich", children }) as React.ReactElement;
+    const resultRich = WizardShell({ open: true, title: "T", size: "rich", children }) as React.ReactElement;
     const panelRich = resultRich.props.children[1];
     expect(panelRich.props.className).toContain('sm:max-w-[1040px]');
     
-    const resultBusiness = WizardShell({ title: "T", size: "business", children }) as React.ReactElement;
+    const resultBusiness = WizardShell({ open: true, title: "T", size: "business", children }) as React.ReactElement;
     const panelBusiness = resultBusiness.props.children[1];
     expect(panelBusiness.props.className).toContain('sm:max-w-[1120px]');
   });
 
   it('rend le footer si fourni', () => {
     const footer = React.createElement('div', { id: 'footer-custom' }, 'Mon Footer');
-    const result = WizardShell({ title: "T", children: React.createElement('div'), footer }) as React.ReactElement;
+    const result = WizardShell({ open: true, title: "T", children: React.createElement('div'), footer }) as React.ReactElement;
     
-    const panel = result.props.children[1];
-    // panel.children = [Handle, Header, Body, Footer]
-    const renderedFooter = panel.props.children[3];
+    const renderedFooter = findElement(result, (element) => element.props.id === 'footer-custom');
     expect(renderedFooter).toBeDefined();
-    expect(renderedFooter.props.className).toContain('bottom-0');
+    expect(renderedFooter?.props.children).toBe('Mon Footer');
   });
 
   it('rend primary et secondary actions dans le footer généré', () => {
     const primaryAction = React.createElement('button', null, 'Primary');
     const secondaryAction = React.createElement('button', null, 'Secondary');
-    const result = WizardShell({ title: "T", children: React.createElement('div'), primaryAction, secondaryAction }) as React.ReactElement;
+    const result = WizardShell({ open: true, title: "T", children: React.createElement('div'), primaryAction, secondaryAction }) as React.ReactElement;
     
-    const panel = result.props.children[1];
-    const renderedFooter = panel.props.children[3];
-    expect(renderedFooter).toBeDefined();
-    // Le children du footer est une div flex contenant les actions
-    const flexDiv = renderedFooter.props.children;
-    expect(flexDiv.props.className).toContain('flex-col-reverse');
+    const renderedPrimary = findElement(result, (element) => element.type === 'button' && element.props.children === 'Primary');
+    const renderedSecondary = findElement(result, (element) => element.type === 'button' && element.props.children === 'Secondary');
+    expect(renderedPrimary).toBeDefined();
+    expect(renderedSecondary).toBeDefined();
   });
 
   it('rend le bouton close et appelle onClose', () => {
     const onClose = vi.fn();
-    const result = WizardShell({ title: "T", children: React.createElement('div'), onClose }) as React.ReactElement;
+    const result = WizardShell({ open: true, title: "T", children: React.createElement('div'), onClose }) as React.ReactElement;
     
-    const panel = result.props.children[1];
-    const header = panel.props.children[1];
-    // header.children = [TitleDiv, CloseButton]
-    const headerTop = header.props.children[0]; // flex items-start justify-between
-    const closeButton = headerTop.props.children[1];
-    
+    const closeButton = findElement(result, (element) => element.type === 'button' && element.props['aria-label'] === 'Fermer');
     expect(closeButton).toBeDefined();
-    expect(closeButton.type).toBe('button');
-    closeButton.props.onClick();
+    closeButton?.props.onClick();
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

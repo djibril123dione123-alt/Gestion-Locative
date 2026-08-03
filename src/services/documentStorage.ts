@@ -271,7 +271,7 @@ export async function getAgencyStorageBreakdown(agencyId: string): Promise<Stora
 }
 
 export async function cleanupTemporaryDocuments(agencyId: string, olderThanDays = 30): Promise<DocumentMaintenanceResult> {
-  const { data, error } = await supabase.rpc('cleanup_temporary_documents', {
+  const { data, error } = await supabase.rpc('tenant_cleanup_temporary_documents', {
     p_agency_id: agencyId,
     p_older_than_days: olderThanDays,
   });
@@ -280,13 +280,13 @@ export async function cleanupTemporaryDocuments(agencyId: string, olderThanDays 
 }
 
 export async function markOrphanDocumentRecords(agencyId: string): Promise<DocumentMaintenanceResult> {
-  const { data, error } = await supabase.rpc('mark_orphan_document_records', { p_agency_id: agencyId });
+  const { data, error } = await supabase.rpc('tenant_mark_orphan_document_records', { p_agency_id: agencyId });
   if (error) throw error;
   return data ?? {};
 }
 
 export async function optimizeDocumentStorage(agencyId: string): Promise<DocumentMaintenanceResult> {
-  const { data, error } = await supabase.rpc('optimize_document_storage', { p_agency_id: agencyId });
+  const { data, error } = await supabase.rpc('tenant_optimize_document_storage', { p_agency_id: agencyId });
   if (error) throw error;
   return data ?? {};
 }

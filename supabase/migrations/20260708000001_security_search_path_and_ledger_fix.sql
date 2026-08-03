@@ -105,6 +105,7 @@ CREATE POLICY "jobs_insert_service" ON public.job_queue
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 3. Vues SECURITY INVOKER + isolation tenant explicite
 -- ─────────────────────────────────────────────────────────────────────────────
+DROP VIEW IF EXISTS public.vw_financial_drift_report CASCADE;
 CREATE OR REPLACE VIEW public.vw_financial_drift_report WITH (security_invoker = true) AS
 SELECT
   fs.agency_id,
@@ -125,6 +126,7 @@ ORDER BY ABS(fs.diff) DESC, fs.period DESC;
 COMMENT ON VIEW public.vw_financial_drift_report IS
   'Rapport drift comptable certifié tenant-safe (SECURITY INVOKER)';
 
+DROP VIEW IF EXISTS public.vw_system_anomalies CASCADE;
 CREATE OR REPLACE VIEW public.vw_system_anomalies WITH (security_invoker = true) AS
   -- Paiements sans contrat valide
   SELECT

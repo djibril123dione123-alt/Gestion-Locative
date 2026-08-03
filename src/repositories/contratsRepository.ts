@@ -118,25 +118,20 @@ export const contratsRepository = {
   },
 
   /**
-   * Insère un nouveau contrat.
+   * Les mutations contractuelles sont transactionnelles et passent
+   * obligatoirement par les Edge Functions du contratApi.
    */
-  async insert(payload: ContratInsert) {
-    const { data, error } = await supabase
-      .from('contrats')
-      .insert([payload])
-      .select('id')
-      .single();
-    return { data, error };
+  async insert(_payload: ContratInsert) {
+    void _payload;
+    throw new Error('DIRECT_CONTRACT_WRITE_BLOCKED');
   },
 
   /**
-   * Met à jour un contrat existant.
+   * Voir createContratViaEdge / updateContratViaEdge / renewContratViaEdge.
    */
-  async update(id: string, payload: ContratUpdate) {
-    const { error } = await supabase
-      .from('contrats')
-      .update(payload)
-      .eq('id', id);
-    return { error };
+  async update(_id: string, _payload: ContratUpdate) {
+    void _id;
+    void _payload;
+    throw new Error('DIRECT_CONTRACT_WRITE_BLOCKED');
   },
 };

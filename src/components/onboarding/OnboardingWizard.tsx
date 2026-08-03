@@ -19,6 +19,9 @@ import { useToast } from '../../hooks/useToast';
 import { ToastContainer } from '../ui/Toast';
 import { getTimezoneKey, markOnboardingComplete, markOnboardingCompletePersisted } from './onboardingStorage';
 import { formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
+import { resolveAgencyAssetUrl, uploadAgencyIdentityAsset } from '../../services/agencyIdentityAssets';
+import { createTeamInvitation } from '../../services/tenantAdministrationCommands';
+import { completeTenantOnboarding } from '../../services/tenantProfileCommands';
 
 interface OnboardingWizardProps {
   isOpen: boolean;
@@ -27,9 +30,6 @@ interface OnboardingWizardProps {
 }
 
 type RoleOption = 'agent' | 'comptable' | 'admin';
-
-const AGENCY_ASSETS_BUCKET = 'agency-assets';
-const MAX_LOGO_SIZE = 5 * 1024 * 1024;
 
 const STEPS = [
   {
@@ -57,13 +57,6 @@ const TIMEZONES = [
   { value: 'Europe/Paris', label: 'Paris, Europe centrale' },
 ];
 
-function getLogoExtension(file: File) {
-  if (file.type === 'image/svg+xml') return 'svg';
-  if (file.type === 'image/webp') return 'webp';
-  if (file.type === 'image/jpeg') return 'jpg';
-  return 'png';
-}
-
 export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWizardProps) {
   const { profile, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
@@ -72,6 +65,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
   const [loading, setLoading] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [storedLogoPath, setStoredLogoPath] = useState<string | null>(null);
   const [generatedInviteLink, setGeneratedInviteLink] = useState<string | null>(null);
   const [form, setForm] = useState({
     agencyName: '',
@@ -116,7 +110,9 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
         devise: settingsRes.data?.devise || prev.devise,
         timezone: storedTimezone,
       }));
-      setLogoPreview(settingsRes.data?.logo_url || agencyRes.data?.logo_url || null);
+      const storedLogo = settingsRes.data?.logo_url || agencyRes.data?.logo_url || null;
+      setStoredLogoPath(storedLogo);
+      setLogoPreview(await resolveAgencyAssetUrl(storedLogo));
     })();
 
     return () => {
@@ -150,48 +146,19 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
   const skipLabel = step === 2 && !isIndividualOwner ? 'Inviter plus tard' : "Passer pour l'instant";
 
   const uploadLogo = async () => {
-    if (!logoFile || !profile?.agency_id) return logoPreview;
-    if (!logoFile.type.startsWith('image/')) {
-      throw new Error(isIndividualOwner ? 'La photo de profil doit être une image.' : 'Le logo doit être une image.');
-    }
-    if (logoFile.size > MAX_LOGO_SIZE) {
-      throw new Error(isIndividualOwner ? 'La photo de profil doit peser moins de 5 Mo.' : 'Le logo doit peser moins de 5 Mo.');
-    }
-
-    const fileExt = getLogoExtension(logoFile);
-    const filePath = isIndividualOwner
-      ? `${profile.agency_id}/owners/profile-onboarding-${Date.now()}.${fileExt}`
-      : `${profile.agency_id}/logos/onboarding-${Date.now()}.${fileExt}`;
-    const { error: uploadError } = await supabase.storage
-      .from(AGENCY_ASSETS_BUCKET)
-      .upload(filePath, logoFile, {
-        cacheControl: '31536000',
-        contentType: logoFile.type,
-        upsert: false,
-      });
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage.from(AGENCY_ASSETS_BUCKET).getPublicUrl(filePath);
-    return `${data.publicUrl}?v=${Date.now()}`;
+    if (!logoFile || !profile?.agency_id) return null;
+    return uploadAgencyIdentityAsset({ agencyId: profile.agency_id, kind: 'logo', file: logoFile });
   };
 
   const createInvitation = async () => {
     if (!form.inviteEmail.trim() || !profile?.agency_id || !profile.id) return null;
-    const token = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const email = form.inviteEmail.trim().toLowerCase();
-
-    const { error } = await supabase.from('invitations').insert({
+    const invitation = await createTeamInvitation({
       email,
-      agency_id: profile.agency_id,
       role: form.inviteRole,
-      token,
-      invited_by: profile.id,
-      expires_at: expiresAt,
-      status: 'pending',
+      daysValid: 7,
     });
-    if (error) throw error;
-    return `${window.location.origin}/?token=${token}`;
+    return `${window.location.origin}/?token=${invitation.token}`;
   };
 
   const save = async () => {
@@ -212,41 +179,18 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
 
     setLoading(true);
     try {
-      const logoUrl = await uploadLogo();
+      const uploadedLogo = await uploadLogo();
+      const logoUrl = uploadedLogo?.path || storedLogoPath;
       const agencyName = form.agencyName.trim();
-      const agencyUpdate: Record<string, string | null> = {
-        name: agencyName,
-        logo_url: logoUrl || null,
-      };
-      if (isIndividualOwner) {
-        if (normalizedOwnerPhone || form.ownerPhone.trim()) {
-          agencyUpdate.phone = normalizedOwnerPhone || form.ownerPhone.trim();
-        }
-        agencyUpdate.address = form.ownerAddress.trim() || null;
-      }
-
-      const { error: agencyError } = await supabase
-        .from('agencies')
-        .update(agencyUpdate)
-        .eq('id', profile.agency_id);
-      if (agencyError) throw agencyError;
-
-      const settingsPayload: Record<string, unknown> = {
-        agency_id: profile.agency_id,
-        nom_agence: agencyName,
-        representant_nom: isIndividualOwner ? null : form.representativeName.trim() || null,
-        devise: form.devise,
+      await completeTenantOnboarding({
+        agencyName,
+        logoUrl: logoUrl || null,
+        phone: isIndividualOwner ? normalizedOwnerPhone || form.ownerPhone.trim() || null : null,
+        address: isIndividualOwner ? form.ownerAddress.trim() || null : null,
+        representativeName: isIndividualOwner ? null : form.representativeName.trim() || null,
+        currency: form.devise,
         city: form.timezone.includes('Abidjan') ? 'Abidjan' : 'Dakar',
-        logo_url: logoUrl || null,
-        onboarding_completed_at: new Date().toISOString(),
-      };
-      if (isIndividualOwner) {
-        settingsPayload.telephone = normalizedOwnerPhone || form.ownerPhone.trim() || null;
-        settingsPayload.adresse = form.ownerAddress.trim() || null;
-      }
-
-      const { error: settingsError } = await supabase.from('agency_settings').upsert(settingsPayload);
-      if (settingsError) throw settingsError;
+      });
 
       let inviteLink: string | null = null;
       if (form.inviteEmail.trim()) {

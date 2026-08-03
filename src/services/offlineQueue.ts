@@ -1,23 +1,12 @@
 /**
- * Offline mutation queue — stores pending actions in IndexedDB
- * and replays them against the real backend when connectivity is restored.
+ * Offline mutation queue.
  *
- * Conflict strategy: last-write-wins (timestamp-based).
- * Stale 'syncing' entries (left over after a crash) are recovered to 'pending'
- * on startup via recoverStaleSyncing().
- *
- * IMPORTANT: paiement mutations are routed through Edge Functions to ensure
- * server-side commission calculation, ledger writes, and event_outbox entries.
- * Direct table inserts for paiements would bypass all financial integrity logic.
+ * Only low-risk tenant contact writes are replayable. Financial, contractual
+ * and destructive operations always require an online server command.
  */
 
-import { dbPut, dbGetAll, dbDelete, dbGetByIndex } from './db';
-import {
-  createPaiementViaEdge,
-  updatePaiementViaEdge,
-  cancelPaiementViaEdge,
-} from './api/paiementApi';
 import { supabase } from '../lib/supabase';
+import { dbDelete, dbGetAll, dbGetByIndex, dbPut } from './db';
 
 export type MutationAction =
   | 'locataire_create'
@@ -29,6 +18,20 @@ export type MutationAction =
   | 'contrat_create'
   | 'contrat_update'
   | 'contrat_delete';
+
+type OfflineMutationPolicy = 'replayable' | 'forbidden';
+
+export const OFFLINE_MUTATION_POLICY: Readonly<Record<MutationAction, OfflineMutationPolicy>> = {
+  locataire_create: 'replayable',
+  locataire_update: 'replayable',
+  locataire_delete: 'forbidden',
+  paiement_create: 'forbidden',
+  paiement_update: 'forbidden',
+  paiement_delete: 'forbidden',
+  contrat_create: 'forbidden',
+  contrat_update: 'forbidden',
+  contrat_delete: 'forbidden',
+};
 
 export interface PendingMutation {
   id?: number;
@@ -57,35 +60,16 @@ const MAX_RETRIES = 3;
 const BASE_RETRY_DELAY_MS = 5_000;
 const MAX_RETRY_DELAY_MS = 5 * 60_000;
 
-const ACTION_TABLE: Record<MutationAction, string> = {
-  locataire_create: 'locataires',
-  locataire_update: 'locataires',
-  locataire_delete: 'locataires',
-  paiement_create: 'paiements',
-  paiement_update: 'paiements',
-  paiement_delete: 'paiements',
-  contrat_create: 'contrats',
-  contrat_update: 'contrats',
-  contrat_delete: 'contrats',
-};
+export const OFFLINE_MUTATION_BLOCKED_MESSAGE =
+  'Cette action exige une connexion active afin de garantir son contrôle serveur.';
 
 function makeClientMutationId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID();
-  }
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID();
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function buildMutationKey(mutation: Pick<PendingMutation, 'action' | 'entity_type' | 'payload'>): string {
-  const idempotencyKey = mutation.payload.idempotency_key;
-  if (typeof idempotencyKey === 'string' && idempotencyKey.trim()) {
-    return `${mutation.action}:idempotency:${idempotencyKey}`;
-  }
-  const id = mutation.payload.id;
-  if (typeof id === 'string' && id.trim()) {
-    return `${mutation.action}:${mutation.entity_type}:${id}`;
-  }
-  return `${mutation.action}:${mutation.entity_type}:${makeClientMutationId()}`;
+function isReplayable(action: MutationAction): boolean {
+  return OFFLINE_MUTATION_POLICY[action] === 'replayable';
 }
 
 function retryDelayMs(retries: number): number {
@@ -93,99 +77,188 @@ function retryDelayMs(retries: number): number {
   return Math.min(MAX_RETRY_DELAY_MS, BASE_RETRY_DELAY_MS * 2 ** Math.max(0, retries - 1)) + jitter;
 }
 
-/** Resets any stale 'syncing' entries back to 'pending'.
- *  Call once at app startup — guards against crash during a previous sync. */
+function buildMutationKey(mutation: Pick<PendingMutation, 'action' | 'entity_type' | 'payload'>): string {
+  const recordId = mutation.payload.id;
+  if (typeof recordId === 'string' && recordId.trim()) {
+    return `${mutation.action}:${mutation.entity_type}:${recordId}`;
+  }
+  return `${mutation.action}:${mutation.entity_type}:${makeClientMutationId()}`;
+}
+
+async function removeMutation(mutation: PendingMutation): Promise<void> {
+  if (mutation.id !== undefined) await dbDelete('pending_mutations', mutation.id);
+}
+
+/** Remove critical writes left by clients that used the historical queue. */
+export async function purgeOfflineMutationQueue(): Promise<number> {
+  try {
+    const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
+    const forbidden = all.filter((mutation) => !isReplayable(mutation.action));
+    await Promise.all(forbidden.map(removeMutation));
+    return forbidden.length;
+  } catch {
+    return 0;
+  }
+}
+
+/** Recover replayable writes interrupted while the app was closing. */
 export async function recoverStaleSyncing(): Promise<number> {
   try {
     const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
-    const stale = all.filter((m) => m.status === 'syncing');
-    for (const m of stale) {
-      await dbPut('pending_mutations', {
-        ...m,
-        status: 'pending',
-        updated_at: Date.now(),
-        next_retry_at: Date.now(),
-      });
+    let recovered = 0;
+    for (const mutation of all) {
+      if (!isReplayable(mutation.action)) {
+        await removeMutation(mutation);
+        continue;
+      }
+      if (mutation.status === 'syncing') {
+        recovered += 1;
+        await dbPut('pending_mutations', {
+          ...mutation,
+          status: 'pending',
+          updated_at: Date.now(),
+          next_retry_at: Date.now(),
+        });
+      }
     }
-    return stale.length;
+    return recovered;
   } catch {
     return 0;
   }
 }
 
-/** Enqueue a mutation for later sync */
 export async function enqueueMutation(
   mutation: Omit<PendingMutation, 'id' | 'status' | 'retries'>,
 ): Promise<void> {
-  try {
-    const now = Date.now();
-    const mutationKey = mutation.mutation_key ?? buildMutationKey(mutation);
-    const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
-    const duplicate = all.find(
-      (m) =>
-        m.mutation_key === mutationKey &&
-        (m.status === 'pending' || m.status === 'syncing'),
-    );
-    if (duplicate) return;
+  if (!isReplayable(mutation.action)) throw new Error(OFFLINE_MUTATION_BLOCKED_MESSAGE);
 
-    await dbPut('pending_mutations', {
-      ...mutation,
-      client_mutation_id: mutation.client_mutation_id ?? makeClientMutationId(),
-      mutation_key: mutationKey,
-      created_at: mutation.created_at ?? now,
-      updated_at: now,
-      next_retry_at: mutation.next_retry_at ?? now,
-      status: 'pending',
-      retries: 0,
-    } as PendingMutation);
-  } catch (err) {
-    console.warn('[OfflineQueue] Failed to enqueue mutation:', err);
-  }
+  const now = Date.now();
+  const payload = { ...mutation.payload };
+  if (mutation.action === 'locataire_create' && !payload.id) payload.id = makeClientMutationId();
+
+  const mutationKey = mutation.mutation_key ?? buildMutationKey({ ...mutation, payload });
+  const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
+  const duplicate = all.some(
+    (entry) =>
+      entry.mutation_key === mutationKey &&
+      (entry.status === 'pending' || entry.status === 'syncing'),
+  );
+  if (duplicate) return;
+
+  await dbPut('pending_mutations', {
+    ...mutation,
+    payload,
+    client_mutation_id: mutation.client_mutation_id ?? makeClientMutationId(),
+    mutation_key: mutationKey,
+    created_at: mutation.created_at ?? now,
+    updated_at: now,
+    next_retry_at: mutation.next_retry_at ?? now,
+    status: 'pending',
+    retries: 0,
+  });
 }
 
-/** Returns all pending mutations (sorted oldest-first) */
 export async function getPendingMutations(): Promise<PendingMutation[]> {
+  await purgeOfflineMutationQueue();
   try {
-    const all = await dbGetByIndex('pending_mutations', 'status', 'pending');
+    const pending = await dbGetByIndex('pending_mutations', 'status', 'pending');
     const now = Date.now();
-    return (all as PendingMutation[])
-      .filter((m) => (m.next_retry_at ?? 0) <= now)
-      .sort((a, b) => a.timestamp - b.timestamp);
+    return (pending as PendingMutation[])
+      .filter((mutation) => isReplayable(mutation.action) && (mutation.next_retry_at ?? 0) <= now)
+      .sort((left, right) => left.timestamp - right.timestamp);
   } catch {
     return [];
   }
 }
 
-/** Returns total count of pending mutations */
 export async function getPendingCount(): Promise<number> {
+  await purgeOfflineMutationQueue();
   try {
-    const [pending, syncing] = await Promise.all([
-      dbGetByIndex('pending_mutations', 'status', 'pending'),
-      dbGetByIndex('pending_mutations', 'status', 'syncing'),
-    ]);
-    return pending.length + syncing.length;
+    const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
+    return all.filter(
+      (mutation) =>
+        isReplayable(mutation.action) &&
+        (mutation.status === 'pending' || mutation.status === 'syncing'),
+    ).length;
   } catch {
     return 0;
   }
 }
 
-/** Returns all mutations that have permanently errored (>= MAX_RETRIES) */
 export async function getErrorMutations(): Promise<PendingMutation[]> {
+  await purgeOfflineMutationQueue();
   try {
     const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
-    return all.filter((m) => m.status === 'error');
+    return all.filter((mutation) => isReplayable(mutation.action) && mutation.status === 'error');
   } catch {
     return [];
   }
 }
 
-/**
- * Replay all pending mutations against Supabase.
- *
- * Paiement mutations (create/update/delete) are routed through Edge Functions
- * to guarantee server-side commission calculation, ledger entries, and
- * event_outbox population. All other mutations use direct table operations.
- */
+async function getReplayContext(action: MutationAction): Promise<{ agencyId: string }> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const user = userData.user;
+  if (userError || !user) throw new Error('Session expirée. Reconnectez-vous avant la synchronisation.');
+
+  const { data: profile, error: profileError } = await supabase
+    .from('user_profiles')
+    .select('agency_id, actif')
+    .eq('id', user.id)
+    .maybeSingle();
+  if (profileError || !profile?.agency_id || profile.actif === false) {
+    throw new Error('Ce profil ne peut plus synchroniser de données.');
+  }
+
+  const permissionAction = action === 'locataire_create' ? 'create' : 'update';
+  const { data: allowed, error: permissionError } = await supabase.rpc('fn_user_can', {
+    p_user_id: user.id,
+    p_page: 'locataires',
+    p_action: permissionAction,
+  });
+  if (permissionError || allowed !== true) {
+    throw new Error('Vos permissions ne permettent plus cette synchronisation.');
+  }
+
+  return { agencyId: profile.agency_id };
+}
+
+async function replayLocataireMutation(mutation: PendingMutation): Promise<void> {
+  const { agencyId } = await getReplayContext(mutation.action);
+  const payloadAgencyId = mutation.payload.agency_id;
+  if (typeof payloadAgencyId === 'string' && payloadAgencyId !== agencyId) {
+    throw new Error('La synchronisation appartient à un autre espace de travail.');
+  }
+
+  if (mutation.action === 'locataire_create') {
+    const { error } = await supabase.from('locataires').insert({
+      ...mutation.payload,
+      agency_id: agencyId,
+    });
+    // A generated client id makes a successful replay idempotent after a lost response.
+    if (error && error.code !== '23505') throw error;
+    return;
+  }
+
+  if (mutation.action === 'locataire_update') {
+    const { id, agency_id: ignoredAgencyId, ...changes } = mutation.payload;
+    void ignoredAgencyId;
+    if (typeof id !== 'string' || !id) throw new Error('Fiche locataire introuvable.');
+
+    const { data, error } = await supabase
+      .from('locataires')
+      .update(changes)
+      .eq('id', id)
+      .eq('agency_id', agencyId)
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error('Cette fiche n’est plus accessible dans votre organisation.');
+    return;
+  }
+
+  throw new Error(OFFLINE_MUTATION_BLOCKED_MESSAGE);
+}
+
 export async function syncPendingMutations(
   onProgress?: (done: number, total: number) => void,
 ): Promise<SyncResult> {
@@ -194,124 +267,51 @@ export async function syncPendingMutations(
   let errors = 0;
   const errorMessages: string[] = [];
 
-  for (let i = 0; i < mutations.length; i++) {
-    const m = mutations[i];
-    const table = ACTION_TABLE[m.action];
-    if (!table) continue;
-
+  for (let index = 0; index < mutations.length; index += 1) {
+    const mutation = mutations[index];
     try {
-      if (m.id !== undefined) {
+      if (mutation.id !== undefined) {
         await dbPut('pending_mutations', {
-          ...m,
+          ...mutation,
           status: 'syncing',
           last_attempt_at: Date.now(),
           updated_at: Date.now(),
         });
       }
 
-      // ── Paiement mutations → Edge Functions (financial integrity) ──────────
-      if (m.action === 'paiement_create') {
-        await createPaiementViaEdge({
-          contrat_id: m.payload.contrat_id as string,
-          montant_total: m.payload.montant_total as number,
-          mois_concerne: m.payload.mois_concerne as string,
-          date_paiement: m.payload.date_paiement as string,
-          mode_paiement: m.payload.mode_paiement as
-            | 'especes'
-            | 'virement'
-            | 'cheque'
-            | 'mobile_money'
-            | 'autre',
-          statut: m.payload.statut as 'paye' | 'partiel' | 'en_attente',
-          idempotency_key: (m.payload.idempotency_key as string | null | undefined) ?? null,
-          reference: (m.payload.reference as string | null) ?? null,
-        });
-      } else if (m.action === 'paiement_update') {
-        await updatePaiementViaEdge({
-          id: m.payload.id as string,
-          ...(m.payload.montant_total != null && {
-            montant_total: m.payload.montant_total as number,
-          }),
-          ...(m.payload.mode_paiement != null && {
-            mode_paiement: m.payload.mode_paiement as
-              | 'especes'
-              | 'virement'
-              | 'cheque'
-              | 'mobile_money'
-              | 'autre',
-          }),
-          ...(m.payload.statut != null && {
-            statut: m.payload.statut as 'paye' | 'partiel' | 'en_attente',
-          }),
-          ...(m.payload.date_paiement != null && {
-            date_paiement: m.payload.date_paiement as string,
-          }),
-          ...(m.payload.reference !== undefined && {
-            reference: m.payload.reference as string | null,
-          }),
-        });
-      } else if (m.action === 'paiement_delete') {
-        await cancelPaiementViaEdge({ id: m.payload.id as string });
-
-      // ── Autres mutations → opérations Supabase directes ───────────────────
-      } else {
-        const isCreate = m.action.endsWith('_create');
-        const isDelete = m.action.endsWith('_delete');
-        let supabaseError: unknown;
-
-        if (isDelete) {
-          const { id } = m.payload;
-          if (!id) { errors++; continue; }
-          const { error } = await supabase.from(table).delete().eq('id', id);
-          supabaseError = error;
-        } else if (isCreate) {
-          const { error } = await supabase.from(table).insert([m.payload]);
-          supabaseError = error;
-        } else {
-          const { id, ...rest } = m.payload;
-          if (!id) { errors++; continue; }
-          const { error } = await supabase.from(table).update(rest).eq('id', id);
-          supabaseError = error;
-        }
-
-        if (supabaseError) throw supabaseError;
-      }
-
-      if (m.id !== undefined) await dbDelete('pending_mutations', m.id as number);
-      synced++;
-    } catch (err: unknown) {
-      errors++;
-      const msg = err instanceof Error ? err.message : String(err);
-      errorMessages.push(`[${m.action}] ${msg}`);
-
-      const retries = (m.retries ?? 0) + 1;
-      if (m.id !== undefined) {
-        const newStatus: PendingMutation['status'] = retries >= MAX_RETRIES ? 'error' : 'pending';
-        const now = Date.now();
+      await replayLocataireMutation(mutation);
+      await removeMutation(mutation);
+      synced += 1;
+    } catch (error) {
+      errors += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      errorMessages.push(`[${mutation.action}] ${message}`);
+      const retries = (mutation.retries ?? 0) + 1;
+      const status: PendingMutation['status'] = retries >= MAX_RETRIES ? 'error' : 'pending';
+      const now = Date.now();
+      if (mutation.id !== undefined) {
         await dbPut('pending_mutations', {
-          ...m,
-          status: newStatus,
+          ...mutation,
+          status,
           retries,
-          error: msg,
+          error: message,
           updated_at: now,
           last_attempt_at: now,
-          next_retry_at: newStatus === 'pending' ? now + retryDelayMs(retries) : undefined,
+          next_retry_at: status === 'pending' ? now + retryDelayMs(retries) : undefined,
         });
       }
     }
-
-    onProgress?.(i + 1, mutations.length);
+    onProgress?.(index + 1, mutations.length);
   }
 
   return { synced, errors, errorMessages };
 }
 
-/** Clear all done + permanently-errored mutations */
 export async function clearDoneMutations(): Promise<void> {
   const all = (await dbGetAll('pending_mutations')) as PendingMutation[];
-  for (const m of all) {
-    if (m.status === 'done' || m.status === 'error') {
-      if (m.id !== undefined) await dbDelete('pending_mutations', m.id as number);
-    }
-  }
+  await Promise.all(
+    all
+      .filter((mutation) => mutation.status === 'done' || mutation.status === 'error')
+      .map(removeMutation),
+  );
 }

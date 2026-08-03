@@ -3,7 +3,6 @@ import * as Sentry from '@sentry/react';
 
 interface UserContext {
   userId?: string;
-  email?: string;
   agencyId?: string;
   role?: string;
 }
@@ -21,7 +20,6 @@ export const useErrorReporting = () => {
       if (userContext) {
         scope.setUser({
           id: userContext.userId,
-          email: userContext.email,
         });
         scope.setTag('agency_id', userContext.agencyId || 'unknown');
         scope.setTag('user_role', userContext.role || 'unknown');
@@ -49,10 +47,9 @@ export const useErrorReporting = () => {
 
       // Ajouter le contexte
       if (context) {
-        if (context.userId || context.email) {
+        if (context.userId) {
           scope.setUser({
             id: context.userId,
-            email: context.email,
           });
         }
         scope.setTag('agency_id', context.agencyId || 'unknown');
@@ -73,7 +70,6 @@ export const useErrorReporting = () => {
   const setUserContext = useCallback((user: UserContext) => {
     Sentry.setUser({
       id: user.userId,
-      email: user.email,
     });
     Sentry.setTag('agency_id', user.agencyId || 'unknown');
     Sentry.setTag('user_role', user.role || 'unknown');

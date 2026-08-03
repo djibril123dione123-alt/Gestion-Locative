@@ -302,7 +302,17 @@ function readSnapshotPlatform(snapshot: Record<string, unknown> | null | undefin
     estimatedMrr: numberValue(platform.estimated_mrr),
     openIncidents: numberValue(platform.open_incidents),
     openTickets: numberValue(platform.open_tickets),
+    pendingProofs: numberValue(platform.pending_proofs),
+    pendingRequests: numberValue(platform.pending_requests),
   };
+}
+
+function readSnapshotList<T>(
+  snapshot: Record<string, unknown> | null | undefined,
+  key: string,
+): T[] | null {
+  const value = snapshot?.[key];
+  return Array.isArray(value) ? (value as T[]) : null;
 }
 
 function inferAgenciesFromRelatedSources({
@@ -404,63 +414,95 @@ function inferAgenciesFromRelatedSources({
 }
 
 export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
+  const snapshotResponse = await supabase.rpc('admin_console_snapshot');
+  if (snapshotResponse.error) {
+    throw new Error('La source de pilotage super-admin est indisponible. Réessayez dans quelques instants.');
+  }
+
+  const snapshot = (snapshotResponse.data ?? null) as Record<string, unknown> | null;
+  const hasConsolidatedSnapshot = [
+    'agencies',
+    'users',
+    'subscriptions',
+    'proofs',
+    'requests',
+    'config_rows',
+    'document_registry',
+    'document_verifications',
+  ].every((key) => Array.isArray(snapshot?.[key]));
+
   const admin = supabase.schema('samay_admin');
-  const results = await Promise.allSettled([
-    supabase.rpc('admin_console_snapshot'),
-    supabase.from('vw_owner_agency_stats').select('*').order('created_at', { ascending: false }),
-    supabase.from('agencies').select('id,name,status,plan,organization_type,is_bailleur_account,email,phone,created_at,trial_ends_at,derniere_activite').order('created_at', { ascending: false }).limit(500),
-    supabase.from('user_profiles').select('*, agencies(name)').order('created_at', { ascending: false }).limit(500),
-    supabase.from('subscriptions').select('*, agencies(name)').order('created_at', { ascending: false }).limit(300),
-    supabase.from('subscription_payment_proofs').select('*, agencies(name, organization_type, is_bailleur_account)').order('created_at', { ascending: false }).limit(200),
-    supabase.from('agency_creation_requests').select('*').order('created_at', { ascending: false }).limit(200),
-    supabase.from('owner_actions_log').select('*').order('created_at', { ascending: false }).limit(120),
-    supabase.from('feature_flags').select('*').order('updated_at', { ascending: false }).limit(120),
-    supabase.from('saas_config').select('*').order('key'),
-    admin.from('admin_notes').select('*').order('created_at', { ascending: false }).limit(200),
-    admin.from('admin_notifications').select('*').order('created_at', { ascending: false }).limit(120),
-    admin.from('system_events').select('*').order('created_at', { ascending: false }).limit(120),
-    admin.from('organization_metrics').select('*').order('metric_date', { ascending: false }).limit(300),
-    admin.from('maintenance_announcements').select('*').order('created_at', { ascending: false }).limit(80),
-    supabase.from('document_registry').select('*, agencies(name)').order('created_at', { ascending: false }).limit(200),
-    supabase.from('document_verifications').select('*, agencies(name)').order('created_at', { ascending: false }).limit(200),
-  ]);
+  const results = hasConsolidatedSnapshot
+    ? []
+    : await Promise.allSettled([
+        supabase.from('vw_owner_agency_stats').select('*').order('created_at', { ascending: false }),
+        supabase.from('agencies').select('id,name,status,plan,organization_type,is_bailleur_account,email,phone,created_at,trial_ends_at,derniere_activite').order('created_at', { ascending: false }).limit(500),
+        supabase.from('user_profiles').select('*, agencies(name)').order('created_at', { ascending: false }).limit(500),
+        supabase.from('subscriptions').select('*, agencies(name)').order('created_at', { ascending: false }).limit(300),
+        supabase.from('subscription_payment_proofs').select('*, agencies(name, organization_type, is_bailleur_account)').order('created_at', { ascending: false }).limit(200),
+        supabase.from('agency_creation_requests').select('*').order('created_at', { ascending: false }).limit(200),
+        supabase.from('owner_actions_log').select('*').order('created_at', { ascending: false }).limit(120),
+        supabase.from('feature_flags').select('*').order('updated_at', { ascending: false }).limit(120),
+        supabase.from('saas_config').select('*').order('key'),
+        admin.from('admin_notes').select('*').order('created_at', { ascending: false }).limit(200),
+        admin.from('admin_notifications').select('*').order('created_at', { ascending: false }).limit(120),
+        admin.from('system_events').select('*').order('created_at', { ascending: false }).limit(120),
+        admin.from('organization_metrics').select('*').order('metric_date', { ascending: false }).limit(300),
+        admin.from('maintenance_announcements').select('*').order('created_at', { ascending: false }).limit(80),
+        supabase.from('document_registry').select('*, agencies(name)').order('created_at', { ascending: false }).limit(200),
+        supabase.from('document_verifications').select('*, agencies(name)').order('created_at', { ascending: false }).limit(200),
+      ]);
 
   const partialErrors: string[] = [];
-  const unpack = <T,>(index: number, _label: string, fallback: T): T => {
+  const failedSources = new Set<number>();
+  const unpack = <T,>(index: number, fallback: T): T => {
     const result = results[index];
-    if (result.status === 'rejected') {
+    if (!result || result.status === 'rejected') {
+      failedSources.add(index);
       return fallback;
     }
     const response = result.value as { data?: unknown; error?: { message?: string } | null };
     if (response.error) {
+      failedSources.add(index);
       return fallback;
     }
     return (response.data ?? fallback) as T;
   };
 
-  const snapshot = unpack<Record<string, unknown> | null>(0, 'Snapshot plateforme', null);
-  const agenciesView = unpack<AdminAgency[]>(1, 'Vue organisations', []);
-  const agenciesFallback = unpack<AdminAgency[]>(2, 'Organisations', []);
-  const usersRaw = unpack<Array<AdminUser & { agencies?: { name?: string | null } | null }>>(3, 'Utilisateurs', []);
-  const subscriptionsRaw = unpack<Array<AdminSubscription & { agencies?: { name?: string | null } | null }>>(4, 'Abonnements', []);
-  const proofs = unpack<SubscriptionPaymentProof[]>(5, 'Paiements manuels', []);
-  const requests = unpack<AgencyCreationRequest[]>(6, 'Demandes', []);
-  const legacyLogs = unpack<AdminAuditLog[]>(7, 'Audit historique', []);
-  const legacyFlags = unpack<AdminFeatureFlag[]>(8, 'Feature flags', []);
-  const configRows = unpack<SaasConfigRow[]>(9, 'Configuration SaaS', []);
-  const notes = unpack<AdminNote[]>(10, 'Notes internes', []);
-  const notifications = unpack<AdminNotification[]>(11, 'Notifications admin', []);
-  const systemEvents = unpack<AdminSystemEvent[]>(12, 'Événements système', []);
-  const organizationMetrics = unpack<AdminOrganizationMetric[]>(13, 'Métriques organisations', []);
-  const announcements = unpack<AdminMaintenanceAnnouncement[]>(14, 'Annonces maintenance', []);
-  const documentRegistry = unpack<AdminDocumentRegistryEntry[]>(15, 'Registry documents', []);
-  const documentVerifications = unpack<AdminDocumentVerification[]>(16, 'QR Verify', []);
+  const agenciesView = readSnapshotList<AdminAgency>(snapshot, 'agencies') ?? unpack<AdminAgency[]>(0, []);
+  const agenciesFallback = hasConsolidatedSnapshot ? [] : unpack<AdminAgency[]>(1, []);
+  const usersRaw = readSnapshotList<AdminUser & { agencies?: { name?: string | null } | null }>(snapshot, 'users')
+    ?? unpack<Array<AdminUser & { agencies?: { name?: string | null } | null }>>(2, []);
+  const subscriptionsRaw = readSnapshotList<AdminSubscription & { agencies?: { name?: string | null } | null }>(snapshot, 'subscriptions')
+    ?? unpack<Array<AdminSubscription & { agencies?: { name?: string | null } | null }>>(3, []);
+  const proofs = readSnapshotList<SubscriptionPaymentProof>(snapshot, 'proofs')
+    ?? unpack<SubscriptionPaymentProof[]>(4, []);
+  const requests = readSnapshotList<AgencyCreationRequest>(snapshot, 'requests')
+    ?? unpack<AgencyCreationRequest[]>(5, []);
+  const legacyLogs = hasConsolidatedSnapshot ? [] : unpack<AdminAuditLog[]>(6, []);
+  const legacyFlags = hasConsolidatedSnapshot ? [] : unpack<AdminFeatureFlag[]>(7, []);
+  const configRows = readSnapshotList<SaasConfigRow>(snapshot, 'config_rows')
+    ?? unpack<SaasConfigRow[]>(8, []);
+  const notes = readSnapshotList<AdminNote>(snapshot, 'notes')
+    ?? unpack<AdminNote[]>(9, []);
+  const notifications = readSnapshotList<AdminNotification>(snapshot, 'notifications')
+    ?? unpack<AdminNotification[]>(10, []);
+  const systemEvents = readSnapshotList<AdminSystemEvent>(snapshot, 'system_events')
+    ?? unpack<AdminSystemEvent[]>(11, []);
+  const organizationMetrics = readSnapshotList<AdminOrganizationMetric>(snapshot, 'organization_metrics')
+    ?? unpack<AdminOrganizationMetric[]>(12, []);
+  const announcements = readSnapshotList<AdminMaintenanceAnnouncement>(snapshot, 'announcements')
+    ?? unpack<AdminMaintenanceAnnouncement[]>(13, []);
+  const documentRegistry = readSnapshotList<AdminDocumentRegistryEntry>(snapshot, 'document_registry')
+    ?? unpack<AdminDocumentRegistryEntry[]>(14, []);
+  const documentVerifications = readSnapshotList<AdminDocumentVerification>(snapshot, 'document_verifications')
+    ?? unpack<AdminDocumentVerification[]>(15, []);
 
   const platformFromSnapshot = readSnapshotPlatform(snapshot);
-  const auditLogs = ((snapshot?.audit_logs as AdminAuditLog[] | undefined) ?? legacyLogs).slice(0, 120);
-  const featureFlags = ((snapshot?.feature_flags as AdminFeatureFlag[] | undefined) ?? legacyFlags).slice(0, 120);
-  const incidents = ((snapshot?.incidents as AdminIncident[] | undefined) ?? []).slice(0, 40);
-  const tickets = ((snapshot?.tickets as AdminTicket[] | undefined) ?? []).slice(0, 40);
+  const auditLogs = (readSnapshotList<AdminAuditLog>(snapshot, 'audit_logs') ?? legacyLogs).slice(0, 120);
+  const featureFlags = (readSnapshotList<AdminFeatureFlag>(snapshot, 'feature_flags') ?? legacyFlags).slice(0, 120);
+  const incidents = (readSnapshotList<AdminIncident>(snapshot, 'incidents') ?? []).slice(0, 120);
+  const tickets = (readSnapshotList<AdminTicket>(snapshot, 'tickets') ?? []).slice(0, 120);
 
   const users = usersRaw.map((user) => ({ ...user, agency_name: user.agency_name ?? user.agencies?.name ?? null }));
   const subscriptions = subscriptionsRaw.map((sub) => ({ ...sub, agency_name: sub.agency_name ?? sub.agencies?.name ?? null }));
@@ -473,12 +515,19 @@ export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
     verifications: documentVerifications,
   });
   const agencies = agenciesView.length > 0 ? agenciesView : agenciesFallback.length > 0 ? agenciesFallback : inferredAgencies;
+  if (!hasConsolidatedSnapshot && failedSources.has(0) && failedSources.has(1) && agencies.length === 0) {
+    throw new Error('Les organisations ne peuvent pas être chargées pour le moment. Réessayez dans quelques instants.');
+  }
+  if (!hasConsolidatedSnapshot && failedSources.has(2) && users.length === 0 && platformFromSnapshot.totalUsers > 0) {
+    partialErrors.push('Utilisateurs');
+  }
+
   const estimatedMrr = agencies
     .filter((agency) => ['active', 'trial', null, undefined].includes(agency.status))
     .reduce((sum, agency) => sum + getAdminPlanPrice(normalizeAdminPlanId(agency.plan)), 0);
 
   return {
-    generatedAt: new Date().toISOString(),
+    generatedAt: typeof snapshot?.generated_at === 'string' ? snapshot.generated_at : new Date().toISOString(),
     partialErrors,
     agencies,
     users,
@@ -510,8 +559,8 @@ export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
       estimatedMrr: platformFromSnapshot.estimatedMrr || estimatedMrr,
       openIncidents: platformFromSnapshot.openIncidents || incidents.filter((incident) => !['resolved', 'closed'].includes(incident.status ?? '')).length,
       openTickets: platformFromSnapshot.openTickets || tickets.filter((ticket) => !['resolved', 'closed'].includes(ticket.status ?? '')).length,
-      pendingProofs: proofs.filter((proof) => proof.status === 'pending').length,
-      pendingRequests: requests.filter((request) => request.status === 'pending').length,
+      pendingProofs: platformFromSnapshot.pendingProofs || proofs.filter((proof) => proof.status === 'pending').length,
+      pendingRequests: platformFromSnapshot.pendingRequests || requests.filter((request) => request.status === 'pending').length,
     },
   };
 }

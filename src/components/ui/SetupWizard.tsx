@@ -6,6 +6,7 @@ import { useToast } from '../../hooks/useToast';
 import { ToastContainer } from './Toast';
 import { SmartCombobox } from './SmartCombobox';
 import { reloadUserProfile } from '../../lib/agencyHelper';
+import { createContratViaEdge } from '../../services/api/contratApi';
 import { createPaiementViaEdge } from '../../services/api/paiementApi';
 import { getOrCreateIndividualOwnerBailleur } from '../../services/individualOwner';
 import {
@@ -236,26 +237,14 @@ export function SetupWizard({ onClose, onComplete }: SetupWizardProps) {
             throw new Error('Le locataire ou l\'unité n\'a pas été créé correctement. Veuillez recommencer.');
           }
 
-          const { data, error } = await supabase
-            .from('contrats')
-            .insert({
+          const data = await createContratViaEdge({
               locataire_id: wizardData.locataire.id,
               unite_id: wizardData.unite.id,
               loyer_mensuel: parseFloat(formData.contrat.loyer_mensuel),
               commission: isIndividualOwner ? 0 : parseFloat(formData.contrat.commission),
               date_debut: formData.contrat.date_debut,
-              statut: 'actif',
-              agency_id: profile.agency_id
-            })
-            .select()
-            .single();
-
-          if (error) throw error;
-
-          await supabase
-            .from('unites')
-            .update({ statut: 'loue' })
-            .eq('id', wizardData.unite.id);
+              statut: 'actif'
+            });
 
           setWizardData({ ...wizardData, contrat: data });
           success('Contrat créé avec succès');

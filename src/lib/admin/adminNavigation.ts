@@ -45,7 +45,7 @@ export const CONSOLE_NAV_ITEMS: ConsoleNavItem[] = [
   {
     id: 'billing',
     label: 'Abonnements',
-    shortLabel: 'Billing',
+    shortLabel: 'Abonnements',
     route: '#/console/billing',
     description: 'Plans, revenus estimés, quotas et paiements manuels.',
     icon: CreditCard,
@@ -68,10 +68,10 @@ export const CONSOLE_NAV_ITEMS: ConsoleNavItem[] = [
   },
   {
     id: 'system-config',
-    label: 'Système & configuration',
+    label: 'Système',
     shortLabel: 'Système',
     route: '#/console/system-config',
-    description: 'Documents, QR, santé technique, feature flags, audit et configuration.',
+    description: 'Documents, QR, santé technique, fonctionnalités pilotées et audit.',
     icon: Settings2,
   },
 ];

@@ -40,6 +40,6 @@ describe('PremiumMobileCard', () => {
   it('applique selected/active', () => {
     const result = PremiumMobileCard({ title: "Test", selected: true }) as React.ReactElement;
     expect(result.props.className).toContain('border-emerald-300');
-    expect(result.props.className).toContain('bg-emerald-50/55');
+    expect(result.props.className).toContain('bg-emerald-50/50');
   });
 });

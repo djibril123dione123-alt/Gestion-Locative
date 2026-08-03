@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { trackEvent } from '../lib/analytics';
 
 export type TrackingAction =
   | 'login'
@@ -26,26 +26,18 @@ interface TrackPayload {
 }
 
 export function useTracking() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
 
   const track = useCallback(
     async ({ action, entity_type, entity_id, metadata }: TrackPayload) => {
       if (!user) return;
-      try {
-        await supabase.from('audit_logs').insert({
-          user_id: user.id,
-          agency_id: profile?.agency_id ?? null,
-          action,
-          entity_type: entity_type ?? action,
-          entity_id: entity_id ?? null,
-          metadata: metadata ?? {},
-          created_at: new Date().toISOString(),
-        });
-      } catch {
-        // Tracking must never break app flow — fail silently
-      }
+      trackEvent(action, {
+        entity_type: entity_type ?? action,
+        entity_id: entity_id ?? null,
+        ...metadata,
+      });
     },
-    [user, profile?.agency_id]
+    [user]
   );
 
   return { track };

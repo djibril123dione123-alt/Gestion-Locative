@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  frontend:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,7 +16,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
 
     - name: Install dependencies
@@ -28,5 +28,45 @@ jobs:
     - name: Lint
       run: npm run lint
 
+    - name: Unit tests
+      run: npm run test:unit
+
     - name: Build
       run: npm run build
+
+    - name: Install Chromium for browser smoke tests
+      run: npx playwright install --with-deps chromium
+
+    - name: Browser smoke tests
+      run: npm run test:e2e:smoke
+      env:
+        PLAYWRIGHT_USE_PREVIEW: '1'
+        PLAYWRIGHT_BASE_URL: http://127.0.0.1:4173
+
+    - name: Reject whitespace errors
+      run: git diff --check
+
+    - name: Production dependency audit
+      run: npm audit --omit=dev --audit-level=high
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Supabase CLI
+      uses: supabase/setup-cli@v1
+      with:
+        version: 2.109.1
+
+    - name: Start isolated Supabase stack and apply migrations
+      run: supabase start
+
+    - name: Run RLS, privilege and command-surface tests
+      run: supabase test db
+
+    - name: Stop Supabase stack
+      if: always()
+      run: supabase stop --no-backup

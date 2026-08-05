@@ -796,37 +796,10 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
         eyebrow="FACTURATION & PLAN"
         description="Comparez les capacités et activez le plan adapté à votre croissance."
         mobileDescription="Changer de plan."
-        variant="workstation"
+        variant="classic"
         tone="finance"
-        size="compact"
+        size="standard"
         mobileMode="fullscreen"
-        rail={
-          <WizardRail
-            eyebrow="Plan actuel"
-            title={displayedPlanName}
-            description={catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)}/mois` : 'Tarification sur devis'}
-            footer="Activation instantanée après paiement confirmé. Les paiements manuels restent validés par le support avant activation."
-          >
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-white/[0.07] p-2">
-                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Utilisateurs</p>
-                <p className="mt-1 text-sm font-black text-white">{catalogPlan.max_users === -1 ? 'Illimité' : catalogPlan.max_users}</p>
-              </div>
-              <div className="rounded-xl bg-white/[0.07] p-2">
-                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Unités</p>
-                <p className="mt-1 text-sm font-black text-white">{catalogPlan.max_unites === -1 ? 'Illimité' : catalogPlan.max_unites}</p>
-              </div>
-              <div className="rounded-xl bg-white/[0.07] p-2">
-                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Stockage</p>
-                <p className="mt-1 text-sm font-black text-white">{catalogPlan.storage_gb === -1 ? 'Illimité' : `${catalogPlan.storage_gb} Go`}</p>
-              </div>
-              <div className="rounded-xl bg-white/[0.07] p-2">
-                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Statut</p>
-                <p className="mt-1 text-sm font-black text-white">{statusCfg.label}</p>
-              </div>
-            </div>
-          </WizardRail>
-        }
       >
         <div className="space-y-3">
           <div className="rounded-2xl border border-emerald-900/15 bg-emerald-50/60 p-3 shadow-2xs">
@@ -914,46 +887,22 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
 
           <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-950/10 bg-slate-50/80 px-3 py-2.5 text-xs font-medium text-slate-600">
             <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-700" />
-                  <span>Le changement de plan conserve les données existantes. Seules les capacités et limites sont ajustées après confirmation.</span>
-                </div>
-              </div>
-            </WizardShell>
+            <span>Le changement de plan conserve les données existantes. Seules les capacités et limites sont ajustées après confirmation.</span>
+          </div>
+        </div>
+      </WizardShell>
 
-            <WizardShell
+      <WizardShell
         open={manualProofOpen}
         onClose={() => setManualProofOpen(false)}
         title="Déclarer une preuve"
         eyebrow="PAIEMENT MANUEL"
         description="Le support valide la preuve puis active le plan si le paiement est confirmé."
         mobileDescription="Preuve de paiement."
-        variant="workstation"
+        variant="classic"
         tone="finance"
-        size="compact"
+        size="standard"
         mobileMode="fullscreen"
-        rail={
-          <WizardRail
-            eyebrow="Déclaration"
-            title={`Plan ${proofCatalogPlan.name}`}
-            description="Validation support avant activation."
-            footer="Formats conseillés : reçu mobile money, capture lisible, lien Drive ou référence de virement."
-          >
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-white/[0.07] p-2">
-                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Montant</p>
-                <p className="mt-1 text-sm font-black text-white">{formatCurrency(Number.isFinite(proofAmount) ? proofAmount : 0)}</p>
-              </div>
-              <div className="rounded-xl bg-white/[0.07] p-2">
-                <p className="text-[0.54rem] font-black uppercase tracking-[0.12em] text-emerald-200/80">Méthode</p>
-                <p className="mt-1 truncate text-sm font-black text-white">
-                  {MANUAL_PAYMENT_METHODS.find((method) => method.id === proofForm.method)?.label ?? proofForm.method}
-                </p>
-              </div>
-            </div>
-            <div className="rounded-2xl border border-amber-200/20 bg-amber-300/[0.08] p-3 text-xs font-semibold leading-5 text-amber-50/85">
-              Le plan n’est pas activé automatiquement. Une preuve claire accélère la validation par le support.
-            </div>
-          </WizardRail>
-        }
         secondaryAction={(
           <button
             type="button"

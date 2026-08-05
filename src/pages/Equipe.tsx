@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Check,
   Copy,
@@ -1063,10 +1063,22 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                   </button>
                   <button
                     type="button"
-                    disabled
-                    title="Annulation non disponible sans policy update. Le lien expire automatiquement."
-                    className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 px-2.5 text-[0.68rem] font-extrabold text-slate-400"
+                    onClick={async () => {
+                      const { error } = await supabase
+                        .from('invitations')
+                        .delete()
+                        .eq('id', invitation.id);
+                      if (!error) {
+                        toast.success('Invitation annulée.');
+                        loadData();
+                      } else {
+                        toast.error("Erreur lors de l'annulation de l'invitation.");
+                      }
+                    }}
+                    title="Annuler et supprimer cette invitation"
+                    className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-red-100 bg-red-50 px-2.5 text-[0.68rem] font-extrabold text-red-600 transition hover:bg-red-100 hover:border-red-200"
                   >
+                    <X className="h-3.5 w-3.5" />
                     Annuler
                   </button>
                   </div>

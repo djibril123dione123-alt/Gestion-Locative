@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, CheckCircle2, Loader2, Sparkles, Trash2 } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../hooks/useToast';
+import { isOfficialDemoTenant } from '../../lib/demoTenant';
+import { isPresentationMode } from '../../lib/presentationMode';
 import { supabase } from '../../lib/supabase';
 import { createContratViaEdge } from '../../services/api/contratApi';
 import { createPaiementViaEdge } from '../../services/api/paiementApi';
@@ -45,8 +48,14 @@ const DEMO_DATA = {
 };
 
 export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: DemoDataLoaderProps) {
+  const location = useLocation();
   const { profile, agency, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
+  const officialDemoTenant = isOfficialDemoTenant(profile?.agency_id ?? agency?.id);
+  const presentationMode = isPresentationMode(
+    location.search,
+    typeof window === 'undefined' ? '' : window.location.search,
+  );
   const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -81,7 +90,10 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
   };
 
   useEffect(() => {
-    if (!profile?.agency_id) return;
+    if (!profile?.agency_id || officialDemoTenant) {
+      setDemoPresent(false);
+      return;
+    }
     const agencyId = profile.agency_id;
     let alive = true;
     void (async () => {
@@ -96,10 +108,10 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
     return () => {
       alive = false;
     };
-  }, [profile?.agency_id]);
+  }, [officialDemoTenant, profile?.agency_id]);
 
   const loadDemo = async () => {
-    if (!profile?.agency_id) return;
+    if (!profile?.agency_id || officialDemoTenant) return;
     setLoading(true);
 
     try {
@@ -241,13 +253,13 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
         toast.warning(
           isIndividualOwner
             ? 'Exemples proprietaire charges sans paiements automatiques. Vous pouvez continuer et enregistrer un premier loyer.'
-            : 'Donnees exemples chargees sans paiements automatiques. Vous pouvez continuer depuis Encaissements.',
+            : 'Données exemples chargées sans paiements automatiques. Vous pouvez continuer depuis Encaissements.',
         );
       } else {
         toast.success(
           isIndividualOwner
             ? 'Exemples proprietaire charges. Vous pouvez explorer votre espace tout de suite.'
-            : 'Donnees exemples chargees. Vous pouvez explorer le produit tout de suite.',
+            : 'Données exemples chargées. Vous pouvez explorer le produit tout de suite.',
         );
       }
       onLoaded?.();
@@ -264,7 +276,7 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
   };
 
   const resetDemo = async () => {
-    if (!profile?.agency_id) return;
+    if (!profile?.agency_id || officialDemoTenant) return;
     if (!confirmReset) {
       setConfirmReset(true);
       return;
@@ -301,8 +313,10 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
     }
   };
 
+  if (officialDemoTenant) return null;
+
   if (variant === 'resetBanner') {
-    if (!demoPresent) return null;
+    if (!demoPresent || presentationMode) return null;
 
     return (
       <>
@@ -320,9 +334,9 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
                 <Sparkles className="h-5 w-5" />
               </div>
               <div>
-                <p className="font-black text-slate-950">Donnees exemples actives</p>
+                <p className="font-black text-slate-950">Données exemples actives</p>
                 <p className="mt-0.5 text-sm font-semibold leading-5 text-slate-600">
-                  Vous explorez Samay Keur avec des donnees de test. Vous pouvez les supprimer sans toucher a vos vraies donnees.
+                  Vous explorez Samay Këur avec des données de test. Vous pouvez les supprimer sans toucher à vos vraies données.
                 </p>
               </div>
             </div>
@@ -333,7 +347,7 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
               className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 py-2.5 text-sm font-black text-orange-700 shadow-sm transition hover:bg-orange-50 disabled:opacity-50"
             >
               {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              {confirmReset ? 'Confirmer le reset' : 'Reinitialiser les exemples'}
+              {confirmReset ? 'Confirmer la réinitialisation' : 'Réinitialiser les exemples'}
             </button>
           </div>
         </div>
@@ -345,7 +359,7 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
     return (
       <div className={`flex items-center gap-2 ${compact ? 'text-sm' : 'text-base'} font-bold text-emerald-700`}>
         <CheckCircle2 className="h-4 w-4" />
-        <span>Donnees exemples chargees</span>
+        <span>Données exemples chargées</span>
       </div>
     );
   }
@@ -411,7 +425,7 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 py-2 text-xs font-black text-orange-700 transition hover:bg-orange-50 disabled:opacity-50"
                 >
                   {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                  {confirmReset ? 'Supprimer les exemples' : 'Reinitialiser les exemples'}
+                  {confirmReset ? 'Supprimer les exemples' : 'Réinitialiser les exemples'}
                 </button>
               </div>
             </div>

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 
 import { useAuth } from '../../contexts/AuthContext';
+import { isOfficialDemoTenant } from '../../lib/demoTenant';
 import { supabase } from '../../lib/supabase';
 import { DemoDataLoader } from '../billing/DemoDataLoader';
 
@@ -47,6 +48,7 @@ export function FirstStepsChecklist({
   showDemoData = false,
 }: FirstStepsChecklistProps) {
   const { profile, accountProfile } = useAuth();
+  const officialDemoTenant = isOfficialDemoTenant(profile?.agency_id);
   const [counts, setCounts] = useState<ProgressCounts>(DEFAULT_COUNTS);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
@@ -246,9 +248,13 @@ export function FirstStepsChecklist({
                 : 'Votre premiere victoire commence par un bailleur.'}
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-emerald-50/72">
-              {isIndividualOwner
-                ? "Ajoutez un bien, un locataire, un bail puis un premier loyer. Vous pouvez aussi charger des exemples pour explorer l'espace sans attendre."
-                : "Creez d'abord un bailleur, puis son bien, ses locataires, ses encaissements et ses quittances. Les exemples permettent de tester le parcours complet."}
+              {officialDemoTenant
+                ? isIndividualOwner
+                  ? 'Ajoutez un bien, un locataire, un bail puis un premier loyer pour lancer votre espace.'
+                  : "Creez d'abord un bailleur, puis structurez ses biens, ses locations, ses encaissements et ses quittances."
+                : isIndividualOwner
+                  ? "Ajoutez un bien, un locataire, un bail puis un premier loyer. Vous pouvez aussi charger des exemples pour explorer l'espace sans attendre."
+                  : "Creez d'abord un bailleur, puis son bien, ses locataires, ses encaissements et ses quittances. Les exemples permettent de tester le parcours complet."}
             </p>
           </div>
 
@@ -299,7 +305,7 @@ export function FirstStepsChecklist({
       </div>
 
       <div className="border-t border-slate-100 p-4 sm:p-5">
-        {showDemoData ? (
+        {showDemoData && !officialDemoTenant ? (
           <DemoDataLoader
             onLoaded={() => {
               void loadProgress();

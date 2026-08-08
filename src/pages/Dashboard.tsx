@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { formatCurrency, formatDate } from '../lib/formatters';
 import { applyCfaSettlementTolerance } from '../lib/cfaSettlement';
+import { isOfficialDemoTenant } from '../lib/demoTenant';
 import {
   AlertCircle,
   ArrowRight,
@@ -914,6 +915,9 @@ function firstNumber(payload: Record<string, unknown>, keys: string[]): number |
 }
 
 function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: DashboardProps & { onLoaded: () => void }) {
+  const { profile } = useAuth();
+  const officialDemoTenant = isOfficialDemoTenant(profile?.agency_id);
+
   return (
     <PremiumPageShell className="space-y-2.5 lg:space-y-3">
       <section className="relative overflow-hidden rounded-xl border border-emerald-950/5 bg-[linear-gradient(135deg,#FDFBF7_0%,#F3F9F6_100%)] p-3 shadow-[0_10px_26px_rgba(6,17,13,0.05)] lg:p-4">
@@ -951,7 +955,7 @@ function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: Dashbo
         </div>
       </section>
 
-      <div className="grid gap-2.5 lg:grid-cols-[minmax(0,1.3fr)_minmax(220px,0.7fr)]">
+      <div className={`grid gap-2.5 ${officialDemoTenant ? '' : 'lg:grid-cols-[minmax(0,1.3fr)_minmax(220px,0.7fr)]'}`}>
         <section className="rounded-xl border border-emerald-950/10 bg-white/95 p-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="text-xs font-black text-slate-950">Feuille de route</h2>
@@ -982,15 +986,17 @@ function NewAgencyDashboard({ onNavigate, onStartSetupWizard, onLoaded }: Dashbo
             ))}
           </div>
         </section>
-        <section className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
-          <h2 className="text-xs font-black text-slate-950">Tester avec des exemples</h2>
-          <p className="mt-1 text-[0.68rem] leading-4 text-slate-600">
-            Générez des données fictives pour découvrir le cockpit avant de configurer vos vrais dossiers.
-          </p>
-          <div className="mt-2">
-            <DemoDataLoader variant="compact" onLoaded={onLoaded} />
-          </div>
-        </section>
+        {!officialDemoTenant && (
+          <section className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2.5 shadow-sm">
+            <h2 className="text-xs font-black text-slate-950">Tester avec des exemples</h2>
+            <p className="mt-1 text-[0.68rem] leading-4 text-slate-600">
+              Générez des données fictives pour découvrir le cockpit avant de configurer vos vrais dossiers.
+            </p>
+            <div className="mt-2">
+              <DemoDataLoader variant="compact" onLoaded={onLoaded} />
+            </div>
+          </section>
+        )}
       </div>
     </PremiumPageShell>
   );

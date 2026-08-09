@@ -518,7 +518,7 @@ const EMPTY_SETTINGS: Omit<SettingsState, 'agency_id'> = {
   logo_url: '',
   logo_position: DEFAULT_AGENCY_SETTINGS.logo_position ?? 'left',
   couleur_primaire: DEFAULT_AGENCY_SETTINGS.couleur_primaire ?? '#F58220',
-  couleur_secondaire: DEFAULT_AGENCY_SETTINGS.couleur_secondaire ?? '#333333',
+  couleur_secondaire: DEFAULT_AGENCY_SETTINGS.couleur_secondaire ?? '#D9AA5E',
   devise: DEFAULT_AGENCY_SETTINGS.devise ?? 'XOF',
   pied_page_personnalise: DEFAULT_AGENCY_SETTINGS.pied_page_personnalise ?? '',
   signature_url: null,
@@ -906,7 +906,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         logo_url: settings.logo_url ?? '',
         logo_position: settings.logo_position ?? 'left',
         couleur_primaire: settings.couleur_primaire ?? '#F58220',
-        couleur_secondaire: settings.couleur_secondaire ?? '#333333',
+        couleur_secondaire: settings.couleur_secondaire ?? '#D9AA5E',
         mention_tribunal: settings.mention_tribunal ?? '',
         mention_penalites: settings.mention_penalites ?? '',
         mention_frais_huissier: settings.mention_frais_huissier ?? '',
@@ -1356,7 +1356,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-1.5">
                   <SettingsStatusCard label="Mode" value={documentModeLabel} icon={FileText} />
-                  <SettingsStatusCard label="Couleurs" value={`${settings.couleur_primaire ?? '#F58220'} / ${settings.couleur_secondaire ?? '#333333'}`} icon={Sparkles} />
+                  <SettingsStatusCard label="Couleurs" value={`${settings.couleur_primaire ?? '#F58220'} / ${settings.couleur_secondaire ?? '#D9AA5E'}`} icon={Sparkles} />
                   <SettingsStatusCard label="Pénalités" value={`${settings.penalite_retard_montant ?? 0} F / jour`} icon={ShieldCheck} />
                   <SettingsStatusCard label="Mis à jour" value={formatCompactDate(settings.updated_at)} icon={CheckCircle} />
                 </div>
@@ -1392,7 +1392,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                       <InfoLine label="Signature / cachet" value={signaturePreview ? 'Prêt pour les signatures' : 'À ajouter'} strong={Boolean(signaturePreview)} />
                       <InfoLine label="Position" value={settings.logo_position} />
                       <ColorLine label="Couleur primaire" value={settings.couleur_primaire ?? '#F58220'} />
-                      <ColorLine label="Couleur secondaire" value={settings.couleur_secondaire ?? '#333333'} />
+                      <ColorLine label="Couleur secondaire" value={settings.couleur_secondaire ?? '#D9AA5E'} />
                     </div>
                     <div className="grid gap-1">
                       <div className="flex h-12 w-20 items-center justify-center rounded-xl border border-emerald-950/10 bg-[#fff8ed] p-2">
@@ -1412,7 +1412,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               signatureUrl={signaturePreview}
               logoPosition={settings.logo_position ?? 'left'}
               primary={settings.couleur_primaire ?? '#F58220'}
-              secondary={settings.couleur_secondaire ?? '#333333'}
+              secondary={settings.couleur_secondaire ?? '#D9AA5E'}
               tribunal={settings.mention_tribunal}
               footer={settings.pied_page_personnalise}
               qrEnabled={Boolean(settings.qr_code_quittances)}
@@ -1447,7 +1447,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 </div>
               </div>
               <ColorLine label="Primaire" value={settings.couleur_primaire ?? '#F58220'} />
-              <ColorLine label="Secondaire" value={settings.couleur_secondaire ?? '#333333'} />
+              <ColorLine label="Secondaire" value={settings.couleur_secondaire ?? '#D9AA5E'} />
             </SettingsInfoCard>
             <SettingsDocumentPreview
               title={displayName}
@@ -1455,7 +1455,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               signatureUrl={signaturePreview}
               logoPosition={settings.logo_position ?? 'left'}
               primary={settings.couleur_primaire ?? '#F58220'}
-              secondary={settings.couleur_secondaire ?? '#333333'}
+              secondary={settings.couleur_secondaire ?? '#D9AA5E'}
               tribunal={settings.mention_tribunal}
               footer={settings.pied_page_personnalise}
               qrEnabled={Boolean(settings.qr_code_quittances)}
@@ -1922,8 +1922,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     <label>
                       <span className={embeddedLabelClass}>Couleur secondaire</span>
                       <div className="flex gap-2">
-                        <input type="color" value={settings.couleur_secondaire ?? '#333333'} onChange={(e) => setSettings({ ...settings, couleur_secondaire: e.target.value })} className="h-10 w-12 rounded-xl border border-emerald-950/10 bg-white p-1" />
-                        <input type="text" value={settings.couleur_secondaire ?? '#333333'} onChange={(e) => setSettings({ ...settings, couleur_secondaire: e.target.value })} className={embeddedFieldClass} />
+                        <input type="color" value={settings.couleur_secondaire ?? '#D9AA5E'} onChange={(e) => setSettings({ ...settings, couleur_secondaire: e.target.value })} className="h-10 w-12 rounded-xl border border-emerald-950/10 bg-white p-1" />
+                        <input type="text" value={settings.couleur_secondaire ?? '#D9AA5E'} onChange={(e) => setSettings({ ...settings, couleur_secondaire: e.target.value })} className={embeddedFieldClass} />
                       </div>
                     </label>
                   </div>
@@ -1935,7 +1935,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 signatureUrl={signaturePreview}
                 logoPosition={settings.logo_position ?? 'left'}
                 primary={settings.couleur_primaire ?? '#F58220'}
-                secondary={settings.couleur_secondaire ?? '#333333'}
+                secondary={settings.couleur_secondaire ?? '#D9AA5E'}
                 tribunal={settings.mention_tribunal}
                 footer={settings.pied_page_personnalise}
                 qrEnabled={Boolean(settings.qr_code_quittances)}
@@ -2634,7 +2634,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   <div className="flex gap-3">
                     <input aria-label="Champ de saisie"
                       type="color"
-                      value={settings.couleur_secondaire ?? '#333333'}
+                      value={settings.couleur_secondaire ?? '#D9AA5E'}
                       onChange={(e) =>
                         setSettings({ ...settings, couleur_secondaire: e.target.value })
                       }
@@ -2642,7 +2642,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     />
                     <input aria-label="Champ de saisie"
                       type="text"
-                      value={settings.couleur_secondaire ?? '#333333'}
+                      value={settings.couleur_secondaire ?? '#D9AA5E'}
                       onChange={(e) =>
                         setSettings({ ...settings, couleur_secondaire: e.target.value })
                       }

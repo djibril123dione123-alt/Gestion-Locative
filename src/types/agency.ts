@@ -88,7 +88,7 @@ export const DEFAULT_AGENCY_SETTINGS: AgencySettingsFormInput = {
   logo_url: null,
   logo_position: 'left',
   couleur_primaire: '#F58220',
-  couleur_secondaire: '#333333',
+  couleur_secondaire: '#D9AA5E',
   devise: 'XOF',
   pied_page_personnalise: 'Gestion Locative - Dakar, Sénégal',
   signature_url: null,

@@ -3,12 +3,15 @@ export type PlanId = 'starter' | 'pro' | 'business' | 'enterprise';
 export interface PricingPlanDefinition {
   id: PlanId;
   name: string;
+  internalName: string;
   audience: string;
   price_xof: number;
   priceLabel: string;
   billingLabel: string;
   positioning: string;
   outcome: string;
+  bestFor: string;
+  supportLabel: string;
   accent: string;
   surface: string;
   highlighted?: boolean;
@@ -35,16 +38,25 @@ export interface PricingPlanDefinition {
 export const CONTACT_WHATSAPP = '221769010960';
 export const CONTACT_EMAIL = 'samaykeur@gmail.com';
 
+/**
+ * Source tarifaire publique canonique.
+ * Les IDs, prix et limites correspondent aux identifiants persistés en base.
+ * Les capacités métier communes ne sont pas dupliquées ici comme des droits de plan :
+ * elles restent disponibles selon le rôle, les modules activés et le type de compte.
+ */
 export const PRICING_PLAN_DEFINITIONS: PricingPlanDefinition[] = [
   {
     id: 'starter',
-    name: 'Starter',
+    name: 'Essentiel',
+    internalName: 'Starter',
     audience: 'Bailleur individuel',
     price_xof: 5000,
     priceLabel: '5 000 F CFA',
     billingLabel: 'par mois',
-    positioning: 'Pour structurer un petit patrimoine sans Excel dispersé.',
-    outcome: 'Vous gardez une vision claire des loyers, documents et échéances essentielles.',
+    positioning: 'Pour centraliser un petit patrimoine et suivre les loyers sans fichiers dispersés.',
+    outcome: 'Une gestion claire des biens, des échéances et des documents du quotidien.',
+    bestFor: 'Un propriétaire qui gère seul jusqu’à 10 unités.',
+    supportLabel: 'Support par email',
     accent: '#475569',
     surface: '#F8FAFC',
     limits: {
@@ -57,28 +69,36 @@ export const PRICING_PLAN_DEFINITIONS: PricingPlanDefinition[] = [
       users: '1 utilisateur',
       immeubles: '3 immeubles',
       unites: '10 unités',
-      storage: '1 Go sécurisé',
+      storage: '1 Go',
     },
-    features: ['Pilotage simple des loyers', 'Documents locatifs professionnels', 'GED légère', 'Support email'],
-    value: [
-      'Pilotage simple des loyers',
-      'Documents locatifs professionnels',
-      'Suivi basique des impayés',
-      'Archivage documentaire léger',
+    features: [
+      'Biens, unités, occupants et baux',
+      'Suivi des loyers et des impayés',
+      'Quittances et documents professionnels',
+      'Rapports bailleurs',
+      'Support par email',
     ],
-    infrastructure: ['GED de démarrage', 'Exports essentiels', 'Support email'],
-    cta: 'Commencer en Starter',
+    value: [
+      'Centraliser les informations du patrimoine',
+      'Savoir ce qui est payé ou en retard',
+      'Retrouver les documents au même endroit',
+    ],
+    infrastructure: ['1 utilisateur', 'Jusqu’à 10 unités', '1 Go de stockage documentaire'],
+    cta: 'Choisir Essentiel',
     ctaStyle: 'outline',
   },
   {
     id: 'pro',
     name: 'Pro',
-    audience: 'Bailleur sérieux / petite gestion',
+    internalName: 'Pro',
+    audience: 'Gestionnaire ou petite agence',
     price_xof: 15000,
     priceLabel: '15 000 F CFA',
     billingLabel: 'par mois',
-    positioning: 'Pour professionnaliser les encaissements et rassurer les propriétaires.',
-    outcome: 'Vous automatisez le suivi financier, les relances et les rapports propriétaires.',
+    positioning: 'Pour professionnaliser les encaissements et partager une information fiable.',
+    outcome: 'Plus de capacité, une petite équipe et des rapports prêts à présenter aux propriétaires.',
+    bestFor: 'Une équipe jusqu’à 5 personnes qui gère jusqu’à 100 unités.',
+    supportLabel: 'Support prioritaire',
     accent: '#F58220',
     surface: '#FFF7ED',
     highlighted: true,
@@ -93,32 +113,39 @@ export const PRICING_PLAN_DEFINITIONS: PricingPlanDefinition[] = [
       users: '5 utilisateurs',
       immeubles: '20 immeubles',
       unites: '100 unités',
-      storage: '20 Go sécurisés',
+      storage: '20 Go',
     },
-    features: ['Tout Starter', 'Notifications bailleurs', 'Rapports PDF mensuels', 'Alertes impayés', 'Commissions', 'Support WhatsApp'],
-    value: [
-      'Suivi propriétaire automatisé',
-      'Reporting financier avancé',
-      'Paiements Wave, Orange Money et Djamo',
-      'QR de vérification documentaire',
-      'Gestion des reliquats et paiements partiels',
+    features: [
+      'Toutes les fonctions métier essentielles',
+      'Collaboration jusqu’à 5 utilisateurs',
+      'Rapports bailleurs et suivi financier',
+      'GED et vérification documentaire',
+      'Support prioritaire',
     ],
-    infrastructure: ['GED structurée', 'Synchronisation offline-first', 'Support WhatsApp prioritaire'],
-    cta: 'Activer Pro',
+    value: [
+      'Partager une source unique avec l’équipe',
+      'Suivre paiements partiels et reliquats',
+      'Produire des rapports propriétaires lisibles',
+    ],
+    infrastructure: ['5 utilisateurs', 'Jusqu’à 100 unités', '20 Go de stockage documentaire'],
+    cta: 'Choisir Pro',
     ctaStyle: 'primary',
   },
   {
     id: 'business',
-    name: 'Business',
+    name: 'Agence',
+    internalName: 'Business',
     audience: 'Agence immobilière structurée',
     price_xof: 35000,
     priceLabel: '35 000 F CFA',
     billingLabel: 'par mois',
-    positioning: 'Pour coordonner une équipe, sécuriser les workflows et piloter un portefeuille.',
-    outcome: 'Votre agence gagne en contrôle : rôles, validations, audit trail et reporting consolidé.',
+    positioning: 'Pour coordonner plusieurs gestionnaires et piloter un portefeuille plus important.',
+    outcome: 'Une capacité agence, des accès maîtrisés et une vision consolidée des opérations.',
+    bestFor: 'Une agence jusqu’à 15 utilisateurs et 500 unités.',
+    supportLabel: 'Support prioritaire',
     accent: '#0F766E',
     surface: '#ECFDF5',
-    badge: 'Agence',
+    badge: 'Équipe',
     limits: {
       max_users: 15,
       max_immeubles: 100,
@@ -129,29 +156,36 @@ export const PRICING_PLAN_DEFINITIONS: PricingPlanDefinition[] = [
       users: '15 utilisateurs',
       immeubles: '100 immeubles',
       unites: '500 unités',
-      storage: '100 Go sécurisés',
+      storage: '100 Go',
     },
-    features: ['Tout Pro', '15 utilisateurs', 'Rapports agents', 'Multi-portefeuilles', 'API webhooks', 'Support < 4h'],
-    value: [
-      'Rôles et permissions avancés',
-      'Workflows équipe et coordination agence',
-      'Historique et audit trail opérationnel',
-      'Rapports bailleurs et finance consolidés',
-      'Portefeuille multi-gestionnaires',
+    features: [
+      'Toutes les fonctions métier essentielles',
+      'Collaboration jusqu’à 15 utilisateurs',
+      'Rôles, permissions et suivi d’activité',
+      'Rapports consolidés et documents vérifiables',
+      'Support prioritaire',
     ],
-    infrastructure: ['GED agence complète', 'API webhooks', 'Support prioritaire < 4h'],
-    cta: 'Passer en Business',
+    value: [
+      'Coordonner agents, comptables et administrateurs',
+      'Contrôler les accès selon les responsabilités',
+      'Piloter un portefeuille agence plus large',
+    ],
+    infrastructure: ['15 utilisateurs', 'Jusqu’à 500 unités', '100 Go de stockage documentaire'],
+    cta: 'Choisir Agence',
     ctaStyle: 'secondary',
   },
   {
     id: 'enterprise',
-    name: 'Enterprise',
-    audience: 'Groupes, réseaux, multi-agences',
+    name: 'Entreprise',
+    internalName: 'Enterprise',
+    audience: 'Groupe ou réseau immobilier',
     price_xof: 0,
     priceLabel: 'Sur devis',
-    billingLabel: 'capacité sur mesure',
-    positioning: 'Pour déployer une infrastructure immobilière gouvernée, sécurisée et scalable.',
-    outcome: 'Vous obtenez une plateforme adaptée à vos règles, vos équipes et votre gouvernance.',
+    billingLabel: 'capacité à définir',
+    positioning: 'Pour cadrer un déploiement à grande échelle avec des besoins spécifiques.',
+    outcome: 'Le périmètre, les volumes et l’accompagnement sont définis avec votre organisation.',
+    bestFor: 'Un groupe, un réseau ou une organisation dépassant les limites du plan Agence.',
+    supportLabel: 'Accompagnement défini sur devis',
     accent: '#14532D',
     surface: '#F0FDF4',
     limits: {
@@ -161,21 +195,24 @@ export const PRICING_PLAN_DEFINITIONS: PricingPlanDefinition[] = [
       storage_gb: 100,
     },
     capacities: {
-      users: 'Sur mesure',
-      immeubles: 'Sur mesure',
-      unites: 'Sur mesure',
-      storage: 'Fair usage contractualisé',
+      users: 'À définir',
+      immeubles: 'À définir',
+      unites: 'À définir',
+      storage: 'À définir',
     },
-    features: ['Capacité sur mesure', 'White-label', 'SLA contractualisé', 'Account manager', 'Formation sur site'],
-    value: [
-      'Multi-agence et gouvernance réseau',
-      'SLA, sécurité et conformité renforcés',
-      'Déploiement personnalisé et formation',
-      'White-label et intégrations métier',
-      'Account manager dédié',
+    features: [
+      'Périmètre fonctionnel défini avec votre équipe',
+      'Capacités adaptées au volume réel',
+      'Accompagnement de déploiement',
+      'Conditions de support contractualisées',
     ],
-    infrastructure: ['Architecture dédiée selon volume', 'API complète', 'Support institutionnel'],
-    cta: 'Demander un devis',
+    value: [
+      'Cadrer les besoins d’un réseau ou d’un groupe',
+      'Préparer l’adoption par plusieurs équipes',
+      'Définir les capacités et le support attendus',
+    ],
+    infrastructure: ['Utilisateurs à définir', 'Portefeuille à définir', 'Stockage à définir'],
+    cta: 'Parler à l’équipe',
     ctaStyle: 'contact',
   },
 ];

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PageShell } from '../components/ui/PageShell';
+import { useAuth } from '../contexts/AuthContext';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { ToastContainer } from '../components/ui/Toast';
@@ -133,6 +134,8 @@ function SimpleDocumentMode({
 }
 
 export function DocumentStudio() {
+  const { accountProfile } = useAuth();
+  const isIndividualOwner = accountProfile.isIndividualOwner;
   const navigate = useNavigate();
   const toast = useToast();
   const [documentType, setDocumentType] = useState<DocumentTemplateType>('contrat');
@@ -321,7 +324,7 @@ export function DocumentStudio() {
         <section className="min-w-0 rounded-md border border-emerald-950/10 bg-[#fffdf8] shadow-sm">
           <div className="flex flex-col gap-2 border-b border-slate-200 p-2.5">
             <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
-              {DOCUMENT_CHOICES.map((choice) => (
+              {DOCUMENT_CHOICES.filter(c => isIndividualOwner ? c.type !== 'rapport_bailleur' : c.type !== 'rapport_proprietaire').map((choice) => (
                 <button
                   type="button"
                   key={choice.type}

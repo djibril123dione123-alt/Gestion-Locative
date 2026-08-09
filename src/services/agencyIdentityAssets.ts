@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase';
 import type { AgencySettings } from '../types/agency';
 
 const BUCKET = 'agency-assets';
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 export type AgencyIdentityAssetKind = 'logo' | 'signature' | 'stamp';
@@ -15,7 +15,7 @@ export interface AgencyIdentityAssetResult {
 
 export function validateAgencyIdentityFile(file: File): string | null {
   if (!ALLOWED_TYPES.has(file.type)) return 'Formats acceptés : PNG, JPG ou WebP.';
-  if (file.size <= 0 || file.size > MAX_FILE_SIZE) return "L'image ne doit pas dépasser 2 Mo.";
+  if (file.size <= 0 || file.size > MAX_FILE_SIZE) return "L'image ne doit pas dépasser 5 Mo.";
   return null;
 }
 

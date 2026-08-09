@@ -887,7 +887,8 @@ export async function drawDocumentHeader(
     doc.text(line, infoX, 19.3 + index * 4.2, { align: infoAlign });
   });
 
-  const separatorY = Math.max(40, logoBottom + 8);
+  const textBottom = 19.3 + (infoLines.slice(0, 5).length - 1) * 4.2 + 2;
+  const separatorY = Math.max(textBottom, logoBottom) + 4;
   doc.setDrawColor(191, 203, 218);
   doc.setLineWidth(0.24);
   doc.line(14, separatorY, pageWidth - 14, separatorY);

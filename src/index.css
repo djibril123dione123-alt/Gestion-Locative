@@ -100,6 +100,31 @@
     background: rgba(255, 138, 0, 0.24);
     color: #0d1b16;
   }
+
+  /* Thin scrollbars for desktop (PC) */
+  @media (pointer: fine) {
+    * {
+      scrollbar-width: thin;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(15, 23, 42, 0.15);
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(15, 23, 42, 0.25);
+    }
+  }
 }
 
 @layer components {

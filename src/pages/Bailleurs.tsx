@@ -2746,10 +2746,11 @@ function CompactLabelValue({ label, value }: { label: string; value: ReactNode |
   const isIdentity = label.toLowerCase().includes('identit');
   const isName = label === 'Nom complet';
   return (
-    <div className={`flex min-w-0 items-center justify-between gap-3 ${isName ? 'py-1.5 sm:py-[0.55rem]' : 'py-1.5 sm:py-[0.42rem]'}`}>
-      <span className="shrink-0 text-[0.72rem] font-medium text-slate-500 sm:text-[0.66rem]">{label}</span>
+    <div className={`flex min-w-0 items-start justify-between gap-3 ${isName ? 'py-1.5 sm:py-[0.55rem]' : 'py-1.5 sm:py-[0.42rem]'}`}>
+      <span className="shrink-0 text-[0.72rem] font-medium text-slate-500 sm:text-[0.66rem] mt-[2px]">{label}</span>
       <span
-        className={`min-w-0 max-w-[70%] truncate text-right font-semibold sm:max-w-[62%] ${isIdentity ? 'tabular-nums tracking-[-0.01em] text-slate-700' : ''} ${isName ? 'text-[0.82rem] text-slate-950 sm:text-[0.74rem]' : 'text-[0.74rem] text-slate-800 sm:text-[0.68rem]'}`}
+        className={`min-w-0 flex-1 text-right font-semibold break-words ${isIdentity ? 'tabular-nums tracking-[-0.01em] text-slate-700' : ''} ${isName ? 'text-[0.82rem] text-slate-950 sm:text-[0.74rem]' : 'text-[0.74rem] text-slate-800 sm:text-[0.68rem]'}`}
+        style={{ overflowWrap: 'anywhere' }}
         title={typeof value === 'string' ? value : undefined}
       >
         {value}

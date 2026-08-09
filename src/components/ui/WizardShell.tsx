@@ -156,7 +156,7 @@ export function WizardShell({
           </aside>
         )}
 
-        <div className={isWorkstation ? 'flex min-h-0 min-w-0 flex-col overflow-hidden' : 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden'}>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           <div
             className={
               isWorkstation
@@ -290,7 +290,7 @@ export function WizardShell({
             )}
           </div>
 
-          <div className={`min-h-0 overflow-y-auto px-3.5 py-2.5 sm:px-4 sm:py-3.5 ${isWorkstation ? 'bg-[#fffdf8]' : 'flex-1 bg-white'} ${bodyClassName}`}>
+          <div className={`min-h-0 flex-1 overflow-y-auto px-3.5 py-2.5 sm:px-4 sm:py-3.5 ${isWorkstation ? 'bg-[#fffdf8]' : 'bg-white'} ${bodyClassName}`}>
             {stepContext && (
               <div className="mb-2 rounded-lg border border-l-2 border-emerald-950/10 border-l-emerald-700/18 bg-[#fffdf8]/82 px-2 py-1.5 text-[0.73rem] font-medium leading-snug text-slate-600 shadow-[0_5px_12px_rgba(15,23,42,0.016)] sm:mb-2.5 sm:rounded-xl sm:px-2.5 sm:py-[0.45rem] sm:text-[0.67rem]">
                 {stepContext}

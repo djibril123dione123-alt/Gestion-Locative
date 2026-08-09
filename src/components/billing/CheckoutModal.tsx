@@ -342,91 +342,102 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
       ) : undefined}
     >
       {step !== 'success' && step !== 'error' && (
-        <div className="mb-4 overflow-hidden rounded-2xl border border-emerald-950/15 bg-gradient-to-br from-[#fffefc] via-[#fffcf6] to-emerald-50/20 p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
+        <div className="mb-6 relative overflow-hidden rounded-2xl bg-[#031510] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.15)] ring-1 ring-white/10">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.15),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(251,191,36,0.08),transparent_40%)] pointer-events-none" />
+          <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent pointer-events-none" />
+          
+          <div className="relative flex items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[0.6rem] font-black uppercase tracking-[0.16em] text-emerald-800">PLAN SÉLECTIONNÉ</p>
-              <p className="mt-0.5 truncate text-base font-black text-slate-950">Plan {planName}</p>
+              <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-emerald-400/90">PLAN SÉLECTIONNÉ</p>
+              <p className="mt-0.5 truncate text-[1.15rem] font-black text-white drop-shadow-sm">Plan {planName}</p>
             </div>
             <div className="shrink-0 text-right">
-              <p className="text-xl font-black tracking-tight text-emerald-950">
+              <p className="text-2xl font-black tracking-tight text-white drop-shadow-md">
                 {formatCurrency(priceXof)}
-                <span className="ml-1 text-xs font-semibold text-slate-500">/mois</span>
+                <span className="ml-1.5 text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest">/mois</span>
               </p>
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-800/15 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-950">
-            <Shield className="h-4 w-4 shrink-0 text-emerald-700" />
-            <span>Activation instantanée après confirmation du paiement. Le paiement en ligne reste prioritaire.</span>
+          <div className="relative mt-4 flex items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 backdrop-blur-md shadow-inner">
+            <Shield className="h-4 w-4 shrink-0 text-emerald-400 mt-0.5" />
+            <span className="text-[0.72rem] font-medium leading-relaxed text-slate-300">
+              <strong className="text-white">Activation instantanée</strong> après confirmation. Le paiement en ligne reste prioritaire sur les autres moyens.
+            </span>
           </div>
         </div>
       )}
 
 
       {step === 'select_provider' && (
-        <div className="space-y-4">
+        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <div>
-            <h4 className="text-sm font-black text-slate-950">Choisissez votre moyen de paiement</h4>
-            <p className="mt-0.5 text-xs text-slate-500">Les transactions locales sont sécurisées et vérifiées automatiquement via PayDunya.</p>
+            <h4 className="text-[0.95rem] font-black text-slate-900 tracking-tight">Choisissez votre moyen de paiement</h4>
+            <p className="mt-1 text-[0.75rem] text-slate-500 font-medium">Les transactions locales sont sécurisées et vérifiées automatiquement via PayDunya.</p>
           </div>
-          <div className="grid gap-2.5 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
             {PROVIDERS.map((p) => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => handleSelectProvider(p.id)}
-                className="group relative flex min-w-0 items-center gap-3.5 rounded-2xl border border-slate-200/90 bg-white p-3.5 text-left shadow-2xs transition hover:-translate-y-0.5 hover:border-emerald-600/40 hover:bg-emerald-50/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/20"
+                className="group relative flex min-w-0 items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-emerald-500/40 hover:bg-gradient-to-br hover:from-emerald-50/50 hover:to-white hover:shadow-[0_12px_30px_rgba(16,185,129,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30"
               >
+                <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.03),transparent)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 {p.logo ? (
-                  <LogoBadge src={p.logo} label={p.label} fallback={p.fallback} className="h-10 w-10 shrink-0 shadow-xs" />
+                  <LogoBadge src={p.logo} label={p.label} fallback={p.fallback} className="h-12 w-12 shrink-0 shadow-sm ring-1 ring-slate-900/5 transition-transform duration-300 group-hover:scale-105 group-hover:ring-emerald-500/20" />
                 ) : (
-                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700 shadow-xs">
-                    <CreditCard className="h-5 w-5" />
+                  <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700 shadow-sm transition-transform duration-300 group-hover:scale-105 group-hover:border-blue-200 group-hover:bg-blue-100/50">
+                    <CreditCard className="h-6 w-6" />
                   </span>
                 )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-black text-slate-950 group-hover:text-emerald-950">{p.label}</span>
-                  <span className="block truncate text-[0.68rem] font-semibold text-slate-500">{p.sub}</span>
+                <span className="min-w-0 flex-1 relative z-10">
+                  <span className="block truncate text-[0.95rem] font-extrabold text-slate-900 transition-colors group-hover:text-emerald-950">{p.label}</span>
+                  <span className="block truncate text-[0.7rem] font-semibold text-slate-500 mt-0.5">{p.sub}</span>
                 </span>
-                {p.id === 'card' ? (
-                  <span className="rounded-full border border-blue-200/60 bg-blue-50 px-2 py-0.5 text-[0.6rem] font-black uppercase tracking-wide text-blue-700">
-                    VISA
-                  </span>
-                ) : (
-                  <span className="rounded-full border border-slate-200/80 bg-slate-50 px-2 py-0.5 text-[0.6rem] font-bold text-slate-600 group-hover:border-emerald-300 group-hover:bg-emerald-100/60 group-hover:text-emerald-900">
-                    Rapide
-                  </span>
-                )}
+                <div className="relative z-10">
+                  {p.id === 'card' ? (
+                    <span className="rounded-full border border-blue-200/80 bg-gradient-to-r from-blue-50 to-blue-100/50 px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-wider text-blue-700 shadow-sm">
+                      VISA
+                    </span>
+                  ) : (
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.65rem] font-bold text-slate-600 shadow-sm transition-colors group-hover:border-emerald-300/60 group-hover:bg-emerald-100/50 group-hover:text-emerald-800">
+                      Rapide
+                    </span>
+                  )}
+                </div>
               </button>
             ))}
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1 text-xs font-bold text-slate-500">
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-1.5 shadow-2xs">
-              <Shield className="h-3.5 w-3.5 text-emerald-700" /> Sécurisé par PayDunya
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
+            <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/60 bg-slate-50/50 px-3.5 py-2 text-[0.7rem] font-bold text-slate-600 shadow-sm">
+              <Shield className="h-3.5 w-3.5 text-emerald-600" /> Sécurisé par PayDunya
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/80 bg-slate-50/80 px-3 py-1.5 shadow-2xs">
-              <Clock className="h-3.5 w-3.5 text-emerald-700" /> Activation instantanée
+            <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/60 bg-slate-50/50 px-3.5 py-2 text-[0.7rem] font-bold text-slate-600 shadow-sm">
+              <Clock className="h-3.5 w-3.5 text-emerald-600" /> Temps réel
             </span>
           </div>
         </div>
       )}
 
       {step === 'enter_phone' && selectedProvider && (
-        <div className="space-y-3.5">
-          <div className="flex items-center gap-2.5 rounded-xl border p-2.5" style={{ backgroundColor: selectedProvider.bg, borderColor: `${selectedProvider.color}30` }}>
-            <LogoBadge src={selectedProvider.logo} label={selectedProvider.label} fallback={selectedProvider.fallback} className="h-8 w-8" />
+        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+          <div className="flex items-center gap-3.5 rounded-2xl border p-4 shadow-sm" style={{ backgroundColor: selectedProvider.bg, borderColor: `${selectedProvider.color}30` }}>
+            <LogoBadge src={selectedProvider.logo} label={selectedProvider.label} fallback={selectedProvider.fallback} className="h-12 w-12 shadow-sm ring-1 ring-black/5" />
             <div className="min-w-0">
-              <p className="truncate text-[0.8rem] font-extrabold text-slate-950">{selectedProvider.label}</p>
-              <p className="truncate text-[0.62rem] font-semibold text-slate-500">{selectedProvider.sub}</p>
+              <p className="truncate text-[1rem] font-black text-slate-900">{selectedProvider.label}</p>
+              <p className="truncate text-[0.75rem] font-semibold text-slate-500 mt-0.5">{selectedProvider.sub}</p>
             </div>
           </div>
 
-          <div>
-            <label className="mb-1.5 block text-[0.72rem] font-extrabold text-slate-700">
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/40 p-5 shadow-inner">
+            <label className="mb-2.5 block text-[0.75rem] font-black uppercase tracking-wider text-slate-700">
               Numéro {selectedProvider.label} <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[0.72rem] font-black text-slate-500">+221</span>
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none z-10">
+                <span className="text-[0.9rem] font-black text-slate-400 group-focus-within:text-emerald-600 transition-colors">+221</span>
+              </div>
               <input
                 type="tel"
                 value={phone}
@@ -438,15 +449,20 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
                 placeholder="77 123 45 67"
                 maxLength={14}
                 autoFocus
-                className="mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 pl-14 pr-3 text-[0.88rem] font-medium text-slate-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all tracking-wide placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 autofill:bg-white autofill:shadow-[inset_0_0_0px_1000px_white] sm:!h-8 sm:rounded-[0.6rem]"
+                className="block h-12 w-full rounded-xl border border-slate-300/80 bg-white pl-14 pr-4 text-[1rem] font-bold text-slate-900 shadow-sm transition-all placeholder:text-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 hover:border-slate-400"
               />
             </div>
             {phoneError ? (
-              <p className="mt-1.5 flex items-center gap-1.5 text-[0.68rem] font-semibold text-red-600">
-                <AlertCircle className="h-3.5 w-3.5" />{phoneError}
+              <p className="mt-2.5 flex items-center gap-1.5 text-[0.72rem] font-bold text-red-600 animate-in fade-in slide-in-from-top-1">
+                <AlertCircle className="h-4 w-4 shrink-0" />{phoneError}
               </p>
             ) : null}
-            <p className="mt-1.5 text-[0.64rem] font-medium text-slate-500">Vous recevrez une notification à confirmer sur ce numéro.</p>
+            <div className="mt-4 flex items-start gap-2 text-slate-500">
+              <Shield className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600/70" />
+              <p className="text-[0.75rem] font-medium leading-relaxed">
+                Vous recevrez une <strong>notification push sécurisée</strong> sur votre téléphone pour valider le paiement.
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -538,45 +554,49 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
       {step === 'success' && (
         <div className="flex flex-col items-center gap-4 py-8">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-green-100">
-            <CheckCircle2 className="h-9 w-9 text-green-700" />
+        <div className="flex flex-col items-center gap-6 py-10 animate-in zoom-in-95">
+          <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-emerald-500 shadow-xl shadow-emerald-500/20">
+            <CheckCircle2 className="h-12 w-12 text-white" />
           </div>
           <div className="text-center">
-            <p className="text-[1.1rem] font-black text-slate-950">Abonnement activé</p>
-            <p className="mt-1 text-[0.72rem] font-medium leading-5 text-slate-600">
-              Le plan <strong>{planName}</strong> est actif pour 30 jours.
+            <p className="text-[1.3rem] font-black text-slate-900">Paiement réussi !</p>
+            <p className="mt-2 text-[0.9rem] font-medium text-slate-500">
+              Votre accès au plan <strong>{planName}</strong> est désormais activé.
             </p>
           </div>
         </div>
       )}
 
       {step === 'error' && (
-        <div className="flex flex-col items-center gap-4 py-5">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50">
-            <AlertCircle className="h-8 w-8 text-red-500" />
+        <div className="flex flex-col items-center gap-6 py-8 animate-in zoom-in-95 duration-500">
+          <div className="relative flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-red-50 to-red-100/50 border border-red-100 shadow-[0_8px_30px_rgba(239,68,68,0.15)]">
+            <div className="absolute inset-0 rounded-3xl bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.8),transparent)]" />
+            <AlertCircle className="relative h-10 w-10 text-red-500 drop-shadow-sm" />
           </div>
-          <div className="max-w-sm text-center">
-            <p className="text-[0.95rem] font-extrabold text-slate-950">
-              {isEdgeFunctionDown ? 'Service temporairement indisponible' : 'Paiement non confirmé'}
+          <div className="max-w-xs text-center">
+            <p className="text-[1.15rem] font-black tracking-tight text-slate-900">
+              {isEdgeFunctionDown ? 'Service indisponible' : 'Paiement non confirmé'}
             </p>
-            <p className="mt-1.5 text-[0.72rem] font-medium leading-5 text-slate-500">{errorMsg}</p>
+            <p className="mt-2 text-[0.8rem] font-medium leading-relaxed text-slate-500">{errorMsg}</p>
           </div>
-          <div className="w-full space-y-2">
+          <div className="w-full max-w-sm space-y-3 mt-2">
             {isEdgeFunctionDown ? (
               <>
                 <a
                   href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(`Bonjour, je veux activer le plan ${planName} sur Samay Këur (${formatCurrency(priceXof)}/mois).`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-3 text-[0.75rem] font-black text-white transition hover:opacity-90"
+                  className="group relative flex h-12 w-full items-center justify-center gap-2.5 rounded-xl bg-[#25D366] px-4 text-[0.85rem] font-black text-white shadow-[0_4px_12px_rgba(37,211,102,0.3)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_20px_rgba(37,211,102,0.4)] overflow-hidden"
                 >
-                  <LogoBadge src={whatsappLogo} label="WhatsApp" fallback="WA" className="h-5 w-5 rounded-md border-white/20" />
+                  <div className="absolute inset-0 bg-[linear-gradient(to_right,transparent,rgba(255,255,255,0.2),transparent)] -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]" />
+                  <LogoBadge src={whatsappLogo} label="WhatsApp" fallback="WA" className="h-6 w-6 rounded-md border-white/20" />
                   Activer via WhatsApp
                 </a>
                 <a
                   href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`Activation plan ${planName} - Samay Këur`)}&body=${encodeURIComponent(`Bonjour, je veux activer le plan ${planName} sur Samay Këur (${formatCurrency(priceXof)}/mois).`)}`}
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[0.75rem] font-black text-slate-700 transition hover:bg-slate-50"
+                  className="flex h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-slate-200/80 bg-white px-4 text-[0.85rem] font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:-translate-y-0.5"
                 >
-                  <LogoBadge src={gmailLogo} label="Gmail" fallback="GM" className="h-5 w-5 rounded-md" />
+                  <LogoBadge src={gmailLogo} label="Gmail" fallback="GM" className="h-6 w-6 rounded-md" />
                   Envoyer un email
                 </a>
                 <button
@@ -586,7 +606,7 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
                     setErrorMsg('');
                     setIsEdgeFunctionDown(false);
                   }}
-                  className="h-9 w-full rounded-xl border border-slate-200 bg-white text-[0.72rem] font-bold text-slate-600 transition hover:bg-slate-50"
+                  className="h-11 w-full rounded-xl bg-transparent text-[0.8rem] font-bold text-slate-500 transition hover:text-slate-700"
                 >
                   Réessayer quand même
                 </button>
@@ -598,9 +618,9 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
                   setStep('select_provider');
                   setErrorMsg('');
                 }}
-                className="h-10 w-full rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 text-[0.78rem] font-black text-white transition hover:-translate-y-0.5"
+                className="h-12 w-full rounded-xl bg-slate-900 px-4 text-[0.85rem] font-black text-white shadow-lg shadow-slate-900/20 transition-all hover:-translate-y-0.5 hover:bg-slate-800 focus:ring-4 focus:ring-slate-900/10"
               >
-                Réessayer
+                Réessayer le paiement
               </button>
             )}
           </div>

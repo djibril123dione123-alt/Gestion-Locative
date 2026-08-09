@@ -90,14 +90,16 @@ export function AppSidebarFrame({
       <aside
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`fixed inset-y-0 left-0 z-50 flex h-screen flex-col overflow-hidden border-r border-emerald-300/10 bg-[radial-gradient(circle_at_20%_0%,rgba(16,185,129,0.18),transparent_18rem),linear-gradient(180deg,#031f1a,#062b23_48%,#041b17)] text-white shadow-[18px_0_60px_rgba(2,6,23,0.28)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${widthClass} ${positionClass} ${expandedByHover ? 'lg:shadow-[24px_0_60px_rgba(0,0,0,0.55)]' : ''} ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen flex-col overflow-hidden border-r border-white/[0.03] bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.12),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(251,191,36,0.06),transparent_45%),linear-gradient(180deg,#041b15_0%,#06271f_45%,#02110d_100%)] text-white shadow-[20px_0_60px_rgba(0,0,0,0.4),inset_-1px_0_0_rgba(255,255,255,0.02)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${widthClass} ${positionClass} ${expandedByHover ? 'lg:shadow-[30px_0_80px_rgba(0,0,0,0.6)]' : ''} ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        <div className={`relative flex items-center overflow-visible border-b border-white/10 ${expanded ? 'justify-between pl-4 pr-2 py-4' : 'justify-center p-4'}`}>
-          <div className="absolute -left-8 top-0 h-28 w-28 rounded-full bg-emerald-300/15 blur-2xl" />
-          <div className="absolute right-0 top-0 h-px w-2/3 bg-gradient-to-r from-transparent via-orange-300/60 to-transparent" />
+        <div className={`relative z-10 flex items-center overflow-visible border-b border-white/[0.04] bg-black/20 backdrop-blur-md ${expanded ? 'justify-between pl-4 pr-2 py-4' : 'justify-center p-4'}`}>
+          <div className="absolute inset-0 bg-gradient-to-b from-white/[0.03] to-transparent pointer-events-none" />
+          <div className="absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent" />
+          <div className="absolute -left-8 top-0 h-32 w-32 rounded-full bg-emerald-400/10 blur-[30px] pointer-events-none" />
+          
           <div className="relative flex min-w-0 flex-1 items-center">
             {expanded ? (
-              <img src="/samay-keur-logo-sidebar.svg" alt="Samay Këur" className="h-12 w-full object-contain object-left scale-[1.3] origin-left drop-shadow-sm" />
+              <img src="/samay-keur-logo-sidebar.svg" alt="Samay Këur" className="h-11 w-full object-contain object-left scale-[1.25] origin-left drop-shadow-md transition-transform duration-300" />
             ) : (
               <BrandMark size="md" tone="dark" animated withTile={false} />
             )}
@@ -128,16 +130,17 @@ export function AppSidebarFrame({
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden xl:py-3">
-          <ul className="space-y-1 px-2.5">
+        <nav className="relative flex-1 overflow-y-auto py-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden xl:py-4">
+          <div className="absolute left-4 top-0 h-full w-px bg-gradient-to-b from-white/[0.02] via-white/[0.05] to-transparent pointer-events-none hidden lg:block" />
+          <ul className="relative space-y-1.5 px-3 z-10">
             {items.map((entry) => {
               const active = isItemActive?.(entry.id) ?? entry.id === activeItem;
               const Icon = entry.icon;
               return (
                 <Fragment key={entry.id}>
                   {entry.section && expanded && (
-                    <li className="px-2.5 pb-1 pt-3.5 first:pt-1">
-                      <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400/70">
+                    <li className="px-3 pb-1.5 pt-5 first:pt-1">
+                      <span className="block text-[0.6rem] font-black uppercase tracking-[0.22em] text-emerald-100/40">
                         {entry.section}
                       </span>
                     </li>
@@ -147,13 +150,21 @@ export function AppSidebarFrame({
                       type="button"
                       onClick={() => onNavigate(entry.id)}
                       title={entry.label}
-                      className={`group relative flex w-full items-center gap-3 rounded-xl px-2.5 py-2 transition-all duration-200 ${active ? 'bg-gradient-to-r from-emerald-500/25 to-white/[0.05] font-extrabold text-white shadow-[0_4px_16px_rgba(0,0,0,0.25)] ring-1 ring-emerald-400/30' : 'font-semibold text-slate-300 hover:bg-white/[0.065] hover:text-white'} ${expanded ? '' : 'justify-center px-0'}`}
+                      className={`group relative flex w-full items-center gap-3.5 rounded-xl px-3 py-2.5 transition-all duration-300 ease-out ${
+                        active 
+                          ? 'bg-gradient-to-r from-emerald-500/20 to-white/[0.06] font-bold text-white shadow-[0_4px_16px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.08)] ring-1 ring-white/[0.05] border-l border-emerald-400/50' 
+                          : 'font-semibold text-slate-400 hover:bg-white/[0.04] hover:text-slate-100 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] border-l border-transparent'
+                      } ${expanded ? '' : 'justify-center px-0'}`}
                     >
                       {active && (
-                        <span className="absolute bottom-1.5 left-0 top-1.5 w-1 rounded-r-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.85)]" />
+                        <span className="absolute -left-[1px] top-1/2 h-[60%] w-[3px] -translate-y-1/2 rounded-r-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
                       )}
-                      <Icon className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 group-hover:scale-110 ${active ? 'text-emerald-300' : 'text-slate-400 group-hover:text-emerald-200'}`} />
-                      {expanded && <span className="truncate text-xs tracking-wide">{entry.label}</span>}
+                      <Icon className={`h-[1.1rem] w-[1.1rem] flex-shrink-0 transition-all duration-300 ${
+                        active 
+                          ? 'text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)] scale-110' 
+                          : 'text-slate-500 group-hover:text-slate-300 group-hover:scale-110'
+                      }`} />
+                      {expanded && <span className="truncate text-[0.8rem] tracking-wide">{entry.label}</span>}
                     </button>
                   </li>
                 </Fragment>
@@ -163,7 +174,8 @@ export function AppSidebarFrame({
         </nav>
 
         {footer && (
-          <div className="relative border-t border-white/10 bg-black/20 p-3">
+          <div className="relative z-10 border-t border-white/[0.04] bg-[#020b09]/60 backdrop-blur-md p-3 shadow-[0_-10px_20px_rgba(0,0,0,0.2)]">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.05] to-transparent" />
             {footer(expanded)}
           </div>
         )}

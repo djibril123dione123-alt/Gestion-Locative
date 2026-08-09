@@ -1350,14 +1350,123 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         )}
       </WizardShell>
 
-      <Modal
-        isOpen={!!permissionTarget}
+      <WizardShell
+        open={!!permissionTarget}
         onClose={() => {
           setPermissionTarget(null);
           setPermissionWizardStep(0);
           clearDirectRouteParams();
         }}
+        size="compact"
+        variant="workstation"
+        tone="brand"
+        eyebrow="SAMAY KËUR"
         title={permissionTarget ? `Permissions · ${permissionTarget.prenom ?? ''} ${permissionTarget.nom ?? ''}` : 'Permissions'}
+        description={permissionTarget ? `Base actuelle : ${ROLE_LABELS[permissionTarget.role] ?? permissionTarget.role}` : ''}
+        steps={permissionTarget ? [
+          {
+            id: 'synthesis',
+            label: 'Étape 1',
+            shortLabel: 'Synthèse',
+            description: 'Vue d\'ensemble',
+            icon: <ShieldCheck className="h-3.5 w-3.5" />
+          },
+          ...Object.keys(groupedCatalog).map((cat, idx) => ({
+            id: `cat-${idx}`,
+            label: `Étape ${idx + 2}`,
+            shortLabel: cat,
+            description: 'Permissions',
+            icon: <KeyRound className="h-3.5 w-3.5" />
+          }))
+        ] : []}
+        currentStep={permissionWizardStep}
+        contentDescription="Ajustez les permissions pour chaque module de l'application."
+        rail={
+          <WizardRail
+            eyebrow="Console d'accès"
+            title="Permissions"
+            description="Personnalisez les accès module par module."
+            steps={permissionTarget ? [
+              {
+                id: 'synthesis',
+                label: 'Étape 1',
+                shortLabel: 'Synthèse',
+                description: 'Vue d\'ensemble',
+                icon: <ShieldCheck className="h-3.5 w-3.5" />
+              },
+              ...Object.keys(groupedCatalog).map((cat, idx) => ({
+                id: `cat-${idx}`,
+                label: `Étape ${idx + 2}`,
+                shortLabel: cat,
+                description: 'Permissions',
+                icon: <KeyRound className="h-3.5 w-3.5" />
+              }))
+            ] : []}
+            currentStep={permissionWizardStep}
+          >
+            {permissionTarget && (
+              <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.055] p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[0.54rem] font-black uppercase tracking-[0.14em] text-emerald-100/70">Profil ciblé</p>
+                  <p className="truncate text-[0.65rem] font-black text-white">{permissionTarget.prenom} {permissionTarget.nom}</p>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
+                    <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.visible}</div>
+                    <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Visibles</div>
+                  </div>
+                  <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
+                    <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.hidden}</div>
+                    <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Masquées</div>
+                  </div>
+                  <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
+                    <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.actions}</div>
+                    <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Actions</div>
+                  </div>
+                  <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
+                    <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.disabled}</div>
+                    <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Désactivés</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </WizardRail>
+        }
+        primaryAction={
+          <button
+            type="button"
+            onClick={() => {
+              const categories = Object.keys(groupedCatalog);
+              if (permissionWizardStep === categories.length) {
+                void savePermissions();
+              } else {
+                setPermissionWizardStep((prev) => Math.min(prev + 1, categories.length));
+              }
+            }}
+            disabled={savingPermissions}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          >
+            {savingPermissions ? 'Sauvegarde...' : permissionWizardStep === Object.keys(groupedCatalog).length ? 'Enregistrer les accès' : 'Continuer'}
+          </button>
+        }
+        secondaryAction={
+          <button
+            type="button"
+            onClick={() => {
+              if (permissionWizardStep > 0) {
+                setPermissionWizardStep((prev) => prev - 1);
+              } else {
+                setPermissionTarget(null);
+                setPermissionWizardStep(0);
+                clearDirectRouteParams();
+              }
+            }}
+            disabled={savingPermissions}
+            className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
+          >
+            {permissionWizardStep === 0 ? 'Annuler' : 'Retour'}
+          </button>
+        }
       >
         {permissionTarget ? (() => {
           const categories = Object.keys(groupedCatalog);
@@ -1366,204 +1475,148 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             : null;
 
           return (
-          <div className="flex flex-col sm:flex-row gap-4 max-h-[75vh]">
-            <div className="w-full sm:w-48 shrink-0 sm:border-r border-slate-100 sm:pr-4 overflow-y-auto hidden sm:block">
-              <nav className="space-y-1">
-                <button
-                  type="button"
-                  onClick={() => setPermissionWizardStep(0)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-[0.72rem] font-bold transition ${
-                    permissionWizardStep === 0 ? 'bg-emerald-50 text-brand-800' : 'text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className={`w-1.5 h-1.5 rounded-full ${permissionWizardStep === 0 ? 'bg-brand-600' : 'bg-slate-300'}`} />
-                  Profil & Synthèse
-                </button>
-                {categories.map((cat, idx) => {
-                  const stepIndex = idx + 1;
-                  return (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setPermissionWizardStep(stepIndex)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-[0.72rem] font-bold transition ${
-                        permissionWizardStep === stepIndex ? 'bg-emerald-50 text-brand-800' : 'text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      <div className={`w-1.5 h-1.5 rounded-full ${permissionWizardStep === stepIndex ? 'bg-brand-600' : 'bg-slate-300'}`} />
-                      {cat}
-                    </button>
-                  );
-                })}
-              </nav>
-            </div>
-
-            <div className="flex-1 flex flex-col min-w-0">
-              <div className="flex-1 overflow-y-auto pr-2 space-y-4 pb-4">
-                <div className="sm:hidden mb-2">
-                  <select 
-                    value={permissionWizardStep} 
-                    onChange={(e) => setPermissionWizardStep(Number(e.target.value))}
-                    className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700"
-                  >
-                    <option value={0}>Profil & Synthèse</option>
-                    {categories.map((cat, idx) => (
-                      <option key={cat} value={idx + 1}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {permissionWizardStep === 0 && (
-                  <div className="space-y-4">
-                    <div className="sk-card-premium p-4">
-                      <p className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-brand-800">Configuration Globale</p>
-                      <p className="mt-1.5 text-[0.78rem] font-semibold text-slate-700 leading-relaxed">
+            <div className="space-y-4">
+              {permissionWizardStep === 0 && (
+                <div className="space-y-5 lg:space-y-6">
+                  <div className="relative overflow-hidden rounded-2xl border border-emerald-950/5 bg-gradient-to-br from-emerald-50/50 to-white p-5 shadow-sm">
+                    <div className="absolute -right-4 -top-4 opacity-[0.03] text-brand-900 pointer-events-none">
+                      <ShieldCheck className="h-32 w-32" />
+                    </div>
+                    <div className="relative">
+                      <div className="flex items-center gap-2 mb-2.5">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-800 text-white shadow-sm">
+                          <SlidersHorizontal className="h-3.5 w-3.5" />
+                        </div>
+                        <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-brand-800">Configuration Globale</p>
+                      </div>
+                      <p className="mt-2 text-[0.78rem] font-semibold text-slate-700 leading-relaxed max-w-xl">
                         Rôle de base : <span className="font-black text-slate-950">{ROLE_LABELS[permissionTarget.role] ?? permissionTarget.role}</span>.
                         <br/>
-                        Les lignes “Rôle par défaut” suivent automatiquement ce rôle. Appliquez un profil type pour tout configurer rapidement, ou affinez par catégorie.
+                        Les lignes “Rôle par défaut” suivent automatiquement ce rôle. Appliquez un profil type pour tout configurer rapidement, ou affinez par catégorie dans les étapes suivantes.
                       </p>
-                      <div className="mt-4 grid gap-2 sm:grid-cols-4">
-                        <MiniStat label="Visibles" value={permissionDraftPreview.visible} />
-                        <MiniStat label="Masquées" value={permissionDraftPreview.hidden} />
-                        <MiniStat label="Actions" value={permissionDraftPreview.actions} />
-                        <MiniStat label="Modules off" value={permissionDraftPreview.disabled} />
-                      </div>
                     </div>
+                  </div>
 
-                    <div>
-                      <h4 className="text-[0.65rem] font-black uppercase tracking-[0.15em] text-slate-500 mb-2">Profils Types</h4>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {(['standard', 'restricted', 'finance', 'custom'] as AccessPreset[]).map((preset) => (
+                  <div>
+                    <h4 className="text-[0.68rem] font-black uppercase tracking-[0.15em] text-slate-500 mb-3 px-1">Profils Types</h4>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {(['standard', 'restricted', 'finance', 'custom'] as AccessPreset[]).map((preset) => {
+                        const isCustom = preset === 'custom';
+                        return (
                           <button
                             key={preset}
                             type="button"
-                            onClick={() => preset === 'custom' ? setPermissionDraft(buildPermissionDraft(permissionTarget)) : applyPreset(preset as Exclude<AccessPreset, 'custom'>)}
-                            className="rounded-xl border border-emerald-950/10 bg-white p-3 text-left transition hover:border-emerald-200 hover:bg-emerald-50/50 shadow-sm group"
+                            onClick={() => isCustom ? setPermissionDraft(buildPermissionDraft(permissionTarget)) : applyPreset(preset as Exclude<AccessPreset, 'custom'>)}
+                            className={`group relative overflow-hidden rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 ${isCustom ? 'border-amber-200/50 bg-gradient-to-br from-amber-50/50 to-white hover:border-amber-300 hover:shadow-md' : 'border-emerald-950/5 bg-white hover:border-brand-200 hover:shadow-md'}`}
                           >
-                            <span className="block text-[0.78rem] font-extrabold text-slate-950 group-hover:text-brand-800">{ACCESS_PRESETS[preset].label}</span>
-                            <span className="mt-1 block text-[0.68rem] font-semibold leading-snug text-slate-600">{ACCESS_PRESETS[preset].summary}</span>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className={`block text-[0.82rem] font-extrabold ${isCustom ? 'text-amber-900' : 'text-slate-950 group-hover:text-brand-800'}`}>
+                                {ACCESS_PRESETS[preset].label}
+                              </span>
+                              {isCustom ? <Sparkles className="h-4 w-4 text-amber-500" /> : <Shield className="h-4 w-4 text-slate-300 group-hover:text-brand-500" />}
+                            </div>
+                            <span className="block text-[0.7rem] font-semibold leading-snug text-slate-500 group-hover:text-slate-600">
+                              {ACCESS_PRESETS[preset].summary}
+                            </span>
                           </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {currentCategory && (
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-black text-slate-950 px-1 border-b border-slate-100 pb-2">{currentCategory}</h3>
-                    <div className="space-y-3">
-                      {groupedCatalog[currentCategory].map((item) => {
-                        const draft = permissionDraft[item.id];
-                        const moduleEnabled = isModuleEnabled(item.id, agencySettings);
-                        const inherited = moduleEnabled ? getDefaultAccessLevel(permissionTarget.role, item.id) : 'none';
-                        if (!draft) return null;
-                        const actionsDisabled = draft.access_level === 'none' || !moduleEnabled;
-                        const actionCapabilities = getPageActionCapabilities(item.id);
-                        return (
-                          <div key={item.id} className="rounded-xl border border-slate-200/60 bg-white p-3 shadow-sm hover:border-emerald-950/10 transition">
-                            <div className="flex flex-col gap-2 xl:flex-row xl:items-start xl:justify-between">
-                              <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  <h4 className="text-[0.78rem] font-black text-slate-950">{item.label}</h4>
-                                  {item.sensitive ? (
-                                    <span className="rounded-full bg-orange-50 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-wide text-orange-700">
-                                      sensible
-                                    </span>
-                                  ) : null}
-                                  {!moduleEnabled ? (
-                                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-wide text-slate-500">
-                                      module inactif
-                                    </span>
-                                  ) : null}
-                                </div>
-                                <p className="mt-0.5 text-[0.66rem] leading-snug text-slate-500">{item.description}</p>
-                                <p className="mt-1 text-[0.6rem] font-bold text-slate-400">Défaut rôle : {ACCESS_LABELS[inherited]}</p>
-                              </div>
-                              <div className="w-full xl:w-48 shrink-0">
-                                <SmartCombobox
-                                  density="dense"
-                                  disabled={!moduleEnabled}
-                                  value={draft.access_level}
-                                  options={[
-                                    { value: 'inherit', label: 'Rôle par défaut' },
-                                    { value: 'none', label: 'Masquer' },
-                                    { value: 'read', label: 'Lecture seule' },
-                                    { value: 'write', label: 'Édition' },
-                                    { value: 'admin', label: 'Admin module' },
-                                  ]}
-                                  onChange={(val) => updateDraftAccess(item.id, val as DraftAccessLevel)}
-                                  placeholder="Niveau d'accès"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="mt-3">
-                              {actionCapabilities.length > 0 ? (
-                                <div className="flex flex-wrap items-center gap-1.5">
-                                  {ACTIONS.filter(({ key }) => actionCapabilities.includes(key)).map(({ key, label, icon: Icon }) => (
-                                    <button
-                                      key={key}
-                                      type="button"
-                                      disabled={actionsDisabled}
-                                      onClick={() => toggleDraftAction(item.id, key)}
-                                      className={`inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[0.62rem] font-black transition ${
-                                        draft[key]
-                                          ? 'border-emerald-200 bg-emerald-50 text-brand-800'
-                                          : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
-                                      } disabled:cursor-not-allowed disabled:opacity-40`}
-                                    >
-                                      <Icon className="h-3.5 w-3.5" />
-                                      {label}
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-[0.62rem] font-bold text-slate-500 border border-slate-100 inline-block">
-                                  Consultation uniquement. Aucune action fine disponible.
-                                </p>
-                              )}
-                            </div>
-                          </div>
                         );
                       })}
                     </div>
                   </div>
-                )}
-              </div>
-              
-              <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-auto">
-                <button
-                  type="button"
-                  onClick={() => setPermissionTarget(null)}
-                  className="rounded-xl px-4 py-2 text-[0.75rem] font-bold text-slate-500 transition hover:text-slate-800 hover:bg-slate-50"
-                >
-                  Annuler
-                </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPermissionWizardStep((prev) => Math.min(prev + 1, categories.length))}
-                    disabled={permissionWizardStep === categories.length}
-                    className="rounded-xl border border-slate-200 px-4 py-2 text-[0.75rem] font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
-                  >
-                    Suivant
-                  </button>
-                  <button
-                    type="button"
-                    onClick={savePermissions}
-                    disabled={savingPermissions}
-                    className="rounded-xl bg-brand-800 px-5 py-2 text-[0.75rem] font-black text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:bg-brand-950 disabled:opacity-50"
-                  >
-                    {savingPermissions ? 'Sauvegarde...' : 'Sauvegarder'}
-                  </button>
                 </div>
-              </div>
+              )}
+
+              {currentCategory && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                      <KeyRound className="h-3.5 w-3.5" />
+                    </div>
+                    <h3 className="text-[0.75rem] font-bold uppercase tracking-[0.15em] text-slate-800">{currentCategory}</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {groupedCatalog[currentCategory].map((item) => {
+                      const draft = permissionDraft[item.id];
+                      const moduleEnabled = isModuleEnabled(item.id, agencySettings);
+                      const inherited = moduleEnabled ? getDefaultAccessLevel(permissionTarget.role, item.id) : 'none';
+                      if (!draft) return null;
+                      const actionsDisabled = draft.access_level === 'none' || !moduleEnabled;
+                      const actionCapabilities = getPageActionCapabilities(item.id);
+                      return (
+                        <div key={item.id} className="group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-4 shadow-sm transition hover:border-brand-200 hover:shadow-md">
+                          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="text-[0.82rem] font-black text-slate-950 group-hover:text-brand-800 transition-colors">{item.label}</h4>
+                                {item.sensitive ? (
+                                  <span className="rounded-full bg-orange-50 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-wide text-orange-700 ring-1 ring-inset ring-orange-600/10">
+                                    sensible
+                                  </span>
+                                ) : null}
+                                {!moduleEnabled ? (
+                                  <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-wide text-slate-500 ring-1 ring-inset ring-slate-400/20">
+                                    module inactif
+                                  </span>
+                                ) : null}
+                              </div>
+                              <p className="mt-1 text-[0.68rem] leading-snug text-slate-500">{item.description}</p>
+                              <p className="mt-1.5 text-[0.62rem] font-bold text-slate-400">Défaut rôle : <span className="text-slate-500">{ACCESS_LABELS[inherited]}</span></p>
+                            </div>
+                            <div className="w-full xl:w-52 shrink-0">
+                              <SmartCombobox
+                                density="dense"
+                                disabled={!moduleEnabled}
+                                value={draft.access_level}
+                                options={[
+                                  { value: 'inherit', label: 'Rôle par défaut' },
+                                  { value: 'none', label: 'Masquer' },
+                                  { value: 'read', label: 'Lecture seule' },
+                                  { value: 'write', label: 'Édition' },
+                                  { value: 'admin', label: 'Admin module' },
+                                ]}
+                                onChange={(val) => updateDraftAccess(item.id, val as DraftAccessLevel)}
+                                placeholder="Niveau d'accès"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="mt-3.5 pt-3.5 border-t border-slate-100/80">
+                            {actionCapabilities.length > 0 ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                {ACTIONS.filter(({ key }) => actionCapabilities.includes(key)).map(({ key, label, icon: Icon }) => (
+                                  <button
+                                    key={key}
+                                    type="button"
+                                    disabled={actionsDisabled}
+                                    onClick={() => toggleDraftAction(item.id, key)}
+                                    className={`inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[0.64rem] font-bold transition-all ${
+                                      draft[key]
+                                        ? 'border-brand-200 bg-emerald-50 text-brand-800 shadow-sm ring-1 ring-inset ring-brand-900/5'
+                                        : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:border-slate-300'
+                                    } disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white`}
+                                  >
+                                    <Icon className="h-3.5 w-3.5" />
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-[0.62rem] font-semibold text-slate-500 border border-slate-100">
+                                <Lock className="h-3 w-3 opacity-60" />
+                                Consultation uniquement. Aucune action fine disponible.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
           );
         })() : null}
-      </Modal>
+      </WizardShell>
 
       <ConfirmModal
         isOpen={!!deactivateTarget}

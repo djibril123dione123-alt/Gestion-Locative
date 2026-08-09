@@ -48,7 +48,7 @@ import { SmartCombobox, type SmartComboboxOption } from '../components/ui/SmartC
 import { MoneyText } from '../components/ui/MoneyText';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { BrandMark } from '../components/brand/BrandLogo';
-import { WizardShell, type WizardStep } from '../components/ui/WizardShell';
+import { WizardShell, type WizardStep, wizardPrimaryActionClass, wizardSecondaryActionClass } from '../components/ui/WizardShell';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
@@ -71,7 +71,7 @@ import {
   type OccupantBailPersonOption,
 } from '../repositories/occupantsBauxRepository';
 import { readWithCache, invalidateOperationalCaches, notifyDataChanged } from '../services/offlineReadCache';
-import { formatDate, formatSenegalPhone, normalizeSenegalPhone } from '../lib/formatters';
+import { formatDate, formatSenegalPhone, normalizeSenegalPhone, formatSenegalPhoneInput } from '../lib/formatters';
 import {
   IDENTITY_PIECE_OPTIONS,
   formatIdentityNumberInput,
@@ -479,6 +479,11 @@ export function OccupantsBaux() {
     setOccupationModalMode('create');
     void loadWorkflowOptions();
   }, [loadWorkflowOptions]);
+
+  const openCreateOccupant = useCallback(() => {
+    setOccupantForm(emptyOccupantForm());
+    setOccupantModalMode('create');
+  }, []);
 
   const openEditOccupant = useCallback((row: OccupantBailRow) => {
     setOccupantForm(occupantFormFromRow(row));
@@ -1019,6 +1024,17 @@ export function OccupantsBaux() {
                 className="w-full sm:w-auto !h-7 !min-h-7 !px-2.5 !py-1 !text-[0.7rem]"
               >
                 Nouvelle location
+              </PremiumButton>
+            }
+            secondaryAction={
+              <PremiumButton
+                variant="secondary"
+                type="button"
+                onClick={openCreateOccupant}
+                icon={<UserPlus className="h-3.5 w-3.5" />}
+                className="w-full sm:w-auto !h-7 !min-h-7 !px-2.5 !py-1 !text-[0.7rem]"
+              >
+                Nouveau locataire
               </PremiumButton>
             }
           />
@@ -2336,71 +2352,109 @@ function OccupantFormModal({
   if (!mode) return null;
 
   return (
-    <Modal isOpen={Boolean(mode)} onClose={onClose} title={mode === 'edit' ? "Modifier le locataire" : 'Nouveau locataire'}>
-      <div className="space-y-4">
-        <LifecycleIntro
-          icon={UserPlus}
-          title={mode === 'edit' ? "Identité du locataire" : 'Créer un locataire'}
-          description="Ces informations alimentent le bail, les documents et les futures fiches Locations."
-        />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <TextField label="Prénom" value={form.prenom} onChange={(value) => onChange({ ...form, prenom: value })} required />
-          <TextField label="Nom" value={form.nom} onChange={(value) => onChange({ ...form, nom: value })} required />
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <TextField label="Téléphone" value={form.telephone} onChange={(value) => onChange({ ...form, telephone: value })} placeholder="77 123 45 67" required />
-          <label className="block">
-            <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
-              Type de pièce
-            </span>
-            <div className="mt-1">
-              <SmartCombobox
-                density="compact"
-                value={form.type_piece || 'CNI'}
-                options={IDENTITY_PIECE_OPTIONS}
-                onChange={(val) => onChange({
-                  ...form,
-                  type_piece: val,
-                  numero_piece: formatIdentityNumberInput(form.numero_piece || '', val),
-                })}
-                placeholder="Sélectionner le type"
-              />
+    <WizardShell
+      open={Boolean(mode)}
+      onClose={onClose}
+      size="simple"
+      title={mode === 'edit' ? "Modifier le locataire" : 'Nouveau locataire'}
+      eyebrow="PORTFEUILLE LOCATIF"
+      primaryAction={
+        <button
+          type="button"
+          className={wizardPrimaryActionClass}
+          onClick={onSubmit}
+          disabled={submitting}
+        >
+          {submitting ? 'Enregistrement...' : mode === 'edit' ? 'Enregistrer' : 'Créer le locataire'}
+        </button>
+      }
+      secondaryAction={
+        <button
+          type="button"
+          className={wizardSecondaryActionClass}
+          onClick={onClose}
+          disabled={submitting}
+        >
+          Annuler
+        </button>
+      }
+    >
+      <div className="space-y-5 py-2">
+        <div className="sk-card-premium p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-950/10 bg-white text-emerald-700 shadow-sm">
+              <UserPlus className="h-5 w-5" />
             </div>
-          </label>
-        </div>
-        <label className="block">
-          <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
-            Numéro de pièce
-          </span>
-          <div className="relative mt-1">
-            <input
-              type="text"
-              value={form.numero_piece || ''}
-              onChange={(e) => onChange({
-                ...form,
-                numero_piece: formatIdentityNumberInput(e.target.value, form.type_piece || 'CNI'),
-              })}
-              className="mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:!h-8 sm:!min-h-8 sm:rounded-[0.6rem] sm:text-[0.8rem]"
-              placeholder={getIdentityPlaceholder(form.type_piece || 'CNI')}
-              maxLength={getIdentityMaxLength(form.type_piece || 'CNI')}
-              inputMode={(form.type_piece || 'CNI').toLowerCase().includes('cni') ? 'numeric' : 'text'}
-              onKeyDown={(form.type_piece || 'CNI').toLowerCase().includes('cni') ? preventNonDigitKey : undefined}
-              autoCapitalize="characters"
-            />
+            <div>
+              <h3 className="text-[0.95rem] font-bold text-slate-900">
+                {mode === 'edit' ? "Identité du locataire" : 'Créer un locataire'}
+              </h3>
+              <p className="mt-0.5 text-[0.76rem] font-medium text-slate-500">
+                Ces informations alimentent le bail, les documents et les futures fiches.
+              </p>
+            </div>
           </div>
-          <p className="mt-1 text-[0.66rem] text-slate-500 sm:text-[10px]">
-            {getIdentityHint(form.type_piece || 'CNI')}
-          </p>
-        </label>
-        <TextField label="Adresse" value={form.adresse_personnelle} onChange={(value) => onChange({ ...form, adresse_personnelle: value })} placeholder="Adresse personnelle" />
-        <ModalActions
-          submitting={submitting}
-          submitLabel={mode === 'edit' ? 'Enregistrer' : 'Créer le locataire'}
-          onCancel={onClose}
-          onSubmit={onSubmit}
-        />
+        </div>
+
+        <div className="space-y-4 px-1">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label="Prénom" value={form.prenom} onChange={(value) => onChange({ ...form, prenom: value })} required />
+            <TextField label="Nom" value={form.nom} onChange={(value) => onChange({ ...form, nom: value })} required />
+          </div>
+          
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label="Téléphone" value={form.telephone} onChange={(value) => onChange({ ...form, telephone: formatSenegalPhoneInput(value) })} placeholder="77 123 45 67" required />
+            <TextField label="Email" value={form.email} onChange={(value) => onChange({ ...form, email: value })} placeholder="nom@domaine.com" />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
+                Type de pièce
+              </span>
+              <div className="mt-1">
+                <SmartCombobox
+                  density="compact"
+                  value={form.type_piece || 'CNI'}
+                  options={IDENTITY_PIECE_OPTIONS}
+                  onChange={(val) => onChange({
+                    ...form,
+                    type_piece: val,
+                    numero_piece: formatIdentityNumberInput(form.numero_piece || '', val),
+                  })}
+                  placeholder="Sélectionner le type"
+                />
+              </div>
+            </label>
+            <label className="block">
+              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">
+                Numéro de pièce
+              </span>
+              <div className="relative mt-1">
+                <input
+                  type="text"
+                  value={form.numero_piece || ''}
+                  onChange={(e) => onChange({
+                    ...form,
+                    numero_piece: formatIdentityNumberInput(e.target.value, form.type_piece || 'CNI'),
+                  })}
+                  className="mt-0.5 h-9 w-full rounded-xl border border-emerald-950/10 bg-[#fffdf8]/90 px-3 text-[0.93rem] font-medium text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_2px_rgba(0,0,0,0.012)] outline-none transition-all placeholder:font-normal placeholder:text-slate-400/80 focus:border-emerald-600/30 focus:bg-white focus:ring-2 focus:ring-emerald-600/10 sm:!h-8 sm:!min-h-8 sm:rounded-[0.6rem] sm:text-[0.8rem]"
+                  placeholder={getIdentityPlaceholder(form.type_piece || 'CNI')}
+                  maxLength={getIdentityMaxLength(form.type_piece || 'CNI')}
+                  inputMode={(form.type_piece || 'CNI').toLowerCase().includes('cni') ? 'numeric' : 'text'}
+                  onKeyDown={(form.type_piece || 'CNI').toLowerCase().includes('cni') ? preventNonDigitKey : undefined}
+                  autoCapitalize="characters"
+                />
+              </div>
+              <p className="mt-1 text-[0.66rem] text-slate-500 sm:text-[10px]">
+                {getIdentityHint(form.type_piece || 'CNI')}
+              </p>
+            </label>
+          </div>
+          <TextField label="Adresse" value={form.adresse_personnelle} onChange={(value) => onChange({ ...form, adresse_personnelle: value })} placeholder="Adresse personnelle" />
+        </div>
       </div>
-    </Modal>
+    </WizardShell>
   );
 }
 
@@ -2759,7 +2813,7 @@ function OccupationFormModal({
                     <TextField label="Nom" value={form.newOccupant.nom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, nom: value } })} required placeholder="Diallo" />
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <TextField label="Téléphone" value={form.newOccupant.telephone} onChange={(value) => update({ newOccupant: { ...form.newOccupant, telephone: value } })} required placeholder="77 123 45 67" />
+                    <TextField label="Téléphone" value={form.newOccupant.telephone} onChange={(value) => update({ newOccupant: { ...form.newOccupant, telephone: formatSenegalPhoneInput(value) } })} required placeholder="77 123 45 67" />
                     <TextField label="Email" value={form.newOccupant.email} onChange={(value) => update({ newOccupant: { ...form.newOccupant, email: value } })} placeholder="nom@domaine.com" />
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">

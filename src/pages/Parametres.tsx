@@ -1267,12 +1267,12 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
         {activeTab === 'general' && (
           <div className="space-y-2">
-            <div className="grid gap-2 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+            <div className="columns-1 gap-2 lg:columns-2">
               <SettingsInfoCard title="Identité" eyebrow={isIndividualOwner ? 'PROFIL PROPRIÉTAIRE' : 'AGENCE'} icon={Building}>
                 <OrganizationInfoLine label={isIndividualOwner ? 'Nom documentaire' : "Nom de l'agence"} value={displayName} strong documentHint="Contrats, quittances, rapports" />
                 <OrganizationInfoLine label="Type" value={accountTypeLabel} />
-                <OrganizationInfoLine label="Email" value={settings.email} icon={AtSign} documentHint="Entêtes et contacts" />
-                <OrganizationInfoLine label="Téléphone" value={formatSenegalPhone(settings.telephone, 'Non renseigné')} icon={Phone} documentHint="Entêtes et contacts" />
+                <OrganizationInfoLine label="Email" value={settings.email} icon={AtSign} />
+                <OrganizationInfoLine label="Téléphone" value={formatSenegalPhone(settings.telephone, 'Non renseigné')} icon={Phone} />
                 <OrganizationInfoLine label="Site web" value={settings.site_web} icon={Globe2} />
                 <ReadinessPill label="Contact" ready={contactComplete} />
               </SettingsInfoCard>
@@ -1286,7 +1286,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
               <SettingsInfoCard title="Informations légales" eyebrow="REGISTRE" icon={Landmark}>
                 {!isIndividualOwner && <OrganizationInfoLine label="NINEA" value={settings.ninea} strong documentHint="Documents officiels" />}
-                {!isIndividualOwner && <OrganizationInfoLine label="RC" value={settings.rc} documentHint="Documents officiels" />}
+                {!isIndividualOwner && <OrganizationInfoLine label="RC" value={settings.rc} />}
                 <OrganizationInfoLine label="Tribunal" value={settings.mention_tribunal} multiline />
                 <ReadinessPill label="Légal" ready={legalComplete} />
               </SettingsInfoCard>
@@ -1683,7 +1683,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
             </SettingsEditSection>
 
             <SettingsEditSection icon={FileText} eyebrow="Source documentaire" title="Impact dans les documents" description="Ce rappel évite de modifier l'identité officielle sans comprendre où elle sera reprise.">
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <DocumentImpactMini label={isIndividualOwner ? 'Nom propriétaire' : "Nom agence"} value="Contrats · Quittances · Rapports" ready={Boolean(officialNameValue)} />
                 <DocumentImpactMini label="Adresse" value="Entêtes · Mentions" ready={addressComplete} />
                 <DocumentImpactMini label={isIndividualOwner ? 'Pièce' : 'NINEA / RC'} value={isIndividualOwner ? 'Mandats · Registre' : 'Documents officiels'} ready={legalComplete} />
@@ -2778,7 +2778,7 @@ function SettingsInfoCard({
   className?: string;
 }) {
   return (
-    <section className={`h-full rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm ${className}`}>
+    <section className={`break-inside-avoid mb-2 inline-block w-full rounded-xl border border-emerald-950/10 bg-white/88 p-2 shadow-sm ${className}`}>
       <div className="mb-1 flex items-center gap-1.5">
         <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
           <Icon className="h-2.5 w-2.5" />
@@ -3295,11 +3295,11 @@ function SettingsModulesOverview({
           </span>
         ))}
       </div>
-      <div className="grid gap-2 xl:grid-cols-2">
+      <div className="columns-1 gap-2 lg:columns-2">
         {modules.map((group) => {
           const activeCount = group.items.filter((item) => ['system', 'essential', 'active'].includes(item.status)).length;
           return (
-          <section key={group.category} className="rounded-xl border border-emerald-950/10 bg-white p-2 shadow-sm">
+          <section key={group.category} className="break-inside-avoid mb-2 inline-block w-full rounded-xl border border-emerald-950/10 bg-white p-2 shadow-sm">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <h3 className="truncate text-[0.72rem] font-extrabold text-slate-950">{group.category}</h3>

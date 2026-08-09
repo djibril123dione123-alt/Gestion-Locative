@@ -320,6 +320,7 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
       variant="workstation"
       tone="finance"
       size="compact"
+      panelClassName="sm:max-w-[700px]"
       mobileMode="fullscreen"
       secondaryAction={step === 'enter_phone' ? (
         <button
@@ -342,27 +343,27 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
       ) : undefined}
     >
       {step !== 'success' && step !== 'error' && (
-        <div className="mb-6 relative overflow-hidden rounded-2xl bg-[#031510] p-5 shadow-[0_12px_40px_rgba(0,0,0,0.15)] ring-1 ring-white/10">
+        <div className="mb-4 relative overflow-hidden rounded-2xl bg-[#031510] p-4 shadow-[0_8px_30px_rgba(0,0,0,0.15)] ring-1 ring-white/10">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.15),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(251,191,36,0.08),transparent_40%)] pointer-events-none" />
           <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent pointer-events-none" />
           
-          <div className="relative flex items-center justify-between gap-4">
+          <div className="relative flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-emerald-400/90">PLAN SÉLECTIONNÉ</p>
-              <p className="mt-0.5 truncate text-[1.15rem] font-black text-white drop-shadow-sm">Plan {planName}</p>
+              <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-emerald-400/90">PLAN SÉLECTIONNÉ</p>
+              <p className="truncate text-[1.05rem] font-black text-white drop-shadow-sm">Plan {planName}</p>
             </div>
             <div className="shrink-0 text-right">
-              <p className="text-2xl font-black tracking-tight text-white drop-shadow-md">
+              <p className="text-[1.4rem] font-black tracking-tight text-white drop-shadow-md">
                 {formatCurrency(priceXof)}
-                <span className="ml-1.5 text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest">/mois</span>
+                <span className="ml-1 text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest">/mois</span>
               </p>
             </div>
           </div>
-          <div className="relative mt-4 flex items-start gap-3 rounded-xl border border-white/[0.08] bg-white/[0.03] p-3 backdrop-blur-md shadow-inner">
-            <Shield className="h-4 w-4 shrink-0 text-emerald-400 mt-0.5" />
-            <span className="text-[0.72rem] font-medium leading-relaxed text-slate-300">
-              <strong className="text-white">Activation instantanée</strong> après confirmation. Le paiement en ligne reste prioritaire sur les autres moyens.
+          <div className="relative mt-3 flex items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 backdrop-blur-md shadow-inner">
+            <Shield className="h-4 w-4 shrink-0 text-emerald-400" />
+            <span className="text-[0.68rem] font-medium leading-tight text-slate-300">
+              <strong className="text-white">Activation instantanée</strong>. Le paiement en ligne reste prioritaire.
             </span>
           </div>
         </div>
@@ -370,10 +371,10 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
 
 
       {step === 'select_provider' && (
-        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <div>
             <h4 className="text-[0.95rem] font-black text-slate-900 tracking-tight">Choisissez votre moyen de paiement</h4>
-            <p className="mt-1 text-[0.75rem] text-slate-500 font-medium">Les transactions locales sont sécurisées et vérifiées automatiquement via PayDunya.</p>
+            <p className="mt-0.5 text-[0.72rem] text-slate-500 font-medium">Les transactions locales sont sécurisées et vérifiées automatiquement via PayDunya.</p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {PROVIDERS.map((p) => (
@@ -381,27 +382,27 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
                 key={p.id}
                 type="button"
                 onClick={() => handleSelectProvider(p.id)}
-                className="group relative flex min-w-0 items-center gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 text-left shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-1 hover:border-emerald-500/40 hover:bg-gradient-to-br hover:from-emerald-50/50 hover:to-white hover:shadow-[0_12px_30px_rgba(16,185,129,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30"
+                className="group relative flex min-w-0 items-center gap-4 rounded-xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/40 p-3.5 text-left shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-emerald-500/40 hover:bg-gradient-to-br hover:from-emerald-50/50 hover:to-white hover:shadow-[0_8px_24px_rgba(16,185,129,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30"
               >
-                <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.03),transparent)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 rounded-xl bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.03),transparent)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 {p.logo ? (
-                  <LogoBadge src={p.logo} label={p.label} fallback={p.fallback} className="h-12 w-12 shrink-0 shadow-sm ring-1 ring-slate-900/5 transition-transform duration-300 group-hover:scale-105 group-hover:ring-emerald-500/20" />
+                  <LogoBadge src={p.logo} label={p.label} fallback={p.fallback} className="h-11 w-11 shrink-0 rounded-xl shadow-sm ring-1 ring-slate-900/5 transition-transform duration-300 group-hover:scale-105 group-hover:ring-emerald-500/20 group-hover:shadow-md" />
                 ) : (
-                  <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700 shadow-sm transition-transform duration-300 group-hover:scale-105 group-hover:border-blue-200 group-hover:bg-blue-100/50">
-                    <CreditCard className="h-6 w-6" />
+                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700 shadow-sm transition-transform duration-300 group-hover:scale-105 group-hover:border-blue-200 group-hover:bg-blue-100/50">
+                    <CreditCard className="h-5 w-5" />
                   </span>
                 )}
                 <span className="min-w-0 flex-1 relative z-10">
-                  <span className="block truncate text-[0.95rem] font-extrabold text-slate-900 transition-colors group-hover:text-emerald-950">{p.label}</span>
-                  <span className="block truncate text-[0.7rem] font-semibold text-slate-500 mt-0.5">{p.sub}</span>
+                  <span className="block truncate text-[0.9rem] font-extrabold text-slate-900 transition-colors duration-300 group-hover:text-emerald-950">{p.label}</span>
+                  <span className="block truncate text-[0.68rem] font-semibold text-slate-500 mt-0.5">{p.sub}</span>
                 </span>
-                <div className="relative z-10">
+                <div className="relative z-10 shrink-0">
                   {p.id === 'card' ? (
-                    <span className="rounded-full border border-blue-200/80 bg-gradient-to-r from-blue-50 to-blue-100/50 px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-wider text-blue-700 shadow-sm">
+                    <span className="rounded-full border border-blue-200/80 bg-gradient-to-r from-blue-50 to-blue-100/50 px-2 py-1 text-[0.6rem] font-black uppercase tracking-wider text-blue-700 shadow-sm transition-all group-hover:border-blue-300 group-hover:from-blue-100 group-hover:to-blue-200">
                       VISA
                     </span>
                   ) : (
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.65rem] font-bold text-slate-600 shadow-sm transition-colors group-hover:border-emerald-300/60 group-hover:bg-emerald-100/50 group-hover:text-emerald-800">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.6rem] font-bold text-slate-600 shadow-sm transition-all duration-300 group-hover:border-emerald-300/60 group-hover:bg-emerald-100/80 group-hover:text-emerald-800">
                       Rapide
                     </span>
                   )}
@@ -410,33 +411,33 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
             ))}
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/60 bg-slate-50/50 px-3.5 py-2 text-[0.7rem] font-bold text-slate-600 shadow-sm">
-              <Shield className="h-3.5 w-3.5 text-emerald-600" /> Sécurisé par PayDunya
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/60 bg-white px-3.5 py-1.5 text-[0.68rem] font-bold text-slate-600 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md">
+              <Shield className="h-3.5 w-3.5 text-emerald-600" /> Transactions sécurisées
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/60 bg-slate-50/50 px-3.5 py-2 text-[0.7rem] font-bold text-slate-600 shadow-sm">
-              <Clock className="h-3.5 w-3.5 text-emerald-600" /> Temps réel
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/60 bg-white px-3.5 py-1.5 text-[0.68rem] font-bold text-slate-600 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md">
+              <Clock className="h-3.5 w-3.5 text-emerald-600" /> Traitement temps réel
             </span>
           </div>
         </div>
       )}
 
       {step === 'enter_phone' && selectedProvider && (
-        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-          <div className="flex items-center gap-3.5 rounded-2xl border p-4 shadow-sm" style={{ backgroundColor: selectedProvider.bg, borderColor: `${selectedProvider.color}30` }}>
-            <LogoBadge src={selectedProvider.logo} label={selectedProvider.label} fallback={selectedProvider.fallback} className="h-12 w-12 shadow-sm ring-1 ring-black/5" />
+        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-500">
+          <div className="flex items-center gap-3 rounded-xl border p-3 shadow-sm" style={{ backgroundColor: selectedProvider.bg, borderColor: `${selectedProvider.color}30` }}>
+            <LogoBadge src={selectedProvider.logo} label={selectedProvider.label} fallback={selectedProvider.fallback} className="h-10 w-10 shadow-sm ring-1 ring-black/5 rounded-xl bg-white" />
             <div className="min-w-0">
-              <p className="truncate text-[1rem] font-black text-slate-900">{selectedProvider.label}</p>
-              <p className="truncate text-[0.75rem] font-semibold text-slate-500 mt-0.5">{selectedProvider.sub}</p>
+              <p className="truncate text-[0.9rem] font-black text-slate-900">{selectedProvider.label}</p>
+              <p className="truncate text-[0.7rem] font-semibold text-slate-500 mt-0.5">{selectedProvider.sub}</p>
             </div>
           </div>
 
-          <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-slate-50/40 p-5 shadow-inner">
-            <label className="mb-2.5 block text-[0.75rem] font-black uppercase tracking-wider text-slate-700">
+          <div className="relative overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50/40 p-4 shadow-inner">
+            <label className="mb-2 block text-[0.72rem] font-black uppercase tracking-wider text-slate-700">
               Numéro {selectedProvider.label} <span className="text-red-500">*</span>
             </label>
             <div className="relative group">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none z-10">
-                <span className="text-[0.9rem] font-black text-slate-400 group-focus-within:text-emerald-600 transition-colors">+221</span>
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
+                <span className="text-[0.85rem] font-black text-slate-400 group-focus-within:text-emerald-600 transition-colors">+221</span>
               </div>
               <input
                 type="tel"
@@ -449,18 +450,20 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
                 placeholder="77 123 45 67"
                 maxLength={14}
                 autoFocus
-                className="block h-12 w-full rounded-xl border border-slate-300/80 bg-white pl-14 pr-4 text-[1rem] font-bold text-slate-900 shadow-sm transition-all placeholder:text-slate-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 hover:border-slate-400"
+                className={`block h-10 w-full rounded-lg border-2 bg-white pl-12 pr-3 text-[0.9rem] font-bold text-slate-900 shadow-sm transition-all placeholder:font-normal placeholder:text-slate-400 focus:outline-none ${
+                  phoneError ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-500/10' : 'border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 hover:border-slate-300'
+                }`}
               />
             </div>
             {phoneError ? (
-              <p className="mt-2.5 flex items-center gap-1.5 text-[0.72rem] font-bold text-red-600 animate-in fade-in slide-in-from-top-1">
-                <AlertCircle className="h-4 w-4 shrink-0" />{phoneError}
+              <p className="mt-2 flex items-center gap-1.5 text-[0.7rem] font-bold text-red-600 animate-in fade-in slide-in-from-top-1">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />{phoneError}
               </p>
             ) : null}
-            <div className="mt-4 flex items-start gap-2 text-slate-500">
-              <Shield className="h-4 w-4 shrink-0 mt-0.5 text-emerald-600/70" />
-              <p className="text-[0.75rem] font-medium leading-relaxed">
-                Vous recevrez une <strong>notification push sécurisée</strong> sur votre téléphone pour valider le paiement.
+            <div className="mt-3 flex items-start gap-2 text-slate-500">
+              <Shield className="h-3.5 w-3.5 shrink-0 mt-0.5 text-emerald-600/70" />
+              <p className="text-[0.7rem] font-medium leading-relaxed">
+                Vous recevrez une <strong>notification push sécurisée</strong> sur votre téléphone pour valider.
               </p>
             </div>
           </div>
@@ -552,8 +555,6 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
       )}
 
       {step === 'success' && (
-        <div className="flex flex-col items-center gap-4 py-8">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-green-100">
         <div className="flex flex-col items-center gap-6 py-10 animate-in zoom-in-95">
           <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-emerald-500 shadow-xl shadow-emerald-500/20">
             <CheckCircle2 className="h-12 w-12 text-white" />

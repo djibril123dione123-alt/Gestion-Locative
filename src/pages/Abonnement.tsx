@@ -398,7 +398,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
 
       {/* ── Bannière urgente essai ── */}
       {embedded && (
-        <section className="grid gap-2.5 xl:grid-cols-[minmax(0,1fr)_minmax(14rem,0.65fr)]">
+        <section className="grid gap-2.5 lg:grid-cols-[minmax(0,1fr)_minmax(14rem,0.65fr)]">
           <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8]/92 p-2.5 shadow-sm">
             <p className="text-[0.5rem] font-black uppercase tracking-[0.14em] text-emerald-700">Abonnement & paiements</p>
             <h2 className="mt-0.5 text-[0.82rem] font-extrabold text-slate-950">Plan, limites et validation des paiements.</h2>
@@ -556,7 +556,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
           </div>
 
           {/* Usage bars */}
-          <div className={embedded ? 'mt-3 grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-3 sm:grid-cols-2 xl:grid-cols-4' : 'mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5'}>
+          <div className={embedded ? 'mt-3 grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-3 sm:grid-cols-2 lg:grid-cols-4' : 'mt-6 pt-5 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5'}>
             {renderUsageBar(<Users className="w-4 h-4" />, 'Utilisateurs', usage.users, currentPlan?.max_users ?? catalogPlan.max_users, 'usage-utilisateurs')}
             {renderUsageBar(<Home className="w-4 h-4" />, isIndividualOwner ? 'Biens' : 'Immeubles', usage.immeubles, currentPlan?.max_immeubles ?? catalogPlan.max_immeubles, 'usage-immeubles')}
             {renderUsageBar(<DoorOpen className="w-4 h-4" />, isIndividualOwner ? 'Unités locatives' : 'Unités', usage.unites, currentPlan?.max_unites ?? catalogPlan.max_unites, 'usage-produits')}
@@ -651,7 +651,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
           </a>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           {PLAN_CATALOG.map((plan) => {
             const isCurrent = currentPlanId === plan.id;
             const Icon = plan.icon;
@@ -801,25 +801,32 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
         mobileMode="fullscreen"
       >
         <div className="space-y-3">
-          <div className="rounded-2xl border border-emerald-900/15 bg-emerald-50/60 p-3 shadow-2xs">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-600 ring-4 ring-emerald-600/15" />
+          <div className="relative overflow-hidden rounded-2xl bg-[#031510] p-4 sm:p-5 shadow-[0_8px_30px_rgba(0,0,0,0.15)] ring-1 ring-white/10">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.15),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(251,191,36,0.08),transparent_40%)] pointer-events-none" />
+            <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent pointer-events-none" />
+            
+            <div className="relative flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3.5">
+                <span className="flex h-3 w-3 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.6)] animate-pulse" />
                 <div className="min-w-0">
-                  <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-emerald-800">Votre plan actuel</p>
-                  <p className="truncate text-sm font-black text-slate-950">{displayedPlanName}</p>
+                  <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-emerald-400/90">VOTRE PLAN ACTUEL</p>
+                  <p className="truncate text-[1.2rem] font-black text-white drop-shadow-sm">{displayedPlanName}</p>
                 </div>
               </div>
-              <span className="rounded-full border border-emerald-600/30 bg-white px-2.5 py-1 text-[0.65rem] font-black uppercase tracking-[0.08em] text-emerald-900">
-                {catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)}/mois` : 'Sur devis'}
-              </span>
+              <div className="shrink-0 text-right">
+                <span className="inline-flex rounded-full border border-white/[0.12] bg-white/[0.05] px-3.5 py-1.5 text-[0.7rem] font-bold tracking-widest text-white shadow-inner backdrop-blur-md">
+                  {catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)} / MOIS` : 'SUR DEVIS'}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
             {PLAN_CATALOG.map((plan) => {
               const Icon = plan.icon;
               const isCurr = currentPlanId === plan.id;
+              const isEnterprise = plan.id === 'enterprise';
               return (
                 <button
                   key={plan.id}
@@ -833,50 +840,65 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                       openPayment(plan.id);
                     }
                   }}
-                  className={`group relative flex min-h-[7.5rem] flex-col justify-between overflow-hidden rounded-xl border p-3 text-left transition ${
+                  className={`group relative flex min-h-[9.5rem] flex-col justify-between overflow-hidden rounded-3xl border p-4 sm:p-5 text-left transition-all duration-500 ease-out ${
                     isCurr
-                      ? 'cursor-default border-emerald-700/25 bg-emerald-50/55 shadow-xs'
-                      : 'border-slate-200/90 bg-white hover:-translate-y-0.5 hover:border-emerald-600/45 hover:shadow-lg'
+                      ? 'cursor-default border-emerald-500/50 bg-gradient-to-br from-emerald-50/80 to-emerald-100/30 shadow-[0_8px_30px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/20'
+                      : isEnterprise
+                      ? 'border-slate-800 bg-gradient-to-br from-slate-900 to-slate-950 text-white hover:-translate-y-1 hover:border-slate-600 hover:shadow-[0_20px_40px_rgba(0,0,0,0.4)] hover:ring-1 hover:ring-slate-700'
+                      : 'border-slate-200/80 bg-white hover:-translate-y-1 hover:border-emerald-500/30 hover:bg-gradient-to-br hover:from-white hover:to-emerald-50/40 hover:shadow-[0_20px_40px_rgba(16,185,129,0.1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30'
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2.5">
+                  {isCurr && <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.15),transparent_70%)] pointer-events-none" />}
+                  {isEnterprise && !isCurr && <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.06),transparent_70%)] pointer-events-none opacity-0 transition-opacity duration-500 group-hover:opacity-100" />}
+                  {!isEnterprise && !isCurr && <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.04),transparent_70%)] pointer-events-none opacity-0 transition-opacity duration-500 group-hover:opacity-100" />}
+                  
+                  <div className="relative flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3.5">
                       <div
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-2xs transition group-hover:scale-105"
-                        style={{ backgroundColor: plan.color + '18' }}
+                        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-sm transition-transform duration-500 group-hover:scale-110 ${
+                          isEnterprise ? 'bg-white/10 ring-1 ring-white/20' : ''
+                        }`}
+                        style={!isEnterprise ? { backgroundColor: plan.color + '15', border: `1px solid ${plan.color}20` } : {}}
                       >
-                        <Icon className="h-4.5 w-4.5" style={{ color: plan.color }} />
+                        <Icon className="h-6 w-6" style={!isEnterprise ? { color: plan.color } : { color: '#f8fafc' }} />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-slate-950">{plan.name}</p>
-                        <p className="text-xs font-extrabold" style={{ color: plan.color }}>
+                        <p className={`truncate text-[1.1rem] font-black transition-colors duration-300 ${isEnterprise ? 'text-white group-hover:text-slate-200' : 'text-slate-900 group-hover:text-emerald-950'}`}>{plan.name}</p>
+                        <p className={`text-[0.75rem] font-extrabold mt-0.5 ${isEnterprise ? 'text-slate-400' : ''}`} style={!isEnterprise ? { color: plan.color } : {}}>
                           {plan.price_xof > 0 ? `${formatCurrency(plan.price_xof)}/mois` : 'Sur devis'}
                         </p>
                       </div>
                     </div>
                     {isCurr ? (
-                      <span className="rounded-full bg-emerald-700 px-2 py-0.5 text-[0.56rem] font-black uppercase tracking-[0.08em] text-white">
+                      <span className="flex items-center gap-1.5 rounded-full bg-emerald-500 px-3 py-1.5 text-[0.65rem] font-black uppercase tracking-[0.1em] text-white shadow-md ring-2 ring-emerald-500/20">
+                        <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                         Actuel
                       </span>
                     ) : (
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-100 bg-slate-50 text-slate-400 transition group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700">
-                        <ArrowUpRight className="h-4 w-4" />
+                      <span className={`flex h-9 w-9 items-center justify-center rounded-xl border shadow-sm transition-all duration-500 ${
+                        isEnterprise
+                          ? 'border-slate-700 bg-slate-800 text-slate-400 group-hover:border-slate-500 group-hover:bg-slate-700 group-hover:text-white'
+                          : 'border-slate-200/80 bg-slate-50 text-slate-400 group-hover:border-emerald-300 group-hover:bg-emerald-500 group-hover:text-white group-hover:shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                      }`}>
+                        <ArrowUpRight className="h-4.5 w-4.5" />
                       </span>
                     )}
                   </div>
 
-                  <div className="grid grid-cols-3 gap-1.5 border-t border-slate-100 pt-2.5">
-                    <div className="rounded-lg bg-slate-50/90 px-2 py-1.5 text-center">
-                      <p className="text-[0.52rem] font-bold uppercase tracking-wider text-slate-400">Users</p>
-                      <p className="text-xs font-black text-slate-800">{plan.max_users === -1 ? '∞' : plan.max_users}</p>
+                  <div className={`relative mt-5 grid grid-cols-3 gap-2 rounded-2xl p-3 transition-colors duration-500 ${
+                    isEnterprise ? 'bg-slate-800/50 group-hover:bg-slate-800/80' : 'bg-slate-50/80 group-hover:bg-emerald-50/50'
+                  }`}>
+                    <div className="text-center">
+                      <p className={`text-[0.55rem] font-black uppercase tracking-widest ${isEnterprise ? 'text-slate-400' : 'text-slate-400'}`}>Users</p>
+                      <p className={`text-[0.9rem] font-black mt-0.5 ${isEnterprise ? 'text-white' : 'text-slate-800'}`}>{plan.max_users === -1 ? '∞' : plan.max_users}</p>
                     </div>
-                    <div className="rounded-lg bg-slate-50/90 px-2 py-1.5 text-center">
-                      <p className="text-[0.52rem] font-bold uppercase tracking-wider text-slate-400">Unités</p>
-                      <p className="text-xs font-black text-slate-800">{plan.max_unites === -1 ? '∞' : plan.max_unites}</p>
+                    <div className={`border-l border-r px-1 text-center ${isEnterprise ? 'border-slate-700/50' : 'border-slate-200/70'}`}>
+                      <p className={`text-[0.55rem] font-black uppercase tracking-widest ${isEnterprise ? 'text-slate-400' : 'text-slate-400'}`}>Unités</p>
+                      <p className={`text-[0.9rem] font-black mt-0.5 ${isEnterprise ? 'text-white' : 'text-slate-800'}`}>{plan.max_unites === -1 ? '∞' : plan.max_unites}</p>
                     </div>
-                    <div className="rounded-lg bg-slate-50/90 px-2 py-1.5 text-center">
-                      <p className="text-[0.52rem] font-bold uppercase tracking-wider text-slate-400">Stockage</p>
-                      <p className="text-xs font-black text-slate-800">{plan.storage_gb === -1 ? '∞' : `${plan.storage_gb} Go`}</p>
+                    <div className="text-center">
+                      <p className={`text-[0.55rem] font-black uppercase tracking-widest ${isEnterprise ? 'text-slate-400' : 'text-slate-400'}`}>Stockage</p>
+                      <p className={`text-[0.9rem] font-black mt-0.5 ${isEnterprise ? 'text-white' : 'text-slate-800'}`}>{plan.storage_gb === -1 ? '∞' : `${plan.storage_gb} Go`}</p>
                     </div>
                   </div>
                 </button>
@@ -884,9 +906,13 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             })}
           </div>
 
-          <div className="flex items-center gap-2.5 rounded-2xl border border-emerald-950/10 bg-slate-50/80 px-3 py-2.5 text-xs font-medium text-slate-600">
-            <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-700" />
-            <span>Le changement de plan conserve les données existantes. Seules les capacités et limites sont ajustées après confirmation.</span>
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-slate-50/60 p-3 shadow-inner">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm ring-1 ring-slate-900/5">
+              <ShieldCheck className="h-4 w-4 text-emerald-600" />
+            </div>
+            <span className="text-[0.72rem] font-medium leading-relaxed text-slate-600">
+              Le changement de plan <strong>conserve les données existantes</strong>. Seules les capacités sont ajustées.
+            </span>
           </div>
         </div>
       </WizardShell>
@@ -928,25 +954,33 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
         )}
       >
         <form id={manualProofFormId} onSubmit={submitManualProof} className="space-y-3">
-          <div className="flex items-center justify-between rounded-xl border border-emerald-950/15 bg-gradient-to-r from-emerald-950 via-[#073b2f] to-[#0a4d3e] px-3 py-2 text-white shadow-sm">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-emerald-300 ring-1 ring-white/15">
-                <FileCheck2 className="h-4 w-4" />
+          <div className="relative overflow-hidden rounded-2xl bg-[#031510] p-4 sm:p-5 shadow-[0_8px_30px_rgba(0,0,0,0.15)] ring-1 ring-white/10">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.15),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(251,191,36,0.08),transparent_40%)] pointer-events-none" />
+            <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent pointer-events-none" />
+            
+            <div className="relative flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-emerald-300 ring-1 ring-white/15 backdrop-blur-md shadow-inner">
+                  <FileCheck2 className="h-5 w-5 drop-shadow-sm" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-emerald-400/90">DÉCLARATION OFFICIELLE</p>
+                  <p className="truncate text-[1.1rem] font-black text-white drop-shadow-sm">Plan {proofCatalogPlan.name}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-[0.52rem] font-black uppercase tracking-[0.16em] text-emerald-300">Déclaration officielle</p>
-                <h3 className="truncate text-xs font-extrabold text-white">Plan {proofCatalogPlan.name}</h3>
+              <div className="shrink-0 text-right">
+                <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-emerald-400/90">MONTANT ESTIMÉ</p>
+                <p className="text-[1.35rem] font-black tracking-tight text-white drop-shadow-md">
+                  {formatCurrency(Number.isFinite(proofAmount) ? proofAmount : 0)}
+                </p>
               </div>
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="text-[0.52rem] font-black uppercase tracking-[0.14em] text-emerald-300">Montant estimé</p>
-              <p className="text-xs font-extrabold text-amber-300">{formatCurrency(Number.isFinite(proofAmount) ? proofAmount : 0)}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
             <div>
-              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Plan</span>
+              <span className="mb-0.5 block text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Plan</span>
               <SmartCombobox
                 value={proofForm.plan_key}
                 options={PLAN_CATALOG.filter((plan) => plan.id !== 'enterprise').map((plan) => ({
@@ -967,7 +1001,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             </div>
 
             <label className="block">
-              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Montant (XOF)</span>
+              <span className="mb-0.5 block text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Montant (XOF)</span>
               <input
                 type="number"
                 min="0"
@@ -978,7 +1012,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             </label>
 
             <label className="block">
-              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Date paiement</span>
+              <span className="mb-0.5 block text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Date paiement</span>
               <input
                 type="date"
                 value={proofForm.payment_date}
@@ -990,7 +1024,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
 
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             <div>
-              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Moyen de paiement</span>
+              <span className="mb-0.5 block text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Moyen de paiement</span>
               <SmartCombobox
                 value={proofForm.method}
                 options={MANUAL_PAYMENT_METHODS.map((method) => ({ value: method.id, label: method.label }))}
@@ -1001,7 +1035,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             </div>
 
             <label className="block">
-              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Référence</span>
+              <span className="mb-0.5 block text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Référence</span>
               <input
                 type="text"
                 value={proofForm.reference}
@@ -1014,7 +1048,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
 
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
             <label className="block">
-              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Lien preuve</span>
+              <span className="mb-0.5 block text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Lien preuve</span>
               <input
                 type="url"
                 value={proofForm.proof_file_url}
@@ -1025,7 +1059,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             </label>
 
             <label className="block">
-              <span className="text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Commentaire</span>
+              <span className="mb-0.5 block text-[0.78rem] font-semibold text-slate-600 sm:text-[0.64rem] sm:font-medium">Commentaire</span>
               <input
                 type="text"
                 value={proofForm.comment}
@@ -1036,16 +1070,21 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             </label>
           </div>
 
-          <div className="grid gap-2 rounded-2xl border border-orange-200/70 bg-orange-50/70 p-3 text-xs text-orange-950 sm:grid-cols-[1fr_auto] sm:items-center">
-            <div className="min-w-0">
-              <p className="font-black">Validation support avant activation</p>
-              <p className="mt-0.5 font-semibold leading-5 text-orange-900/80">
-                Ajoutez une référence claire et, si possible, un lien vers le reçu ou la capture. Le plan reste inchangé tant que la preuve n’est pas validée.
+          <div className="mt-4 flex items-start gap-4 rounded-xl border border-orange-200/80 bg-gradient-to-br from-orange-50/80 to-amber-50/30 p-4 shadow-sm sm:items-center">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100/80 text-orange-600 ring-1 ring-orange-200/50">
+              <AlertTriangle className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.85rem] font-black text-orange-950">Validation support requise</p>
+              <p className="mt-0.5 text-[0.72rem] font-medium leading-relaxed text-orange-900/80">
+                Ajoutez une référence claire (ou un lien vers la capture). Le plan sera activé dès validation.
               </p>
             </div>
-            <span className="rounded-full border border-orange-200 bg-white px-2.5 py-1 text-[0.62rem] font-black uppercase tracking-[0.1em] text-orange-700">
-              En attente
-            </span>
+            <div className="shrink-0">
+              <span className="inline-flex rounded-lg border border-orange-200 bg-white px-3 py-1.5 text-[0.65rem] font-black uppercase tracking-[0.1em] text-orange-700 shadow-sm">
+                En attente
+              </span>
+            </div>
           </div>
         </form>
       </WizardShell>

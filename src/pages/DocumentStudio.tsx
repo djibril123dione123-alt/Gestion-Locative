@@ -73,7 +73,7 @@ function SimpleDocumentMode({
   };
 
   return (
-    <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_18rem]">
+    <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
       <section className="rounded-md border border-emerald-950/10 bg-white p-3">
         <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-orange-600">Mode simple</p>
         <h2 className="mt-1 text-sm font-black text-slate-950">Réglages visibles du document</h2>

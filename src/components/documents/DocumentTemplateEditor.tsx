@@ -106,7 +106,7 @@ export function DocumentTemplateEditor({
   };
 
   return (
-    <div className="grid min-h-0 gap-3 xl:grid-cols-[17rem_minmax(0,1fr)]">
+    <div className="grid min-h-0 gap-3 lg:grid-cols-[17rem_minmax(0,1fr)]">
       <aside className="min-h-0 rounded-md border border-emerald-950/10 bg-white">
         <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2">
           <div>

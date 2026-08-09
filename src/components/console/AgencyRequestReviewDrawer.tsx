@@ -32,7 +32,7 @@ export function AgencyRequestReviewDrawer({
     <PremiumDrawerShell
       open={!!request}
       onClose={onClose}
-      size="standard"
+      size="compact"
       density="compact"
       desktopMode="floating"
       desktopAt="lg"
@@ -43,16 +43,16 @@ export function AgencyRequestReviewDrawer({
     >
       <div className="grid gap-3">
         <AdminPanel title="Résumé demandeur" subtitle="Informations fournies pendant l'onboarding.">
-          <div className="grid gap-2 text-sm">
+          <div className="grid gap-1.5 text-[0.72rem]">
             {[
               ['Email', textValue(email)],
               ['Téléphone', textValue(request.phone)],
               ['Type demandé', request.is_bailleur_account ? 'Bailleur individuel' : textValue(request.organization_type, 'Agence immobilière')],
               ['Plan initial', plan.name],
             ].map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 last:border-0">
-                <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">{label}</span>
-                <span className="text-right font-bold text-slate-900">{value}</span>
+              <div key={label} className="flex items-center justify-between gap-3 border-b border-slate-100 py-1.5 last:border-0">
+                <span className="text-[0.58rem] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</span>
+                <span className="text-right font-semibold text-slate-900">{value}</span>
               </div>
             ))}
           </div>
@@ -66,7 +66,7 @@ export function AgencyRequestReviewDrawer({
               ['Plan initial identifié', Boolean(plan.id)],
               ['Aucun doublon visible', duplicates.length === 0],
             ].map(([label, ok]) => (
-              <div key={String(label)} className={`flex items-center justify-between rounded-xl border px-3 py-2 text-sm font-bold ${ok ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
+              <div key={String(label)} className={`flex items-center justify-between rounded-[0.7rem] border px-2.5 py-1.5 text-[0.72rem] font-semibold ${ok ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}>
                 <span>{label}</span>
                 <CheckCircle2 className="h-4 w-4" />
               </div>

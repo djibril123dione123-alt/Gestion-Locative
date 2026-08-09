@@ -86,7 +86,7 @@ export function BillingTab({
                 className: selectedProofId ? 'w-[48%]' : undefined,
                 render: (proof) => (
                   <span className="block min-w-0">
-                    <span className="block truncate font-black text-slate-950">{proof.agencies?.name ?? proof.agency_id}</span>
+                    <span className="block truncate text-[0.76rem] font-semibold text-slate-950">{proof.agencies?.name ?? proof.agency_id}</span>
                     <span className="block truncate text-[0.68rem] font-semibold text-slate-500">
                       {proof.reference ?? 'Référence non renseignée'}
                       {selectedProofId ? ` · ${getAdminPlan(proof.plan_key).name} · ${proof.method}` : ''}
@@ -95,7 +95,7 @@ export function BillingTab({
                 ),
               },
               { key: 'plan', label: 'Plan', hideWhenDetail: true, render: (proof) => <AdminStatusBadge tone="orange">{getAdminPlan(proof.plan_key).name}</AdminStatusBadge> },
-              { key: 'amount', label: 'Déclaré', align: 'right', render: (proof) => <span className="font-black">{formatAdminCurrency(proof.amount)}</span> },
+              { key: 'amount', label: 'Déclaré', align: 'right', render: (proof) => <span className="font-semibold">{formatAdminCurrency(proof.amount)}</span> },
               { key: 'expected', label: 'Attendu', align: 'right', render: (proof) => <span className={paymentHasAmountAnomaly(proof) ? 'font-black text-red-700' : 'font-bold text-slate-700'}>{formatAdminCurrency(paymentExpectedAmount(proof))}</span> },
               { key: 'method', label: 'Moyen', hideWhenDetail: true, render: (proof) => proof.method },
               { key: 'ref', label: 'Référence', hideWhenDetail: true, render: (proof) => proof.reference ?? 'Non renseignée' },
@@ -105,12 +105,12 @@ export function BillingTab({
               <button type="button" onClick={() => onOpenProof(proof)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50/30">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-black text-slate-950">{proof.agencies?.name ?? proof.agency_id}</p>
+                    <p className="truncate text-[0.78rem] font-semibold text-slate-950">{proof.agencies?.name ?? proof.agency_id}</p>
                     <p className="truncate text-xs font-semibold text-slate-500">{proof.method} · {proof.reference ?? 'Référence non renseignée'}</p>
                   </div>
-                  <span className="whitespace-nowrap font-black text-emerald-800">{formatAdminCurrency(proof.amount)}</span>
+                  <span className="whitespace-nowrap font-semibold text-emerald-800">{formatAdminCurrency(proof.amount)}</span>
                 </div>
-                {paymentHasAmountAnomaly(proof) && <p className="mt-2 rounded-lg bg-red-50 px-2 py-1 text-xs font-black text-red-700">Attendu : {formatAdminCurrency(paymentExpectedAmount(proof))}</p>}
+                {paymentHasAmountAnomaly(proof) && <p className="mt-2 rounded-lg bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">Attendu : {formatAdminCurrency(paymentExpectedAmount(proof))}</p>}
               </button>
             )}
           />
@@ -134,7 +134,7 @@ export function BillingTab({
                   }`}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-black text-slate-900">{plan.name}</p>
+                    <p className="text-[0.78rem] font-semibold text-slate-900">{plan.name}</p>
                     <p className="truncate text-[0.68rem] font-semibold text-slate-500">{plan.priceLabel} · {plan.audience}</p>
                   </div>
                   <AdminStatusBadge tone={count ? 'emerald' : 'slate'}>{count}</AdminStatusBadge>
@@ -159,7 +159,7 @@ export function BillingTab({
                   aria-label={`Ouvrir l'organisation ${subscription.agency_name ?? subscription.agency_id}`}
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-slate-950">{subscription.agency_name ?? subscription.agency_id}</p>
+                    <p className="truncate text-[0.78rem] font-semibold text-slate-950">{subscription.agency_name ?? subscription.agency_id}</p>
                     <p className="text-[0.68rem] font-semibold text-slate-500">{getAdminPlan(subscription.plan_id).name}</p>
                   </div>
                   <span className="text-xs font-bold text-slate-500">Échéance {formatAdminDate(subscription.current_period_end)}</span>
@@ -194,24 +194,24 @@ export function BillingTab({
                 label: 'Organisation',
                 render: (proof) => (
                   <span className="block min-w-0">
-                    <span className="block truncate font-black text-slate-950">{proof.agencies?.name ?? proof.agency_id}</span>
+                    <span className="block truncate text-[0.76rem] font-semibold text-slate-950">{proof.agencies?.name ?? proof.agency_id}</span>
                     <span className="block truncate text-[0.68rem] font-semibold text-slate-500">{proof.method} · {proof.reference ?? 'Sans référence'}</span>
                   </span>
                 ),
               },
               { key: 'plan', label: 'Plan', hideWhenDetail: true, render: (proof) => getAdminPlan(proof.plan_key).name },
-              { key: 'amount', label: 'Montant', align: 'right', render: (proof) => <span className="font-black">{formatAdminCurrency(proof.amount)}</span> },
+              { key: 'amount', label: 'Montant', align: 'right', render: (proof) => <span className="font-semibold">{formatAdminCurrency(proof.amount)}</span> },
               { key: 'status', label: 'Statut', render: (proof) => <AdminStatusBadge status={proof.status} /> },
               { key: 'date', label: 'Date', hideWhenDetail: true, render: (proof) => formatAdminDate(proof.created_at) },
             ]}
             renderCard={(proof) => (
               <button key={proof.id} type="button" onClick={() => onOpenProof(proof)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-slate-950">{proof.agencies?.name ?? proof.agency_id}</p>
+                  <p className="truncate text-[0.78rem] font-semibold text-slate-950">{proof.agencies?.name ?? proof.agency_id}</p>
                   <p className="truncate text-xs font-semibold text-slate-500">{proof.method} · {formatAdminDate(proof.created_at)}</p>
                 </div>
                 <div className="text-right">
-                  <p className="whitespace-nowrap text-sm font-black text-slate-900">{formatAdminCurrency(proof.amount)}</p>
+                  <p className="whitespace-nowrap text-[0.78rem] font-semibold text-slate-900">{formatAdminCurrency(proof.amount)}</p>
                   <AdminStatusBadge status={proof.status} />
                 </div>
               </button>

@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { CheckCircle2, CloudOff, RefreshCw, Download, Upload, AlertTriangle, X } from 'lucide-react';
+import { RefreshCw, Download, Upload, AlertTriangle, X } from 'lucide-react';
 import {
   getLastBackupTimestamp,
   downloadBackup,
@@ -131,21 +131,16 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
     ? `Sauvegardé ${relativeTime(lastTs)}`
     : 'Aucune sauvegarde';
 
-  const Icon =
-    saving || syncing
-      ? RefreshCw
-      : isProblematic
-      ? CloudOff
-      : CheckCircle2;
 
-  const colorClass =
+
+  const dotColorClass =
     saving || syncing
-      ? 'text-brand-700'
+      ? 'bg-orange-500'
       : isProblematic
-      ? 'text-action-700'
+      ? 'bg-red-500'
       : lastTs
-      ? 'text-emerald-500'
-      : 'text-slate-400';
+      ? 'bg-emerald-500'
+      : 'bg-slate-400';
 
   return (
     <div className="fixed bottom-[calc(var(--sk-mobile-bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] right-3 z-40 flex flex-col items-end gap-2 lg:bottom-4 lg:right-4">
@@ -280,13 +275,11 @@ export function BackupIndicator({ saving = false, syncing = false, pendingCount 
 
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="sk-pressable flex h-[24px] items-center gap-1 rounded-full border border-emerald-950/10 bg-white/[0.92] px-2 py-0 text-[0.65rem] font-bold text-slate-700 shadow-sm backdrop-blur-xl transition hover:bg-brand-50 hover:text-brand-900"
-        title="Gestion des sauvegardes"
+        className="sk-pressable flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/90 shadow-[0_1px_4px_rgba(0,0,0,0.15)] backdrop-blur-xl transition hover:scale-110"
+        title={label}
+        aria-label={label}
       >
-        <Icon
-          className={`w-2.5 h-2.5 flex-shrink-0 ${colorClass} ${saving || syncing ? 'animate-spin' : ''}`}
-        />
-        <span className="hidden sm:inline">{label}</span>
+        <span className={`block h-[7px] w-[7px] rounded-full ${dotColorClass} ${saving || syncing ? 'animate-pulse' : ''}`} />
       </button>
     </div>
   );

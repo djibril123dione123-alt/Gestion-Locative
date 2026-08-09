@@ -59,8 +59,6 @@ export function ConsoleShell({
           onClose={() => setIsMobileOpen(false)}
           isCollapsed={isCollapsed}
           onToggleCollapsed={() => setIsCollapsed((value) => !value)}
-          brandSubtitle="Console admin"
-          badge="Super-admin"
           footer={(expanded) => (
             <div className={expanded ? 'space-y-2' : 'space-y-1'}>
               <div
@@ -98,7 +96,7 @@ export function ConsoleShell({
           <div className="mx-auto h-full max-w-[1760px] px-2 py-2 sm:px-3 lg:px-4">
             <SplitViewShell
               isDetailOpen={isDetailOpen}
-              size="wide"
+              size="compact"
               desktopAt="lg"
               className="h-full min-h-0 items-stretch"
               mainClassName={classNames('h-full min-h-0', isDetailOpen && 'hidden lg:block')}

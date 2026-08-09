@@ -85,7 +85,7 @@ export function OrganizationDrawer({
     <PremiumDrawerShell
       open={!!agency}
       onClose={onClose}
-      size="wide"
+      size="compact"
       density="compact"
       desktopMode="floating"
       desktopAt="lg"
@@ -112,7 +112,7 @@ export function OrganizationDrawer({
 
         <div className="mt-3 grid items-start gap-3">
           <AdminPanel title="Résumé opérationnel" subtitle="Identité, contact, plan et signaux de santé.">
-            <div className="grid gap-2 text-sm">
+            <div className="grid gap-1.5 text-[0.72rem]">
               {[
                 ['Type', typeLabel],
                 ['Email', textValue(agency.email)],
@@ -123,9 +123,9 @@ export function OrganizationDrawer({
                 ['Unités / contrats', `${agency.nb_unites ?? metrics?.total_units ?? 0} unités · ${agency.nb_contrats ?? metrics?.total_contracts ?? 0} contrats`],
                 ['Volume paiements', formatAdminCurrency(agency.volume_paiements ?? metrics?.payments_amount)],
               ].map(([label, value]) => (
-                <div key={label} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 last:border-0">
-                  <span className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">{label}</span>
-                  <span className="text-right font-bold text-slate-900">{value}</span>
+                <div key={label} className="flex items-center justify-between gap-3 border-b border-slate-100 py-1.5 last:border-0">
+                  <span className="text-[0.58rem] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</span>
+                  <span className="text-right font-semibold text-slate-900">{value}</span>
                 </div>
               ))}
             </div>
@@ -134,8 +134,8 @@ export function OrganizationDrawer({
           <AdminPanel title="Centre de contact" subtitle="Actions rapides support sans exposer de données sensibles.">
             <div className="grid gap-2">
               <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <p className="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Contact principal</p>
-                <p className="mt-1 text-sm font-black text-slate-950">{agency.email ?? agency.phone ?? 'Non renseigné'}</p>
+                <p className="text-[0.58rem] font-semibold uppercase tracking-[0.08em] text-slate-500">Contact principal</p>
+                <p className="mt-1 truncate text-[0.76rem] font-semibold text-slate-950">{agency.email ?? agency.phone ?? 'Non renseigné'}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <AdminButton disabled={!contactEmail} onClick={() => contactEmail && window.open(contactEmail, '_blank')}>
@@ -148,7 +148,7 @@ export function OrganizationDrawer({
                 </AdminButton>
               </div>
               <div className="grid gap-2 rounded-xl border border-slate-200 bg-white p-3">
-                <input value={ticketSubject} onChange={(event) => setTicketSubject(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold outline-none" placeholder="Créer ticket : sujet..." />
+                <input value={ticketSubject} onChange={(event) => setTicketSubject(event.target.value)} className="h-8 rounded-[0.6rem] border border-slate-200 px-2.5 text-[0.72rem] font-medium outline-none" placeholder="Créer ticket : sujet..." />
                 <div className="grid gap-2 sm:grid-cols-2">
                   <SmartCombobox
                     value={ticketCategory}
@@ -206,8 +206,8 @@ export function OrganizationDrawer({
               ) : proofs.slice(0, 5).map((proof) => (
                 <div key={proof.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2">
                   <div>
-                    <p className="text-sm font-black text-slate-900">{formatAdminCurrency(proof.amount)} · {proof.method}</p>
-                    <p className="text-xs font-semibold text-slate-500">{proof.reference ?? 'Référence non renseignée'}</p>
+                    <p className="text-[0.76rem] font-semibold text-slate-900">{formatAdminCurrency(proof.amount)} · {proof.method}</p>
+                    <p className="text-[0.66rem] font-medium text-slate-500">{proof.reference ?? 'Référence non renseignée'}</p>
                   </div>
                   <AdminStatusBadge status={proof.status} />
                 </div>
@@ -222,8 +222,8 @@ export function OrganizationDrawer({
               ) : users.slice(0, 6).map((user) => (
                 <div key={user.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-slate-900">{`${user.prenom ?? ''} ${user.nom ?? ''}`.trim() || user.email}</p>
-                    <p className="truncate text-xs font-semibold text-slate-500">{user.email}</p>
+                    <p className="truncate text-[0.76rem] font-semibold text-slate-900">{`${user.prenom ?? ''} ${user.nom ?? ''}`.trim() || user.email}</p>
+                    <p className="truncate text-[0.66rem] font-medium text-slate-500">{user.email}</p>
                   </div>
                   <AdminStatusBadge status={user.actif === false ? 'suspended' : 'active'}>{user.role}</AdminStatusBadge>
                 </div>
@@ -244,8 +244,8 @@ export function OrganizationDrawer({
               ) : documents.slice(0, 6).map((document) => (
                 <div key={document.id} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2">
                   <div>
-                    <p className="text-sm font-black text-slate-900">{documentTypeLabel(document.document_type)}</p>
-                    <p className="text-xs font-semibold text-slate-500">{document.reference ?? document.period ?? 'Référence interne'} · {formatAdminDate(document.generated_at ?? document.created_at)}</p>
+                    <p className="text-[0.76rem] font-semibold text-slate-900">{documentTypeLabel(document.document_type)}</p>
+                    <p className="text-[0.66rem] font-medium text-slate-500">{document.reference ?? document.period ?? 'Référence interne'} · {formatAdminDate(document.generated_at ?? document.created_at)}</p>
                   </div>
                   <AdminStatusBadge status={document.status} />
                 </div>
@@ -256,7 +256,7 @@ export function OrganizationDrawer({
           <AdminPanel title="Notes internes" subtitle="Support, commercial, sécurité ou suivi administratif.">
             <div className="space-y-2">
               <div className="rounded-xl border border-slate-200 bg-white p-3">
-                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold outline-none" placeholder="Ajouter une note interne..." />
+                <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} className="w-full resize-none rounded-[0.6rem] border border-slate-200 px-2.5 py-2 text-[0.72rem] font-medium outline-none" placeholder="Ajouter une note interne..." />
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                   <div className="min-w-[10rem]">
                     <SmartCombobox
@@ -286,7 +286,7 @@ export function OrganizationDrawer({
                     <AdminStatusBadge tone="slate">{item.visibility === 'internal' ? 'Interne' : item.visibility === 'support' ? 'Support' : item.visibility ?? 'Interne'}</AdminStatusBadge>
                     <span className="text-xs font-semibold text-slate-400">{formatAdminDate(item.created_at)}</span>
                   </div>
-                  <p className="mt-2 text-sm font-semibold text-slate-700">{item.note}</p>
+                  <p className="mt-2 text-[0.72rem] font-medium leading-4 text-slate-700">{item.note}</p>
                 </div>
               ))}
             </div>
@@ -299,8 +299,8 @@ export function OrganizationDrawer({
               <p className="text-xs font-semibold text-slate-500">Aucune action auditée liée à cette organisation.</p>
             ) : latestAudit.map((log) => (
               <div key={log.id} className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-                <p className="text-sm font-black text-slate-950">{humanizeAuditAction(log.action)}</p>
-                <p className="text-xs font-semibold text-slate-500">{log.reason ?? log.target_type ?? 'Action administrateur'} · {formatAdminDate(log.created_at)}</p>
+                <p className="text-[0.76rem] font-semibold text-slate-950">{humanizeAuditAction(log.action)}</p>
+                <p className="text-[0.66rem] font-medium text-slate-500">{log.reason ?? log.target_type ?? 'Action administrateur'} · {formatAdminDate(log.created_at)}</p>
               </div>
             ))}
           </div>

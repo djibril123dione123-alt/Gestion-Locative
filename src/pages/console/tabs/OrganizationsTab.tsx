@@ -155,7 +155,7 @@ export function OrganizationsTab({
               className: selectedAgencyId ? 'w-[48%]' : undefined,
               render: (agency) => (
                 <span className="block min-w-0 text-left">
-                  <span className="block truncate font-black text-slate-950">{agency.name}</span>
+                  <span className="block truncate text-[0.76rem] font-semibold text-slate-950">{agency.name}</span>
                   <span className="block truncate text-[0.68rem] font-semibold text-slate-500">
                     {agency.email ?? 'Email non renseigné'}
                     {selectedAgencyId ? ` · ${getAdminPlan(agency.plan).name} · ${organizationTypeLabel(agency)}` : ''}
@@ -175,14 +175,14 @@ export function OrganizationsTab({
               },
             },
             { key: 'usage', label: 'Usage', hideWhenDetail: true, render: (agency) => `${agency.nb_users ?? 0} utilisateur(s) · ${agency.nb_unites ?? 0} unité(s)` },
-            { key: 'volume', label: 'Volume', align: 'right', hideWhenDetail: true, render: (agency) => <span className="font-black">{formatAdminCurrency(agency.volume_paiements)}</span> },
+            { key: 'volume', label: 'Volume', align: 'right', hideWhenDetail: true, render: (agency) => <span className="font-semibold">{formatAdminCurrency(agency.volume_paiements)}</span> },
             { key: 'last', label: 'Activité', hideWhenDetail: true, render: (agency) => formatAdminDate(agency.derniere_activite) },
           ]}
           renderCard={(agency) => (
             <button type="button" onClick={() => onOpenAgency(agency)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50/30">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-black text-slate-950">{agency.name}</p>
+                  <p className="truncate text-[0.78rem] font-semibold text-slate-950">{agency.name}</p>
                   <p className="truncate text-xs font-semibold text-slate-500">{agency.email ?? 'Email non renseigné'}</p>
                 </div>
                 <AdminStatusBadge status={agency.status} />

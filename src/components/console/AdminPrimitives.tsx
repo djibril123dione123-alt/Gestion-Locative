@@ -33,7 +33,7 @@ const metricToneByAdminTone: Record<AdminTone, MetricTone> = {
 export function AdminStatusBadge({ status, children, tone }: { status?: string | null; children?: React.ReactNode; tone?: AdminTone }) {
   const nextTone = tone ?? getStatusTone(status);
   return (
-    <span className={`inline-flex max-w-full items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[0.58rem] font-black uppercase tracking-[0.09em] ${toneClasses[nextTone]}`}>
+    <span className={`inline-flex max-w-full items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-[0.56rem] font-bold uppercase tracking-[0.08em] ${toneClasses[nextTone]}`}>
       {children ?? getStatusLabel(status)}
     </span>
   );
@@ -94,8 +94,8 @@ export function AdminPanel({
     <PremiumTableSurface density="compact" className={classNames('bg-white/95', className)}>
       <div className="flex flex-col gap-2 border-b border-slate-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-[0.92rem] font-black leading-tight text-slate-950">{title}</h2>
-          {subtitle && <p className="mt-0.5 text-[0.72rem] font-medium leading-4 text-slate-500">{subtitle}</p>}
+          <h2 className="text-[0.82rem] font-semibold leading-tight text-slate-950">{title}</h2>
+          {subtitle && <p className="mt-0.5 text-[0.68rem] font-medium leading-4 text-slate-500">{subtitle}</p>}
         </div>
         {action}
       </div>
@@ -170,7 +170,7 @@ export function AdminListToolbar({
       secondaryActions={(
         <div className="flex shrink-0 items-center gap-1.5">
           {typeof resultCount === 'number' && (
-            <span className="hidden whitespace-nowrap text-[0.66rem] font-black text-slate-500 xl:inline">
+            <span className="hidden whitespace-nowrap text-[0.64rem] font-semibold text-slate-500 xl:inline">
               {resultCount} résultat{resultCount > 1 ? 's' : ''}
             </span>
           )}
@@ -216,7 +216,7 @@ export function AdminSectionTabs({
             aria-selected={active}
             onClick={() => onChange(item.value)}
             className={classNames(
-              'inline-flex h-7 flex-none items-center gap-1.5 whitespace-nowrap rounded-[0.55rem] px-2.5 text-[0.68rem] font-black transition',
+              'inline-flex h-7 flex-none items-center gap-1.5 whitespace-nowrap rounded-[0.55rem] px-2.5 text-[0.66rem] font-semibold transition',
               active ? 'bg-emerald-950 text-white shadow-sm' : 'text-slate-600 hover:bg-emerald-50 hover:text-emerald-900',
             )}
           >
@@ -235,7 +235,7 @@ export function AdminEmptyState({ title, text, action }: { title: string; text: 
   return (
     <div className="rounded-[1.05rem] border border-dashed border-slate-200 bg-slate-50/70 p-3 text-center">
       <CheckCircle2 className="mx-auto h-4 w-4 text-emerald-700" />
-      <p className="mt-1.5 text-[0.82rem] font-black text-slate-900">{title}</p>
+      <p className="mt-1.5 text-[0.78rem] font-semibold text-slate-900">{title}</p>
       <p className="mx-auto mt-1 max-w-md text-[0.72rem] font-medium leading-4 text-slate-500">{text}</p>
       {action && <div className="mt-3">{action}</div>}
     </div>
@@ -246,7 +246,7 @@ export function AdminLoadingState({ label = 'Chargement console...' }: { label?:
   return (
     <PremiumTableSurface density="compact" className="bg-white">
       <div className="flex min-h-[320px] items-center justify-center">
-        <div className="flex items-center gap-2 text-sm font-bold text-slate-500">
+        <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
           <Loader2 className="h-4 w-4 animate-spin" />
           {label}
         </div>
@@ -312,11 +312,11 @@ export function ResponsiveTable<T>({
   return (
     <>
       <PremiumTableSurface density="dense" withHorizontalScroll className="hidden bg-white md:block" ariaLabel="Table console">
-        <table className={classNames('w-full text-sm', selectedKey ? 'min-w-[520px]' : 'min-w-[680px]')}>
+        <table className={classNames('w-full text-[0.76rem]', selectedKey ? 'min-w-[480px]' : 'min-w-[640px]')}>
           <thead className="bg-slate-50">
             <tr>
               {visibleColumns.map((column) => (
-                <th key={column.key} className={classNames('px-3 py-2 text-[0.62rem] font-black uppercase tracking-[0.11em] text-slate-500', column.align === 'right' ? 'text-right' : 'text-left', column.className)}>
+                <th key={column.key} className={classNames('px-2 py-1.5 text-[0.58rem] font-semibold uppercase tracking-[0.09em] text-slate-500', column.align === 'right' ? 'text-right' : 'text-left', column.className)}>
                   {column.label}
                 </th>
               ))}
@@ -346,7 +346,7 @@ export function ResponsiveTable<T>({
                   )}
                 >
                   {visibleColumns.map((column) => (
-                    <td key={column.key} className={classNames('px-3 py-1.5 align-middle text-[0.78rem]', column.align === 'right' ? 'text-right' : 'text-left', column.className)}>
+                    <td key={column.key} className={classNames('px-2 py-1.5 align-middle text-[0.72rem] font-medium', column.align === 'right' ? 'text-right' : 'text-left', column.className)}>
                       {column.render(row)}
                     </td>
                   ))}

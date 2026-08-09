@@ -1,7 +1,6 @@
 import {
   ChevronsLeft,
   ChevronsRight,
-  ShieldCheck,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -30,9 +29,6 @@ interface AppSidebarFrameProps {
   onClose?: () => void;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
-  brandTitle?: string;
-  brandSubtitle?: string;
-  badge?: string;
   footer?: (expanded: boolean) => ReactNode;
   isItemActive?: (item: string) => boolean;
 }
@@ -45,9 +41,6 @@ export function AppSidebarFrame({
   onClose,
   isCollapsed = false,
   onToggleCollapsed,
-  brandTitle = 'SAMAY KËUR',
-  brandSubtitle = 'Manage. Grow. Prosper.',
-  badge,
   footer,
   isItemActive,
 }: AppSidebarFrameProps) {
@@ -99,24 +92,18 @@ export function AppSidebarFrame({
         onMouseLeave={handleMouseLeave}
         className={`fixed inset-y-0 left-0 z-50 flex h-screen flex-col overflow-hidden border-r border-emerald-300/10 bg-[radial-gradient(circle_at_20%_0%,rgba(16,185,129,0.18),transparent_18rem),linear-gradient(180deg,#031f1a,#062b23_48%,#041b17)] text-white shadow-[18px_0_60px_rgba(2,6,23,0.28)] transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${widthClass} ${positionClass} ${expandedByHover ? 'lg:shadow-[24px_0_60px_rgba(0,0,0,0.55)]' : ''} ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        <div className={`relative flex items-center overflow-hidden border-b border-white/10 px-3 py-4 ${expanded ? 'justify-between' : 'justify-center'}`}>
+        <div className={`relative flex items-center overflow-visible border-b border-white/10 ${expanded ? 'justify-between pl-4 pr-2 py-4' : 'justify-center p-4'}`}>
           <div className="absolute -left-8 top-0 h-28 w-28 rounded-full bg-emerald-300/15 blur-2xl" />
           <div className="absolute right-0 top-0 h-px w-2/3 bg-gradient-to-r from-transparent via-orange-300/60 to-transparent" />
-          <div className="relative flex min-w-0 items-center gap-2.5">
-            <BrandMark size="sm" tone="dark" animated withTile={false} />
-            <div className={`min-w-0 transition-opacity duration-200 ${expanded ? 'opacity-100' : 'hidden opacity-0'}`}>
-              <p className="truncate text-xs font-black tracking-widest text-brand-paper">{brandTitle}</p>
-              <p className="mt-0.5 truncate text-[10px] font-black uppercase tracking-widest text-action-500">{brandSubtitle}</p>
-              {badge && (
-                <span className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-emerald-400/20 bg-emerald-400/10 px-1.5 py-0.5 text-[9px] font-black uppercase text-emerald-200">
-                  <ShieldCheck className="h-3 w-3" />
-                  {badge}
-                </span>
-              )}
-            </div>
+          <div className="relative flex min-w-0 flex-1 items-center">
+            {expanded ? (
+              <img src="/samay-keur-logo-sidebar.svg" alt="Samay Këur" className="h-12 w-full object-contain object-left scale-[1.3] origin-left drop-shadow-sm" />
+            ) : (
+              <BrandMark size="md" tone="dark" animated withTile={false} />
+            )}
           </div>
 
-          <div className="relative flex items-center gap-1">
+          <div className="relative flex shrink-0 items-center z-10">
             {onToggleCollapsed && (
               <button
                 type="button"

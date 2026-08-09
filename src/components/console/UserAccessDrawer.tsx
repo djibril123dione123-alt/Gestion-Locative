@@ -61,13 +61,13 @@ export function UserAccessDrawer({
       eyebrow="Fiche utilisateur"
       description="Contrôlez le rôle, le statut et les garde-fous avant toute mutation."
       onClose={onClose}
-      size="standard"
+      size="compact"
       density="compact"
       desktopMode="floating"
       desktopAt="lg"
       className="h-full lg:!w-full"
       avatar={
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-950 text-sm font-black text-white shadow-sm">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-950 text-[0.76rem] font-bold text-white shadow-sm">
           {initials(user)}
         </div>
       }
@@ -80,16 +80,16 @@ export function UserAccessDrawer({
         </AdminKpiGrid>
 
         <AdminPanel title="Identité & rattachement" subtitle="Données issues du profil utilisateur et du tenant rattaché.">
-          <div className="grid gap-2 text-sm">
+          <div className="grid gap-1.5 text-[0.72rem]">
             {[
               ['Email', textValue(user.email)],
               ['Organisation', textValue(user.agency_name, 'Non rattaché')],
               ['Date création', formatAdminDate(user.created_at)],
               ['Protection', protectedAdmin ? 'Dernier admin ou super-admin protégé' : 'Modifiable avec audit'],
             ].map(([label, value]) => (
-              <div key={label} className="flex items-center justify-between gap-3 border-b border-slate-100 py-2 last:border-0">
-                <span className="text-[0.65rem] font-black uppercase tracking-[0.1em] text-slate-500">{label}</span>
-                <span className="text-right text-[0.82rem] font-bold text-slate-900">{value}</span>
+              <div key={label} className="flex items-center justify-between gap-3 border-b border-slate-100 py-1.5 last:border-0">
+                <span className="text-[0.58rem] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</span>
+                <span className="text-right text-[0.72rem] font-semibold text-slate-900">{value}</span>
               </div>
             ))}
           </div>
@@ -106,13 +106,13 @@ export function UserAccessDrawer({
                   type="button"
                   disabled={disabled}
                   onClick={() => onChangeRole(user, role.id)}
-                  className="rounded-[1.05rem] border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-emerald-300 hover:bg-emerald-50/45 disabled:cursor-not-allowed disabled:opacity-55"
+                  className="rounded-[0.75rem] border border-slate-200 bg-white px-2.5 py-2 text-left transition hover:border-emerald-300 hover:bg-emerald-50/45 disabled:cursor-not-allowed disabled:opacity-55"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-[0.86rem] font-black text-slate-950">{role.label}</p>
+                    <p className="text-[0.76rem] font-semibold text-slate-950">{role.label}</p>
                     {current ? <AdminStatusBadge tone="emerald">Actuel</AdminStatusBadge> : <AdminStatusBadge tone="slate">Disponible</AdminStatusBadge>}
                   </div>
-                  <p className="mt-1 text-[0.72rem] font-semibold leading-4 text-slate-500">{role.description}</p>
+                  <p className="mt-0.5 text-[0.66rem] font-medium leading-4 text-slate-500">{role.description}</p>
                 </button>
               );
             })}
@@ -131,7 +131,7 @@ export function UserAccessDrawer({
             {active ? 'Désactiver le compte' : 'Réactiver le compte'}
           </PremiumButton>
           {protectedAdmin && (
-            <p className="mt-3 rounded-[1.05rem] border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold leading-5 text-amber-900">
+            <p className="mt-2.5 rounded-[0.75rem] border border-amber-200 bg-amber-50 px-2.5 py-2 text-[0.68rem] font-semibold leading-4 text-amber-900">
               Garde-fou actif : cette organisation doit conserver au moins un administrateur actif.
             </p>
           )}

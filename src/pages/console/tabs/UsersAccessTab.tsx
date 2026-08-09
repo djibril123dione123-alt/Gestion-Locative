@@ -113,7 +113,7 @@ export function UsersAccessTab({
               className: selectedUserId ? 'w-[52%]' : undefined,
               render: (user) => (
                 <span className="block min-w-0 text-left">
-                  <span className="block truncate font-black text-slate-950">{displayName(user)}</span>
+                  <span className="block truncate text-[0.76rem] font-semibold text-slate-950">{displayName(user)}</span>
                   <span className="block truncate text-[0.68rem] font-semibold text-slate-500">
                     {user.email}
                     {selectedUserId ? ` · ${user.agency_name ?? 'Non rattaché'} · ${accessSummary(user)}` : ''}
@@ -130,7 +130,7 @@ export function UsersAccessTab({
             <button type="button" onClick={() => onOpenUser(user)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50/30">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-black text-slate-950">{displayName(user)}</p>
+                  <p className="truncate text-[0.78rem] font-semibold text-slate-950">{displayName(user)}</p>
                   <p className="truncate text-xs font-semibold text-slate-500">{user.email}</p>
                 </div>
                 <AdminStatusBadge tone={user.role === 'admin' || user.role === 'super_admin' ? 'blue' : 'slate'}>{roleLabel(user.role)}</AdminStatusBadge>

@@ -107,7 +107,7 @@ export const ADAPTIVE_DICTIONARY: Record<OrganizationType, SemanticDictionaryEnt
       legalRepresentative: 'Gestionnaire',
       netOwner: 'Net proprietaire',
       revenue: 'Honoraires percus',
-      charges: 'Depenses',
+      charges: 'Dépenses',
     },
     navigationGroups: {
       portefeuille: {
@@ -137,7 +137,7 @@ export const ADAPTIVE_DICTIONARY: Record<OrganizationType, SemanticDictionaryEnt
   agency: {
     labels: {
       workspace: 'Agence',
-      workspaceSettings: 'Parametres agence',
+      workspaceSettings: 'Paramètres agence',
       owners: 'Bailleurs',
       properties: 'Biens & patrimoine',
       units: 'Unites',
@@ -147,12 +147,12 @@ export const ADAPTIVE_DICTIONARY: Record<OrganizationType, SemanticDictionaryEnt
       commissions: 'Commissions',
       reports: 'Rapports bailleurs',
       documents: 'Documents',
-      team: 'Equipe & acces',
+      team: 'Équipe & accès',
       audit: 'Journal & audit',
       legalRepresentative: 'Representant legal',
       netOwner: 'Net bailleur estime',
       revenue: 'Commissions acquises',
-      charges: 'Depenses',
+      charges: 'Dépenses',
     },
     navigationGroups: {
       portefeuille: {
@@ -197,7 +197,7 @@ export const ADAPTIVE_DICTIONARY: Record<OrganizationType, SemanticDictionaryEnt
       legalRepresentative: 'Direction generale',
       netOwner: 'Net consolide',
       revenue: 'CA consolide',
-      charges: 'Depenses consolidees',
+      charges: 'Dépenses consolidées',
     },
     navigationGroups: {
       portefeuille: {
@@ -263,7 +263,7 @@ export function getSemanticPageLabel(page: string, type: OrganizationType): stri
   if (labelKey === 'subscription') return 'Abonnement';
   if (labelKey === 'pricing') return 'Tarifs';
   if (labelKey === 'notifications') return 'Notifications';
-  if (labelKey === 'inventory') return 'Etats des lieux';
+  if (labelKey === 'inventory') return 'États des lieux';
   if (labelKey === 'maintenance') return 'Maintenance';
   if (labelKey === 'calendar') return 'Calendrier';
   return entry.labels[labelKey] ?? null;

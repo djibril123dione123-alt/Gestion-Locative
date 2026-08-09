@@ -56,6 +56,7 @@ import { ConsoleShell } from './ConsoleShell';
 export function Console() {
   const { profile, signOut } = useAuth();
   const toast = useToast();
+  const notifyLoadError = toast.error;
   const [space, setSpace] = useState<ConsoleSpace>(() => getConsoleSpaceFromHash(window.location.hash));
   const [data, setData] = useState<AdminConsoleData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,12 +82,12 @@ export function Console() {
       const nextData = await loadAdminConsoleData();
       setData(nextData);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Chargement console impossible.');
+      notifyLoadError(error instanceof Error ? error.message : 'Chargement console impossible.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [toast]);
+  }, [notifyLoadError]);
 
   useEffect(() => {
     void load('initial');

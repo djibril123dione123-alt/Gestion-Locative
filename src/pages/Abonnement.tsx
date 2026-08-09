@@ -10,7 +10,6 @@ import {
   wizardPrimaryActionClass,
   wizardSecondaryActionClass,
 } from '../components/ui/WizardShell';
-import { WizardRail } from '../components/ui/WizardRail';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import {

@@ -414,12 +414,16 @@ function inferAgenciesFromRelatedSources({
 }
 
 export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
-  const snapshotResponse = await supabase.rpc('admin_console_snapshot');
-  if (snapshotResponse.error) {
-    throw new Error('La source de pilotage super-admin est indisponible. Réessayez dans quelques instants.');
+  let snapshot: Record<string, unknown> | null = null;
+  try {
+    const snapshotResponse = await supabase.rpc('admin_console_snapshot');
+    if (!snapshotResponse.error) {
+      snapshot = (snapshotResponse.data ?? null) as Record<string, unknown> | null;
+    }
+  } catch {
+    // The consolidated RPC is an optimization. Existing guarded sources keep
+    // the console usable while a migration or transient API issue is resolved.
   }
-
-  const snapshot = (snapshotResponse.data ?? null) as Record<string, unknown> | null;
   const hasConsolidatedSnapshot = [
     'agencies',
     'users',
@@ -436,7 +440,7 @@ export async function loadAdminConsoleData(): Promise<AdminConsoleData> {
     ? []
     : await Promise.allSettled([
         supabase.from('vw_owner_agency_stats').select('*').order('created_at', { ascending: false }),
-        supabase.from('agencies').select('id,name,status,plan,organization_type,is_bailleur_account,email,phone,created_at,trial_ends_at,derniere_activite').order('created_at', { ascending: false }).limit(500),
+        supabase.from('agencies').select('id,name,status,plan,organization_type,is_bailleur_account,email,phone,created_at,trial_ends_at').order('created_at', { ascending: false }).limit(500),
         supabase.from('user_profiles').select('*, agencies(name)').order('created_at', { ascending: false }).limit(500),
         supabase.from('subscriptions').select('*, agencies(name)').order('created_at', { ascending: false }).limit(300),
         supabase.from('subscription_payment_proofs').select('*, agencies(name, organization_type, is_bailleur_account)').order('created_at', { ascending: false }).limit(200),

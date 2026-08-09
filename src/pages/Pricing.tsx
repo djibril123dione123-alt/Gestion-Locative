@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Check, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { CheckoutModal } from '../components/billing/CheckoutModal';
 import { BrandLogo } from '../components/brand/BrandLogo';
 import { PricingSections } from '../components/pricing/PricingSections';
@@ -47,6 +47,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
         <PricingSections
           plans={PRICING_PLAN_DEFINITIONS}
           onSelectPlan={handlePlanSelection}
+          onStart={() => onNavigate?.(profile ? 'abonnement' : 'auth')}
           onRequestDemo={() => openPricingConversation('Bonjour, je souhaite une démonstration de Samay Këur.')}
           compact
         />
@@ -93,23 +94,23 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
       </header>
 
       <main>
-        <section className="relative isolate overflow-hidden bg-emerald-950 px-4 py-14 text-white sm:px-6 sm:py-16 lg:px-8 lg:py-20">
+        <section className="relative isolate overflow-hidden bg-emerald-950 px-4 py-11 text-white sm:px-6 sm:py-14 lg:px-8 lg:py-18">
           <img
-            src="/brand/marketing/landing-documents.jpg"
-            alt="Gestion locative et documents professionnels Samay Këur"
+            src="/brand/marketing/landing-payments.jpg"
+            alt="Suivi professionnel des encaissements avec Samay Këur"
             className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
           />
-          <div className="absolute inset-0 -z-10 bg-emerald-950/88" aria-hidden="true" />
+          <div className="absolute inset-0 -z-10 bg-emerald-950/90" aria-hidden="true" />
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
             <div className="max-w-3xl">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Tarifs Samay Këur</p>
-              <h1 className="mt-4 text-4xl font-black leading-tight sm:text-5xl lg:text-[3.35rem]">
-                Le bon plan pour professionnaliser votre gestion locative.
+              <h1 className="mt-4 text-3xl font-black !leading-[1.08] text-white sm:text-4xl lg:text-[2.8rem]">
+                Un plan adapté à votre façon de gérer.
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-7 text-emerald-50/80 sm:text-lg">
-                Centralisez patrimoine, loyers, impayés, documents et rapports. Choisissez une capacité adaptée à votre portefeuille, sans renoncer au socle métier essentiel.
+              <p className="mt-4 max-w-2xl text-base leading-6 text-emerald-50/80 sm:text-lg sm:leading-7">
+                Bailleur indépendant, gestionnaire ou agence : choisissez la capacité adaptée à votre portefeuille et à votre équipe, avec le même socle métier pour suivre loyers, impayés, documents et rapports.
               </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <a
                   href="#plans"
                   className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-orange-400 px-5 py-2.5 text-sm font-black text-emerald-950 transition hover:bg-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
@@ -133,7 +134,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
                 {[
                   'Prix mensuels en F CFA',
                   'Socle métier commun à tous les plans',
-                  'Capacités alignées sur les limites appliquées',
+                  'Plans adaptés au portefeuille et à l’équipe',
                   'Changement de plan sans suppression de données',
                 ].map((item) => (
                   <li key={item} className="flex gap-2.5">
@@ -142,9 +143,8 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
                   </li>
                 ))}
               </ul>
-              <p className="mt-5 flex items-center gap-2 text-xs font-semibold text-emerald-100/70">
-                <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                Les activations manuelles restent soumises à validation du support.
+              <p className="mt-5 text-xs font-semibold text-emerald-100/70">
+                Votre plan peut évoluer avec votre portefeuille, sans recommencer votre organisation.
               </p>
             </div>
           </div>
@@ -153,6 +153,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
         <PricingSections
           plans={PRICING_PLAN_DEFINITIONS}
           onSelectPlan={handlePlanSelection}
+          onStart={() => onNavigate?.(profile ? 'abonnement' : 'auth')}
           onRequestDemo={() => openPricingConversation('Bonjour, je souhaite une démonstration de Samay Këur.')}
         />
       </main>

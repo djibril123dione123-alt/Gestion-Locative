@@ -553,12 +553,12 @@ function applyDocumentPrefix(ref: string, type: PdfDocumentType, settings?: Part
   return ref.replace(/^[A-Z0-9]+(?=-)/, prefix);
 }
 
-function isDocumentQrEnabled(settings: Partial<AgencySettings> | undefined, type: PdfDocumentType): boolean {
+export function isDocumentQrEnabled(settings: Partial<AgencySettings> | undefined, type: PdfDocumentType): boolean {
   if (settings?.qr_code_quittances === false) return false;
   return getPdfDocumentPreferences(settings).qr_documents[type] !== false;
 }
 
-function hexToRgb(hex: string | null | undefined, fallback: [number, number, number]): [number, number, number] {
+export function hexToRgb(hex: string | null | undefined, fallback: [number, number, number]): [number, number, number] {
   const normalized = (hex || '').replace('#', '').trim();
   if (!/^[0-9a-f]{6}$/i.test(normalized)) return fallback;
   return [
@@ -568,7 +568,7 @@ function hexToRgb(hex: string | null | undefined, fallback: [number, number, num
   ];
 }
 
-function getBrandColors(settings?: Partial<AgencySettings>) {
+export function getBrandColors(settings?: Partial<AgencySettings>) {
   const primary = hexToRgb(settings?.couleur_primaire, [20, 83, 45]);
   const secondary = hexToRgb(settings?.couleur_secondaire, [15, 23, 42]);
   return {
@@ -651,9 +651,9 @@ function applyPublishedTemplateStyle(
 ): Partial<AgencySettings> {
   return {
     ...settings,
-    logo_url: template.content.style.showLogo ? settings.logo_url : null,
-    signature_enabled: template.content.style.showSignature && settings.signature_enabled === true,
-    stamp_enabled: template.content.style.showStamp && settings.stamp_enabled === true,
+    logo_url: settings.logo_url,
+    signature_enabled: settings.signature_enabled === true,
+    stamp_enabled: settings.stamp_enabled === true,
     document_preferences: {
       ...(settings.document_preferences ?? {}),
       header_style: template.content.style.header,
@@ -748,7 +748,7 @@ export async function drawSignatureBlocks(
       const ratio = Math.min(maxImageWidth / signatureImage.width, maxImageHeight / signatureImage.height, 1);
       const imageWidth = Math.max(8, signatureImage.width * ratio);
       const imageHeight = Math.max(4, signatureImage.height * ratio);
-      const imageX = x + width - imageWidth - 5;
+      const imageX = stampImage ? x + width - imageWidth - 5 : x + (width - imageWidth) / 2;
       const imageY = y + 11;
       doc.addImage(signatureImage.dataUrl, 'PNG', imageX, imageY, imageWidth, imageHeight);
     }
@@ -772,7 +772,7 @@ export async function drawSignatureBlocks(
   doc.setTextColor(0, 0, 0);
 }
 
-async function drawCompactSignatureSeal(
+async function drawSingleSignatureBox(
   doc: jsPDF,
   x: number,
   y: number,
@@ -780,28 +780,53 @@ async function drawCompactSignatureSeal(
   height: number,
   settings?: Partial<AgencySettings>
 ): Promise<void> {
-  const assetUrl = settings?.stamp_enabled && settings.stamp_url
-    ? settings.stamp_url
-    : settings?.signature_enabled
-      ? settings.signature_url
-      : null;
-  const signatureImage = await loadImageAsPngDataUrl(assetUrl, 360);
-  if (!signatureImage) return;
-
   const colors = getBrandColors(settings);
-  const maxImageWidth = Math.min(34, width - 10);
-  const maxImageHeight = Math.min(10, height - 12);
-  const ratio = Math.min(maxImageWidth / signatureImage.width, maxImageHeight / signatureImage.height, 1);
-  const imageWidth = Math.max(10, signatureImage.width * ratio);
-  const imageHeight = Math.max(4, signatureImage.height * ratio);
-  const imageX = x + width - imageWidth - 5;
-  const imageY = y + height - imageHeight - 4;
+  const individualOwner = isIndividualOwnerSettings(settings);
+  const signatureImage = settings?.signature_enabled
+    ? await loadImageAsPngDataUrl(settings.signature_url, 460)
+    : null;
+  const stampImage = settings?.stamp_enabled
+    ? await loadImageAsPngDataUrl(settings.stamp_url, 360)
+    : null;
 
+  if (!signatureImage && !stampImage) return;
+
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(184, 196, 211);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(x, y, width, height, 2.2, 2.2, 'FD');
+  doc.setFillColor(...colors.paper);
+  doc.roundedRect(x + 1.2, y + 1.2, width - 2.4, 8.2, 1.8, 1.8, 'F');
   doc.setFont(undefined as unknown as string, 'bold');
-  doc.setFontSize(5.6);
+  doc.setFontSize(8.2);
+  doc.setTextColor(30, 41, 59);
+  doc.text(individualOwner ? 'Le propriétaire' : 'Le bailleur / mandataire', x + 4, y + 6.2);
+
+  if (signatureImage) {
+    const maxImageWidth = width - 12;
+    const maxImageHeight = height - 20;
+    const ratio = Math.min(maxImageWidth / signatureImage.width, maxImageHeight / signatureImage.height, 1);
+    const imageWidth = Math.max(8, signatureImage.width * ratio);
+    const imageHeight = Math.max(4, signatureImage.height * ratio);
+    const imageX = stampImage ? x + width - imageWidth - 5 : x + (width - imageWidth) / 2;
+    const imageY = y + 11;
+    doc.addImage(signatureImage.dataUrl, 'PNG', imageX, imageY, imageWidth, imageHeight);
+  }
+  if (stampImage) {
+    const ratio = Math.min(18 / stampImage.width, 12 / stampImage.height, 1);
+    const stampWidth = Math.max(8, stampImage.width * ratio);
+    const stampHeight = Math.max(6, stampImage.height * ratio);
+    doc.addImage(stampImage.dataUrl, 'PNG', x + 5, y + 11, stampWidth, stampHeight);
+  }
+
+  doc.setDrawColor(148, 163, 184);
+  doc.setLineWidth(0.22);
+  doc.line(x + 4, y + height - 11.5, x + width - 4, y + height - 11.5);
+  doc.setFont(undefined as unknown as string, 'normal');
+  doc.setFontSize(7);
   doc.setTextColor(...colors.muted);
-  doc.text(settings?.stamp_enabled ? 'Cachet officiel' : 'Signature', x + width - 5, imageY - 1.5, { align: 'right' });
-  doc.addImage(signatureImage.dataUrl, 'PNG', imageX, imageY, imageWidth, imageHeight);
+  doc.text('Nom, date et signature', x + 4, y + height - 6.5);
+  doc.text(individualOwner ? 'Cachet ou mention le cas échéant' : 'Cachet le cas échéant', x + 4, y + height - 2.7);
   doc.setTextColor(0, 0, 0);
 }
 
@@ -878,10 +903,11 @@ export async function drawDocumentHeader(
   doc.setTextColor(71, 85, 105);
   const infoLines = [
     settings.adresse,
-    [settings.telephone ? formatSenegalPhone(settings.telephone, '') : null, settings.email].filter(Boolean).join(' · '),
-    !individualOwner && settings.ninea ? `NINEA ${settings.ninea}` : null,
-    !individualOwner && settings.rc ? `RC ${settings.rc}` : null,
-    settings.site_web ?? null,
+    settings.telephone ? `Tél : ${formatSenegalPhone(settings.telephone, '')}` : null,
+    settings.email ? `Email : ${settings.email}` : null,
+    !individualOwner && settings.ninea ? `NINEA : ${settings.ninea}` : null,
+    !individualOwner && settings.rc ? `RC : ${settings.rc}` : null,
+    settings.site_web ? `Web : ${settings.site_web}` : null,
   ].filter(Boolean) as string[];
   infoLines.slice(0, 5).forEach((line, index) => {
     doc.text(line, infoX, 19.3 + index * 4.2, { align: infoAlign });
@@ -1108,23 +1134,41 @@ function renderTemplateToDoc(
     }
   };
 
-  for (const paragraph of paragraphs) {
+  for (let paragraph of paragraphs) {
     const isArticleTitle = /^(ARTICLE|Article)\s+[\dIVXLC]+/.test(paragraph);
-    const isNumberedPoint = /^\d+[).]\s+/.test(paragraph);
+    let isNumberedPoint = /^\d+[).]\s+/.test(paragraph);
 
     if (isArticleTitle) {
-      ensureSpace(14);
-      y += 2.2;
-      doc.setDrawColor(...colors.border);
-      doc.setLineWidth(0.1);
-      doc.line(leftMargin, y - 2.4, leftMargin + usableWidth, y - 2.4);
+      const parts = paragraph.split('\n');
+      const titleText = parts[0];
+      paragraph = parts.slice(1).join('\n').trim();
+      isNumberedPoint = /^\d+[).]\s+/.test(paragraph);
+
+      const neededSpace = 14;
+      ensureSpace(neededSpace);
+
+      // Si y <= 25, cela signifie qu'on est tout en haut d'une nouvelle page (soit parce qu'ensureSpace a ajouté une page, soit parce que le paragraphe précédent s'est terminé pile en bas).
+      if (y > 25 && y > startY + 2) {
+        y += 5.5;
+        doc.setDrawColor(...colors.border);
+        doc.setLineWidth(0.1);
+        doc.line(leftMargin, y - 3.8, leftMargin + usableWidth, y - 3.8);
+      } else {
+        y += 1.5;
+      }
+
       doc.setFont(undefined as unknown as string, 'bold');
       doc.setFontSize(9.2);
-      doc.setTextColor(15, 23, 42);
-      doc.text(paragraph, leftMargin, y + 2.4);
-      y += 8;
+      doc.setTextColor(...colors.primary);
+
+      const titleLines = doc.splitTextToSize(titleText, usableWidth) as string[];
+      doc.text(titleLines, leftMargin, y);
+      y += titleLines.length * 4.5;
       doc.setFontSize(fontSize);
-      continue;
+      doc.setTextColor(30, 41, 59);
+
+      if (!paragraph) continue;
+      y += 1.5;
     }
 
     const textX = isNumberedPoint ? leftMargin + 4 : leftMargin;
@@ -1214,7 +1258,7 @@ export function drawSubtleSectionTitle(
   doc.roundedRect(x, y - 3.2, 1.2, subtitle ? 9.2 : 6.4, 1, 1, 'F');
   doc.setFont(undefined as unknown as string, 'bold');
   doc.setFontSize(9.4);
-  doc.setTextColor(...colors.ink);
+  doc.setTextColor(...colors.primary);
   doc.text(title, x + 4, y);
   doc.setDrawColor(195, 207, 221);
   doc.setLineWidth(0.16);
@@ -1453,17 +1497,19 @@ async function drawVerificationBlock(
     : null;
 
   const blockHeight = 28;
-  drawSectionFrame(doc, x, y, width, blockHeight, settings, {
-    accent: verification.registered ? 'neutral' : 'orange',
-    fill: true,
-  });
+  doc.setFillColor(...colors.surface);
+  doc.setDrawColor(...colors.primary);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(x, y, width, blockHeight, 2.5, 2.5, 'FD');
 
-  const textX = qrDataUrl ? x + 24 : x + 15;
+  const textX = qrDataUrl ? x + 26 : x + 15;
   if (qrDataUrl) {
-    const qrSize = 17;
+    const qrSize = 18;
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(x + 3.5, y + 4.6, qrSize + 2, qrSize + 2, 1.4, 1.4, 'F');
-    doc.addImage(qrDataUrl, 'PNG', x + 4.5, y + 5.5, qrSize, qrSize);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.1);
+    doc.roundedRect(x + 4, y + 5, qrSize + 2, qrSize + 2, 1.5, 1.5, 'FD');
+    doc.addImage(qrDataUrl, 'PNG', x + 5, y + 6, qrSize, qrSize);
   } else {
     doc.setFillColor(255, 247, 237);
     doc.setDrawColor(234, 88, 12);
@@ -1475,18 +1521,18 @@ async function drawVerificationBlock(
   }
 
   doc.setFont(undefined as unknown as string, 'bold');
-  doc.setFontSize(7.2);
-  doc.setTextColor(15, 23, 42);
+  doc.setFontSize(7.6);
+  doc.setTextColor(...colors.primary);
   doc.text(
     verification.registered ? 'Authentification numérique' : 'Preuve numérique indisponible',
     textX,
-    y + 8,
+    y + 9.5,
   );
   doc.setFont(undefined as unknown as string, 'normal');
-  doc.setFontSize(6.4);
+  doc.setFontSize(6.8);
   doc.setTextColor(...colors.muted);
   const textWidth = width - (textX - x) - 5;
-  doc.text(fitSingleLine(doc, 'Réf. ' + ref, textWidth), textX, y + 12.6);
+  doc.text(fitSingleLine(doc, 'Réf. ' + ref, textWidth), textX, y + 14.5);
   doc.text(
     fitSingleLine(
       doc,
@@ -1494,14 +1540,14 @@ async function drawVerificationBlock(
       textWidth,
     ),
     textX,
-    y + 16.8,
+    y + 19,
   );
   doc.text(
     verification.registered
       ? 'Authenticité enregistrée dans le registre'
       : 'Aucun QR public n’a été émis pour cette copie',
     textX,
-    y + 21,
+    y + 23.5,
   );
   doc.setTextColor(0);
 }
@@ -1517,70 +1563,25 @@ export async function drawLegalVerificationFooter(
   }
 ): Promise<void> {
   const { ref, type, agency, date, settings } = options;
-  const colors = getBrandColors(settings);
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const pageNumber = doc.getNumberOfPages();
 
-  const verification = await registerDocumentVerification({
-    type,
-    ref,
-    agency,
-    agencyId: settings?.agency_id,
-    date,
-  }, true);
-  const qrDataUrl = verification.registered
-    ? await QRCode.toDataURL(verification.url, {
-        width: 192,
-        margin: 1,
-        errorCorrectionLevel: 'H',
-      })
-    : null;
-
   doc.setPage(pageNumber);
-  const qrSize = 15;
-  const blockWidth = 70;
-  const blockHeight = 22;
+  const blockWidth = 80;
   const x = pageWidth - 14 - blockWidth;
   const y = pageHeight - 45;
-  const textX = qrDataUrl ? x + qrSize + 7 : x + 13;
 
-  doc.setFillColor(255, 255, 255);
-  doc.setDrawColor(184, 196, 211);
-  doc.setLineWidth(0.17);
-  doc.roundedRect(x, y, blockWidth, blockHeight, 1.8, 1.8, 'FD');
-
-  if (qrDataUrl) {
-    doc.addImage(qrDataUrl, 'PNG', x + 3, y + 3.5, qrSize, qrSize);
-  } else {
-    doc.setFillColor(255, 247, 237);
-    doc.setDrawColor(234, 88, 12);
-    doc.roundedRect(x + 3.5, y + 7.5, 6, 6, 1.3, 1.3, 'FD');
-    doc.setFont(undefined as unknown as string, 'bold');
-    doc.setFontSize(6.5);
-    doc.setTextColor(194, 65, 12);
-    doc.text('!', x + 6.5, y + 11.9, { align: 'center' });
-  }
-
-  doc.setFont(undefined as unknown as string, 'bold');
-  doc.setFontSize(6.2);
-  doc.setTextColor(30, 41, 59);
-  doc.text(
-    verification.registered ? 'Authentification numérique' : 'Preuve numérique indisponible',
-    textX,
-    y + 6.5,
-  );
-  doc.setFont(undefined as unknown as string, 'normal');
-  doc.setFontSize(5.6);
-  doc.setTextColor(...colors.muted);
-  const availableWidth = blockWidth - (textX - x) - 4;
-  doc.text(fitSingleLine(doc, 'Réf. ' + ref, availableWidth), textX, y + 11);
-  doc.text(
-    verification.registered ? 'Authenticité enregistrée' : 'QR public non émis',
-    textX,
-    y + 15.2,
-  );
-  doc.setTextColor(0);
+  await drawVerificationBlock(doc, {
+    x,
+    y,
+    width: blockWidth,
+    ref,
+    type,
+    agency,
+    date,
+    settings,
+  });
 }
 
 async function drawEditorialSignatureSection(
@@ -1609,10 +1610,10 @@ async function drawEditorialSignatureSection(
     settings,
   } = options;
   const neededHeight = 48;
-  let sectionY = y + 8;
+  let sectionY = y + 4;
   const beforePage = doc.getCurrentPageInfo().pageNumber;
 
-  sectionY = ensureDocumentSpace(doc, sectionY, neededHeight, settings, 22, 48);
+  sectionY = ensureDocumentSpace(doc, sectionY, neededHeight, settings, 22, 40);
   const afterPage = doc.getCurrentPageInfo().pageNumber;
 
   if (afterPage !== beforePage) {
@@ -1628,7 +1629,7 @@ async function drawEditorialSignatureSection(
   doc.setTextColor(30, 41, 59);
   const introLines = doc.splitTextToSize(intro, usableWidth) as string[];
   doc.text(introLines, leftMargin, sectionY + 2);
-  await drawSignatureBlocks(doc, sectionY + 15 + introLines.length * 1.3, labels, settings);
+  await drawSignatureBlocks(doc, sectionY + 6 + introLines.length * 3.5, labels, settings);
 }
 
 // ---------------------------------------------------------------------------
@@ -2029,17 +2030,16 @@ export async function generatePaiementFacturePDF(
   });
 
   let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 6 : y + 8;
-  const finalBlockHeight = 30;
-  const finalBlockBottom = doc.internal.pageSize.getHeight() - 23;
-  if (finalY + finalBlockHeight > finalBlockBottom) {
-    finalY = ensureDocumentSpace(doc, finalY, finalBlockHeight, settings, 24, 23);
-  }
   const receiptQrEnabled = receiptTemplate.content.style.showQr
     && enabledReceiptSections.has('qr_verification')
     && isDocumentQrEnabled(settings, paiementDocumentType);
-  const qrWidth = receiptQrEnabled ? 74 : 0;
-  const qrGap = qrWidth > 0 ? 7 : 0;
-  const mentionsWidth = usableWidth - qrWidth - qrGap;
+  const mentionsWidth = usableWidth; // Pleine largeur
+
+  const finalBlockBottom = doc.internal.pageSize.getHeight() - 23;
+  const finalBlockHeight = 44; // 12 pour les mentions + 32 pour le QR/Signature
+  if (finalY + finalBlockHeight > finalBlockBottom) {
+    finalY = ensureDocumentSpace(doc, finalY, finalBlockHeight, settings, 24, 23);
+  }
 
   const mentions = [
     receiptTemplate.content.blocks.find((block) => block.kind === 'footer' && block.enabled)?.content
@@ -2049,11 +2049,19 @@ export async function generatePaiementFacturePDF(
       : null,
   ];
 
+  let calculatedHeight = 12.5;
+  const filteredMentions = mentions.filter(Boolean) as string[];
+  const wrappedMentions = filteredMentions.map(m => doc.splitTextToSize(`- ${m}`, mentionsWidth - 10) as string[]);
+  for (const lines of wrappedMentions) {
+    calculatedHeight += lines.length * 3.6 + 1;
+  }
+
   const colors = getBrandColors(settings);
+  const mentionsHeight = Math.max(16, calculatedHeight + 2); // 2mm padding at the bottom
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(203, 213, 225);
   doc.setLineWidth(0.13);
-  doc.roundedRect(leftMargin, finalY, mentionsWidth, finalBlockHeight, 2.2, 2.2, 'FD');
+  doc.roundedRect(leftMargin, finalY, mentionsWidth, mentionsHeight, 2.2, 2.2, 'FD');
   doc.setFillColor(...colors.goldSoft);
   doc.roundedRect(leftMargin + 2, finalY + 2, mentionsWidth - 4, 7.2, 1.8, 1.8, 'F');
   doc.setFont(undefined as unknown as string, 'bold');
@@ -2063,21 +2071,14 @@ export async function generatePaiementFacturePDF(
   doc.setFont(undefined as unknown as string, 'normal');
   doc.setFontSize(6.7);
   doc.setTextColor(30, 41, 59);
-  let yMentions = finalY + 13.7;
-  for (const m of mentions.filter(Boolean) as string[]) {
-    const lines = doc.splitTextToSize(`- ${m}`, mentionsWidth - 10) as string[];
+
+  let yMentions = finalY + 12.5;
+  for (const lines of wrappedMentions) {
     doc.text(lines, leftMargin + 5, yMentions);
     yMentions += lines.length * 3.6 + 1;
   }
 
-  if (settings.pied_page_personnalise) {
-    doc.setFontSize(5.9);
-    doc.setTextColor(100, 116, 139);
-    const footerLines = doc.splitTextToSize(settings.pied_page_personnalise, mentionsWidth - 10) as string[];
-    doc.text(footerLines.slice(0, 1), leftMargin + 5, finalY + 27.2);
-  }
-
-  await drawCompactSignatureSeal(doc, leftMargin, finalY, mentionsWidth, finalBlockHeight, settings);
+  const qrAndSignatureY = finalY + mentionsHeight + 4;
 
   if (receiptQrEnabled) {
     generation?.report('securing-document', {
@@ -2085,9 +2086,9 @@ export async function generatePaiementFacturePDF(
       verificationStatus: 'pending',
     });
     await drawVerificationBlock(doc, {
-      x: leftMargin + mentionsWidth + qrGap,
-      y: finalY,
-      width: qrWidth,
+      x: leftMargin,
+      y: qrAndSignatureY,
+      width: 80,
       ref,
       type: paiementDocumentType,
       agency: settings.nom_agence ?? 'Samay Këur',
@@ -2096,6 +2097,17 @@ export async function generatePaiementFacturePDF(
       paymentStatus: statusLabel,
       settings,
     });
+  }
+
+  if (settings.signature_enabled || settings.stamp_enabled) {
+    await drawSingleSignatureBox(
+      doc,
+      leftMargin + usableWidth - 76,
+      qrAndSignatureY,
+      76,
+      34,
+      settings
+    );
   }
 
   addFooter(doc, settings);
@@ -2273,7 +2285,7 @@ export async function generateMandatBailleurPDF(
       subtitle: 'Mandat de gérance',
       reference: mandatRef,
       intro: 'Les parties confirment la délégation de gestion décrite dans le présent mandat.',
-      labels: ['Le mandant', 'Le mandataire'],
+      labels: ['Le mandataire', 'Le mandant'],
       leftMargin,
       usableWidth,
       settings,

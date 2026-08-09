@@ -10,45 +10,63 @@ export interface PricingComparisonSection {
   rows: PricingComparisonRow[];
 }
 
+const INCLUDED = {
+  starter: 'Inclus',
+  pro: 'Inclus',
+  business: 'Inclus',
+  enterprise: 'Périmètre défini',
+} satisfies Record<PlanId, string>;
+
+const BY_MODULE = {
+  starter: 'Selon configuration',
+  pro: 'Selon configuration',
+  business: 'Selon configuration',
+  enterprise: 'Périmètre défini',
+} satisfies Record<PlanId, string>;
+
 export const PRICING_FOUNDATION = [
   {
-    title: 'Patrimoine et locations',
-    text: 'Bailleurs, biens, unités, occupants et baux réunis dans un même espace.',
+    title: 'Patrimoine',
+    text: 'Bailleurs, biens et unités sont réunis dans une source de vérité exploitable.',
   },
   {
-    title: 'Encaissements et impayés',
-    text: 'Paiements complets ou partiels, reliquats et échéances restent lisibles.',
+    title: 'Locations',
+    text: 'Occupants, baux, échéances et renouvellements restent reliés au bon dossier.',
   },
   {
-    title: 'Documents professionnels',
+    title: 'Encaissements',
+    text: 'Paiements complets ou partiels, reliquats et impayés sont suivis sans ambiguïté.',
+  },
+  {
+    title: 'Finances',
+    text: 'Dépenses, charges, commissions et nets bailleurs sont rapprochés des opérations.',
+  },
+  {
+    title: 'Documents',
     text: 'Contrats, mandats, quittances, factures et rapports sont générés et archivés.',
   },
   {
-    title: 'Rapports bailleurs',
-    text: 'Les propriétaires disposent d’une synthèse claire des opérations et montants.',
-  },
-  {
-    title: 'Équipe et accès',
-    text: 'Les rôles et permissions structurent le travail quand le plan accueille plusieurs utilisateurs.',
-  },
-  {
-    title: 'Usage local',
-    text: 'Une interface en français, pensée pour les usages immobiliers au Sénégal.',
+    title: 'Pilotage',
+    text: 'Tableaux de bord, rapports et accès d’équipe rendent l’activité plus lisible.',
   },
 ];
 
 export const PRICING_BENEFITS = [
   {
-    title: 'Moins de recherches manuelles',
-    text: 'Les informations utiles ne restent plus dispersées entre cahiers, fichiers et conversations.',
+    title: 'Finance bailleur maîtrisée',
+    text: 'Chaque encaissement, dépense, commission et reliquat reste rattaché au bon dossier.',
   },
   {
-    title: 'Des montants plus faciles à expliquer',
-    text: 'Paiements, reliquats, dépenses et nets bailleurs sont rapprochés des dossiers concernés.',
+    title: 'Documents vérifiables',
+    text: 'Les documents professionnels sont centralisés, référencés et vérifiables lorsque le QR est activé.',
   },
   {
-    title: 'Une relation propriétaire plus professionnelle',
-    text: 'Documents et rapports donnent une preuve claire du travail réalisé par le gestionnaire.',
+    title: 'Équipe sous contrôle',
+    text: 'Rôles, permissions et visibilité des pages structurent le travail des collaborateurs.',
+  },
+  {
+    title: 'Travail sur le terrain',
+    text: 'L’interface responsive et les mécanismes de cache disponibles facilitent les consultations en mobilité.',
   },
 ];
 
@@ -56,59 +74,81 @@ export const PRICING_COMPARISON: PricingComparisonSection[] = [
   {
     title: 'Gestion locative',
     rows: [
-      {
-        label: 'Biens, unités et occupants',
-        values: { starter: 'Inclus', pro: 'Inclus', business: 'Inclus', enterprise: 'Périmètre défini' },
-      },
-      {
-        label: 'Baux, échéances et impayés',
-        values: { starter: 'Inclus', pro: 'Inclus', business: 'Inclus', enterprise: 'Périmètre défini' },
-      },
-      {
-        label: 'Paiements et reliquats',
-        values: { starter: 'Inclus', pro: 'Inclus', business: 'Inclus', enterprise: 'Périmètre défini' },
-      },
-      {
-        label: 'Dépenses, charges et commissions',
-        values: { starter: 'Inclus', pro: 'Inclus', business: 'Inclus', enterprise: 'Périmètre défini' },
-      },
-      {
-        label: 'Rapports bailleurs',
-        values: { starter: 'Inclus', pro: 'Inclus', business: 'Inclus', enterprise: 'Périmètre défini' },
-      },
+      { label: 'Biens, unités et occupants', values: INCLUDED },
+      { label: 'Baux, échéances et renouvellements', values: INCLUDED },
+      { label: 'Paiements complets et partiels', values: INCLUDED },
+      { label: 'Reliquats, impayés et créances', values: INCLUDED },
     ],
   },
   {
-    title: 'Documents et contrôle',
+    title: 'Finance et propriétaires',
+    rows: [
+      { label: 'Dépenses et charges', values: INCLUDED },
+      { label: 'Commissions et net bailleur', values: INCLUDED },
+      { label: 'Rapports bailleurs et propriétaires', values: INCLUDED },
+      { label: 'Suivi des reversements', values: INCLUDED },
+    ],
+  },
+  {
+    title: 'Documents',
+    rows: [
+      { label: 'Quittances, contrats et mandats', values: INCLUDED },
+      { label: 'Rapports et factures', values: INCLUDED },
+      { label: 'GED et archivage documentaire', values: INCLUDED },
+      { label: 'Studio documentaire et modèles', values: INCLUDED },
+      { label: 'Registre et QR Verify', values: BY_MODULE },
+    ],
+  },
+  {
+    title: 'Exploitation',
+    rows: [
+      { label: 'Calendrier et suivi des échéances', values: INCLUDED },
+      { label: 'Maintenance et interventions', values: BY_MODULE },
+      { label: 'États des lieux', values: BY_MODULE },
+    ],
+  },
+  {
+    title: 'Équipe et contrôle',
     rows: [
       {
-        label: 'Contrats, mandats et quittances',
-        values: { starter: 'Inclus', pro: 'Inclus', business: 'Inclus', enterprise: 'Périmètre défini' },
-      },
-      {
-        label: 'GED et registre documentaire',
-        values: { starter: 'Inclus', pro: 'Inclus', business: 'Inclus', enterprise: 'Périmètre défini' },
-      },
-      {
-        label: 'QR de vérification',
-        values: { starter: 'Disponible', pro: 'Disponible', business: 'Disponible', enterprise: 'À définir' },
+        label: 'Utilisateurs inclus',
+        values: { starter: '1', pro: '5', business: '15', enterprise: 'À définir' },
       },
       {
         label: 'Rôles et permissions',
-        values: { starter: 'Compte unique', pro: 'Jusqu’à 5 comptes', business: 'Jusqu’à 15 comptes', enterprise: 'À définir' },
+        values: { starter: 'Compte unique', pro: 'Inclus', business: 'Inclus', enterprise: 'Périmètre défini' },
       },
+      { label: 'Journal des actions', values: INCLUDED },
     ],
   },
   {
-    title: 'Accompagnement',
+    title: 'Intégrations et accompagnement',
     rows: [
+      { label: 'Exports disponibles dans les écrans concernés', values: INCLUDED },
+      {
+        label: 'Paiement en ligne de l’abonnement',
+        values: { starter: 'Selon disponibilité', pro: 'Selon disponibilité', business: 'Selon disponibilité', enterprise: 'À définir' },
+      },
+      {
+        label: 'API ou intégration spécifique',
+        values: { starter: 'Non commercialisé', pro: 'Non commercialisé', business: 'Non commercialisé', enterprise: 'Sur étude' },
+      },
       {
         label: 'Canal de support',
         values: { starter: 'Email', pro: 'Prioritaire', business: 'Prioritaire', enterprise: 'Défini sur devis' },
       },
+    ],
+  },
+  {
+    title: 'Capacités techniques',
+    rows: [
       {
-        label: 'Dimensionnement',
-        values: { starter: 'Standard', pro: 'Standard', business: 'Standard', enterprise: 'Avec votre équipe' },
+        label: 'Unités gérées',
+        values: { starter: '10', pro: '100', business: '500', enterprise: 'À définir' },
+      },
+      {
+        label: 'Immeubles',
+        values: { starter: '3', pro: '20', business: '100', enterprise: 'À définir' },
       },
     ],
   },
@@ -116,33 +156,53 @@ export const PRICING_COMPARISON: PricingComparisonSection[] = [
 
 export const PRICING_FAQ = [
   {
-    question: 'Quel plan choisir pour démarrer ?',
-    answer:
-      'Essentiel convient à un bailleur qui travaille seul. Pro est adapté à une petite équipe. Agence répond aux portefeuilles plus importants et aux équipes jusqu’à 15 utilisateurs.',
-  },
-  {
-    question: 'Les fonctions métier changent-elles selon le plan ?',
-    answer:
-      'Le socle de gestion locative reste commun. Les plans augmentent surtout le nombre d’utilisateurs, d’immeubles, d’unités et la capacité documentaire. Certains modules restent pilotés par le type de compte, le rôle et la configuration de l’organisation.',
-  },
-  {
     question: 'Puis-je changer de plan sans perdre mes données ?',
     answer:
-      'Oui. Le changement de plan ajuste les capacités disponibles sans supprimer les informations déjà enregistrées. Si un usage dépasse une nouvelle limite, l’équipe vous accompagne avant le changement.',
+      'Oui. Le changement de plan ajuste les capacités disponibles sans supprimer les informations déjà enregistrées. Si votre usage dépasse une nouvelle limite, le changement est cadré avant activation.',
   },
   {
-    question: 'Comment le paiement de l’abonnement fonctionne-t-il ?',
+    question: 'Que se passe-t-il si j’atteins la limite d’unités ?',
     answer:
-      'Le paiement en ligne est proposé via les moyens disponibles dans le parcours sécurisé. Une preuve de paiement manuel peut aussi être transmise au support et reste soumise à validation avant activation.',
+      'Les données existantes sont conservées. Vous devrez choisir un plan offrant davantage de capacité avant d’ajouter de nouvelles unités au-delà de la limite appliquée.',
   },
   {
-    question: 'Le plan Entreprise inclut-il automatiquement des intégrations spécifiques ?',
+    question: 'Pouvez-vous importer mes données existantes ?',
     answer:
-      'Non. Le périmètre Entreprise est défini sur devis. Une intégration, un volume ou un accompagnement particulier n’est considéré comme inclus qu’après validation contractuelle.',
+      'Le format et le volume des données sont examinés pendant l’onboarding. Samay Këur ne promet pas un import automatique universel : le périmètre réalisable est confirmé avant toute reprise.',
   },
   {
-    question: 'Puis-je essayer le produit avant de choisir ?',
+    question: 'Plusieurs collaborateurs peuvent-ils avoir des accès différents ?',
     answer:
-      'L’équipe peut organiser une démonstration centrée sur votre portefeuille, vos documents et votre manière de travailler afin de confirmer le plan adapté.',
+      'Oui sur les plans multi-utilisateurs. Les rôles définissent une base et les permissions peuvent limiter les pages visibles selon les responsabilités de chacun.',
+  },
+  {
+    question: 'Les paiements partiels et les reliquats sont-ils pris en charge ?',
+    answer:
+      'Oui. Un encaissement peut être total ou partiel, et le reliquat reste rattaché à l’échéance et au dossier concernés.',
+  },
+  {
+    question: 'Puis-je exporter mes données et télécharger mes documents ?',
+    answer:
+      'Les écrans concernés proposent des exports et les documents générés peuvent être téléchargés. Le périmètre précis dépend du dossier et du module utilisés.',
+  },
+  {
+    question: 'Comment les documents sont-ils sécurisés et vérifiés ?',
+    answer:
+      'Les documents sont enregistrés avec une référence. Lorsque QR Verify est activé, le QR permet de consulter les informations de vérification prévues par le registre Samay Këur.',
+  },
+  {
+    question: 'Puis-je travailler avec une connexion instable ?',
+    answer:
+      'Certaines consultations bénéficient d’un cache local et de mécanismes de synchronisation. Une première ouverture en ligne reste nécessaire et Samay Këur ne présente pas toutes les opérations comme entièrement hors ligne.',
+  },
+  {
+    question: 'Quels moyens de paiement sont gérés ?',
+    answer:
+      'La gestion locative permet d’enregistrer notamment espèces, virement, chèque et mobile money. Pour l’abonnement, les canaux proposés dans le parcours de paiement sécurisé dépendent de leur disponibilité.',
+  },
+  {
+    question: 'Quand faut-il choisir le plan Entreprise ?',
+    answer:
+      'Entreprise s’adresse aux groupes, réseaux et organisations multi-agences qui dépassent les capacités du plan Agence ou nécessitent un périmètre d’accompagnement défini contractuellement.',
   },
 ];

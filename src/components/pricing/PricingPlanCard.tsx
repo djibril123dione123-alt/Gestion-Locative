@@ -1,4 +1,4 @@
-import { ArrowRight, BarChart3, Building2, Check, Crown, Zap } from 'lucide-react';
+import { ArrowRight, BarChart3, Building2, Check, Crown, DoorOpen, Users, Zap } from 'lucide-react';
 import type { PlanId, PricingPlanDefinition } from '../../lib/pricingCatalog';
 
 const PLAN_ICONS = {
@@ -19,7 +19,7 @@ export function PricingPlanCard({ plan, onSelect }: PricingPlanCardProps) {
 
   return (
     <article
-      className={`flex h-full flex-col rounded-lg border p-5 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md ${
+      className={`flex h-full flex-col rounded-lg border p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5 ${
         isHighlighted
           ? 'border-emerald-900 bg-emerald-950 text-white'
           : 'border-emerald-950/10 bg-white text-slate-950'
@@ -27,11 +27,11 @@ export function PricingPlanCard({ plan, onSelect }: PricingPlanCardProps) {
     >
       <div className="flex items-start justify-between gap-3">
         <span
-          className={`inline-flex h-10 w-10 items-center justify-center rounded-lg ${
+          className={`inline-flex h-9 w-9 items-center justify-center rounded-lg sm:h-10 sm:w-10 ${
             isHighlighted ? 'bg-white/10 text-emerald-200' : 'bg-emerald-50 text-emerald-800'
           }`}
         >
-          <Icon className="h-5 w-5" aria-hidden="true" />
+          <Icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" aria-hidden="true" />
         </span>
         {plan.badge && (
           <span
@@ -44,26 +44,41 @@ export function PricingPlanCard({ plan, onSelect }: PricingPlanCardProps) {
         )}
       </div>
 
-      <p className={`mt-5 text-xs font-bold uppercase tracking-[0.08em] ${isHighlighted ? 'text-emerald-200' : 'text-emerald-800'}`}>
+      <p className={`mt-4 text-xs font-bold uppercase tracking-[0.08em] ${isHighlighted ? 'text-emerald-200' : 'text-emerald-800'}`}>
         {plan.audience}
       </p>
       <h3 className="mt-1 text-2xl font-black">{plan.name}</h3>
-      <p className={`mt-2 min-h-[4.5rem] text-sm leading-6 ${isHighlighted ? 'text-emerald-50/75' : 'text-slate-600'}`}>
+      <p className={`mt-2 text-sm leading-5 sm:min-h-[4.5rem] sm:leading-6 ${isHighlighted ? 'text-emerald-50/75' : 'text-slate-600'}`}>
         {plan.positioning}
       </p>
 
-      <div className="mt-5 flex items-end gap-2 border-t border-current/10 pt-5">
+      <div className="mt-4 flex items-end gap-2 border-t border-current/10 pt-4 sm:mt-5 sm:pt-5">
         <strong className="text-2xl font-black">{plan.priceLabel}</strong>
         <span className={`pb-0.5 text-xs font-semibold ${isHighlighted ? 'text-emerald-100/70' : 'text-slate-500'}`}>
           {plan.billingLabel}
         </span>
       </div>
 
-      <p className={`mt-3 text-sm font-semibold leading-5 ${isHighlighted ? 'text-white' : 'text-slate-800'}`}>
+      <p className={`mt-2 text-sm font-semibold leading-5 sm:mt-3 ${isHighlighted ? 'text-white' : 'text-slate-800'}`}>
         {plan.outcome}
       </p>
 
-      <ul className="mt-5 space-y-2.5">
+      <div className={`mt-3 grid grid-cols-2 gap-2 rounded-lg p-2.5 sm:mt-4 sm:p-3 ${isHighlighted ? 'bg-white/[0.07]' : 'bg-slate-50'}`}>
+        <div className="flex min-w-0 items-center gap-2">
+          <Users className={`h-4 w-4 shrink-0 ${isHighlighted ? 'text-emerald-200' : 'text-emerald-700'}`} aria-hidden="true" />
+          <span className={`truncate text-xs font-bold ${isHighlighted ? 'text-emerald-50/85' : 'text-slate-700'}`}>
+            {plan.capacities.users}
+          </span>
+        </div>
+        <div className="flex min-w-0 items-center gap-2">
+          <DoorOpen className={`h-4 w-4 shrink-0 ${isHighlighted ? 'text-emerald-200' : 'text-emerald-700'}`} aria-hidden="true" />
+          <span className={`truncate text-xs font-bold ${isHighlighted ? 'text-emerald-50/85' : 'text-slate-700'}`}>
+            {plan.capacities.unites}
+          </span>
+        </div>
+      </div>
+
+      <ul className="mt-4 space-y-2 sm:mt-5 sm:space-y-2.5">
         {plan.features.map((feature) => (
           <li key={feature} className="flex gap-2.5 text-sm leading-5">
             <Check className={`mt-0.5 h-4 w-4 shrink-0 ${isHighlighted ? 'text-orange-300' : 'text-emerald-700'}`} aria-hidden="true" />
@@ -72,7 +87,7 @@ export function PricingPlanCard({ plan, onSelect }: PricingPlanCardProps) {
         ))}
       </ul>
 
-      <div className="mt-auto pt-6">
+      <div className="mt-auto pt-5 sm:pt-6">
         <button
           type="button"
           onClick={() => onSelect(plan)}

@@ -57,6 +57,7 @@ import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { MoneyText } from '../components/ui/MoneyText';
 import { WizardShell, type WizardStep } from '../components/ui/WizardShell';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
+import { resolveAgencySettingsAssets } from '../services/agencyIdentityAssets';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
@@ -369,6 +370,12 @@ const formatCurrency = (value: number | null | undefined) => {
   return `${formatted} F CFA`;
 };
 
+const formatPdfNumber = (value: number | null | undefined) => {
+  const amount = Number(value ?? 0);
+  const safeAmount = Number.isFinite(amount) ? amount : 0;
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(safeAmount)).replace(/\u202f|\u00a0/g, ' ');
+};
+
 const formatMonthLabel = (month: string) => {
   const [year, monthNumber] = month.split('-').map(Number);
   if (!year || !monthNumber) return 'Période non renseignée';
@@ -665,7 +672,7 @@ export function Bailleurs() {
               .eq('agency_id', profile.agency_id),
             supabase
               .from('agency_settings')
-              .select('agency_id, nom_agence, adresse, telephone, email, logo_url, couleur_primaire, couleur_secondaire, pied_page_personnalise')
+              .select('agency_id, nom_agence, adresse, telephone, email, site_web, ninea, rc, logo_url, couleur_primaire, couleur_secondaire, pied_page_personnalise')
               .eq('agency_id', profile.agency_id)
               .maybeSingle(),
           ]);
@@ -1154,12 +1161,12 @@ export function Bailleurs() {
       const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      const settings: Partial<AgencySettings> = {
+      const settings = await resolveAgencySettingsAssets({
         ...(pageData.agencySettings ?? {}),
         agency_id: pageData.agencySettings?.agency_id ?? profile?.agency_id ?? undefined,
         is_bailleur_account: accountProfile.isIndividualOwner,
         organization_type: accountProfile.type,
-      };
+      });
       const reportTemplateType = accountProfile.isIndividualOwner ? 'rapport_proprietaire' : 'rapport_bailleur';
       const reportTemplate = await resolvePublishedDocumentTemplate(reportTemplateType, settings.agency_id);
       settings.document_preferences = {
@@ -1289,17 +1296,17 @@ export function Bailleurs() {
         immeuble: contract.immeuble || 'Bien non renseigné',
         unite: contract.unite || 'Unité non renseignée',
         locataire: contract.locataire || 'Locataire non renseigné',
-        loyer: formatCurrency(Number(contract.loyer_mensuel)),
+        loyer: formatPdfNumber(Number(contract.loyer_mensuel)),
         statut: Number(contract.reliquat) > 0 ? 'Partiel' : 'Soldé',
-        encaisse: formatCurrency(Number(contract.encaisse)),
-        reliquat: formatCurrency(Number(contract.reliquat)),
-        net: formatCurrency(Number(contract.part_bailleur)),
+        encaisse: formatPdfNumber(Number(contract.encaisse)),
+        reliquat: formatPdfNumber(Number(contract.reliquat)),
+        net: formatPdfNumber(Number(contract.part_bailleur)),
       }));
 
       if (enabledReportSections.has('collections') || enabledReportSections.has('occupancy')) {
       sectionTitle('Détail par bien', 'Lecture par immeuble, unité, locataire et situation financière.');
       autoTable(doc, {
-        head: [['Bien', 'Unité', 'Locataire', 'Loyer', 'Statut', 'Encaissé', 'Reliquat', 'Net']],
+        head: [['Bien', 'Unité', 'Locataire', 'Loyer (F CFA)', 'Statut', 'Encaissé (F CFA)', 'Reliquat (F CFA)', 'Net (F CFA)']],
         body: rows.length
           ? rows.map((row) => [row.immeuble, row.unite, row.locataire, row.loyer, row.statut, row.encaisse, row.reliquat, row.net])
           : [['-', '-', 'Aucun paiement enregistré sur la période', '-', '-', '-', '-', '-']],
@@ -1326,6 +1333,49 @@ export function Bailleurs() {
       });
       y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 10;
       }
+
+      // --- DIAGRAMME FINANCIER ---
+      if (enabledReportSections.has('collections') || enabledReportSections.has('expenses') || enabledReportSections.has('commissions')) {
+        sectionTitle('Répartition financière');
+        const chartY = y;
+
+        const chartData = [
+          { label: 'Revenus bruts', value: totalLoyers, color: [16, 185, 129] as [number, number, number] },
+          { label: 'Déductions', value: totalCommissions + totalDepenses, color: [244, 63, 94] as [number, number, number] },
+          { label: netLabel, value: totalNet, color: [15, 23, 42] as [number, number, number] }
+        ];
+
+        const maxVal = Math.max(...chartData.map(d => d.value));
+        const chartWidth = 110;
+        const barHeight = 5.5;
+        const spacing = 4.5;
+
+        chartData.forEach((item, idx) => {
+          const itemY = chartY + idx * (barHeight + spacing);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8.5);
+          doc.setTextColor(71, 85, 105);
+          doc.text(item.label, 14, itemY + 4);
+
+          const barWidth = maxVal > 0 ? (item.value / maxVal) * chartWidth : 0;
+
+          doc.setFillColor(241, 245, 249);
+          doc.roundedRect(42, itemY, chartWidth, barHeight, 1, 1, 'F');
+
+          if (barWidth > 0) {
+            doc.setFillColor(...item.color);
+            doc.roundedRect(42, itemY, barWidth, barHeight, 1, 1, 'F');
+          }
+
+          doc.setTextColor(15, 23, 42);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8.5);
+          doc.text(formatCurrency(item.value), 42 + chartWidth + 6, itemY + 4);
+        });
+
+        y = chartY + chartData.length * (barHeight + spacing) + 12;
+      }
+      // --- FIN DIAGRAMME ---
 
       if (enabledReportSections.has('expenses') && reportDepenses.length > 0) {
         ensureSpace(34);

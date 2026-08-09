@@ -235,6 +235,7 @@ export function DocumentTemplateEditor({
                 value={selected.content}
                 onChange={(event) => updateBlock(selected.id, { content: event.target.value })}
                 rows={10}
+                spellCheck={false}
                 className="mt-1 w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2 text-xs leading-relaxed outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/10"
               />
             </label>

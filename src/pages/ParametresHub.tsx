@@ -601,7 +601,7 @@ function OverviewSection({
 
   return (
     <div className="space-y-2">
-      <section className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_16rem]">
+      <section className="grid gap-2">
         <div className="rounded-xl border border-emerald-950/10 bg-gradient-to-br from-[#fffdf8] via-white to-emerald-50/45 p-2 shadow-sm">
           <p className="text-[0.5rem] font-black uppercase tracking-[0.16em] text-[#a45d12]">Prêt pour exploitation</p>
           <h2 className="mt-0.5 font-serif text-[0.95rem] font-extrabold text-slate-950">Administration centralisée.</h2>
@@ -612,27 +612,6 @@ function OverviewSection({
             <MiniHealth icon={BadgeCheck} label="Compte" value={snapshot?.organizationReady ? 'Configuré' : (isIndividualOwner ? 'Propriétaire' : 'Agence')} />
             <MiniHealth icon={ShieldCheck} label="Accès" value={role} />
             <MiniHealth icon={FileText} label="Documents" value={snapshot?.documentsReady ? 'Prêts' : snapshot?.qrReady ? 'QR actif' : 'À vérifier'} />
-          </div>
-        </div>
-        <div className={readyForDemo ? 'rounded-xl border border-emerald-200/80 bg-emerald-50/70 p-2 shadow-sm' : 'rounded-xl border border-orange-200/70 bg-orange-50/65 p-2 shadow-sm'}>
-          <div className="flex items-start gap-2">
-            <div className={readyForDemo ? 'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-800 shadow-sm' : 'flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-orange-700 shadow-sm'}>
-              {readyForDemo ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
-            </div>
-            <div className="min-w-0">
-              <p className={readyForDemo ? 'text-[0.5rem] font-black uppercase tracking-[0.15em] text-emerald-800' : 'text-[0.5rem] font-black uppercase tracking-[0.15em] text-orange-700'}>
-                {readyForDemo ? 'Démonstration' : 'À vérifier'}
-              </p>
-              <h3 className="mt-0.5 text-[0.76rem] font-extrabold text-slate-950">
-                {readyForDemo ? 'Espace prêt à présenter' : 'Avant présentation'}
-              </h3>
-              <ul className="mt-1 space-y-0.5 text-[0.62rem] font-semibold leading-[0.85rem] text-slate-600">
-                {points.slice(0, 4).map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-                {readyForDemo ? <li>Dernière configuration : {snapshot?.lastConfigLabel ?? 'récente'}.</li> : null}
-              </ul>
-            </div>
           </div>
         </div>
       </section>

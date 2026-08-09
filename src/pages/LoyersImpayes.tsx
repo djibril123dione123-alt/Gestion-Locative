@@ -427,7 +427,7 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
     const columns = allColumns.filter((c) => {
         if (isIndividualOwner && c.key === 'bailleur') return false;
         if (!colIsVisible(c.key)) return false;
-        if (drawerLoyer && (c.key === 'bailleur' || c.key === 'telephone_locataire')) return false;
+        if (drawerLoyer && (c.key === 'bailleur' || c.key === 'telephone_locataire' || c.key === 'mois_concerne')) return false;
         return true;
     });
 

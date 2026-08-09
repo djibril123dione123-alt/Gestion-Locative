@@ -837,8 +837,19 @@ export async function drawDocumentHeader(
   let logoBottom = 26;
   const logo = await loadImageAsPngDataUrl(settings.logo_url, 420);
   if (logo) {
-    const logoWidth = Math.min(45, Math.max(20, logo.width * 0.08));
-    const logoHeight = Math.min(24, (logo.height / logo.width) * logoWidth);
+    const maxLogoWidth = 65;
+    const maxLogoHeight = 26;
+    const imgRatio = logo.width / logo.height;
+    const boxRatio = maxLogoWidth / maxLogoHeight;
+    
+    let logoWidth, logoHeight;
+    if (imgRatio > boxRatio) {
+      logoWidth = maxLogoWidth;
+      logoHeight = maxLogoWidth / imgRatio;
+    } else {
+      logoHeight = maxLogoHeight;
+      logoWidth = maxLogoHeight * imgRatio;
+    }
     const logoX = logoPosition === 'center'
       ? pageWidth / 2 - logoWidth / 2
       : logoPosition === 'right'

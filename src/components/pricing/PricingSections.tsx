@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import {
   ArrowRight,
-  BriefcaseBusiness,
+  Briefcase,
   Building2,
   Check,
   ChevronDown,
-  CircleHelp,
+  HelpCircle,
   FileCheck2,
   HandCoins,
   Landmark,
@@ -23,7 +23,7 @@ import {
 import { PricingPlanCard } from './PricingPlanCard';
 
 const FOUNDATION_ICONS = [Building2, ReceiptText, FileCheck2, Landmark, Users, ShieldCheck];
-const BENEFIT_ICONS = [BriefcaseBusiness, HandCoins, Landmark];
+const BENEFIT_ICONS = [Briefcase, HandCoins, Landmark];
 
 interface PricingSectionsProps {
   plans: PricingPlanDefinition[];
@@ -256,7 +256,7 @@ export function PricingSections({ plans, onSelectPlan, onRequestDemo, compact = 
       <section className="border-t border-emerald-950/10 bg-[#f4f0e7] px-4 py-14 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.75fr_1.25fr]">
           <div>
-            <CircleHelp className="h-6 w-6 text-emerald-800" aria-hidden="true" />
+            <HelpCircle className="h-6 w-6 text-emerald-800" aria-hidden="true" />
             <h2 className="mt-4 text-2xl font-black text-slate-950 sm:text-3xl">Questions avant de choisir</h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               Des réponses directes sur les plans, le changement d’abonnement et les capacités réellement disponibles.

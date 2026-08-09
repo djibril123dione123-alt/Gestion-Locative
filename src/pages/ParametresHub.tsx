@@ -530,8 +530,6 @@ function OverviewSection({
   snapshot: ControlSnapshot | null;
   onOpen: (section: ControlSection) => void;
 }) {
-  const points = snapshot?.pointsToReview ?? ['Chargement des contrôles de configuration.'];
-  const readyForDemo = Boolean(snapshot && snapshot.pointsToReview.length === 0);
   const cards: Array<{
     title: string;
     label: string;

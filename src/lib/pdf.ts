@@ -837,8 +837,8 @@ export async function drawDocumentHeader(
   let logoBottom = 26;
   const logo = await loadImageAsPngDataUrl(settings.logo_url, 420);
   if (logo) {
-    const logoWidth = Math.min(30, Math.max(15, logo.width * 0.07));
-    const logoHeight = Math.min(18, (logo.height / logo.width) * logoWidth);
+    const logoWidth = Math.min(45, Math.max(20, logo.width * 0.08));
+    const logoHeight = Math.min(24, (logo.height / logo.width) * logoWidth);
     const logoX = logoPosition === 'center'
       ? pageWidth / 2 - logoWidth / 2
       : logoPosition === 'right'
@@ -1045,7 +1045,7 @@ function renderTemplateToDoc(
   settings?: Partial<AgencySettings>
 ): number {
   const pageHeight = doc.internal.pageSize.getHeight();
-  const marginBottom = 24;
+  const marginBottom = 18;
   const colors = getBrandColors(settings);
 
   doc.setFontSize(fontSize);
@@ -1101,7 +1101,7 @@ function renderTemplateToDoc(
     const isNumberedPoint = /^\d+[).]\s+/.test(paragraph);
 
     if (isArticleTitle) {
-      ensureSpace(22);
+      ensureSpace(14);
       y += 2.2;
       doc.setDrawColor(...colors.border);
       doc.setLineWidth(0.1);
@@ -1600,7 +1600,7 @@ async function drawEditorialSignatureSection(
   let sectionY = y + 8;
   const beforePage = doc.getCurrentPageInfo().pageNumber;
 
-  sectionY = ensureDocumentSpace(doc, sectionY, neededHeight, settings, 22, 24);
+  sectionY = ensureDocumentSpace(doc, sectionY, neededHeight, settings, 22, 48);
   const afterPage = doc.getCurrentPageInfo().pageNumber;
 
   if (afterPage !== beforePage) {

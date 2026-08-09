@@ -244,16 +244,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
   const proofCatalogPlan = PLAN_CATALOG.find((plan) => plan.id === proofForm.plan_key) ?? selectedCatalogPlan;
   const proofAmount = Number(proofForm.amount || 0);
   const latestManualProof = useMemo(() => manualProofs[0] ?? null, [manualProofs]);
-  const getPlanFeatures = (plan: (typeof PLAN_CATALOG)[number]) => {
-    if (!isIndividualOwner) return plan.features;
-    const individualFeatures: Record<string, readonly string[]> = {
-      starter: ['Suivi simple des loyers', 'Quittances professionnelles', 'Documents personnels', 'Support email'],
-      pro: ['Tout Starter', 'Rapports propriétaires mensuels', 'Alertes impayés', 'Paiements partiels', 'Support WhatsApp'],
-      business: ['Tout Pro', 'Portefeuille multi-biens', 'Stockage documentaire avancé', 'Reporting financier', 'Support prioritaire'],
-      enterprise: ['Capacité sur mesure', 'Accompagnement personnalisé', 'SLA contractualisé', 'Formation sur site'],
-    };
-    return individualFeatures[plan.id] ?? plan.features;
-  };
+  const getPlanFeatures = (plan: (typeof PLAN_CATALOG)[number]) => plan.features;
 
   const openPayment = (planId: string) => {
     setSelectedPlanId(planId);
@@ -700,7 +691,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                     Plan actuel
                   </div>
                 ) : plan.id === 'enterprise' ? (
-                  <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux un devis Enterprise Samay Këur.')}`}
+                  <a href={`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux un devis Entreprise Samay Këur.')}`}
                     target="_blank" rel="noopener noreferrer"
                     className="flex items-center justify-center gap-1 rounded-lg py-1 text-[0.68rem] font-bold text-white transition hover:opacity-90"
                     style={{ backgroundColor: plan.color }}>
@@ -835,7 +826,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                   onClick={() => {
                     setUpgradeOpen(false);
                     if (plan.id === 'enterprise') {
-                      window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux passer au plan Enterprise Samay Këur.')}`, '_blank');
+                      window.open(`https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent('Bonjour, je veux passer au plan Entreprise Samay Këur.')}`, '_blank');
                     } else {
                       openPayment(plan.id);
                     }
@@ -889,7 +880,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                     isEnterprise ? 'bg-slate-800/50 group-hover:bg-slate-800/80' : 'bg-slate-50/80 group-hover:bg-emerald-50/50'
                   }`}>
                     <div className="text-center">
-                      <p className={`text-[0.55rem] font-black uppercase tracking-widest ${isEnterprise ? 'text-slate-400' : 'text-slate-400'}`}>Users</p>
+                      <p className={`text-[0.55rem] font-black uppercase tracking-widest ${isEnterprise ? 'text-slate-400' : 'text-slate-400'}`}>Utilisateurs</p>
                       <p className={`text-[0.9rem] font-black mt-0.5 ${isEnterprise ? 'text-white' : 'text-slate-800'}`}>{plan.max_users === -1 ? '∞' : plan.max_users}</p>
                     </div>
                     <div className={`border-l border-r px-1 text-center ${isEnterprise ? 'border-slate-700/50' : 'border-slate-200/70'}`}>

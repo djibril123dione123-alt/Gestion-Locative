@@ -24,6 +24,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import { BrandLogo, BrandMark } from '../components/brand/BrandLogo';
+import { PRICING_PLAN_DEFINITIONS } from '../lib/pricingCatalog';
 
 interface LandingPageProps {
   onNavigate?: (page: string) => void;
@@ -129,49 +130,18 @@ const trustStack = [
   { label: 'Stockage', value: 'Quotas', icon: HardDrive },
 ];
 
-const plans = [
-  {
-    name: 'Starter',
-    audience: 'Bailleur individuel',
-    price: '5 000',
-    unit: 'F CFA/mois',
-    storage: '1 Go',
-    capacity: 'Jusqu’à 10 unités',
-    promise: 'Structurer un petit patrimoine sans Excel dispersé.',
-    features: ['Suivi des loyers', 'Documents locatifs', 'Support de démarrage'],
-  },
-  {
-    name: 'Pro',
-    audience: 'Gestion active',
-    price: '15 000',
-    unit: 'F CFA/mois',
-    storage: '20 Go',
-    capacity: 'Jusqu’à 100 unités',
-    promise: 'Piloter les encaissements et rassurer les propriétaires.',
-    features: ['Reporting financier', 'QR de vérification', 'Paiements locaux'],
-    highlighted: true,
-  },
-  {
-    name: 'Business',
-    audience: 'Agence structurée',
-    price: '35 000',
-    unit: 'F CFA/mois',
-    storage: '100 Go',
-    capacity: 'Jusqu’à 500 unités',
-    promise: 'Coordonner une équipe avec permissions, GED et workflows.',
-    features: ['Rôles avancés', 'GED agence', 'Audit trail'],
-  },
-  {
-    name: 'Enterprise',
-    audience: 'Groupes et réseaux',
-    price: 'Sur devis',
-    unit: '',
-    storage: 'Sur mesure',
-    capacity: 'Multi-agence',
-    promise: 'Déployer une infrastructure immobilière gouvernée.',
-    features: ['SLA', 'Migration dédiée', 'API et intégrations'],
-  },
-];
+const plans = PRICING_PLAN_DEFINITIONS.map((plan) => ({
+  id: plan.id,
+  name: plan.name,
+  audience: plan.audience,
+  price: plan.priceLabel,
+  unit: plan.billingLabel,
+  capacity: plan.capacities.unites,
+  support: plan.supportLabel,
+  promise: plan.positioning,
+  features: plan.features.slice(0, 3),
+  highlighted: plan.highlighted,
+}));
 
 const faqs = [
   {
@@ -943,15 +913,15 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
         <section id="pricing" className="bg-[#f5f1e7] px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <SectionHeader
-              eyebrow="Pricing infrastructure"
-              title="Choisissez le niveau de structure adapté à votre portefeuille."
-              text="Les plans reflètent la vraie capacité du produit : stockage, documents, unités, équipe, reporting, support et gouvernance."
+              eyebrow="Des plans lisibles"
+              title="Choisissez selon votre portefeuille et votre équipe."
+              text="Le socle de gestion locative reste commun. Les plans augmentent surtout la capacité, le nombre d’utilisateurs et le niveau d’accompagnement."
             />
             <div className="mt-12 grid gap-4 lg:grid-cols-4">
               {plans.map((plan) => (
                 <Reveal
-                  key={plan.name}
-                  className={`relative rounded-[1.75rem] border p-6 transition duration-300 hover:-translate-y-1 ${
+                  key={plan.id}
+                  className={`relative rounded-lg border p-6 transition duration-300 hover:-translate-y-1 ${
                     plan.highlighted
                       ? 'border-amber-200 bg-[#07120f] text-white shadow-[0_30px_100px_rgba(6,17,13,0.24)]'
                       : 'border-emerald-950/10 bg-white/92 text-slate-950 shadow-sm'
@@ -974,20 +944,20 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                     {plan.unit && <span className={`ml-2 text-sm font-bold ${plan.highlighted ? 'text-emerald-50/58' : 'text-slate-500'}`}>{plan.unit}</span>}
                   </div>
                   <div className="mt-5 grid gap-2">
-                    {[plan.capacity, `Stockage : ${plan.storage}`].map((item) => (
-                      <div key={item} className={`rounded-2xl border px-3 py-2 text-sm font-black ${plan.highlighted ? 'border-white/10 bg-white/[0.07] text-amber-100' : 'border-emerald-950/10 bg-emerald-50 text-emerald-900'}`}>
+                    {[plan.capacity, plan.support].map((item) => (
+                      <div key={item} className={`rounded-lg border px-3 py-2 text-sm font-black ${plan.highlighted ? 'border-white/10 bg-white/[0.07] text-amber-100' : 'border-emerald-950/10 bg-emerald-50 text-emerald-900'}`}>
                         {item}
                       </div>
                     ))}
                   </div>
                   <button
                     type="button"
-                    onClick={plan.name === 'Enterprise' ? goDemo : goSignup}
+                    onClick={plan.id === 'enterprise' ? goDemo : goSignup}
                     className={`mt-6 w-full rounded-xl px-4 py-3 text-sm font-black transition ${
                       plan.highlighted ? 'bg-emerald-300 text-emerald-950 hover:bg-emerald-200' : 'bg-slate-950 text-white hover:bg-emerald-950'
                     }`}
                   >
-                    {plan.name === 'Enterprise' ? 'Parler à l’équipe' : 'Démarrer'}
+                    {plan.id === 'enterprise' ? 'Parler à l’équipe' : 'Démarrer'}
                   </button>
                   <div className="mt-6 space-y-3">
                     {plan.features.map((feature) => (
@@ -1000,8 +970,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                 </Reveal>
               ))}
             </div>
-            <Reveal className="mt-8 rounded-[1.6rem] border border-emerald-950/10 bg-white/80 p-5 text-center text-sm font-semibold leading-7 text-slate-600 shadow-sm">
-              Aucun plan n’est présenté comme “illimité” : le stockage et la bande passante restent maîtrisés pour garder une plateforme durable, rapide et rentable.
+            <Reveal className="mt-8 rounded-lg border border-emerald-950/10 bg-white/80 p-5 text-center text-sm font-semibold leading-7 text-slate-600 shadow-sm">
+              Les prix, identifiants et limites affichés ici sont issus du même catalogue que la facturation. Les besoins hors catalogue sont confirmés uniquement sur devis.
             </Reveal>
           </div>
         </section>

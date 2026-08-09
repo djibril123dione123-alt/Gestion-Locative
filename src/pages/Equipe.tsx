@@ -22,7 +22,6 @@ import {
 
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Modal } from '../components/ui/Modal';
 import {
   WizardShell,
   wizardPrimaryActionClass,
@@ -1359,7 +1358,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         }}
         size="compact"
         variant="workstation"
-        tone="brand"
+        tone="agency"
         eyebrow="SAMAY KËUR"
         title={permissionTarget ? `Permissions · ${permissionTarget.prenom ?? ''} ${permissionTarget.nom ?? ''}` : 'Permissions'}
         description={permissionTarget ? `Base actuelle : ${ROLE_LABELS[permissionTarget.role] ?? permissionTarget.role}` : ''}

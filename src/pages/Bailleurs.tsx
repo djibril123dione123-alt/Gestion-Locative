@@ -2113,7 +2113,7 @@ export function Bailleurs() {
                   <div className="grid gap-2.5">
                     {(selectedBailleur.telephone || selectedBailleur.email || selectedBailleur.adresse) && (
                       <CompactSection title="Coordonnées" icon={MapPin}>
-                        <div className="flex flex-col divide-y divide-slate-100">
+                        <div className="flex flex-col divide-y divide-slate-100 min-w-0">
                           <CompactLabelValue label="Téléphone" value={selectedBailleur.telephone ? formatSenegalPhone(selectedBailleur.telephone) : null} />
                           <CompactLabelValue label="Email" value={selectedBailleur.email} />
                           <CompactLabelValue label="Adresse" value={selectedBailleur.adresse} />
@@ -2122,13 +2122,13 @@ export function Bailleurs() {
                     )}
 
                     <CompactSection title="Gestion & Contrats" icon={FileText}>
-                      <div className="flex flex-col divide-y divide-slate-100">
+                      <div className="flex flex-col divide-y divide-slate-100 min-w-0">
                         <CompactLabelValue label="Début de mandat" value={selectedBailleur.debut_contrat ? new Date(selectedBailleur.debut_contrat).toLocaleDateString('fr-FR') : null} />
                         <CompactLabelValue label="Commission" value={formatCommission(selectedBailleur.commission)} />
                       </div>
-                      <div className="mt-2.5 grid grid-cols-2 gap-2">
-                        <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"><FileText className="h-3.5 w-3.5 text-slate-400" />Modifier</button>
-                        <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"><FileText className="h-3.5 w-3.5 text-slate-400" />Mandat PDF</button>
+                      <div className="mt-2.5 grid grid-cols-2 gap-2 min-w-0">
+                        <button type="button" onClick={() => handleEdit(selectedBailleur)} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 min-w-0"><FileText className="shrink-0 h-3.5 w-3.5 text-slate-400" /><span className="truncate">Modifier</span></button>
+                        <button type="button" onClick={() => handleGenerateMandat(selectedBailleur)} className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 min-w-0"><FileText className="shrink-0 h-3.5 w-3.5 text-slate-400" /><span className="truncate">Mandat PDF</span></button>
                       </div>
                     </CompactSection>
                   </div>
@@ -2731,12 +2731,14 @@ function MicroMetric({ label, value, tone = 'slate' }: { label: string; value: R
 
 function CompactSection({ title, icon: Icon, children }: { title: string; icon?: React.ElementType; children: ReactNode }) {
   return (
-    <section className="rounded-[14px] border border-emerald-950/10 bg-white/80 p-2.5 shadow-sm">
-      <h3 className="mb-2 flex items-center gap-1.5 text-[0.6rem] font-black uppercase tracking-wider text-slate-500">
-        {Icon && <Icon className="h-3.5 w-3.5 text-slate-400" />}
-        {title}
+    <section className="min-w-0 rounded-[14px] border border-emerald-950/10 bg-white/80 p-2.5 shadow-sm">
+      <h3 className="mb-2 flex items-center gap-1.5 text-[0.6rem] font-black uppercase tracking-wider text-slate-500 min-w-0">
+        {Icon && <Icon className="shrink-0 h-3.5 w-3.5 text-slate-400" />}
+        <span className="truncate">{title}</span>
       </h3>
-      {children}
+      <div className="min-w-0">
+        {children}
+      </div>
     </section>
   );
 }

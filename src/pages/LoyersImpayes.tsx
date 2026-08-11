@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Table } from '../components/ui/Table';
 import { ToastContainer } from '../components/ui/Toast';
-import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, CreditCard, Wallet, Building2, CalendarDays, SlidersHorizontal, CheckCircle2, Sparkles, Clock } from 'lucide-react';
+import { Search, AlertCircle, RefreshCw, ChevronLeft, ChevronRight, CreditCard, Wallet, Building2, CalendarDays, SlidersHorizontal, CheckCircle2, Sparkles, Clock, ReceiptText, BellRing, Loader2, FileCheck2, XCircle } from 'lucide-react';
 import { Tabs } from '../components/ui/Tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -17,6 +17,21 @@ import { useDirectRoute } from '../hooks/useDirectRoute';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../services/offlineReadCache';
 import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { getOpenReceivables, type OpenReceivableStatus } from '../services/api/financeApi';
+import {
+    cancelRentalDue,
+    generateRentalDuesBulk,
+    getRentalDueDetail,
+    isCanonicalRentalDueId,
+    prepareRentalDueDocument,
+    previewRentalDueGeneration,
+    recordRentalDueDelivery,
+    scheduleRentalDueReminders,
+    type RentalDueDetail,
+    type RentalDueDocumentType,
+    type RentalDueGenerationPreview,
+} from '../services/api/rentalDueApi';
+import { runDocumentGeneration } from '../lib/documentGeneration';
+import { generateRentalDuePdf, rentalDueDocumentLabel } from '../lib/rentalDuePdf';
 import { HandCoins } from 'lucide-react';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { SplitViewShell } from '../components/ui/SplitViewShell';
@@ -43,6 +58,18 @@ const PAYMENT_MODE_OPTIONS = [
     { value: 'virement', label: 'Virement bancaire' },
     { value: 'cheque', label: 'Chèque' },
     { value: 'autre', label: 'Autre mode' },
+];
+
+const RENTAL_DUE_DOCUMENT_OPTIONS: Array<{
+    value: RentalDueDocumentType;
+    label: string;
+    subtitle: string;
+}> = [
+    { value: 'due_notice', label: "Avis d'échéance", subtitle: 'Annonce le montant attendu avant règlement.' },
+    { value: 'rent_invoice', label: 'Facture de loyer', subtitle: 'Formalise la somme exigible pour la période.' },
+    { value: 'partial_payment_receipt', label: 'Reçu de paiement partiel', subtitle: 'Justifie un encaissement laissant un reliquat.' },
+    { value: 'rent_receipt', label: 'Quittance de loyer', subtitle: 'Confirme le règlement intégral de la période.' },
+    { value: 'credit_note', label: "Avoir d'annulation", subtitle: 'Documente une correction ou une annulation.' },
 ];
 
 type LoyerStatut = OpenReceivableStatus;
@@ -133,6 +160,18 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         () => impayes.find((i) => i.id === selectedDrawerId || i.contrat_id === selectedDrawerId) ?? null,
         [impayes, selectedDrawerId],
     );
+    const [dueDetail, setDueDetail] = useState<RentalDueDetail | null>(null);
+    const [dueDetailLoading, setDueDetailLoading] = useState(false);
+    const [dueDetailError, setDueDetailError] = useState<string | null>(null);
+    const [dueAction, setDueAction] = useState<'document' | 'reminders' | 'cancel' | null>(null);
+    const [dueDocumentType, setDueDocumentType] = useState<RentalDueDocumentType>('rent_invoice');
+    const [cancelDueOpen, setCancelDueOpen] = useState(false);
+    const [cancelDueReason, setCancelDueReason] = useState('');
+    const [bulkGenerationOpen, setBulkGenerationOpen] = useState(false);
+    const [bulkGenerationPeriod, setBulkGenerationPeriod] = useState(monthKey(monthStart(new Date())));
+    const [bulkGenerationPreview, setBulkGenerationPreview] = useState<RentalDueGenerationPreview | null>(null);
+    const [bulkGenerationLoading, setBulkGenerationLoading] = useState(false);
+    const [bulkGenerationError, setBulkGenerationError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [paymentForm, setPaymentForm] = useState({
         montant: '',
@@ -275,6 +314,211 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
         window.addEventListener('samaykeur:data-changed', handler);
         return () => window.removeEventListener('samaykeur:data-changed', handler);
     }, [loadData]);
+
+    useEffect(() => {
+        let active = true;
+        setDueDetail(null);
+        setDueDetailError(null);
+
+        if (!drawerLoyer || !isCanonicalRentalDueId(drawerLoyer.id)) {
+            setDueDetailLoading(false);
+            return () => { active = false; };
+        }
+
+        setDueDetailLoading(true);
+        void getRentalDueDetail(drawerLoyer.id)
+            .then((detail) => {
+                if (active) setDueDetail(detail);
+            })
+            .catch((detailError: unknown) => {
+                if (active) {
+                    setDueDetailError(detailError instanceof Error ? detailError.message : "Le détail canonique est indisponible.");
+                }
+            })
+            .finally(() => {
+                if (active) setDueDetailLoading(false);
+            });
+
+        return () => { active = false; };
+    }, [drawerLoyer]);
+
+    const recommendedDueDocumentType = useMemo<RentalDueDocumentType>(() => {
+        if (dueDetail?.due.status === 'PAID') return 'rent_receipt';
+        if (dueDetail?.due.status === 'PARTIALLY_PAID') return 'partial_payment_receipt';
+        return 'rent_invoice';
+    }, [dueDetail?.due.status]);
+
+    useEffect(() => {
+        setDueDocumentType(recommendedDueDocumentType);
+    }, [recommendedDueDocumentType, dueDetail?.due.id]);
+
+    const dueDocumentOptions = useMemo(() => {
+        if (!dueDetail) return RENTAL_DUE_DOCUMENT_OPTIONS;
+        const hasIssuedBillingDocument = dueDetail.documents.some((document) =>
+            (document.document_type === 'rent_invoice' || document.document_type === 'due_notice')
+            && (document.status === 'issued' || document.status === 'archived'),
+        );
+        const hasIssuedCreditNote = dueDetail.documents.some((document) =>
+            document.document_type === 'credit_note'
+            && (document.status === 'issued' || document.status === 'archived'),
+        );
+        return RENTAL_DUE_DOCUMENT_OPTIONS.filter((option) => {
+            if (option.value === 'rent_receipt') return dueDetail.due.status === 'PAID';
+            if (option.value === 'partial_payment_receipt') return dueDetail.due.status === 'PARTIALLY_PAID';
+            if (option.value === 'credit_note') {
+                return dueDetail.due.status === 'CANCELLED' || (hasIssuedBillingDocument && !hasIssuedCreditNote);
+            }
+            return dueDetail.due.status !== 'CANCELLED';
+        });
+    }, [dueDetail]);
+
+    const cancellationRequiresCreditNote = useMemo(() => {
+        if (!dueDetail) return false;
+        const hasIssuedBillingDocument = dueDetail.documents.some((document) =>
+            (document.document_type === 'rent_invoice' || document.document_type === 'due_notice')
+            && (document.status === 'issued' || document.status === 'archived'),
+        );
+        const hasIssuedCreditNote = dueDetail.documents.some((document) =>
+            document.document_type === 'credit_note'
+            && (document.status === 'issued' || document.status === 'archived'),
+        );
+        return hasIssuedBillingDocument && !hasIssuedCreditNote;
+    }, [dueDetail]);
+
+    const dueDocumentActionLabel = dueDocumentType === 'rent_receipt'
+        ? 'Préparer la quittance'
+        : dueDocumentType === 'partial_payment_receipt'
+            ? 'Préparer le reçu partiel'
+            : dueDocumentType === 'credit_note'
+                ? "Préparer l'avoir"
+            : 'Préparer la facture';
+
+    const handlePrepareDueDocument = async (requestedType: RentalDueDocumentType = dueDocumentType) => {
+        if (!dueDetail || dueAction) return;
+        setDueAction('document');
+        let preparedDocumentId: string | null = null;
+        try {
+            const generationKey = [
+                'rental-due',
+                dueDetail.due.id,
+                requestedType,
+                dueDetail.due.version,
+            ].join(':');
+            const result = await runDocumentGeneration({
+                key: generationKey,
+                kind: requestedType.includes('receipt') ? 'quittance' : 'facture',
+                title: rentalDueDocumentLabel(requestedType),
+                source: 'Échéances locatives',
+                reference: dueDetail.due.reference ?? undefined,
+                archiveExpected: true,
+                verificationExpected: true,
+                steps: [
+                    'loading-data',
+                    'building-document',
+                    'securing-document',
+                    'archiving-document',
+                    'loading-preview',
+                ],
+            }, async (generation) => {
+                const prepared = await prepareRentalDueDocument(dueDetail.due.id, requestedType);
+                preparedDocumentId = prepared.document.id;
+                generation.report('building-document', {
+                    reference: prepared.document.reference ?? undefined,
+                });
+                return generateRentalDuePdf({
+                    detail: dueDetail,
+                    preparedDocument: prepared.document,
+                    generation,
+                });
+            });
+            toast.success(result.archiveStatus === 'ready'
+                ? 'Document généré, enregistré et prêt à consulter.'
+                : 'Document généré. Son archivage reste à vérifier.');
+            if (preparedDocumentId) {
+                try {
+                    await recordRentalDueDelivery(dueDetail.due.id, preparedDocumentId, 'download');
+                } catch {
+                    toast.warning("Le téléchargement est prêt, mais sa livraison n'a pas pu être journalisée.");
+                }
+            }
+            setDueDetail(await getRentalDueDetail(dueDetail.due.id));
+        } catch (documentError) {
+            toast.error(documentError instanceof Error ? documentError.message : "Le document n'a pas pu être préparé.");
+        } finally {
+            setDueAction(null);
+        }
+    };
+
+    const handleScheduleDueReminders = async () => {
+        if (!dueDetail || dueAction) return;
+        setDueAction('reminders');
+        try {
+            const scheduled = await scheduleRentalDueReminders(dueDetail.due.id);
+            toast.success(`${scheduled ?? 0} rappel(s) planifié(s).`);
+            setDueDetail(await getRentalDueDetail(dueDetail.due.id));
+        } catch (reminderError) {
+            toast.error(reminderError instanceof Error ? reminderError.message : "Les rappels n'ont pas pu être planifiés.");
+        } finally {
+            setDueAction(null);
+        }
+    };
+
+    const canManageDueEngine = profile?.role === 'admin' || profile?.role === 'super_admin';
+
+    const handleCancelDue = async () => {
+        if (!dueDetail || dueAction || cancellationRequiresCreditNote || cancelDueReason.trim().length < 8) return;
+        setDueAction('cancel');
+        try {
+            const detail = await cancelRentalDue(dueDetail.due.id, cancelDueReason.trim());
+            setDueDetail(detail);
+            setCancelDueOpen(false);
+            setCancelDueReason('');
+            toast.success("L'échéance a été annulée et la correction est tracée.");
+            await loadData();
+        } catch (cancelError) {
+            toast.error(cancelError instanceof Error ? cancelError.message : "L'échéance n'a pas pu être annulée.");
+        } finally {
+            setDueAction(null);
+        }
+    };
+
+    const openBulkGeneration = () => {
+        const resolvedMonth = resolveMonthFilter(selectedMois);
+        setBulkGenerationPeriod(resolvedMonth ? `${resolvedMonth}-01` : monthKey(monthStart(new Date())));
+        setBulkGenerationPreview(null);
+        setBulkGenerationError(null);
+        setBulkGenerationOpen(true);
+    };
+
+    const handleBulkPreview = async () => {
+        if (!bulkGenerationPeriod || bulkGenerationLoading) return;
+        setBulkGenerationLoading(true);
+        setBulkGenerationError(null);
+        try {
+            setBulkGenerationPreview(await previewRentalDueGeneration(bulkGenerationPeriod));
+        } catch (previewError) {
+            setBulkGenerationError(previewError instanceof Error ? previewError.message : "Le contrôle de la période a échoué.");
+        } finally {
+            setBulkGenerationLoading(false);
+        }
+    };
+
+    const handleBulkGeneration = async () => {
+        if (!bulkGenerationPreview || bulkGenerationPreview.blocked_count > 0 || bulkGenerationLoading) return;
+        setBulkGenerationLoading(true);
+        setBulkGenerationError(null);
+        try {
+            const result = await generateRentalDuesBulk(bulkGenerationPreview.period_start);
+            toast.success(`${result.run.generated_count} échéance(s) générée(s), ${result.run.reused_count} déjà existante(s).`);
+            setBulkGenerationOpen(false);
+            setBulkGenerationPreview(null);
+            await loadData();
+        } catch (generationError) {
+            setBulkGenerationError(generationError instanceof Error ? generationError.message : 'La génération mensuelle a échoué.');
+        } finally {
+            setBulkGenerationLoading(false);
+        }
+    };
 
 
     const handlePayerClick = (impaye: LoyerImpaye) => {
@@ -540,6 +784,16 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                     title={isIndividualOwner ? 'Mes créances à recouvrer' : 'Créances à recouvrer'}
                                     description="Retards, partiels et restes dus."
                                     mobileDescription="Suivi des impayés."
+                                    secondaryAction={canManageDueEngine ? (
+                                        <PremiumButton
+                                            variant="secondary"
+                                            size="sm"
+                                            icon={<CalendarDays className="h-3.5 w-3.5" />}
+                                            onClick={openBulkGeneration}
+                                        >
+                                            Préparer le mois
+                                        </PremiumButton>
+                                    ) : undefined}
                                 >
                                     <div className="mt-2.5 pt-2.5 border-t border-emerald-950/10 flex items-center justify-start w-full sm:w-auto">
                                         <Tabs
@@ -789,6 +1043,19 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                                         Encaisser ce loyer
                                     </PremiumButton>
                                 )}
+                                {dueDetail && (
+                                    <PremiumButton
+                                        variant="secondary"
+                                        size="sm"
+                                        icon={dueAction === 'document' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ReceiptText className="h-3.5 w-3.5" />}
+                                        onClick={() => void handlePrepareDueDocument()}
+                                        disabled={Boolean(dueAction)}
+                                        className="!h-7 !min-h-7 !text-[0.7rem]"
+                                        fullWidth
+                                    >
+                                        {dueAction === 'document' ? 'Génération en cours…' : dueDocumentActionLabel}
+                                    </PremiumButton>
+                                )}
                             </>
                         }
                         bodyClassName="space-y-2"
@@ -798,6 +1065,125 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             <CompactLabelValue label="Déjà encaissé" value={<MoneyText value={drawerLoyer.montant_encaisse} className="font-semibold text-emerald-800" />} />
                             <CompactLabelValue label="Reste dû" value={<MoneyText value={drawerLoyer.montant_du} className={drawerLoyer.montant_du > 3 ? 'font-black text-red-700' : 'font-black text-emerald-800'} />} />
                         </CompactSection>
+                        {dueDetailLoading && (
+                            <CompactSection title="Échéance canonique" icon={Loader2}>
+                                <div className="flex items-center gap-2 py-1 text-[0.72rem] font-medium text-slate-500">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-700" />
+                                    Chargement des lignes et affectations…
+                                </div>
+                            </CompactSection>
+                        )}
+                        {dueDetailError && (
+                            <CompactSection title="Échéance canonique" icon={AlertCircle}>
+                                <p className="py-1 text-[0.7rem] font-medium text-amber-800">{dueDetailError}</p>
+                            </CompactSection>
+                        )}
+                        {dueDetail && (
+                            <>
+                                <CompactSection title="Composition de l'échéance" icon={ReceiptText}>
+                                    {dueDetail.lines.map((line) => (
+                                        <CompactLabelValue
+                                            key={line.id}
+                                            label={line.label}
+                                            value={<MoneyText value={Number(line.amount_ttc || 0)} />}
+                                        />
+                                    ))}
+                                    <CompactLabelValue label="Montant HT" value={<MoneyText value={Number(dueDetail.due.amount_ht || 0)} />} />
+                                    <CompactLabelValue label="Taxes" value={<MoneyText value={Number(dueDetail.due.tax_amount || 0)} />} />
+                                    <CompactLabelValue label="Total TTC" value={<MoneyText value={Number(dueDetail.due.amount_ttc || 0)} />} strong />
+                                    {Number(dueDetail.due.credit_applied || 0) > 0 && (
+                                        <CompactLabelValue label="Crédit appliqué" value={<MoneyText value={Number(dueDetail.due.credit_applied)} />} />
+                                    )}
+                                </CompactSection>
+                                <CompactSection title="Paiements affectés">
+                                    {dueDetail.allocations.length === 0 ? (
+                                        <p className="py-1 text-[0.7rem] font-medium text-slate-500">Aucune affectation enregistrée.</p>
+                                    ) : dueDetail.allocations.map((allocation) => (
+                                        <CompactLabelValue
+                                            key={allocation.id}
+                                            label={new Date(allocation.allocated_at).toLocaleDateString('fr-FR')}
+                                            value={<MoneyText value={allocation.allocation_type === 'reversal' ? -Number(allocation.amount) : Number(allocation.amount)} />}
+                                        />
+                                    ))}
+                                </CompactSection>
+                                <CompactSection title="Documents & relances">
+                                    <SmartCombobox
+                                        value={dueDocumentType}
+                                        options={dueDocumentOptions}
+                                        onChange={(value) => setDueDocumentType(value as RentalDueDocumentType)}
+                                        placeholder="Type de document"
+                                        searchPlaceholder="Rechercher un document..."
+                                        density="compact"
+                                        className="mb-2 w-full"
+                                    />
+                                    {dueDetail.documents.length > 0 ? (
+                                        <div className="mb-2 space-y-1">
+                                            {dueDetail.documents.slice(0, 3).map((document) => (
+                                                <div key={document.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-200/80 bg-white/80 px-2 py-1.5">
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-[0.66rem] font-bold text-slate-800">{rentalDueDocumentLabel(document.document_type)}</p>
+                                                        <p className="truncate text-[0.58rem] font-medium text-slate-500">{document.reference ?? 'Référence en préparation'} · v{document.version}</p>
+                                                    </div>
+                                                    <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[0.52rem] font-black uppercase tracking-wider text-emerald-800">
+                                                        {document.status === 'archived' ? 'Archivé' : document.status === 'issued' ? 'Émis' : document.status}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="mb-2 py-1 text-[0.66rem] font-medium text-slate-500">Aucun document émis pour cette échéance.</p>
+                                    )}
+                                    <CompactLabelValue label="Livraisons" value={`${dueDetail.deliveries.length} trace(s)`} />
+                                    <CompactLabelValue label="Rappels" value={`${dueDetail.reminders.length} planifié(s)`} />
+                                    <CompactLabelValue label="Journal" value={`${dueDetail.events.length} événement(s)`} />
+                                    {dueDetail.reminders.slice(0, 2).map((reminder) => (
+                                        <CompactLabelValue
+                                            key={reminder.id}
+                                            label={reminder.reminder_type === 'overdue' ? 'Relance retard' : reminder.reminder_type === 'final' ? 'Dernier rappel' : "Rappel d'échéance"}
+                                            value={`${new Date(reminder.scheduled_for).toLocaleDateString('fr-FR')} · ${reminder.status}`}
+                                        />
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => void handleScheduleDueReminders()}
+                                        disabled={Boolean(dueAction) || dueDetail.due.status === 'PAID' || dueDetail.due.status === 'CANCELLED'}
+                                        className="mt-2 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-900/15 bg-emerald-50/70 px-2 text-[0.68rem] font-bold text-emerald-900 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {dueAction === 'reminders' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BellRing className="h-3.5 w-3.5" />}
+                                        Planifier les rappels
+                                    </button>
+                                </CompactSection>
+                                {canManageDueEngine && dueDetail.due.status !== 'PAID' && dueDetail.due.status !== 'CANCELLED' && (
+                                    <CompactSection title="Correction contrôlée" icon={XCircle}>
+                                        <p className="mb-2 text-[0.66rem] font-medium leading-relaxed text-slate-500">
+                                            {cancellationRequiresCreditNote
+                                                ? "Une facture a déjà été émise. Un avoir doit être enregistré avant l'annulation."
+                                                : "L'annulation conserve l'échéance, ses documents et son historique. Un motif est obligatoire."}
+                                        </p>
+                                        {cancellationRequiresCreditNote && (
+                                            <button
+                                                type="button"
+                                                onClick={() => void handlePrepareDueDocument('credit_note')}
+                                                disabled={Boolean(dueAction)}
+                                                className="mb-1.5 inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-2 text-[0.68rem] font-bold text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <FileCheck2 className="h-3.5 w-3.5" />
+                                                Émettre l'avoir requis
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => setCancelDueOpen(true)}
+                                            disabled={Boolean(dueAction) || cancellationRequiresCreditNote}
+                                            className="inline-flex h-7 w-full items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50/70 px-2 text-[0.68rem] font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <XCircle className="h-3.5 w-3.5" />
+                                            Annuler l'échéance
+                                        </button>
+                                    </CompactSection>
+                                )}
+                            </>
+                        )}
                         <CompactSection title="Affectation">
                             <CompactLabelValue
                                 label="Bien"
@@ -840,16 +1226,215 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             />
                             <CompactLabelValue label="Téléphone" value={drawerLoyer.telephone_locataire || '—'} />
                         </CompactSection>
-                        <CompactSection title="Traçabilité certifiée">
+                        <CompactSection title="Traçabilité financière">
                             <div className="text-[0.72rem] text-slate-500 space-y-1">
-                                <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Échéance issue de l’historique financier sécurisé</p>
-                                <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> Montants confirmés par le traitement financier</p>
+                                <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> {dueDetail ? 'Échéance enregistrée dans le moteur canonique' : 'Créance calculée depuis les données financières existantes'}</p>
+                                <p className="flex items-center gap-1.5 font-medium"><AlertCircle className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> {dueDetail ? 'Lignes, affectations et versions traçables' : 'Migration progressive sans altération des paiements'}</p>
                             </div>
                         </CompactSection>
                     </PremiumDrawerShell>
                 )
             }
         />
+
+        {bulkGenerationOpen && (
+            <WizardShell
+                open
+                title="Préparer les échéances du mois"
+                eyebrow="FACTURATION LOCATIVE"
+                description="Contrôlez les contrats éligibles avant toute génération."
+                steps={[
+                    { id: 'period', label: 'Période' },
+                    { id: 'control', label: 'Contrôle' },
+                ]}
+                currentStep={bulkGenerationPreview ? 1 : 0}
+                size="simple"
+                variant="workstation"
+                tone="finance"
+                onClose={() => {
+                    if (bulkGenerationLoading) return;
+                    setBulkGenerationOpen(false);
+                    setBulkGenerationPreview(null);
+                    setBulkGenerationError(null);
+                }}
+                panelClassName="sm:!w-[min(92vw,720px)] sm:!max-w-[720px]"
+                bodyClassName="!py-3"
+                secondaryAction={
+                    <PremiumButton
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                            setBulkGenerationOpen(false);
+                            setBulkGenerationPreview(null);
+                            setBulkGenerationError(null);
+                        }}
+                        disabled={bulkGenerationLoading}
+                    >
+                        Fermer
+                    </PremiumButton>
+                }
+                primaryAction={
+                    <PremiumButton
+                        variant="create"
+                        size="sm"
+                        icon={bulkGenerationLoading
+                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            : bulkGenerationPreview
+                                ? <FileCheck2 className="h-3.5 w-3.5" />
+                                : <Search className="h-3.5 w-3.5" />}
+                        onClick={() => void (bulkGenerationPreview ? handleBulkGeneration() : handleBulkPreview())}
+                        disabled={bulkGenerationLoading || !bulkGenerationPeriod || Boolean(bulkGenerationPreview?.blocked_count)}
+                    >
+                        {bulkGenerationLoading
+                            ? 'Traitement en cours…'
+                            : bulkGenerationPreview
+                                ? `Générer ${bulkGenerationPreview.ready_count} échéance(s)`
+                                : 'Analyser la période'}
+                    </PremiumButton>
+                }
+            >
+                <div className="space-y-3">
+                    <div className="rounded-xl border border-emerald-950/10 bg-white/80 p-3">
+                        <label htmlFor="bulk-due-period" className="mb-1.5 block text-[0.62rem] font-black uppercase tracking-[0.13em] text-slate-500">
+                            Mois de facturation
+                        </label>
+                        <input
+                            id="bulk-due-period"
+                            type="month"
+                            value={bulkGenerationPeriod.slice(0, 7)}
+                            onChange={(event) => {
+                                setBulkGenerationPeriod(event.target.value ? `${event.target.value}-01` : '');
+                                setBulkGenerationPreview(null);
+                                setBulkGenerationError(null);
+                            }}
+                            className="h-9 w-full rounded-lg border border-emerald-950/15 bg-[#fffdf8] px-3 text-xs font-semibold text-slate-900 outline-none transition focus:border-emerald-700/35 focus:ring-2 focus:ring-emerald-700/10"
+                        />
+                        <p className="mt-1.5 text-[0.66rem] font-medium leading-relaxed text-slate-500">
+                            Le contrôle détecte les contrats prêts, les doublons et les données bloquantes sans créer d'échéance.
+                        </p>
+                    </div>
+
+                    {bulkGenerationError && (
+                        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[0.7rem] font-semibold text-red-700">
+                            {bulkGenerationError}
+                        </div>
+                    )}
+
+                    {bulkGenerationPreview && (
+                        <>
+                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+                                {[
+                                    ['Contrats', bulkGenerationPreview.candidate_count, 'slate'],
+                                    ['Prêts', bulkGenerationPreview.ready_count, 'emerald'],
+                                    ['Alertes', bulkGenerationPreview.warning_count, 'amber'],
+                                    ['Bloqués', bulkGenerationPreview.blocked_count, 'red'],
+                                    ['Existants', bulkGenerationPreview.existing_count, 'blue'],
+                                ].map(([label, value, tone]) => (
+                                    <div key={String(label)} className={`rounded-xl border px-2.5 py-2 ${tone === 'emerald' ? 'border-emerald-200 bg-emerald-50' : tone === 'amber' ? 'border-amber-200 bg-amber-50' : tone === 'red' ? 'border-red-200 bg-red-50' : tone === 'blue' ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-slate-50'}`}>
+                                        <p className="text-[0.55rem] font-black uppercase tracking-wider text-slate-500">{label}</p>
+                                        <p className="mt-0.5 text-base font-black tabular-nums text-slate-950">{value}</p>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="max-h-[16rem] space-y-1.5 overflow-y-auto pr-1">
+                                {bulkGenerationPreview.items.map((item) => {
+                                    const issues = Object.values(item.issues ?? {}).filter(Boolean);
+                                    return (
+                                        <div key={item.contract_id} className="flex items-start justify-between gap-3 rounded-xl border border-slate-200/90 bg-white/85 px-3 py-2">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-[0.72rem] font-bold text-slate-900">{item.tenant_name || 'Locataire non renseigné'}</p>
+                                                <p className="truncate text-[0.62rem] font-medium text-slate-500">{item.property_name || 'Bien non renseigné'} · {item.unit_name || 'Unité non renseignée'}</p>
+                                                {issues.length > 0 && <p className="mt-1 text-[0.6rem] font-semibold text-amber-700">{issues.join(' · ')}</p>}
+                                            </div>
+                                            <div className="shrink-0 text-right">
+                                                <MoneyText value={item.rent_amount} className="text-[0.7rem] font-black text-slate-900" />
+                                                <p className={`mt-1 text-[0.52rem] font-black uppercase tracking-wider ${item.readiness === 'ready' ? 'text-emerald-700' : item.readiness === 'warning' ? 'text-amber-700' : 'text-red-700'}`}>
+                                                    {item.existing_due_id ? 'Déjà créée' : item.readiness === 'ready' ? 'Prêt' : item.readiness === 'warning' ? 'À vérifier' : 'Bloqué'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
+                </div>
+            </WizardShell>
+        )}
+
+        {cancelDueOpen && dueDetail && (
+            <WizardShell
+                open
+                title="Annuler l'échéance"
+                eyebrow="CORRECTION FINANCIÈRE"
+                description="L'échéance reste conservée dans le journal d'audit."
+                size="compact"
+                variant="workstation"
+                tone="finance"
+                onClose={() => {
+                    if (dueAction === 'cancel') return;
+                    setCancelDueOpen(false);
+                    setCancelDueReason('');
+                }}
+                secondaryAction={
+                    <PremiumButton
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                            setCancelDueOpen(false);
+                            setCancelDueReason('');
+                        }}
+                        disabled={dueAction === 'cancel'}
+                    >
+                        Conserver
+                    </PremiumButton>
+                }
+                primaryAction={
+                    <button
+                        type="button"
+                        onClick={() => void handleCancelDue()}
+                        disabled={dueAction === 'cancel' || cancellationRequiresCreditNote || cancelDueReason.trim().length < 8}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-700/30 bg-red-700 px-4 text-[0.72rem] font-black text-white shadow-sm transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {dueAction === 'cancel' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                        Confirmer l'annulation
+                    </button>
+                }
+            >
+                <div className="space-y-3">
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                        <p className="text-[0.72rem] font-bold text-amber-950">{dueDetail.due.reference ?? "Échéance sans référence"}</p>
+                        <p className="mt-0.5 text-[0.66rem] font-medium text-amber-800">
+                            {new Date(dueDetail.due.period_start).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })} · {formatCurrency(Number(dueDetail.due.amount_ttc || 0))}
+                        </p>
+                    </div>
+                    {cancellationRequiresCreditNote && (
+                        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
+                            <p className="text-[0.7rem] font-bold text-red-800">Avoir obligatoire avant annulation</p>
+                            <p className="mt-0.5 text-[0.64rem] font-medium leading-relaxed text-red-700">
+                                La facture d'origine reste traçable. Fermez cette fenêtre et émettez l'avoir proposé dans la fiche.
+                            </p>
+                        </div>
+                    )}
+                    <div>
+                        <label htmlFor="cancel-due-reason" className="mb-1.5 block text-[0.62rem] font-black uppercase tracking-[0.13em] text-slate-500">
+                            Motif de l'annulation
+                        </label>
+                        <textarea
+                            id="cancel-due-reason"
+                            rows={3}
+                            value={cancelDueReason}
+                            onChange={(event) => setCancelDueReason(event.target.value)}
+                            placeholder="Ex. bail résilié avant la période facturée"
+                            className="w-full resize-none rounded-xl border border-emerald-950/15 bg-[#fffdf8] px-3 py-2 text-xs font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-700/35 focus:ring-2 focus:ring-emerald-700/10"
+                        />
+                        <p className={`mt-1 text-[0.62rem] font-medium ${cancelDueReason.trim().length > 0 && cancelDueReason.trim().length < 8 ? 'text-red-600' : 'text-slate-500'}`}>
+                            {cancelDueReason.trim().length > 0 && cancelDueReason.trim().length < 8 ? 'Précisez le motif en au moins 8 caractères.' : 'Le motif sera enregistré avec la correction.'}
+                        </p>
+                    </div>
+                </div>
+            </WizardShell>
+        )}
 
         {/* Workflow de paiement */}
             {showModal && selectedLoyer && (

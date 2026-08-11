@@ -30,6 +30,7 @@ import { PremiumButton } from '../components/ui/PremiumButton';
 import { invalidateAgencySettingsCache } from '../lib/pdf';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { OrganizationCompliancePanel } from '../components/settings/OrganizationCompliancePanel';
 import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
 import { formatSenegalCniInput, validateSenegalCni } from '../lib/senegalIdentity';
 import {
@@ -1338,6 +1339,13 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
           </div>
         )}
 
+        {activeTab === 'general' && profile?.agency_id && (
+          <OrganizationCompliancePanel
+            agencyId={profile.agency_id}
+            isIndividualOwner={isIndividualOwner}
+          />
+        )}
+
         {activeTab === 'documents' && (
           <div className="grid gap-2 lg:grid-cols-[minmax(0,0.78fr)_minmax(22rem,1.22fr)]">
             <div className="grid gap-2">
@@ -1691,6 +1699,16 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               </div>
             </SettingsEditSection>
           </div>
+        )}
+
+        {activeTab === 'general' && profile?.agency_id && (
+          <OrganizationCompliancePanel
+            agencyId={profile.agency_id}
+            editable
+            isIndividualOwner={isIndividualOwner}
+            onSaved={(message) => showToast(message, 'success')}
+            onError={(message) => showToast(message, 'error')}
+          />
         )}
 
         {showDocumentsIdentity && (

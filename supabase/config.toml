@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.verify-document]
 verify_jwt = false
+
+[functions.rental-due-command]
+verify_jwt = true

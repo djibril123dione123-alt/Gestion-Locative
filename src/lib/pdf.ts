@@ -185,6 +185,12 @@ export async function saveGeneratedPdf(
           options.documentType === 'quittance' ||
           options.documentType === 'facture'
         ? options.documentType
+        : options.documentType === 'due_notice' ||
+            options.documentType === 'rent_invoice' ||
+            options.documentType === 'partial_payment_receipt' ||
+            options.documentType === 'rent_receipt' ||
+            options.documentType === 'credit_note'
+          ? options.documentType
         : options.kind === 'commission'
           ? 'rapport_bailleur'
           : options.kind === 'inventaire'
@@ -454,7 +460,7 @@ async function loadImageAsPngDataUrl(
   }
 }
 
-async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
+export async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
   try {
     const {
       data: { user },

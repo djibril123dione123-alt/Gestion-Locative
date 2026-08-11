@@ -84,11 +84,13 @@ import {
 import { createContratViaEdge, renewContratViaEdge, updateContratViaEdge } from '../services/api/contratApi';
 import { generateContratPDF } from '../lib/pdf';
 import { runDocumentGeneration } from '../lib/documentGeneration';
+import { ContractBillingCompliancePanel } from '../components/locations/ContractBillingCompliancePanel';
+import { ContractRentalDuePanel } from '../components/locations/ContractRentalDuePanel';
 
 // ─── Types locaux ────────────────────────────────────────────────────────────
 
 type FilterTab = 'tous' | ContratStatut;
-type DrawerTab = 'resume' | 'paiements' | 'documents' | 'historique';
+type DrawerTab = 'resume' | 'paiements' | 'documents' | 'historique' | 'facturation';
 type OccupantModalMode = 'create' | 'edit';
 type OccupationModalMode = 'create' | 'edit-bail';
 type OccupantChoiceMode = 'existing' | 'new';
@@ -154,6 +156,7 @@ const CACHE_KEY = 'occupants-baux-page';
 const DRAWER_TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: 'resume', label: 'Résumé' },
   { id: 'paiements', label: 'Paiements' },
+  { id: 'facturation', label: 'Facturation' },
   { id: 'documents', label: 'Documents' },
   { id: 'historique', label: 'Historique' },
 ];
@@ -1301,6 +1304,9 @@ export function OccupantsBaux() {
                 onResiliate={openResiliation}
                 onArchive={setArchiveTarget}
                 onRenew={openRenewal}
+                complianceEditable={profile?.role === 'admin' || profile?.role === 'super_admin'}
+                onComplianceSaved={notifySuccess}
+                onComplianceError={notifyError}
               />
             ) : undefined
           }
@@ -1512,6 +1518,9 @@ function OccupantBailDrawer({
   onResiliate,
   onArchive,
   onRenew,
+  complianceEditable,
+  onComplianceSaved,
+  onComplianceError,
 }: {
   row: OccupantBailRow | null;
   details: OccupantBailDetails | null;
@@ -1528,6 +1537,9 @@ function OccupantBailDrawer({
   onResiliate: (row: OccupantBailRow) => void;
   onArchive: (row: OccupantBailRow) => void;
   onRenew: (row: OccupantBailRow) => void;
+  complianceEditable: boolean;
+  onComplianceSaved: (message: string) => void;
+  onComplianceError: (message: string) => void;
 }) {
   if (!row) return null;
 
@@ -1626,6 +1638,17 @@ function OccupantBailDrawer({
             />
           )}
           {activeTab === 'paiements' && <DrawerPayments contractId={row.contrat_id} details={details} loading={detailsLoading} error={detailsError} />}
+          {activeTab === 'facturation' && (
+            <div className="space-y-2">
+              <ContractBillingCompliancePanel
+                contractId={row.contrat_id}
+                editable={complianceEditable}
+                onSaved={onComplianceSaved}
+                onError={onComplianceError}
+              />
+              <ContractRentalDuePanel contractId={row.contrat_id} />
+            </div>
+          )}
           {activeTab === 'documents' && (
             <DrawerDocuments
               row={row}

@@ -84,6 +84,7 @@ import { PremiumDrawerShell } from '../components/ui/PremiumDrawerShell';
 import { BrandMark } from '../components/brand/BrandLogo';
 import { createOwnerReportSnapshot } from '../services/api/documentSnapshotApi';
 import { runDocumentGeneration } from '../lib/documentGeneration';
+import { BailleurCompliancePanel } from '../components/bailleurs/BailleurCompliancePanel';
 
 /**
  * Interface Bailleur avec les champs commission et debut_contrat
@@ -229,7 +230,7 @@ interface BailleurSummary {
   activeContracts: number;
 }
 
-type DrawerTab = 'overview' | 'biens' | 'contrats' | 'paiements' | 'depenses' | 'rapports' | 'documents';
+type DrawerTab = 'overview' | 'biens' | 'contrats' | 'paiements' | 'depenses' | 'rapports' | 'documents' | 'conformite';
 type BailleurFilter = 'all' | 'with_reliquats' | 'without_reliquats' | 'with_biens' | 'without_biens' | 'high_commission' | 'active' | 'inactive' | 'with_net';
 
 const EMPTY_PAGE_DATA: BailleurPageData = {
@@ -258,6 +259,7 @@ const DRAWER_MORE_TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: 'documents', label: 'Docs' },
   { id: 'contrats', label: 'Contrats' },
   { id: 'depenses', label: 'Dépenses' },
+  { id: 'conformite', label: 'Conformité' },
 ];
 
 /**
@@ -1599,6 +1601,16 @@ export function Bailleurs() {
 
   const renderDrawerTab = () => {
     if (!selectedBailleur) return null;
+    if (activeDrawerTab === 'conformite') {
+      return (
+        <BailleurCompliancePanel
+          bailleurId={selectedBailleur.id}
+          editable={profile?.role === 'admin' || profile?.role === 'super_admin'}
+          onSaved={toast.success}
+          onError={toast.error}
+        />
+      );
+    }
     const recentPaiements = selectedSummary.paiements
       .slice()
       .sort((a, b) => String(b.date_paiement ?? '').localeCompare(String(a.date_paiement ?? '')))

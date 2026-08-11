@@ -5,6 +5,11 @@ export type PdfMetadataDocumentType =
   | 'facture'
   | 'rapport_bailleur'
   | 'rapport_proprietaire'
+  | 'due_notice'
+  | 'rent_invoice'
+  | 'partial_payment_receipt'
+  | 'rent_receipt'
+  | 'credit_note'
   | 'inventaire'
   | 'commission'
   | 'document';
@@ -64,6 +69,31 @@ const TYPE_COPY: Record<
     title: 'Rapport propriétaire',
     subject: 'Rapport financier de gestion locative',
     keywords: 'Samay Këur, rapport propriétaire, gestion locative, finance',
+  },
+  due_notice: {
+    title: "Avis d'échéance",
+    subject: "Avis d'échéance de loyer",
+    keywords: "Samay Këur, avis d'échéance, loyer, location",
+  },
+  rent_invoice: {
+    title: 'Facture de loyer',
+    subject: 'Facture de loyer',
+    keywords: 'Samay Këur, facture de loyer, échéance, location',
+  },
+  partial_payment_receipt: {
+    title: 'Reçu de paiement partiel',
+    subject: 'Reçu de paiement partiel de loyer',
+    keywords: 'Samay Këur, reçu, paiement partiel, loyer',
+  },
+  rent_receipt: {
+    title: 'Quittance de loyer',
+    subject: 'Quittance de loyer acquittée',
+    keywords: 'Samay Këur, quittance, loyer, paiement acquitté',
+  },
+  credit_note: {
+    title: 'Avoir locatif',
+    subject: 'Avoir sur échéance locative',
+    keywords: 'Samay Këur, avoir, correction, échéance locative',
   },
   inventaire: {
     title: 'Inventaire',

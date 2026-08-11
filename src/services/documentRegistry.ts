@@ -8,6 +8,11 @@ export type ManagedDocumentType =
   | 'quittance'
   | 'facture'
   | 'rapport_bailleur'
+  | 'due_notice'
+  | 'rent_invoice'
+  | 'partial_payment_receipt'
+  | 'rent_receipt'
+  | 'credit_note'
   | 'export'
   | 'pdf'
   | 'document';
@@ -74,6 +79,11 @@ const STORAGE_FOLDERS: Record<ManagedDocumentType, string> = {
   quittance: 'quittances',
   facture: 'factures',
   rapport_bailleur: 'rapports-bailleurs',
+  due_notice: 'avis-echeance',
+  rent_invoice: 'factures-loyer',
+  partial_payment_receipt: 'recus-partiels',
+  rent_receipt: 'quittances-loyer',
+  credit_note: 'avoirs-locatifs',
   export: 'exports',
   pdf: 'exports',
   document: 'exports',

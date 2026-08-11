@@ -36,6 +36,31 @@ const documentTypes: Array<{
     subject: 'Rapport financier de gestion locative',
   },
   {
+    type: 'due_notice',
+    title: "Avis d'échéance",
+    subject: "Avis d'échéance de loyer",
+  },
+  {
+    type: 'rent_invoice',
+    title: 'Facture de loyer',
+    subject: 'Facture de loyer',
+  },
+  {
+    type: 'partial_payment_receipt',
+    title: 'Reçu de paiement partiel',
+    subject: 'Reçu de paiement partiel de loyer',
+  },
+  {
+    type: 'rent_receipt',
+    title: 'Quittance de loyer',
+    subject: 'Quittance de loyer acquittée',
+  },
+  {
+    type: 'credit_note',
+    title: 'Avoir locatif',
+    subject: 'Avoir sur échéance locative',
+  },
+  {
     type: 'inventaire',
     title: 'Inventaire',
     subject: 'Inventaire immobilier',

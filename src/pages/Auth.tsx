@@ -200,7 +200,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                   <button
                     type="button"
                     onClick={() => switchMode('login')}
-                    className={`min-h-9 rounded-lg px-2.5 text-xs font-black transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 ${
+                    className={`min-h-9 rounded-lg px-2.5 text-xs font-black transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-champagne/20 ${
                       mode === 'login'
                         ? 'bg-brand-950 text-white shadow-sm'
                         : 'text-slate-600 hover:bg-white hover:text-brand-900'
@@ -213,7 +213,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                     type="button"
                     aria-label="Inscription"
                     onClick={() => switchMode('register')}
-                    className={`min-h-9 rounded-lg px-2.5 text-xs font-black transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 ${
+                    className={`min-h-9 rounded-lg px-2.5 text-xs font-black transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-champagne/20 ${
                       mode === 'register'
                         ? 'bg-brand-950 text-white shadow-sm'
                         : 'text-slate-600 hover:bg-white hover:text-brand-900'
@@ -233,7 +233,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                       type="button"
                       onClick={handleGoogleSignIn}
                       disabled={loading || googleLoading}
-                      className="group flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-emerald-950/10 bg-white px-3 py-1.5 text-[0.7rem] font-black text-slate-900 shadow-[0_8px_20px_rgba(6,17,13,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-[0_10px_24px_rgba(6,17,13,0.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="group flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-emerald-950/10 bg-white px-3 py-1.5 text-[0.7rem] font-black text-slate-900 shadow-[0_8px_20px_rgba(6,17,13,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50/50 hover:shadow-[0_10px_24px_rgba(6,17,13,0.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-champagne/20 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-base font-black text-slate-950 shadow-sm transition-transform duration-300 group-hover:scale-105">
                         {googleLoading ? (
@@ -314,7 +314,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                             setError("Veuillez remplir votre prénom, nom et email pour continuer.");
                           }
                         }}
-                        className="flex min-h-9 w-full transform items-center justify-center gap-2 rounded-lg bg-[#072F24] px-3 py-1.5 text-[0.7rem] font-black text-white shadow-[0_9px_24px_rgba(7,47,36,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25"
+                        className="flex min-h-9 w-full transform items-center justify-center gap-2 rounded-lg bg-[#072F24] px-3 py-1.5 text-[0.7rem] font-black text-white shadow-[0_9px_24px_rgba(7,47,36,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-champagne/25"
                       >
                         Continuer
                       </button>
@@ -351,13 +351,13 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                             aria-invalid={!!error}
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            className="sk-input min-h-9 w-full border-emerald-950/10 bg-[#fbfdfc] px-3 py-1.5 pr-9 text-xs font-semibold shadow-sm transition hover:border-emerald-200 focus:border-action-500"
+                            className="sk-input min-h-9 w-full border-emerald-950/10 bg-[#fbfdfc] px-3 py-1.5 pr-9 text-xs font-semibold shadow-sm transition hover:border-emerald-200 focus:border-champagne"
                             placeholder="••••••••"
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-emerald-50 hover:text-brand-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/20"
+                            className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-emerald-50 hover:text-brand-800 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-champagne/20"
                             aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
                           >
                             {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -388,7 +388,7 @@ export function Auth({ initialMode = 'login' }: AuthProps) {
                       <button
                         type="submit"
                         disabled={loading || googleLoading || (mode === 'register' && !acceptedTerms)}
-                        className="flex min-h-9 w-full transform items-center justify-center gap-2 rounded-lg bg-[#072F24] px-3 py-1.5 text-[0.7rem] font-black text-white shadow-[0_9px_24px_rgba(7,47,36,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-action-500/25 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex min-h-9 w-full transform items-center justify-center gap-2 rounded-lg bg-[#072F24] px-3 py-1.5 text-[0.7rem] font-black text-white shadow-[0_9px_24px_rgba(7,47,36,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#0A3F30] active:bg-[#041812] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-champagne/25 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {loading ? (
                           <>
@@ -461,7 +461,7 @@ function Field({ label, required = false, inputProps }: FieldProps) {
         required={required}
         aria-invalid={inputProps['aria-invalid']}
         {...inputProps}
-        className={`sk-input min-h-9 w-full border-emerald-950/10 bg-white/92 px-3 py-1.5 text-xs font-semibold shadow-sm transition hover:border-emerald-200 focus:border-action-500 ${inputProps.className ?? ''}`}
+        className={`sk-input min-h-9 w-full border-emerald-950/10 bg-white/92 px-3 py-1.5 text-xs font-semibold shadow-sm transition hover:border-emerald-200 focus:border-champagne ${inputProps.className ?? ''}`}
       />
     </div>
   );

@@ -37,6 +37,17 @@ export default {
           light: '#FFA64D',
           dark: '#E06610',
         },
+        // Or/champagne — même dégradé que l'emblème de marque (mark.svg, skGold),
+        // pour que l'accent premium reste identique entre la vitrine et l'app.
+        champagne: {
+          50: '#FBF6EC',
+          100: '#F1D9A6',
+          300: '#E4C482',
+          DEFAULT: '#D9AA5E',
+          600: '#C99A4E',
+          700: '#B8863E',
+          900: '#8A6529',
+        },
         'confort-red': {
           DEFAULT: '#C0392B',
           light: '#E74C3C',

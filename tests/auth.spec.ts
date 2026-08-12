@@ -51,8 +51,8 @@ test.describe('Routes publiques et protégées', () => {
   test('la page tarifs reste publiquement accessible', async ({ page }) => {
     await page.goto('/#/pricing', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByRole('heading', { level: 1 })).toContainText(/plans/i);
-    await expect(page.getByRole('heading', { name: 'Starter' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText(/plan/i);
+    await expect(page.getByRole('heading', { name: 'Essentiel', exact: true })).toBeVisible();
     await expect(page.getByText('Pro', { exact: true }).first()).toBeVisible();
   });
 });

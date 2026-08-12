@@ -72,7 +72,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
     <div className="min-h-screen bg-[#f4f0e7] text-slate-950">
       <header className="border-b border-white/10 bg-emerald-950 px-4 py-3 text-white sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-          <a href="#/" aria-label="Accueil Samay Këur" className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400">
+          <a href="#/" aria-label="Accueil Samay Këur" className="rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-champagne">
             <BrandLogo size="sm" tone="dark" showTagline />
           </a>
           <div className="flex items-center gap-2">
@@ -85,7 +85,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
             <button
               type="button"
               onClick={() => onNavigate?.(profile ? 'abonnement' : 'auth')}
-              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-black text-emerald-950 transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400"
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-black text-emerald-950 transition hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-champagne"
             >
               {profile ? 'Mon abonnement' : 'Se connecter'}
             </button>
@@ -103,7 +103,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
           <div className="absolute inset-0 -z-10 bg-emerald-950/90" aria-hidden="true" />
           <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
             <div className="max-w-3xl">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-orange-300">Tarifs Samay Këur</p>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-champagne-100">Tarifs Samay Këur</p>
               <h1 className="mt-4 text-3xl font-black !leading-[1.08] text-white sm:text-4xl lg:text-[2.8rem]">
                 Un plan adapté à votre façon de gérer.
               </h1>
@@ -113,7 +113,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
               <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                 <a
                   href="#plans"
-                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-orange-400 px-5 py-2.5 text-sm font-black text-emerald-950 transition hover:bg-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-champagne-300 to-champagne px-5 py-2.5 text-sm font-black text-emerald-950 shadow-premium transition hover:from-champagne-100 hover:to-champagne-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
                   Comparer les plans
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -121,7 +121,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
                 <button
                   type="button"
                   onClick={() => openPricingConversation('Bonjour, je souhaite une démonstration de Samay Këur.')}
-                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/25 bg-white/5 px-5 py-2.5 text-sm font-black text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-300"
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/25 bg-white/5 px-5 py-2.5 text-sm font-black text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-champagne-100"
                 >
                   Demander une démonstration
                 </button>
@@ -138,7 +138,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
                   'Changement de plan sans suppression de données',
                 ].map((item) => (
                   <li key={item} className="flex gap-2.5">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" aria-hidden="true" />
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-champagne-100" aria-hidden="true" />
                     {item}
                   </li>
                 ))}

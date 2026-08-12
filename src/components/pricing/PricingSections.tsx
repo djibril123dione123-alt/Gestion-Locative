@@ -37,7 +37,7 @@ interface PricingSectionsProps {
 function SectionHeading({ eyebrow, title, text }: { eyebrow: string; title: string; text: string }) {
   return (
     <div className="max-w-3xl">
-      <p className="text-xs font-black uppercase tracking-[0.12em] text-orange-700">{eyebrow}</p>
+      <p className="text-xs font-black uppercase tracking-[0.12em] text-champagne-700">{eyebrow}</p>
       <h2 className="mt-2 text-2xl font-black text-slate-950 sm:text-3xl">{title}</h2>
       <p className="mt-3 text-sm leading-6 text-slate-600 sm:text-base">{text}</p>
     </div>
@@ -141,14 +141,14 @@ export function PricingSections({ plans, onSelectPlan, onStart, onRequestDemo, c
 
       <section className="border-y border-emerald-950/10 bg-emerald-950 px-4 py-14 text-white sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <p className="text-xs font-black uppercase tracking-[0.12em] text-orange-300">Valeur métier</p>
+          <p className="text-xs font-black uppercase tracking-[0.12em] text-champagne-100">Valeur métier</p>
           <h2 className="mt-2 max-w-3xl text-2xl font-black sm:text-3xl">Ce que votre agence gagne au quotidien.</h2>
           <div className="mt-8 grid gap-7 md:grid-cols-2 lg:grid-cols-4">
             {PRICING_BENEFITS.map((benefit, index) => {
               const Icon = BENEFIT_ICONS[index];
               return (
                 <div key={benefit.title} className="border-t border-white/15 pt-5">
-                  <Icon className="h-5 w-5 text-orange-300" aria-hidden="true" />
+                  <Icon className="h-5 w-5 text-champagne-100" aria-hidden="true" />
                   <h3 className="mt-4 text-lg font-black">{benefit.title}</h3>
                   <p className="mt-2 text-sm leading-6 text-emerald-50/70">{benefit.text}</p>
                 </div>
@@ -295,7 +295,7 @@ export function PricingSections({ plans, onSelectPlan, onStart, onRequestDemo, c
       <section className="bg-white px-4 py-14 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 rounded-lg border border-emerald-900/20 bg-emerald-50 p-6 sm:p-8 lg:flex-row lg:items-center">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.12em] text-orange-700">Passez à une gestion maîtrisée</p>
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-champagne-700">Passez à une gestion maîtrisée</p>
             <h2 className="mt-2 text-2xl font-black text-slate-950">Prêt à reprendre le contrôle de votre gestion locative ?</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
               Commencez avec le plan adapté ou demandez une démonstration centrée sur votre portefeuille et votre manière de travailler.
@@ -305,7 +305,7 @@ export function PricingSections({ plans, onSelectPlan, onStart, onRequestDemo, c
             <button
               type="button"
               onClick={onStart}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-950 px-5 py-2.5 text-sm font-black text-white transition hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-emerald-950 px-5 py-2.5 text-sm font-black text-white transition hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-champagne focus-visible:ring-offset-2"
             >
               Commencer maintenant
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -313,7 +313,7 @@ export function PricingSections({ plans, onSelectPlan, onStart, onRequestDemo, c
             <button
               type="button"
               onClick={onRequestDemo}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-emerald-950/15 bg-white px-5 py-2.5 text-sm font-black text-emerald-950 transition hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-emerald-950/15 bg-white px-5 py-2.5 text-sm font-black text-emerald-950 transition hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-champagne-700 focus-visible:ring-offset-2"
             >
               Demander une démonstration
             </button>

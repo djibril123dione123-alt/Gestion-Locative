@@ -19,16 +19,22 @@ export function PricingPlanCard({ plan, onSelect }: PricingPlanCardProps) {
 
   return (
     <article
-      className={`flex h-full flex-col rounded-lg border p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md sm:p-5 ${
+      className={`relative flex h-full flex-col overflow-hidden rounded-lg border p-4 transition duration-200 hover:-translate-y-0.5 sm:p-5 ${
         isHighlighted
-          ? 'border-emerald-900 bg-emerald-950 text-white'
-          : 'border-emerald-950/10 bg-white text-slate-950'
+          ? 'border-champagne/70 bg-emerald-950 text-white shadow-premium hover:shadow-premium-lg hover:border-champagne'
+          : 'border-emerald-950/10 bg-white text-slate-950 shadow-sm hover:shadow-md'
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
+      {isHighlighted && (
+        <div
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top,_rgba(217,170,94,0.16),_transparent_60%)]"
+          aria-hidden="true"
+        />
+      )}
+      <div className="relative flex items-start justify-between gap-3">
         <span
           className={`inline-flex h-9 w-9 items-center justify-center rounded-lg sm:h-10 sm:w-10 ${
-            isHighlighted ? 'bg-white/10 text-emerald-200' : 'bg-emerald-50 text-emerald-800'
+            isHighlighted ? 'bg-white/10 text-champagne-100' : 'bg-emerald-50 text-emerald-800'
           }`}
         >
           <Icon className="h-4.5 w-4.5 sm:h-5 sm:w-5" aria-hidden="true" />
@@ -36,7 +42,9 @@ export function PricingPlanCard({ plan, onSelect }: PricingPlanCardProps) {
         {plan.badge && (
           <span
             className={`rounded-full px-2.5 py-1 text-[0.67rem] font-bold uppercase tracking-[0.08em] ${
-              isHighlighted ? 'bg-orange-400 text-emerald-950' : 'bg-slate-100 text-slate-600'
+              isHighlighted
+                ? 'bg-gradient-to-r from-champagne-300 to-champagne text-emerald-950 shadow-sm'
+                : 'bg-slate-100 text-slate-600'
             }`}
           >
             {plan.badge}
@@ -81,7 +89,7 @@ export function PricingPlanCard({ plan, onSelect }: PricingPlanCardProps) {
       <ul className="mt-4 space-y-2 sm:mt-5 sm:space-y-2.5">
         {plan.features.map((feature) => (
           <li key={feature} className="flex gap-2.5 text-sm leading-5">
-            <Check className={`mt-0.5 h-4 w-4 shrink-0 ${isHighlighted ? 'text-orange-300' : 'text-emerald-700'}`} aria-hidden="true" />
+            <Check className={`mt-0.5 h-4 w-4 shrink-0 ${isHighlighted ? 'text-champagne-100' : 'text-emerald-700'}`} aria-hidden="true" />
             <span className={isHighlighted ? 'text-emerald-50/85' : 'text-slate-700'}>{feature}</span>
           </li>
         ))}
@@ -91,12 +99,12 @@ export function PricingPlanCard({ plan, onSelect }: PricingPlanCardProps) {
         <button
           type="button"
           onClick={() => onSelect(plan)}
-          className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 focus-visible:ring-offset-2 ${
+          className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
             isHighlighted
-              ? 'bg-orange-400 text-emerald-950 hover:bg-orange-300'
+              ? 'bg-gradient-to-r from-champagne-300 to-champagne text-emerald-950 shadow-premium hover:from-champagne-100 hover:to-champagne-300 focus-visible:ring-champagne'
               : plan.id === 'enterprise'
-                ? 'border border-emerald-900/20 bg-emerald-50 text-emerald-950 hover:bg-emerald-100'
-                : 'bg-emerald-950 text-white hover:bg-emerald-900'
+                ? 'border border-emerald-900/20 bg-emerald-50 text-emerald-950 hover:bg-emerald-100 focus-visible:ring-emerald-700'
+                : 'bg-emerald-950 text-white hover:bg-emerald-900 focus-visible:ring-emerald-700'
           }`}
         >
           {plan.cta}

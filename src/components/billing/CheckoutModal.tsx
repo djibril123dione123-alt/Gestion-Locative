@@ -51,7 +51,7 @@ const POLL_INTERVAL_MS = 5000;
 const POLL_MAX_ATTEMPTS = 36;
 
 const CONTACT_WHATSAPP = '221769010960';
-const CONTACT_EMAIL = 'samaykeur@gmail.com';
+const CONTACT_EMAIL = 'contact@samaykeur.com';
 
 const PROVIDERS: ProviderConfig[] = [
   { id: 'orange_money', label: 'Orange Money', sub: 'Sénégal', logo: orangeMoneyLogo, fallback: 'OM', color: '#FF6600', bg: '#FFF4EE' },

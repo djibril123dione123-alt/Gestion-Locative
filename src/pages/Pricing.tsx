@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, Check } from 'lucide-react';
 import { CheckoutModal } from '../components/billing/CheckoutModal';
 import { BrandLogo } from '../components/brand/BrandLogo';
 import { PricingSections } from '../components/pricing/PricingSections';
 import { useAuth } from '../contexts/AuthContext';
 import {
+  CONTACT_EMAIL,
   CONTACT_WHATSAPP,
   PRICING_PLAN_DEFINITIONS,
   type PricingPlanDefinition,
@@ -23,6 +24,12 @@ function openPricingConversation(message: string) {
   );
 }
 
+// Un prospect non connecté qui choisit un plan est redirigé vers Auth ; le
+// HashRouter actuel ne porte pas d'état entre pages, donc l'intention est
+// conservée ici le temps du login/inscription et reprise au retour sur
+// /pricing (voir l'effet ci-dessous), sans toucher au routage ni aux IDs.
+const PENDING_PLAN_KEY = 'sk_pending_plan_intent';
+
 export function Pricing({ embedded = false, onNavigate }: PricingProps) {
   const { profile } = useAuth();
   const [checkoutPlan, setCheckoutPlan] = useState<PricingPlanDefinition | null>(null);
@@ -34,12 +41,22 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
     }
 
     if (!profile) {
+      sessionStorage.setItem(PENDING_PLAN_KEY, plan.id);
       onNavigate?.('auth');
       return;
     }
 
     setCheckoutPlan(plan);
   };
+
+  useEffect(() => {
+    if (!profile) return;
+    const pendingId = sessionStorage.getItem(PENDING_PLAN_KEY);
+    if (!pendingId) return;
+    sessionStorage.removeItem(PENDING_PLAN_KEY);
+    const pendingPlan = PRICING_PLAN_DEFINITIONS.find((plan) => plan.id === pendingId);
+    if (pendingPlan) setCheckoutPlan(pendingPlan);
+  }, [profile]);
 
   if (embedded) {
     return (
@@ -96,8 +113,9 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
       <main>
         <section className="relative isolate overflow-hidden bg-emerald-950 px-4 py-11 text-white sm:px-6 sm:py-14 lg:px-8 lg:py-18">
           <img
-            src="/brand/marketing/landing-payments.jpg"
-            alt="Suivi professionnel des encaissements avec Samay Këur"
+            src="/brand/marketing/pricing-hero.png"
+            alt=""
+            aria-hidden="true"
             className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
           />
           <div className="absolute inset-0 -z-10 bg-emerald-950/90" aria-hidden="true" />
@@ -158,10 +176,29 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
         />
       </main>
 
-      <footer className="border-t border-white/10 bg-emerald-950 px-4 py-6 text-emerald-50/70 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 text-xs sm:flex-row sm:items-center">
-          <p>Samay Këur · Gestion locative professionnelle</p>
-          <p>Les capacités Entreprise sont confirmées uniquement après étude et contractualisation.</p>
+      <footer className="border-t border-white/10 bg-emerald-950 px-4 py-10 text-emerald-50/70 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex flex-col gap-6 border-b border-white/10 pb-6 sm:flex-row sm:items-center sm:justify-between">
+            <BrandLogo size="sm" tone="dark" />
+            <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm font-semibold">
+              <a href="https://samaykeur.com" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Site vitrine</a>
+              <a href="https://samaykeur.com/demo" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Démo</a>
+              <a href={`mailto:${CONTACT_EMAIL}`} className="hover:text-white transition">Contact</a>
+              <a
+                href={`https://wa.me/${CONTACT_WHATSAPP}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white transition"
+              >
+                WhatsApp
+              </a>
+              <a href="https://samaykeur.com/cgu" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Légal</a>
+            </nav>
+          </div>
+          <div className="flex flex-col gap-2 pt-6 text-xs sm:flex-row sm:items-center sm:justify-between">
+            <p>Samay Këur · Gestion locative professionnelle</p>
+            <p>Les capacités Entreprise sont confirmées uniquement après étude et contractualisation.</p>
+          </div>
         </div>
       </footer>
 

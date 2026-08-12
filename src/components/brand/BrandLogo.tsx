@@ -30,10 +30,15 @@ const TEXT_SIZE: Record<BrandSize, string> = {
   xl: 'text-4xl',
 };
 
+// Icône UI inline : toujours l'emblème transparent réel (jamais une tuile
+// glossy pré-cuite — celle-ci reste réservée aux contextes d'icône OS via
+// generate-brand-icons.mjs). Le fond visuel, quand withTile est actif, est
+// entièrement dessiné en CSS ci-dessous, jamais superposé à une image déjà
+// tuilée (ce qui produisait un double-cadre "boîte dans la boîte").
 const MARK_SRC: Record<BrandTone, string> = {
-  dark: '/brand/app-icon-primary.png',
-  light: '/brand/app-icon-light.png',
-  mono: '/brand/app-icon-monochrome.png',
+  dark: '/brand/mark-transparent.png',
+  light: '/brand/mark-transparent.png',
+  mono: '/brand/mark-transparent.png',
 };
 
 const LOCKUP_SRC: Record<BrandTone, string> = {
@@ -50,7 +55,7 @@ export function BrandMark({
   withTile = true,
 }: BrandMarkProps) {
   const isLight = tone === 'light';
-  const src = withTile ? MARK_SRC[tone] : '/brand/mark-transparent.png';
+  const src = MARK_SRC[tone];
   const tileClass = withTile
     ? isLight
       ? 'bg-[#F2EDE3] shadow-[0_18px_42px_rgba(13,27,22,0.18)] ring-1 ring-[#DED6C8]'

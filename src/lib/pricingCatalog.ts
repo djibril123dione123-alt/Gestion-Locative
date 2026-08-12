@@ -36,7 +36,7 @@ export interface PricingPlanDefinition {
 }
 
 export const CONTACT_WHATSAPP = '221769010960';
-export const CONTACT_EMAIL = 'samaykeur@gmail.com';
+export const CONTACT_EMAIL = 'contact@samaykeur.com';
 
 /**
  * Source tarifaire publique canonique.
@@ -99,8 +99,8 @@ export const PRICING_PLAN_DEFINITIONS: PricingPlanDefinition[] = [
     outcome: 'Plus de capacité, une petite équipe et des rapports prêts à présenter aux propriétaires.',
     bestFor: 'Une équipe jusqu’à 5 personnes qui gère jusqu’à 100 unités.',
     supportLabel: 'Support prioritaire',
-    accent: '#F58220',
-    surface: '#FFF7ED',
+    accent: '#B8863E',
+    surface: '#FBF6EC',
     badge: 'Populaire',
     limits: {
       max_users: 5,

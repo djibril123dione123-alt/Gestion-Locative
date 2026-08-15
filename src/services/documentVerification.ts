@@ -140,9 +140,9 @@ export function getPaymentStatusLabel(status?: string | null) {
 export function getVerificationCopy(state: VerificationState) {
   if (state === 'authentic') {
     return {
-      title: 'Document authentique',
+      title: 'Document enregistré',
       message:
-        "Cette page confirme l'authenticité du document enregistré dans le registre documentaire Samay Këur. Les informations affichées doivent correspondre au document scanné.",
+        "Cette référence est enregistrée dans le registre documentaire Samay Këur. Les informations affichées doivent correspondre au document scanné.",
     };
   }
   if (state === 'revoked' || state === 'superseded') {
@@ -166,7 +166,7 @@ export function getVerificationCopy(state: VerificationState) {
   if (state === 'token_required') {
     return {
       title: 'Lien QR ou jeton sécurisé requis',
-      message: "Ne confirmez l'authenticité d'aucun document sans scanner le QR code ou utiliser un jeton de sécurité valide.",
+      message: "Ne considérez aucun document comme enregistré sans scanner le QR code ou utiliser un jeton de sécurité valide.",
     };
   }
   return {

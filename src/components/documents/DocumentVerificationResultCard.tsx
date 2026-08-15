@@ -203,8 +203,8 @@ export function DocumentVerificationResultCard({
             )}
             <p className="min-w-0 break-words text-[0.68rem] font-medium leading-5 text-slate-600 [overflow-wrap:anywhere] sm:text-[0.72rem]">
               {result?.state === 'authentic'
-                ? "Le registre Samay Këur confirme l'authenticité de cette référence. Vérifiez que les informations affichées correspondent au document scanné."
-                : "Ne vous fiez pas à ce document tant que son authenticité n'a pas été confirmée par son émetteur."}
+                ? "Cette référence est enregistrée dans le registre Samay Këur. Vérifiez que les informations affichées correspondent au document scanné."
+                : "Ne vous fiez pas à ce document tant que son enregistrement n'a pas été confirmé par son émetteur."}
             </p>
           </div>
         </div>

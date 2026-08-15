@@ -452,7 +452,7 @@ const DEFAULT_DOCUMENT_PREFERENCES: NonNullable<AgencySettings['document_prefere
     rapport: true,
     facture: false,
   },
-  qr_text: "Scannez pour vérifier l'authenticité.",
+  qr_text: "Scannez pour vérifier ce document.",
   qr_position: 'bottom_right',
   confidentiality_notice: 'Document confidentiel réservé aux parties concernées.',
   payment_notice: 'Paiement attendu selon les modalités prévues au contrat.',

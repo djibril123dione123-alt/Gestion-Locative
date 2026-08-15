@@ -83,7 +83,7 @@ export function DocumentScanner() {
         : await verifyDocumentReference(parsed.reference ?? value, profile?.agency_id);
       setResult(next);
       if (next.state === 'authentic') {
-        toast.success(parsed.token ? 'Document authentique' : 'Preuve trouvée dans votre coffre');
+        toast.success(parsed.token ? 'Document enregistré' : 'Preuve trouvée dans votre coffre');
       } else if (next.state === 'network_error') {
         toast.error('Vérification impossible pour le moment');
       }
@@ -197,7 +197,7 @@ export function DocumentScanner() {
         className="lg:!flex-row lg:!items-center lg:!justify-between"
         eyebrow="REGISTRE DOCUMENTAIRE"
         title="Scanner un document"
-        description="Scannez le QR d'une quittance, d'un contrat ou d'un rapport pour confirmer son authenticité."
+        description="Scannez le QR d'une quittance, d'un contrat ou d'un rapport pour vérifier son enregistrement."
         mobileDescription="Vérification QR."
         sideContent={
           <div className="hidden max-w-[17.5rem] items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/70 px-2.5 py-2 text-[0.68rem] font-semibold leading-4 text-slate-600 shadow-sm ring-1 ring-white/70 lg:flex">
@@ -331,7 +331,7 @@ export function DocumentScanner() {
               </div>
               <h2 className="mt-2 text-sm font-extrabold text-slate-950 sm:text-base">Résultat de vérification</h2>
               <p className="mt-1.5 max-w-md text-[0.72rem] font-medium leading-5 text-slate-500 sm:text-xs">
-                Le statut du document apparaîtra ici : authentique, introuvable, révoqué ou erreur réseau.
+                Le statut du document apparaîtra ici : enregistré, introuvable, révoqué ou erreur réseau.
               </p>
             </div>
           )}

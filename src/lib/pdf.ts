@@ -1530,7 +1530,7 @@ async function drawVerificationBlock(
   doc.setFontSize(7.6);
   doc.setTextColor(...colors.primary);
   doc.text(
-    verification.registered ? 'Authentification numérique' : 'Preuve numérique indisponible',
+    verification.registered ? 'Vérification numérique' : 'Preuve numérique indisponible',
     textX,
     y + 9.5,
   );
@@ -1550,7 +1550,7 @@ async function drawVerificationBlock(
   );
   doc.text(
     verification.registered
-      ? 'Authenticité enregistrée dans le registre'
+      ? 'Enregistrement confirmé dans le registre'
       : 'Aucun QR public n’a été émis pour cette copie',
     textX,
     y + 23.5,

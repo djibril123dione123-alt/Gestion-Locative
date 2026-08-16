@@ -125,7 +125,7 @@ export function WizardShell({
     ? `relative flex w-full flex-col overflow-hidden border border-emerald-950/10 bg-[#f8f3e8]/95 shadow-[0_30px_96px_rgba(6,17,13,0.2)] ring-1 ring-white/60 ${
         isFullscreenMobile ? 'min-h-dvh rounded-none sm:min-h-0' : 'max-h-[91dvh] rounded-t-[1.35rem]'
       } sm:max-h-[min(680px,calc(100vh-36px))] sm:w-[min(92vw,920px)] sm:max-w-[920px] sm:rounded-[1.6rem] ${
-        hasRail ? 'sm:grid sm:grid-cols-[minmax(11.75rem,0.53fr)_minmax(0,1.47fr)]' : ''
+        hasRail ? 'sm:grid sm:grid-cols-[minmax(11.75rem,0.53fr)_minmax(0,1.47fr)] sm:grid-rows-[minmax(0,1fr)]' : ''
       } ${panelClassName}`
     : `sk-premium-panel flex w-full flex-col sm:w-[90vw] ${sizeClasses[size] || sizeClasses.standard} rounded-t-[1.5rem] sm:rounded-t-[1.35rem] sm:rounded-[1.35rem] max-h-[94dvh] sm:max-h-[calc(100vh-48px)] ${panelClassName}`;
 

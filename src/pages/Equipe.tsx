@@ -1269,35 +1269,12 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             {inviteStep === 1 ? (() => {
               const guide = INVITE_ROLE_GUIDE[formData.role];
               return (
-                <div className={`rounded-xl border p-2.5 ${guide.tone}`}>
-                  <div className="flex items-start gap-2">
-                    <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-[0.7rem] font-extrabold">{ROLE_LABELS[formData.role]}</p>
-                      <p className="mt-0.5 text-[0.62rem] font-semibold leading-3 opacity-80">{guide.summary}</p>
-                    </div>
+                <div className={`flex items-start gap-2 rounded-xl border p-2.5 ${guide.tone}`}>
+                  <Shield className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[0.7rem] font-extrabold">{ROLE_LABELS[formData.role]}</p>
+                    <p className="mt-0.5 text-[0.62rem] font-semibold leading-3 opacity-80">{guide.summary}</p>
                   </div>
-                  <div className="mt-1.5 grid gap-1 sm:grid-cols-3">
-                    {guide.access.map((item) => (
-                      <span key={item} className="rounded-lg bg-white/70 px-2 py-1 text-[0.56rem] font-bold leading-3 text-slate-700">
-                        {item}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-2 rounded-lg bg-white/75 px-2 py-1.5 text-[0.6rem] font-semibold leading-4 text-slate-600">
-                    Sécurité : le lien expire automatiquement. Les pages visibles restent contrôlées par RBAC et peuvent être ajustées après acceptation.
-                  </div>
-                  <div className="mt-2 grid gap-1.5 rounded-lg bg-white/80 p-1.5 sm:grid-cols-4">
-                    <MiniStat label="Pages visibles" value={invitePreview.visible} />
-                    <MiniStat label="Pages masquées" value={invitePreview.hidden} />
-                    <MiniStat label="Actions" value={invitePreview.actions} />
-                    <MiniStat label="Modules off" value={invitePreview.disabled} />
-                  </div>
-                  {invitePreset === 'custom' ? (
-                    <p className="mt-1.5 rounded-lg bg-white/75 px-2 py-1 text-[0.58rem] font-bold leading-4 text-slate-600">
-                      Le preset personnalisé sera enregistré comme intention. Les ajustements page par page se font après acceptation, depuis la fiche du membre.
-                    </p>
-                  ) : null}
                 </div>
               );
             })() : null}

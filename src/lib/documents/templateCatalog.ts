@@ -40,39 +40,6 @@ export function getSystemBlockPublicLabel(systemKey?: DocumentSystemBlockKey | n
   return systemKey ? SYSTEM_BLOCK_PUBLIC_LABELS[systemKey] ?? fallback : fallback;
 }
 
-export function getSystemBlockPreviewText(systemKey?: DocumentSystemBlockKey | null, documentType?: DocumentTemplateType) {
-  switch (systemKey) {
-    case 'payment_summary':
-      return 'Période juillet 2026. Montant encaissé : 300 000 F CFA. Statut : soldé.';
-    case 'tenant_identity':
-      return 'Locataire : Fatou Sarr. Contact : 77 000 12 34. Pièce : 2 01 19940112 00456 7.';
-    case 'property_identity':
-      return 'Résidence Alima, Appartement F4, Dakar. Bail rattaché : CTR-2026-014.';
-    case 'payment_breakdown':
-      return 'Loyer attendu : 300 000 F CFA. Déjà encaissé : 300 000 F CFA. Reliquat : 0 F CFA.';
-    case 'owner_summary':
-      return documentType === 'rapport_proprietaire'
-        ? 'Synthèse propriétaire : 1 250 000 F CFA encaissés, 120 000 F CFA de reliquats, 980 000 F CFA nets.'
-        : 'Synthèse bailleur : 1 250 000 F CFA encaissés, 120 000 F CFA de reliquats, 980 000 F CFA nets à reverser.';
-    case 'occupancy':
-      return 'Portefeuille : 3 biens, 8 unités, 7 occupées. Taux d’occupation : 88 %.';
-    case 'collections':
-      return 'Encaissements du mois : Fatou Sarr, Anta Diagne et Mouhamed Diop ont réglé leurs loyers.';
-    case 'expenses':
-      return 'Dépenses rattachées : maintenance plomberie 45 000 F CFA, électricité communs 18 000 F CFA.';
-    case 'commissions':
-      return 'Commissions agence : 125 000 F CFA. Taux moyen appliqué : 10 %.';
-    case 'arrears':
-      return 'Reliquats à suivre : 120 000 F CFA sur une échéance partielle.';
-    case 'documents':
-      return 'Pièces associées : quittances, justificatifs et rapport mensuel archivés dans le coffre documentaire.';
-    case 'qr_verification':
-      return 'QR Verify actif. Le document peut être authentifié par lien public de vérification.';
-    default:
-      return 'Cette section sera alimentée automatiquement par les données validées de Samay Këur.';
-  }
-}
-
 export const TEMPLATE_TAG_CATALOG: TemplateTagDefinition[] = [
   { key: 'agency_name', label: "Nom de l'organisation", category: 'organisation', example: 'Keur Gestion', documentTypes: types('contrat', 'mandat', 'quittance', 'facture', 'rapport_bailleur', 'rapport_proprietaire') },
   { key: 'agency_address', label: 'Adresse', category: 'organisation', example: 'Médina, Dakar', documentTypes: types('contrat', 'mandat', 'quittance', 'facture', 'rapport_bailleur', 'rapport_proprietaire') },

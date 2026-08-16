@@ -18,9 +18,8 @@ import { ToastContainer } from '../components/ui/Toast';
 import { DocumentTemplateEditor } from '../components/documents/DocumentTemplateEditor';
 import { DocumentTemplatePreview } from '../components/documents/DocumentTemplatePreview';
 import { useToast } from '../hooks/useToast';
-import { createDocumentTemplateTestPdf } from '../lib/documents/templatePreviewPdf';
-import { runDocumentGeneration } from '../lib/documentGeneration';
-import { saveGeneratedPdf } from '../lib/pdf';
+import { useDocumentPreviewPdf } from '../hooks/useDocumentPreviewPdf';
+import { loadAgencySettings } from '../lib/pdf';
 import {
   stableTemplateStringify,
   validateDocumentTemplate,
@@ -31,6 +30,7 @@ import {
   restoreDocumentTemplateRevision,
   saveDocumentTemplateDraft,
 } from '../services/documentTemplateService';
+import type { AgencySettings } from '../types';
 import type {
   AgencyDocumentTemplateRow,
   DocumentTemplateContent,
@@ -150,7 +150,14 @@ export function DocumentStudio() {
   const [activeView, setActiveView] = useState<'editor' | 'preview' | 'history'>('editor');
   const [editorMode, setEditorMode] = useState<'simple' | 'advanced'>('simple');
   const [savedFingerprint, setSavedFingerprint] = useState('');
+  const [settings, setSettings] = useState<Partial<AgencySettings>>({});
   const loadSequence = useRef(0);
+
+  useEffect(() => {
+    void loadAgencySettings().then(setSettings);
+  }, []);
+
+  const preview = useDocumentPreviewPdf(documentType, content, settings);
 
   const load = async (type: DocumentTemplateType) => {
     const sequence = ++loadSequence.current;
@@ -256,40 +263,14 @@ export function DocumentStudio() {
     }
   };
 
-  const downloadTest = async () => {
-    if (!content) return;
-    try {
-      const reference = `TEST-${documentType.toUpperCase()}`;
-      await runDocumentGeneration(
-        {
-          key: `document-studio:${documentType}`,
-          kind: 'document',
-          title: `Préparation du modèle ${DOCUMENT_CHOICES.find((choice) => choice.type === documentType)?.label ?? ''}`,
-          source: 'document-studio',
-          reference,
-        },
-        async (generation) => {
-          generation.report('building-document', { reference });
-          const doc = createDocumentTemplateTestPdf(content);
-          generation.report('securing-document', { reference });
-          await saveGeneratedPdf(doc, {
-            kind: 'document',
-            title: `PDF test — ${DOCUMENT_CHOICES.find((choice) => choice.type === documentType)?.label ?? 'Document'}`,
-            fileName: `${reference}.pdf`,
-            source: 'document-studio',
-            reference,
-            generation,
-            metadata: {
-              documentType,
-              reference,
-              title: `Modèle test — ${DOCUMENT_CHOICES.find((choice) => choice.type === documentType)?.label ?? 'Document'}`,
-            },
-          });
-        },
-      );
-    } catch (error) {
-      toast.error(getFriendlyError(error));
+  const downloadTest = () => {
+    if (!preview.doc) {
+      toast.error(preview.supported ? "L'aperçu n'est pas encore prêt." : "Aperçu bientôt disponible pour ce type.");
+      return;
     }
+    // Télécharge exactement le PDF déjà affiché dans l'aperçu — aucune
+    // référence n'est allouée, aucune écriture registre n'a lieu (previewMode).
+    preview.doc.save(`TEST-${documentType.toUpperCase()}.pdf`);
   };
 
   return (
@@ -382,7 +363,7 @@ export function DocumentStudio() {
                     Non enregistré
                   </span>
                 )}
-                <PremiumButton variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={downloadTest} disabled={!content}>
+                <PremiumButton variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />} onClick={downloadTest} disabled={!content || !preview.doc}>
                   PDF test
                 </PremiumButton>
                 <PremiumButton variant="primary" size="sm" icon={<Save className="h-3.5 w-3.5" />} onClick={saveDraft} disabled={!content || !hasUnsavedChanges || saving || publishing}>
@@ -419,7 +400,12 @@ export function DocumentStudio() {
               )
             ) : activeView === 'preview' ? (
               <div className="h-[42rem]">
-                <DocumentTemplatePreview content={content} />
+                <DocumentTemplatePreview
+                  blobUrl={preview.blobUrl}
+                  loading={preview.loading}
+                  error={preview.error}
+                  supported={preview.supported}
+                />
               </div>
             ) : (
               <div className="space-y-2">
@@ -455,7 +441,12 @@ export function DocumentStudio() {
         <aside className="min-w-0 space-y-3">
           {content && (
             <div className="hidden h-[31rem] lg:block">
-              <DocumentTemplatePreview content={content} />
+              <DocumentTemplatePreview
+                blobUrl={preview.blobUrl}
+                loading={preview.loading}
+                error={preview.error}
+                supported={preview.supported}
+              />
             </div>
           )}
           <div className="rounded-md border border-emerald-950/10 bg-white p-3 shadow-sm">

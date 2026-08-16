@@ -1154,6 +1154,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
           </button>
         ) : inviteStep < 2 ? (
           <button
+            key="invite-continue"
             type="button"
             disabled={!canInviteMore || !inviteEmailIsValid}
             onClick={() => setInviteStep(2)}
@@ -1163,6 +1164,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
           </button>
         ) : (
           <button
+            key="invite-submit"
             type="submit"
             form={inviteFormId}
             disabled={submitting || !canInviteMore}

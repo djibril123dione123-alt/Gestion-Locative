@@ -2262,7 +2262,7 @@ export async function generateMandatBailleurPDF(
       {
         reference: mandatRef,
         issueDate: new Date().toLocaleDateString('fr-FR'),
-        documentType: 'Mandat de gestion',
+        documentType: 'Mandat de gérance',
       }
     );
 

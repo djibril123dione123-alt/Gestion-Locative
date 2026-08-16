@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Check,
+  ChevronDown,
   Copy,
   CalendarClock,
   Download,
@@ -52,6 +53,7 @@ import {
 import { getPricingPlan } from '../lib/pricingCatalog';
 import { supabase, type UserRole } from '../lib/supabase';
 import {
+  cancelTeamInvitation,
   createTeamInvitation,
   deactivateTeamMember,
   replaceMemberPermissions,
@@ -246,7 +248,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     role: 'agent',
   });
   const [invitePreset, setInvitePreset] = useState<AccessPreset>('standard');
-  const [inviteStep, setInviteStep] = useState<1 | 2 | 3>(1);
+  const [inviteStep, setInviteStep] = useState<1 | 2>(1);
   const [inviteNote, setInviteNote] = useState('');
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -256,7 +258,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
   const [roleFilter, setRoleFilter] = useState<'all' | RoleOption | 'bailleur'>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [permissionTarget, setPermissionTarget] = useState<Member | null>(null);
-  const [permissionWizardStep, setPermissionWizardStep] = useState(0);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [permissionDraft, setPermissionDraft] = useState<PermissionDraft>({});
   const [savingPermissions, setSavingPermissions] = useState(false);
 
@@ -467,6 +469,15 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
     setPermissionDraft(buildPermissionDraft(permissionTarget, preset));
   };
 
+  const toggleCategory = (category: string) => {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+  };
+
   const updateDraftAccess = (page: string, accessLevel: DraftAccessLevel) => {
     setPermissionDraft((prev) => {
       const current = prev[page];
@@ -549,7 +560,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
       }));
       toast.success('Permissions mises à jour');
       setPermissionTarget(null);
-      setPermissionWizardStep(0);
+      setExpandedCategories(new Set());
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur lors de la sauvegarde des permissions';
       toast.error(msg);
@@ -560,6 +571,13 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (inviteStep !== 2) {
+      // Une touche Entrée dans un champ du formulaire déclenche nativement
+      // onSubmit, quelle que soit l'étape affichée : on avance d'une étape
+      // au lieu de créer l'invitation sans passer par la confirmation.
+      setInviteStep(2);
+      return;
+    }
     if (!profile?.agency_id) return;
     if (!formData.email.trim()) {
       toast.warning('Veuillez saisir un email');
@@ -660,17 +678,10 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
   const inviteSteps = [
     {
       id: 'collaborator',
-      label: 'Collaborateur',
-      shortLabel: 'Contact',
-      description: 'Email et message',
+      label: 'Collaborateur & accès',
+      shortLabel: 'Qui & accès',
+      description: 'Email, rôle et preset',
       icon: <Mail className="h-3.5 w-3.5" />,
-    },
-    {
-      id: 'access',
-      label: 'Rôle & accès',
-      shortLabel: 'Accès',
-      description: 'Rôle et preset',
-      icon: <Shield className="h-3.5 w-3.5" />,
     },
     {
       id: 'confirm',
@@ -680,7 +691,6 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
       icon: <Send className="h-3.5 w-3.5" />,
     },
   ];
-  const selectedInviteGuide = INVITE_ROLE_GUIDE[formData.role];
   const inviteWizardRail = (
     <WizardRail
       eyebrow="Console équipe"
@@ -702,38 +712,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
           Les accès restent ajustables après acceptation et les modules désactivés restent verrouillés par RBAC.
         </span>
       )}
-    >
-      {!generatedLink && inviteStep > 1 ? (
-        <>
-          <div className="rounded-xl border border-white/10 bg-white/[0.055] p-2.5">
-            <p className="text-[0.58rem] font-black uppercase tracking-[0.16em] text-emerald-100/75">
-              Rôle sélectionné
-            </p>
-            <p className="mt-1 text-[0.92rem] font-black text-white">{ROLE_LABELS[formData.role]}</p>
-            <p className="mt-1 text-[0.66rem] font-semibold leading-4 text-emerald-50/68">{selectedInviteGuide.summary}</p>
-            <div className="mt-2 space-y-1">
-              {selectedInviteGuide.access.slice(0, 2).map((item) => (
-                <div key={item} className="flex items-start gap-1.5 text-[0.62rem] font-bold leading-4 text-emerald-50/84">
-                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-200" />
-                  <span>{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-white/10 bg-white/[0.055] p-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-[0.54rem] font-black uppercase tracking-[0.14em] text-emerald-100/70">Preset</p>
-              <p className="truncate text-[0.65rem] font-black text-white">{ACCESS_PRESETS[invitePreset].label}</p>
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-1.5">
-              <MiniStat label="Visibles" value={invitePreview.visible} />
-              <MiniStat label="Masquées" value={invitePreview.hidden} />
-            </div>
-          </div>
-        </>
-      ) : null}
-    </WizardRail>
+    />
   );
 
   if (loading && members.length === 0) {
@@ -1065,15 +1044,13 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                   <button
                     type="button"
                     onClick={async () => {
-                      const { error } = await supabase
-                        .from('invitations')
-                        .delete()
-                        .eq('id', invitation.id);
-                      if (!error) {
+                      try {
+                        await cancelTeamInvitation(invitation.id);
                         toast.success('Invitation annulée.');
                         loadData();
-                      } else {
-                        toast.error("Erreur lors de l'annulation de l'invitation.");
+                      } catch (err: unknown) {
+                        const msg = err instanceof Error ? err.message : "Erreur lors de l'annulation de l'invitation.";
+                        toast.error(msg);
                       }
                     }}
                     title="Annuler et supprimer cette invitation"
@@ -1159,7 +1136,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         secondaryAction={
           <button
             type="button"
-            onClick={generatedLink || inviteStep === 1 ? closeInviteModal : () => setInviteStep((previous) => (previous === 3 ? 2 : 1))}
+            onClick={generatedLink || inviteStep === 1 ? closeInviteModal : () => setInviteStep(1)}
             className={wizardSecondaryActionClass}
           >
             {generatedLink || inviteStep === 1 ? 'Fermer' : 'Retour'}
@@ -1175,11 +1152,11 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             {copied ? 'Copié' : 'Copier le lien'}
           </button>
-        ) : inviteStep < 3 ? (
+        ) : inviteStep < 2 ? (
           <button
             type="button"
-            disabled={!canInviteMore || (inviteStep === 1 && !inviteEmailIsValid)}
-            onClick={() => setInviteStep((previous) => (previous === 1 ? 2 : 3))}
+            disabled={!canInviteMore || !inviteEmailIsValid}
+            onClick={() => setInviteStep(2)}
             className={wizardPrimaryActionClass}
           >
             Continuer
@@ -1245,7 +1222,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 <p className="mt-1 text-[0.58rem] font-semibold text-slate-400">Lien valable 7 jours. {240 - inviteNote.length} caractères restants.</p>
               </div>
             </div>
-            <div className={inviteStep === 2 ? '' : 'hidden'}>
+            <div className={inviteStep === 1 ? '' : 'hidden'}>
               <label className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Rôle et preset d’accès</label>
               <SmartCombobox
                 density="compact"
@@ -1263,7 +1240,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 placeholder="Sélectionner un rôle"
               />
             </div>
-            <div className={inviteStep === 2 ? '' : 'hidden'}>
+            <div className={inviteStep === 1 ? '' : 'hidden'}>
               <p className="mb-1 block text-[0.62rem] font-black uppercase tracking-[0.12em] text-slate-500">Preset d’accès prévu</p>
               <div className="grid gap-1.5 sm:grid-cols-2">
                 {(['standard', 'restricted', 'finance', 'custom'] as AccessPreset[]).map((preset) => {
@@ -1289,7 +1266,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 })}
               </div>
             </div>
-            {inviteStep === 2 ? (() => {
+            {inviteStep === 1 ? (() => {
               const guide = INVITE_ROLE_GUIDE[formData.role];
               return (
                 <div className={`rounded-xl border p-2.5 ${guide.tone}`}>
@@ -1324,7 +1301,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                 </div>
               );
             })() : null}
-            {inviteStep === 3 ? (
+            {inviteStep === 2 ? (
               <div className="rounded-xl border border-emerald-950/10 bg-white p-3 shadow-sm">
                 <p className="text-[0.58rem] font-black uppercase tracking-[0.14em] text-emerald-700">Confirmation</p>
                 <h3 className="mt-0.5 text-[0.86rem] font-black text-slate-950">Vérifier avant envoi</h3>
@@ -1353,7 +1330,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         open={!!permissionTarget}
         onClose={() => {
           setPermissionTarget(null);
-          setPermissionWizardStep(0);
+          setExpandedCategories(new Set());
           clearDirectRouteParams();
         }}
         size="compact"
@@ -1362,69 +1339,58 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         eyebrow="SAMAY KËUR"
         title={permissionTarget ? `Permissions · ${permissionTarget.prenom ?? ''} ${permissionTarget.nom ?? ''}` : 'Permissions'}
         description={permissionTarget ? `Base actuelle : ${ROLE_LABELS[permissionTarget.role] ?? permissionTarget.role}` : ''}
-        steps={permissionTarget ? [
-          {
-            id: 'synthesis',
-            label: 'Étape 1',
-            shortLabel: 'Synthèse',
-            description: 'Vue d\'ensemble',
-            icon: <ShieldCheck className="h-3.5 w-3.5" />
-          },
-          ...Object.keys(groupedCatalog).map((cat, idx) => ({
-            id: `cat-${idx}`,
-            label: `Étape ${idx + 2}`,
-            shortLabel: cat,
-            description: 'Permissions',
-            icon: <KeyRound className="h-3.5 w-3.5" />
-          }))
-        ] : []}
-        currentStep={permissionWizardStep}
         contentDescription="Ajustez les permissions pour chaque module de l'application."
         rail={
           <WizardRail
             eyebrow="Console d'accès"
             title="Permissions"
-            description="Personnalisez les accès module par module."
-            steps={permissionTarget ? [
-              {
-                id: 'synthesis',
-                label: 'Étape 1',
-                shortLabel: 'Synthèse',
-                description: 'Vue d\'ensemble',
-                icon: <ShieldCheck className="h-3.5 w-3.5" />
-              },
-              ...Object.keys(groupedCatalog).map((cat, idx) => ({
-                id: `cat-${idx}`,
-                label: `Étape ${idx + 2}`,
-                shortLabel: cat,
-                description: 'Permissions',
-                icon: <KeyRound className="h-3.5 w-3.5" />
-              }))
-            ] : []}
-            currentStep={permissionWizardStep}
+            description="Cliquez une catégorie pour l'ouvrir."
           >
             {permissionTarget && (
-              <div className="mt-6 rounded-xl border border-white/10 bg-white/[0.055] p-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[0.54rem] font-black uppercase tracking-[0.14em] text-emerald-100/70">Profil ciblé</p>
-                  <p className="truncate text-[0.65rem] font-black text-white">{permissionTarget.prenom} {permissionTarget.nom}</p>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-1.5">
-                  <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
-                    <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.visible}</div>
-                    <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Visibles</div>
+              <div className="space-y-2">
+                {Object.keys(groupedCatalog).map((cat) => {
+                  const isOpen = expandedCategories.has(cat);
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => toggleCategory(cat)}
+                      className={`flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-1.5 text-left transition ${
+                        isOpen
+                          ? 'border-amber-100/16 bg-white/[0.06] text-white'
+                          : 'border-white/[0.075] bg-white/[0.018] text-emerald-50/[0.78] hover:bg-white/[0.04]'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <KeyRound className="h-3 w-3 shrink-0 opacity-70" />
+                        <span className="truncate text-[0.66rem] font-semibold">{cat}</span>
+                      </span>
+                      <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  );
+                })}
+                <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.055] p-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[0.54rem] font-black uppercase tracking-[0.14em] text-emerald-100/70">Profil ciblé</p>
+                    <p className="truncate text-[0.65rem] font-black text-white">{permissionTarget.prenom} {permissionTarget.nom}</p>
                   </div>
-                  <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
-                    <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.hidden}</div>
-                    <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Masquées</div>
-                  </div>
-                  <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
-                    <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.actions}</div>
-                    <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Actions</div>
-                  </div>
-                  <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
-                    <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.disabled}</div>
-                    <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Désactivés</div>
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
+                      <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.visible}</div>
+                      <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Visibles</div>
+                    </div>
+                    <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
+                      <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.hidden}</div>
+                      <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Masquées</div>
+                    </div>
+                    <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
+                      <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.actions}</div>
+                      <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Actions</div>
+                    </div>
+                    <div className="rounded-lg bg-white/5 px-2 py-1.5 border border-white/5">
+                      <div className="text-[1.1rem] font-black text-white leading-none">{permissionDraftPreview.disabled}</div>
+                      <div className="text-[0.55rem] font-black uppercase tracking-wider text-emerald-100/50 mt-0.5">Désactivés</div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1434,187 +1400,185 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         primaryAction={
           <button
             type="button"
-            onClick={() => {
-              const categories = Object.keys(groupedCatalog);
-              if (permissionWizardStep === categories.length) {
-                void savePermissions();
-              } else {
-                setPermissionWizardStep((prev) => Math.min(prev + 1, categories.length));
-              }
-            }}
+            onClick={() => void savePermissions()}
             disabled={savingPermissions}
             className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
-            {savingPermissions ? 'Sauvegarde...' : permissionWizardStep === Object.keys(groupedCatalog).length ? 'Enregistrer les accès' : 'Continuer'}
+            {savingPermissions ? 'Sauvegarde...' : 'Enregistrer les accès'}
           </button>
         }
         secondaryAction={
           <button
             type="button"
             onClick={() => {
-              if (permissionWizardStep > 0) {
-                setPermissionWizardStep((prev) => prev - 1);
-              } else {
-                setPermissionTarget(null);
-                setPermissionWizardStep(0);
-                clearDirectRouteParams();
-              }
+              setPermissionTarget(null);
+              setExpandedCategories(new Set());
+              clearDirectRouteParams();
             }}
             disabled={savingPermissions}
             className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
           >
-            {permissionWizardStep === 0 ? 'Annuler' : 'Retour'}
+            Fermer
           </button>
         }
       >
-        {permissionTarget ? (() => {
-          const categories = Object.keys(groupedCatalog);
-          const currentCategory = permissionWizardStep > 0 && permissionWizardStep <= categories.length 
-            ? categories[permissionWizardStep - 1] 
-            : null;
-
-          return (
-            <div className="space-y-4">
-              {permissionWizardStep === 0 && (
-                <div className="space-y-5 lg:space-y-6">
-                  <div className="relative overflow-hidden rounded-2xl border border-emerald-950/5 bg-gradient-to-br from-emerald-50/50 to-white p-5 shadow-sm">
-                    <div className="absolute -right-4 -top-4 opacity-[0.03] text-brand-900 pointer-events-none">
-                      <ShieldCheck className="h-32 w-32" />
-                    </div>
-                    <div className="relative">
-                      <div className="flex items-center gap-2 mb-2.5">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-800 text-white shadow-sm">
-                          <SlidersHorizontal className="h-3.5 w-3.5" />
-                        </div>
-                        <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-brand-800">Configuration Globale</p>
-                      </div>
-                      <p className="mt-2 text-[0.78rem] font-semibold text-slate-700 leading-relaxed max-w-xl">
-                        Rôle de base : <span className="font-black text-slate-950">{ROLE_LABELS[permissionTarget.role] ?? permissionTarget.role}</span>.
-                        <br/>
-                        Les lignes “Rôle par défaut” suivent automatiquement ce rôle. Appliquez un profil type pour tout configurer rapidement, ou affinez par catégorie dans les étapes suivantes.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h4 className="text-[0.68rem] font-black uppercase tracking-[0.15em] text-slate-500 mb-3 px-1">Profils Types</h4>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {(['standard', 'restricted', 'finance', 'custom'] as AccessPreset[]).map((preset) => {
-                        const isCustom = preset === 'custom';
-                        return (
-                          <button
-                            key={preset}
-                            type="button"
-                            onClick={() => isCustom ? setPermissionDraft(buildPermissionDraft(permissionTarget)) : applyPreset(preset as Exclude<AccessPreset, 'custom'>)}
-                            className={`group relative overflow-hidden rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 ${isCustom ? 'border-amber-200/50 bg-gradient-to-br from-amber-50/50 to-white hover:border-amber-300 hover:shadow-md' : 'border-emerald-950/5 bg-white hover:border-brand-200 hover:shadow-md'}`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <span className={`block text-[0.82rem] font-extrabold ${isCustom ? 'text-amber-900' : 'text-slate-950 group-hover:text-brand-800'}`}>
-                                {ACCESS_PRESETS[preset].label}
-                              </span>
-                              {isCustom ? <Sparkles className="h-4 w-4 text-amber-500" /> : <Shield className="h-4 w-4 text-slate-300 group-hover:text-brand-500" />}
-                            </div>
-                            <span className="block text-[0.7rem] font-semibold leading-snug text-slate-500 group-hover:text-slate-600">
-                              {ACCESS_PRESETS[preset].summary}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
+        {permissionTarget ? (
+          <div className="space-y-4">
+            <div className="space-y-5 lg:space-y-6">
+              <div className="relative overflow-hidden rounded-2xl border border-emerald-950/5 bg-gradient-to-br from-emerald-50/50 to-white p-5 shadow-sm">
+                <div className="absolute -right-4 -top-4 opacity-[0.03] text-brand-900 pointer-events-none">
+                  <ShieldCheck className="h-32 w-32" />
                 </div>
-              )}
-
-              {currentCategory && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-slate-600">
-                      <KeyRound className="h-3.5 w-3.5" />
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-md bg-brand-800 text-white shadow-sm">
+                      <SlidersHorizontal className="h-3.5 w-3.5" />
                     </div>
-                    <h3 className="text-[0.75rem] font-bold uppercase tracking-[0.15em] text-slate-800">{currentCategory}</h3>
+                    <p className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-brand-800">Configuration Globale</p>
                   </div>
-                  <div className="space-y-3">
-                    {groupedCatalog[currentCategory].map((item) => {
-                      const draft = permissionDraft[item.id];
-                      const moduleEnabled = isModuleEnabled(item.id, agencySettings);
-                      const inherited = moduleEnabled ? getDefaultAccessLevel(permissionTarget.role, item.id) : 'none';
-                      if (!draft) return null;
-                      const actionsDisabled = draft.access_level === 'none' || !moduleEnabled;
-                      const actionCapabilities = getPageActionCapabilities(item.id);
-                      return (
-                        <div key={item.id} className="group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-4 shadow-sm transition hover:border-brand-200 hover:shadow-md">
-                          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                            <div className="min-w-0">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h4 className="text-[0.82rem] font-black text-slate-950 group-hover:text-brand-800 transition-colors">{item.label}</h4>
-                                {item.sensitive ? (
-                                  <span className="rounded-full bg-orange-50 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-wide text-orange-700 ring-1 ring-inset ring-orange-600/10">
-                                    sensible
-                                  </span>
-                                ) : null}
-                                {!moduleEnabled ? (
-                                  <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-wide text-slate-500 ring-1 ring-inset ring-slate-400/20">
-                                    module inactif
-                                  </span>
-                                ) : null}
-                              </div>
-                              <p className="mt-1 text-[0.68rem] leading-snug text-slate-500">{item.description}</p>
-                              <p className="mt-1.5 text-[0.62rem] font-bold text-slate-400">Défaut rôle : <span className="text-slate-500">{ACCESS_LABELS[inherited]}</span></p>
-                            </div>
-                            <div className="w-full xl:w-52 shrink-0">
-                              <SmartCombobox
-                                density="dense"
-                                disabled={!moduleEnabled}
-                                value={draft.access_level}
-                                options={[
-                                  { value: 'inherit', label: 'Rôle par défaut' },
-                                  { value: 'none', label: 'Masquer' },
-                                  { value: 'read', label: 'Lecture seule' },
-                                  { value: 'write', label: 'Édition' },
-                                  { value: 'admin', label: 'Admin module' },
-                                ]}
-                                onChange={(val) => updateDraftAccess(item.id, val as DraftAccessLevel)}
-                                placeholder="Niveau d'accès"
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="mt-3.5 pt-3.5 border-t border-slate-100/80">
-                            {actionCapabilities.length > 0 ? (
-                              <div className="flex flex-wrap items-center gap-2">
-                                {ACTIONS.filter(({ key }) => actionCapabilities.includes(key)).map(({ key, label, icon: Icon }) => (
-                                  <button
-                                    key={key}
-                                    type="button"
-                                    disabled={actionsDisabled}
-                                    onClick={() => toggleDraftAction(item.id, key)}
-                                    className={`inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[0.64rem] font-bold transition-all ${
-                                      draft[key]
-                                        ? 'border-brand-200 bg-emerald-50 text-brand-800 shadow-sm ring-1 ring-inset ring-brand-900/5'
-                                        : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:border-slate-300'
-                                    } disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white`}
-                                  >
-                                    <Icon className="h-3.5 w-3.5" />
-                                    {label}
-                                  </button>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-[0.62rem] font-semibold text-slate-500 border border-slate-100">
-                                <Lock className="h-3 w-3 opacity-60" />
-                                Consultation uniquement. Aucune action fine disponible.
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <p className="mt-2 text-[0.78rem] font-semibold text-slate-700 leading-relaxed max-w-xl">
+                    Rôle de base : <span className="font-black text-slate-950">{ROLE_LABELS[permissionTarget.role] ?? permissionTarget.role}</span>.
+                    <br/>
+                    Les lignes “Rôle par défaut” suivent automatiquement ce rôle. Appliquez un profil type pour tout configurer rapidement, ou dépliez une catégorie ci-dessous pour affiner module par module.
+                  </p>
                 </div>
-              )}
+              </div>
+
+              <div>
+                <h4 className="text-[0.68rem] font-black uppercase tracking-[0.15em] text-slate-500 mb-3 px-1">Profils Types</h4>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(['standard', 'restricted', 'finance', 'custom'] as AccessPreset[]).map((preset) => {
+                    const isCustom = preset === 'custom';
+                    return (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => isCustom ? setPermissionDraft(buildPermissionDraft(permissionTarget)) : applyPreset(preset as Exclude<AccessPreset, 'custom'>)}
+                        className={`group relative overflow-hidden rounded-2xl border p-4 text-left shadow-sm transition hover:-translate-y-0.5 ${isCustom ? 'border-amber-200/50 bg-gradient-to-br from-amber-50/50 to-white hover:border-amber-300 hover:shadow-md' : 'border-emerald-950/5 bg-white hover:border-brand-200 hover:shadow-md'}`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`block text-[0.82rem] font-extrabold ${isCustom ? 'text-amber-900' : 'text-slate-950 group-hover:text-brand-800'}`}>
+                            {ACCESS_PRESETS[preset].label}
+                          </span>
+                          {isCustom ? <Sparkles className="h-4 w-4 text-amber-500" /> : <Shield className="h-4 w-4 text-slate-300 group-hover:text-brand-500" />}
+                        </div>
+                        <span className="block text-[0.7rem] font-semibold leading-snug text-slate-500 group-hover:text-slate-600">
+                          {ACCESS_PRESETS[preset].summary}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          );
-        })() : null}
+
+            <div className="space-y-2.5">
+              {Object.keys(groupedCatalog).map((cat) => {
+                const isOpen = expandedCategories.has(cat);
+                return (
+                  <div key={cat} className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(cat)}
+                      className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left transition hover:bg-slate-50/80"
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                          <KeyRound className="h-3.5 w-3.5" />
+                        </div>
+                        <h3 className="truncate text-[0.75rem] font-bold uppercase tracking-[0.15em] text-slate-800">{cat}</h3>
+                        <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[0.58rem] font-bold text-slate-500">
+                          {groupedCatalog[cat].length}
+                        </span>
+                      </span>
+                      <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isOpen && (
+                      <div className="space-y-3 border-t border-slate-100 p-4">
+                        {groupedCatalog[cat].map((item) => {
+                          const draft = permissionDraft[item.id];
+                          const moduleEnabled = isModuleEnabled(item.id, agencySettings);
+                          const inherited = moduleEnabled ? getDefaultAccessLevel(permissionTarget.role, item.id) : 'none';
+                          if (!draft) return null;
+                          const actionsDisabled = draft.access_level === 'none' || !moduleEnabled;
+                          const actionCapabilities = getPageActionCapabilities(item.id);
+                          return (
+                            <div key={item.id} className="group relative overflow-hidden rounded-2xl border border-slate-200/60 bg-white p-4 shadow-sm transition hover:border-brand-200 hover:shadow-md">
+                              <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <h4 className="text-[0.82rem] font-black text-slate-950 group-hover:text-brand-800 transition-colors">{item.label}</h4>
+                                    {item.sensitive ? (
+                                      <span className="rounded-full bg-orange-50 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-wide text-orange-700 ring-1 ring-inset ring-orange-600/10">
+                                        sensible
+                                      </span>
+                                    ) : null}
+                                    {!moduleEnabled ? (
+                                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-wide text-slate-500 ring-1 ring-inset ring-slate-400/20">
+                                        module inactif
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  <p className="mt-1 text-[0.68rem] leading-snug text-slate-500">{item.description}</p>
+                                  <p className="mt-1.5 text-[0.62rem] font-bold text-slate-400">Défaut rôle : <span className="text-slate-500">{ACCESS_LABELS[inherited]}</span></p>
+                                </div>
+                                <div className="w-full xl:w-52 shrink-0">
+                                  <SmartCombobox
+                                    density="dense"
+                                    disabled={!moduleEnabled}
+                                    value={draft.access_level}
+                                    options={[
+                                      { value: 'inherit', label: 'Rôle par défaut' },
+                                      { value: 'none', label: 'Masquer' },
+                                      { value: 'read', label: 'Lecture seule' },
+                                      { value: 'write', label: 'Édition' },
+                                      { value: 'admin', label: 'Admin module' },
+                                    ]}
+                                    onChange={(val) => updateDraftAccess(item.id, val as DraftAccessLevel)}
+                                    placeholder="Niveau d'accès"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="mt-3.5 pt-3.5 border-t border-slate-100/80">
+                                {actionCapabilities.length > 0 ? (
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {ACTIONS.filter(({ key }) => actionCapabilities.includes(key)).map(({ key, label, icon: Icon }) => (
+                                      <button
+                                        key={key}
+                                        type="button"
+                                        disabled={actionsDisabled}
+                                        onClick={() => toggleDraftAction(item.id, key)}
+                                        className={`inline-flex h-7 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-[0.64rem] font-bold transition-all ${
+                                          draft[key]
+                                            ? 'border-brand-200 bg-emerald-50 text-brand-800 shadow-sm ring-1 ring-inset ring-brand-900/5'
+                                            : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:border-slate-300'
+                                        } disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-white`}
+                                      >
+                                        <Icon className="h-3.5 w-3.5" />
+                                        {label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="inline-flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-[0.62rem] font-semibold text-slate-500 border border-slate-100">
+                                    <Lock className="h-3 w-3 opacity-60" />
+                                    Consultation uniquement. Aucune action fine disponible.
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </WizardShell>
 
       <ConfirmModal

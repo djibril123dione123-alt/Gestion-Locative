@@ -343,32 +343,20 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
       ) : undefined}
     >
       {step !== 'success' && step !== 'error' && (
-        <div className="mb-4 relative overflow-hidden rounded-2xl bg-[#031510] p-4 shadow-[0_8px_30px_rgba(0,0,0,0.15)] ring-1 ring-white/10">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(16,185,129,0.15),transparent_50%),radial-gradient(ellipse_at_bottom_left,rgba(251,191,36,0.08),transparent_40%)] pointer-events-none" />
-          <div className="absolute -top-12 -right-12 h-32 w-32 rounded-full bg-emerald-500/20 blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-400/20 to-transparent pointer-events-none" />
-          
-          <div className="relative flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[0.62rem] font-black uppercase tracking-[0.2em] text-emerald-400/90">PLAN SÉLECTIONNÉ</p>
-              <p className="truncate text-[1.05rem] font-black text-white drop-shadow-sm">Plan {planName}</p>
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="text-[1.4rem] font-black tracking-tight text-white drop-shadow-md">
-                {formatCurrency(priceXof)}
-                <span className="ml-1 text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest">/mois</span>
-              </p>
-            </div>
+        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5">
+          <div className="min-w-0">
+            <p className="truncate text-[0.85rem] font-black text-slate-900">Plan {planName}</p>
+            <p className="mt-0.5 flex items-center gap-1 text-[0.64rem] font-medium text-slate-500">
+              <Shield className="h-3 w-3 shrink-0 text-emerald-600" />
+              Activation instantanée après confirmation
+            </p>
           </div>
-          <div className="relative mt-3 flex items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 backdrop-blur-md shadow-inner">
-            <Shield className="h-4 w-4 shrink-0 text-emerald-400" />
-            <span className="text-[0.68rem] font-medium leading-tight text-slate-300">
-              <strong className="text-white">Activation instantanée</strong>. Le paiement en ligne reste prioritaire.
-            </span>
-          </div>
+          <p className="shrink-0 text-[1.1rem] font-black tracking-tight text-slate-900">
+            {formatCurrency(priceXof)}
+            <span className="ml-1 text-[0.58rem] font-bold text-slate-400 uppercase tracking-widest">/mois</span>
+          </p>
         </div>
       )}
-
 
       {step === 'select_provider' && (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -382,41 +370,32 @@ export function CheckoutModal({ isOpen, onClose, planId, planName, priceXof, onS
                 key={p.id}
                 type="button"
                 onClick={() => handleSelectProvider(p.id)}
-                className="group relative flex min-w-0 items-center gap-4 rounded-xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/40 p-3.5 text-left shadow-[0_2px_12px_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-emerald-500/40 hover:bg-gradient-to-br hover:from-emerald-50/50 hover:to-white hover:shadow-[0_8px_24px_rgba(16,185,129,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30"
+                className="group flex min-w-0 items-center gap-4 rounded-xl border border-slate-200 bg-white p-3.5 text-left transition-colors hover:border-emerald-400/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30"
               >
-                <div className="absolute inset-0 rounded-xl bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.03),transparent)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 {p.logo ? (
-                  <LogoBadge src={p.logo} label={p.label} fallback={p.fallback} className="h-11 w-11 shrink-0 rounded-xl shadow-sm ring-1 ring-slate-900/5 transition-transform duration-300 group-hover:scale-105 group-hover:ring-emerald-500/20 group-hover:shadow-md" />
+                  <LogoBadge src={p.logo} label={p.label} fallback={p.fallback} className="h-11 w-11 shrink-0 rounded-xl ring-1 ring-slate-900/5" />
                 ) : (
-                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700 shadow-sm transition-transform duration-300 group-hover:scale-105 group-hover:border-blue-200 group-hover:bg-blue-100/50">
+                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-700">
                     <CreditCard className="h-5 w-5" />
                   </span>
                 )}
-                <span className="min-w-0 flex-1 relative z-10">
-                  <span className="block truncate text-[0.9rem] font-extrabold text-slate-900 transition-colors duration-300 group-hover:text-emerald-950">{p.label}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[0.9rem] font-extrabold text-slate-900">{p.label}</span>
                   <span className="block truncate text-[0.68rem] font-semibold text-slate-500 mt-0.5">{p.sub}</span>
                 </span>
-                <div className="relative z-10 shrink-0">
+                <div className="shrink-0">
                   {p.id === 'card' ? (
-                    <span className="rounded-full border border-blue-200/80 bg-gradient-to-r from-blue-50 to-blue-100/50 px-2 py-1 text-[0.6rem] font-black uppercase tracking-wider text-blue-700 shadow-sm transition-all group-hover:border-blue-300 group-hover:from-blue-100 group-hover:to-blue-200">
+                    <span className="rounded-full border border-blue-200/80 bg-blue-50 px-2 py-1 text-[0.6rem] font-black uppercase tracking-wider text-blue-700">
                       VISA
                     </span>
                   ) : (
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.6rem] font-bold text-slate-600 shadow-sm transition-all duration-300 group-hover:border-emerald-300/60 group-hover:bg-emerald-100/80 group-hover:text-emerald-800">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[0.6rem] font-bold text-slate-600">
                       Rapide
                     </span>
                   )}
                 </div>
               </button>
             ))}
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/60 bg-white px-3.5 py-1.5 text-[0.68rem] font-bold text-slate-600 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md">
-              <Shield className="h-3.5 w-3.5 text-emerald-600" /> Transactions sécurisées
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200/60 bg-white px-3.5 py-1.5 text-[0.68rem] font-bold text-slate-600 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md">
-              <Clock className="h-3.5 w-3.5 text-emerald-600" /> Traitement temps réel
-            </span>
           </div>
         </div>
       )}

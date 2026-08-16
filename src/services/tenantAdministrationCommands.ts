@@ -74,6 +74,14 @@ export async function createTeamInvitation(input: {
   };
 }
 
+export async function cancelTeamInvitation(invitationId: string): Promise<void> {
+  const { error } = await supabase.rpc('tenant_cancel_invitation', {
+    p_invitation_id: invitationId,
+    p_idempotency_key: commandKey('team-invitation-cancel', invitationId),
+  });
+  if (error) throw error;
+}
+
 export async function replaceMemberPermissions(
   targetUserId: string,
   permissions: UserPagePermission[],

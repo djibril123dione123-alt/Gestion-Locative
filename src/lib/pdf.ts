@@ -27,7 +27,7 @@ import {
   resolvePublishedDocumentTemplate,
 } from '../services/documentTemplateService';
 import { renderDocumentTemplate } from './documents/templateEngine';
-import type { ResolvedDocumentTemplate } from '../types/documentStudio';
+import type { DocumentTemplateContent, ResolvedDocumentTemplate } from '../types/documentStudio';
 import type {
   DocumentArchiveStatus,
   DocumentGenerationLifecycle,
@@ -38,6 +38,12 @@ import {
   type PdfMetadataDocumentType,
   type PdfMetadataInput,
 } from './pdfMetadata';
+import {
+  getContratPreviewSample,
+  getMandatPreviewSample,
+  getPaiementPreviewSample,
+  PREVIEW_REFERENCE_PLACEHOLDER,
+} from './documents/documentPreviewSamples';
 
 export { formatCurrency };
 
@@ -1470,20 +1476,29 @@ async function drawVerificationBlock(
     date?: string;
     paymentStatus?: string;
     settings?: Partial<AgencySettings>;
+    /** En mode aperçu : ne jamais écrire de preuve de vérification en base. */
+    previewMode?: boolean;
   }
 ): Promise<void> {
-  const { x, y, width, ref, type, agency, amount, date, paymentStatus, settings } = options;
+  const { x, y, width, ref, type, agency, amount, date, paymentStatus, settings, previewMode } = options;
   const colors = getBrandColors(settings);
   const individualOwner = isIndividualOwnerSettings(settings);
-  const verification = await registerDocumentVerification({
-    type,
-    ref,
-    agency,
-    agencyId: settings?.agency_id,
-    amount,
-    date,
-    paymentStatus,
-  }, true);
+  const verification: DocumentVerificationRegistration = previewMode
+    ? {
+        id: 'preview',
+        token: 'preview',
+        registered: true,
+        url: `${getPublicVerifyBaseUrl()}/verify?preview=1`,
+      }
+    : await registerDocumentVerification({
+        type,
+        ref,
+        agency,
+        agencyId: settings?.agency_id,
+        amount,
+        date,
+        paymentStatus,
+      }, true);
   const qrDataUrl = verification.registered
     ? await QRCode.toDataURL(verification.url, {
         width: 192,
@@ -1556,9 +1571,10 @@ export async function drawLegalVerificationFooter(
     agency: string;
     date?: string;
     settings?: Partial<AgencySettings>;
+    previewMode?: boolean;
   }
 ): Promise<void> {
-  const { ref, type, agency, date, settings } = options;
+  const { ref, type, agency, date, settings, previewMode } = options;
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
   const pageNumber = doc.getNumberOfPages();
@@ -1577,6 +1593,7 @@ export async function drawLegalVerificationFooter(
     agency,
     date,
     settings,
+    previewMode,
   });
 }
 
@@ -1632,31 +1649,24 @@ async function drawEditorialSignatureSection(
 // PDF generators
 // ---------------------------------------------------------------------------
 
-export async function generateContratPDF(
+/**
+ * Dessine le contenu complet d'un contrat de location sur un jsPDF déjà créé.
+ * Fonction pure côté effets de bord "documentaires" : le seul effet de bord
+ * conditionnel est l'enregistrement de la preuve QR (drawLegalVerificationFooter),
+ * neutralisé quand `previewMode` est vrai. N'alloue jamais de référence, n'écrit
+ * jamais dans document_registry — c'est le rôle de l'appelant.
+ */
+async function buildContratDocument(
   contrat: ContratPDFData,
-  generation?: DocumentGenerationLifecycle,
-): Promise<void> {
-  if (!contrat) throw new Error('Aucun contrat fourni');
-
-  const loadedSettings = await loadAgencySettings();
-  const contractTemplate = await resolvePublishedDocumentTemplate('contrat', loadedSettings.agency_id);
-  const settings = applyPublishedTemplateStyle(loadedSettings, contractTemplate);
+  contractTemplate: ResolvedDocumentTemplate,
+  contractRef: string,
+  settings: Partial<AgencySettings>,
+  options?: { previewMode?: boolean; generation?: DocumentGenerationLifecycle },
+): Promise<{ doc: jsPDF; qrEnabled: boolean }> {
+  const previewMode = options?.previewMode ?? false;
+  const generation = options?.generation;
   const individualOwner = isIndividualOwnerSettings(settings);
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-  const contractRefFallback = applyDocumentPrefix(
-    `CTR-${new Date().getFullYear()}-${(contrat.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`,
-    'contrat',
-    settings,
-  );
-  const contractRef = await allocateDocumentReference({
-    documentType: 'contrat',
-    entityId: contrat.id ?? contractRefFallback,
-    periodKey: contrat.date_debut?.slice(0, 7),
-    format: settings.document_preferences?.numbering_format,
-    prefix: getPdfDocumentPreferences(settings).prefixes.contrat,
-    fallback: contractRefFallback,
-  });
-  generation?.report('building-document', { reference: contractRef });
 
   const bailleur = (contrat.unites?.immeubles?.bailleurs ?? {}) as {
     prenom?: string;
@@ -1792,8 +1802,50 @@ export async function generateContratPDF(
       agency: settings.nom_agence ?? 'Samay Këur',
       date: new Date().toISOString(),
       settings,
+      previewMode,
     });
   }
+
+  return { doc, qrEnabled: contractQrEnabled };
+}
+
+export async function generateContratPDF(
+  contrat: ContratPDFData,
+  generation?: DocumentGenerationLifecycle,
+): Promise<void> {
+  if (!contrat) throw new Error('Aucun contrat fourni');
+
+  const loadedSettings = await loadAgencySettings();
+  const contractTemplate = await resolvePublishedDocumentTemplate('contrat', loadedSettings.agency_id);
+  const settings = applyPublishedTemplateStyle(loadedSettings, contractTemplate);
+  const contractRefFallback = applyDocumentPrefix(
+    `CTR-${new Date().getFullYear()}-${(contrat.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+    'contrat',
+    settings,
+  );
+  const contractRef = await allocateDocumentReference({
+    documentType: 'contrat',
+    entityId: contrat.id ?? contractRefFallback,
+    periodKey: contrat.date_debut?.slice(0, 7),
+    format: settings.document_preferences?.numbering_format,
+    prefix: getPdfDocumentPreferences(settings).prefixes.contrat,
+    fallback: contractRefFallback,
+  });
+  generation?.report('building-document', { reference: contractRef });
+
+  const { doc, qrEnabled: contractQrEnabled } = await buildContratDocument(
+    contrat,
+    contractTemplate,
+    contractRef,
+    settings,
+    { generation },
+  );
+
+  const locataire = (contrat.locataires ?? {}) as {
+    prenom?: string;
+    nom?: string;
+  };
+
   await saveGeneratedPdf(doc, {
     kind: 'contrat',
     title: 'Contrat de location',
@@ -1848,13 +1900,34 @@ export async function generateContratPDF(
   });
 }
 
-export async function generatePaiementFacturePDF(
-  paiement: PaiementPDFData,
-  generation?: DocumentGenerationLifecycle,
-): Promise<void> {
-  if (!paiement) throw new Error('Aucun paiement fourni');
+interface PaiementReceiptComputed {
+  loyer: number;
+  paye: number;
+  paiementsPrecedents: number;
+  totalPayeMois: number;
+  reliquat: number;
+  statusLabel: string;
+  paiementDocumentType: PdfDocumentType;
+}
 
-  // Validation des champs critiques avant génération
+/**
+ * Dessine le contenu complet d'une quittance/reçu de paiement sur un jsPDF déjà
+ * créé. `computed` regroupe les valeurs dérivées de `paiement` qui ont déjà servi
+ * à l'appelant à choisir le type de modèle et à allouer la référence — elles ne
+ * sont jamais recalculées ici pour éviter toute divergence entre les deux calculs.
+ */
+async function buildPaiementReceiptDocument(
+  paiement: PaiementPDFData,
+  receiptTemplate: ResolvedDocumentTemplate,
+  ref: string,
+  settings: Partial<AgencySettings>,
+  computed: PaiementReceiptComputed,
+  options?: { previewMode?: boolean; generation?: DocumentGenerationLifecycle },
+): Promise<{ doc: jsPDF; qrEnabled: boolean }> {
+  const previewMode = options?.previewMode ?? false;
+  const generation = options?.generation;
+  const { loyer, paye, paiementsPrecedents, totalPayeMois, reliquat, statusLabel, paiementDocumentType } = computed;
+
   const contrat = (paiement.contrats ?? {}) as {
     locataires?: { prenom?: string; nom?: string };
     unites?: { nom?: string; immeubles?: { nom?: string; adresse?: string } };
@@ -1863,46 +1936,7 @@ export async function generatePaiementFacturePDF(
   const locataire = contrat.locataires ?? {};
   const unite = contrat.unites ?? {};
 
-  const missingFields: string[] = [];
-  if (!locataire.nom && !locataire.prenom) missingFields.push('nom du locataire');
-  if (!unite.nom) missingFields.push('nom de l\'unité');
-  if (!paiement.montant_total) missingFields.push('montant');
-  if (!paiement.mois_concerne) missingFields.push('mois concerné');
-
-  if (missingFields.length > 0) {
-    console.warn('[PDF] Champs manquants pour la quittance :', missingFields.join(', '));
-    // Continue with fallback values — do not block generation
-  }
-
-  const loadedSettings = await loadAgencySettings();
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-
-  const loyer = Number(paiement.montant_attendu ?? contrat.loyer_mensuel ?? 0);
-  const paye = Number(paiement.montant_total ?? 0);
-  const paiementsPrecedents = Number(paiement.paiements_precedents ?? Math.max(Number(paiement.montant_encaisse_cumul ?? 0) - paye, 0) ?? 0);
-  const totalPayeMois = Number(paiement.total_paye_mois ?? paiement.montant_encaisse_cumul ?? (paiementsPrecedents + paye));
-  const reliquat = paiement.reliquat != null
-    ? Number(paiement.reliquat)
-    : Math.max(loyer - totalPayeMois, 0);
-  const statusLabel = reliquat > 0 ? 'Paiement partiel' : 'Soldé';
-  const paiementDocumentType: PdfDocumentType = reliquat > 0 ? 'facture' : 'quittance';
-  const templateType = reliquat > 0 ? 'facture' : 'quittance';
-  const receiptTemplate = await resolvePublishedDocumentTemplate(templateType, loadedSettings.agency_id);
-  const settings = applyPublishedTemplateStyle(loadedSettings, receiptTemplate);
-  const referenceFallback = applyDocumentPrefix(
-    paiement.reference ?? generateQuittanceRef(paiement),
-    paiementDocumentType,
-    settings,
-  );
-  const ref = await allocateDocumentReference({
-    documentType: templateType,
-    entityId: paiement.id ?? referenceFallback,
-    periodKey: paiement.mois_concerne?.slice(0, 7),
-    format: settings.document_preferences?.numbering_format,
-    prefix: getPdfDocumentPreferences(settings).prefixes[paiementDocumentType],
-    fallback: referenceFallback,
-  });
-  generation?.report('building-document', { reference: ref });
   const enabledReceiptSections = new Set(
     receiptTemplate.content.blocks
       .filter((block) => block.enabled && block.systemKey)
@@ -2092,6 +2126,7 @@ export async function generatePaiementFacturePDF(
       date: paiement.date_paiement ?? new Date().toISOString(),
       paymentStatus: statusLabel,
       settings,
+      previewMode,
     });
   }
 
@@ -2107,6 +2142,83 @@ export async function generatePaiementFacturePDF(
   }
 
   addFooter(doc, settings);
+
+  return { doc, qrEnabled: receiptQrEnabled };
+}
+
+export async function generatePaiementFacturePDF(
+  paiement: PaiementPDFData,
+  generation?: DocumentGenerationLifecycle,
+): Promise<void> {
+  if (!paiement) throw new Error('Aucun paiement fourni');
+
+  // Validation des champs critiques avant génération
+  const contrat = (paiement.contrats ?? {}) as {
+    locataires?: { prenom?: string; nom?: string };
+    unites?: { nom?: string; immeubles?: { nom?: string; adresse?: string } };
+    loyer_mensuel?: number;
+  };
+  const locataire = contrat.locataires ?? {};
+  const unite = contrat.unites ?? {};
+
+  const missingFields: string[] = [];
+  if (!locataire.nom && !locataire.prenom) missingFields.push('nom du locataire');
+  if (!unite.nom) missingFields.push('nom de l\'unité');
+  if (!paiement.montant_total) missingFields.push('montant');
+  if (!paiement.mois_concerne) missingFields.push('mois concerné');
+
+  if (missingFields.length > 0) {
+    console.warn('[PDF] Champs manquants pour la quittance :', missingFields.join(', '));
+    // Continue with fallback values — do not block generation
+  }
+
+  const loadedSettings = await loadAgencySettings();
+
+  const loyer = Number(paiement.montant_attendu ?? contrat.loyer_mensuel ?? 0);
+  const paye = Number(paiement.montant_total ?? 0);
+  const paiementsPrecedents = Number(paiement.paiements_precedents ?? Math.max(Number(paiement.montant_encaisse_cumul ?? 0) - paye, 0) ?? 0);
+  const totalPayeMois = Number(paiement.total_paye_mois ?? paiement.montant_encaisse_cumul ?? (paiementsPrecedents + paye));
+  const reliquat = paiement.reliquat != null
+    ? Number(paiement.reliquat)
+    : Math.max(loyer - totalPayeMois, 0);
+  const statusLabel = reliquat > 0 ? 'Paiement partiel' : 'Soldé';
+  const paiementDocumentType: PdfDocumentType = reliquat > 0 ? 'facture' : 'quittance';
+  const templateType = reliquat > 0 ? 'facture' : 'quittance';
+  const receiptTemplate = await resolvePublishedDocumentTemplate(templateType, loadedSettings.agency_id);
+  const settings = applyPublishedTemplateStyle(loadedSettings, receiptTemplate);
+  const referenceFallback = applyDocumentPrefix(
+    paiement.reference ?? generateQuittanceRef(paiement),
+    paiementDocumentType,
+    settings,
+  );
+  const ref = await allocateDocumentReference({
+    documentType: templateType,
+    entityId: paiement.id ?? referenceFallback,
+    periodKey: paiement.mois_concerne?.slice(0, 7),
+    format: settings.document_preferences?.numbering_format,
+    prefix: getPdfDocumentPreferences(settings).prefixes[paiementDocumentType],
+    fallback: referenceFallback,
+  });
+  generation?.report('building-document', { reference: ref });
+
+  const { doc, qrEnabled: receiptQrEnabled } = await buildPaiementReceiptDocument(
+    paiement,
+    receiptTemplate,
+    ref,
+    settings,
+    { loyer, paye, paiementsPrecedents, totalPayeMois, reliquat, statusLabel, paiementDocumentType },
+    { generation },
+  );
+
+  const devise = settings.devise ?? 'XOF';
+  const moisConcerne = paiement.mois_concerne
+    ? new Date(paiement.mois_concerne).toLocaleDateString('fr-FR', {
+        year: 'numeric',
+        month: 'long',
+      })
+    : '—';
+  const tenantName = joinClean([locataire.prenom, locataire.nom]) || 'Locataire non renseigné';
+
   await saveGeneratedPdf(doc, {
     kind: paiementDocumentType === 'quittance' ? 'quittance' : 'facture',
     title:
@@ -2172,33 +2284,21 @@ export async function generatePaiementFacturePDF(
   });
 }
 
-export async function generateMandatBailleurPDF(
+/**
+ * Dessine le contenu complet d'un mandat de gérance sur un jsPDF déjà créé.
+ * Même contrat que buildContratDocument/buildPaiementReceiptDocument : aucune
+ * allocation de référence, aucune écriture registre — seulement le dessin.
+ */
+async function buildMandatDocument(
   bailleur: MandatPDFData,
-  generation?: DocumentGenerationLifecycle,
-): Promise<void> {
-  if (!bailleur) throw new Error('Aucun bailleur fourni');
-
-  const loadedSettings = await loadAgencySettings();
-  if (isIndividualOwnerSettings(loadedSettings)) {
-    throw new Error("Le mandat de gérance est réservé aux agences et gestionnaires qui administrent des biens pour des tiers.");
-  }
+  mandateTemplate: ResolvedDocumentTemplate,
+  mandatRef: string,
+  settings: Partial<AgencySettings>,
+  options?: { previewMode?: boolean; generation?: DocumentGenerationLifecycle },
+): Promise<{ doc: jsPDF; qrEnabled: boolean }> {
+  const previewMode = options?.previewMode ?? false;
+  const generation = options?.generation;
   const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-  const mandateTemplate = await resolvePublishedDocumentTemplate('mandat', loadedSettings.agency_id);
-  const settings = applyPublishedTemplateStyle(loadedSettings, mandateTemplate);
-  const mandateRefFallback = applyDocumentPrefix(
-    `MDT-${new Date().getFullYear()}-${(bailleur.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`,
-    'mandat',
-    settings,
-  );
-  const mandatRef = await allocateDocumentReference({
-    documentType: 'mandat',
-    entityId: bailleur.id ?? mandateRefFallback,
-    periodKey: bailleur.debut_contrat?.slice(0, 7),
-    format: settings.document_preferences?.numbering_format,
-    prefix: getPdfDocumentPreferences(settings).prefixes.mandat,
-    fallback: mandateRefFallback,
-  });
-  generation?.report('building-document', { reference: mandatRef });
 
   try {
     const bienAdresse = cleanDocumentText(bailleur.bien_adresse, '');
@@ -2306,8 +2406,48 @@ export async function generateMandatBailleurPDF(
       agency: settings.nom_agence ?? 'Samay Këur',
       date: new Date().toISOString(),
       settings,
+      previewMode,
     });
   }
+
+  return { doc, qrEnabled: mandateQrEnabled };
+}
+
+export async function generateMandatBailleurPDF(
+  bailleur: MandatPDFData,
+  generation?: DocumentGenerationLifecycle,
+): Promise<void> {
+  if (!bailleur) throw new Error('Aucun bailleur fourni');
+
+  const loadedSettings = await loadAgencySettings();
+  if (isIndividualOwnerSettings(loadedSettings)) {
+    throw new Error("Le mandat de gérance est réservé aux agences et gestionnaires qui administrent des biens pour des tiers.");
+  }
+  const mandateTemplate = await resolvePublishedDocumentTemplate('mandat', loadedSettings.agency_id);
+  const settings = applyPublishedTemplateStyle(loadedSettings, mandateTemplate);
+  const mandateRefFallback = applyDocumentPrefix(
+    `MDT-${new Date().getFullYear()}-${(bailleur.id ?? Date.now().toString()).toString().replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+    'mandat',
+    settings,
+  );
+  const mandatRef = await allocateDocumentReference({
+    documentType: 'mandat',
+    entityId: bailleur.id ?? mandateRefFallback,
+    periodKey: bailleur.debut_contrat?.slice(0, 7),
+    format: settings.document_preferences?.numbering_format,
+    prefix: getPdfDocumentPreferences(settings).prefixes.mandat,
+    fallback: mandateRefFallback,
+  });
+  generation?.report('building-document', { reference: mandatRef });
+
+  const { doc, qrEnabled: mandateQrEnabled } = await buildMandatDocument(
+    bailleur,
+    mandateTemplate,
+    mandatRef,
+    settings,
+    { generation },
+  );
+
   await saveGeneratedPdf(doc, {
     kind: 'mandat',
     title: 'Mandat de gérance',
@@ -2360,4 +2500,87 @@ export async function generateMandatBailleurPDF(
       ],
     },
   });
+}
+
+// ---------------------------------------------------------------------------
+// Aperçu en direct (Studio, Paramètres) — mêmes fonctions de dessin que la
+// génération réelle, sans allocation de référence ni écriture registre.
+// ---------------------------------------------------------------------------
+
+/**
+ * Enveloppe un contenu de modèle en cours d'édition (brouillon Studio, jamais
+ * publié) dans la forme ResolvedDocumentTemplate attendue par les fonctions de
+ * dessin. resolvePublishedDocumentTemplate ne peut pas servir ici : elle ne lit
+ * jamais draft_content, seulement la dernière révision publiée.
+ */
+function wrapDraftAsResolvedTemplate(content: DocumentTemplateContent): ResolvedDocumentTemplate {
+  return {
+    content,
+    source: 'agency',
+    revisionId: null,
+    revision: null,
+    checksum: 'preview',
+    catalogVersion: 'preview',
+    rendererVersion: 'preview',
+  };
+}
+
+/** Aperçu fidèle d'un contrat de location, à partir du brouillon Studio en cours d'édition. */
+export async function buildContratPreviewDocument(
+  content: DocumentTemplateContent,
+  settings: Partial<AgencySettings>,
+): Promise<jsPDF> {
+  const { doc } = await buildContratDocument(
+    getContratPreviewSample(),
+    wrapDraftAsResolvedTemplate(content),
+    PREVIEW_REFERENCE_PLACEHOLDER,
+    settings,
+    { previewMode: true },
+  );
+  return doc;
+}
+
+/**
+ * Aperçu fidèle d'une quittance/reçu de paiement. `reliquat` permet de
+ * prévisualiser la variante "paiement partiel" sans attendre un vrai paiement.
+ */
+export async function buildPaiementReceiptPreviewDocument(
+  content: DocumentTemplateContent,
+  settings: Partial<AgencySettings>,
+  reliquat = 0,
+): Promise<jsPDF> {
+  const sample = getPaiementPreviewSample(reliquat);
+  const statusLabel = reliquat > 0 ? 'Paiement partiel' : 'Soldé';
+  const { doc } = await buildPaiementReceiptDocument(
+    sample,
+    wrapDraftAsResolvedTemplate(content),
+    PREVIEW_REFERENCE_PLACEHOLDER,
+    settings,
+    {
+      loyer: sample.montant_attendu ?? 0,
+      paye: sample.montant_total,
+      paiementsPrecedents: sample.paiements_precedents ?? 0,
+      totalPayeMois: sample.total_paye_mois ?? sample.montant_total,
+      reliquat,
+      statusLabel,
+      paiementDocumentType: reliquat > 0 ? 'facture' : 'quittance',
+    },
+    { previewMode: true },
+  );
+  return doc;
+}
+
+/** Aperçu fidèle d'un mandat de gérance, à partir du brouillon Studio en cours d'édition. */
+export async function buildMandatPreviewDocument(
+  content: DocumentTemplateContent,
+  settings: Partial<AgencySettings>,
+): Promise<jsPDF> {
+  const { doc } = await buildMandatDocument(
+    getMandatPreviewSample(),
+    wrapDraftAsResolvedTemplate(content),
+    PREVIEW_REFERENCE_PLACEHOLDER,
+    settings,
+    { previewMode: true },
+  );
+  return doc;
 }

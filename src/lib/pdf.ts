@@ -176,26 +176,16 @@ export async function saveGeneratedPdf(
     };
   }
 ) {
+  // ManagedDocumentType est désormais un sous-ensemble strict de PdfMetadataDocumentType
+  // (les deux registres de types ont été réconciliés) — plus besoin de renarrowing manuel.
   const metadataDocumentType: PdfMetadataDocumentType =
     options.metadata?.documentType ??
-    (options.documentType === 'rapport_bailleur'
+    options.documentType ??
+    (options.kind === 'commission'
       ? 'rapport_bailleur'
-      : options.documentType === 'contrat' ||
-          options.documentType === 'mandat' ||
-          options.documentType === 'quittance' ||
-          options.documentType === 'facture'
-        ? options.documentType
-        : options.documentType === 'due_notice' ||
-            options.documentType === 'rent_invoice' ||
-            options.documentType === 'partial_payment_receipt' ||
-            options.documentType === 'rent_receipt' ||
-            options.documentType === 'credit_note'
-          ? options.documentType
-        : options.kind === 'commission'
-          ? 'rapport_bailleur'
-          : options.kind === 'inventaire'
-            ? 'inventaire'
-            : 'document');
+      : options.kind === 'inventaire'
+        ? 'inventaire'
+        : 'document');
   applyPdfMetadata(doc, {
     ...options.metadata,
     documentType: metadataDocumentType,

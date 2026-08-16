@@ -17,33 +17,17 @@ import {
   AlertTriangle,
   X,
 } from 'lucide-react';
-import type { GeneratedDocumentPayload } from '../../lib/documentGenerated';
 import { useDocumentGeneration } from '../../hooks/useDocumentGeneration';
 import { BrandMark } from '../brand/BrandLogo';
 import { Button } from '../ui/Button';
 import { DocumentGenerationProgress } from './DocumentGenerationProgress';
+import { getDocumentTypeLabel } from '../../lib/documents/documentTypes';
 
 interface DocumentGeneratedModalProps {
   onNavigate?: (page: string) => void;
 }
 
 type Feedback = 'copied' | 'shared' | 'printed' | 'email' | null;
-
-const KIND_LABELS: Partial<Record<GeneratedDocumentPayload['kind'], string>> = {
-  contrat: 'Contrat de location',
-  quittance: 'Quittance de loyer',
-  facture: 'Facture',
-  recu: 'Reçu de paiement',
-  mandat: 'Mandat de gestion',
-  commission: 'Rapport bailleur',
-  inventaire: 'Inventaire',
-  bilan: 'Bilan financier',
-  xlsx: 'Export Excel',
-  csv: 'Export CSV',
-  export: 'Export de données',
-  pdf: 'Document PDF',
-  document: 'Document',
-};
 
 function formatFileSize(bytes?: number) {
   if (!bytes) return 'PDF optimisé';
@@ -86,7 +70,7 @@ export function DocumentGeneratedModal({
   const payload = session.payload;
   const isReady = session.state === 'ready' && Boolean(payload);
   const isError = session.state === 'error';
-  const kindLabel = KIND_LABELS[session.kind] ?? 'Document';
+  const kindLabel = getDocumentTypeLabel(session.kind, { fallback: 'generic' });
   const titleId = 'document-generation-title';
   const isPdf = Boolean(
     payload &&

@@ -29,6 +29,11 @@ const QR_CAPABLE_DOCUMENT_TYPES = new Set([
   'rapport',
   'rapport_bailleur',
   'rapport_proprietaire',
+  'due_notice',
+  'rent_invoice',
+  'partial_payment_receipt',
+  'rent_receipt',
+  'credit_note',
 ]);
 
 export function supportsPublicVerification(documentType?: string) {

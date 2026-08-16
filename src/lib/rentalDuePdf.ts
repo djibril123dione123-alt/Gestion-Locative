@@ -24,6 +24,7 @@ import {
   loadAgencySettings,
   saveGeneratedPdf,
 } from './pdf';
+import { getDocumentTypeLabel } from './documents/documentTypes';
 
 interface RentalDuePdfInput {
   detail: RentalDueDetail;
@@ -41,35 +42,35 @@ interface RentalDueDocumentCopy {
 
 const DOCUMENT_COPY: Record<RentalDueDocumentType, RentalDueDocumentCopy> = {
   due_notice: {
-    title: "Avis d'échéance de loyer",
+    title: getDocumentTypeLabel('due_notice'),
     shortTitle: "Avis d'échéance",
     subject: "Avis d'échéance de loyer",
     kind: 'facture',
     verificationType: 'avis_echeance',
   },
   rent_invoice: {
-    title: 'Facture de loyer',
+    title: getDocumentTypeLabel('rent_invoice'),
     shortTitle: 'Facture',
     subject: 'Facture de loyer',
     kind: 'facture',
     verificationType: 'facture_loyer',
   },
   partial_payment_receipt: {
-    title: 'Reçu de paiement partiel',
+    title: getDocumentTypeLabel('partial_payment_receipt'),
     shortTitle: 'Reçu partiel',
     subject: 'Reçu de paiement partiel de loyer',
     kind: 'quittance',
     verificationType: 'recu_paiement_partiel',
   },
   rent_receipt: {
-    title: 'Quittance de loyer',
+    title: getDocumentTypeLabel('rent_receipt'),
     shortTitle: 'Quittance',
     subject: 'Quittance de loyer acquittée',
     kind: 'quittance',
     verificationType: 'quittance_loyer',
   },
   credit_note: {
-    title: 'Avoir locatif',
+    title: getDocumentTypeLabel('credit_note'),
     shortTitle: 'Avoir',
     subject: 'Avoir sur échéance locative',
     kind: 'facture',

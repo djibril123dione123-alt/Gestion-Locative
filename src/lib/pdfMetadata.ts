@@ -12,6 +12,8 @@ export type PdfMetadataDocumentType =
   | 'credit_note'
   | 'inventaire'
   | 'commission'
+  | 'export'
+  | 'pdf'
   | 'document';
 
 interface PdfMetadataTarget {
@@ -104,6 +106,16 @@ const TYPE_COPY: Record<
     title: 'Rapport de commissions',
     subject: 'Rapport de commissions de gestion',
     keywords: 'Samay Këur, commissions, rapport, gestion locative',
+  },
+  export: {
+    title: 'Export financier',
+    subject: 'Export de données de gestion locative',
+    keywords: 'Samay Këur, export, gestion locative, données',
+  },
+  pdf: {
+    title: 'Document',
+    subject: 'Document de gestion locative',
+    keywords: 'Samay Këur, gestion locative, document',
   },
   document: {
     title: 'Document',

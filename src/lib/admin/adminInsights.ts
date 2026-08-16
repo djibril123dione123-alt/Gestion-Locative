@@ -1,6 +1,13 @@
 import { getAdminPlan, getAdminPlanPrice, normalizeAdminPlanId } from './adminPricingCatalog';
 import { numberValue } from './adminFormatters';
 import type { AdminAgency, AdminConsoleData, AdminDocumentRegistryEntry, SubscriptionPaymentProof } from '../../services/admin/adminConsoleService';
+import { getDocumentTypeLabel as getCanonicalDocumentTypeLabel } from '../documents/documentTypes';
+
+/** Anciennes valeurs vues dans des données admin plus anciennes, alias vers le type canonique. */
+const ADMIN_DOCUMENT_TYPE_ALIASES: Record<string, string> = {
+  contrat_location: 'contrat',
+  mandat_gerance: 'mandat',
+};
 
 export type AdminInsightTone = 'red' | 'amber' | 'blue' | 'emerald' | 'slate' | 'orange';
 
@@ -66,18 +73,9 @@ export function summarizeSaasRevenue(data: AdminConsoleData) {
 }
 
 export function documentTypeLabel(type: string | null | undefined) {
-  const labels: Record<string, string> = {
-    quittance: 'Quittance',
-    facture: 'Facture',
-    contrat: 'Contrat',
-    contrat_location: 'Contrat',
-    mandat: 'Mandat',
-    mandat_gerance: 'Mandat',
-    rapport_bailleur: 'Rapport bailleur',
-    rapport_proprietaire: 'Rapport propriétaire',
-    export: 'Export',
-  };
-  return labels[(type ?? '').toLowerCase()] ?? type ?? 'Document';
+  const normalized = (type ?? '').toLowerCase();
+  const resolved = ADMIN_DOCUMENT_TYPE_ALIASES[normalized] ?? normalized;
+  return getCanonicalDocumentTypeLabel(resolved, { fallback: 'raw' });
 }
 
 export function documentHasRegistryIssue(entry: AdminDocumentRegistryEntry) {

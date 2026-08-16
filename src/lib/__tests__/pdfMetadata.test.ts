@@ -70,6 +70,16 @@ const documentTypes: Array<{
     title: 'Rapport de commissions',
     subject: 'Rapport de commissions de gestion',
   },
+  {
+    type: 'export',
+    title: 'Export financier',
+    subject: 'Export de données de gestion locative',
+  },
+  {
+    type: 'pdf',
+    title: 'Document',
+    subject: 'Document de gestion locative',
+  },
 ];
 
 describe('applyPdfMetadata', () => {

@@ -15,7 +15,10 @@ describe('Documents Logic', () => {
   describe('documentTypeTitle', () => {
     it('returns human readable title for known types', () => {
       expect(documentTypeTitle('quittance')).toBe('Quittance');
-      expect(documentTypeTitle('contrat')).toBe('Contrat de bail');
+      // "Contrat de location" matches the title actually drawn by the real PDF
+      // generator (pdf.ts: generateContratPDF) — the canonical registry aligns
+      // on that instead of the "Contrat de bail" wording this module used alone.
+      expect(documentTypeTitle('contrat')).toBe('Contrat de location');
       expect(documentTypeTitle('rapport_bailleur')).toBe('Rapport bailleur');
     });
 

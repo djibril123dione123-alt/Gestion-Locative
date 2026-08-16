@@ -1,3 +1,5 @@
+import { getDocumentTypeLabel as getCanonicalDocumentTypeLabel } from '../lib/documents/documentTypes';
+
 export type VerificationState =
   | 'loading'
   | 'authentic'
@@ -107,18 +109,7 @@ export function getVerificationQueryParams() {
 }
 
 export function getDocumentTypeLabel(type?: string | null) {
-  const normalized = String(type ?? '').trim().toLowerCase();
-  const labels: Record<string, string> = {
-    quittance: 'Quittance',
-    facture: 'Facture',
-    contrat: 'Contrat de location',
-    mandat: 'Mandat de gérance',
-    rapport: 'Rapport bailleur',
-    rapport_bailleur: 'Rapport bailleur',
-    export: 'Export',
-    document: 'Document',
-  };
-  return labels[normalized] ?? (normalized ? normalized.replace(/_/g, ' ') : 'Document');
+  return getCanonicalDocumentTypeLabel(type, { fallback: 'humanize' });
 }
 
 export function getPaymentStatusLabel(status?: string | null) {

@@ -16,6 +16,7 @@ import {
 import { formatStorageSize } from '../../services/documentStorage';
 import { PremiumDrawerShell } from '../ui/PremiumDrawerShell';
 import { getDocumentProofState } from './documentProofState';
+import { getDocumentTypeLabel } from '../../lib/documents/documentTypes';
 
 interface VerificationData {
   token: string;
@@ -106,17 +107,10 @@ function metadataAmount(metadata: Record<string, unknown> | undefined, keys: str
 }
 
 function documentTypeLabel(document: DocumentProofDrawerData) {
-  const labels: Record<string, string> = {
-    quittance: 'Quittance',
-    facture: 'Facture',
-    contrat: 'Contrat de bail',
-    mandat: 'Mandat de gestion',
-    rapport: 'Rapport',
-    rapport_bailleur: 'Rapport bailleur',
-    rapport_proprietaire: 'Rapport propriétaire',
-    export: 'Export financier',
-  };
-  return labels[document.documentType ?? ''] ?? (document.source === 'uploaded' ? 'Document ajouté' : 'Document généré');
+  if (!document.documentType) {
+    return document.source === 'uploaded' ? 'Document ajouté' : 'Document généré';
+  }
+  return getDocumentTypeLabel(document.documentType, { fallback: 'generic' });
 }
 
 function lifecycleLabel(status: string) {

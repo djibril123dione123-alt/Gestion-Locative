@@ -34,4 +34,24 @@ describe('getDocumentProofState', () => {
   it('keeps generated non-QR document types non-verifiable', () => {
     expect(getDocumentProofState({ ...generatedDocument, documentType: 'document' }).kind).toBe('non_verifiable');
   });
+
+  it.each([
+    'due_notice',
+    'rent_invoice',
+    'partial_payment_receipt',
+    'rent_receipt',
+    'credit_note',
+  ] as const)('requires review for rental-due document type %s with no proof row yet', (documentType) => {
+    expect(getDocumentProofState({ ...generatedDocument, documentType })).toMatchObject({ kind: 'review', label: 'À vérifier' });
+  });
+
+  it.each([
+    'due_notice',
+    'rent_invoice',
+    'partial_payment_receipt',
+    'rent_receipt',
+    'credit_note',
+  ] as const)('marks rental-due document type %s as QR verifiable once authentic', (documentType) => {
+    expect(getDocumentProofState({ ...generatedDocument, documentType, verification: { status: 'authentic' } }).kind).toBe('verifiable');
+  });
 });

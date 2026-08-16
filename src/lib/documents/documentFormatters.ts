@@ -7,6 +7,7 @@ import {
 } from '../../services/documentStorage';
 import { getDocumentProofState } from '../../components/documents/documentProofState';
 import type { DocumentProofDrawerData } from '../../components/documents/DocumentProofDrawer';
+import { getDocumentTypeLabel } from './documentTypes';
 
 export interface UserDocumentRow {
   id: string;
@@ -97,19 +98,6 @@ export const DOCUMENT_TYPE_FILTERS: Array<{ id: DocumentTypeFilter; label: strin
   { id: 'noqr', label: 'Sans QR' },
 ];
 
-export const DOCUMENT_TYPE_TITLES: Record<string, string> = {
-  quittance: 'Quittance',
-  facture: 'Facture',
-  contrat: 'Contrat de bail',
-  mandat: 'Mandat de gestion',
-  rapport: 'Rapport',
-  rapport_bailleur: 'Rapport bailleur',
-  rapport_proprietaire: 'Rapport propriétaire',
-  export: 'Export financier',
-  pdf: 'Document',
-  document: 'Document',
-};
-
 export interface EntityOption {
   id: string;
   label: string;
@@ -155,8 +143,7 @@ export function formatDocumentPeriod(period?: string | null) {
 }
 
 export function documentTypeTitle(documentType?: string) {
-  if (!documentType) return 'Document';
-  return DOCUMENT_TYPE_TITLES[documentType] ?? documentType.replace(/_/g, ' ');
+  return getDocumentTypeLabel(documentType, { fallback: 'humanize' });
 }
 
 export function lifecycleLabel(item: DocumentItem) {

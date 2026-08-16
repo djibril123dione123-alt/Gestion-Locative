@@ -328,7 +328,7 @@ export function DocumentGeneratedModal({
           </aside>
 
           <main className="flex min-h-[420px] flex-col bg-[#fbfaf7]">
-            <header className="flex items-center justify-between border-b border-slate-200 px-4 py-3 sm:px-5">
+            <header className="flex items-center justify-between border-b border-slate-200 px-4 py-2 sm:px-5">
               <div className="flex min-w-0 items-center gap-2">
                 <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-600" />
                 <span className="truncate text-[10px] font-black uppercase tracking-wider text-slate-500">
@@ -338,14 +338,14 @@ export function DocumentGeneratedModal({
               <button
                 type="button"
                 onClick={close}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-slate-300 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 aria-label="Fermer"
               >
                 <X className="h-4 w-4" />
               </button>
             </header>
 
-            <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-5">
               {!isReady && !isError ? (
                 <DocumentGenerationProgress session={session} />
               ) : null}
@@ -396,8 +396,12 @@ export function DocumentGeneratedModal({
 
               {isReady && payload ? (
                 <>
-                  <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-2">
+                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <div
+                      className={`flex items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-2 ${
+                        isPdf ? 'md:hidden' : ''
+                      }`}
+                    >
                       <div className="flex min-w-0 items-center gap-2">
                         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-950 text-white">
                           {isTableExport ? (
@@ -421,7 +425,7 @@ export function DocumentGeneratedModal({
                     </div>
 
                     {isPdf ? (
-                      <div className="hidden h-[390px] bg-slate-100 md:block">
+                      <div className="hidden min-h-[390px] flex-1 bg-slate-100 md:flex">
                         <iframe
                           title={`Aperçu ${payload.fileName}`}
                           src={

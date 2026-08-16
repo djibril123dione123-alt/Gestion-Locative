@@ -31,7 +31,8 @@ import { invalidateAgencySettingsCache } from '../lib/pdf';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { OrganizationCompliancePanel } from '../components/settings/OrganizationCompliancePanel';
-import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
+import { ensureE164, formatInternationalPhone, isValidInternationalPhone } from '../lib/formatters';
+import { PhoneInput } from '../components/ui/PhoneInput';
 import { formatSenegalCniInput, validateSenegalCni } from '../lib/senegalIdentity';
 import {
   deleteAgencyIdentityAsset,
@@ -819,7 +820,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         agency_id: agencyId,
         nom_agence: isIndividualOwner ? ownerName : agency?.name ?? DEFAULT_AGENCY_SETTINGS.nom_agence ?? 'Mon Agence',
         adresse: agency?.address ?? '',
-        telephone: normalizeSenegalPhone(agency?.phone ?? '') ?? agency?.phone ?? '',
+        telephone: ensureE164(agency?.phone ?? ''),
         email: agency?.email ?? '',
         ninea: agency?.ninea ?? '',
         representant_nom: isIndividualOwner ? ownerName : '',
@@ -859,7 +860,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
     try {
       const cleanedEmail = cleanOptionalText(settings.email)?.toLowerCase() ?? '';
       const cleanedWebsite = cleanOptionalText(settings.site_web) ?? '';
-      const normalizedPhone = settings.telephone ? normalizeSenegalPhone(settings.telephone) : null;
+      const normalizedPhone = settings.telephone ? ensureE164(settings.telephone) : null;
       const officialName = isIndividualOwner
         ? cleanOptionalText(settings.representant_nom || settings.nom_agence)
         : cleanOptionalText(settings.nom_agence);
@@ -868,8 +869,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         setSaving(false);
         return;
       }
-      if (settings.telephone && !normalizedPhone) {
-        showToast('Le téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.', 'error');
+      if (settings.telephone && !isValidInternationalPhone(normalizedPhone)) {
+        showToast('Le téléphone doit être un numéro valide, par exemple 77 123 45 67.', 'error');
         setSaving(false);
         return;
       }
@@ -1118,7 +1119,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   const officialNameValue = isIndividualOwner
     ? cleanOptionalText(settings.representant_nom || settings.nom_agence)
     : cleanOptionalText(settings.nom_agence);
-  const normalizedOrganizationPhone = settings.telephone ? normalizeSenegalPhone(settings.telephone) : null;
+  const normalizedOrganizationPhone = settings.telephone ? ensureE164(settings.telephone) : null;
   const normalizedOrganizationEmail = cleanOptionalText(settings.email)?.toLowerCase() ?? '';
   const organizationFieldErrors = {
     officialName: officialNameValue
@@ -1126,8 +1127,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
       : isIndividualOwner
         ? 'Nom propriétaire obligatoire.'
         : "Nom d'agence obligatoire.",
-    phone: settings.telephone && !normalizedOrganizationPhone
-      ? 'Numéro sénégalais attendu, ex. 77 123 45 67.'
+    phone: settings.telephone && !isValidInternationalPhone(normalizedOrganizationPhone)
+      ? 'Numéro invalide, ex. 77 123 45 67.'
       : null,
     email: normalizedOrganizationEmail && !isValidEmail(normalizedOrganizationEmail)
       ? 'Adresse email invalide.'
@@ -1273,7 +1274,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 <OrganizationInfoLine label={isIndividualOwner ? 'Nom documentaire' : "Nom de l'agence"} value={displayName} strong documentHint="Contrats, quittances, rapports" />
                 <OrganizationInfoLine label="Type" value={accountTypeLabel} />
                 <OrganizationInfoLine label="Email" value={settings.email} icon={AtSign} />
-                <OrganizationInfoLine label="Téléphone" value={formatSenegalPhone(settings.telephone, 'Non renseigné')} icon={Phone} />
+                <OrganizationInfoLine label="Téléphone" value={formatInternationalPhone(settings.telephone, 'Non renseigné')} icon={Phone} />
                 <OrganizationInfoLine label="Site web" value={settings.site_web} icon={Globe2} />
                 <ReadinessPill label="Contact" ready={contactComplete} />
               </SettingsInfoCard>
@@ -1568,15 +1569,11 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
             <SettingsEditSection icon={Phone} eyebrow="Contact" title="Coordonnées" description="Téléphone et email apparaissent dans les entêtes et les contacts documentaires.">
               <div className="grid gap-2.5 md:grid-cols-2">
-                <FormField label="Téléphone" hint="Format Sénégal" error={organizationFieldErrors.phone}>
-                  <input
-                    type="text"
-                    value={formatSenegalPhone(settings.telephone, '')}
-                    onChange={(e) => setSettings({ ...settings, telephone: formatSenegalPhoneInput(e.target.value) })}
-                    className={organizationInputClass(organizationFieldErrors.phone)}
-                    placeholder="77 123 45 67"
-                    aria-invalid={Boolean(organizationFieldErrors.phone)}
-                    autoComplete="tel"
+                <FormField label="Téléphone" error={organizationFieldErrors.phone}>
+                  <PhoneInput
+                    label=""
+                    value={settings.telephone ?? ''}
+                    onChange={(value) => setSettings({ ...settings, telephone: value })}
                   />
                 </FormField>
                 <FormField label="Email" optional hint="Validé à l'enregistrement" error={organizationFieldErrors.email}>
@@ -2091,14 +2088,10 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Téléphone
-                  </label>
-                  <input aria-label="Champ de saisie"
-                    type="text"
-                    value={formatSenegalPhone(settings.telephone, '')}
-                    onChange={(e) => setSettings({ ...settings, telephone: formatSenegalPhoneInput(e.target.value) })}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  <PhoneInput
+                    label="Téléphone"
+                    value={settings.telephone ?? ''}
+                    onChange={(value) => setSettings({ ...settings, telephone: value })}
                   />
                 </div>
 

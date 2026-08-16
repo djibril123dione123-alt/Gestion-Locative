@@ -8,8 +8,9 @@ import {
   Users,
 } from 'lucide-react';
 
-import { formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
+import { ensureE164, isValidInternationalPhone } from '../../lib/formatters';
 import { supabase } from '../../lib/supabase';
+import { PhoneInput } from '../ui/PhoneInput';
 import { SmartCombobox } from '../ui/SmartCombobox';
 import { WizardRail } from '../ui/WizardRail';
 import {
@@ -119,7 +120,7 @@ export function CreateConsoleAgencyWizard({
     { id: 'review', label: 'Validation' },
   ];
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
-  const phoneValid = Boolean(normalizeSenegalPhone(form.phone));
+  const phoneValid = isValidInternationalPhone(form.phone);
   const identityValid = form.name.trim().length >= 2 && emailValid && phoneValid;
 
   const reset = () => {
@@ -144,10 +145,10 @@ export function CreateConsoleAgencyWizard({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const normalizedPhone = normalizeSenegalPhone(form.phone);
-    if (!identityValid || !normalizedPhone) {
+    const normalizedPhone = ensureE164(form.phone);
+    if (!identityValid || !isValidInternationalPhone(normalizedPhone)) {
       setStep(0);
-      setError('Vérifiez le nom, l’adresse email et le numéro sénégalais.');
+      setError('Vérifiez le nom, l’adresse email et le numéro de téléphone.');
       return;
     }
     setBusy(true);
@@ -280,18 +281,14 @@ export function CreateConsoleAgencyWizard({
               ) : null}
             </div>
             <div>
-              <label className={fieldLabelClass}>Téléphone Sénégal *</label>
-              <input
+              <PhoneInput
+                label="Téléphone"
                 required
-                inputMode="tel"
                 value={form.phone}
-                onChange={(event) => setForm({ ...form, phone: formatSenegalPhoneInput(event.target.value) })}
-                placeholder="77 123 45 67"
-                className={inputClass}
-                data-testid="input-new-agency-phone"
+                onChange={(value) => setForm({ ...form, phone: value })}
               />
               {form.phone.trim() && !phoneValid ? (
-                <p className="mt-1 text-[0.58rem] font-bold text-red-600">Format attendu : 77 123 45 67.</p>
+                <p className="mt-1 text-[0.58rem] font-bold text-red-600">Numéro de téléphone invalide.</p>
               ) : null}
             </div>
           </div>

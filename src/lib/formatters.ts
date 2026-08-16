@@ -1,6 +1,7 @@
 /**
  * Centralized formatting utilities for UI, exports and PDF rendering.
  */
+import { isValidPhoneNumber, parsePhoneNumberWithError } from 'libphonenumber-js';
 
 function formatNum(num: number): string {
   return Math.round(num)
@@ -142,4 +143,62 @@ export function formatSenegalPhoneInput(value: string | number | null | undefine
 export function getSenegalPhoneHref(value: string | number | null | undefined): string | null {
   const normalized = normalizeSenegalPhone(value);
   return normalized ? `tel:+${normalized}` : null;
+}
+
+/**
+ * Validation/formatage international (tout pays), en complément des fonctions
+ * Sénégal ci-dessus. Le composant PhoneInput produit du E.164 (+221771234567),
+ * mais les fiches existantes ont été enregistrées via normalizeSenegalPhone
+ * (221771234567, sans "+") — ensureE164 fait le pont entre les deux formats
+ * pour que l'affichage et l'édition restent corrects sur les données
+ * anciennes sans migration de base préalable. À utiliser pour tout contact
+ * susceptible d'être basé à l'étranger (bailleurs de la diaspora notamment) ;
+ * les fonctions Sénégal restent inchangées pour les usages qui en dépendent déjà.
+ */
+export function ensureE164(value: string | number | null | undefined): string {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('+')) return raw;
+
+  // Ancien format : chiffres seuls, éventuellement déjà préfixés 221/00221.
+  const local = getSenegalLocalPhone(raw);
+  if (local) return `+221${local}`;
+
+  // Chiffres seuls sans préfixe reconnu (ex. déjà un indicatif étranger sans "+").
+  const digitsOnly = raw.replace(/\D/g, '');
+  if (digitsOnly && digitsOnly === raw.replace(/\s/g, '')) return `+${digitsOnly}`;
+
+  return raw;
+}
+
+export function isValidInternationalPhone(value: string | number | null | undefined): boolean {
+  const candidate = ensureE164(value);
+  if (!candidate) return false;
+  try {
+    return isValidPhoneNumber(candidate);
+  } catch {
+    return false;
+  }
+}
+
+export function formatInternationalPhone(value: string | number | null | undefined, fallback = '-'): string {
+  const raw = String(value ?? '').trim();
+  if (!raw) return fallback;
+  const candidate = ensureE164(raw);
+  try {
+    return parsePhoneNumberWithError(candidate).formatInternational();
+  } catch {
+    return raw || fallback;
+  }
+}
+
+export function getInternationalPhoneHref(value: string | number | null | undefined): string | null {
+  const candidate = ensureE164(value);
+  if (!candidate) return null;
+  try {
+    if (!isValidPhoneNumber(candidate)) return null;
+    return `tel:${candidate}`;
+  } catch {
+    return null;
+  }
 }

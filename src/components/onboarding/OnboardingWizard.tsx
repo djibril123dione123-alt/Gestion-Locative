@@ -7,7 +7,6 @@ import {
   Loader2,
   MapPin,
   Mail,
-  Phone,
   Upload,
   Users,
   X,
@@ -18,7 +17,8 @@ import { supabase } from '../../lib/supabase';
 import { useToast } from '../../hooks/useToast';
 import { ToastContainer } from '../ui/Toast';
 import { getTimezoneKey, markOnboardingComplete, markOnboardingCompletePersisted } from './onboardingStorage';
-import { formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
+import { ensureE164, isValidInternationalPhone } from '../../lib/formatters';
+import { PhoneInput } from '../ui/PhoneInput';
 import { resolveAgencyAssetUrl, uploadAgencyIdentityAsset } from '../../services/agencyIdentityAssets';
 import { createTeamInvitation } from '../../services/tenantAdministrationCommands';
 import { completeTenantOnboarding } from '../../services/tenantProfileCommands';
@@ -169,10 +169,10 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
       return;
     }
     const normalizedOwnerPhone = isIndividualOwner && form.ownerPhone.trim()
-      ? normalizeSenegalPhone(form.ownerPhone)
+      ? ensureE164(form.ownerPhone)
       : null;
-    if (isIndividualOwner && form.ownerPhone.trim() && !normalizedOwnerPhone) {
-      toast.warning('Le téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.');
+    if (isIndividualOwner && form.ownerPhone.trim() && !isValidInternationalPhone(normalizedOwnerPhone)) {
+      toast.warning('Le téléphone doit être un numéro valide, par exemple 77 123 45 67.');
       setStep(0);
       return;
     }
@@ -377,18 +377,12 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
                     )}
                     {isIndividualOwner && (
                       <div className="grid gap-2.5 sm:grid-cols-2">
-                        <label className="block">
-                          <span className={labelClass}>
-                            <Phone className="mr-1 inline h-3.5 w-3.5 text-brand-800" />
-                            Téléphone
-                          </span>
-                          <input
-                            value={formatSenegalPhoneInput(form.ownerPhone)}
-                            onChange={(event) => setForm((prev) => ({ ...prev, ownerPhone: formatSenegalPhoneInput(event.target.value) }))}
-                            placeholder="Ex: 77 123 45 67"
-                            className={fieldClass}
-                          />
-                        </label>
+                        <PhoneInput
+                          label="Téléphone"
+                          value={form.ownerPhone}
+                          onChange={(value) => setForm((prev) => ({ ...prev, ownerPhone: value }))}
+                          placeholder="Ex: 77 123 45 67"
+                        />
                         <label className="block">
                           <span className={labelClass}>
                             <MapPin className="mr-1 inline h-3.5 w-3.5 text-brand-800" />

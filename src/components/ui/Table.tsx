@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrandMark } from '../brand/BrandLogo';
-import { formatSenegalPhone, getSenegalPhoneHref } from '../../lib/formatters';
+import { formatInternationalPhone, getInternationalPhoneHref } from '../../lib/formatters';
 import { PremiumMobileCard, PremiumMobileCardRow } from './PremiumMobileCard';
 
 export type TableColumnAlign = "left" | "center" | "right";
@@ -80,7 +80,7 @@ export function Table<T extends { id: string }>({
     }
 
     if (normalizedKey.includes('telephone') || normalizedKey.includes('phone') || normalizedKey.includes('tel')) {
-      const phoneHref = getSenegalPhoneHref(text);
+      const phoneHref = getInternationalPhoneHref(text);
       if (phoneHref) {
         return (
           <a
@@ -88,7 +88,7 @@ export function Table<T extends { id: string }>({
             aria-label={`Appeler ${text}`}
             className="font-bold text-brand-700 underline-offset-2 transition hover:text-brand-950 hover:underline"
           >
-            {formatSenegalPhone(text)}
+            {formatInternationalPhone(text)}
           </a>
         );
       }

@@ -47,7 +47,8 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { translateSupabaseError, getSuccessMessage } from '../lib/errorMessages';
-import { formatDate, formatSenegalPhone, normalizeSenegalPhone, isValidSenegalPhone, formatSenegalPhoneInput } from '../lib/formatters';
+import { formatDate, formatInternationalPhone, isValidInternationalPhone, getInternationalPhoneHref, ensureE164 } from '../lib/formatters';
+import { PhoneInput } from '../components/ui/PhoneInput';
 import { formatPersonName } from '../lib/people';
 import { PremiumFilterSelect } from '../components/ui/PremiumFilterSelect';
 import { PremiumToolbar } from '../components/ui/PremiumToolbar';
@@ -844,7 +845,7 @@ export function Bailleurs() {
   /**
    * Soumission du formulaire
    */
-  const handleSubmit = async (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent, options?: { andAddProperty?: boolean }) => {
     if (e) e.preventDefault();
 
     // Validation basique
@@ -859,11 +860,11 @@ export function Bailleurs() {
       return;
     }
 
-    const normalizedPhone = normalizeSenegalPhone(formData.telephone);
-    if (!normalizedPhone) {
-      setError('Le numéro de téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.');
+    if (!isValidInternationalPhone(formData.telephone)) {
+      setError('Le numéro de téléphone est invalide. Vérifiez l\'indicatif du pays sélectionné.');
       return;
     }
+    const normalizedPhone = ensureE164(formData.telephone);
 
     if (!formData.debut_contrat) {
       setError('La date de début du contrat est obligatoire.');
@@ -900,6 +901,8 @@ export function Bailleurs() {
         updated_at: new Date().toISOString(),
       };
 
+      let newBailleurId: string | null = null;
+
       if (editingBailleur) {
         const { error: updateError } = await supabase
           .from('bailleurs')
@@ -910,16 +913,19 @@ export function Bailleurs() {
         toast.success(getSuccessMessage('update', 'Bailleur'));
       } else {
         // Création
-        const { error: insertError } = await supabase
+        const { data: insertedBailleur, error: insertError } = await supabase
           .from('bailleurs')
           .insert([{
             ...bailleurData,
             agency_id: profile?.agency_id,
             created_by: user?.id,
             actif: true
-          }]);
+          }])
+          .select('id')
+          .single();
 
         if (insertError) throw insertError;
+        newBailleurId = insertedBailleur?.id ?? null;
         toast.success(getSuccessMessage('create', 'Bailleur'));
       }
 
@@ -932,6 +938,10 @@ export function Bailleurs() {
         notifyDataChanged(['bailleurs', 'patrimoine', 'dashboard', 'finances', 'documents']);
       }
       await loadBailleurs();
+
+      if (options?.andAddProperty && newBailleurId) {
+        window.location.hash = `#/patrimoine?action=new&bailleurId=${newBailleurId}`;
+      }
     } catch (err: unknown) {
       console.error('Erreur lors de l\'enregistrement:', err);
       const errorMessage = translateSupabaseError(err);
@@ -950,7 +960,7 @@ export function Bailleurs() {
     setFormData({
       nom: bailleur.nom,
       prenom: bailleur.prenom,
-      telephone: formatSenegalPhone(bailleur.telephone, ''),
+      telephone: ensureE164(bailleur.telephone),
       email: bailleur.email || '',
       adresse: bailleur.adresse || '',
       piece_identite: formatSenegalCni(bailleur.piece_identite || ''),
@@ -2077,7 +2087,7 @@ export function Bailleurs() {
                               </div>
                             </div>
                           </td>}
-                          {showBailleurColumn('telephone') && <td className="whitespace-nowrap px-2 py-1.5 text-[0.68rem] font-medium text-slate-600">{bailleur.telephone ? <a href={`tel:${bailleur.telephone}`} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(bailleur.telephone)}</a> : ''}</td>}
+                          {showBailleurColumn('telephone') && <td className="whitespace-nowrap px-2 py-1.5 text-[0.68rem] font-medium text-slate-600">{bailleur.telephone ? <a href={getInternationalPhoneHref(bailleur.telephone) ?? undefined} onClick={(e) => e.stopPropagation()} className="hover:text-brand-700 hover:underline">{formatInternationalPhone(bailleur.telephone)}</a> : ''}</td>}
                           {showBailleurColumn('commission') && <td className="whitespace-nowrap px-2 py-1.5 text-[0.68rem] font-medium text-slate-600">{formatCommission(bailleur.commission)}</td>}
                           {showBailleurColumn('reliquats') && <td className={`whitespace-nowrap px-2 py-1.5 text-right text-[0.72rem] font-semibold tabular-nums ${summary.reliquats > 0 ? 'text-red-600' : 'text-slate-400 font-medium'}`}><MoneyText value={summary.reliquats} /></td>}
                           {showBailleurColumn('net') && <td className={`whitespace-nowrap px-2 py-1.5 text-right text-[0.72rem] font-semibold tabular-nums ${summary.net > 0 ? 'text-emerald-800' : 'text-slate-400 font-medium'}`}><MoneyText value={summary.net} /></td>}
@@ -2146,7 +2156,7 @@ export function Bailleurs() {
                       <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase ${selectedBailleur.actif ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}>
                         {getStatusLabel(selectedBailleur)}
                       </span>
-                      {selectedBailleur.telephone && <span className="flex items-center gap-1 text-slate-500 font-medium"><Phone className="h-3 w-3" />{formatSenegalPhone(selectedBailleur.telephone)}</span>}
+                      {selectedBailleur.telephone && <span className="flex items-center gap-1 text-slate-500 font-medium"><Phone className="h-3 w-3" />{formatInternationalPhone(selectedBailleur.telephone)}</span>}
                       {selectedBailleur.email && <span className="flex min-w-0 items-center gap-1 text-slate-500 font-medium"><Mail className="shrink-0 h-3 w-3" /><span className="truncate">{selectedBailleur.email}</span></span>}
                     </div>
                     <div className="pt-1 text-[0.68rem] text-slate-500 font-medium">
@@ -2176,7 +2186,7 @@ export function Bailleurs() {
                     {(selectedBailleur.telephone || selectedBailleur.email || selectedBailleur.adresse) && (
                       <CompactSection title="Coordonnées" icon={MapPin}>
                         <div className="flex flex-col divide-y divide-slate-100 min-w-0">
-                          <CompactLabelValue label="Téléphone" value={selectedBailleur.telephone ? formatSenegalPhone(selectedBailleur.telephone) : null} />
+                          <CompactLabelValue label="Téléphone" value={selectedBailleur.telephone ? formatInternationalPhone(selectedBailleur.telephone) : null} />
                           <CompactLabelValue label="Email" value={selectedBailleur.email} />
                           <CompactLabelValue label="Adresse" value={selectedBailleur.adresse} />
                         </div>
@@ -2252,6 +2262,38 @@ export function Bailleurs() {
             currentStep={bailleurWizardStepIndex}
           />
         }
+        footer={
+          bailleurWizardStep === 'summary' && !editingBailleur ? (
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={() => setBailleurWizardStep('admin')}
+                disabled={isSubmitting}
+                className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
+              >
+                Retour
+              </button>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={() => void handleSubmit(undefined, { andAddProperty: false })}
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
+                >
+                  {isSubmitting ? 'Traitement...' : 'Enregistrer'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSubmit(undefined, { andAddProperty: true })}
+                  disabled={isSubmitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                >
+                  {isSubmitting ? 'Traitement...' : 'Enregistrer et ajouter un bien'}
+                </button>
+              </div>
+            </div>
+          ) : undefined
+        }
         primaryAction={
           <button
             type="button"
@@ -2261,7 +2303,7 @@ export function Bailleurs() {
                 if (!formData.nom.trim()) { setError('Le nom est obligatoire.'); return; }
                 if (!isValidPersonNamePart(formData.prenom) || !isValidPersonNamePart(formData.nom)) { setError("Le prénom et le nom doivent contenir uniquement des lettres, espaces, apostrophes ou tirets."); return; }
                 if (!formData.telephone.trim()) { setError('Le téléphone est obligatoire.'); return; }
-                if (!isValidSenegalPhone(formData.telephone)) { setError('Numéro invalide. Exemple : +221 77 123 45 67'); return; }
+                if (!isValidInternationalPhone(formData.telephone)) { setError('Numéro invalide. Vérifiez l\'indicatif du pays sélectionné.'); return; }
                 if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) { setError('Email invalide. Exemple : nom@domaine.com'); return; }
                 setError(null);
                 setBailleurWizardStep('admin');
@@ -2310,17 +2352,16 @@ export function Bailleurs() {
               <TextField label="Nom" value={formData.nom} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, nom: v }); }} required placeholder="Diop" />
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2.5">
-              <TextField
-                type="tel"
+              <PhoneInput
                 label="Téléphone"
                 value={formData.telephone}
                 onChange={(v) => {
-                  const val = formatSenegalPhoneInput(v);
-                  if (val !== formData.telephone) setIsDirty(true);
-                  setFormData({ ...formData, telephone: val });
+                  if (v !== formData.telephone) setIsDirty(true);
+                  setFormData({ ...formData, telephone: v });
                 }}
                 required
                 placeholder="77 123 45 67"
+                helperText="Bailleur à l'étranger ? Changez l'indicatif via le sélecteur de pays."
               />
               <TextField type="email" label="Email" value={formData.email || ''} onChange={(v) => { setIsDirty(true); setFormData({ ...formData, email: v }); }} placeholder="nom@domaine.com" />
             </div>
@@ -2417,7 +2458,7 @@ export function Bailleurs() {
                   </div>
                   <div className="min-w-0 divide-y divide-slate-100/80 px-3">
                     <CompactLabelValue label="Nom complet" value={titleCaseName(formatPersonName({ prenom: formData.prenom, nom: formData.nom }))} />
-                    <CompactLabelValue label="Téléphone" value={isValidSenegalPhone(formData.telephone) ? `+221 ${formatSenegalPhone(formData.telephone, formData.telephone)}` : formData.telephone} />
+                    <CompactLabelValue label="Téléphone" value={formatInternationalPhone(formData.telephone, formData.telephone)} />
                     {formData.email && <CompactLabelValue label="Email" value={formData.email} />}
                   </div>
                 </div>

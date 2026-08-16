@@ -21,7 +21,8 @@ import { ToastContainer } from '../components/ui/Toast';
 import { reloadUserProfile } from '../lib/agencyHelper';
 import { BrandLogo } from '../components/brand/BrandLogo';
 import { LoadingState } from '../components/ui/LoadingState';
-import { formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
+import { ensureE164, isValidInternationalPhone } from '../lib/formatters';
+import { PhoneInput } from '../components/ui/PhoneInput';
 
 type AccountType = 'agency' | 'bailleur';
 type RequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
@@ -150,9 +151,9 @@ export default function Welcome() {
     }
     setLoading(true);
     try {
-      const normalizedPhone = normalizeSenegalPhone(formData.phone);
-      if (!normalizedPhone) {
-        showToast('Le téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.', 'error');
+      const normalizedPhone = ensureE164(formData.phone);
+      if (!isValidInternationalPhone(normalizedPhone)) {
+        showToast('Le téléphone doit être un numéro valide, par exemple 77 123 45 67.', 'error');
         setLoading(false);
         return;
       }
@@ -572,15 +573,11 @@ export default function Welcome() {
               <p className="text-[0.72rem] font-semibold leading-4 text-slate-200">À quel numéro notre équipe peut-elle vous joindre ?</p>
             </div>
             <div className="space-y-2.5">
-              <input
-                type="tel"
-                autoFocus
+              <PhoneInput
+                label=""
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: formatSenegalPhoneInput(e.target.value) })}
-                className={welcomeInputClass}
-                placeholder="+221 77 123 45 67"
-                onKeyPress={(e) => e.key === 'Enter' && formData.phone.trim() && nextStep()}
-                data-testid="input-phone"
+                onChange={(value) => setFormData({ ...formData, phone: value })}
+                placeholder="77 123 45 67"
               />
               <button
                 onClick={nextStep}

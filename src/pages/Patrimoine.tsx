@@ -367,6 +367,49 @@ function createUnitForm(propertyId = ''): UnitFormState {
   };
 }
 
+const PROPERTY_DRAFT_KEY = 'sk:patrimoine:propertyDraft';
+const UNIT_DRAFT_KEY = 'sk:patrimoine:unitDraft';
+
+function stashPropertyDraft(form: PropertyFormState) {
+  try {
+    const { bailleur_id, ...draft } = form;
+    void bailleur_id;
+    sessionStorage.setItem(PROPERTY_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // stockage indisponible : le brouillon ne sera simplement pas restauré
+  }
+}
+
+function readAndClearPropertyDraft(): Partial<PropertyFormState> | null {
+  try {
+    const raw = sessionStorage.getItem(PROPERTY_DRAFT_KEY);
+    sessionStorage.removeItem(PROPERTY_DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as Partial<PropertyFormState>) : null;
+  } catch {
+    return null;
+  }
+}
+
+function stashUnitDraft(form: UnitFormState) {
+  try {
+    const { immeuble_id, ...draft } = form;
+    void immeuble_id;
+    sessionStorage.setItem(UNIT_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // stockage indisponible : le brouillon ne sera simplement pas restauré
+  }
+}
+
+function readAndClearUnitDraft(): Partial<UnitFormState> | null {
+  try {
+    const raw = sessionStorage.getItem(UNIT_DRAFT_KEY);
+    sessionStorage.removeItem(UNIT_DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as Partial<UnitFormState>) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
   const { user, profile, agency, accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
@@ -380,14 +423,24 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
       const action = params.get('action');
       if (action === 'new-unite' || action === 'new-unit') {
         const bienId = params.get('bienId');
+        const draft = readAndClearUnitDraft();
         setEditingUnit(null);
-        if (bienId) {
-          setUnitForm((prev) => ({ ...prev, immeuble_id: bienId }));
-        }
+        setUnitForm((prev) => ({
+          ...prev,
+          ...(draft ?? {}),
+          ...(bienId ? { immeuble_id: bienId } : {}),
+        }));
         setUnitWizardStep('main');
         setUnitModalOpen(true);
       } else {
+        const bailleurId = params.get('bailleurId');
+        const draft = readAndClearPropertyDraft();
         setEditingProperty(null);
+        setPropertyForm((prev) => ({
+          ...prev,
+          ...(draft ?? {}),
+          ...(bailleurId ? { bailleur_id: bailleurId } : {}),
+        }));
         setPropertyWizardStep('main');
         setPropertyModalOpen(true);
       }
@@ -888,7 +941,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
     await loadData();
   };
 
-  const handlePropertySubmit = async (event?: React.FormEvent) => {
+  const handlePropertySubmit = async (event?: React.FormEvent, options?: { andAddUnit?: boolean }) => {
     if (event) event.preventDefault();
     if (!profile?.agency_id) return;
     if (!navigator.onLine) {
@@ -933,17 +986,28 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
         description: descWithMetadata,
       };
 
+      let newPropertyId: string | null = null;
+
       if (editingProperty) {
         const { error } = await supabase.from('immeubles').update(payload).eq('id', editingProperty.id).eq('agency_id', profile.agency_id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('immeubles').insert([{ ...payload, agency_id: profile.agency_id, created_by: user?.id ?? null }]);
+        const { data: insertedProperty, error } = await supabase
+          .from('immeubles')
+          .insert([{ ...payload, agency_id: profile.agency_id, created_by: user?.id ?? null }])
+          .select('id')
+          .single();
         if (error) throw error;
+        newPropertyId = insertedProperty?.id ?? null;
       }
 
       toast.success(editingProperty ? 'Bien mis à jour.' : 'Bien créé.');
       closePropertyModal();
       await reloadAfterMutation();
+
+      if (options?.andAddUnit && newPropertyId) {
+        window.location.hash = `#/patrimoine?action=new-unite&bienId=${newPropertyId}`;
+      }
     } catch (error) {
       console.error('[Patrimoine] save property failed', error);
       toast.error("Impossible d'enregistrer ce bien.");
@@ -952,7 +1016,7 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
     }
   };
 
-  const handleUnitSubmit = async (event?: React.FormEvent) => {
+  const handleUnitSubmit = async (event?: React.FormEvent, options?: { andAddAnother?: boolean }) => {
     if (event) event.preventDefault();
     if (!profile?.agency_id) return;
     if (!navigator.onLine) {
@@ -993,7 +1057,13 @@ export function Patrimoine({ initialTab = 'biens' }: PatrimoineProps) {
       }
 
       toast.success(editingUnit ? 'Unité mise à jour.' : 'Unité créée.');
-      closeUnitModal();
+
+      if (options?.andAddAnother && !editingUnit) {
+        setUnitForm(createUnitForm(unitForm.immeuble_id));
+        setUnitWizardStep('main');
+      } else {
+        closeUnitModal();
+      }
       await reloadAfterMutation();
     } catch (error) {
       console.error('[Patrimoine] save unit failed', error);
@@ -2269,7 +2339,7 @@ function PropertyModal({
   wizardStep: PropertyWizardStep;
   onStepChange: (step: PropertyWizardStep) => void;
   onClose: () => void;
-  onSubmit: (event?: React.FormEvent) => void;
+  onSubmit: (event?: React.FormEvent, options?: { andAddUnit?: boolean }) => void;
   onChange: React.Dispatch<React.SetStateAction<PropertyFormState>>;
 }) {
   const toast = useToast();
@@ -2294,6 +2364,38 @@ function PropertyModal({
           steps={PROPERTY_WIZARD_STEPS}
           currentStep={propertyWizardStepIndex}
         />
+      }
+      footer={
+        wizardStep === 'summary' && !editingProperty ? (
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              onClick={() => onStepChange('address')}
+              disabled={saving}
+              className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
+            >
+              Retour
+            </button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={() => void onSubmit(undefined, { andAddUnit: false })}
+                disabled={saving}
+                className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
+              >
+                {saving ? 'Création...' : 'Enregistrer'}
+              </button>
+              <button
+                type="button"
+                onClick={() => void onSubmit(undefined, { andAddUnit: true })}
+                disabled={saving}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {saving ? 'Création...' : 'Enregistrer et ajouter une unité'}
+              </button>
+            </div>
+          </div>
+        ) : undefined
       }
       primaryAction={
         <button
@@ -2371,6 +2473,7 @@ function PropertyModal({
                 emptyLabel="Aucun bailleur disponible."
                 emptyActionLabel="Aller aux bailleurs"
                 onEmptyAction={() => {
+                  stashPropertyDraft(form);
                   onClose();
                   window.location.hash = '#/bailleurs?action=new';
                 }}
@@ -2489,7 +2592,7 @@ function UnitModal({
   wizardStep: UnitWizardStep;
   onStepChange: (step: UnitWizardStep) => void;
   onClose: () => void;
-  onSubmit: (event?: React.FormEvent) => void;
+  onSubmit: (event?: React.FormEvent, options?: { andAddAnother?: boolean }) => void;
   onChange: React.Dispatch<React.SetStateAction<UnitFormState>>;
 }) {
   const toast = useToast();
@@ -2514,6 +2617,38 @@ function UnitModal({
           steps={UNIT_WIZARD_STEPS}
           currentStep={unitWizardStepIndex}
         />
+      }
+      footer={
+        wizardStep === 'summary' && !editingUnit ? (
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              onClick={() => onStepChange('rent')}
+              disabled={saving}
+              className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
+            >
+              Retour
+            </button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={() => void onSubmit(undefined, { andAddAnother: false })}
+                disabled={saving}
+                className="w-full rounded-xl border border-emerald-950/10 bg-white/85 px-4 py-2 text-[11px] font-semibold text-slate-600 shadow-sm outline-none transition hover:bg-white focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] disabled:opacity-50 sm:w-auto"
+              >
+                {saving ? 'Création...' : 'Terminer'}
+              </button>
+              <button
+                type="button"
+                onClick={() => void onSubmit(undefined, { andAddAnother: true })}
+                disabled={saving}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] hover:shadow-[0_14px_28px_rgba(6,45,35,0.22)] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {saving ? 'Création...' : 'Enregistrer et ajouter une autre unité'}
+              </button>
+            </div>
+          </div>
+        ) : undefined
       }
       primaryAction={
         <button
@@ -2572,6 +2707,7 @@ function UnitModal({
               emptyLabel="Aucun bien disponible."
               emptyActionLabel="Créer un bien"
               onEmptyAction={() => {
+                stashUnitDraft(form);
                 onClose();
                 window.location.hash = '#/patrimoine?action=new';
               }}

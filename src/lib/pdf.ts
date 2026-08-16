@@ -9,7 +9,7 @@ import {
   PaiementPDFData,
   MandatPDFData,
 } from '../types';
-import { formatCurrency, formatSenegalPhone } from './formatters';
+import { formatCurrency, formatInternationalPhone } from './formatters';
 import {
   announceGeneratedDocument,
   GeneratedDocumentKind,
@@ -909,7 +909,7 @@ export async function drawDocumentHeader(
   doc.setTextColor(71, 85, 105);
   const infoLines = [
     settings.adresse,
-    settings.telephone ? `Tél : ${formatSenegalPhone(settings.telephone, '')}` : null,
+    settings.telephone ? `Tél : ${formatInternationalPhone(settings.telephone, '')}` : null,
     settings.email ? `Email : ${settings.email}` : null,
     !individualOwner && settings.ninea ? `NINEA : ${settings.ninea}` : null,
     !individualOwner && settings.rc ? `RC : ${settings.rc}` : null,

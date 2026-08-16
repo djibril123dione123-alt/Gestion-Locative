@@ -35,7 +35,8 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { applyCfaSettlementTolerance } from '../../lib/cfaSettlement';
-import { formatCurrency, formatDate, formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
+import { ensureE164, formatCurrency, formatDate, formatInternationalPhone } from '../../lib/formatters';
+import { PhoneInput } from '../ui/PhoneInput';
 import { formatPersonName } from '../../lib/people';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../../services/offlineReadCache';
 import { getOrCreateIndividualOwnerBailleur, type OwnerBailleur } from '../../services/individualOwner';
@@ -655,7 +656,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
     }
 
     const normalizedPhone = profileForm.telephone.trim()
-      ? normalizeSenegalPhone(profileForm.telephone) || profileForm.telephone.trim()
+      ? ensureE164(profileForm.telephone) || profileForm.telephone.trim()
       : null;
 
     setSavingProfile(true);
@@ -1396,7 +1397,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
                   <h3 className="truncate text-xl font-bold text-slate-950">{ownerName}</h3>
                   <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-800">Propriétaire</span>
                   <div className="mt-3 space-y-1.5 text-sm font-medium text-slate-600">
-                    <p className="flex items-center gap-2"><CreditCard className="h-4 w-4 text-slate-400" />{formatSenegalPhone(data.settings?.telephone || profile?.telephone || agency?.phone, 'Téléphone à compléter')}</p>
+                    <p className="flex items-center gap-2"><CreditCard className="h-4 w-4 text-slate-400" />{formatInternationalPhone(data.settings?.telephone || profile?.telephone || agency?.phone, 'Téléphone à compléter')}</p>
                     <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-slate-400" />{data.settings?.email || profile?.email || agency?.email}</p>
                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-400" />{data.settings?.adresse || agency?.address || 'Adresse à compléter'}</p>
                   </div>
@@ -1523,11 +1524,10 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
             </label>
             <label className="block">
               <span className="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Téléphone</span>
-              <input
-                value={formatSenegalPhoneInput(profileForm.telephone)}
-                onChange={(event) => setProfileForm((current) => ({ ...current, telephone: formatSenegalPhoneInput(event.target.value) }))}
-                className="h-12 w-full rounded-2xl border border-emerald-950/10 bg-white px-4 text-sm font-bold text-slate-950 outline-none focus:border-brand-700 focus:ring-4 focus:ring-emerald-100"
-                placeholder="77 123 45 67"
+              <PhoneInput
+                label=""
+                value={profileForm.telephone}
+                onChange={(value) => setProfileForm((current) => ({ ...current, telephone: value }))}
               />
             </label>
             <label className="block">

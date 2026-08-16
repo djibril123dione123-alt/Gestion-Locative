@@ -9,7 +9,8 @@ import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { PageSkeleton } from '../components/ui/Skeleton';
-import { formatSenegalPhone, formatSenegalPhoneInput, normalizeSenegalPhone } from '../lib/formatters';
+import { ensureE164, isValidInternationalPhone } from '../lib/formatters';
+import { PhoneInput } from '../components/ui/PhoneInput';
 import { closeAgencyAccount } from '../services/admin/adminActionsService';
 
 type AgencyPlan = 'basic' | 'pro' | 'enterprise';
@@ -91,9 +92,9 @@ export default function Agences() {
     e.preventDefault();
 
     try {
-      const normalizedPhone = normalizeSenegalPhone(formData.phone);
-      if (!normalizedPhone) {
-        showToast('Le téléphone doit être un numéro sénégalais valide, par exemple 77 123 45 67.', 'error');
+      const normalizedPhone = ensureE164(formData.phone);
+      if (!isValidInternationalPhone(normalizedPhone)) {
+        showToast('Le téléphone doit être un numéro valide, par exemple 77 123 45 67.', 'error');
         return;
       }
       if (editingAgency) {
@@ -190,7 +191,7 @@ export default function Agences() {
       name: agency.name,
       ninea: agency.ninea || '',
       address: agency.address || '',
-      phone: formatSenegalPhone(agency.phone, ''),
+      phone: ensureE164(agency.phone),
       email: agency.email,
       website: agency.website || '',
       plan: agency.plan,
@@ -335,15 +336,11 @@ export default function Agences() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Téléphone *
-              </label>
-              <input
-                type="tel"
+              <PhoneInput
+                label="Téléphone"
                 required
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: formatSenegalPhoneInput(e.target.value) })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                onChange={(value) => setFormData({ ...formData, phone: value })}
               />
             </div>
           </div>

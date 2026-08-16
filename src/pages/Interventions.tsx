@@ -13,7 +13,8 @@ import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Wrench, Plus, ArrowRight, Phone, Building2, AlertTriangle, CheckCircle2, Clock, Search, SlidersHorizontal } from 'lucide-react';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
-import { formatCurrency, formatSenegalPhone, formatSenegalPhoneInput, getSenegalPhoneHref, normalizeSenegalPhone } from '../lib/formatters';
+import { ensureE164, formatCurrency, formatInternationalPhone, getInternationalPhoneHref } from '../lib/formatters';
+import { PhoneInput } from '../components/ui/PhoneInput';
 import { PageSkeleton, SkeletonCards } from '../components/ui/Skeleton';
 import { useDirectRoute } from '../hooks/useDirectRoute';
 
@@ -144,7 +145,7 @@ export function Interventions() {
         date_demande: form.date_demande,
         date_souhaitee: form.date_souhaitee || null,
         prestataire_nom: form.prestataire_nom.trim() || null,
-        prestataire_telephone: normalizeSenegalPhone(form.prestataire_telephone) || null,
+        prestataire_telephone: form.prestataire_telephone.trim() ? ensureE164(form.prestataire_telephone) : null,
         cout_estime: form.cout_estime ? parseFloat(form.cout_estime) : null,
         statut: 'a_faire',
         created_by: user?.id,
@@ -488,12 +489,12 @@ export function Interventions() {
                               </div>
                               {i.prestataire_telephone && (
                                 <a
-                                  href={getSenegalPhoneHref(i.prestataire_telephone) ?? undefined}
+                                  href={getInternationalPhoneHref(i.prestataire_telephone) ?? undefined}
                                   className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold shadow-2xs transition shrink-0"
                                   title="Appeler l'artisan"
                                 >
                                   <Phone className="h-3 w-3" />
-                                  {formatSenegalPhone(i.prestataire_telephone)}
+                                  {formatInternationalPhone(i.prestataire_telephone)}
                                 </a>
                               )}
                             </div>
@@ -693,13 +694,10 @@ export function Interventions() {
               />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Téléphone prestataire</label>
-              <input
-                type="tel"
-                placeholder="+221 77 000 00 00"
+              <PhoneInput
+                label="Téléphone prestataire"
                 value={form.prestataire_telephone}
-                onChange={(e) => setForm({ ...form, prestataire_telephone: formatSenegalPhoneInput(e.target.value) })}
-                className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-xs outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+                onChange={(value) => setForm({ ...form, prestataire_telephone: value })}
               />
             </div>
             <div>

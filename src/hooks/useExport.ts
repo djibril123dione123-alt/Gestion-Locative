@@ -9,7 +9,7 @@
 import { useState, useCallback } from 'react';
 import type { Workbook, Worksheet } from 'exceljs';
 import { announceGeneratedDocument, type GeneratedDocumentPreview } from '../lib/documentGenerated';
-import { formatSenegalPhone } from '../lib/formatters';
+import { formatInternationalPhone } from '../lib/formatters';
 
 export interface ExportLocataire {
   nom: string;
@@ -112,7 +112,7 @@ function fmt(v: unknown): string | number | null {
 
 function fmtPhone(v: unknown): string | null {
   if (v === null || v === undefined) return null;
-  return formatSenegalPhone(String(v), '');
+  return formatInternationalPhone(String(v), '');
 }
 
 function buildPreview(

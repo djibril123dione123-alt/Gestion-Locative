@@ -71,7 +71,8 @@ import {
   type OccupantBailPersonOption,
 } from '../repositories/occupantsBauxRepository';
 import { readWithCache, invalidateOperationalCaches, notifyDataChanged } from '../services/offlineReadCache';
-import { formatDate, formatSenegalPhone, normalizeSenegalPhone, formatSenegalPhoneInput } from '../lib/formatters';
+import { formatDate, ensureE164, formatInternationalPhone, getInternationalPhoneHref, isValidInternationalPhone } from '../lib/formatters';
+import { PhoneInput } from '../components/ui/PhoneInput';
 import {
   IDENTITY_PIECE_OPTIONS,
   formatIdentityNumberInput,
@@ -247,7 +248,7 @@ function occupantFormFromRow(row: OccupantBailRow): OccupantFormState {
   return {
     prenom: row.prenom ?? '',
     nom: row.nom ?? '',
-    telephone: row.telephone ? formatSenegalPhone(row.telephone, '') : '',
+    telephone: row.telephone ? ensureE164(row.telephone) : '',
     email: row.email ?? '',
     adresse_personnelle: row.adresse_personnelle ?? '',
     piece_identite: rawPiece,
@@ -260,11 +261,11 @@ function personInputFromForm(form: OccupantFormState): { data: OccupantBailPerso
   const prenom = form.prenom.trim();
   const nom = form.nom.trim();
   const email = form.email.trim();
-  const normalizedPhone = normalizeSenegalPhone(form.telephone);
+  const normalizedPhone = ensureE164(form.telephone);
 
   if (!prenom) return { data: null, error: "Le prénom du locataire est obligatoire." };
   if (!nom) return { data: null, error: "Le nom du locataire est obligatoire." };
-  if (!normalizedPhone) return { data: null, error: 'Le téléphone doit être un numéro sénégalais valide.' };
+  if (!isValidInternationalPhone(normalizedPhone)) return { data: null, error: 'Le téléphone doit être un numéro valide.' };
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { data: null, error: "L'email du locataire n'est pas valide." };
   }
@@ -1409,11 +1410,11 @@ function DesktopRow({
         <td className={`py-2.5 px-3 whitespace-nowrap text-[0.75rem] text-slate-700 font-medium ${compact ? 'hidden' : 'hidden lg:table-cell'}`}>
           {row.telephone ? (
             <a
-              href={`tel:${row.telephone}`}
+              href={getInternationalPhoneHref(row.telephone) ?? undefined}
               onClick={(e) => e.stopPropagation()}
               className="hover:text-brand-700 hover:underline"
             >
-              {formatSenegalPhone(row.telephone)}
+              {formatInternationalPhone(row.telephone)}
             </a>
           ) : (
             <span className="text-slate-400">—</span>
@@ -1569,7 +1570,7 @@ function OccupantBailDrawer({
             {row.telephone && (
               <span className="flex items-center gap-1 text-slate-500 font-medium">
                 <Phone className="h-3 w-3 text-slate-400" />
-                <a href={`tel:${row.telephone}`} className="hover:text-brand-700 hover:underline">{formatSenegalPhone(row.telephone)}</a>
+                <a href={getInternationalPhoneHref(row.telephone) ?? undefined} className="hover:text-brand-700 hover:underline">{formatInternationalPhone(row.telephone)}</a>
               </span>
             )}
             {row.email && (
@@ -1791,8 +1792,8 @@ function DrawerResume({
             label="Téléphone"
             value={
               row.telephone ? (
-                <a href={`tel:${row.telephone}`} className="hover:text-brand-700 hover:underline">
-                  {formatSenegalPhone(row.telephone)}
+                <a href={getInternationalPhoneHref(row.telephone) ?? undefined} className="hover:text-brand-700 hover:underline">
+                  {formatInternationalPhone(row.telephone)}
                 </a>
               ) : (
                 'Non renseigné'
@@ -2426,7 +2427,7 @@ function OccupantFormModal({
           </div>
           
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField label="Téléphone" value={form.telephone} onChange={(value) => onChange({ ...form, telephone: formatSenegalPhoneInput(value) })} placeholder="77 123 45 67" required />
+            <PhoneInput label="Téléphone" value={form.telephone} onChange={(value) => onChange({ ...form, telephone: value })} required />
             <TextField label="Email" value={form.email} onChange={(value) => onChange({ ...form, email: value })} placeholder="nom@domaine.com" />
           </div>
 
@@ -2627,7 +2628,7 @@ function OccupationFormModal({
       value: occupant.id,
       label: `${occupant.prenom} ${occupant.nom}`.trim(),
       subtitle: [
-        occupant.telephone ? formatSenegalPhone(occupant.telephone) : 'Téléphone non renseigné',
+        occupant.telephone ? formatInternationalPhone(occupant.telephone) : 'Téléphone non renseigné',
         occupant.email || 'Email non renseigné',
       ].join(' · '),
       keywords: [
@@ -2836,7 +2837,7 @@ function OccupationFormModal({
                     <TextField label="Nom" value={form.newOccupant.nom} onChange={(value) => update({ newOccupant: { ...form.newOccupant, nom: value } })} required placeholder="Diallo" />
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <TextField label="Téléphone" value={form.newOccupant.telephone} onChange={(value) => update({ newOccupant: { ...form.newOccupant, telephone: formatSenegalPhoneInput(value) } })} required placeholder="77 123 45 67" />
+                    <PhoneInput label="Téléphone" value={form.newOccupant.telephone} onChange={(value) => update({ newOccupant: { ...form.newOccupant, telephone: value } })} required />
                     <TextField label="Email" value={form.newOccupant.email} onChange={(value) => update({ newOccupant: { ...form.newOccupant, email: value } })} placeholder="nom@domaine.com" />
                   </div>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">

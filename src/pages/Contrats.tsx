@@ -4,7 +4,7 @@ import { createContratViaEdge, updateContratViaEdge, ContratApiError } from '../
 import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
-import { Plus, Search, Download, AlertCircle, TrendingUp, Ban, CalendarDays } from 'lucide-react';
+import { Plus, Search, Download, AlertCircle, TrendingUp, Ban, CalendarDays, FileText } from 'lucide-react';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { generateContratPDF } from '../lib/pdf';
@@ -16,6 +16,7 @@ import { OfflineDataNotice } from '../components/ui/OfflineDataNotice';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
 import { PremiumButton } from '../components/ui/PremiumButton';
 import { runDocumentGeneration } from '../lib/documentGeneration';
+import { EmptyState } from '../components/ui/EmptyState';
 
 // =========================
 //  PALETTE CONFORT IMMO ARCHI
@@ -851,13 +852,21 @@ export function Contrats() {
         </div>
 
         {filteredContrats.length === 0 ? (
-          <div className="text-center py-12 bg-brand-surface rounded-lg border border-emerald-950/10">
-            <p className="text-slate-600 text-base lg:text-lg">
-              {searchTerm
-                ? 'Aucun contrat trouvé pour votre recherche'
-                : 'Aucun contrat enregistré'}
-            </p>
-          </div>
+          <EmptyState
+            bare
+            icon={FileText}
+            title={searchTerm ? 'Aucun résultat' : 'Aucun contrat enregistré'}
+            description={
+              searchTerm
+                ? 'Aucun contrat ne correspond à votre recherche.'
+                : 'Créez votre premier contrat pour commencer à suivre les baux et loyers.'
+            }
+            action={
+              searchTerm
+                ? { label: 'Réinitialiser la recherche', onClick: () => setSearchTerm('') }
+                : { label: 'Nouveau contrat', onClick: () => setIsModalOpen(true) }
+            }
+          />
         ) : (
           <div className="overflow-x-auto">
             <Table

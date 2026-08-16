@@ -4,7 +4,7 @@ import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
-import { Plus, Search, Sheet } from 'lucide-react';
+import { Plus, Search, Sheet, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { useExport } from '../hooks/useExport';
@@ -303,7 +303,22 @@ export function Locataires() {
           )}
         </div>
         <div className="overflow-x-auto">
-          <Table columns={columns} data={paginated} onEdit={handleEdit} onDelete={handleDelete} />
+          <Table
+            columns={columns}
+            data={paginated}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            emptyState={{
+              icon: Users,
+              title: searchTerm ? 'Aucun résultat' : 'Aucun locataire enregistré',
+              description: searchTerm
+                ? 'Aucun locataire ne correspond à votre recherche.'
+                : 'Ajoutez votre premier locataire pour commencer à suivre ses occupations et paiements.',
+              action: searchTerm
+                ? { label: 'Réinitialiser la recherche', onClick: () => setSearchTerm('') }
+                : { label: 'Nouveau locataire', onClick: () => setIsModalOpen(true) },
+            }}
+          />
         </div>
 
         {/* Pagination */}

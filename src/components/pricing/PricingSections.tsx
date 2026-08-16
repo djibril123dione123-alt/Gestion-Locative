@@ -46,7 +46,7 @@ function SectionHeading({ eyebrow, title, text }: { eyebrow: string; title: stri
 
 function PlanGrid({ plans, onSelectPlan }: Pick<PricingSectionsProps, 'plans' | 'onSelectPlan'>) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {plans.map((plan) => (
         <PricingPlanCard key={plan.id} plan={plan} onSelect={onSelectPlan} />
       ))}

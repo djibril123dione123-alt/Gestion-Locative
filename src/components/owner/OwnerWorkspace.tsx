@@ -1181,6 +1181,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
 
               {propertyCards.length === 0 ? (
                 <EmptyState
+                  bare
                   icon={Building2}
                   title="Aucun bien ajouté pour le moment."
                   description="Ajoutez votre premier bien pour commencer le suivi des unités, locataires, loyers et documents."

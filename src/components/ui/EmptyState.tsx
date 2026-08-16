@@ -14,15 +14,25 @@ interface EmptyStateProps {
     label: string;
     onClick: () => void;
   };
+  /** Skip the card chrome (border/shadow/background/watermark) for use inside an existing card container. */
+  bare?: boolean;
 }
 
-export function EmptyState({ icon: Icon, title, description, action, secondaryAction }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, action, secondaryAction, bare = false }: EmptyStateProps) {
   return (
-    <div className="sk-empty-state overflow-hidden relative group">
-      <div className="pointer-events-none absolute -right-8 -top-8 opacity-[0.04]">
-        <BrandMark size="xl" tone="light" withTile={false} />
-      </div>
-      
+    <div
+      className={
+        bare
+          ? 'relative flex flex-col items-center justify-center overflow-hidden py-8 text-center sm:py-12'
+          : 'sk-empty-state overflow-hidden relative group'
+      }
+    >
+      {!bare && (
+        <div className="pointer-events-none absolute -right-8 -top-8 opacity-[0.04]">
+          <BrandMark size="xl" tone="light" withTile={false} />
+        </div>
+      )}
+
       {/* Halos décoratifs premium */}
       <div className="relative mb-6 flex h-24 w-24 items-center justify-center">
         <div className="absolute inset-0 rounded-full bg-emerald-50 opacity-50 scale-150 transition-transform duration-700 group-hover:scale-175" />

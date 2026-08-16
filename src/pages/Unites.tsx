@@ -4,7 +4,7 @@ import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, DoorOpen } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { usePlanLimits } from '../hooks/usePlanLimits';
@@ -305,7 +305,22 @@ export function Unites() {
         </div>
 
         <div className="overflow-x-auto">
-          <Table columns={columns} data={filteredUnites} onEdit={handleEdit} onDelete={handleDelete} />
+          <Table
+            columns={columns}
+            data={filteredUnites}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            emptyState={{
+              icon: DoorOpen,
+              title: searchTerm ? 'Aucun résultat' : 'Aucune unité enregistrée',
+              description: searchTerm
+                ? 'Aucune unité ne correspond à votre recherche.'
+                : 'Ajoutez votre première unité pour préparer la mise en location.',
+              action: searchTerm
+                ? { label: 'Réinitialiser la recherche', onClick: () => setSearchTerm('') }
+                : { label: 'Nouvelle unité', onClick: () => setIsModalOpen(true) },
+            }}
+          />
         </div>
       </div>
 

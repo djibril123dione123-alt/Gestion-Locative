@@ -31,7 +31,7 @@ interface PaiementFormModalProps {
   contrats: ContratRow[];
   paiements: PaiementRow[];
   isSaving: boolean;
-  onSubmit: () => Promise<void>;
+  onSubmit: (options?: { andGenerate?: boolean }) => Promise<void>;
   isOnline: boolean;
 }
 
@@ -232,6 +232,28 @@ export function PaiementFormModal({
           steps={PAYMENT_STEPS}
           currentStep={currentStep - 1}
         />
+      }
+      footer={
+        currentStep === 3 && !editingPaiement ? (
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              onClick={() => setCurrentStep((step) => step - 1)}
+              disabled={isSaving}
+              className={wizardSecondaryActionClass}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" /> Retour
+            </button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+              <button type="button" onClick={() => void onSubmit()} disabled={!canSubmit} className={wizardSecondaryActionClass}>
+                {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+              <button type="button" onClick={() => void onSubmit({ andGenerate: true })} disabled={!canSubmit} className={wizardPrimaryActionClass}>
+                {isSaving ? 'Enregistrement...' : 'Enregistrer et générer la quittance'}
+              </button>
+            </div>
+          </div>
+        ) : undefined
       }
       secondaryAction={
         <button

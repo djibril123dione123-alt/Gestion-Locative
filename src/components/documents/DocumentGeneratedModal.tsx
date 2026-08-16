@@ -195,7 +195,7 @@ export function DocumentGeneratedModal({
         aria-busy={!isReady && !isError}
         className="relative flex max-h-[92dvh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/15 bg-white shadow-[0_40px_130px_rgba(0,0,0,0.72)] motion-safe:animate-scaleIn"
       >
-        <div className="grid min-h-0 overflow-y-auto lg:grid-cols-[280px_minmax(0,1fr)] lg:overflow-hidden">
+        <div className="grid min-h-0 overflow-y-auto lg:grid-cols-[280px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
           <aside className="relative flex min-h-[220px] flex-col justify-between overflow-hidden border-b border-white/10 bg-[#061b15] p-5 text-white lg:min-h-[600px] lg:border-b-0 lg:border-r">
             <div className="relative space-y-5">
               <div className="flex items-center justify-between">

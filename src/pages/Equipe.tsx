@@ -1454,6 +1454,9 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
             <div className="space-y-2.5">
               {Object.keys(groupedCatalog).map((cat) => {
                 const isOpen = expandedCategories.has(cat);
+                const modifiedCount = groupedCatalog[cat].filter(
+                  (item) => permissionDraft[item.id]?.access_level !== 'inherit',
+                ).length;
                 return (
                   <div key={cat} className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-sm">
                     <button
@@ -1469,6 +1472,11 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
                         <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[0.58rem] font-bold text-slate-500">
                           {groupedCatalog[cat].length}
                         </span>
+                        {modifiedCount > 0 && (
+                          <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[0.58rem] font-bold text-amber-800">
+                            {modifiedCount} modifié{modifiedCount > 1 ? 's' : ''}
+                          </span>
+                        )}
                       </span>
                       <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                     </button>

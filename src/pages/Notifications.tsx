@@ -303,17 +303,16 @@ export function Notifications() {
               <SkeletonTable rows={5} cols={3} />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-12">
-              <EmptyState
-                icon={Bell}
-                title={searchQuery ? 'Aucun résultat' : 'Aucune notification'}
-                description={
-                  searchQuery
-                    ? `Aucune alerte ne correspond à "${searchQuery}".`
-                    : 'Votre espace de notification est à jour.'
-                }
-              />
-            </div>
+            <EmptyState
+              bare
+              icon={Bell}
+              title={searchQuery ? 'Aucun résultat' : 'Aucune notification'}
+              description={
+                searchQuery
+                  ? `Aucune alerte ne correspond à "${searchQuery}".`
+                  : 'Votre espace de notification est à jour.'
+              }
+            />
           ) : (
             <div className="divide-y divide-slate-100/80">
               {filtered.map((n) => {

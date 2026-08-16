@@ -663,7 +663,13 @@ export function Inventaires() {
             <SkeletonTable rows={6} cols={5} />
           </div>
         ) : filtered.length === 0 ? (
-          <EmptyState icon={ClipboardList} title="Aucun inventaire" description="Créez votre premier état des lieux." />
+          <EmptyState
+            bare
+            icon={ClipboardList}
+            title="Aucun inventaire"
+            description="Créez votre premier état des lieux."
+            action={{ label: 'Nouvel inventaire', onClick: () => setIsOpen(true) }}
+          />
         ) : (
           <Table data={filtered} columns={columns} />
         )}

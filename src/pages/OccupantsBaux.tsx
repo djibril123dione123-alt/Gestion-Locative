@@ -46,6 +46,7 @@ import { Modal } from '../components/ui/Modal';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { SmartCombobox, type SmartComboboxOption } from '../components/ui/SmartCombobox';
 import { MoneyText } from '../components/ui/MoneyText';
+import { EmptyState } from '../components/ui/EmptyState';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { BrandMark } from '../components/brand/BrandLogo';
 import { WizardShell, type WizardStep, wizardPrimaryActionClass, wizardSecondaryActionClass } from '../components/ui/WizardShell';
@@ -575,7 +576,37 @@ export function OccupantsBaux() {
     }
   }, [loadWorkflowOptions, notifyError, notifySuccess, occupantForm, occupantModalMode, profile?.agency_id, profile?.id, refreshOccupantsBaux, selectedRow]);
 
-  const submitOccupation = useCallback(async () => {
+  const generateContractPdf = useCallback(async (row: OccupantBailRow) => {
+    if (!profile?.agency_id) return;
+    const agencyId = profile.agency_id;
+    setPdfGeneratingId(row.contrat_id);
+    try {
+      await runDocumentGeneration({
+        key: `contrat:${agencyId}:${row.contrat_id}`,
+        kind: 'contrat',
+        title: 'Préparation du contrat',
+        source: 'occupants-baux',
+        archiveExpected: true,
+        verificationExpected: true,
+      }, async (generation) => {
+        const { data, error } = await occupantsBauxRepository.contractPdfData({
+          agencyId,
+          contratId: row.contrat_id,
+        });
+        if (error) throw error;
+        if (!data) throw new Error('Contrat introuvable.');
+        await generateContratPDF(data, generation);
+      });
+      notifySuccess('PDF contrat généré.');
+    } catch (err) {
+      console.error('[OccupantsBaux] contract PDF failed', err);
+      notifyError(err instanceof Error ? err.message : 'Impossible de générer le PDF contrat.');
+    } finally {
+      setPdfGeneratingId(null);
+    }
+  }, [notifyError, notifySuccess, profile?.agency_id]);
+
+  const submitOccupation = useCallback(async (options?: { andGenerate?: boolean }) => {
     if (!profile?.agency_id) return;
     if (occupationModalMode === 'create' && locationWizardStep !== 'resume') {
       notifyError('Validez le résumé avant de créer la location.');
@@ -690,6 +721,9 @@ export function OccupantsBaux() {
         if (!error && createdRow) {
           setSelectedContratId(createdRow.contrat_id);
           setActiveDrawerTab('resume');
+          if (options?.andGenerate) {
+            await generateContractPdf(createdRow);
+          }
         }
       }
     } catch (err) {
@@ -698,37 +732,7 @@ export function OccupantsBaux() {
     } finally {
       setWorkflowSubmitting(false);
     }
-  }, [isIndividualOwner, loadWorkflowOptions, locationWizardStep, notifyError, notifySuccess, occupationForm, occupationModalMode, profile?.agency_id, profile?.id, refreshOccupantsBaux, selectedRow]);
-
-  const generateContractPdf = useCallback(async (row: OccupantBailRow) => {
-    if (!profile?.agency_id) return;
-    const agencyId = profile.agency_id;
-    setPdfGeneratingId(row.contrat_id);
-    try {
-      await runDocumentGeneration({
-        key: `contrat:${agencyId}:${row.contrat_id}`,
-        kind: 'contrat',
-        title: 'Préparation du contrat',
-        source: 'occupants-baux',
-        archiveExpected: true,
-        verificationExpected: true,
-      }, async (generation) => {
-        const { data, error } = await occupantsBauxRepository.contractPdfData({
-          agencyId,
-          contratId: row.contrat_id,
-        });
-        if (error) throw error;
-        if (!data) throw new Error('Contrat introuvable.');
-        await generateContratPDF(data, generation);
-      });
-      notifySuccess('PDF contrat généré.');
-    } catch (err) {
-      console.error('[OccupantsBaux] contract PDF failed', err);
-      notifyError(err instanceof Error ? err.message : 'Impossible de générer le PDF contrat.');
-    } finally {
-      setPdfGeneratingId(null);
-    }
-  }, [notifyError, notifySuccess, profile?.agency_id]);
+  }, [generateContractPdf, isIndividualOwner, loadWorkflowOptions, locationWizardStep, notifyError, notifySuccess, occupationForm, occupationModalMode, profile?.agency_id, profile?.id, refreshOccupantsBaux, selectedRow]);
 
   const openResiliation = useCallback((row: OccupantBailRow) => {
     setResiliationForm({ date: todayIso(), motif: '', observations: '' });
@@ -1163,8 +1167,19 @@ export function OccupantsBaux() {
             {/* Table desktop / Cards mobile */}
             {paginated.length === 0 ? (
               <EmptyState
-                hasSearch={!!searchTerm || activeFilterCount > 0}
-                onReset={resetFilters}
+                bare
+                icon={FileText}
+                title={(!!searchTerm || activeFilterCount > 0) ? 'Aucun résultat' : 'Aucune location enregistrée'}
+                description={
+                  (!!searchTerm || activeFilterCount > 0)
+                    ? 'Aucune location ne correspond à vos critères. Essayez de modifier la recherche ou les filtres.'
+                    : "Créez votre première location pour suivre le locataire, le bail et l'unité depuis un seul endroit."
+                }
+                action={
+                  (!!searchTerm || activeFilterCount > 0)
+                    ? { label: 'Réinitialiser les filtres', onClick: resetFilters }
+                    : { label: 'Nouvelle location', onClick: openCreateOccupation }
+                }
               />
             ) : (
               <>
@@ -2617,7 +2632,7 @@ function OccupationFormModal({
   onStepChange: (step: LocationWizardStep) => void;
   onChange: (form: OccupationFormState) => void;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit: (options?: { andGenerate?: boolean }) => void;
   onValidationError: (message: string) => void;
 }) {
   const update = (patch: Partial<OccupationFormState>) => onChange({ ...form, ...patch });
@@ -2788,6 +2803,38 @@ function OccupationFormModal({
         >
           {wizardStep === 'occupant' || wizardStep === 'unite' ? 'Annuler' : 'Retour'}
         </button>
+      }
+      footer={
+        wizardStep === 'resume' ? (
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              onClick={() => onStepChange('conditions')}
+              disabled={submitting || workflowLoading}
+              className="inline-flex h-8 min-h-0 w-full min-w-[5.5rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-emerald-950/10 bg-white/90 px-3 py-1 text-[0.72rem] font-semibold leading-none text-slate-700 shadow-2xs outline-none transition hover:bg-white hover:text-slate-900 sm:w-auto"
+            >
+              Retour
+            </button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={() => void onSubmit()}
+                disabled={submitting || workflowLoading}
+                className="inline-flex h-8 min-h-0 w-full min-w-[7rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-emerald-950/10 bg-white/90 px-3 py-1 text-[0.72rem] font-semibold leading-none text-slate-700 shadow-2xs outline-none transition hover:bg-white hover:text-slate-900 sm:w-auto"
+              >
+                {submitting || workflowLoading ? 'Création...' : 'Créer la location'}
+              </button>
+              <button
+                type="button"
+                onClick={() => void onSubmit({ andGenerate: true })}
+                disabled={submitting || workflowLoading}
+                className="inline-flex h-8 min-h-0 w-full min-w-[7.5rem] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-3 py-1 text-[0.72rem] font-semibold leading-none text-white shadow-[0_10px_22px_rgba(6,45,35,0.16)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] focus-visible:ring-2 focus-visible:ring-emerald-700/20 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {submitting || workflowLoading ? 'Création...' : 'Créer et générer le contrat'}
+              </button>
+            </div>
+          </div>
+        ) : undefined
       }
     >
       <div className="space-y-2 sm:space-y-2.5">
@@ -3131,39 +3178,6 @@ function TextField({
       </div>
       {helperText && <p className="mt-1 text-[0.66rem] text-slate-500 sm:text-[10px]">{helperText}</p>}
     </label>
-  );
-}
-
-function EmptyState({
-  hasSearch,
-  onReset,
-}: {
-  hasSearch: boolean;
-  onReset: () => void;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center mb-4 shadow-inner">
-        <FileText className="w-8 h-8 text-emerald-400" />
-      </div>
-      <h3 className="text-lg font-bold text-slate-800 mb-1">
-        {hasSearch ? 'Aucun résultat' : 'Aucune location enregistrée'}
-      </h3>
-      <p className="text-sm text-slate-500 max-w-xs mb-4">
-        {hasSearch
-          ? 'Aucune location ne correspond à vos critères. Essayez de modifier la recherche ou les filtres.'
-          : 'Créez votre première location pour suivre le locataire, le bail et l’unité depuis un seul endroit.'}
-      </p>
-      {hasSearch && (
-        <button
-          type="button"
-          onClick={onReset}
-          className="px-4 py-2 text-sm font-semibold text-emerald-700 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition"
-        >
-          Réinitialiser les filtres
-        </button>
-      )}
-    </div>
   );
 }
 

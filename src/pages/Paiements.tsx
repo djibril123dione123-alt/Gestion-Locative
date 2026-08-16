@@ -377,7 +377,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (options?: { andGenerate?: boolean }) => {
     if (!profile?.agency_id || submittingRef.current) return;
 
     const montant = Number(formData.montant_total);
@@ -468,6 +468,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
         return;
       }
 
+      let createdPaiementId: string | undefined;
       if (editingPaiement) {
         await updatePaiementViaEdge({
           id: editingPaiement.id,
@@ -486,7 +487,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           payload: { montant, mode: formData.mode_paiement },
         });
       } else {
-        await createPaiementViaEdge({
+        const created = await createPaiementViaEdge({
           contrat_id: formData.contrat_id,
           montant_total: montant,
           mois_concerne: moisConcerne,
@@ -497,6 +498,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           reference: formData.reference || null,
           notes,
         });
+        createdPaiementId = created.id;
         track({
           action: 'paiement_create',
           entity_type: 'paiements',
@@ -518,6 +520,9 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       );
       notifyDataChanged(['paiements', 'impayes', 'dashboard', 'finances', 'contrats']);
       await loadData();
+      if (options?.andGenerate && createdPaiementId) {
+        await exportFacture(createdPaiementId);
+      }
     } catch (error: unknown) {
       if (error instanceof PaiementApiError) {
         showError(error.message);
@@ -1002,26 +1007,25 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
               </PremiumTableSurface>
             ) : filtered.length === 0 ? (
               <PremiumTableSurface density="compact" ariaLabel="Aucun paiement">
-                <div className="p-6">
-                  <EmptyState
-                    icon={CreditCard}
-                    title={
-                      statusFilter === 'tous' && !searchTerm
-                        ? 'Aucun paiement enregistré'
-                        : 'Aucun résultat'
-                    }
-                    description={
-                      statusFilter === 'tous' && !searchTerm
-                        ? 'Commencez par enregistrer un premier encaissement de loyer.'
-                        : 'Essayez un autre filtre ou élargissez votre recherche.'
-                    }
-                    action={
-                      statusFilter === 'tous' && !searchTerm
-                        ? { label: 'Nouveau paiement', onClick: openCreateModal }
-                        : undefined
-                    }
-                  />
-                </div>
+                <EmptyState
+                  bare
+                  icon={CreditCard}
+                  title={
+                    statusFilter === 'tous' && !searchTerm
+                      ? 'Aucun paiement enregistré'
+                      : 'Aucun résultat'
+                  }
+                  description={
+                    statusFilter === 'tous' && !searchTerm
+                      ? 'Commencez par enregistrer un premier encaissement de loyer.'
+                      : 'Essayez un autre filtre ou élargissez votre recherche.'
+                  }
+                  action={
+                    statusFilter === 'tous' && !searchTerm
+                      ? { label: 'Nouveau paiement', onClick: openCreateModal }
+                      : undefined
+                  }
+                />
               </PremiumTableSurface>
             ) : (
               <PremiumTableSurface density="compact" ariaLabel="Table des paiements">

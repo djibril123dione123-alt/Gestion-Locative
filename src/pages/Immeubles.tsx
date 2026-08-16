@@ -5,7 +5,7 @@ import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
 import { ToastContainer } from '../components/ui/Toast';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Building2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { usePlanLimits } from '../hooks/usePlanLimits';
@@ -396,6 +396,20 @@ export function Immeubles() {
             data={filteredImmeubles}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            emptyState={{
+              icon: Building2,
+              title: searchTerm
+                ? 'Aucun résultat'
+                : isIndividualOwner ? 'Aucun bien ajouté' : 'Aucun immeuble enregistré',
+              description: searchTerm
+                ? `Aucun ${isIndividualOwner ? 'bien' : 'immeuble'} ne correspond à votre recherche.`
+                : isIndividualOwner
+                  ? 'Ajoutez votre premier bien pour commencer à suivre vos unités et locataires.'
+                  : 'Ajoutez votre premier immeuble pour commencer à y rattacher des unités.',
+              action: searchTerm
+                ? { label: 'Réinitialiser la recherche', onClick: () => setSearchTerm('') }
+                : { label: isIndividualOwner ? 'Nouveau bien' : 'Nouvel immeuble', onClick: openCreateModal },
+            }}
           />
         </div>
       </div>

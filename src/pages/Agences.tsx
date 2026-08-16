@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/ui/Modal';
 import { Table } from '../components/ui/Table';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
-import { Plus, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Building2 } from 'lucide-react';
 import { useToast } from '../hooks/useToast';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { ensureE164, isValidInternationalPhone } from '../lib/formatters';
@@ -296,7 +296,16 @@ export default function Agences() {
       {loading ? (
         <PageSkeleton title="Agences" variant="table" />
       ) : (
-        <Table columns={columns} data={agencies} />
+        <Table
+          columns={columns}
+          data={agencies}
+          emptyState={{
+            icon: Building2,
+            title: 'Aucune agence enregistrée',
+            description: 'Créez la première agence pour commencer à gérer le système.',
+            action: { label: 'Nouvelle agence', onClick: openCreateModal },
+          }}
+        />
       )}
 
       <Modal

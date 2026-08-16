@@ -596,26 +596,25 @@ export function Depenses() {
               </PremiumTableSurface>
             ) : filtered.length === 0 ? (
               <PremiumTableSurface density="compact" ariaLabel="Aucune dépense">
-                <div className="p-6">
-                  <EmptyState
-                    icon={ReceiptText}
-                    title={
-                      !selectedCategorie && !selectedImmeuble && !searchTerm
-                        ? 'Aucune dépense enregistrée'
-                        : 'Aucun résultat'
-                    }
-                    description={
-                      !selectedCategorie && !selectedImmeuble && !searchTerm
-                        ? 'Commencez par enregistrer votre première charge ou dépense.'
-                        : 'Essayez un autre filtre ou élargissez votre recherche.'
-                    }
-                    action={
-                      !selectedCategorie && !selectedImmeuble && !searchTerm
-                        ? { label: 'Nouvelle dépense', onClick: openCreateModal }
-                        : undefined
-                    }
-                  />
-                </div>
+                <EmptyState
+                  bare
+                  icon={ReceiptText}
+                  title={
+                    !selectedCategorie && !selectedImmeuble && !searchTerm
+                      ? 'Aucune dépense enregistrée'
+                      : 'Aucun résultat'
+                  }
+                  description={
+                    !selectedCategorie && !selectedImmeuble && !searchTerm
+                      ? 'Commencez par enregistrer votre première charge ou dépense.'
+                      : 'Essayez un autre filtre ou élargissez votre recherche.'
+                  }
+                  action={
+                    !selectedCategorie && !selectedImmeuble && !searchTerm
+                      ? { label: 'Nouvelle dépense', onClick: openCreateModal }
+                      : undefined
+                  }
+                />
               </PremiumTableSurface>
             ) : (
               <PremiumTableSurface density="compact" ariaLabel="Table des dépenses">

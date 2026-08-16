@@ -56,6 +56,7 @@ import { PremiumTableSurface } from '../components/ui/PremiumTableSurface';
 import { ColumnPicker } from '../components/ui/ColumnPicker';
 import { SmartCombobox } from '../components/ui/SmartCombobox';
 import { MoneyText } from '../components/ui/MoneyText';
+import { EmptyState } from '../components/ui/EmptyState';
 import { WizardShell, type WizardStep } from '../components/ui/WizardShell';
 import { PremiumMobileCard } from '../components/ui/PremiumMobileCard';
 import { resolveAgencySettingsAssets } from '../services/agencyIdentityAssets';
@@ -2037,14 +2038,17 @@ export function Bailleurs() {
             </MobileFilterSheet>
 
           {filteredBailleurs.length === 0 ? (
-            <div className="p-8">
-              <EmptyDrawerState
-                title={searchTerm || activeFilter !== 'all' ? 'Aucun bailleur trouvé' : 'Aucun bailleur enregistré'}
-                description={searchTerm || activeFilter !== 'all' ? 'Essayez une autre recherche ou retirez les filtres actifs.' : 'Ajoutez votre premier bailleur pour structurer votre portefeuille locatif.'}
-                actionLabel={!searchTerm && activeFilter === 'all' ? 'Créer mon premier bailleur' : (activeFilter !== 'all' ? 'Réinitialiser les filtres' : undefined)}
-                onAction={!searchTerm && activeFilter === 'all' ? () => { setBailleurWizardStep('identity'); setIsModalOpen(true); } : (activeFilter !== 'all' ? () => setActiveFilter('all') : undefined)}
-              />
-            </div>
+            <EmptyState
+              bare
+              icon={Users}
+              title={searchTerm || activeFilter !== 'all' ? 'Aucun bailleur trouvé' : 'Aucun bailleur enregistré'}
+              description={searchTerm || activeFilter !== 'all' ? 'Essayez une autre recherche ou retirez les filtres actifs.' : 'Ajoutez votre premier bailleur pour structurer votre portefeuille locatif.'}
+              action={
+                !searchTerm && activeFilter === 'all'
+                  ? { label: 'Créer mon premier bailleur', onClick: () => { setBailleurWizardStep('identity'); setIsModalOpen(true); } }
+                  : (activeFilter !== 'all' ? { label: 'Réinitialiser les filtres', onClick: () => setActiveFilter('all') } : undefined)
+              }
+            />
           ) : (
             <>
               <div className="hidden lg:block overflow-x-auto">

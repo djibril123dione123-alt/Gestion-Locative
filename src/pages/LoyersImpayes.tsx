@@ -922,6 +922,23 @@ export function LoyersImpayes(_props: LoyersImpayesProps = {}) {
                             data={paginated}
                             onRowClick={(i) => setSelectedDrawerId(i.id)}
                             selectedId={drawerLoyer?.id}
+                            emptyState={{
+                                icon: impayes.length === 0 ? CheckCircle2 : AlertCircle,
+                                title: impayes.length === 0 ? 'Aucune créance en cours' : 'Aucun résultat',
+                                description: impayes.length === 0
+                                    ? 'Tous les loyers sont à jour. Les nouvelles échéances impayées apparaîtront ici.'
+                                    : 'Aucune créance ne correspond à vos filtres actuels.',
+                                action: impayes.length === 0
+                                    ? undefined
+                                    : {
+                                        label: 'Réinitialiser les filtres',
+                                        onClick: () => {
+                                            setSearchTerm('');
+                                            setSelectedBailleur('');
+                                            setStatusFilter('tous');
+                                        },
+                                    },
+                            }}
                             mobileRender={(i) => {
                                 const status = STATUS_META[i.statut] || STATUS_META['en_retard'];
                                 const periodLabel = new Date(i.mois_concerne).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });

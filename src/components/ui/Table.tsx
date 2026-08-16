@@ -1,7 +1,8 @@
 import React from 'react';
-import { BrandMark } from '../brand/BrandLogo';
+import { Inbox, LucideIcon } from 'lucide-react';
 import { formatInternationalPhone, getInternationalPhoneHref } from '../../lib/formatters';
 import { PremiumMobileCard, PremiumMobileCardRow } from './PremiumMobileCard';
+import { EmptyState } from './EmptyState';
 
 export type TableColumnAlign = "left" | "center" | "right";
 export type TableColumnVisibility = "always" | "desktop" | "wide" | "compact";
@@ -20,6 +21,13 @@ export interface TableColumn<T> {
 
 export type Column<T> = TableColumn<T>; // Rétrocompatibilité
 
+interface TableEmptyStateConfig {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  action?: { label: string; onClick: () => void };
+}
+
 interface TableProps<T> {
   columns: Column<T>[];
   data: T[];
@@ -29,6 +37,7 @@ interface TableProps<T> {
   selectedId?: string | null;
   mobileRender?: (item: T) => React.ReactNode;
   compact?: boolean;
+  emptyState?: TableEmptyStateConfig;
 }
 
 const getAlignmentClass = (align?: TableColumnAlign) => {
@@ -53,6 +62,7 @@ export function Table<T extends { id: string }>({
   selectedId,
   mobileRender,
   compact,
+  emptyState,
 }: TableProps<T>) {
   const getCellValue = (item: T, key: string): React.ReactNode => {
     const value = (item as Record<string, unknown>)[key];
@@ -99,13 +109,13 @@ export function Table<T extends { id: string }>({
 
   if (data.length === 0) {
     return (
-      <div className="sk-card flex min-h-44 items-center justify-center px-5 py-10 text-center sm:px-6 sm:py-12">
-        <div>
-          <BrandMark size="sm" tone="light" animated={false} className="mx-auto mb-4" />
-          <p className="text-base font-black text-slate-950">Aucune donnée disponible</p>
-          <p className="mt-2 text-sm text-slate-500">Les résultats apparaîtront ici dès qu'ils seront créés.</p>
-        </div>
-      </div>
+      <EmptyState
+        bare
+        icon={emptyState?.icon ?? Inbox}
+        title={emptyState?.title ?? 'Aucune donnée disponible'}
+        description={emptyState?.description ?? "Les résultats apparaîtront ici dès qu'ils seront créés."}
+        action={emptyState?.action}
+      />
     );
   }
 

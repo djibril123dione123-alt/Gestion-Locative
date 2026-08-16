@@ -885,38 +885,36 @@ export function Documents() {
           {loading ? (
             <SkeletonCards count={4} />
           ) : filteredItems.length === 0 ? (
-            <div className="rounded-2xl border border-emerald-950/10 bg-white/90 shadow-sm">
-              {query || typeFilter !== 'all' || statusFilter !== 'all' || sourceFilter !== 'all' ? (
-                <EmptyState
-                  icon={FolderOpen}
-                  title="Aucun document trouvé"
-                  description="Ajustez les filtres ou réinitialisez la recherche."
-                  action={{
-                    label: "Réinitialiser",
-                    onClick: () => {
-                      setQuery('');
-                      setTypeFilter('all');
-                      setStatusFilter('all');
-                      setSourceFilter('all');
-                    }
-                  }}
-                />
-              ) : (
-                <EmptyState
-                  icon={FolderOpen}
-                  title="Aucun document"
-                  description="Ajoutez votre premier document au coffre."
-                  action={{
-                    label: "Ajouter un document",
-                    onClick: () => setUploadOpen(true)
-                  }}
-                  secondaryAction={{
-                    label: "Scanner un document",
-                    onClick: () => navigate('/documents/scan')
-                  }}
-                />
-              )}
-            </div>
+            query || typeFilter !== 'all' || statusFilter !== 'all' || sourceFilter !== 'all' ? (
+              <EmptyState
+                icon={FolderOpen}
+                title="Aucun document trouvé"
+                description="Ajustez les filtres ou réinitialisez la recherche."
+                action={{
+                  label: "Réinitialiser",
+                  onClick: () => {
+                    setQuery('');
+                    setTypeFilter('all');
+                    setStatusFilter('all');
+                    setSourceFilter('all');
+                  }
+                }}
+              />
+            ) : (
+              <EmptyState
+                icon={FolderOpen}
+                title="Aucun document"
+                description="Ajoutez votre premier document au coffre."
+                action={{
+                  label: "Ajouter un document",
+                  onClick: () => setUploadOpen(true)
+                }}
+                secondaryAction={{
+                  label: "Scanner un document",
+                  onClick: () => navigate('/documents/scan')
+                }}
+              />
+            )
           ) : (
             <>
               {/* Desktop: dense list when drawer closed, compact when open */}

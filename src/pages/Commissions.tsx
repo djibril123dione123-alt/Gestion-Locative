@@ -16,6 +16,7 @@ import {
   saveGeneratedPdf,
 } from '../lib/pdf';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import { EmptyState } from '../components/ui/EmptyState';
 import { FinancePageHeader } from '../components/finance/FinancePrimitives';
 import { runDocumentGeneration } from '../lib/documentGeneration';
 
@@ -357,7 +358,12 @@ export function Commissions() {
         <h3 className="text-base lg:text-lg font-semibold text-slate-900 mb-4">Détail des commissions</h3>
 
         {commissions.length === 0 ? (
-          <p className="text-center text-slate-500 py-8">Aucune commission pour cette période.</p>
+          <EmptyState
+            bare
+            icon={TrendingUp}
+            title="Aucune commission"
+            description="Aucune commission enregistrée pour cette période."
+          />
         ) : (
           <>
             {/* Mobile: card view */}

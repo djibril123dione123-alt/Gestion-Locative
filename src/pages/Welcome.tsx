@@ -23,9 +23,12 @@ import { BrandLogo } from '../components/brand/BrandLogo';
 import { LoadingState } from '../components/ui/LoadingState';
 import { ensureE164, isValidInternationalPhone } from '../lib/formatters';
 import { PhoneInput } from '../components/ui/PhoneInput';
+import { PRICING_PLAN_DEFINITIONS, type PlanId } from '../lib/pricingCatalog';
 
 type AccountType = 'agency' | 'bailleur';
 type RequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+const SIGNUP_PLAN_CHOICES = PRICING_PLAN_DEFINITIONS.filter((plan) => plan.id !== 'enterprise');
 
 interface AgencyRequestRow {
   id: string;
@@ -85,6 +88,16 @@ export default function Welcome() {
     address: '',
     ninea: '',
     devise: 'XOF',
+  });
+  // Pré-sélection depuis le CTA vitrine (ex: /signup?plan=pro) — la vitrine
+  // envoie déjà ce paramètre depuis les pages tarifs, il n'était jamais lu.
+  // Lu directement depuis window.location.search (pas useSearchParams) : l'app
+  // utilise HashRouter, qui ne voit que la portion après `#` — la query string
+  // envoyée par la vitrine (avant le `#`) reste dans window.location.search
+  // pendant toute la navigation cliente (HashRouter ne la touche jamais).
+  const [requestedPlan, setRequestedPlan] = useState<PlanId | null>(() => {
+    const requested = new URLSearchParams(window.location.search).get('plan');
+    return SIGNUP_PLAN_CHOICES.some((plan) => plan.id === requested) ? (requested as PlanId) : null;
   });
 
   // Charger la demande existante de l'utilisateur (status pending/rejected/approved)
@@ -176,6 +189,7 @@ export default function Welcome() {
           agency_ninea: formData.ninea.trim() || null,
           agency_devise: formData.devise || 'XOF',
           is_bailleur_account: accountType === 'bailleur',
+          requested_plan: requestedPlan,
           status: 'pending',
         })
         .select('id, status, agency_name, is_bailleur_account, rejection_reason, created_at, reviewed_at, created_agency_id')
@@ -202,6 +216,7 @@ export default function Welcome() {
       setExistingRequest(null);
       setStep(0);
       setAccountType(null);
+      setRequestedPlan(null);
       setFormData({
         name: '',
         phone: '',
@@ -219,7 +234,8 @@ export default function Welcome() {
     if (step === 0 && !accountType) return;
     if (step === 1 && !formData.name.trim()) return;
     if (step === 2 && !formData.phone.trim()) return;
-    if (step >= 3) return;
+    if (step === 3 && !requestedPlan) return;
+    if (step >= 4) return;
     setStep(step + 1);
   };
 
@@ -389,8 +405,8 @@ export default function Welcome() {
   // Vue formulaire (création de la demande)
 
   const formSteps = accountType === 'agency'
-    ? ['Structure', 'Contact', 'Détails']
-    : ['Identité', 'Contact', 'Adresse'];
+    ? ['Structure', 'Contact', 'Plan', 'Détails']
+    : ['Identité', 'Contact', 'Plan', 'Adresse'];
 
   const renderStepper = () => (
     <div className="mx-auto mb-4 w-full max-w-2xl rounded-2xl border border-white/22 bg-brand-950/50 px-3 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur-xl sm:px-5  .5">
@@ -567,7 +583,7 @@ export default function Welcome() {
                 <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-2.5 py-1.5 text-xs font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
                   <ArrowLeft className="mr-2 h-4 w-4" />Retour
                 </button>
-                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100">Étape 2 sur 3</span>
+                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100">Étape 2 sur 4</span>
               </div>
               <h2 className="mb-1.5 font-serif text-xl font-black text-[#FFF7E6]">Numéro de téléphone</h2>
               <p className="text-[0.72rem] font-semibold leading-4 text-slate-200">À quel numéro notre équipe peut-elle vous joindre ?</p>
@@ -601,7 +617,62 @@ export default function Welcome() {
                 <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-2.5 py-1.5 text-xs font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
                   <ArrowLeft className="mr-2 h-4 w-4" />Retour
                 </button>
-                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100">Étape 3 sur 3</span>
+                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100">Étape 3 sur 4</span>
+              </div>
+              <h2 className="mb-1.5 font-serif text-xl font-black text-[#FFF7E6]">Quelle formule vous intéresse ?</h2>
+              <p className="text-[0.72rem] font-semibold leading-4 text-slate-200">
+                Indicatif : 30 jours d'essai offerts avant tout paiement. Vous pourrez changer de formule à tout moment.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {SIGNUP_PLAN_CHOICES.map((plan) => {
+                const isSelected = requestedPlan === plan.id;
+                return (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => setRequestedPlan(plan.id)}
+                    className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                      isSelected
+                        ? 'border-amber-300 bg-amber-50/95 shadow-[0_10px_30px_rgba(208,138,36,0.22)]'
+                        : 'border-white/18 bg-white/[0.06] hover:border-white/30 hover:bg-white/[0.1]'
+                    }`}
+                    data-testid={`signup-plan-${plan.id}`}
+                  >
+                    <span className="min-w-0">
+                      <span className={`block text-sm font-black ${isSelected ? 'text-brand-950' : 'text-white'}`}>{plan.name}</span>
+                      <span className={`block text-[0.68rem] font-semibold ${isSelected ? 'text-brand-800/80' : 'text-slate-300'}`}>{plan.audience}</span>
+                    </span>
+                    <span className={`shrink-0 text-right text-sm font-black ${isSelected ? 'text-brand-950' : 'text-amber-100'}`}>
+                      {plan.priceLabel}
+                      <span className="block text-[0.6rem] font-bold uppercase tracking-wide opacity-70">/ mois</span>
+                    </span>
+                  </button>
+                );
+              })}
+              <button
+                onClick={nextStep}
+                disabled={!requestedPlan}
+                className={welcomePrimaryButtonClass}
+                data-testid="button-next-step-3"
+              >
+                Continuer<ArrowRight className="ml-2 h-4 w-4" />
+              </button>
+            </div>
+            </>,
+          )
+        );
+
+      case 4:
+        return (
+          renderFormCard(
+            <>
+            <div className="mb-4">
+              <div className="mb-3 flex items-center justify-between">
+                <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-2.5 py-1.5 text-xs font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
+                  <ArrowLeft className="mr-2 h-4 w-4" />Retour
+                </button>
+                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100">Étape 4 sur 4</span>
               </div>
               <h2 className="mb-1.5 font-serif text-xl font-black text-[#FFF7E6]">
                 {accountType === 'agency' ? 'Détails de votre structure' : 'Adresse'}

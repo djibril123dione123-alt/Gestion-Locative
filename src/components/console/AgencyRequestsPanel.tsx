@@ -30,6 +30,7 @@ interface AgencyRequestRow {
   agency_ninea: string | null;
   agency_devise: string | null;
   is_bailleur_account: boolean;
+  requested_plan: string | null;
   status: RequestStatus;
   reviewed_by: string | null;
   reviewed_at: string | null;
@@ -37,6 +38,12 @@ interface AgencyRequestRow {
   created_agency_id: string | null;
   created_at: string;
 }
+
+const PLAN_LABELS: Record<string, string> = {
+  starter: 'Essentiel',
+  pro: 'Pro',
+  business: 'Agence',
+};
 
 const STATUS_BADGE: Record<RequestStatus, { label: string; classes: string; Icon: React.ElementType }> = {
   pending:   { label: 'En attente', classes: 'bg-orange-500/15 text-orange-300 border-orange-500/30', Icon: Clock },
@@ -231,6 +238,9 @@ export function AgencyRequestsPanel() {
                           Bailleur individuel
                         </span>
                       )}
+                      <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/15 px-2 py-0.5 text-[0.65rem] font-bold text-amber-300">
+                        Plan {req.requested_plan ? PLAN_LABELS[req.requested_plan] ?? req.requested_plan : 'Pro (par défaut)'}
+                      </span>
                     </div>
                     <p className="mb-2 text-[0.68rem] text-gray-500">
                       Demande reçue le {formatDate(req.created_at)}

@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import {
   AlertCircle,
   ArrowRight,
@@ -40,16 +38,7 @@ import { PhoneInput } from '../ui/PhoneInput';
 import { formatPersonName } from '../../lib/people';
 import { invalidateOperationalCaches, notifyDataChanged, readWithCache } from '../../services/offlineReadCache';
 import { getOrCreateIndividualOwnerBailleur, type OwnerBailleur } from '../../services/individualOwner';
-import {
-  addFooter,
-  drawDocumentHeader,
-  drawLegalVerificationFooter,
-  drawPageBorder,
-  drawSectionFrame,
-  drawTotalsBlock,
-  getAutoTableTheme,
-  saveGeneratedPdf,
-} from '../../lib/pdf';
+import { buildRapportDocument, saveGeneratedPdf } from '../../lib/pdf';
 import type { AgencySettings } from '../../types';
 import {
   allocateDocumentReference,
@@ -766,11 +755,6 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         show_document_number: reportTemplate.content.style.showDocumentNumber,
       };
       if (!reportTemplate.content.style.showLogo) settings.logo_url = null;
-      const enabledReportSections = new Set(
-        reportTemplate.content.blocks
-          .filter((block) => block.enabled && block.systemKey)
-          .map((block) => block.systemKey),
-      );
       const reportRef = await allocateDocumentReference({
         documentType: 'rapport_proprietaire',
         entityId: data.ownerBailleur?.id ?? agencyId,
@@ -780,114 +764,18 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         fallback: createOwnerReportReference(reportPeriod),
       });
       generation.report('building-document', { reference: reportRef });
+      const netLabel = 'Revenus nets';
 
-      const doc = new jsPDF('p', 'mm', 'a4');
-      drawPageBorder(doc, settings);
-      let y = await drawDocumentHeader(doc, settings, 'Résumé mensuel propriétaire', `Période : ${periodLabel}`, {
-        documentType: 'rapport propriétaire',
-        reference: reportRef,
-        issueDate: formatDate(new Date().toISOString()),
-      });
-
-      doc.setFont(undefined as unknown as string, 'normal');
-      doc.setFontSize(8.4);
-      doc.setTextColor(71, 85, 105);
-      doc.text(
-        'Synthèse des revenus encaissés, reliquats, charges et locations en cours de votre espace propriétaire.',
-        14,
-        y + 2,
-      );
-      y += 9;
-
-      y = drawTotalsBlock(
-        doc,
-        14,
-        y,
-        doc.internal.pageSize.getWidth() - 28,
-        [
-          ...(enabledReportSections.has('collections') ? [{ label: 'Loyers encaissés', value: formatCurrency(Number(reportData.totals.collected)) }] : []),
-          ...(enabledReportSections.has('arrears') ? [{ label: 'Reliquats', value: formatCurrency(Number(reportData.totals.arrears)) }] : []),
-          ...(enabledReportSections.has('expenses') ? [{ label: 'Dépenses', value: formatCurrency(Number(reportData.totals.expenses)) }] : []),
-          { label: 'Net propriétaire', value: formatCurrency(Number(reportData.totals.netToPay)), emphasis: true },
-        ],
+      const { doc, qrEnabled: reportQrEnabled } = await buildRapportDocument(
+        'rapport_proprietaire',
+        reportData,
+        ownerName,
+        periodLabel,
+        reportTemplate,
+        reportRef,
         settings,
+        { generation },
       );
-
-      const rows = reportData.contracts.map((contract) => [
-        contract.immeuble || 'Bien',
-        contract.unite || 'Unité',
-        contract.locataire || 'Locataire',
-        formatCurrency(Number(contract.loyer_mensuel)),
-        formatCurrency(Number(contract.encaisse)),
-        formatCurrency(Number(contract.reliquat)),
-        Number(contract.reliquat) > 0 ? 'Partiel' : 'Soldé',
-      ]);
-
-      if (enabledReportSections.has('collections') || enabledReportSections.has('occupancy')) autoTable(doc, {
-        startY: y,
-        head: [['Bien', 'Unité', 'Locataire', 'Loyer', 'Encaissé', 'Reliquat', 'Statut']],
-        body: rows.length > 0 ? rows : [['-', '-', 'Aucune location en cours', formatCurrency(0), formatCurrency(0), formatCurrency(0), '-']],
-        ...getAutoTableTheme(settings),
-        columnStyles: {
-          3: { halign: 'right' },
-          4: { halign: 'right' },
-          5: { halign: 'right' },
-          6: { halign: 'center' },
-        },
-        didDrawPage: () => {
-          drawPageBorder(doc, settings);
-        },
-      });
-
-      const tableEnd = (doc as jsPDF & { lastAutoTable?: { finalY?: number } }).lastAutoTable?.finalY ?? y + 12;
-      doc.setFont(undefined as unknown as string, 'bold');
-      doc.setFontSize(8.4);
-      doc.setTextColor(15, 23, 42);
-      doc.text(`Taux de recouvrement : ${Number(reportData.totals.recoveryRate)}%`, 14, Math.min(tableEnd + 9, 258));
-
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      let closingTop = tableEnd + 16;
-      if (closingTop + 34 > pageHeight - 24) {
-        addFooter(doc, settings);
-        doc.addPage();
-        drawPageBorder(doc, settings);
-        closingTop = 24;
-      }
-      const closingY = drawSectionFrame(doc, 14, closingTop, pageWidth - 28, 30, settings, {
-        title: 'Synthèse de reversement',
-        subtitle: `Net propriétaire : ${formatCurrency(Number(reportData.totals.netToPay))}`,
-        accent: 'neutral',
-      });
-      doc.setFont(undefined as unknown as string, 'normal');
-      doc.setFontSize(7.6);
-      doc.setTextColor(71, 85, 105);
-      doc.text(
-        doc.splitTextToSize(
-          'Aucune note particulière pour cette période. Ce résumé consolide les encaissements, reliquats, dépenses et revenus nets issus du registre Samay Këur.',
-          pageWidth - 42,
-        ),
-        19,
-        closingY,
-      );
-
-      const reportQrEnabled =
-        reportTemplate.content.style.showQr &&
-        enabledReportSections.has('qr_verification');
-      if (reportQrEnabled) {
-        generation.report('securing-document', {
-          reference: reportRef,
-          verificationStatus: 'pending',
-        });
-        await drawLegalVerificationFooter(doc, {
-          ref: reportRef,
-          type: 'rapport_bailleur',
-          agency: ownerName,
-          date: new Date().toISOString(),
-          settings,
-        });
-      }
-      addFooter(doc, settings);
 
       await saveGeneratedPdf(doc, {
         kind: 'bilan',
@@ -957,7 +845,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
           stats: [
             { label: 'Loyers encaissés', value: formatCurrency(Number(reportData.totals.collected)) },
             { label: 'Reliquats', value: formatCurrency(Number(reportData.totals.arrears)) },
-            { label: 'Net propriétaire', value: formatCurrency(Number(reportData.totals.netToPay)) },
+            { label: netLabel, value: formatCurrency(Number(reportData.totals.netToPay)) },
             { label: 'Recouvrement', value: `${Number(reportData.totals.recoveryRate)}%` },
           ],
         },

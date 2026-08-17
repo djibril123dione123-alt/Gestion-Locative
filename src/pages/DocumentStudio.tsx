@@ -42,7 +42,6 @@ const DOCUMENT_CHOICES: Array<{ type: DocumentTemplateType; label: string }> = [
   { type: 'contrat', label: 'Contrat' },
   { type: 'mandat', label: 'Mandat' },
   { type: 'quittance', label: 'Quittance' },
-  { type: 'facture', label: 'Facture' },
   { type: 'rapport_bailleur', label: 'Rapport bailleur' },
   { type: 'rapport_proprietaire', label: 'Rapport propriétaire' },
 ];

@@ -16,7 +16,6 @@ const PREVIEWABLE_TYPES: DocumentTemplateType[] = [
   'contrat',
   'mandat',
   'quittance',
-  'facture',
   'rapport_bailleur',
   'rapport_proprietaire',
 ];
@@ -72,8 +71,8 @@ export function useDocumentPreviewPdf(
         try {
           const nextDoc = documentType === 'mandat'
             ? await buildMandatPreviewDocument(content, settings)
-            : documentType === 'quittance' || documentType === 'facture'
-              ? await buildPaiementReceiptPreviewDocument(content, settings, documentType === 'facture' ? 100000 : 0)
+            : documentType === 'quittance'
+              ? await buildPaiementReceiptPreviewDocument(content, settings, 0)
               : documentType === 'rapport_bailleur' || documentType === 'rapport_proprietaire'
                 ? await buildRapportPreviewDocument(documentType, content, settings)
                 : await buildContratPreviewDocument(content, settings);
@@ -98,7 +97,6 @@ export function useDocumentPreviewPdf(
     }, DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentType, content, settings, supported]);
 
   useEffect(() => () => {

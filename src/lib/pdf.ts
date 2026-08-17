@@ -511,14 +511,13 @@ export async function loadAgencySettings(): Promise<Partial<AgencySettings>> {
   }
 }
 
-type PdfDocumentType = 'contrat' | 'mandat' | 'quittance' | 'rapport' | 'facture';
+type PdfDocumentType = 'contrat' | 'mandat' | 'quittance' | 'rapport';
 
 const DEFAULT_PDF_PREFIXES: Record<PdfDocumentType, string> = {
   contrat: 'CTR',
   mandat: 'MDT',
   quittance: 'QIT',
   rapport: 'RPT',
-  facture: 'FAC',
 };
 
 function getPdfDocumentPreferences(settings?: Partial<AgencySettings>) {
@@ -532,7 +531,6 @@ function getPdfDocumentPreferences(settings?: Partial<AgencySettings>) {
       mandat: true,
       quittance: true,
       rapport: true,
-      facture: true,
       ...(settings?.document_preferences?.qr_documents ?? {}),
     } as Record<PdfDocumentType, boolean>,
     receipt_notice:
@@ -1909,7 +1907,6 @@ interface PaiementReceiptComputed {
   totalPayeMois: number;
   reliquat: number;
   statusLabel: string;
-  paiementDocumentType: PdfDocumentType;
 }
 
 /**
@@ -1928,7 +1925,15 @@ async function buildPaiementReceiptDocument(
 ): Promise<{ doc: jsPDF; qrEnabled: boolean }> {
   const previewMode = options?.previewMode ?? false;
   const generation = options?.generation;
-  const { loyer, paye, paiementsPrecedents, totalPayeMois, reliquat, statusLabel, paiementDocumentType } = computed;
+  const { loyer, paye, paiementsPrecedents, totalPayeMois, reliquat, statusLabel } = computed;
+  /**
+   * Un reliquat > 0 est un reçu de paiement partiel, pas une facture : la
+   * "facture" du produit est le moteur d'échéances (rent_invoice), un concept
+   * distinct avec son propre cycle de vie. Même modèle Studio ('quittance')
+   * et même prefixe/QR dans les deux cas -- seul le titre et la classification
+   * de vérification changent.
+   */
+  const verificationType = reliquat > 0 ? 'partial_payment_receipt' : 'quittance';
 
   const contrat = (paiement.contrats ?? {}) as {
     locataires?: { prenom?: string; nom?: string };
@@ -1959,12 +1964,12 @@ async function buildPaiementReceiptDocument(
   const titleY = await drawDocumentHeader(
     doc,
     settings,
-    'Quittance de loyer',
+    reliquat > 0 ? 'Reçu de paiement partiel' : 'Quittance de loyer',
     `${locataire.prenom ?? ''} ${locataire.nom ?? ''}`.trim(),
       {
         reference: ref,
         issueDate: datePaiement,
-        documentType: reliquat > 0 ? 'Facture partielle' : 'Quittance',
+        documentType: reliquat > 0 ? 'Reçu partiel' : 'Quittance',
       }
   );
 
@@ -2064,7 +2069,7 @@ async function buildPaiementReceiptDocument(
   let finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 6 : y + 8;
   const receiptQrEnabled = receiptTemplate.content.style.showQr
     && enabledReceiptSections.has('qr_verification')
-    && isDocumentQrEnabled(settings, paiementDocumentType);
+    && isDocumentQrEnabled(settings, 'quittance');
   const mentionsWidth = usableWidth; // Pleine largeur
 
   const finalBlockBottom = doc.internal.pageSize.getHeight() - 23;
@@ -2122,7 +2127,7 @@ async function buildPaiementReceiptDocument(
       y: qrAndSignatureY,
       width: 80,
       ref,
-      type: paiementDocumentType,
+      type: verificationType,
       agency: settings.nom_agence ?? 'Samay Këur',
       amount: paye,
       date: paiement.date_paiement ?? new Date().toISOString(),
@@ -2184,21 +2189,26 @@ export async function generatePaiementFacturePDF(
     ? Number(paiement.reliquat)
     : Math.max(loyer - totalPayeMois, 0);
   const statusLabel = reliquat > 0 ? 'Paiement partiel' : 'Soldé';
-  const paiementDocumentType: PdfDocumentType = reliquat > 0 ? 'facture' : 'quittance';
-  const templateType = reliquat > 0 ? 'facture' : 'quittance';
-  const receiptTemplate = await resolvePublishedDocumentTemplate(templateType, loadedSettings.agency_id);
+  /**
+   * Un reliquat > 0 est un reçu de paiement partiel, pas une facture : la
+   * "facture" du produit est le moteur d'échéances (rent_invoice), un concept
+   * distinct. Même modèle Studio ('quittance'), même prefixe/QR dans les deux
+   * cas -- seule la classification registre/vérification change.
+   */
+  const registryDocumentType = reliquat > 0 ? 'partial_payment_receipt' : 'quittance';
+  const receiptTemplate = await resolvePublishedDocumentTemplate('quittance', loadedSettings.agency_id);
   const settings = applyPublishedTemplateStyle(loadedSettings, receiptTemplate);
   const referenceFallback = applyDocumentPrefix(
     paiement.reference ?? generateQuittanceRef(paiement),
-    paiementDocumentType,
+    'quittance',
     settings,
   );
   const ref = await allocateDocumentReference({
-    documentType: templateType,
+    documentType: 'quittance',
     entityId: paiement.id ?? referenceFallback,
     periodKey: paiement.mois_concerne?.slice(0, 7),
     format: settings.document_preferences?.numbering_format,
-    prefix: getPdfDocumentPreferences(settings).prefixes[paiementDocumentType],
+    prefix: getPdfDocumentPreferences(settings).prefixes.quittance,
     fallback: referenceFallback,
   });
   generation?.report('building-document', { reference: ref });
@@ -2208,7 +2218,7 @@ export async function generatePaiementFacturePDF(
     receiptTemplate,
     ref,
     settings,
-    { loyer, paye, paiementsPrecedents, totalPayeMois, reliquat, statusLabel, paiementDocumentType },
+    { loyer, paye, paiementsPrecedents, totalPayeMois, reliquat, statusLabel },
     { generation },
   );
 
@@ -2222,19 +2232,16 @@ export async function generatePaiementFacturePDF(
   const tenantName = joinClean([locataire.prenom, locataire.nom]) || 'Locataire non renseigné';
 
   await saveGeneratedPdf(doc, {
-    kind: paiementDocumentType === 'quittance' ? 'quittance' : 'facture',
-    title:
-      paiementDocumentType === 'quittance'
-        ? 'Quittance de loyer'
-        : 'Facture de loyer',
+    kind: 'quittance',
+    title: reliquat > 0 ? 'Reçu de paiement partiel' : 'Quittance de loyer',
     fileName: `${ref}.pdf`,
     source: 'paiements',
-    documentType: paiementDocumentType,
+    documentType: registryDocumentType,
     entityId: paiement.id ?? ref,
     period: paiement.mois_concerne?.slice(0, 7) ?? null,
     reference: ref,
     data: {
-      document: paiementDocumentType,
+      document: registryDocumentType,
       reference: ref,
       paiement,
       loyer,
@@ -2255,7 +2262,7 @@ export async function generatePaiementFacturePDF(
     generation,
     verificationExpected: receiptQrEnabled,
     metadata: {
-      documentType: paiementDocumentType,
+      documentType: registryDocumentType,
       reference: ref,
       agencyName: settings.nom_agence ?? undefined,
       partyName: tenantName,
@@ -2873,7 +2880,6 @@ export async function buildPaiementReceiptPreviewDocument(
       totalPayeMois: sample.total_paye_mois ?? sample.montant_total,
       reliquat,
       statusLabel,
-      paiementDocumentType: reliquat > 0 ? 'facture' : 'quittance',
     },
     { previewMode: true },
   );

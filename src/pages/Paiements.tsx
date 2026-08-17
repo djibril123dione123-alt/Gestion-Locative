@@ -676,8 +676,8 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       };
 
         await generatePaiementFacturePDF(payload, generation);
+        success(payment.remaining > 0 ? 'Reçu de paiement partiel généré avec succès' : 'Quittance générée avec succès');
       });
-      success('Facture générée avec succès');
     } catch (err: unknown) {
       showError(
         err instanceof Error ? err.message : 'Impossible de générer la facture PDF',

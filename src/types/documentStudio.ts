@@ -1,8 +1,15 @@
+/**
+ * 'facture' retiré (Phase 5, refonte documentaire) : ce n'était pas une vraie
+ * facture, seulement un reçu de paiement partiel utilisant déjà le modèle
+ * quittance. La vraie facture (rent_invoice, moteur d'échéances) n'est pas
+ * un type Studio -- voir ManagedDocumentType (services/documentRegistry.ts)
+ * qui conserve 'facture' comme valeur d'historique/filtre pour les anciens
+ * documents déjà enregistrés sous ce type.
+ */
 export const DOCUMENT_TEMPLATE_TYPES = [
   'contrat',
   'mandat',
   'quittance',
-  'facture',
   'rapport_bailleur',
   'rapport_proprietaire',
 ] as const;

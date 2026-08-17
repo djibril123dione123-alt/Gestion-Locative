@@ -52,7 +52,7 @@ type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
 type SettingsTab = 'general' | 'documents' | 'appearance' | 'modules';
 type EmbeddedMode = 'single' | 'documentsIdentity';
 type LogoUploadState = 'idle' | 'preview' | 'uploading' | 'done';
-type DocumentPreviewType = 'quittance' | 'contrat' | 'mandat' | 'rapport' | 'rapport_proprietaire' | 'facture';
+type DocumentPreviewType = 'quittance' | 'contrat' | 'mandat' | 'rapport' | 'rapport_proprietaire';
 type ModuleFieldToggleKey =
   | 'module_depenses_actif'
   | 'module_inventaires_actif'
@@ -93,7 +93,6 @@ const DOCUMENT_PREVIEWS: Record<DocumentPreviewType, { label: string }> = {
   mandat: { label: 'Mandat' },
   rapport: { label: 'Rapport bailleur' },
   rapport_proprietaire: { label: 'Rapport propriétaire' },
-  facture: { label: 'Facture' },
 };
 
 /** DocumentPreviewType 'rapport' (historique) correspond au type Studio 'rapport_bailleur'. */
@@ -103,7 +102,6 @@ const DOCUMENT_PREVIEW_TEMPLATE_TYPE: Record<DocumentPreviewType, DocumentTempla
   mandat: 'mandat',
   rapport: 'rapport_bailleur',
   rapport_proprietaire: 'rapport_proprietaire',
-  facture: 'facture',
 };
 
 function getDocumentModeLabel(mode?: AgencySettings['document_mode']) {

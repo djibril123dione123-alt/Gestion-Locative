@@ -539,7 +539,7 @@ export default function Welcome() {
                 <button onClick={prevStep} className="inline-flex items-center rounded-full border border-white/16 bg-white/10 px-2.5 py-1.5 text-xs font-black text-slate-100 transition hover:bg-white/16 hover:text-white">
                   <ArrowLeft className="mr-2 h-4 w-4" />Retour
                 </button>
-                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100">Étape 1 sur 3</span>
+                <span className="rounded-full border border-emerald-100/30 bg-emerald-100/16 px-2.5 py-1 text-[10px] font-black uppercase text-emerald-100">Étape 1 sur 4</span>
               </div>
               <h2 className="mb-1.5 font-serif text-xl font-black text-[#FFF7E6]">
                 {accountType === 'agency' ? 'Nom de votre structure' : 'Votre nom complet'}

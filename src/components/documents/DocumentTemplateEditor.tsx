@@ -1,15 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
+  AlertTriangle,
   ArrowDown,
   ArrowUp,
   Braces,
   FileText,
   Plus,
+  RotateCcw,
   Search,
   Trash2,
 } from 'lucide-react';
 import { PremiumButton } from '../ui/PremiumButton';
 import {
+  getOfficialDocumentTemplate,
   getSystemBlockPublicLabel,
   getTemplateTags,
   TEMPLATE_TAG_CATEGORY_LABELS,
@@ -18,6 +21,7 @@ import type {
   DocumentTemplateBlock,
   DocumentTemplateContent,
   TemplateTagDefinition,
+  TemplateValidationIssue,
 } from '../../types/documentStudio';
 
 interface DocumentTemplateEditorProps {
@@ -25,6 +29,7 @@ interface DocumentTemplateEditorProps {
   selectedBlockId: string | null;
   onSelectBlock: (blockId: string) => void;
   onChange: (content: DocumentTemplateContent) => void;
+  issues?: TemplateValidationIssue[];
 }
 
 function normalizeOrder(blocks: DocumentTemplateBlock[]) {
@@ -43,11 +48,31 @@ export function DocumentTemplateEditor({
   selectedBlockId,
   onSelectBlock,
   onChange,
+  issues = [],
 }: DocumentTemplateEditorProps) {
   const [tagSearch, setTagSearch] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const cursorRef = useRef<{ blockId: string; start: number; end: number } | null>(null);
   const blocks = [...content.blocks].sort((left, right) => left.order - right.order);
   const selected = blocks.find((block) => block.id === selectedBlockId) ?? blocks[0];
   const tags = getTemplateTags(content.documentType);
+  const issuesByBlockId = useMemo(() => {
+    const map = new Map<string, TemplateValidationIssue[]>();
+    for (const issue of issues) {
+      if (!issue.blockId) continue;
+      map.set(issue.blockId, [...(map.get(issue.blockId) ?? []), issue]);
+    }
+    return map;
+  }, [issues]);
+  const selectedIssues = selected ? issuesByBlockId.get(selected.id) ?? [] : [];
+  const officialBlock = useMemo(() => {
+    if (!selected || selected.custom || selected.kind === 'system') return null;
+    const official = getOfficialDocumentTemplate(content.documentType);
+    return official.blocks.find((block) => block.code === selected.code) ?? null;
+  }, [content.documentType, selected]);
+  const isModifiedFromOfficial = Boolean(
+    officialBlock && selected && (selected.title !== officialBlock.title || selected.content !== officialBlock.content),
+  );
   const filteredTags = useMemo(() => {
     const query = tagSearch.trim().toLowerCase();
     if (!query) return tags;
@@ -101,8 +126,36 @@ export function DocumentTemplateEditor({
 
   const insertTag = (tag: string) => {
     if (!selected || selected.kind === 'system') return;
-    const spacer = selected.content && !selected.content.endsWith(' ') ? ' ' : '';
-    updateBlock(selected.id, { content: `${selected.content}${spacer}{{${tag}}}` });
+    const insertion = `{{${tag}}}`;
+    const text = selected.content;
+    const cursor = cursorRef.current?.blockId === selected.id ? cursorRef.current : null;
+    const start = cursor?.start ?? text.length;
+    const end = cursor?.end ?? text.length;
+    const spacer = start === text.length && text && !text.endsWith(' ') ? ' ' : '';
+    const nextContent = `${text.slice(0, start)}${spacer}${insertion}${text.slice(end)}`;
+    updateBlock(selected.id, { content: nextContent });
+    const nextCursor = start + spacer.length + insertion.length;
+    cursorRef.current = { blockId: selected.id, start: nextCursor, end: nextCursor };
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(nextCursor, nextCursor);
+    });
+  };
+
+  const trackCursor = (event: { currentTarget: HTMLTextAreaElement }) => {
+    if (!selected) return;
+    cursorRef.current = {
+      blockId: selected.id,
+      start: event.currentTarget.selectionStart,
+      end: event.currentTarget.selectionEnd,
+    };
+  };
+
+  const resetBlockToOfficial = () => {
+    if (!selected || !officialBlock) return;
+    updateBlock(selected.id, { title: officialBlock.title, content: officialBlock.content });
   };
 
   return (
@@ -136,6 +189,12 @@ export function DocumentTemplateEditor({
                 <span className="min-w-0 flex-1 truncate text-[0.68rem] font-bold">
                   {block.kind === 'system' ? getSystemBlockPublicLabel(block.systemKey, block.title) : block.title}
                 </span>
+                {issuesByBlockId.has(block.id) && (
+                  <AlertTriangle
+                    className="h-3 w-3 shrink-0 text-orange-600"
+                    aria-label={`${issuesByBlockId.get(block.id)?.length ?? 0} point(s) à corriger`}
+                  />
+                )}
                 {!block.enabled && <span className="text-[0.5rem] font-black uppercase text-slate-400">masqué</span>}
               </button>
               <button
@@ -165,9 +224,16 @@ export function DocumentTemplateEditor({
         <section className="min-w-0 rounded-md border border-emerald-950/10 bg-white p-3">
           <div className="flex flex-wrap items-start justify-between gap-2 border-b border-slate-200 pb-2">
             <div>
-              <p className="text-[0.56rem] font-black uppercase tracking-[0.14em] text-orange-600">
-                {selected.custom ? 'Clause personnalisée' : selected.kind === 'system' ? 'Section automatique' : 'Modèle officiel'}
-              </p>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="text-[0.56rem] font-black uppercase tracking-[0.14em] text-orange-600">
+                  {selected.custom ? 'Clause personnalisée' : selected.kind === 'system' ? 'Section automatique' : 'Modèle officiel'}
+                </p>
+                {isModifiedFromOfficial && (
+                  <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[0.5rem] font-black uppercase tracking-[0.08em] text-amber-700">
+                    Modifié
+                  </span>
+                )}
+              </div>
               <p className="text-sm font-black text-slate-950">
                 {selected.kind === 'system' ? getSystemBlockPublicLabel(selected.systemKey, selected.title) : selected.title}
               </p>
@@ -176,6 +242,16 @@ export function DocumentTemplateEditor({
               )}
             </div>
             <div className="flex items-center gap-2">
+              {officialBlock && isModifiedFromOfficial && (
+                <button
+                  type="button"
+                  onClick={resetBlockToOfficial}
+                  className="flex h-7 items-center gap-1 rounded-md border border-slate-200 px-2 text-[0.6rem] font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Texte officiel
+                </button>
+              )}
               <label className="inline-flex items-center gap-1.5 text-[0.64rem] font-bold text-slate-600">
                 <input
                   type="checkbox"
@@ -198,6 +274,12 @@ export function DocumentTemplateEditor({
               )}
             </div>
           </div>
+
+          {selectedIssues.length > 0 && (
+            <div className="mt-2 rounded-md border border-orange-200 bg-orange-50 px-2.5 py-1.5 text-[0.62rem] font-semibold text-orange-800">
+              {selectedIssues.map((issue, index) => <p key={`${issue.code}-${index}`}>• {issue.message}</p>)}
+            </div>
+          )}
 
           <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem]">
             <label className="block">
@@ -232,8 +314,12 @@ export function DocumentTemplateEditor({
             <label className="mt-3 block">
               <span className="text-[0.58rem] font-black uppercase tracking-[0.12em] text-slate-500">Contenu</span>
               <textarea
+                ref={textareaRef}
                 value={selected.content}
                 onChange={(event) => updateBlock(selected.id, { content: event.target.value })}
+                onSelect={trackCursor}
+                onKeyUp={trackCursor}
+                onClick={trackCursor}
                 rows={10}
                 spellCheck={false}
                 className="mt-1 w-full resize-y rounded-md border border-slate-200 bg-white px-3 py-2 text-xs leading-relaxed outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/10"

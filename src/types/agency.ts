@@ -5,19 +5,13 @@ export interface AgencySettings {
   document_mode?: 'simple' | 'professional' | 'legal';
   enabled_modules?: Record<string, boolean>;
   document_preferences?: {
+    /** Ecrase par applyPublishedTemplateStyle (pdf.ts) des qu'un modele Studio est resolu ; ne plus exposer de controle UI pour ce champ. */
     header_style?: 'sobriete' | 'institutionnel' | 'moderne';
-    show_slogan?: boolean;
     numbering_format?: 'Q-YYYY-0001' | 'SK-Q-0001' | 'AGENCE-YYYY-0001';
-    reset_numbering_yearly?: boolean;
     show_document_number?: boolean;
     prefixes?: Record<string, string>;
     qr_documents?: Record<string, boolean>;
-    qr_text?: string;
-    qr_position?: 'bottom_right' | 'footer' | 'cover';
-    confidentiality_notice?: string;
-    payment_notice?: string;
     receipt_notice?: string;
-    document_options?: Record<string, Record<string, boolean>>;
   };
   proprietaire_info?: Record<string, string | null>;
   nom_agence: string | null;

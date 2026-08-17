@@ -47,7 +47,7 @@ type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
   updated_at?: string;
 };
 
-type SettingsTab = 'general' | 'documents' | 'appearance' | 'modules';
+type SettingsTab = 'general' | 'documents' | 'modules';
 type EmbeddedMode = 'single' | 'documentsIdentity';
 type LogoUploadState = 'idle' | 'preview' | 'uploading' | 'done';
 type DocumentPreviewType = 'quittance' | 'contrat' | 'mandat' | 'rapport' | 'rapport_proprietaire';
@@ -249,10 +249,7 @@ function getOrganizationTypeLabel(value: AgencySettings['organization_type'] | u
 }
 
 const DEFAULT_DOCUMENT_PREFERENCES: NonNullable<AgencySettings['document_preferences']> = {
-  header_style: 'institutionnel',
-  show_slogan: true,
   numbering_format: 'Q-YYYY-0001',
-  reset_numbering_yearly: true,
   show_document_number: true,
   prefixes: {
     quittance: 'QIT',
@@ -268,55 +265,7 @@ const DEFAULT_DOCUMENT_PREFERENCES: NonNullable<AgencySettings['document_prefere
     rapport: true,
     facture: false,
   },
-  qr_text: "Scannez pour vérifier ce document.",
-  qr_position: 'bottom_right',
-  confidentiality_notice: 'Document confidentiel réservé aux parties concernées.',
-  payment_notice: 'Paiement attendu selon les modalités prévues au contrat.',
   receipt_notice: "Quittance émise sous réserve d'encaissement effectif.",
-  document_options: {
-    contrat: {
-      logo: true,
-      qr: true,
-      legalRepresentative: true,
-      taxIds: true,
-      penalties: true,
-      tribunal: true,
-      signatures: true,
-      annexes: true,
-    },
-    mandat: {
-      commission: true,
-      duration: true,
-      ownerDuties: true,
-      agencyDuties: true,
-      signatures: true,
-      qr: true,
-    },
-    quittance: {
-      period: true,
-      paymentMethod: true,
-      remainingDue: true,
-      qr: true,
-      receiptNotice: true,
-      stamp: false,
-    },
-    rapport: {
-      financialSummary: true,
-      payments: true,
-      remainingDue: true,
-      expenses: true,
-      commissions: true,
-      attachments: true,
-      qr: true,
-      footer: true,
-    },
-    facture: {
-      taxIds: true,
-      paymentTerms: true,
-      fiscalNotice: true,
-      qr: false,
-    },
-  },
 };
 
 const EMPTY_SETTINGS: Omit<SettingsState, 'agency_id'> = {
@@ -380,10 +329,6 @@ function getDocumentPreferences(settings: SettingsState): NonNullable<AgencySett
     qr_documents: {
       ...DEFAULT_DOCUMENT_PREFERENCES.qr_documents,
       ...(settings.document_preferences?.qr_documents ?? {}),
-    },
-    document_options: {
-      ...DEFAULT_DOCUMENT_PREFERENCES.document_options,
-      ...(settings.document_preferences?.document_options ?? {}),
     },
   };
 }
@@ -550,6 +495,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   const [logoUploadState, setLogoUploadState] = useState<LogoUploadState>('idle');
   const [signaturePreview, setSignaturePreview] = useState<string>('');
   const [signatureUploadState, setSignatureUploadState] = useState<LogoUploadState>('idle');
+  const [stampPreview, setStampPreview] = useState<string>('');
+  const [stampUploadState, setStampUploadState] = useState<LogoUploadState>('idle');
   const [documentPreviewType, setDocumentPreviewType] = useState<DocumentPreviewType>('quittance');
 
   const getOwnerNameFallback = () => {
@@ -594,6 +541,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
         const resolved = await resolveAgencySettingsAssets(nextSettings);
         setLogoPreview(resolved.logo_url ?? '');
         setSignaturePreview(resolved.signature_url ?? '');
+        setStampPreview(resolved.stamp_url ?? '');
       } else {
         const created = await createDefaultSettings(agencyId);
         if (created) {
@@ -602,6 +550,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
           const resolved = await resolveAgencySettingsAssets(created);
           setLogoPreview(resolved.logo_url ?? '');
           setSignaturePreview(resolved.signature_url ?? '');
+          setStampPreview(resolved.stamp_url ?? '');
         }
       }
     } catch (err) {
@@ -789,6 +738,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
       setLastSavedSnapshot(JSON.stringify(savedData));
       setLogoPreview(savedData.logo_url ?? '');
       setSignaturePreview(savedData.signature_url ?? '');
+      setStampPreview(savedData.stamp_url ?? '');
       invalidateAgencySettingsCache(profile.agency_id);
       showToast('Paramètres enregistrés avec succès', 'success');
       if (embedded) {
@@ -869,6 +819,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
 
   const uploadLogoFile = (file: File) => uploadIdentityAsset('logo', file, logoPreview, setLogoPreview, setLogoUploadState);
   const uploadSignatureFile = (file: File) => uploadIdentityAsset('signature', file, signaturePreview, setSignaturePreview, setSignatureUploadState);
+  const uploadStampFile = (file: File) => uploadIdentityAsset('stamp', file, stampPreview, setStampPreview, setStampUploadState);
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -895,6 +846,20 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
   };
 
   const handleSignatureRemove = () => removeIdentityAsset('signature', setSignaturePreview, setSignatureUploadState);
+
+  const handleStampUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) await uploadStampFile(file);
+    event.target.value = '';
+  };
+
+  const handleStampDrop = async (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (file) await uploadStampFile(file);
+  };
+
+  const handleStampRemove = () => removeIdentityAsset('stamp', setStampPreview, setStampUploadState);
 
   const hasUnsavedChanges = useMemo(
     () => Boolean(settings && JSON.stringify(settings) !== lastSavedSnapshot),
@@ -1172,7 +1137,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                   <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                     <div className="min-w-0">
                       <InfoLine label="Logo" value={logoPreview ? 'Logo configuré' : 'Logo à ajouter'} strong />
-                      <InfoLine label="Signature / cachet" value={signaturePreview ? 'Prêt pour les signatures' : 'À ajouter'} strong={Boolean(signaturePreview)} />
+                      <InfoLine label="Signature" value={signaturePreview ? 'Prête' : 'À ajouter'} strong={Boolean(signaturePreview)} />
+                      <InfoLine label="Cachet" value={stampPreview ? 'Prêt' : 'À ajouter'} strong={Boolean(stampPreview)} />
                       <InfoLine label="Position" value={settings.logo_position} />
                       <ColorLine label="Couleur primaire" value={settings.couleur_primaire ?? '#F58220'} />
                       <ColorLine label="Couleur secondaire" value={settings.couleur_secondaire ?? '#D9AA5E'} />
@@ -1182,7 +1148,10 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                         {logoPreview ? <SafeLogoImage src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
                       </div>
                       <div className="flex h-10 w-20 items-center justify-center rounded-xl border border-emerald-950/10 bg-white p-1.5">
-                        {signaturePreview ? <SafeLogoImage src={signaturePreview} alt="Signature ou cachet" className="max-h-full max-w-full object-contain" /> : <span className="text-[0.46rem] font-black uppercase tracking-[0.08em] text-slate-400">Signature</span>}
+                        {signaturePreview ? <SafeLogoImage src={signaturePreview} alt="Signature" className="max-h-full max-w-full object-contain" /> : <span className="text-[0.46rem] font-black uppercase tracking-[0.08em] text-slate-400">Signature</span>}
+                      </div>
+                      <div className="flex h-10 w-20 items-center justify-center rounded-xl border border-emerald-950/10 bg-white p-1.5">
+                        {stampPreview ? <SafeLogoImage src={stampPreview} alt="Cachet" className="max-h-full max-w-full object-contain" /> : <span className="text-[0.46rem] font-black uppercase tracking-[0.08em] text-slate-400">Cachet</span>}
                       </div>
                     </div>
                   </div>
@@ -1193,43 +1162,10 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               settings={settings}
               logoUrl={logoPreview}
               signatureUrl={signaturePreview}
+              stampUrl={stampPreview}
               selectedType={documentPreviewType}
               onSelectType={setDocumentPreviewType}
               className="lg:min-h-full"
-            />
-          </div>
-        )}
-
-        {activeTab === 'appearance' && (
-          <div className="grid gap-2 lg:grid-cols-[minmax(0,0.9fr)_minmax(16rem,1.1fr)]">
-            <SettingsInfoCard title="Identité visuelle" eyebrow="MARQUE" icon={Palette}>
-              <div className="mb-2 flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/80 p-2">
-                <div className="flex h-9 w-14 items-center justify-center rounded-xl bg-[#fff8ed] p-1.5">
-                  {logoPreview ? <SafeLogoImage src={logoPreview} alt="Logo" className="max-h-full max-w-full object-contain" /> : <Sparkles className="h-5 w-5 text-orange-600" />}
-                </div>
-                <div>
-                  <p className="text-[0.66rem] font-extrabold text-slate-950">{logoPreview ? 'Logo chargé' : 'Logo à ajouter'}</p>
-                  <p className="text-[0.58rem] font-semibold text-slate-500">Position : {settings.logo_position ?? 'left'} · Signature : {signaturePreview ? 'prête' : 'à ajouter'}</p>
-                </div>
-              </div>
-              <div className="mb-2 flex items-center gap-2 rounded-xl border border-emerald-950/10 bg-white/80 p-2">
-                <div className="flex h-9 w-14 items-center justify-center rounded-xl bg-white p-1.5 shadow-inner">
-                  {signaturePreview ? <SafeLogoImage src={signaturePreview} alt="Signature ou cachet" className="max-h-full max-w-full object-contain" /> : <FileText className="h-4 w-4 text-slate-400" />}
-                </div>
-                <div>
-                  <p className="text-[0.66rem] font-extrabold text-slate-950">{signaturePreview ? 'Signature / cachet configuré' : 'Signature / cachet à ajouter'}</p>
-                  <p className="text-[0.58rem] font-semibold text-slate-500">Utilisé dans les zones de signature des documents.</p>
-                </div>
-              </div>
-              <ColorLine label="Primaire" value={settings.couleur_primaire ?? '#F58220'} />
-              <ColorLine label="Secondaire" value={settings.couleur_secondaire ?? '#D9AA5E'} />
-            </SettingsInfoCard>
-            <SettingsDocumentPreview
-              settings={settings}
-              logoUrl={logoPreview}
-              signatureUrl={signaturePreview}
-              selectedType={documentPreviewType}
-              onSelectType={setDocumentPreviewType}
             />
           </div>
         )}
@@ -1576,7 +1512,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     </div>
                   </label>
                   <div className="block" onDrop={handleSignatureDrop} onDragOver={(e) => e.preventDefault()}>
-                    <span className={embeddedLabelClass}>Signature / cachet documentaire</span>
+                    <span className={embeddedLabelClass}>Signature</span>
                     <div className="flex items-center justify-between gap-2.5 rounded-xl border border-dashed border-emerald-950/15 bg-white p-2.5">
                       <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5">
                         <input
@@ -1586,13 +1522,13 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                           className="hidden"
                         />
                         <div className="flex h-11 w-16 shrink-0 items-center justify-center rounded-xl bg-[#fffdf8] p-2 shadow-sm">
-                          {signaturePreview ? <SafeLogoImage src={signaturePreview} alt="Signature ou cachet" className="max-h-full max-w-full object-contain" /> : <Upload className="h-5 w-5 text-emerald-800" />}
+                          {signaturePreview ? <SafeLogoImage src={signaturePreview} alt="Signature" className="max-h-full max-w-full object-contain" /> : <Upload className="h-5 w-5 text-emerald-800" />}
                         </div>
                         <div className="min-w-0">
                           <p className="text-[0.72rem] font-extrabold text-slate-950">
-                            {signatureUploadState === 'uploading' ? 'Upload en cours...' : signaturePreview ? 'Signature / cachet prêt' : 'Cliquer ou déposer une signature'}
+                            {signatureUploadState === 'uploading' ? 'Upload en cours...' : signaturePreview ? 'Signature prête' : 'Cliquer ou déposer une signature'}
                           </p>
-                          <p className="text-[0.62rem] font-semibold text-slate-500">PNG transparent conseillé. Utilisé dans contrats et mandats.</p>
+                          <p className="text-[0.62rem] font-semibold text-slate-500">PNG transparent conseillé. Utilisée dans contrats et mandats.</p>
                         </div>
                       </label>
                       {signaturePreview && (
@@ -1601,6 +1537,38 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                           onClick={handleSignatureRemove}
                           className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[0.56rem] font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100"
                           disabled={signatureUploadState === 'uploading'}
+                        >
+                          Retirer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="block" onDrop={handleStampDrop} onDragOver={(e) => e.preventDefault()}>
+                    <span className={embeddedLabelClass}>Cachet / tampon</span>
+                    <div className="flex items-center justify-between gap-2.5 rounded-xl border border-dashed border-emerald-950/15 bg-white p-2.5">
+                      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5">
+                        <input
+                          type="file"
+                          accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml"
+                          onChange={handleStampUpload}
+                          className="hidden"
+                        />
+                        <div className="flex h-11 w-16 shrink-0 items-center justify-center rounded-xl bg-[#fffdf8] p-2 shadow-sm">
+                          {stampPreview ? <SafeLogoImage src={stampPreview} alt="Cachet" className="max-h-full max-w-full object-contain" /> : <Upload className="h-5 w-5 text-emerald-800" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-[0.72rem] font-extrabold text-slate-950">
+                            {stampUploadState === 'uploading' ? 'Upload en cours...' : stampPreview ? 'Cachet prêt' : 'Cliquer ou déposer un cachet'}
+                          </p>
+                          <p className="text-[0.62rem] font-semibold text-slate-500">PNG transparent conseillé. Utilisé partout où le cachet est activé.</p>
+                        </div>
+                      </label>
+                      {stampPreview && (
+                        <button
+                          type="button"
+                          onClick={handleStampRemove}
+                          className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-[0.56rem] font-black uppercase tracking-[0.08em] text-red-700 transition hover:bg-red-100"
+                          disabled={stampUploadState === 'uploading'}
                         >
                           Retirer
                         </button>
@@ -1643,6 +1611,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 settings={settings}
                 logoUrl={logoPreview}
                 signatureUrl={signaturePreview}
+                stampUrl={stampPreview}
                 selectedType={documentPreviewType}
                 onSelectType={setDocumentPreviewType}
               />
@@ -1930,6 +1899,7 @@ function SettingsDocumentPreview({
   settings,
   logoUrl,
   signatureUrl,
+  stampUrl,
   selectedType,
   onSelectType,
   className = '',
@@ -1938,6 +1908,7 @@ function SettingsDocumentPreview({
   /** URL signee deja resolue (settings.logo_url n'est qu'un chemin de stockage, pas une URL chargeable). */
   logoUrl?: string;
   signatureUrl?: string;
+  stampUrl?: string;
   selectedType: DocumentPreviewType;
   onSelectType: (type: DocumentPreviewType) => void;
   className?: string;
@@ -1970,8 +1941,8 @@ function SettingsDocumentPreview({
   }, [templateType, settings.agency_id]);
 
   const previewSettings = useMemo(
-    () => ({ ...settings, logo_url: logoUrl || null, signature_url: signatureUrl || null }),
-    [settings, logoUrl, signatureUrl],
+    () => ({ ...settings, logo_url: logoUrl || null, signature_url: signatureUrl || null, stamp_url: stampUrl || null }),
+    [settings, logoUrl, signatureUrl, stampUrl],
   );
   const preview = useDocumentPreviewPdf(templateType, content, previewSettings);
 

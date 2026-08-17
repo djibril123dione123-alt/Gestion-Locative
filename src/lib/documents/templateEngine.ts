@@ -12,7 +12,6 @@ const REQUIRED_BLOCK_CODES: Partial<Record<DocumentTemplateContent['documentType
   contrat: ['parties', 'signature'],
   mandat: ['parties', 'signature'],
   quittance: ['summary'],
-  facture: ['summary'],
   rapport_bailleur: ['owner'],
   rapport_proprietaire: ['owner'],
 };

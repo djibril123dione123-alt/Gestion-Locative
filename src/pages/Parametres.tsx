@@ -106,37 +106,6 @@ const DOCUMENT_PREVIEW_TEMPLATE_TYPE: Record<DocumentPreviewType, DocumentTempla
   facture: 'facture',
 };
 
-const DOCUMENT_OPTION_LABELS: Record<string, string> = {
-  annexes: 'Annexes',
-  attachments: 'Pièces jointes',
-  agencyDuties: 'Obligations agence',
-  commission: 'Commission',
-  duration: 'Durée',
-  expenses: 'Charges',
-  financialSummary: 'Résumé financier',
-  fiscalNotice: 'Mention fiscale',
-  footer: 'Pied de page',
-  legalRepresentative: 'Représentant légal',
-  logo: 'Logo',
-  ownerDuties: 'Obligations bailleur',
-  paymentMethod: 'Mode paiement',
-  paymentTerms: 'Conditions paiement',
-  payments: 'Paiements',
-  penalties: 'Pénalités',
-  period: 'Période',
-  qr: 'QR Verify',
-  receiptNotice: 'Réserve encaissement',
-  remainingDue: 'Reliquats',
-  signatures: 'Signatures',
-  stamp: 'Cachet',
-  taxIds: 'NINEA / RC',
-  tribunal: 'Tribunal',
-};
-
-function getDocumentOptionLabel(key: string) {
-  return DOCUMENT_OPTION_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, (value) => value.toUpperCase());
-}
-
 function getDocumentModeLabel(mode?: AgencySettings['document_mode']) {
   if (mode === 'legal') return 'Juridique renforcé';
   if (mode === 'simple') return 'Simple';
@@ -1008,25 +977,6 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
       },
     });
   };
-  const toggleDocumentQr = (type: DocumentPreviewType) => {
-    updateDocumentPreferences({
-      qr_documents: {
-        ...(documentPreferences.qr_documents ?? {}),
-        [type]: !documentPreferences.qr_documents?.[type],
-      },
-    });
-  };
-  const toggleDocumentOption = (type: DocumentPreviewType, key: string) => {
-    updateDocumentPreferences({
-      document_options: {
-        ...(documentPreferences.document_options ?? {}),
-        [type]: {
-          ...(documentPreferences.document_options?.[type] ?? {}),
-          [key]: !documentPreferences.document_options?.[type]?.[key],
-        },
-      },
-    });
-  };
   const embeddedFieldClass =
     'h-8 w-full rounded-lg border border-emerald-950/10 bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/15';
   const embeddedTextareaClass =
@@ -1584,106 +1534,43 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                     <input type="number" value={settings.penalite_retard_delai_jours ?? 0} onChange={(e) => setSettings({ ...settings, penalite_retard_delai_jours: Number(e.target.value) })} className={embeddedFieldClass} />
                   </label>
                 </div>
-                <div className="grid gap-2.5 sm:grid-cols-2">
-                  <label>
-                    <span className={embeddedLabelClass}>Style d'entête</span>
-                    <select
-                      value={documentPreferences.header_style ?? 'institutionnel'}
-                      onChange={(event) => updateDocumentPreferences({ header_style: event.target.value as NonNullable<AgencySettings['document_preferences']>['header_style'] })}
-                      className={embeddedFieldClass}
-                    >
-                      <option value="institutionnel">Institutionnel</option>
-                      <option value="sobriete">Sobriété</option>
-                      <option value="moderne">Moderne</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span className={embeddedLabelClass}>Numérotation</span>
-                    <select
-                      value={documentPreferences.numbering_format ?? 'Q-YYYY-0001'}
-                      onChange={(event) => updateDocumentPreferences({ numbering_format: event.target.value as NonNullable<AgencySettings['document_preferences']>['numbering_format'] })}
-                      className={embeddedFieldClass}
-                    >
-                      <option value="Q-YYYY-0001">Q-YYYY-0001</option>
-                      <option value="SK-Q-0001">SK-Q-0001</option>
-                      <option value="AGENCE-YYYY-0001">AGENCE-YYYY-0001</option>
-                    </select>
-                  </label>
-                </div>
+                <label>
+                  <span className={embeddedLabelClass}>Numérotation</span>
+                  <select
+                    value={documentPreferences.numbering_format ?? 'Q-YYYY-0001'}
+                    onChange={(event) => updateDocumentPreferences({ numbering_format: event.target.value as NonNullable<AgencySettings['document_preferences']>['numbering_format'] })}
+                    className={embeddedFieldClass}
+                  >
+                    <option value="Q-YYYY-0001">Q-YYYY-0001</option>
+                    <option value="SK-Q-0001">SK-Q-0001</option>
+                    <option value="AGENCE-YYYY-0001">AGENCE-YYYY-0001</option>
+                  </select>
+                </label>
                 <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2">
-                  <p className="text-[0.52rem] font-black uppercase tracking-[0.12em] text-slate-500">Préfixes et QR</p>
+                  <p className="text-[0.52rem] font-black uppercase tracking-[0.12em] text-slate-500">Préfixes</p>
+                  <p className="mt-0.5 text-[0.56rem] font-semibold text-slate-400">La visibilité du QR se règle document par document dans le Studio.</p>
                   <div className="mt-2 grid gap-1.5">
                     {(Object.keys(DOCUMENT_PREVIEWS) as DocumentPreviewType[]).map((type) => (
-                      <div key={type} className="grid grid-cols-[minmax(0,1fr)_4rem_auto] items-center gap-1.5">
+                      <div key={type} className="grid grid-cols-[minmax(0,1fr)_5rem] items-center gap-1.5">
                         <span className="truncate text-[0.62rem] font-extrabold text-slate-700">{DOCUMENT_PREVIEWS[type].label}</span>
                         <input
                           value={documentPreferences.prefixes?.[type] ?? ''}
                           onChange={(event) => updateDocumentPrefix(type, event.target.value)}
                           className="h-7 rounded-lg border border-emerald-950/10 bg-white px-2 text-[0.62rem] font-black uppercase text-slate-800 outline-none focus:ring-2 focus:ring-emerald-700/15"
                         />
-                        <button
-                          type="button"
-                          onClick={() => toggleDocumentQr(type)}
-                          className={`h-7 rounded-lg px-2 text-[0.52rem] font-black uppercase tracking-[0.08em] ring-1 transition ${
-                            documentPreferences.qr_documents?.[type] !== false
-                              ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                              : 'bg-slate-50 text-slate-500 ring-slate-200'
-                          }`}
-                        >
-                          QR
-                        </button>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div className="grid gap-2.5 sm:grid-cols-2">
-                  <label className="sm:col-span-2">
-                    <span className={embeddedLabelClass}>Texte QR</span>
-                    <input
-                      type="text"
-                      value={documentPreferences.qr_text ?? ''}
-                      onChange={(event) => updateDocumentPreferences({ qr_text: event.target.value })}
-                      className={embeddedFieldClass}
-                    />
-                  </label>
-                  <label>
-                    <span className={embeddedLabelClass}>Notice quittance</span>
-                    <input
-                      type="text"
-                      value={documentPreferences.receipt_notice ?? ''}
-                      onChange={(event) => updateDocumentPreferences({ receipt_notice: event.target.value })}
-                      className={embeddedFieldClass}
-                    />
-                  </label>
-                  <label>
-                    <span className={embeddedLabelClass}>Notice paiement</span>
-                    <input
-                      type="text"
-                      value={documentPreferences.payment_notice ?? ''}
-                      onChange={(event) => updateDocumentPreferences({ payment_notice: event.target.value })}
-                      className={embeddedFieldClass}
-                    />
-                  </label>
-                </div>
-                <div className="rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2">
-                  <p className="text-[0.52rem] font-black uppercase tracking-[0.12em] text-slate-500">Options du document aperçu</p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {Object.entries(documentPreferences.document_options?.[documentPreviewType] ?? {}).map(([key, enabled]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => toggleDocumentOption(documentPreviewType, key)}
-                        className={`rounded-full px-2 py-1 text-[0.52rem] font-black uppercase tracking-[0.08em] ring-1 transition ${
-                          enabled
-                            ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                            : 'bg-slate-50 text-slate-500 ring-slate-200'
-                        }`}
-                      >
-                        {getDocumentOptionLabel(key)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <label>
+                  <span className={embeddedLabelClass}>Notice quittance</span>
+                  <input
+                    type="text"
+                    value={documentPreferences.receipt_notice ?? ''}
+                    onChange={(event) => updateDocumentPreferences({ receipt_notice: event.target.value })}
+                    className={embeddedFieldClass}
+                  />
+                </label>
               </div>
             </div>
 

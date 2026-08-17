@@ -1173,7 +1173,7 @@ export function Bailleurs() {
         entityId: bailleur.id,
         periodKey: reportMonth,
         format: settings.document_preferences?.numbering_format,
-        prefix: settings.document_preferences?.prefixes?.rapport ?? 'RPT',
+        prefix: settings.document_preferences?.prefixes?.[reportTemplateType === 'rapport_proprietaire' ? 'rapport_proprietaire' : 'rapport'] ?? 'RPT',
         fallback: `RBL-${reportMonth}-${bailleur.id.slice(0, 8).toUpperCase()}`,
       });
       generation.report('building-document', { reference: reportRef });

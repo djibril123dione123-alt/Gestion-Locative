@@ -760,7 +760,7 @@ export function OwnerWorkspace({ onNavigate }: OwnerWorkspaceProps) {
         entityId: data.ownerBailleur?.id ?? agencyId,
         periodKey: reportPeriod,
         format: data.settings?.document_preferences?.numbering_format,
-        prefix: data.settings?.document_preferences?.prefixes?.rapport ?? 'RPT',
+        prefix: data.settings?.document_preferences?.prefixes?.rapport_proprietaire ?? 'RPT',
         fallback: createOwnerReportReference(reportPeriod),
       });
       generation.report('building-document', { reference: reportRef });

@@ -4,14 +4,22 @@ import {
   buildContratPreviewDocument,
   buildMandatPreviewDocument,
   buildPaiementReceiptPreviewDocument,
+  buildRapportPreviewDocument,
 } from '../lib/pdf';
 import type { AgencySettings } from '../types';
 import type { DocumentTemplateContent, DocumentTemplateType } from '../types/documentStudio';
 
 const DEBOUNCE_MS = 400;
 
-/** Types dont l'aperçu réel est déjà branché (voir Phase 6 pour rapport_bailleur/rapport_proprietaire). */
-const PREVIEWABLE_TYPES: DocumentTemplateType[] = ['contrat', 'mandat', 'quittance', 'facture'];
+/** Types dont l'aperçu réel est déjà branché à un générateur de pdf.ts. */
+const PREVIEWABLE_TYPES: DocumentTemplateType[] = [
+  'contrat',
+  'mandat',
+  'quittance',
+  'facture',
+  'rapport_bailleur',
+  'rapport_proprietaire',
+];
 
 export function isDocumentPreviewSupported(documentType: DocumentTemplateType): boolean {
   return PREVIEWABLE_TYPES.includes(documentType);
@@ -66,7 +74,9 @@ export function useDocumentPreviewPdf(
             ? await buildMandatPreviewDocument(content, settings)
             : documentType === 'quittance' || documentType === 'facture'
               ? await buildPaiementReceiptPreviewDocument(content, settings, documentType === 'facture' ? 100000 : 0)
-              : await buildContratPreviewDocument(content, settings);
+              : documentType === 'rapport_bailleur' || documentType === 'rapport_proprietaire'
+                ? await buildRapportPreviewDocument(documentType, content, settings)
+                : await buildContratPreviewDocument(content, settings);
 
           if (sequence !== sequenceRef.current) return; // une frappe plus récente a déjà relancé un rendu
 

@@ -15,7 +15,6 @@ import {
   Landmark,
   MapPin,
   Phone,
-  QrCode,
   ShieldCheck,
   Sparkles,
   UserRound,
@@ -40,6 +39,10 @@ import {
   uploadAgencyIdentityAsset,
   validateAgencyIdentityFile,
 } from '../services/agencyIdentityAssets';
+import { resolvePublishedDocumentTemplate } from '../services/documentTemplateService';
+import { useDocumentPreviewPdf } from '../hooks/useDocumentPreviewPdf';
+import { DocumentTemplatePreview } from '../components/documents/DocumentTemplatePreview';
+import type { DocumentTemplateContent, DocumentTemplateType } from '../types/documentStudio';
 
 type SettingsState = Omit<AgencySettings, 'created_at' | 'updated_at'> & {
   created_at?: string;
@@ -83,55 +86,24 @@ interface ParametresProps {
 const LOGO_COMPRESSION_THRESHOLD = 1.4 * 1024 * 1024;
 const LOGO_MAX_DIMENSION = 1200;
 
-const DOCUMENT_PREVIEWS: Record<DocumentPreviewType, {
-  label: string;
-  title: string;
-  reference: string;
-  amount: string;
-  meta: string;
-}> = {
-  quittance: {
-    label: 'Quittance',
-    title: 'Quittance de loyer',
-    reference: 'QIT-2026-07',
-    amount: '500 000 F CFA',
-    meta: 'Juillet 2026 · Appartement F4',
-  },
-  contrat: {
-    label: 'Contrat',
-    title: 'Contrat de bail',
-    reference: 'CTR-2026-04',
-    amount: '300 000 F CFA / mois',
-    meta: 'Bail actif · Unité louée',
-  },
-  mandat: {
-    label: 'Mandat',
-    title: 'Mandat de gestion',
-    reference: 'MDT-2026-08',
-    amount: 'Commission 10%',
-    meta: 'Propriétaire · Portefeuille',
-  },
-  rapport: {
-    label: 'Rapport bailleur',
-    title: 'Rapport bailleur',
-    reference: 'RPT-2026-07',
-    amount: '1 175 000 F CFA',
-    meta: 'Encaissements · Reversements',
-  },
-  rapport_proprietaire: {
-    label: 'Rapport propriétaire',
-    title: 'Rapport propriétaire',
-    reference: 'RPR-2026-07',
-    amount: '875 000 F CFA',
-    meta: 'Synthèse propriétaire · Net reversé',
-  },
-  facture: {
-    label: 'Facture',
-    title: 'Facture de charge',
-    reference: 'FAC-2026-21',
-    amount: '37 500 F CFA',
-    meta: 'Frais huissier · Justificatif',
-  },
+/** Libellés des types de document, réutilisés par la matrice de préfixes/QR et le sélecteur d'aperçu. */
+const DOCUMENT_PREVIEWS: Record<DocumentPreviewType, { label: string }> = {
+  quittance: { label: 'Quittance' },
+  contrat: { label: 'Contrat' },
+  mandat: { label: 'Mandat' },
+  rapport: { label: 'Rapport bailleur' },
+  rapport_proprietaire: { label: 'Rapport propriétaire' },
+  facture: { label: 'Facture' },
+};
+
+/** DocumentPreviewType 'rapport' (historique) correspond au type Studio 'rapport_bailleur'. */
+const DOCUMENT_PREVIEW_TEMPLATE_TYPE: Record<DocumentPreviewType, DocumentTemplateType> = {
+  quittance: 'quittance',
+  contrat: 'contrat',
+  mandat: 'mandat',
+  rapport: 'rapport_bailleur',
+  rapport_proprietaire: 'rapport_proprietaire',
+  facture: 'facture',
 };
 
 const DOCUMENT_OPTION_LABELS: Record<string, string> = {
@@ -164,128 +136,6 @@ const DOCUMENT_OPTION_LABELS: Record<string, string> = {
 function getDocumentOptionLabel(key: string) {
   return DOCUMENT_OPTION_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, (value) => value.toUpperCase());
 }
-
-type DocumentPreviewBlueprint = {
-  subject: string;
-  period: string;
-  summary: Array<{ label: string; value: string; tone?: 'neutral' | 'success' | 'warning' }>;
-  columns: [string, string, string];
-  rows: Array<[string, string, string]>;
-  totalLabel: string;
-  totalValue: string;
-  note: string;
-};
-
-const DOCUMENT_PREVIEW_BLUEPRINTS: Record<DocumentPreviewType, DocumentPreviewBlueprint> = {
-  quittance: {
-    subject: 'Ablaye Sow · Appartement F4',
-    period: 'Période : juillet 2026',
-    summary: [
-      { label: 'Locataire', value: 'Ablaye Sow' },
-      { label: 'Logement', value: 'Keur Modou · F4' },
-      { label: 'Statut', value: 'Payé', tone: 'success' },
-    ],
-    columns: ['Libellé', 'Période', 'Montant'],
-    rows: [
-      ['Loyer mensuel', 'Juillet 2026', '450 000 F CFA'],
-      ['Charges locatives', 'Juillet 2026', '50 000 F CFA'],
-      ['Reliquat antérieur', 'Aucun', '0 F CFA'],
-    ],
-    totalLabel: 'Total encaissé',
-    totalValue: '500 000 F CFA',
-    note: 'Quittance délivrée sous réserve d’encaissement effectif et de vérification comptable.',
-  },
-  contrat: {
-    subject: 'Contrat de bail · Appartement F4',
-    period: 'Prise d’effet : 01 août 2026',
-    summary: [
-      { label: 'Bailleur', value: 'Mamadou Diallo' },
-      { label: 'Locataire', value: 'Ablaye Sow' },
-      { label: 'Durée', value: '12 mois' },
-    ],
-    columns: ['Article', 'Objet', 'Statut'],
-    rows: [
-      ['Article 1', 'Désignation du bien loué', 'Actif'],
-      ['Article 2', 'Loyer, dépôt et échéance', 'Actif'],
-      ['Article 3', 'Obligations des parties', 'Actif'],
-    ],
-    totalLabel: 'Loyer mensuel',
-    totalValue: '300 000 F CFA',
-    note: 'Les clauses actives du studio sont reprises dans le PDF généré avec les variables métier remplacées.',
-  },
-  mandat: {
-    subject: 'Mandat de gérance · Portefeuille Diallo',
-    period: 'Validité : 12 mois renouvelables',
-    summary: [
-      { label: 'Mandant', value: 'Mamadou Diallo' },
-      { label: 'Mandataire', value: 'Boy Dakar' },
-      { label: 'Commission', value: '10%' },
-    ],
-    columns: ['Section', 'Engagement', 'État'],
-    rows: [
-      ['Gestion', 'Encaissements et suivi locatif', 'Inclus'],
-      ['Reversement', 'Net bailleur après commission', 'Inclus'],
-      ['Reporting', 'Rapport mensuel propriétaire', 'Inclus'],
-    ],
-    totalLabel: 'Honoraires agence',
-    totalValue: '10% des encaissements',
-    note: 'Le mandat valorise les pouvoirs donnés à l’agence, les conditions de gestion et les signatures.',
-  },
-  rapport: {
-    subject: 'Bailleur : Mamadou Diallo',
-    period: 'Période : juillet 2026',
-    summary: [
-      { label: 'Encaissements', value: '1 250 000 F CFA', tone: 'success' },
-      { label: 'Reliquats', value: '75 000 F CFA', tone: 'warning' },
-      { label: 'Net à reverser', value: '1 087 500 F CFA', tone: 'success' },
-    ],
-    columns: ['Bien / unité', 'Encaissement', 'Net bailleur'],
-    rows: [
-      ['Keur Modou · F4', '500 000 F CFA', '450 000 F CFA'],
-      ['Résidence Almadies · Studio', '350 000 F CFA', '315 000 F CFA'],
-      ['Villa Sacré-Cœur · RDC', '400 000 F CFA', '322 500 F CFA'],
-    ],
-    totalLabel: 'Net à reverser',
-    totalValue: '1 087 500 F CFA',
-    note: 'Synthèse mensuelle claire avec encaissements, dépenses, commissions, reliquats et QR de vérification.',
-  },
-  rapport_proprietaire: {
-    subject: 'Propriétaire : Awa Ndiaye',
-    period: 'Période : juillet 2026',
-    summary: [
-      { label: 'Revenus', value: '920 000 F CFA', tone: 'success' },
-      { label: 'Charges', value: '45 000 F CFA', tone: 'warning' },
-      { label: 'Solde net', value: '875 000 F CFA', tone: 'success' },
-    ],
-    columns: ['Élément', 'Détail', 'Montant'],
-    rows: [
-      ['Encaissements', '2 logements réglés', '920 000 F CFA'],
-      ['Dépenses', 'Maintenance et charges', '45 000 F CFA'],
-      ['Reliquats', 'Aucun retard critique', '0 F CFA'],
-    ],
-    totalLabel: 'Solde propriétaire',
-    totalValue: '875 000 F CFA',
-    note: 'Version adaptée au bailleur individuel, sans vocabulaire agence inutile.',
-  },
-  facture: {
-    subject: 'Facture · Frais huissier',
-    period: 'Émission : 08 juillet 2026',
-    summary: [
-      { label: 'Client', value: 'Ablaye Sow' },
-      { label: 'Objet', value: 'Frais huissier' },
-      { label: 'Statut', value: 'À régler', tone: 'warning' },
-    ],
-    columns: ['Désignation', 'Quantité', 'Montant'],
-    rows: [
-      ['Frais huissier', '1', '37 500 F CFA'],
-      ['Justificatif', 'Joint au dossier', 'Inclus'],
-      ['TVA', 'Non applicable', '0 F CFA'],
-    ],
-    totalLabel: 'Total facture',
-    totalValue: '37 500 F CFA',
-    note: 'Facture structurée avec référence, détail financier, mention officielle et pied de page agence.',
-  },
-};
 
 function getDocumentModeLabel(mode?: AgencySettings['document_mode']) {
   if (mode === 'legal') return 'Juridique renforcé';
@@ -1416,19 +1266,9 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               )}
             </div>
             <SettingsDocumentPreview
-              title={displayName}
-              logoUrl={logoPreview}
-              signatureUrl={signaturePreview}
-              logoPosition={settings.logo_position ?? 'left'}
-              primary={settings.couleur_primaire ?? '#F58220'}
-              secondary={settings.couleur_secondaire ?? '#D9AA5E'}
-              tribunal={settings.mention_tribunal}
-              footer={settings.pied_page_personnalise}
-              qrEnabled={Boolean(settings.qr_code_quittances)}
-              mode={documentModeLabel}
+              settings={settings}
               selectedType={documentPreviewType}
               onSelectType={setDocumentPreviewType}
-              preferences={documentPreferences}
               className="lg:min-h-full"
             />
           </div>
@@ -1459,19 +1299,9 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               <ColorLine label="Secondaire" value={settings.couleur_secondaire ?? '#D9AA5E'} />
             </SettingsInfoCard>
             <SettingsDocumentPreview
-              title={displayName}
-              logoUrl={logoPreview}
-              signatureUrl={signaturePreview}
-              logoPosition={settings.logo_position ?? 'left'}
-              primary={settings.couleur_primaire ?? '#F58220'}
-              secondary={settings.couleur_secondaire ?? '#D9AA5E'}
-              tribunal={settings.mention_tribunal}
-              footer={settings.pied_page_personnalise}
-              qrEnabled={Boolean(settings.qr_code_quittances)}
-              mode={documentModeLabel}
+              settings={settings}
               selectedType={documentPreviewType}
               onSelectType={setDocumentPreviewType}
-              preferences={documentPreferences}
             />
           </div>
         )}
@@ -1945,19 +1775,9 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 </div>
               </div>
               <SettingsDocumentPreview
-                title={displayName}
-                logoUrl={logoPreview}
-                signatureUrl={signaturePreview}
-                logoPosition={settings.logo_position ?? 'left'}
-                primary={settings.couleur_primaire ?? '#F58220'}
-                secondary={settings.couleur_secondaire ?? '#D9AA5E'}
-                tribunal={settings.mention_tribunal}
-                footer={settings.pied_page_personnalise}
-                qrEnabled={Boolean(settings.qr_code_quittances)}
-                mode={documentModeLabel}
+                settings={settings}
                 selectedType={documentPreviewType}
                 onSelectType={setDocumentPreviewType}
-                preferences={documentPreferences}
               />
             </div>
           </section>
@@ -3019,61 +2839,51 @@ function ColorLine({ label, value }: { label: string; value: string }) {
   );
 }
 
+/**
+ * Aperçu "fidèle" au sens strict : le VRAI PDF (buildXxxPreviewDocument, voir
+ * src/lib/pdf.ts), généré avec le modèle Studio publié pour ce type de
+ * document et les réglages d'identité en cours d'édition sur cette page
+ * (même non encore sauvegardés) — jamais une reconstitution HTML approximative.
+ */
 function SettingsDocumentPreview({
-  title,
-  logoUrl,
-  signatureUrl,
-  logoPosition,
-  primary,
-  secondary,
-  tribunal,
-  footer,
-  qrEnabled,
-  mode,
+  settings,
   selectedType,
   onSelectType,
-  preferences,
   className = '',
 }: {
-  title: string;
-  logoUrl?: string;
-  signatureUrl?: string | null;
-  logoPosition?: AgencySettings['logo_position'];
-  primary: string;
-  secondary: string;
-  tribunal?: string | null;
-  footer?: string | null;
-  qrEnabled: boolean;
-  mode: string;
+  settings: Partial<AgencySettings>;
   selectedType: DocumentPreviewType;
   onSelectType: (type: DocumentPreviewType) => void;
-  preferences: NonNullable<AgencySettings['document_preferences']>;
   className?: string;
 }) {
-  const preview = DOCUMENT_PREVIEWS[selectedType];
-  const blueprint = DOCUMENT_PREVIEW_BLUEPRINTS[selectedType];
-  const prefix = preferences.prefixes?.[selectedType] ?? preview.reference.split('-')[0];
-  const reference = `${prefix}-${preview.reference.split('-').slice(1).join('-') || '2026-001'}`;
-  const qrVisible = qrEnabled && preferences.qr_documents?.[selectedType] !== false;
-  const headerStyleLabel = preferences.header_style === 'moderne'
-    ? 'Moderne'
-    : preferences.header_style === 'sobriete'
-      ? 'Sobriété'
-      : 'Institutionnel';
-  const notice = selectedType === 'quittance'
-    ? preferences.receipt_notice
-    : selectedType === 'facture'
-      ? preferences.payment_notice
-      : preferences.confidentiality_notice;
-  const optionEntries = Object.entries(preferences.document_options?.[selectedType] ?? {})
-    .filter(([, enabled]) => Boolean(enabled))
-    .slice(0, 6);
-  const normalizedLogoPosition = logoPosition ?? 'left';
-  const textOrder = normalizedLogoPosition === 'right' ? 'order-1' : 'order-2';
-  const logoOrder = normalizedLogoPosition === 'right' ? 'order-2' : 'order-1';
-  const headerLayout = normalizedLogoPosition === 'center'
-    ? 'flex-col items-center text-center'
-    : 'flex-row items-start justify-between';
+  const templateType = DOCUMENT_PREVIEW_TEMPLATE_TYPE[selectedType];
+  const [content, setContent] = useState<DocumentTemplateContent | null>(null);
+  const [templateLoading, setTemplateLoading] = useState(true);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setTemplateLoading(true);
+    setTemplateError(null);
+    resolvePublishedDocumentTemplate(templateType, settings.agency_id)
+      .then((resolved) => {
+        if (cancelled) return;
+        setContent(resolved.content);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setContent(null);
+        setTemplateError(error instanceof Error ? error.message : "Le modèle n'a pas pu être chargé.");
+      })
+      .finally(() => {
+        if (!cancelled) setTemplateLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [templateType, settings.agency_id]);
+
+  const preview = useDocumentPreviewPdf(templateType, content, settings);
 
   return (
     <section className={`rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm ${className}`}>
@@ -3101,127 +2911,13 @@ function SettingsDocumentPreview({
           })}
         </div>
       </div>
-      <div className="mt-1.5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner">
-        <div className={`flex gap-2 px-2.5 py-2 ${headerLayout}`} style={{ borderTop: `3px solid ${primary}` }}>
-          <div className={`min-w-0 ${textOrder}`}>
-            <p className="truncate text-[0.72rem] font-extrabold text-slate-950">{title}</p>
-            <p className="text-[0.5rem] font-bold uppercase tracking-[0.12em]" style={{ color: secondary }}>
-              {preview.title}
-            </p>
-            <p className="mt-0.5 text-[0.54rem] font-semibold text-slate-500">{preview.meta}</p>
-          </div>
-          <div className={`flex shrink-0 items-center gap-1.5 ${logoOrder}`}>
-            {qrVisible && (
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800">
-                <QrCode className="h-3.5 w-3.5" />
-              </div>
-            )}
-            <div className="flex h-8 w-12 items-center justify-center rounded-lg bg-slate-50 p-1.5">
-              {logoUrl ? <SafeLogoImage src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" /> : <FileText className="h-4 w-4 text-slate-400" />}
-            </div>
-          </div>
-        </div>
-        <div className="grid gap-1 px-2.5 py-2 sm:grid-cols-3">
-          <div className="rounded-lg bg-slate-50 px-1.5 py-1">
-            <p className="text-[0.46rem] font-black uppercase tracking-[0.1em] text-slate-400">Référence</p>
-            <p className="truncate text-[0.62rem] font-extrabold text-slate-800">{reference}</p>
-          </div>
-          <div className="rounded-lg bg-emerald-50 px-1.5 py-1">
-            <p className="text-[0.46rem] font-black uppercase tracking-[0.1em] text-emerald-700">Montant</p>
-            <p className="truncate text-[0.62rem] font-extrabold text-emerald-900">{preview.amount}</p>
-          </div>
-          <div className="rounded-lg bg-orange-50 px-1.5 py-1">
-            <p className="text-[0.46rem] font-black uppercase tracking-[0.1em] text-orange-700">Mode</p>
-            <p className="truncate text-[0.62rem] font-extrabold text-orange-900">{headerStyleLabel} · {mode}</p>
-          </div>
-        </div>
-        <div className="space-y-1.5 px-2.5 pb-2">
-          <div className="rounded-lg border border-slate-100 bg-white px-2 py-1.5">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-              <div className="min-w-0">
-                <p className="truncate text-[0.66rem] font-extrabold text-slate-900">{blueprint.subject}</p>
-                <p className="truncate text-[0.54rem] font-semibold text-slate-500">{blueprint.period}</p>
-              </div>
-              <p className="shrink-0 rounded-full bg-slate-50 px-1.5 py-0.5 text-[0.48rem] font-black uppercase tracking-[0.08em] text-slate-500">
-                {qrVisible ? 'QR Verify actif' : 'QR masqué'}
-              </p>
-            </div>
-          </div>
-          <div className="grid gap-1 sm:grid-cols-3">
-            {blueprint.summary.map((item) => {
-              const toneClass = item.tone === 'success'
-                ? 'border-emerald-100 bg-emerald-50 text-emerald-900'
-                : item.tone === 'warning'
-                  ? 'border-orange-100 bg-orange-50 text-orange-900'
-                  : 'border-slate-100 bg-slate-50 text-slate-800';
-              return (
-                <div key={item.label} className={`rounded-lg border px-1.5 py-1 ${toneClass}`}>
-                  <p className="text-[0.45rem] font-black uppercase tracking-[0.1em] opacity-70">{item.label}</p>
-                  <p className="truncate text-[0.58rem] font-extrabold">{item.value}</p>
-                </div>
-              );
-            })}
-          </div>
-          <div className="overflow-hidden rounded-lg border border-slate-100 bg-white">
-            <div className="grid grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] bg-slate-50 px-2 py-1 text-[0.46rem] font-black uppercase tracking-[0.1em] text-slate-400">
-              {blueprint.columns.map((column) => (
-                <span key={column} className="truncate last:text-right">{column}</span>
-              ))}
-            </div>
-            {blueprint.rows.map((row) => (
-              <div key={`${row[0]}-${row[1]}`} className="grid grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)_minmax(0,0.85fr)] border-t border-slate-100 px-2 py-1 text-[0.55rem] font-semibold text-slate-600">
-                <span className="truncate font-extrabold text-slate-800">{row[0]}</span>
-                <span className="truncate">{row[1]}</span>
-                <span className="truncate text-right font-extrabold text-slate-800">{row[2]}</span>
-              </div>
-            ))}
-            <div className="flex items-center justify-between gap-2 border-t border-emerald-100 bg-emerald-50/70 px-2 py-1.5">
-              <span className="text-[0.52rem] font-black uppercase tracking-[0.1em] text-emerald-700">{blueprint.totalLabel}</span>
-              <span className="truncate text-[0.66rem] font-black text-emerald-950">{blueprint.totalValue}</span>
-            </div>
-          </div>
-          <p className="rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-1 text-[0.55rem] font-semibold leading-snug text-slate-500">
-            {blueprint.note}
-          </p>
-        </div>
-        <div className="space-y-1 px-2.5 pb-2 text-[0.56rem] font-semibold text-slate-500">
-          <div className="grid gap-1 sm:grid-cols-2">
-            <div className="rounded-lg border border-slate-100 bg-white px-1.5 py-1">
-              <span className="text-slate-400">Émetteur</span>
-              <p className="truncate font-extrabold text-slate-700">{title}</p>
-            </div>
-            <div className="rounded-lg border border-slate-100 bg-white px-1.5 py-1">
-              <span className="text-slate-400">Vérification</span>
-              <p className="truncate font-extrabold text-slate-700">{qrVisible ? 'QR public actif' : 'QR masqué'}</p>
-            </div>
-          </div>
-          {optionEntries.length > 0 && (
-            <div className="flex flex-wrap gap-1 pt-0.5">
-              {optionEntries.map(([key]) => (
-                <span key={key} className="rounded-full bg-slate-50 px-1.5 py-0.5 text-[0.48rem] font-black uppercase tracking-[0.08em] text-slate-500">
-                  {getDocumentOptionLabel(key)}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="grid gap-2 border-t border-slate-100 px-2.5 py-1.5 text-[0.58rem] font-semibold leading-[0.84rem] text-slate-500 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-end">
-          <div className="min-w-0">
-            {notice && <p className="line-clamp-2 text-slate-600">{notice}</p>}
-            <p className="truncate">Tribunal : {tribunal || 'Non renseigné'}</p>
-            <p className="mt-1 truncate">Pied de page : {footer || 'Non renseigné'}</p>
-          </div>
-          <div className="rounded-lg border border-slate-100 bg-white px-1.5 py-1">
-            <p className="text-[0.45rem] font-black uppercase tracking-[0.1em] text-slate-400">Signature / cachet</p>
-            <div className="mt-1 flex h-9 items-center justify-center rounded-md bg-[#fffdf8] px-1">
-              {signatureUrl ? (
-                <SafeLogoImage src={signatureUrl} alt="Signature ou cachet" className="max-h-full max-w-full object-contain" />
-              ) : (
-                <span className="text-[0.48rem] font-black uppercase tracking-[0.08em] text-slate-300">À configurer</span>
-              )}
-            </div>
-          </div>
-        </div>
+      <div className="mt-1.5 h-[34rem] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-inner">
+        <DocumentTemplatePreview
+          blobUrl={preview.blobUrl}
+          loading={preview.loading || templateLoading}
+          error={templateError ?? preview.error}
+          supported={preview.supported}
+        />
       </div>
     </section>
   );

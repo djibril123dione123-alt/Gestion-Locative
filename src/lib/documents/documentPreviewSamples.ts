@@ -8,6 +8,7 @@
 // ne doit jamais être confondue avec une vraie entité — voir le nom du fichier.
 
 import type { ContratPDFData, MandatPDFData, PaiementPDFData } from '../../types/pdf';
+import type { OwnerReportSnapshotPayload } from '../../services/api/documentSnapshotApi';
 
 /** Référence factice stable, jamais allouée via le compteur réel. */
 export const PREVIEW_REFERENCE_PLACEHOLDER = 'APERCU-0000';
@@ -89,6 +90,47 @@ export function getPaiementPreviewSample(reliquat: number): PaiementPDFData {
         },
       },
     },
+  };
+}
+
+export function getRapportPreviewSample(): OwnerReportSnapshotPayload {
+  return {
+    schemaVersion: 'owner_report_v1',
+    generatedAt: '2026-07-31T00:00:00.000Z',
+    agencyId: 'preview-agency',
+    bailleurId: 'preview-bailleur',
+    period: { start: '2026-07-01', end: '2026-07-31' },
+    owner: { id: 'preview-bailleur', nom: 'Ndiaye', prenom: 'Moussa' },
+    totals: {
+      collected: 1250000,
+      arrears: 150000,
+      commissions: 125000,
+      expenses: 45000,
+      ownerShare: 1080000,
+      netToPay: 1080000,
+      activeContracts: 3,
+      recoveryRate: 89,
+    },
+    contracts: [
+      {
+        contrat_id: 'preview-c1', immeuble_id: 'preview-i1', immeuble: 'Résidence Alima', unite_id: 'preview-u1', unite: 'Appt A1',
+        locataire: 'Aissatou Diop', loyer_mensuel: 450000, encaisse: 450000, reliquat: 0, commission: 45000, part_bailleur: 405000, statut: 'paye',
+      },
+      {
+        contrat_id: 'preview-c2', immeuble_id: 'preview-i1', immeuble: 'Résidence Alima', unite_id: 'preview-u2', unite: 'Appt A2',
+        locataire: 'Ibrahima Fall', loyer_mensuel: 400000, encaisse: 250000, reliquat: 150000, commission: 40000, part_bailleur: 210000, statut: 'partiel',
+      },
+      {
+        contrat_id: 'preview-c3', immeuble_id: 'preview-i2', immeuble: 'Villa Ngor', unite_id: 'preview-u3', unite: 'Villa entière',
+        locataire: 'Cheikh Ba', loyer_mensuel: 550000, encaisse: 550000, reliquat: 0, commission: 40000, part_bailleur: 510000, statut: 'paye',
+      },
+    ],
+    payments: [],
+    expenses: [
+      { id: 'preview-e1', date_depense: '2026-07-05', categorie: 'Plomberie', description: 'Réparation fuite Appt A2', beneficiaire: null, montant: 25000, piece_justificative: null, immeuble_id: 'preview-i1', immeuble: 'Résidence Alima' },
+      { id: 'preview-e2', date_depense: '2026-07-18', categorie: 'Peinture', description: 'Rafraîchissement Villa Ngor', beneficiaire: null, montant: 20000, piece_justificative: null, immeuble_id: 'preview-i2', immeuble: 'Villa Ngor' },
+    ],
+    receivables: [],
   };
 }
 

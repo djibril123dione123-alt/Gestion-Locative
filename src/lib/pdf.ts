@@ -43,6 +43,7 @@ import {
   getContratPreviewSample,
   getMandatPreviewSample,
   getPaiementPreviewSample,
+  getRapportPreviewSample,
   PREVIEW_REFERENCE_PLACEHOLDER,
 } from './documents/documentPreviewSamples';
 
@@ -2886,6 +2887,25 @@ export async function buildMandatPreviewDocument(
 ): Promise<jsPDF> {
   const { doc } = await buildMandatDocument(
     getMandatPreviewSample(),
+    wrapDraftAsResolvedTemplate(content),
+    PREVIEW_REFERENCE_PLACEHOLDER,
+    settings,
+    { previewMode: true },
+  );
+  return doc;
+}
+
+/** Aperçu fidèle d'un rapport financier (bailleur agence ou propriétaire individuel). */
+export async function buildRapportPreviewDocument(
+  reportKind: 'rapport_bailleur' | 'rapport_proprietaire',
+  content: DocumentTemplateContent,
+  settings: Partial<AgencySettings>,
+): Promise<jsPDF> {
+  const { doc } = await buildRapportDocument(
+    reportKind,
+    getRapportPreviewSample(),
+    'Moussa Ndiaye',
+    'Juillet 2026',
     wrapDraftAsResolvedTemplate(content),
     PREVIEW_REFERENCE_PLACEHOLDER,
     settings,

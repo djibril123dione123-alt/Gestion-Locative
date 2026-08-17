@@ -1,6 +1,4 @@
 import React, { useEffect, useState, useCallback, useMemo, type ReactNode } from 'react';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { supabase } from '../lib/supabase';
 import { Modal } from '../components/ui/Modal';
 import { ConfirmModal } from '../components/ui/ConfirmModal';
@@ -34,14 +32,8 @@ import {
   X,
 } from 'lucide-react';
 import {
-  addFooter,
-  drawDocumentHeader,
-  drawLegalVerificationFooter,
-  drawPageBorder,
-  drawSectionFrame,
-  drawTotalsBlock,
+  buildRapportDocument,
   generateMandatBailleurPDF,
-  getAutoTableTheme,
   saveGeneratedPdf,
 } from '../lib/pdf';
 import { useAuth } from '../contexts/AuthContext';
@@ -246,10 +238,6 @@ const EMPTY_PAGE_DATA: BailleurPageData = {
   agencySettings: null,
 };
 
-type PdfWithAutoTable = jsPDF & {
-  lastAutoTable?: { finalY: number };
-};
-
 const DRAWER_PRIMARY_TABS: Array<{ id: DrawerTab; label: string }> = [
   { id: 'overview', label: 'Vue' },
   { id: 'rapports', label: 'Rapports' },
@@ -372,12 +360,6 @@ const formatCurrency = (value: number | null | undefined) => {
   const safeAmount = Number.isFinite(amount) ? amount : 0;
   const formatted = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(safeAmount)).replace(/\u202f|\u00a0/g, ' ');
   return `${formatted} F CFA`;
-};
-
-const formatPdfNumber = (value: number | null | undefined) => {
-  const amount = Number(value ?? 0);
-  const safeAmount = Number.isFinite(amount) ? amount : 0;
-  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Math.round(safeAmount)).replace(/\u202f|\u00a0/g, ' ');
 };
 
 const formatMonthLabel = (month: string) => {
@@ -1165,15 +1147,12 @@ export function Bailleurs() {
         documentKind: accountProfile.isIndividualOwner ? 'rapport_proprietaire' : 'rapport_bailleur',
       });
       const reportData = snapshot.payload;
-      const reportDepenses = reportData.expenses;
       const totalLoyers = Number(reportData.totals.collected);
       const totalReliquats = Number(reportData.totals.arrears);
       const totalCommissions = Number(reportData.totals.commissions);
       const totalDepenses = Number(reportData.totals.expenses);
       const totalNet = Number(reportData.totals.netToPay);
-      const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
+      const recoveryRate = Number(reportData.totals.recoveryRate);
       const settings = await resolveAgencySettingsAssets({
         ...(pageData.agencySettings ?? {}),
         agency_id: pageData.agencySettings?.agency_id ?? profile?.agency_id ?? undefined,
@@ -1188,11 +1167,6 @@ export function Bailleurs() {
         show_document_number: reportTemplate.content.style.showDocumentNumber,
       };
       if (!reportTemplate.content.style.showLogo) settings.logo_url = null;
-      const enabledReportSections = new Set(
-        reportTemplate.content.blocks
-          .filter((block) => block.enabled && block.systemKey)
-          .map((block) => block.systemKey),
-      );
       const periodLabel = formatMonthLabel(reportMonth);
       const reportRef = await allocateDocumentReference({
         documentType: reportTemplateType,
@@ -1203,265 +1177,28 @@ export function Bailleurs() {
         fallback: `RBL-${reportMonth}-${bailleur.id.slice(0, 8).toUpperCase()}`,
       });
       generation.report('building-document', { reference: reportRef });
-      const reportTitle = accountProfile.isIndividualOwner ? 'Résumé mensuel propriétaire' : 'Rapport mensuel bailleur';
       const netLabel = accountProfile.isIndividualOwner ? 'Revenus nets' : 'Net à reverser';
-      const tableTheme = getAutoTableTheme(settings);
-      const recoveryRate = Number(reportData.totals.recoveryRate);
 
-      drawPageBorder(doc, settings);
-      let y = await drawDocumentHeader(doc, settings, reportTitle, formatPersonName(bailleur, ''), {
-        reference: reportRef,
-        issueDate: new Date().toLocaleDateString('fr-FR'),
-        documentType: 'Rapport financier',
-      }) + 8;
-
-      const ensureSpace = (needed: number) => {
-        if (y + needed > pageHeight - 26) {
-          addFooter(doc, settings);
-          doc.addPage();
-          drawPageBorder(doc, settings);
-          y = 24;
-        }
-      };
-
-      const sectionTitle = (title: string, subtitle?: string) => {
-        ensureSpace(subtitle ? 18 : 12);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10.5);
-        doc.setTextColor(15, 23, 42);
-        doc.text(title, 14, y);
-        if (subtitle) {
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8.2);
-          doc.setTextColor(100, 116, 139);
-          doc.text(subtitle, 14, y + 5);
-          y += 10;
-        } else {
-          y += 5.5;
-        }
-        doc.setDrawColor(226, 232, 240);
-        doc.setLineWidth(0.12);
-        doc.line(14, y, pageWidth - 14, y);
-        y += 5.5;
-      };
-
-      sectionTitle('Indicateurs du mois', `Période analysée : ${periodLabel}`);
-      const indicatorItems: Array<[string, string]> = [
-        ...(enabledReportSections.has('collections') ? [['Loyers encaissés', formatCurrency(totalLoyers)] as [string, string]] : []),
-        ...(enabledReportSections.has('arrears') ? [['Reliquats à suivre', formatCurrency(totalReliquats)] as [string, string]] : []),
-        ...(enabledReportSections.has('commissions') && !accountProfile.isIndividualOwner
-          ? [['Commissions agence', formatCurrency(totalCommissions)] as [string, string]]
-          : []),
-        [netLabel, formatCurrency(totalNet)],
-        ['Taux de recouvrement', `${recoveryRate}%`],
-        ...(enabledReportSections.has('occupancy')
-          ? [[
-              'Biens concernés',
-              String(new Set(reportData.contracts.map((contract) => contract.immeuble_id)).size),
-            ] as [string, string]]
-          : []),
-      ];
-      const indicatorBody: string[][] = [];
-      for (let index = 0; index < indicatorItems.length; index += 2) {
-        const left = indicatorItems[index];
-        const right = indicatorItems[index + 1] ?? ['', ''];
-        indicatorBody.push([left[0], left[1], right[0], right[1]]);
-      }
-      autoTable(doc, {
-        body: indicatorBody,
-        startY: y,
-        theme: 'grid',
-        ...tableTheme,
-        styles: {
-          ...tableTheme.styles,
-          fontSize: 8.5,
-          cellPadding: { top: 3, right: 3, bottom: 3, left: 3 },
-        },
-        margin: { left: 14, right: 14 },
-        columnStyles: {
-          0: { fontStyle: 'bold', textColor: [71, 85, 105], cellWidth: 42 },
-          1: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42], cellWidth: 40 },
-          2: { fontStyle: 'bold', textColor: [71, 85, 105], cellWidth: 44 },
-          3: { halign: 'right', fontStyle: 'bold', textColor: [15, 23, 42] },
-        },
-      });
-      y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 11;
-
-      sectionTitle('Synthèse propriétaire');
-      const summaryText = [
-        `Sur la période ${periodLabel}, ${formatPersonName(bailleur, '')} présente ${formatCurrency(totalLoyers)} de loyers encaissés.`,
-        enabledReportSections.has('arrears') && totalReliquats > 0
-          ? `Les reliquats ouverts représentent ${formatCurrency(totalReliquats)} et doivent rester prioritaires dans le suivi de gestion.`
-          : enabledReportSections.has('arrears')
-            ? "Aucun reliquat significatif n'est rattaché aux paiements enregistrés sur cette période."
-            : '',
-        `Le montant ${netLabel.toLowerCase()} ressort à ${formatCurrency(totalNet)}.`,
-      ].join(' ');
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(30, 41, 59);
-      const summaryLines = doc.splitTextToSize(summaryText, 178);
-      doc.text(summaryLines, 14, y);
-      y += summaryLines.length * 4.7 + 9;
+      const { doc, qrEnabled: reportQrEnabled } = await buildRapportDocument(
+        reportTemplateType,
+        reportData,
+        formatPersonName(bailleur, ''),
+        periodLabel,
+        reportTemplate,
+        reportRef,
+        settings,
+        { generation },
+      );
 
       const rows = reportData.contracts.map((contract) => ({
-        id: contract.contrat_id,
         immeuble: contract.immeuble || 'Bien non renseigné',
         unite: contract.unite || 'Unité non renseignée',
         locataire: contract.locataire || 'Locataire non renseigné',
-        loyer: formatPdfNumber(Number(contract.loyer_mensuel)),
         statut: Number(contract.reliquat) > 0 ? 'Partiel' : 'Soldé',
-        encaisse: formatPdfNumber(Number(contract.encaisse)),
-        reliquat: formatPdfNumber(Number(contract.reliquat)),
-        net: formatPdfNumber(Number(contract.part_bailleur)),
+        encaisse: formatCurrency(Number(contract.encaisse)),
+        reliquat: formatCurrency(Number(contract.reliquat)),
+        net: formatCurrency(Number(contract.part_bailleur)),
       }));
-
-      if (enabledReportSections.has('collections') || enabledReportSections.has('occupancy')) {
-      sectionTitle('Détail par bien', 'Lecture par immeuble, unité, locataire et situation financière.');
-      autoTable(doc, {
-        head: [['Bien', 'Unité', 'Locataire', 'Loyer (F CFA)', 'Statut', 'Encaissé (F CFA)', 'Reliquat (F CFA)', 'Net (F CFA)']],
-        body: rows.length
-          ? rows.map((row) => [row.immeuble, row.unite, row.locataire, row.loyer, row.statut, row.encaisse, row.reliquat, row.net])
-          : [['-', '-', 'Aucun paiement enregistré sur la période', '-', '-', '-', '-', '-']],
-        startY: y,
-        theme: 'grid',
-        ...tableTheme,
-        styles: {
-          ...tableTheme.styles,
-          fontSize: 7.4,
-          cellPadding: { top: 2.4, right: 2.1, bottom: 2.4, left: 2.1 },
-          overflow: 'linebreak',
-        },
-        headStyles: {
-          ...tableTheme.headStyles,
-          fontSize: 7.2,
-        },
-        margin: { left: 14, right: 14 },
-        columnStyles: {
-          3: { halign: 'right', cellWidth: 20 },
-          5: { halign: 'right', cellWidth: 22 },
-          6: { halign: 'right', cellWidth: 22 },
-          7: { halign: 'right', cellWidth: 24 },
-        },
-      });
-      y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 10;
-      }
-
-      // --- DIAGRAMME FINANCIER ---
-      if (enabledReportSections.has('collections') || enabledReportSections.has('expenses') || enabledReportSections.has('commissions')) {
-        sectionTitle('Répartition financière');
-        const chartY = y;
-
-        const chartData = [
-          { label: 'Revenus bruts', value: totalLoyers, color: [16, 185, 129] as [number, number, number] },
-          { label: 'Déductions', value: totalCommissions + totalDepenses, color: [244, 63, 94] as [number, number, number] },
-          { label: netLabel, value: totalNet, color: [15, 23, 42] as [number, number, number] }
-        ];
-
-        const maxVal = Math.max(...chartData.map(d => d.value));
-        const chartWidth = 110;
-        const barHeight = 5.5;
-        const spacing = 4.5;
-
-        chartData.forEach((item, idx) => {
-          const itemY = chartY + idx * (barHeight + spacing);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8.5);
-          doc.setTextColor(71, 85, 105);
-          doc.text(item.label, 14, itemY + 4);
-
-          const barWidth = maxVal > 0 ? (item.value / maxVal) * chartWidth : 0;
-
-          doc.setFillColor(241, 245, 249);
-          doc.roundedRect(42, itemY, chartWidth, barHeight, 1, 1, 'F');
-
-          if (barWidth > 0) {
-            doc.setFillColor(...item.color);
-            doc.roundedRect(42, itemY, barWidth, barHeight, 1, 1, 'F');
-          }
-
-          doc.setTextColor(15, 23, 42);
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(8.5);
-          doc.text(formatCurrency(item.value), 42 + chartWidth + 6, itemY + 4);
-        });
-
-        y = chartY + chartData.length * (barHeight + spacing) + 12;
-      }
-      // --- FIN DIAGRAMME ---
-
-      if (enabledReportSections.has('expenses') && reportDepenses.length > 0) {
-        ensureSpace(34);
-        sectionTitle('Dépenses rattachées');
-        autoTable(doc, {
-          head: [['Date', 'Catégorie', 'Description', 'Montant']],
-          body: reportDepenses.slice(0, 12).map((depense) => [
-            formatDate(depense.date_depense),
-            depense.categorie ?? 'Dépense',
-            depense.description ?? 'Sans description',
-            formatCurrency(depense.montant),
-          ]),
-          startY: y,
-          theme: 'grid',
-          ...tableTheme,
-          margin: { left: 14, right: 14 },
-          columnStyles: { 3: { halign: 'right' } },
-        });
-        y = ((doc as PdfWithAutoTable).lastAutoTable?.finalY ?? y) + 10;
-      }
-
-      ensureSpace(42);
-      y = drawTotalsBlock(
-        doc,
-        14,
-        y,
-        pageWidth - 28,
-        [
-          ...(enabledReportSections.has('collections') ? [{ label: 'Loyers encaissés', value: formatCurrency(totalLoyers) }] : []),
-          ...(enabledReportSections.has('arrears') ? [{ label: 'Reliquats à suivre', value: formatCurrency(totalReliquats) }] : []),
-          ...(accountProfile.isIndividualOwner && enabledReportSections.has('expenses')
-            ? [{ label: 'Dépenses', value: formatCurrency(totalDepenses) }]
-            : !accountProfile.isIndividualOwner && enabledReportSections.has('commissions')
-              ? [{ label: 'Commissions agence', value: formatCurrency(totalCommissions) }]
-              : []),
-          { label: netLabel, value: formatCurrency(totalNet), emphasis: true },
-        ],
-        settings,
-      );
-
-      ensureSpace(34);
-      const closingY = drawSectionFrame(doc, 14, y, pageWidth - 28, 30, settings, {
-        title: 'Reversement et authentification',
-        subtitle: `${netLabel} : ${formatCurrency(totalNet)}`,
-        accent: 'neutral',
-      });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.6);
-      doc.setTextColor(71, 85, 105);
-      const closingLines = doc.splitTextToSize(
-        `Aucune note particulière pour cette période. Le rapport consolide les encaissements, reliquats, ${accountProfile.isIndividualOwner ? 'dépenses' : 'commissions'} et montants nets issus du registre financier Samay Këur.`,
-        pageWidth - 42,
-      );
-      doc.text(closingLines, 19, closingY);
-      y += 38;
-
-      const reportQrEnabled =
-        reportTemplate.content.style.showQr &&
-        enabledReportSections.has('qr_verification');
-      if (reportQrEnabled) {
-        generation.report('securing-document', {
-          reference: reportRef,
-          verificationStatus: 'pending',
-        });
-        await drawLegalVerificationFooter(doc, {
-          ref: reportRef,
-          type: 'rapport_bailleur',
-          agency: settings.nom_agence ?? 'Samay Këur',
-          date: new Date().toISOString(),
-          settings,
-        });
-      }
-      addFooter(doc, settings);
 
       await saveGeneratedPdf(doc, {
         kind: 'bilan',

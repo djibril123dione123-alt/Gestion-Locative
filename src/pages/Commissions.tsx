@@ -15,6 +15,7 @@ import {
   getAutoTableTheme,
   saveGeneratedPdf,
 } from '../lib/pdf';
+import { allocateDocumentReference } from '../services/documentTemplateService';
 import { PageSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { FinancePageHeader } from '../components/finance/FinancePrimitives';
@@ -141,17 +142,22 @@ export function Commissions() {
 
   const exportPDF = async () => {
     const agencyId = profile?.agency_id;
-    const reference = `COMM-${selectedMonth}`;
     await runDocumentGeneration(
       {
         key: `commission:${agencyId ?? 'agency'}:${selectedMonth}`,
         kind: 'commission',
         title: 'Préparation du rapport des commissions',
         source: 'commissions',
-        reference,
         archiveExpected: true,
       },
       async (generation) => {
+        const reference = await allocateDocumentReference({
+          documentType: 'commission',
+          entityId: agencyId ?? 'commissions',
+          periodKey: selectedMonth,
+          prefix: 'COMM',
+          fallback: `COMM-${selectedMonth}`,
+        });
         generation.report('building-document', { reference });
         const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
         const monthName = new Date(selectedMonth).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });

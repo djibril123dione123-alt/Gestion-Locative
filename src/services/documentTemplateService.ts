@@ -215,7 +215,8 @@ export async function resolvePublishedDocumentTemplate(
 }
 
 export async function allocateDocumentReference(input: {
-  documentType: DocumentTemplateType;
+  /** Types Studio, plus les documents financiers hors Studio (ex. commission) qui partagent la meme numerotation serveur. */
+  documentType: DocumentTemplateType | 'commission';
   entityId: string;
   periodKey?: string | null;
   format?: string | null;

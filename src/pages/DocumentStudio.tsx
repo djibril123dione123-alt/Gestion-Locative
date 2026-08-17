@@ -9,7 +9,7 @@ import {
   Send,
   SlidersHorizontal,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageShell } from '../components/ui/PageShell';
 import { useAuth } from '../contexts/AuthContext';
 import { PremiumPageHeader } from '../components/ui/PremiumPageHeader';
@@ -31,11 +31,12 @@ import {
   saveDocumentTemplateDraft,
 } from '../services/documentTemplateService';
 import type { AgencySettings } from '../types';
-import type {
-  AgencyDocumentTemplateRow,
-  DocumentTemplateContent,
-  DocumentTemplateRevision,
-  DocumentTemplateType,
+import {
+  DOCUMENT_TEMPLATE_TYPES,
+  type AgencyDocumentTemplateRow,
+  type DocumentTemplateContent,
+  type DocumentTemplateRevision,
+  type DocumentTemplateType,
 } from '../types/documentStudio';
 
 const DOCUMENT_CHOICES: Array<{ type: DocumentTemplateType; label: string }> = [
@@ -136,8 +137,15 @@ export function DocumentStudio() {
   const { accountProfile } = useAuth();
   const isIndividualOwner = accountProfile.isIndividualOwner;
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
-  const [documentType, setDocumentType] = useState<DocumentTemplateType>('contrat');
+  const [documentType, setDocumentType] = useState<DocumentTemplateType>(() => {
+    const requested = searchParams.get('type');
+    if (!requested || !(DOCUMENT_TEMPLATE_TYPES as readonly string[]).includes(requested)) return 'contrat';
+    if (isIndividualOwner && requested === 'rapport_bailleur') return 'rapport_proprietaire';
+    if (!isIndividualOwner && requested === 'rapport_proprietaire') return 'rapport_bailleur';
+    return requested as DocumentTemplateType;
+  });
   const [content, setContent] = useState<DocumentTemplateContent | null>(null);
   const [row, setRow] = useState<AgencyDocumentTemplateRow | null>(null);
   const [history, setHistory] = useState<DocumentTemplateRevision[]>([]);

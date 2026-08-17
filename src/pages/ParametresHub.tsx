@@ -96,7 +96,7 @@ const SECTIONS: SectionConfig[] = [
     label: 'Documents',
     title: 'Documents & identité',
     eyebrow: 'REGISTRE DOCUMENTAIRE',
-    description: 'Modèles, QR Verify, logo et rendu des documents émis.',
+    description: 'Identité visuelle, mentions légales et numérotation — la mise en page se règle dans le Studio.',
     icon: FileText,
   },
   {
@@ -553,7 +553,7 @@ function OverviewSection({
       title: 'Documents',
       label: 'GED / QR',
       value: snapshot?.documentsReady ? 'Prêts' : snapshot?.qrReady ? 'QR actif' : 'À relire',
-      description: 'Mentions, QR Verify, logo, signature et rendu documentaire.',
+      description: 'Mentions légales, logo, signature et numérotation des documents.',
       icon: FileText,
       target: 'documentsIdentity',
       tone: 'slate',

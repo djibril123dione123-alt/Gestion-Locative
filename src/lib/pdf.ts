@@ -854,8 +854,8 @@ export async function drawDocumentHeader(
   }
   doc.setFillColor(...colors.paper);
   doc.rect(3.6, 0, pageWidth - 3.6, 8.5, 'F');
-  doc.setDrawColor(226, 213, 181);
-  doc.setLineWidth(0.22);
+  doc.setDrawColor(...colors.gold);
+  doc.setLineWidth(0.35);
   doc.line(3.6, 8.5, pageWidth, 8.5);
 
   const logoPosition = settings.logo_position ?? 'left';

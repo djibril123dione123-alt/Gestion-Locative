@@ -1141,7 +1141,7 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
                 <div className="mt-2 grid grid-cols-2 gap-1.5">
                   <SettingsStatusCard label="Mode" value={documentModeLabel} icon={FileText} />
                   <SettingsStatusCard label="Couleurs" value={`${settings.couleur_primaire ?? '#F58220'} / ${settings.couleur_secondaire ?? '#D9AA5E'}`} icon={Sparkles} />
-                  <SettingsStatusCard label="Pénalités" value={`${settings.penalite_retard_montant ?? 0} F / jour`} icon={ShieldCheck} />
+                  <SettingsStatusCard label="Pénalité de retard" value={`${settings.penalite_retard_montant ?? 0} F / jour`} icon={ShieldCheck} />
                   <SettingsStatusCard label="Mis à jour" value={formatCompactDate(settings.updated_at)} icon={CheckCircle} />
                 </div>
                 <div className="mt-2 grid grid-cols-3 gap-1.5">
@@ -1162,10 +1162,9 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               </section>
 
               <SettingsInfoCard title="Mentions officielles" eyebrow="REGISTRE" icon={FileText}>
-                <InfoLine label="Tribunal" value={settings.mention_tribunal} multiline />
+                <InfoLine label="Clause tribunal" value={settings.mention_tribunal} multiline />
+                <InfoLine label="Clause pénalités" value={settings.mention_penalites} multiline />
                 <InfoLine label="Pied de page" value={settings.pied_page_personnalise} multiline />
-                <InfoLine label="Frais huissier" value={`${settings.frais_huissier ?? 0} F CFA`} />
-                <InfoLine label="Pénalités" value={settings.mention_penalites} multiline />
               </SettingsInfoCard>
 
               {embeddedMode === 'documentsIdentity' && (
@@ -1192,6 +1191,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
             </div>
             <SettingsDocumentPreview
               settings={settings}
+              logoUrl={logoPreview}
+              signatureUrl={signaturePreview}
               selectedType={documentPreviewType}
               onSelectType={setDocumentPreviewType}
               className="lg:min-h-full"
@@ -1225,6 +1226,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
             </SettingsInfoCard>
             <SettingsDocumentPreview
               settings={settings}
+              logoUrl={logoPreview}
+              signatureUrl={signaturePreview}
               selectedType={documentPreviewType}
               onSelectType={setDocumentPreviewType}
             />
@@ -1638,6 +1641,8 @@ export function Parametres({ initialTab = 'general', embedded = false, embeddedM
               </div>
               <SettingsDocumentPreview
                 settings={settings}
+                logoUrl={logoPreview}
+                signatureUrl={signaturePreview}
                 selectedType={documentPreviewType}
                 onSelectType={setDocumentPreviewType}
               />
@@ -1923,11 +1928,16 @@ function ColorLine({ label, value }: { label: string; value: string }) {
  */
 function SettingsDocumentPreview({
   settings,
+  logoUrl,
+  signatureUrl,
   selectedType,
   onSelectType,
   className = '',
 }: {
   settings: Partial<AgencySettings>;
+  /** URL signee deja resolue (settings.logo_url n'est qu'un chemin de stockage, pas une URL chargeable). */
+  logoUrl?: string;
+  signatureUrl?: string;
   selectedType: DocumentPreviewType;
   onSelectType: (type: DocumentPreviewType) => void;
   className?: string;
@@ -1959,7 +1969,11 @@ function SettingsDocumentPreview({
     };
   }, [templateType, settings.agency_id]);
 
-  const preview = useDocumentPreviewPdf(templateType, content, settings);
+  const previewSettings = useMemo(
+    () => ({ ...settings, logo_url: logoUrl || null, signature_url: signatureUrl || null }),
+    [settings, logoUrl, signatureUrl],
+  );
+  const preview = useDocumentPreviewPdf(templateType, content, previewSettings);
 
   return (
     <section className={`rounded-xl border border-emerald-950/10 bg-[#fffdf8] p-2 shadow-sm ${className}`}>

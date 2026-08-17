@@ -127,7 +127,7 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const { data: txn, error: txnErr } = await supabase
       .from("payment_transactions")
-      .select("id, agency_id, plan_id, amount_xof, phone, status")
+      .select("id, agency_id, plan_id, amount_xof, phone, status, is_founder_cycle")
       .eq("invoice_token", invoiceToken)
       .maybeSingle();
 
@@ -162,6 +162,7 @@ serve(async (req) => {
         p_transaction_id: txn.id,
         p_amount_xof: txn.amount_xof,
         p_phone: txn.phone,
+        p_is_founder_cycle: txn.is_founder_cycle ?? false,
       });
 
       if (activateErr) {

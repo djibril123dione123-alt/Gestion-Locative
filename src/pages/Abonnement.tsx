@@ -24,7 +24,7 @@ import { PageSkeleton } from '../components/ui/Skeleton';
 import { formatStorageSize, getAgencyStorageUsage, type StorageUsage } from '../services/documentStorage';
 import gmailLogo from '../assets/support/gmail.png';
 import whatsappLogo from '../assets/support/whatsapp.jpg';
-import { CONTACT_EMAIL, CONTACT_WHATSAPP, PRICING_PLAN_DEFINITIONS, type PlanId } from '../lib/pricingCatalog';
+import { CONTACT_EMAIL, CONTACT_WHATSAPP, FOUNDER_OFFER, PRICING_PLAN_DEFINITIONS, type PlanId } from '../lib/pricingCatalog';
 
 interface Plan {
   id: string;
@@ -53,6 +53,9 @@ interface Agency {
   status: string;
   plan: string;
   trial_ends_at: string | null;
+  founder_eligible: boolean | null;
+  founder_paid_cycles_used: number | null;
+  founder_cycles_total: number | null;
 }
 
 interface Usage {
@@ -108,6 +111,7 @@ const PLAN_CATALOG = PRICING_PLAN_DEFINITIONS.map((plan) => ({
   id: plan.id,
   name: plan.name,
   price_xof: plan.price_xof,
+  founder_price_xof: plan.founderPriceXof ?? null,
   max_users: plan.limits.max_users,
   max_immeubles: plan.limits.max_immeubles,
   max_unites: plan.limits.max_unites,
@@ -173,7 +177,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
     setLoading(true);
     try {
       const [agencyRes, subRes, limitsRes, storageRes] = await Promise.all([
-        supabase.from('agencies').select('id, name, status, plan, trial_ends_at').eq('id', profile.agency_id).single(),
+        supabase.from('agencies').select('id, name, status, plan, trial_ends_at, founder_eligible, founder_paid_cycles_used, founder_cycles_total').eq('id', profile.agency_id).single(),
         supabase.from('subscriptions').select('*, subscription_plans(*)').eq('agency_id', profile.agency_id).order('created_at', { ascending: false }),
         supabase.rpc('check_plan_limits', { p_agency_id: profile.agency_id }),
         getAgencyStorageUsage(profile.agency_id).catch(() => null),
@@ -240,6 +244,17 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
   const catalogPlan   = PLAN_CATALOG.find((p) => p.id === currentPlanId) ?? PLAN_CATALOG[0];
   const displayedPlanName = catalogPlan.name;
   const selectedCatalogPlan = PLAN_CATALOG.find((p) => p.id === selectedPlanId) ?? PLAN_CATALOG[1];
+
+  // Offre Fondateurs : acquise à l'agence tant qu'il lui reste des cycles payants
+  // fondateurs — jamais retirée en cours de route même si l'offre publique ferme.
+  const founderCyclesUsed = agency?.founder_paid_cycles_used ?? 0;
+  const founderCyclesTotal = agency?.founder_cycles_total ?? FOUNDER_OFFER.paidCycles;
+  const founderActive = Boolean(agency?.founder_eligible) && founderCyclesUsed < founderCyclesTotal;
+  const founderCyclesLeft = Math.max(0, founderCyclesTotal - founderCyclesUsed);
+  const effectivePrice = (plan: (typeof PLAN_CATALOG)[number]) =>
+    founderActive && plan.founder_price_xof ? plan.founder_price_xof : plan.price_xof;
+  const isFounderPrice = (plan: (typeof PLAN_CATALOG)[number]) =>
+    founderActive && Boolean(plan.founder_price_xof);
   const manualProofFormId = 'manual-proof-wizard-form';
   const proofCatalogPlan = PLAN_CATALOG.find((plan) => plan.id === proofForm.plan_key) ?? selectedCatalogPlan;
   const proofAmount = Number(proofForm.amount || 0);
@@ -515,11 +530,26 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                 </div>
                 <p className={embedded ? 'mt-0.5 text-[1rem] font-extrabold text-slate-900' : 'text-2xl font-extrabold text-slate-900 mt-0.5'} data-testid="text-current-plan">
                   {displayedPlanName}
+                  {isFounderPrice(catalogPlan) && (
+                    <span className="ml-2 inline-flex rounded-full bg-emerald-900 px-2 py-0.5 align-middle text-[0.5rem] font-black uppercase tracking-[0.08em] text-white">
+                      {FOUNDER_OFFER.badgeLabel}
+                    </span>
+                  )}
                 </p>
                 <p className={embedded ? 'mt-0.5 text-[0.7rem] text-slate-400' : 'text-sm text-slate-400 mt-0.5'}>
-                  {catalogPlan.price_xof > 0
-                    ? <>{formatCurrency(catalogPlan.price_xof)}<span className="text-xs">/mois</span></>
-                    : <span className="text-green-600 font-semibold">Sur devis</span>}
+                  {catalogPlan.price_xof > 0 ? (
+                    isFounderPrice(catalogPlan) ? (
+                      <span className="inline-flex flex-wrap items-baseline gap-1.5">
+                        <span className="font-extrabold text-slate-900">{formatCurrency(effectivePrice(catalogPlan))}<span className="text-xs font-semibold text-slate-400">/mois</span></span>
+                        <span className="text-xs text-slate-400 line-through">{formatCurrency(catalogPlan.price_xof)}</span>
+                        <span className="text-[0.62rem] font-semibold text-emerald-700">Offre Fondateurs · {founderCyclesLeft} cycle{founderCyclesLeft > 1 ? 's' : ''} payant{founderCyclesLeft > 1 ? 's' : ''} restant{founderCyclesLeft > 1 ? 's' : ''}</span>
+                      </span>
+                    ) : (
+                      <>{formatCurrency(catalogPlan.price_xof)}<span className="text-xs">/mois</span></>
+                    )
+                  ) : (
+                    <span className="text-green-600 font-semibold">Sur devis</span>
+                  )}
                 </p>
               </div>
             </div>
@@ -635,7 +665,9 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
         <div className={embedded ? 'mb-2.5 flex items-center justify-between' : 'flex items-center justify-between mb-5'}>
           <div>
             <h2 className={embedded ? 'text-[0.82rem] font-extrabold text-slate-900' : 'font-bold text-slate-900 text-lg'}>Comparer les plans</h2>
-            <p className={embedded ? 'mt-0.5 text-[0.68rem] text-slate-400' : 'text-sm text-slate-400 mt-0.5'}>Sans engagement · Orange Money · Wave · Djamo · Carte</p>
+            <p className={embedded ? 'mt-0.5 text-[0.68rem] text-slate-400' : 'text-sm text-slate-400 mt-0.5'}>
+              {FOUNDER_OFFER.trialDays} jours d'essai offerts avant la première échéance · Orange Money · Wave · Djamo · Carte
+            </p>
           </div>
           <a href="#/pricing" className="text-xs font-semibold flex items-center gap-1 hover:opacity-80 transition" style={{ color: '#F58220' }}>
             Voir tout <ArrowUpRight className="w-3.5 h-3.5" />
@@ -668,11 +700,29 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg" style={{ backgroundColor: plan.color + '18' }}>
                     <Icon className="h-3.5 w-3.5" style={{ color: plan.color }} />
                   </div>
-                  <div>
-                    <p className="text-[0.76rem] font-bold text-slate-900">{plan.name}</p>
-                    <p className="text-[0.66rem] font-semibold" style={{ color: plan.color }}>
-                      {plan.price_xof > 0 ? formatCurrency(plan.price_xof) + '/mois' : 'Sur devis'}
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-1 text-[0.76rem] font-bold text-slate-900">
+                      {plan.name}
+                      {isFounderPrice(plan) && (
+                        <span className="rounded-full bg-emerald-900 px-1.5 py-0.5 text-[0.44rem] font-black uppercase tracking-[0.06em] text-white">
+                          {FOUNDER_OFFER.badgeLabel}
+                        </span>
+                      )}
                     </p>
+                    {plan.price_xof > 0 ? (
+                      isFounderPrice(plan) ? (
+                        <p className="flex flex-wrap items-baseline gap-1 text-[0.66rem] font-semibold">
+                          <span style={{ color: plan.color }}>{formatCurrency(effectivePrice(plan))}/mois</span>
+                          <span className="text-slate-400 line-through">{formatCurrency(plan.price_xof)}</span>
+                        </p>
+                      ) : (
+                        <p className="text-[0.66rem] font-semibold" style={{ color: plan.color }}>
+                          {formatCurrency(plan.price_xof)}/mois
+                        </p>
+                      )
+                    ) : (
+                      <p className="text-[0.66rem] font-semibold" style={{ color: plan.color }}>Sur devis</p>
+                    )}
                   </div>
                 </div>
 
@@ -707,6 +757,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
             );
           })}
         </div>
+        <p className="mt-3 text-[0.6rem] leading-4 text-slate-400">{FOUNDER_OFFER.disclaimer}</p>
       </div>
 
       {/* ── Historique ── */}
@@ -807,7 +858,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
               </div>
               <div className="shrink-0 text-right">
                 <span className="inline-flex rounded-full border border-white/[0.12] bg-white/[0.05] px-3.5 py-1.5 text-[0.7rem] font-bold tracking-widest text-white shadow-inner backdrop-blur-md">
-                  {catalogPlan.price_xof > 0 ? `${formatCurrency(catalogPlan.price_xof)} / MOIS` : 'SUR DEVIS'}
+                  {catalogPlan.price_xof > 0 ? `${formatCurrency(effectivePrice(catalogPlan))} / MOIS` : 'SUR DEVIS'}
                 </span>
               </div>
             </div>
@@ -854,10 +905,28 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
                         <Icon className="h-6 w-6" style={!isEnterprise ? { color: plan.color } : { color: '#f8fafc' }} />
                       </div>
                       <div className="min-w-0">
-                        <p className={`truncate text-[1.1rem] font-black transition-colors duration-300 ${isEnterprise ? 'text-white group-hover:text-slate-200' : 'text-slate-900 group-hover:text-emerald-950'}`}>{plan.name}</p>
-                        <p className={`text-[0.75rem] font-extrabold mt-0.5 ${isEnterprise ? 'text-slate-400' : ''}`} style={!isEnterprise ? { color: plan.color } : {}}>
-                          {plan.price_xof > 0 ? `${formatCurrency(plan.price_xof)}/mois` : 'Sur devis'}
+                        <p className={`flex flex-wrap items-center gap-1.5 truncate text-[1.1rem] font-black transition-colors duration-300 ${isEnterprise ? 'text-white group-hover:text-slate-200' : 'text-slate-900 group-hover:text-emerald-950'}`}>
+                          {plan.name}
+                          {isFounderPrice(plan) && (
+                            <span className="rounded-full bg-emerald-900 px-1.5 py-0.5 text-[0.44rem] font-black uppercase tracking-[0.06em] text-white">
+                              {FOUNDER_OFFER.badgeLabel}
+                            </span>
+                          )}
                         </p>
+                        {plan.price_xof > 0 ? (
+                          isFounderPrice(plan) ? (
+                            <p className="mt-0.5 flex flex-wrap items-baseline gap-1 text-[0.75rem] font-extrabold">
+                              <span style={{ color: plan.color }}>{formatCurrency(effectivePrice(plan))}/mois</span>
+                              <span className="text-[0.65rem] font-semibold text-slate-400 line-through">{formatCurrency(plan.price_xof)}</span>
+                            </p>
+                          ) : (
+                            <p className={`text-[0.75rem] font-extrabold mt-0.5 ${isEnterprise ? 'text-slate-400' : ''}`} style={!isEnterprise ? { color: plan.color } : {}}>
+                              {formatCurrency(plan.price_xof)}/mois
+                            </p>
+                          )
+                        ) : (
+                          <p className={`text-[0.75rem] font-extrabold mt-0.5 ${isEnterprise ? 'text-slate-400' : ''}`}>Sur devis</p>
+                        )}
                       </div>
                     </div>
                     {isCurr ? (
@@ -1086,7 +1155,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
         onClose={() => setPaymentOpen(false)}
         planId={selectedPlanId}
         planName={selectedCatalogPlan.name}
-        priceXof={selectedCatalogPlan.price_xof}
+        priceXof={effectivePrice(selectedCatalogPlan)}
         onSuccess={() => {
           setPaymentOpen(false);
           toast.success(`Plan ${selectedCatalogPlan.name} activé pour 30 jours !`);

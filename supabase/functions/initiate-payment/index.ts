@@ -51,13 +51,6 @@ function err(msg: string, status = 400) {
   return json({ error: msg }, status);
 }
 
-const PLAN_PRICES: Record<string, number> = {
-  starter:    5000,
-  pro:        15000,
-  business:   35000,
-  enterprise: 0,    // sur devis — bypass price check
-};
-
 const Schema = z.object({
   plan_id:    z.string(),
   provider:   z.enum(["orange_money", "wave", "djamo", "card"]),
@@ -87,14 +80,6 @@ serve(async (req) => {
     const { plan_id, provider, phone, amount_xof, agency_id } = parsed.data;
     const idempotencyKey = parsed.data.idempotency_key?.trim() || crypto.randomUUID();
 
-    // Vérification prix côté serveur
-    const expectedPrice = PLAN_PRICES[plan_id];
-    if (expectedPrice === undefined) return err(`Plan inconnu : ${plan_id}`);
-    if (expectedPrice <= 0) return err("Ce plan ne peut pas etre paye automatiquement. Contactez le support.", 422);
-    if (expectedPrice > 0 && amount_xof !== expectedPrice) {
-      return err(`Montant invalide pour le plan ${plan_id}. Attendu : ${expectedPrice} XOF`);
-    }
-
     // Pour les paiements mobile, le téléphone est requis
     if (provider !== "card" && !phone) {
       return err("Numéro de téléphone requis pour ce moyen de paiement");
@@ -102,7 +87,8 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Vérification JWT → agency ownership
+    // Vérification JWT → agency ownership (avant toute lecture liée à agency_id,
+    // pour ne jamais révéler à un tiers si une agence est éligible fondateur).
     const jwt = authHeader.replace("Bearer ", "");
     const anonClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") ?? "");
     const { data: { user } } = await anonClient.auth.getUser(jwt);
@@ -118,34 +104,75 @@ serve(async (req) => {
       return err("Acces refuse", 403);
     }
 
-    if (profile?.agency_id === agency_id) {
-      const { data: existingTxn, error: existingErr } = await supabase
-        .from("payment_transactions")
-        .select("id, invoice_token, status")
-        .eq("agency_id", agency_id)
-        .eq("idempotency_key", idempotencyKey)
-        .maybeSingle();
+    if (!profile || profile.agency_id !== agency_id) return err("Accès refusé", 403);
 
-      if (existingErr) {
-        console.error("[initiate-payment] idempotency lookup error:", existingErr.message);
-        return err("Erreur verification transaction", 500);
-      }
+    // Idempotence : une tentative déjà initiée avec la même clé renvoie la même transaction.
+    const { data: existingTxn, error: existingErr } = await supabase
+      .from("payment_transactions")
+      .select("id, invoice_token, status")
+      .eq("agency_id", agency_id)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
 
-      if (existingTxn) {
-        const checkoutUrl = existingTxn.invoice_token
-          ? `${PAYDUNYA_CHECKOUT_BASE}/${existingTxn.invoice_token}`
-          : undefined;
-        return json({
-          transaction_id: existingTxn.id,
-          invoice_token: existingTxn.invoice_token,
-          checkout_url: checkoutUrl,
-          status: existingTxn.status,
-          idempotent: true,
-        });
-      }
+    if (existingErr) {
+      console.error("[initiate-payment] idempotency lookup error:", existingErr.message);
+      return err("Erreur verification transaction", 500);
     }
 
-    if (!profile || profile.agency_id !== agency_id) return err("Accès refusé", 403);
+    if (existingTxn) {
+      const checkoutUrl = existingTxn.invoice_token
+        ? `${PAYDUNYA_CHECKOUT_BASE}/${existingTxn.invoice_token}`
+        : undefined;
+      return json({
+        transaction_id: existingTxn.id,
+        invoice_token: existingTxn.invoice_token,
+        checkout_url: checkoutUrl,
+        status: existingTxn.status,
+        idempotent: true,
+      });
+    }
+
+    // ── Vérification prix côté serveur ──────────────────────────────────────
+    // Source unique : subscription_plans (prix public + prix fondateur), et
+    // l'état fondateur réel de l'agence (agencies.founder_eligible /
+    // founder_paid_cycles_used / founder_cycles_total). Jamais de prix accepté
+    // depuis le frontend sans revérification ici.
+    const { data: plan, error: planErr } = await supabase
+      .from("subscription_plans")
+      .select("price_xof, founder_price_xof")
+      .eq("id", plan_id)
+      .maybeSingle();
+
+    if (planErr) {
+      console.error("[initiate-payment] plan lookup error:", planErr.message);
+      return err("Erreur vérification du plan", 500);
+    }
+    if (!plan) return err(`Plan inconnu : ${plan_id}`);
+    if (!plan.price_xof || plan.price_xof <= 0) {
+      return err("Ce plan ne peut pas etre paye automatiquement. Contactez le support.", 422);
+    }
+
+    const { data: agency, error: agencyErr } = await supabase
+      .from("agencies")
+      .select("founder_eligible, founder_paid_cycles_used, founder_cycles_total")
+      .eq("id", agency_id)
+      .maybeSingle();
+
+    if (agencyErr) {
+      console.error("[initiate-payment] agency lookup error:", agencyErr.message);
+      return err("Erreur vérification de l'agence", 500);
+    }
+
+    const isFounderCycle = Boolean(
+      agency?.founder_eligible
+      && plan.founder_price_xof
+      && (agency.founder_paid_cycles_used ?? 0) < (agency.founder_cycles_total ?? 0),
+    );
+    const expectedPrice = isFounderCycle ? plan.founder_price_xof! : plan.price_xof;
+
+    if (amount_xof !== expectedPrice) {
+      return err(`Montant invalide pour le plan ${plan_id}. Attendu : ${expectedPrice} XOF`);
+    }
 
     // Créer la transaction en DB (status=pending)
     const { data: txn, error: txnErr } = await supabase
@@ -158,6 +185,7 @@ serve(async (req) => {
         status: "pending",
         phone: phone ?? null,
         idempotency_key: idempotencyKey,
+        is_founder_cycle: isFounderCycle,
       })
       .select("id")
       .single();

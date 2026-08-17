@@ -7,6 +7,9 @@ export interface PricingPlanDefinition {
   audience: string;
   price_xof: number;
   priceLabel: string;
+  /** Prix Offre Fondateurs (12 premiers cycles payants) — absent si le plan n'est pas concerné. */
+  founderPriceXof?: number;
+  founderPriceLabel?: string;
   billingLabel: string;
   positioning: string;
   outcome: string;
@@ -94,6 +97,8 @@ export const PRICING_PLAN_DEFINITIONS: PricingPlanDefinition[] = [
     audience: 'Gestionnaire indépendant ou petite structure',
     price_xof: 15000,
     priceLabel: '15 000 F CFA',
+    founderPriceXof: 12000,
+    founderPriceLabel: '12 000 F CFA',
     billingLabel: 'par mois',
     positioning: 'Pour professionnaliser les encaissements et partager une information fiable.',
     outcome: 'Plus de capacité, une petite équipe et des rapports prêts à présenter aux propriétaires.',
@@ -137,6 +142,8 @@ export const PRICING_PLAN_DEFINITIONS: PricingPlanDefinition[] = [
     audience: 'Agence immobilière et équipe de gestion',
     price_xof: 35000,
     priceLabel: '35 000 F CFA',
+    founderPriceXof: 29000,
+    founderPriceLabel: '29 000 F CFA',
     billingLabel: 'par mois',
     positioning: 'Pour coordonner plusieurs gestionnaires et piloter un portefeuille plus important.',
     outcome: 'Une capacité agence, des accès maîtrisés et une vision consolidée des opérations.',
@@ -218,6 +225,21 @@ export const PRICING_PLAN_DEFINITIONS: PricingPlanDefinition[] = [
 ];
 
 export const PLAN_ORDER = PRICING_PLAN_DEFINITIONS.map((plan) => plan.id);
+
+/**
+ * Offre Fondateurs : tarif préférentiel sur les 12 premiers cycles payants
+ * (starter et enterprise ne sont pas concernés). L'éligibilité réelle d'une
+ * agence (founder_eligible / founder_paid_cycles_used / founder_cycles_total)
+ * est une donnée serveur (table agencies) — ces constantes ne sont que la
+ * copy et les durées, jamais une source de vérité sur le prix facturé.
+ */
+export const FOUNDER_OFFER = {
+  paidCycles: 12,
+  trialDays: 30,
+  badgeLabel: 'OFFRE FONDATEURS',
+  disclaimer:
+    "Offre Fondateurs réservée aux premières agences clientes. Tarif préférentiel appliqué pendant 12 mois payants, puis retour au tarif public en vigueur. Les 30 jours d'essai restent disponibles pour toute nouvelle agence.",
+} as const;
 
 export function getPricingPlan(planId: string | null | undefined) {
   return PRICING_PLAN_DEFINITIONS.find((plan) => plan.id === planId) ?? PRICING_PLAN_DEFINITIONS[0];

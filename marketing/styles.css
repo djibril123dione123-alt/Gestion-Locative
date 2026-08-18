@@ -1201,6 +1201,8 @@ dd {
 .flow-visual img {
   width: 100%;
   height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
   display: block;
 }
 
@@ -1293,6 +1295,8 @@ dd {
 .demo-main-visual img {
   width: 100%;
   height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
   display: block;
 }
 
@@ -1347,6 +1351,8 @@ dd {
   width: 100%;
   border-radius: 8px;
   border: 1px solid var(--mk-line-light);
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
 }
 
 .demo-proofs {

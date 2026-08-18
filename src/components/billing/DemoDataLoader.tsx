@@ -325,7 +325,7 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
           {confirmReset && (
             <div className="mb-3 flex items-start gap-2 rounded-xl border border-orange-200 bg-white/85 p-3 text-sm font-semibold text-orange-900">
               <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              <span>Supprimer les donnees exemples ? Cette action retire uniquement les exemples generes par Samay Keur. Vos vraies donnees ne seront pas supprimees.</span>
+              <span>Supprimer les donnees exemples ? Cette action retire uniquement les exemples generes par Samay Këur. Vos vraies donnees ne seront pas supprimees.</span>
             </div>
           )}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -411,7 +411,7 @@ export function DemoDataLoader({ onLoaded, compact = false, variant = 'full' }: 
               {confirmReset && (
                 <div className="mb-3 flex items-start gap-2 rounded-xl border border-orange-200 bg-orange-50 p-3 text-sm font-semibold text-orange-900">
                   <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-                  <span>Cette action supprimera uniquement les exemples generes par Samay Keur. Vos vraies donnees ne seront pas supprimees.</span>
+                  <span>Cette action supprimera uniquement les exemples generes par Samay Këur. Vos vraies donnees ne seront pas supprimees.</span>
                 </div>
               )}
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

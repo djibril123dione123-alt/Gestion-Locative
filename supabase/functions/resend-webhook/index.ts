@@ -29,8 +29,10 @@ serve(async (req) => {
 
     switch (eventType) {
       case "email.sent":
+        status = "sent";
+        break;
       case "email.delivered":
-        status = "sent"; // or 'delivered' if we add it to the schema, but schema currently only has 'sent'
+        status = "delivered";
         break;
       case "email.delivery_delayed":
         status = "pending";

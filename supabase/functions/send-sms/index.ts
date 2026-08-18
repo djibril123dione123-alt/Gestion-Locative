@@ -55,10 +55,20 @@ async function getOrangeToken(): Promise<string> {
 }
 
 // ─── Envoi SMS ────────────────────────────────────────────────────────────────
-async function sendSms(to: string, message: string): Promise<string> {
+async function sendSms(to: string, message: string, notifId: string): Promise<string> {
   const token = await getOrangeToken();
-  // Normaliser le numéro : +221XXXXXXXXX
-  const phone = to.startsWith("+") ? to : `+221${to.replace(/\D/g, "").slice(-9)}`;
+  
+  // Normaliser le numéro
+  const cleaned = to.replace(/\D/g, "");
+  // Si le numéro commence déjà par l'indicatif (ex: 221...), on le garde, sinon on suppose le Sénégal (+221)
+  const phone = cleaned.startsWith("221") || cleaned.startsWith("225") || cleaned.startsWith("223") 
+    ? `+${cleaned}` 
+    : `+221${cleaned.slice(-9)}`;
+
+  if (!/^\+[1-9]\d{10,14}$/.test(phone)) {
+    throw new Error(`Invalid phone number format: ${phone}`);
+  }
+
   const senderEncoded = encodeURIComponent(ORANGE_SENDER);
 
   const res = await fetch(
@@ -70,8 +80,12 @@ async function sendSms(to: string, message: string): Promise<string> {
         outboundSMSMessageRequest: {
           address: [`tel:${phone}`],
           senderAddress: ORANGE_SENDER,
+          senderName: "Samay Keur",
           outboundSMSTextMessage: { message },
-          receiptRequest: { notifyURL: "", callbackData: "" },
+          receiptRequest: { 
+            notifyURL: `${SUPABASE_URL}/functions/v1/orangesms-webhook`, 
+            callbackData: notifId 
+          },
         },
       }),
     }
@@ -148,11 +162,11 @@ serve(async (req) => {
       }
 
       try {
-        const resourceUrl = await sendSms(phone, message);
+        const providerId = await sendSms(phone, message, notif.id);
         await supabase.from("notification_queue").update({
           status: "sent",
           sent_at: new Date().toISOString(),
-          provider_id: resourceUrl,
+          provider_id: providerId,
         }).eq("id", notif.id);
         sent++;
       } catch (smsErr) {

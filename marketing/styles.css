@@ -1103,78 +1103,68 @@ dd {
   border-color: rgba(245, 130, 32, 0.26);
 }
 
-.docs-layout {
-  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+.trust-flow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-top: 3rem;
 }
 
-.docs-showcase {
+@media (min-width: 768px) {
+  .trust-flow {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+.flow-step {
   position: relative;
-  min-height: 620px;
-}
-
-.docs-marketing-visual {
-  position: absolute;
-  inset: 52px 4% auto 18%;
-  overflow: hidden;
-  border: 1px solid rgba(6, 17, 13, 0.1);
-  border-radius: 36px;
-  background: #fff;
-  box-shadow: 0 26px 80px rgba(6, 17, 13, 0.12);
-}
-
-.docs-marketing-visual img {
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-  opacity: 0.84;
-}
-
-.receipt-preview {
-  position: absolute;
-  inset: 0 auto auto 0;
-  z-index: 2;
-  width: 64%;
-  border-radius: 30px;
-}
-
-.receipt-preview img {
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  object-fit: contain;
-  padding: 18px;
-  background: #fff;
-}
-
-.qr-preview {
-  position: absolute;
-  right: 0;
-  bottom: 32px;
-  z-index: 3;
-  width: 58%;
-  border-radius: 28px;
-}
-
-.qr-preview img {
-  width: 100%;
-  aspect-ratio: 16 / 11;
-  object-fit: cover;
-}
-
-.document-points {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 30px;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  background: #ffffff;
+  border: 1px solid var(--mk-line-light);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
 }
 
-.document-points span {
-  border: 1px solid rgba(6, 17, 13, 0.1);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--sk-brand-800);
-  font-size: 0.82rem;
-  font-weight: 900;
-  padding: 10px 12px;
+.flow-dot {
+  position: absolute;
+  top: -6px;
+  left: 20px;
+  width: 12px;
+  height: 12px;
+  background: #052e16; /* Dark brand */
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+.flow-step strong {
+  font-family: var(--mk-font-display);
+  font-size: 1.05rem;
+  color: var(--mk-dark);
+}
+
+.flow-step p {
+  font-size: 0.85rem;
+  color: var(--mk-gray-600);
+  line-height: 1.4;
+}
+
+.flow-visual {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--mk-line-light);
+  background: #f8fafc;
+}
+
+.flow-visual img {
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 .report-frame {
@@ -1520,7 +1510,7 @@ dd {
   .story-grid,
   .feature-grid,
   .feature-grid.reverse,
-  .docs-layout,
+  .trust-flow,
   .faq-layout,
   .before-after,
   .platform-composition,

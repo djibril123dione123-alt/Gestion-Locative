@@ -17,6 +17,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAppUrl } from "../_shared/app-url.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -27,8 +28,8 @@ const CORS = {
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const FROM_EMAIL = "Samay Këur <no-reply@samaykeur.sn>";
-const APP_URL = Deno.env.get("APP_URL") ?? "https://app.samaykeur.com";
+const FROM_EMAIL = "Samay Këur <notifications@samaykeur.com>";
+const APP_URL = getAppUrl();
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: CORS });
@@ -75,7 +76,7 @@ function baseHtml(title: string, body: string): string {
   <div class="body">${body}</div>
   <div class="footer">
     <p>Samay Këur — Gestion locative pour l'Afrique francophone</p>
-    <p>Questions ? <a href="mailto:support@samaykeur.sn" style="color:#F58220">support@samaykeur.sn</a></p>
+    <p>Questions ? <a href="mailto:support@samaykeur.com" style="color:#F58220">support@samaykeur.com</a></p>
   </div>
 </div>
 </body></html>`;

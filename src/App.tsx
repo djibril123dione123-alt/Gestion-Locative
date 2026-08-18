@@ -131,7 +131,7 @@ function isMissingSettingsColumnError(error: { code?: string; message?: string }
 }
 
 function AppContent() {
-    const { user, profile, accountProfile, loading } = useAuth();
+    const { user, profile, accountProfile, loading, recoveryMode } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -433,6 +433,13 @@ function AppContent() {
             alive = false;
         };
     }, [profile?.agency_id, profile?.id, profile?.role]);
+
+    // Priorité absolue : une session de récupération de mot de passe ne doit
+    // jamais laisser passer vers le tableau de bord, une invitation, ou toute
+    // autre route — même si Supabase a techniquement établi une session valide.
+    if (recoveryMode) {
+        return <Auth initialMode="reset" />;
+    }
 
     if (invitationToken) {
         return (

@@ -5,6 +5,7 @@ import { deriveAccountProfile, type AccountProfile } from '../lib/accountProfile
 import type { Agency } from '../types/database';
 import { clearOfflineClientData, isOfflineError, withReadTimeout } from '../services/offlineReadCache';
 import { acceptTenantLegalTerms } from '../services/tenantProfileCommands';
+import { getAppRedirectUrl } from '../lib/appUrl';
 
 interface AuthContextType {
   user: User | null;
@@ -12,10 +13,16 @@ interface AuthContextType {
   agency: Agency | null;
   accountProfile: AccountProfile;
   loading: boolean;
+  recoveryMode: boolean;
+  authUrlError: string | null;
+  clearAuthUrlError: () => void;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: (options?: GoogleSignInOptions) => Promise<void>;
   signUp: (email: string, password: string, profileData: Partial<UserProfile>) => Promise<void>;
   signOut: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
+  exitRecoveryMode: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,6 +31,7 @@ const AGENCY_SELECT_EXTENDED = `${AGENCY_SELECT_LEGACY},organization_type`;
 const AUTH_CACHE_PREFIX = 'sk_auth_profile:';
 const AUTH_READ_TIMEOUT_MS = 5_000;
 const OAUTH_TERMS_STORAGE_KEY = 'sk_oauth_terms_acceptance';
+const RECOVERY_MODE_STORAGE_KEY = 'sk_password_recovery_pending';
 
 type GoogleSignInOptions = {
   acceptedTermsAt?: string;
@@ -38,13 +46,56 @@ function shouldRetryLegacyAgencySelect(error: { message?: string; code?: string 
 }
 
 function getOAuthRedirectUrl(): string {
-  const appUrl = (import.meta.env.VITE_PUBLIC_APP_URL || import.meta.env.VITE_APP_URL || '').replace(/\/+$/, '');
-  const isLocal =
-    typeof window !== 'undefined' &&
-    ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+  return getAppRedirectUrl('/login');
+}
 
-  const origin = isLocal || !appUrl ? window.location.origin : appUrl;
-  return `${origin}/login`;
+function getPasswordResetRedirectUrl(): string {
+  // Volontairement le même chemin réel (non-hash) que l'OAuth : Supabase Auth
+  // remplace tout fragment existant par le sien (#access_token=...&type=recovery),
+  // donc une route HashRouter encodée ici serait de toute façon écrasée.
+  // App.tsx/AuthContext distinguent ensuite un callback de récupération d'une
+  // connexion normale via l'événement PASSWORD_RECOVERY, pas via l'URL.
+  return getAppRedirectUrl('/login');
+}
+
+function readRecoveryModeFlag(): boolean {
+  try {
+    return sessionStorage.getItem(RECOVERY_MODE_STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeRecoveryModeFlag(active: boolean) {
+  try {
+    if (active) sessionStorage.setItem(RECOVERY_MODE_STORAGE_KEY, '1');
+    else sessionStorage.removeItem(RECOVERY_MODE_STORAGE_KEY);
+  } catch {
+    /* noop */
+  }
+}
+
+/**
+ * Supabase encode les erreurs de lien (expiré, invalide, déjà utilisé) directement
+ * dans le fragment d'URL : #error=access_denied&error_code=otp_expired&error_description=...
+ * Lu une seule fois au montage, avant que la logique OAuth/recovery ne nettoie l'URL.
+ */
+function readAndConsumeHashError(): string | null {
+  if (typeof window === 'undefined') return null;
+  const hash = window.location.hash;
+  if (!hash.includes('error=')) return null;
+
+  const params = new URLSearchParams(hash.replace(/^#\/?/, ''));
+  const code = params.get('error_code');
+  const description = params.get('error_description');
+
+  if (code === 'otp_expired') {
+    return 'Ce lien a expiré. Demandez-en un nouveau.';
+  }
+  if (code || description) {
+    return 'Ce lien est invalide ou a déjà été utilisé. Demandez-en un nouveau.';
+  }
+  return null;
 }
 
 function readPendingOAuthTerms(): GoogleSignInOptions | null {
@@ -94,7 +145,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [agency, setAgency] = useState<Agency | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recoveryMode, setRecoveryMode] = useState<boolean>(() => readRecoveryModeFlag());
+  const [authUrlError, setAuthUrlError] = useState<string | null>(() => readAndConsumeHashError());
   const accountProfile = useMemo(() => deriveAccountProfile(agency), [agency]);
+
+  const clearAuthUrlError = () => setAuthUrlError(null);
 
   const readCachedAuth = (userId: string): { profile: UserProfile; agency: Agency | null } | null => {
     try {
@@ -135,6 +190,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Prevent concurrent loadProfile calls (race condition guard)
   const loadingProfileRef = useRef(false);
+  // onAuthStateChange est enregistré une seule fois (effet à dépendances vides) :
+  // il faut un ref, pas l'état recoveryMode directement, pour lire sa valeur
+  // courante à l'intérieur de ce callback sans le recréer à chaque changement.
+  const recoveryModeRef = useRef(recoveryMode);
+  useEffect(() => {
+    recoveryModeRef.current = recoveryMode;
+  }, [recoveryMode]);
 
   const loadAgency = async (agencyId: string): Promise<Agency | null> => {
     const extended = await withReadTimeout(
@@ -262,6 +324,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!mounted) return;
+
+        // Lien de réinitialisation cliqué : Supabase établit une session valide
+        // uniquement pour changer le mot de passe. Ne JAMAIS la traiter comme une
+        // connexion normale (pas de loadProfile, pas de redirection dashboard) —
+        // sinon un lien de récupération deviendrait un accès complet à l'app.
+        if (_event === 'PASSWORD_RECOVERY') {
+          setUser(session?.user ?? null);
+          setRecoveryMode(true);
+          writeRecoveryModeFlag(true);
+          setLoading(false);
+          if (typeof window !== 'undefined') {
+            window.history.replaceState(null, document.title, `${window.location.origin}/#/login`);
+          }
+          return;
+        }
+
+        // Une session de récupération déjà active (ex: rechargement de page pendant
+        // la saisie du nouveau mot de passe) continue d'être traitée comme telle,
+        // même si l'événement suivant n'est plus PASSWORD_RECOVERY — seul un succès
+        // de mise à jour ou une annulation explicite (exitRecoveryMode) en sort.
+        if (recoveryModeRef.current) {
+          setUser(session?.user ?? null);
+          setLoading(false);
+          return;
+        }
 
         const newUser = session?.user ?? null;
         setUser(newUser);
@@ -408,8 +495,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.hash = '#/dashboard';
   };
 
+  // Anti-enumeration : Supabase répond succès dans les deux cas (compte existant
+  // ou non) — ne jamais faire dépendre le message affiché du contenu de la
+  // réponse, uniquement de la présence/absence d'une erreur réseau/serveur.
+  const requestPasswordReset = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: getPasswordResetRedirectUrl(),
+    });
+    if (error) throw error;
+  };
+
+  // Ne doit être appelée qu'à l'intérieur d'une session de récupération valide
+  // (recoveryMode === true) — updateUser échoue de toute façon sans session,
+  // mais l'appelant (écran "Nouveau mot de passe") doit garantir ce contexte.
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+    // Le mot de passe est changé : on invalide la session de récupération et on
+    // force une reconnexion propre avec le nouveau mot de passe, pour ne jamais
+    // laisser une session "recovery" se transformer silencieusement en session
+    // applicative normale.
+    await exitRecoveryMode();
+  };
+
+  const exitRecoveryMode = async () => {
+    writeRecoveryModeFlag(false);
+    setRecoveryMode(false);
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      /* noop — on nettoie l'état local de toute façon */
+    }
+    setUser(null);
+    setProfile(null);
+    setAgency(null);
+    setLoading(false);
+    if (typeof window !== 'undefined') {
+      window.history.replaceState(null, document.title, `${window.location.origin}/#/login`);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, profile, agency, accountProfile, loading, signIn, signInWithGoogle, signUp, signOut }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        agency,
+        accountProfile,
+        loading,
+        recoveryMode,
+        authUrlError,
+        clearAuthUrlError,
+        signIn,
+        signInWithGoogle,
+        signUp,
+        signOut,
+        requestPasswordReset,
+        updatePassword,
+        exitRecoveryMode,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

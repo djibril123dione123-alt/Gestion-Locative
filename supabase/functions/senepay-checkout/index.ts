@@ -16,6 +16,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { getAppUrl } from "../_shared/app-url.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -29,7 +30,7 @@ const SENEPAY_API_SECRET = Deno.env.get("SENEPAY_API_SECRET") ?? "";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const APP_URL = Deno.env.get("APP_URL") ?? "https://app.samaykeur.com";
+const APP_URL = getAppUrl();
 const WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/senepay-webhook`;
 
 function json(body: unknown, status = 200) {

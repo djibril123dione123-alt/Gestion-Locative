@@ -28,7 +28,9 @@ const CORS = {
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const FROM_EMAIL = "Samay Këur <notifications@samaykeur.com>";
+const FROM_NOTIFICATIONS = "Samay Këur <notifications@samaykeur.com>";
+const FROM_RAPPORTS = "Samay Këur <rapports@samaykeur.com>";
+const FROM_BILLING = "Samay Këur <billing@samaykeur.com>";
 const APP_URL = getAppUrl();
 
 function json(body: unknown, status = 200) {
@@ -252,11 +254,23 @@ serve(async (req) => {
         toName = `${admin.prenom ?? ""} ${admin.nom ?? ""}`.trim() || toEmail;
       }
 
-      // Enrichir template_data avec agency info si besoin
-      if (!notif.template_data?.agency_name) {
-        const { data: agency } = await supabase.from("agencies").select("name, trial_ends_at").eq("id", notif.agency_id).maybeSingle();
+      let fromEmail = FROM_NOTIFICATIONS;
+      if (['rapport_mensuel', 'loyer_encaisse_bailleur'].includes(notif.type)) {
+        fromEmail = FROM_RAPPORTS;
+      } else if (['payment_confirmed', 'renewal_reminder', 'suspension_warning', 'suspension_notice'].includes(notif.type)) {
+        fromEmail = FROM_BILLING;
+      }
+
+      let replyTo: string | undefined = undefined;
+
+      // Enrichir template_data avec agency info si besoin ou récupérer email agence pour Reply-To
+      if (!notif.template_data?.agency_name || fromEmail === FROM_RAPPORTS) {
+        const { data: agency } = await supabase.from("agencies").select("name, trial_ends_at, email").eq("id", notif.agency_id).maybeSingle();
         if (agency) {
           notif.template_data = { ...notif.template_data, agency_name: agency.name, trial_ends_at: agency.trial_ends_at };
+          if (fromEmail === FROM_RAPPORTS && agency.email) {
+            replyTo = agency.email;
+          }
         }
       }
 
@@ -267,16 +281,21 @@ serve(async (req) => {
         continue;
       }
 
+      const resendPayload: any = {
+        from: fromEmail,
+        to: [`${toName} <${toEmail}>`],
+        subject: notif.subject ?? email.subject,
+        html: email.html,
+      };
+      if (replyTo) {
+        resendPayload.reply_to = replyTo;
+      }
+
       // Envoi via Resend
       const resendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: FROM_EMAIL,
-          to: [`${toName} <${toEmail}>`],
-          subject: notif.subject ?? email.subject,
-          html: email.html,
-        }),
+        body: JSON.stringify(resendPayload),
       });
 
       const resendBody = await resendRes.json();

@@ -56,7 +56,9 @@ type ModuleFieldToggleKey =
   | 'module_inventaires_actif'
   | 'module_interventions_actif'
   | 'mode_avance_actif'
-  | 'qr_code_quittances';
+  | 'qr_code_quittances'
+  | 'email_notifications_actif'
+  | 'sms_notifications_actif';
 type ModuleToggleTarget =
   | { kind: 'field'; key: ModuleFieldToggleKey }
   | { kind: 'enabled_modules'; key: string; defaultEnabled?: boolean };
@@ -404,11 +406,23 @@ function buildSettingsModuleCategories(settings: SettingsState): SettingsModuleC
         { label: 'Maintenance', description: 'Demandes, interventions et priorités.', ...optional('module_interventions_actif', Boolean(settings.module_interventions_actif)) },
         { label: 'Planning', description: 'Opérations terrain et calendrier.', impact: 'Calendrier équipe', ...moduleToggle('planning', false) },
         { label: 'Visites et états', description: 'Suivi terrain léger pour les rendez-vous et contrôles.', impact: 'Mobile terrain', status: 'prepared' },
-        {
-          label: 'Notifications bailleurs',
-          description: 'Emails, SMS et relances selon les réglages agence.',
-          impact: 'Communication',
-          status: settings.email_notifications_actif || settings.sms_notifications_actif ? 'active' : 'prepared',
+      ],
+    },
+    {
+      category: 'Communication',
+      description: 'Automatisation des échanges avec les bailleurs et locataires.',
+      items: [
+        { 
+          label: 'Emails transactionnels', 
+          description: 'Envoi automatisé des quittances, reçus et rapports.', 
+          impact: 'Email', 
+          ...optional('email_notifications_actif', Boolean(settings.email_notifications_actif)) 
+        },
+        { 
+          label: 'Alertes SMS', 
+          description: 'Relances de loyers et alertes d\'impayés via Orange SMS.', 
+          impact: 'SMS', 
+          ...optional('sms_notifications_actif', Boolean(settings.sms_notifications_actif)) 
         },
       ],
     },

@@ -39,10 +39,10 @@ serve(async (req) => {
     const agencyIds = [...new Set(settings.map(s => s.agency_id))];
     const { data: agencySettings } = await supabase
       .from("agency_settings")
-      .select("agency_id, communications_email_enabled")
+      .select("agency_id, email_notifications_actif")
       .in("agency_id", agencyIds);
 
-    const emailEnabledMap = new Map(agencySettings?.map(as => [as.agency_id, as.communications_email_enabled ?? true])); 
+    const emailEnabledMap = new Map(agencySettings?.map(as => [as.agency_id, as.email_notifications_actif ?? false])); 
     const results = [];
 
     // On détermine le mois précédent car le rapport du mois M est envoyé au début du mois M+1

@@ -59,11 +59,20 @@ serve(async (req) => {
         const { data: contrats } = await supabase
           .from("contrats")
           .select(`
-            id, loyer_mensuel, date_echeance_jour,
+            id, loyer_mensuel, date_echeance_jour, agency_id,
             locataires (prenom, nom, telephone, email),
             unites (nom)
           `)
           .eq("statut", "actif");
+
+        const agencyIds = [...new Set(contrats?.map(c => c.agency_id) ?? [])];
+        const { data: agencySettings } = await supabase
+          .from("agency_settings")
+          .select("agency_id, sms_notifications_actif, email_notifications_actif")
+          .in("agency_id", agencyIds);
+
+        const emailEnabled = new Map(agencySettings?.map(as => [as.agency_id, as.email_notifications_actif ?? false]));
+        const smsEnabled = new Map(agencySettings?.map(as => [as.agency_id, as.sms_notifications_actif ?? false]));
 
         let tenantQueued = 0;
         for (const c of (contrats ?? []) as Record<string, unknown>[]) {
@@ -79,7 +88,7 @@ serve(async (req) => {
             date_echeance: `1er ${new Date(today.getFullYear(), today.getMonth() + 1, 1).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}`,
           };
 
-          if (loc.email) {
+          if (loc.email && emailEnabled.get(c.agency_id as string)) {
             await supabase.from("notification_queue").insert({
               agency_id: c.agency_id,
               type: "rappel_locataire",
@@ -91,7 +100,7 @@ serve(async (req) => {
             });
             tenantQueued++;
           }
-          if (loc.telephone) {
+          if (loc.telephone && smsEnabled.get(c.agency_id as string)) {
             await supabase.from("notification_queue").insert({
               agency_id: c.agency_id,
               type: "rappel_locataire",
@@ -129,6 +138,14 @@ serve(async (req) => {
 
       let overdueQueued = 0;
       const agenciesAlerted = new Set<string>();
+      
+      const agencyIds = [...new Set(impayes?.map(p => p.agency_id) ?? [])];
+      const { data: agencySettings } = await supabase
+        .from("agency_settings")
+        .select("agency_id, email_notifications_actif, sms_notifications_actif")
+        .in("agency_id", agencyIds);
+
+      const emailEnabled = new Map(agencySettings?.map(as => [as.agency_id, as.email_notifications_actif ?? false]));
 
       for (const p of (impayes ?? []) as Record<string, unknown>[]) {
         if (agenciesAlerted.has(p.agency_id as string)) continue;
@@ -149,19 +166,21 @@ serve(async (req) => {
 
         if ((count ?? 0) > 0) continue;
 
-        await supabase.from("notification_queue").insert({
-          agency_id: p.agency_id,
-          type: "impaye_agent_alerte",
-          channel: "email",
-          template_data: {
-            locataire_nom: `${loc?.prenom ?? ""} ${loc?.nom ?? ""}`.trim(),
-            unite_nom: unite?.nom,
-            montant_total: p.montant_total,
-            mois_concerne: p.mois_concerne,
-            days_late: daysLate,
-          },
-        });
-        overdueQueued++;
+        if (emailEnabled.get(p.agency_id as string)) {
+          await supabase.from("notification_queue").insert({
+            agency_id: p.agency_id,
+            type: "impaye_agent_alerte",
+            channel: "email",
+            template_data: {
+              locataire_nom: `${loc?.prenom ?? ""} ${loc?.nom ?? ""}`.trim(),
+              unite_nom: unite?.nom,
+              montant_total: p.montant_total,
+              mois_concerne: p.mois_concerne,
+              days_late: daysLate,
+            },
+          });
+          overdueQueued++;
+        }
       }
       results.overdue_alerts = { queued: overdueQueued };
     }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getAppOrigin } from '../../lib/appUrl';
 import {
   ArrowLeft,
   ArrowRight,
@@ -158,7 +159,7 @@ export function OnboardingWizard({ isOpen, onClose, onComplete }: OnboardingWiza
       role: form.inviteRole,
       daysValid: 7,
     });
-    return `${window.location.origin}/?token=${invitation.token}`;
+    return `${getAppOrigin()}/?token=${invitation.token}`;
   };
 
   const save = async () => {

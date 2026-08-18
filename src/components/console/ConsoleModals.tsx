@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getAppOrigin } from '../../lib/appUrl';
 import { X, AlertTriangle, Building2, UserPlus, UserCog, CreditCard, Copy, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { formatSenegalPhoneInput, normalizeSenegalPhone } from '../../lib/formatters';
@@ -239,7 +240,7 @@ export function InviteUserModal({ open, onClose, agencies, actorId, actorEmail, 
 
       const result = data as { token?: string } | null;
       if (!result?.token) throw new Error('Invitation créée sans jeton exploitable.');
-      const url = `${window.location.origin}/?token=${result.token}`;
+      const url = `${getAppOrigin()}/?token=${result.token}`;
       setLink(url);
 
       onInvited();

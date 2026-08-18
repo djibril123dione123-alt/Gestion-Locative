@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { getAppOrigin } from '../lib/appUrl';
 import {
   Check,
   ChevronDown,
@@ -599,7 +600,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         message: JSON.stringify({ access_preset: invitePreset, note: inviteNote.trim() || null }),
         daysValid: 7,
       });
-      const link = `${window.location.origin}/?token=${invitation.token}`;
+      const link = `${getAppOrigin()}/?token=${invitation.token}`;
       setGeneratedLink(link);
       toast.success("Invitation créée. Copiez le lien pour l'envoyer.");
       loadData();
@@ -986,7 +987,7 @@ export function Equipe({ embedded = false, sectionMode = 'team' }: EquipeProps =
         ) : (
           <ul className="divide-y divide-slate-100">
             {invitations.map((invitation) => {
-              const link = `${window.location.origin}/?token=${invitation.token}`;
+              const link = `${getAppOrigin()}/?token=${invitation.token}`;
               const preset = getInvitationPreset(invitation);
               const sentAt = new Date(invitation.created_at).toLocaleDateString('fr-FR');
               return (

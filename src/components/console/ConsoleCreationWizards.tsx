@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type FormEvent } from 'react';
+import { getAppOrigin } from '../../lib/appUrl';
 import {
   Building2,
   Check,
@@ -470,7 +471,7 @@ export function InviteConsoleUserWizard({
       if (rpcError) throw rpcError;
       const result = data as { token?: string } | null;
       if (!result?.token) throw new Error('Invitation créée sans lien exploitable.');
-      setLink(`${window.location.origin}/?token=${result.token}`);
+      setLink(`${getAppOrigin()}/?token=${result.token}`);
       await onInvited();
     } catch (caught) {
       setError(commandErrorMessage(caught, 'L’invitation n’a pas pu être créée. Vérifiez les informations puis réessayez.'));

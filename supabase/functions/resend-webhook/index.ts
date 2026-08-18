@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Webhook } from "npm:svix@1.24.0";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const RESEND_WEBHOOK_SECRET = Deno.env.get("RESEND_WEBHOOK_SECRET") ?? ""; // To be verified if SVIX signature validation is added
+const RESEND_WEBHOOK_SECRET = Deno.env.get("RESEND_WEBHOOK_SECRET") ?? "";
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -15,7 +16,32 @@ serve(async (req) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   try {
-    const body = await req.json();
+    const payloadString = await req.text();
+    const svixId = req.headers.get("svix-id");
+    const svixTimestamp = req.headers.get("svix-timestamp");
+    const svixSignature = req.headers.get("svix-signature");
+
+    if (!svixId || !svixTimestamp || !svixSignature) {
+      return json({ error: "Missing svix headers" }, 400);
+    }
+
+    if (!RESEND_WEBHOOK_SECRET) {
+      console.warn("RESEND_WEBHOOK_SECRET is not set, skipping verification for dev");
+    } else {
+      const wh = new Webhook(RESEND_WEBHOOK_SECRET);
+      try {
+        wh.verify(payloadString, {
+          "svix-id": svixId,
+          "svix-timestamp": svixTimestamp,
+          "svix-signature": svixSignature,
+        });
+      } catch (err) {
+        console.error("Invalid svix signature:", err);
+        return json({ error: "Invalid signature" }, 400);
+      }
+    }
+
+    const body = JSON.parse(payloadString);
     const eventType = body.type; // e.g., email.sent, email.delivered
     const emailId = body.data?.email_id; // Resend email ID
 
@@ -35,12 +61,21 @@ serve(async (req) => {
         status = "delivered";
         break;
       case "email.delivery_delayed":
-        status = "pending";
+        status = "delayed";
         break;
       case "email.bounced":
-      case "email.failed":
+        status = "bounced";
+        error = `Resend event: ${eventType}`;
+        break;
       case "email.complained":
+        status = "complained";
+        error = `Resend event: ${eventType}`;
+        break;
       case "email.suppressed":
+        status = "suppressed";
+        error = `Resend event: ${eventType}`;
+        break;
+      case "email.failed":
         status = "failed";
         error = `Resend event: ${eventType}`;
         break;

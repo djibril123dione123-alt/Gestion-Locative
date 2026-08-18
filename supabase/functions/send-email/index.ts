@@ -18,6 +18,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { getAppUrl } from "../_shared/app-url.ts";
+import { logError } from "../_shared/sentry.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -203,6 +204,25 @@ function buildEmail(notif: NotifRow): { subject: string; html: string } | null {
       };
     }
 
+    case "rapport_mensuel": {
+      const month = d.mois_concerne ?? "du mois";
+      return {
+        subject: `📄 Votre rapport mensuel ${month} est disponible`,
+        html: baseHtml("Rapport mensuel", `
+          <h2 style="color:#1a1a2e;margin-top:0">Bonjour ${d.bailleur_nom},</h2>
+          <p>Votre rapport de gestion pour la période <strong>${month}</strong> vient d'être généré.</p>
+          <div class="card">
+            <div class="stat"><span class="stat-label">Total encaissé</span><span class="stat-value">${fmtXof(Number(d.total_encaisse ?? 0))}</span></div>
+            <div class="stat"><span class="stat-label">Commissions</span><span class="stat-value">- ${fmtXof(Number(d.total_commission ?? 0))}</span></div>
+            <div class="stat"><span class="stat-label">Dépenses</span><span class="stat-value">- ${fmtXof(Number(d.total_depenses ?? 0))}</span></div>
+            <div class="stat"><span class="stat-label" style="font-weight:700">Net à reverser</span><span class="stat-value" style="color:#28a745;font-size:18px;font-weight:700">${fmtXof(Number(d.net_reverser ?? 0))}</span></div>
+          </div>
+          <p>Vous pouvez consulter les détails de ce rapport en accédant à votre espace :</p>
+          <a href="${d.magic_link ?? APP_URL}" class="btn">Voir mon rapport</a>
+        `),
+      };
+    }
+
     default:
       return null;
   }
@@ -316,13 +336,13 @@ serve(async (req) => {
           scheduled_for: new Date(Date.now() + 15 * 60_000).toISOString(),
         }).eq("id", notif.id);
         failed++;
-        console.error(`[send-email] Resend error for ${notif.id}:`, errorMsg);
+        logError("send-email", "Resend error for " + notif.id, errorMsg);
       }
     }
 
-    return json({ success: true, sent, failed, skipped });
-  } catch (err) {
-    console.error("[send-email] Erreur:", err);
+    return json({ processed: sent + failed + skipped, sent, failed, skipped });
+  } catch (err: any) {
+    logError("send-email", "Worker error", err);
     return json({ error: "Erreur interne", detail: String(err) }, 500);
   }
 });

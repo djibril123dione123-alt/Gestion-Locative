@@ -16,6 +16,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logError } from "../_shared/sentry.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -178,13 +179,13 @@ serve(async (req) => {
           scheduled_for: new Date(Date.now() + 10 * 60_000).toISOString(),
         }).eq("id", notif.id);
         failed++;
-        console.error(`[send-sms] Erreur pour ${notif.id}:`, errMsg);
+        logError("send-sms", "SMS error for " + notif.id, errMsg);
       }
     }
 
-    return json({ success: true, sent, failed, skipped });
-  } catch (err) {
-    console.error("[send-sms] Erreur inattendue:", err);
+    return json({ processed: sent + failed + skipped, sent, failed, skipped });
+  } catch (err: any) {
+    logError("send-sms", "Worker error", err);
     return json({ error: "Erreur interne", detail: String(err) }, 500);
   }
 });

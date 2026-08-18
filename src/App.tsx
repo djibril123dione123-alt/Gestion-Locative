@@ -610,6 +610,20 @@ function AppContent() {
                 return <AuditDashboard />;
             case 'pricing':
                 return <Pricing onNavigate={handleNavigate} />;
+            case 'sentry-test':
+                return (
+                    <div className="flex h-screen w-full items-center justify-center bg-slate-50">
+                        <div className="text-center">
+                            <h1 className="text-xl font-bold text-slate-800 mb-4">Sentry Test Route</h1>
+                            <button 
+                                onClick={() => { throw new Error("Sentry E2E Test Error from Frontend"); }}
+                                className="bg-red-600 hover:bg-red-700 text-white font-medium px-6 py-2 rounded-lg"
+                            >
+                                Trigger Error
+                            </button>
+                        </div>
+                    </div>
+                );
             default:
                 return <Dashboard onNavigate={handleNavigate} onStartSetupWizard={() => setShowOnboardingWizard(true)} />;
         }

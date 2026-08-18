@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Users,
+  Smartphone,
 } from 'lucide-react';
 
 import { PageShell } from '../components/ui/PageShell';
@@ -27,6 +28,8 @@ import { getPricingPlan } from '../lib/pricingCatalog';
 import type { AgencySettings } from '../types/agency';
 import gmailLogo from '../assets/support/gmail.png';
 import whatsappLogo from '../assets/support/whatsapp.jpg';
+import { InstallSamayKeurGuide } from '../components/pwa/InstallSamayKeurGuide';
+import { usePwaInstall } from '../hooks/usePwaInstall';
 
 const Parametres = lazy(() => import('./Parametres').then((m) => ({ default: m.Parametres })));
 const Equipe = lazy(() => import('./Equipe').then((m) => ({ default: m.Equipe })));
@@ -737,6 +740,9 @@ function PanelCard({
 }
 
 function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isIndividualOwner: boolean }) {
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const { isInstalled, platform } = usePwaInstall();
+
   const statuses: Array<{ label: string; value: string; icon: ComponentType<{ className?: string }> }> = [
     { label: 'Application', value: 'Opérationnelle', icon: CheckCircle2 },
     { label: 'Documents', value: 'Disponibles', icon: FileText },
@@ -813,6 +819,24 @@ function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isI
       <PanelCard title="Données sensibles" eyebrow="CONFIDENTIALITÉ" icon={Activity}>
         <p>Les statuts techniques restent volontairement synthétiques : aucun secret, token ou détail interne sensible n'est exposé.</p>
       </PanelCard>
+      
+      {!isInstalled && (
+        <PanelCard title="Installer l'application" eyebrow="ACCÈS RAPIDE" icon={Smartphone}>
+          <p>
+            {platform === 'desktop' 
+              ? 'Installez Samay Këur sur votre ordinateur pour y accéder plus rapidement.'
+              : 'Ajoutez Samay Këur à votre écran d\'accueil pour une expérience optimale.'}
+          </p>
+          <button
+            onClick={() => setShowInstallGuide(true)}
+            className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.72rem] font-extrabold text-slate-800 shadow-2xs transition hover:bg-slate-50 hover:border-slate-300"
+          >
+            Installer Samay Këur
+          </button>
+        </PanelCard>
+      )}
+
+      <InstallSamayKeurGuide isOpen={showInstallGuide} onClose={() => setShowInstallGuide(false)} />
     </div>
   );
 }

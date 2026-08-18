@@ -15,6 +15,7 @@ import { BrandMark, BrandedLoader } from './components/brand/BrandLogo';
 import { PageSkeleton } from './components/ui/Skeleton';
 import { DocumentGeneratedModal } from './components/documents/DocumentGeneratedModal';
 import { OnboardingWizard } from './components/onboarding/OnboardingWizard';
+import { InstallSamayKeurGuide } from './components/pwa/InstallSamayKeurGuide';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useOfflineSync } from './hooks/useOfflineSync';
 import { supabase } from './lib/supabase';
@@ -33,6 +34,7 @@ import { identifyUser, trackPageView } from './lib/analytics';
 import { readWithCache } from './services/offlineReadCache';
 import { warmOfflineRouteCache } from './services/offlineRoutePreloader';
 import { getOnboardingCompletionStatus, markOnboardingComplete } from './components/onboarding/onboardingStorage';
+import { shouldShowInstallPrompt } from './services/installPromptStorage';
 
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Bailleurs = lazy(() => import('./pages/Bailleurs').then(m => ({ default: m.Bailleurs })));
@@ -157,6 +159,7 @@ function AppContent() {
         }
     });
     const [showOnboardingWizard, setShowOnboardingWizard] = useState(false);
+    const [showInstallGuide, setShowInstallGuide] = useState(false);
 
     // Derive current page from URL (React Router)
     const externalAuthMode = getExternalAuthMode();
@@ -433,6 +436,19 @@ function AppContent() {
             alive = false;
         };
     }, [profile?.agency_id, profile?.id, profile?.role]);
+
+    // Logique d'affichage automatique du guide d'installation PWA
+    useEffect(() => {
+        // On ne l'affiche que si l'utilisateur est bien connecté, a un profil,
+        // n'a pas refusé l'installation, et que l'on est pas sur une page spéciale (auth, accueil)
+        if (profile?.id && shouldShowInstallPrompt() && !showOnboardingWizard) {
+            const timer = setTimeout(() => {
+                setShowInstallGuide(true);
+            }, 30000); // 30 secondes d'utilisation avant de proposer
+            
+            return () => clearTimeout(timer);
+        }
+    }, [profile?.id, showOnboardingWizard]);
 
     // Priorité absolue : une session de récupération de mot de passe ne doit
     // jamais laisser passer vers le tableau de bord, une invitation, ou toute
@@ -726,6 +742,12 @@ function AppContent() {
                     setShowOnboardingWizard(false);
                     window.dispatchEvent(new CustomEvent('samaykeur:data-changed', { detail: { domains: [] } }));
                 }}
+            />
+            
+            {/* Guide d'installation PWA */}
+            <InstallSamayKeurGuide 
+                isOpen={showInstallGuide} 
+                onClose={() => setShowInstallGuide(false)} 
             />
         </div>
     );

@@ -30,7 +30,16 @@ import {
   Briefcase,
   Check,
   X,
+  Clock,
+  History,
+  Shield,
+  Target,
+  UserCircle2,
+  UserPlus,
+  MoreHorizontal,
 } from 'lucide-react';
+import { MicroMetric } from '../components/ui/MicroMetric';
+import { LandlordReportSettingsUI } from '../components/bailleurs/LandlordReportSettingsUI';
 import {
   buildRapportDocument,
   generateMandatBailleurPDF,
@@ -1577,6 +1586,12 @@ export function Bailleurs() {
               </p>
             </div>
           </section>
+
+          <LandlordReportSettingsUI 
+            bailleurId={selectedBailleur.id} 
+            defaultEmail={selectedBailleur.email || ''} 
+          />
+
           {reportDocuments.length === 0 ? (
             <EmptyDrawerState
               title="Aucun rapport généré pour ce bailleur"

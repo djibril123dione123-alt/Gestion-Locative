@@ -59,7 +59,7 @@ async function sendSms(to: string, message: string): Promise<string> {
   const token = await getOrangeToken();
   // Normaliser le numéro : +221XXXXXXXXX
   const phone = to.startsWith("+") ? to : `+221${to.replace(/\D/g, "").slice(-9)}`;
-  const senderEncoded = encodeURIComponent(`tel:+221${ORANGE_SENDER}`);
+  const senderEncoded = encodeURIComponent(ORANGE_SENDER);
 
   const res = await fetch(
     `https://api.orange.com/smsmessaging/v1/outbound/${senderEncoded}/requests`,
@@ -69,7 +69,7 @@ async function sendSms(to: string, message: string): Promise<string> {
       body: JSON.stringify({
         outboundSMSMessageRequest: {
           address: [`tel:${phone}`],
-          senderAddress: `tel:+221${ORANGE_SENDER}`,
+          senderAddress: ORANGE_SENDER,
           outboundSMSTextMessage: { message },
           receiptRequest: { notifyURL: "", callbackData: "" },
         },

@@ -1,8 +1,68 @@
+[functions.analytics-worker]
+verify_jwt = true
+
+[functions.cancel-paiement]
+verify_jwt = true
+
+[functions.close-agency-account]
+verify_jwt = true
+
+[functions.create-contrat]
+verify_jwt = true
+
+[functions.create-paiement]
+verify_jwt = true
+
+[functions.export-accounting-ledger]
+verify_jwt = true
+
+[functions.finalize-managed-document]
+verify_jwt = true
+
+[functions.finance-worker]
+verify_jwt = true
+
+[functions.initiate-payment]
+verify_jwt = true
+
+[functions.manage-agency-identity-asset]
+verify_jwt = true
+
+[functions.notification-worker]
+verify_jwt = true
+
 [functions.paydunya-webhook]
 verify_jwt = false
 
-[functions.verify-document]
-verify_jwt = false
+[functions.renew-contrat]
+verify_jwt = true
 
 [functions.rental-due-command]
 verify_jwt = true
+
+[functions.send-email]
+verify_jwt = true
+
+[functions.send-sms]
+verify_jwt = true
+
+[functions.senepay-checkout]
+verify_jwt = true
+
+[functions.senepay-webhook]
+verify_jwt = false
+
+[functions.subscription-scheduler]
+verify_jwt = true
+
+[functions.update-bailleur-lifecycle]
+verify_jwt = true
+
+[functions.update-contrat]
+verify_jwt = true
+
+[functions.update-paiement]
+verify_jwt = true
+
+[functions.verify-document]
+verify_jwt = false

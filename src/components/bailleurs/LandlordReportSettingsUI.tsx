@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Switch } from '@headlessui/react';
-import { Mail, Clock, Calendar, RefreshCcw, Save } from 'lucide-react';
+import { Mail, Calendar, RefreshCcw, Save } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export function LandlordReportSettingsUI({ bailleurId, defaultEmail }: { bailleurId: string; defaultEmail: string }) {

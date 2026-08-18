@@ -1812,11 +1812,11 @@ function PropertyDrawer({
               <Pencil className="h-3.5 w-3.5 text-slate-400" />
               Modifier le bien
             </button>
-            <button type="button" onClick={() => onNavigate('/paiements')} className="inline-flex !h-7 !min-h-7 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
+            <button type="button" onClick={() => onNavigate(`/paiements?bienId=${property.id}`)} className="inline-flex !h-7 !min-h-7 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
               <Wallet className="h-3.5 w-3.5 text-slate-400" />
               Paiements liés
             </button>
-            <button type="button" onClick={() => onNavigate('/documents')} className="inline-flex !h-7 !min-h-7 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 col-span-2">
+            <button type="button" onClick={() => onNavigate(`/documents?bienId=${property.id}`)} className="inline-flex !h-7 !min-h-7 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[0.65rem] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 col-span-2">
               <FileText className="h-3.5 w-3.5 text-slate-400" />
               Documents associés
             </button>
@@ -1871,7 +1871,7 @@ function PropertyDrawer({
                     </div>
                     <button
                       type="button"
-                      onClick={() => { window.location.hash = '#/documents'; }}
+                      onClick={() => { window.location.hash = `#/documents?bienId=${property.id}`; }}
                       className="inline-flex !h-7 !min-h-7 items-center gap-1 rounded-lg bg-emerald-800 px-2.5 text-[0.68rem] font-semibold text-white shadow-sm hover:bg-emerald-700"
                     >
                       + Coffre GED
@@ -1886,6 +1886,53 @@ function PropertyDrawer({
                       subtitle: <span className="font-medium text-slate-500">PDF · {formatDate(document.created_at)}</span>,
                       onClick: () => { window.location.hash = document.id ? `#/documents?id=${document.source || 'generated'}-${document.id}` : '#/documents'; },
                     }))} />
+                  )}
+                </div>
+              ),
+            },
+            {
+              label: 'Paiements',
+              content: (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2 rounded-xl border border-emerald-950/10 bg-emerald-50/40 p-2.5">
+                    <div>
+                      <p className="text-xs font-bold text-slate-800">Encaissements du bien</p>
+                      <p className="text-[0.62rem] text-slate-600">
+                        {summary.payments.length} paiement{summary.payments.length > 1 ? 's' : ''} enregistré{summary.payments.length > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate(`/paiements?bienId=${property.id}`)}
+                      className="inline-flex !h-7 !min-h-7 items-center gap-1 rounded-lg bg-emerald-800 px-2.5 text-[0.68rem] font-semibold text-white shadow-sm hover:bg-emerald-700"
+                    >
+                      Voir tout
+                    </button>
+                  </div>
+                  {summary.payments.length === 0 ? (
+                    <SoftEmpty text="Aucun paiement enregistré pour ce bien." />
+                  ) : (
+                    <CompactList rows={summary.payments.slice(0, 8).map((payment) => {
+                      const contract = summary.contracts.find((c) => c.id === payment.contrat_id);
+                      const unit = summary.units.find((u) => contract && u.id === contract.unite_id);
+                      const statusLabel =
+                        payment.statut === 'paye' ? 'Soldé'
+                        : payment.statut === 'partiel' ? 'Partiel'
+                        : payment.statut === 'annule' ? 'Annulé'
+                        : payment.statut ?? '?';
+                      return {
+                        icon: Wallet,
+                        title: payment.mois_concerne ? payment.mois_concerne.slice(0, 7) : 'Paiement',
+                        subtitle: (
+                          <span className="font-medium text-slate-500">
+                            <MoneyText value={payment.montant_total ?? 0} compact={false} />
+                            {unit ? ` · ${unit.nom}` : ''}
+                            {' · '}{statusLabel}
+                          </span>
+                        ),
+                        onClick: () => onNavigate(`/paiements?bienId=${property.id}`),
+                      };
+                    })} />
                   )}
                 </div>
               ),

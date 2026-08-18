@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Table } from '../components/ui/Table';
@@ -102,6 +103,10 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     },
   });
 
+  // Filtre contextuel par bien (depuis Patrimoine via ?bienId=)
+  const [searchParams] = useSearchParams();
+  const bienIdFilter = searchParams.get('bienId') ?? null;
+
   const [paiements, setPaiements] = useState<PaiementRow[]>([]);
   const [contrats, setContrats] = useState<ContratRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -170,7 +175,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           const [paiementsRes, contratsRes] = await Promise.all([
             supabase
               .from('paiements')
-              .select('*, contrats(loyer_mensuel, commission, locataires(nom, prenom), unites(nom,id,immeubles(nom,bailleurs(id,nom,prenom))))')
+              .select('*, contrats(loyer_mensuel, commission, locataires(nom, prenom), unites(nom,id,immeubles(id,nom,bailleurs(id,nom,prenom))))')
               .eq('agency_id', profile.agency_id)
               .order('created_at', { ascending: false }),
             supabase
@@ -245,6 +250,10 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
     if (bailleurFilter !== 'all') {
       list = list.filter((p) => p.contrats?.unites?.immeubles?.bailleurs?.id === bailleurFilter);
     }
+    // Filtre contextuel : venu de la page Biens avec ?bienId=
+    if (bienIdFilter) {
+      list = list.filter((p) => p.contrats?.unites?.immeubles?.id === bienIdFilter);
+    }
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
       list = list.filter((p) => {
@@ -269,7 +278,7 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
       });
     }
     return list;
-  }, [paiements, statusFilter, monthFilter, bailleurFilter, searchTerm]);
+  }, [paiements, statusFilter, monthFilter, bailleurFilter, bienIdFilter, searchTerm]);
 
   const bailleurOptions = useMemo(() => {
     const map = new Map<string, string>();
@@ -870,6 +879,29 @@ export function Paiements({ embedded = false }: PaiementsProps = {}) {
           <div className="space-y-4">
             {cacheTimestamp && (
               <OfflineDataNotice cachedAt={cacheTimestamp} onRetry={loadData} retrying={loading} />
+            )}
+
+            {bienIdFilter && (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-700/20 bg-emerald-50/70 px-3.5 py-2.5 text-[0.72rem] shadow-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-800 text-white">
+                    <SlidersHorizontal className="h-2.5 w-2.5" />
+                  </span>
+                  <span className="font-semibold text-emerald-900">
+                    Filtré : paiements de ce bien uniquement
+                  </span>
+                  <span className="hidden sm:inline text-emerald-700 truncate">
+                    ({filtered.length} résultat{filtered.length > 1 ? 's' : ''})
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { window.location.hash = '#/patrimoine'; }}
+                  className="shrink-0 text-[0.68rem] font-bold text-emerald-800 underline underline-offset-2 hover:text-emerald-600 transition"
+                >
+                  ← Retour aux biens
+                </button>
+              </div>
             )}
 
             {!embedded && (

@@ -30,15 +30,7 @@ import {
   Briefcase,
   Check,
   X,
-  Clock,
-  History,
-  Shield,
-  Target,
-  UserCircle2,
-  UserPlus,
-  MoreHorizontal,
 } from 'lucide-react';
-import { MicroMetric } from '../components/ui/MicroMetric';
 import { LandlordReportSettingsUI } from '../components/bailleurs/LandlordReportSettingsUI';
 import {
   buildRapportDocument,

@@ -11,6 +11,7 @@ export interface PaiementContrats {
     nom: string;
     id: string;
     immeubles?: {
+      id?: string | null;
       nom?: string | null;
       bailleurs?: { id: string; nom: string; prenom: string } | null;
     } | null;

@@ -533,6 +533,9 @@ function OverviewSection({
   snapshot: ControlSnapshot | null;
   onOpen: (section: ControlSection) => void;
 }) {
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const { isInstalled, platform } = usePwaInstall();
+
   const cards: Array<{
     title: string;
     label: string;
@@ -622,6 +625,30 @@ function OverviewSection({
           <ControlCard key={card.title} {...card} onOpen={() => onOpen(card.target)} />
         ))}
       </div>
+
+      {!isInstalled && (
+        <div className="mt-4 rounded-xl border border-emerald-950/10 bg-gradient-to-br from-[#fffdf8] to-emerald-50/30 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Smartphone className="h-4 w-4 text-emerald-800" />
+              <h3 className="text-[0.85rem] font-extrabold text-slate-950">Application {platform === 'desktop' ? 'Bureau' : 'Mobile'}</h3>
+            </div>
+            <p className="mt-1 text-[0.7rem] text-slate-600">
+              {platform === 'desktop' 
+                ? 'Installez Samay Këur sur votre ordinateur pour y accéder plus rapidement.'
+                : 'Ajoutez Samay Këur à votre écran d\'accueil pour une expérience optimale.'}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowInstallGuide(true)}
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-emerald-700 bg-emerald-800 px-4 py-2 text-[0.75rem] font-extrabold text-white shadow-md shadow-emerald-900/20 transition hover:-translate-y-0.5 hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700/50"
+          >
+            Installer Samay Këur
+          </button>
+        </div>
+      )}
+
+      <InstallSamayKeurGuide isOpen={showInstallGuide} onClose={() => setShowInstallGuide(false)} />
     </div>
   );
 }
@@ -740,9 +767,6 @@ function PanelCard({
 }
 
 function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isIndividualOwner: boolean }) {
-  const [showInstallGuide, setShowInstallGuide] = useState(false);
-  const { isInstalled, platform } = usePwaInstall();
-
   const statuses: Array<{ label: string; value: string; icon: ComponentType<{ className?: string }> }> = [
     { label: 'Application', value: 'Opérationnelle', icon: CheckCircle2 },
     { label: 'Documents', value: 'Disponibles', icon: FileText },
@@ -819,24 +843,6 @@ function SecuritySupportSection({ role, isIndividualOwner }: { role: string; isI
       <PanelCard title="Données sensibles" eyebrow="CONFIDENTIALITÉ" icon={Activity}>
         <p>Les statuts techniques restent volontairement synthétiques : aucun secret, token ou détail interne sensible n'est exposé.</p>
       </PanelCard>
-      
-      {!isInstalled && (
-        <PanelCard title="Installer l'application" eyebrow="ACCÈS RAPIDE" icon={Smartphone}>
-          <p>
-            {platform === 'desktop' 
-              ? 'Installez Samay Këur sur votre ordinateur pour y accéder plus rapidement.'
-              : 'Ajoutez Samay Këur à votre écran d\'accueil pour une expérience optimale.'}
-          </p>
-          <button
-            onClick={() => setShowInstallGuide(true)}
-            className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[0.72rem] font-extrabold text-slate-800 shadow-2xs transition hover:bg-slate-50 hover:border-slate-300"
-          >
-            Installer Samay Këur
-          </button>
-        </PanelCard>
-      )}
-
-      <InstallSamayKeurGuide isOpen={showInstallGuide} onClose={() => setShowInstallGuide(false)} />
     </div>
   );
 }

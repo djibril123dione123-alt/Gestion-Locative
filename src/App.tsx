@@ -439,16 +439,16 @@ function AppContent() {
 
     // Logique d'affichage automatique du guide d'installation PWA
     useEffect(() => {
-        // On ne l'affiche que si l'utilisateur est bien connecté, a un profil,
-        // n'a pas refusé l'installation, et que l'on est pas sur une page spéciale (auth, accueil)
-        if (profile?.id && shouldShowInstallPrompt() && !showOnboardingWizard) {
+        // On ne l'affiche que sur le Dashboard pour ne pas interrompre un workflow critique
+        // (paiement, scan de document, édition de contrat, etc.)
+        if (profile?.id && shouldShowInstallPrompt() && !showOnboardingWizard && currentPage === 'dashboard') {
             const timer = setTimeout(() => {
                 setShowInstallGuide(true);
-            }, 30000); // 30 secondes d'utilisation avant de proposer
+            }, 30000); // 30 secondes d'utilisation sur le dashboard avant de proposer
             
             return () => clearTimeout(timer);
         }
-    }, [profile?.id, showOnboardingWizard]);
+    }, [profile?.id, showOnboardingWizard, currentPage]);
 
     // Priorité absolue : une session de récupération de mot de passe ne doit
     // jamais laisser passer vers le tableau de bord, une invitation, ou toute

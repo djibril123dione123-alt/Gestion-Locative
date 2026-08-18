@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   Archive,
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { BrandLogo, BrandMark } from '../components/brand/BrandLogo';
 import { PRICING_PLAN_DEFINITIONS } from '../lib/pricingCatalog';
+import { trackPageView, trackEvent } from '../lib/analytics';
 
 interface LandingPageProps {
   onNavigate?: (page: string) => void;
@@ -105,8 +106,8 @@ const financeRows = [
 ];
 
 const documentRows = [
-  ['Quittance mai 2026', 'QR vérifié', 'Version actuelle'],
-  ['Contrat LOC-2026-04', 'Archivé', 'Signatures prêtes'],
+  ['Quittance mai 2026', 'QR de vérification', 'Version actuelle'],
+  ['Contrat LOC-2026-04', 'Enregistrement confirmé', 'Signatures prêtes'],
   ['Rapport bailleur', 'Données à jour', 'PDF partageable'],
 ];
 
@@ -117,9 +118,9 @@ const landlordRows = [
 ];
 
 const terrainFeatures = [
-  { title: 'Mobile-first', text: 'Consulter un locataire, valider un paiement et envoyer une quittance depuis le terrain.', icon: Smartphone },
-  { title: 'Mauvais réseau', text: 'Les opérations importantes peuvent attendre la reconnexion sans casser le travail.', icon: Wifi },
-  { title: 'Mobile money', text: 'Une logique locale compatible avec Wave, Orange Money, Djamo et les usages terrain.', icon: WalletCards },
+  { title: 'Mobile-first', text: 'Interface responsive optimisée pour le terrain. Consultez un locataire et validez un paiement en déplacement.', icon: Smartphone },
+  { title: 'Mauvais réseau', text: 'Une partie de la consultation bénéficie de cache local. Les opérations s’adaptent aux conditions réelles.', icon: Wifi },
+  { title: 'Modes de règlement', text: 'Espèces, Wave, Orange Money, virement : gardez la trace de chaque moyen de paiement.', icon: WalletCards },
   { title: 'WhatsApp utile', text: 'Le canal reste pratique, mais les preuves ne restent plus enfermées dedans.', icon: MessageCircle },
 ];
 
@@ -145,6 +146,11 @@ const plans = PRICING_PLAN_DEFINITIONS.map((plan) => ({
 
 const faqs = [
   {
+    question: 'Puis-je essayer Samay Këur avant de m’abonner ?',
+    answer:
+      'Oui. Les nouveaux comptes éligibles bénéficient de 30 jours d’essai gratuit, sans engagement. Vous pouvez ainsi tester la plateforme avant de choisir l’abonnement adapté à votre activité.',
+  },
+  {
     question: 'Samay Këur remplace-t-il Excel et WhatsApp ?',
     answer:
       'Il ne force pas vos équipes à changer brutalement leurs habitudes. Il centralise les données critiques pour éviter que les paiements, preuves et documents restent dispersés.',
@@ -157,7 +163,7 @@ const faqs = [
   {
     question: 'Que se passe-t-il si la connexion est mauvaise ?',
     answer:
-      'L’expérience est pensée pour le terrain : l’application garde les informations utiles accessibles et peut synchroniser les opérations dès le retour réseau.',
+      'L’expérience web est responsive et pensée pour le terrain. Bien qu’une connexion soit requise, certaines données bénéficient d’un cache local pour faciliter la consultation.',
   },
   {
     question: 'Les données d’une agence sont-elles isolées ?',
@@ -604,8 +610,13 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
 
   const goSignup = () => onNavigate?.('auth');
   const goDemo = () => {
+    trackEvent('demo_click');
     window.location.href = whatsappHref('Bonjour, je souhaite une démo de Samay Këur pour mon agence.');
   };
+
+  useEffect(() => {
+    trackPageView('landing_view');
+  }, []);
 
   return (
     <div className="min-h-screen [overflow-x:clip] bg-[#f5f1e7] text-slate-950 [overscroll-behavior-y:auto] [touch-action:auto]">
@@ -663,9 +674,12 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               <motion.p variants={fadeUp} className="mt-6 max-w-2xl text-lg font-semibold leading-8 text-emerald-50/78 sm:text-xl">
                 Samay Këur centralise encaissements, impayés, contrats, documents et rapports bailleurs dans une plateforme pensée pour l’immobilier africain moderne.
               </motion.p>
-              <motion.div variants={fadeUp} className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <PremiumButton onClick={goDemo}>Demander une démo</PremiumButton>
-                <PremiumButton variant="secondary" onClick={() => scrollToId('plateforme')}>Voir comment ça marche</PremiumButton>
+              <motion.div variants={fadeUp} className="mt-8 flex flex-col items-start gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <PremiumButton onClick={goSignup}>Commencer gratuitement</PremiumButton>
+                  <PremiumButton variant="secondary" onClick={goDemo}>Demander une démo</PremiumButton>
+                </div>
+                <p className="text-sm font-bold text-emerald-50/60">30 jours d'essai gratuit · Sans engagement</p>
               </motion.div>
               <motion.div variants={fadeUp} className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
                 {[
@@ -1029,9 +1043,12 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-emerald-50/70">
                 Vos loyers, documents, équipes et bailleurs méritent une plateforme qui donne confiance dès le premier écran.
               </p>
-              <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-                <PremiumButton onClick={goDemo}>Demander une démo</PremiumButton>
-                <PremiumButton variant="secondary" onClick={goSignup}>Démarrer maintenant</PremiumButton>
+              <div className="mt-8 flex flex-col items-center justify-center gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <PremiumButton onClick={goSignup}>Commencer gratuitement</PremiumButton>
+                  <PremiumButton variant="secondary" onClick={goDemo}>Demander une démo</PremiumButton>
+                </div>
+                <p className="text-sm font-bold text-emerald-50/60">30 jours d'essai gratuit · Sans engagement</p>
               </div>
             </div>
           </Reveal>

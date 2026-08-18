@@ -26,7 +26,9 @@ const CORS = {
 
 const ORANGE_CLIENT_ID = Deno.env.get("ORANGE_SMS_CLIENT_ID") ?? "";
 const ORANGE_CLIENT_SECRET = Deno.env.get("ORANGE_SMS_CLIENT_SECRET") ?? "";
-const ORANGE_SENDER = Deno.env.get("ORANGE_SMS_SENDER") ?? "SamayKeur";
+const ORANGE_SENDER_ADDRESS = Deno.env.get("ORANGE_SMS_SENDER_ADDRESS") ?? ""; // Ex: tel:+22100000000 ou devapi shortcode
+const ORANGE_SENDER_NAME = Deno.env.get("ORANGE_SMS_SENDER_NAME") ?? "SamayKeur";
+const ORANGE_WEBHOOK_SECRET = Deno.env.get("ORANGE_WEBHOOK_SECRET") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -59,18 +61,23 @@ async function getOrangeToken(): Promise<string> {
 async function sendSms(to: string, message: string, notifId: string): Promise<string> {
   const token = await getOrangeToken();
   
-  // Normaliser le numéro
+  // Normaliser le numéro (Sénégal uniquement selon les règles métier)
   const cleaned = to.replace(/\D/g, "");
-  // Si le numéro commence déjà par l'indicatif (ex: 221...), on le garde, sinon on suppose le Sénégal (+221)
-  const phone = cleaned.startsWith("221") || cleaned.startsWith("225") || cleaned.startsWith("223") 
-    ? `+${cleaned}` 
-    : `+221${cleaned.slice(-9)}`;
-
-  if (!/^\+[1-9]\d{10,14}$/.test(phone)) {
-    throw new Error(`Invalid phone number format: ${phone}`);
+  let phone = "";
+  
+  // Extraire les 9 derniers chiffres (le numéro local)
+  const localNum = cleaned.length >= 9 ? cleaned.slice(-9) : cleaned;
+  
+  // Vérifier strictement le format sénégalais (77, 78, 76, 75, 70)
+  if (!/^(77|78|76|75|70)\d{7}$/.test(localNum)) {
+    throw new Error(`VALIDATION_ERROR: Format de numéro invalide pour le Sénégal: ${to}`);
   }
+  
+  phone = `+221${localNum}`;
 
-  const senderEncoded = encodeURIComponent(ORANGE_SENDER);
+  // Si on n'a pas de SENDER_ADDRESS configuré (ex: environnement dev), on fallback sur le format Orange Dev ou un numéro bidon
+  const senderAddress = ORANGE_SENDER_ADDRESS || `tel:+22100000000`;
+  const senderEncoded = encodeURIComponent(senderAddress);
 
   const res = await fetch(
     `https://api.orange.com/smsmessaging/v1/outbound/${senderEncoded}/requests`,
@@ -80,11 +87,11 @@ async function sendSms(to: string, message: string, notifId: string): Promise<st
       body: JSON.stringify({
         outboundSMSMessageRequest: {
           address: [`tel:${phone}`],
-          senderAddress: ORANGE_SENDER,
-          senderName: "Samay Keur",
+          senderAddress: senderAddress,
+          senderName: ORANGE_SENDER_NAME,
           outboundSMSTextMessage: { message },
           receiptRequest: { 
-            notifyURL: `${SUPABASE_URL}/functions/v1/orangesms-webhook`, 
+            notifyURL: `${SUPABASE_URL}/functions/v1/orangesms-webhook?token=${encodeURIComponent(ORANGE_WEBHOOK_SECRET)}`, 
             callbackData: notifId 
           },
         },
@@ -167,16 +174,24 @@ serve(async (req) => {
         await supabase.from("notification_queue").update({
           status: "sent",
           sent_at: new Date().toISOString(),
-          provider_id: providerId,
+          provider: "orange_sms",
+          provider_message_id: providerId,
         }).eq("id", notif.id);
         sent++;
       } catch (smsErr) {
         const errMsg = String(smsErr);
+        const isValidationError = errMsg.includes('VALIDATION_ERROR:');
+        
+        // Exponentiel backoff: 15min, 30min, 60min, etc.
+        const backoffMinutes = 15 * Math.pow(2, notif.retry_count ?? 0);
+        
         await supabase.from("notification_queue").update({
-          status: notif.retry_count >= 3 ? "failed" : "pending",
+          status: (isValidationError || notif.retry_count >= 3) ? "failed" : "pending",
           error: errMsg,
+          provider: "orange_sms",
+          failed_at: (isValidationError || notif.retry_count >= 3) ? new Date().toISOString() : null,
           retry_count: (notif.retry_count ?? 0) + 1,
-          scheduled_for: new Date(Date.now() + 10 * 60_000).toISOString(),
+          scheduled_for: new Date(Date.now() + backoffMinutes * 60_000).toISOString(),
         }).eq("id", notif.id);
         failed++;
         logError("send-sms", "SMS error for " + notif.id, errMsg);

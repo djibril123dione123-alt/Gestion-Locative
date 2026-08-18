@@ -1,4 +1,4 @@
-export type PlanId = 'starter' | 'pro' | 'business' | 'enterprise';
+export type PlanId = 'pro' | 'business' | 'enterprise';
 
 export interface PricingPlanDefinition {
   id: PlanId;
@@ -48,48 +48,6 @@ export const CONTACT_EMAIL = 'contact@samaykeur.com';
  * elles restent disponibles selon le rôle, les modules activés et le type de compte.
  */
 export const PRICING_PLAN_DEFINITIONS: PricingPlanDefinition[] = [
-  {
-    id: 'starter',
-    name: 'Essentiel',
-    internalName: 'Starter',
-    audience: 'Bailleur indépendant',
-    price_xof: 5000,
-    priceLabel: '5 000 F CFA',
-    billingLabel: 'par mois',
-    positioning: 'Pour centraliser un petit patrimoine et suivre les loyers sans fichiers dispersés.',
-    outcome: 'Une gestion claire des biens, des échéances et des documents du quotidien.',
-    bestFor: 'Un propriétaire qui gère seul jusqu’à 10 unités.',
-    supportLabel: 'Support par email',
-    accent: '#475569',
-    surface: '#F8FAFC',
-    limits: {
-      max_users: 1,
-      max_immeubles: 3,
-      max_unites: 10,
-      storage_gb: 1,
-    },
-    capacities: {
-      users: '1 utilisateur',
-      immeubles: '3 immeubles',
-      unites: '10 unités',
-      storage: '1 Go',
-    },
-    features: [
-      'Biens, unités, occupants et baux',
-      'Suivi des loyers et des impayés',
-      'Quittances et documents professionnels',
-      'Dépenses, historique et tableau de bord',
-      'Support par email',
-    ],
-    value: [
-      'Centraliser les informations du patrimoine',
-      'Savoir ce qui est payé ou en retard',
-      'Retrouver les documents au même endroit',
-    ],
-    infrastructure: ['1 utilisateur', 'Jusqu’à 10 unités', '1 Go de stockage documentaire'],
-    cta: 'Choisir Essentiel',
-    ctaStyle: 'outline',
-  },
   {
     id: 'pro',
     name: 'Pro',
@@ -219,7 +177,7 @@ export const PRICING_PLAN_DEFINITIONS: PricingPlanDefinition[] = [
       'Définir les capacités et le support attendus',
     ],
     infrastructure: ['Utilisateurs à définir', 'Portefeuille à définir', 'Stockage à définir'],
-    cta: 'Parler à l’équipe',
+    cta: 'Demander une démo',
     ctaStyle: 'contact',
   },
 ];

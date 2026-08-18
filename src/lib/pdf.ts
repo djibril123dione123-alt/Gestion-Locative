@@ -1535,7 +1535,7 @@ async function drawVerificationBlock(
   doc.setFontSize(7.6);
   doc.setTextColor(...colors.primary);
   doc.text(
-    verification.registered ? 'Vérification numérique' : 'Preuve numérique indisponible',
+    verification.registered ? 'QR de vérification' : 'Preuve numérique indisponible',
     textX,
     y + 9.5,
   );

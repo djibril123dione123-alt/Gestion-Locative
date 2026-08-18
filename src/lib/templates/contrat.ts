@@ -57,7 +57,7 @@ export function generateContratText(data: ContratData): string {
   const city = data.agence.city || 'Dakar';
   const tribunal = data.agence.mention_tribunal || 'Tribunal de commerce de Dakar';
   const penalites = data.agence.mention_penalites ||
-    "À défaut de paiement d'un mois de loyer dans les délais impartis (au plus tard le 07 du mois en cours), des pénalités qui s'élèvent à 1000 F CFA par jour de retard seront appliquées pendant 03 jours. Passé ce délai, la procédure judiciaire sera enclenchée.";
+    "À défaut de paiement du loyer dans les délais impartis, des pénalités de retard pourront être appliquées conformément aux dispositions convenues entre les parties.";
   const fraisHuissier = data.agence.frais_huissier || 37500;
 
   const managerIdentity = managerIdNumber
@@ -85,7 +85,7 @@ Le présent contrat est consenti pour une durée de ${data.contrat.duree_annees}
 NB : Un mois entamé est un mois dû.
 
 ARTICLE 2 : CONGÉ
-Le congé doit être signifié par lettre recommandée avec accusé de réception. Il peut être délivré à tout moment par le locataire en respectant un préavis de deux mois courant à compter de la réception de la lettre.
+Le congé doit être signifié par lettre recommandée avec accusé de réception ou par acte extrajudiciaire. Il peut être délivré en respectant un préavis fixé d'accord parties, selon les modalités et délais légaux en vigueur, courant à compter de la réception de la notification.
 
 ARTICLE 3 : ABANDON DU DOMICILE
 Le contrat est résilié de plein droit par l'abandon de domicile du locataire.
@@ -107,7 +107,7 @@ ARTICLE 5 : OBLIGATIONS DU LOCATAIRE
 8) Laisser exécuter les travaux nécessaires.
 9) Laisser visiter le logement dans les conditions prévues.
 10) Respecter le règlement de l'immeuble.
-11) Recourir au mandataire en cas d'incident.
+11) Signaler sans délai au mandataire toute fuite, dégradation ou anomalie nécessitant une intervention.
 12) Satisfaire à toutes les charges de ville ou de police habituelles.
 
 ARTICLE 6 : MONTANT DU LOYER
@@ -120,7 +120,7 @@ Le dépôt de garantie est fixé à la somme de ${String(data.contrat.depot_gara
 ARTICLE 8 : PÉNALITÉS
 ${penalites}
 
-Il est expressément convenu qu'en cas de litige, les frais d'huissier, d'expertises et d'honoraires d'avocat, qui auraient été engagés par le bailleur et ce sur pièces justificatives, seront remboursés par le locataire.
+Il est expressément convenu qu'en cas de litige nécessitant un recouvrement forcé, les frais justifiés (huissier, etc.) engagés par le bailleur pourront être mis à la charge de la partie défaillante, conformément à la loi.
 Avec attribution exclusive de juridiction au ${tribunal}.
 
 ARTICLE 9 : ÉTAT DES LIEUX
@@ -133,7 +133,7 @@ ARTICLE 11 : ÉLECTION DE DOMICILE
 Pour l'exécution des obligations, le bailleur fait élection de domicile en sa demeure et le locataire dans les lieux loués.
 
 ARTICLE 12 : IMPORTANT
-En cas de non-paiement du loyer dans les délais impartis, une somme de ${String(fraisHuissier).replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')} F CFA est prélevée sur la caution pour les frais d'huissier afin d'assignation en expulsion, conformément à la loi sénégalaise.
+En cas de non-paiement prolongé du loyer dans les délais impartis, les frais de procédure et d'huissier (dont le montant indicatif est de ${String(fraisHuissier).replace(/[\u00A0\u202F\u2009\u2007]/g, ' ')} F CFA) pourront être appliqués conformément à la réglementation en vigueur.
 
 Fait à ${city}, le ${data.contrat.date_du_jour} en deux originaux.
 

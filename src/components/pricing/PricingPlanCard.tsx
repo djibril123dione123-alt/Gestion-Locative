@@ -107,7 +107,7 @@ export function PricingPlanCard({ plan, onSelect }: PricingPlanCardProps) {
                 : 'bg-emerald-950 text-white hover:bg-emerald-900 focus-visible:ring-emerald-700'
           }`}
         >
-          {plan.cta}
+          {plan.id === 'enterprise' ? 'Parler à l’équipe' : 'Commencer mon essai'}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </button>
         <p className={`mt-3 text-center text-xs leading-5 ${isHighlighted ? 'text-emerald-100/65' : 'text-slate-500'}`}>

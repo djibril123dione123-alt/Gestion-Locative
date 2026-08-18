@@ -27,6 +27,8 @@ export function LandlordReportSettingsUI({ bailleurId, defaultEmail }: { bailleu
             recipient_email: defaultEmail,
             frequency: 'monthly',
             send_day: 1,
+            send_time: '08:00',
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Africa/Dakar',
           });
         }
       } catch (err) {
@@ -51,6 +53,8 @@ export function LandlordReportSettingsUI({ bailleurId, defaultEmail }: { bailleu
         recipient_email: settings.recipient_email,
         frequency: settings.frequency,
         send_day: settings.send_day,
+        send_time: settings.send_time,
+        timezone: settings.timezone,
       };
 
       const { error } = await supabase.from('landlord_report_settings').upsert(payload);
@@ -129,8 +133,47 @@ export function LandlordReportSettingsUI({ bailleurId, defaultEmail }: { bailleu
               </div>
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <div>
+              <label className="block text-[10px] font-medium text-slate-600 mb-0.5">Heure d'envoi</label>
+              <div className="relative">
+                <input 
+                  type="time" 
+                  value={settings.send_time || '08:00'} 
+                  onChange={e => setSettings({ ...settings, send_time: e.target.value })}
+                  className="w-full h-7 rounded-md border border-slate-200 px-2 text-xs" 
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-medium text-slate-600 mb-0.5">Fuseau horaire</label>
+              <div className="relative">
+                <select 
+                  value={settings.timezone || 'Africa/Dakar'} 
+                  onChange={e => setSettings({ ...settings, timezone: e.target.value })}
+                  className="w-full h-7 rounded-md border border-slate-200 px-2 text-xs"
+                >
+                  <option value="Africa/Dakar">Dakar (GMT)</option>
+                  <option value="Europe/Paris">Paris (CET)</option>
+                  <option value="America/New_York">New York (EST)</option>
+                </select>
+              </div>
+            </div>
+          </div>
           
-          <div className="flex gap-2 pt-1">
+          {settings.next_send_at && (
+            <div className="mt-2 p-1.5 bg-blue-50/50 rounded text-[10px] text-blue-700 border border-blue-100 flex justify-between items-center">
+              <span>Prochain envoi automatique :</span>
+              <span className="font-semibold">
+                {new Date(settings.next_send_at).toLocaleString('fr-FR', {
+                  day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+                })}
+              </span>
+            </div>
+          )}
+          
+          <div className="flex gap-2 pt-1 mt-2">
             <button 
               onClick={handleSave} 
               disabled={saving}

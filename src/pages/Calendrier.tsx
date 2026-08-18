@@ -86,7 +86,7 @@ export function Calendrier() {
     try {
       const startStr = monthStart.toISOString().split('T')[0];
       const endStr = monthEnd.toISOString().split('T')[0];
-      const [evRes, bRes, iRes, uRes, lRes] = await Promise.all([
+      const [evRes, bRes, iRes, uRes, lRes, intRes] = await Promise.all([
         supabase
           .from('evenements')
           .select('*')
@@ -97,9 +97,38 @@ export function Calendrier() {
         supabase.from('immeubles').select('id, nom').eq('agency_id', profile.agency_id),
         supabase.from('unites').select('id, nom').eq('agency_id', profile.agency_id),
         supabase.from('locataires').select('id, nom, prenom').eq('agency_id', profile.agency_id),
+        supabase
+          .from('interventions')
+          .select('*')
+          .eq('agency_id', profile.agency_id)
+          .gte('scheduled_at', `${startStr}T00:00:00Z`)
+          .lte('scheduled_at', `${endStr}T23:59:59Z`),
       ]);
       if (myRequestId !== requestIdRef.current) return;
-      if (evRes.data) setItems(evRes.data as Evenement[]);
+      
+      let allEvents = (evRes.data || []) as Evenement[];
+      
+      // Inject interventions that have a scheduled_at date
+      if (intRes.data) {
+        const interventionsAsEvents: Evenement[] = intRes.data.map(int => {
+          const dateObj = new Date(int.scheduled_at);
+          return {
+            id: `int-${int.id}`, // prefix to avoid collision
+            titre: `Intervention: ${int.titre}`,
+            type: 'intervention',
+            date: dateObj.toISOString().split('T')[0],
+            heure: `${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`,
+            description: int.description,
+            bailleur_id: int.bailleur_id,
+            immeuble_id: int.immeuble_id,
+            unite_id: int.unite_id,
+            locataire_id: int.locataire_id
+          };
+        });
+        allEvents = [...allEvents, ...interventionsAsEvents];
+      }
+      
+      setItems(allEvents);
       if (bRes.data) setBailleurs(bRes.data);
       if (iRes.data) setImmeubles(iRes.data);
       if (uRes.data) setUnites(uRes.data);

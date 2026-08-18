@@ -59,6 +59,8 @@ const AcceptInvitation = lazy(() => import('./pages/AcceptInvitation').then(m =>
 const AuditDashboard = lazy(() => import('./pages/AuditDashboard').then(m => ({ default: m.AuditDashboard })));
 const Pricing = lazy(() => import('./pages/Pricing').then(m => ({ default: m.Pricing })));
 const VerifyDocument = lazy(() => import('./pages/VerifyDocument').then(m => ({ default: m.VerifyDocument })));
+const SharedReport = lazy(() => import('./pages/SharedReport').then(m => ({ default: m.SharedReport })));
+const TestSentry = lazy(() => import('./pages/TestSentry').then(m => ({ default: m.TestSentry })));
 
 function getExternalAuthMode(): 'login' | 'register' | null {
     const path = window.location.pathname.replace(/^\/+|\/+$/g, '').toLowerCase();
@@ -225,8 +227,12 @@ function AppContent() {
             audit: 'Journal & Audit',
             console: 'Console Administration',
         };
-        const pageTitle = routeNames[basePage] || 'Samay Këur';
-        document.title = `${pageTitle} — Gestion immobilière`;
+        const pageTitle = routeNames[basePage];
+        if (pageTitle) {
+            document.title = `${pageTitle} — Samay Këur`;
+        } else {
+            document.title = 'Logiciel de gestion locative au Sénégal | Samay Këur';
+        }
     }, [basePage]);
 
     useEffect(() => {
@@ -477,6 +483,22 @@ function AppContent() {
         return (
             <Suspense fallback={<BrandedLoader label="Vérification" />}>
                 <VerifyDocument />
+            </Suspense>
+        );
+    }
+
+    if (currentPage === 'shared/rapport') {
+        return (
+            <Suspense fallback={<BrandedLoader label="Chargement du rapport" />}>
+                <SharedReport />
+            </Suspense>
+        );
+    }
+
+    if (currentPage === 'test-sentry') {
+        return (
+            <Suspense fallback={<BrandedLoader />}>
+                <TestSentry />
             </Suspense>
         );
     }

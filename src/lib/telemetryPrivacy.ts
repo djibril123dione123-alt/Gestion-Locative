@@ -1,4 +1,4 @@
-const SENSITIVE_KEY = /(?:authorization|cookie|password|secret|token|email|phone|telephone|address|adresse|cni|passport|piece|ninea|rccm|proof|preuve|document_url|signature|stamp|api_key|service_role|client_secret|pdf|montant|financial|amount|loyer|encaisse|reliquat)/i;
+const SENSITIVE_KEY = /(?:authorization|cookie|password|secret|token|jwt|email|phone|telephone|address|adresse|cni|passport|piece|ninea|rccm|proof|preuve|document_url|signature|stamp|api_key|service_role|client_secret|pdf|montant|financial|amount|loyer|encaisse|reliquat|contrat|payload)/i;
 const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const BEARER = /bearer\s+[a-z0-9._~+/=-]+/gi;
 const LONG_TOKEN = /\b[a-z0-9_-]{32,}\b/gi;

@@ -63,15 +63,15 @@ Conditions principales :
 4) En cas de litige, le ${tribunal} est seul compétent.
 
 Pouvoirs donnés à l'agence :
-- Louer par écrit, renouveler ou résilier les locations, dresser état des lieux, exiger les réparations locatives
+- Louer par écrit, renouveler ou résilier les locations, dresser état des lieux, exiger les réparations locatives ;
 - Donner et accepter congés ;
-- Percevoir les loyers et les verser au propriétaire le 10 de chaque mois ;
-- Exercer toutes actions judiciaires/extra-judiciaires nécessaires ;
-- Entretenir l'immeuble/appartement, passer marchés, choisir prestataires en cas d'urgence ;
-- Conclure/modifier/résilier les abonnements ;
-- TOM et taxes d'ordures à la charge du propriétaire ; autres déclarations fiscales à sa charge.
+- Percevoir les loyers et les verser au propriétaire selon la périodicité convenue ;
+- Exercer toutes actions judiciaires ou extra-judiciaires nécessaires au recouvrement ;
+- Gérer l'entretien courant : le mandataire est autorisé à engager des réparations jusqu'à une limite d'autorisation définie d'accord parties. Au-delà, l'approbation du mandant est requise, sauf action d'urgence conservatoire nécessitant une intervention immédiate (avec obligation de reporting au bailleur) ;
+- Conclure, modifier ou résilier les abonnements ;
+- Déclarations fiscales et taxes (TOM) à la charge du propriétaire.
 
-Mentions supplémentaires : En cas d'assignation en expulsion d'un locataire, les frais d'huissier sont prélevés sur la caution du locataire.
+Mentions supplémentaires : Les frais justifiés de procédure pourront être mis à la charge de la partie défaillante.
 
 Fait à ${city}, le ${data.mandat.date_du_jour}
 

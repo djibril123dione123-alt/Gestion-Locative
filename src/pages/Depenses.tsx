@@ -61,9 +61,15 @@ export function Depenses() {
     onNew: (params) => {
       setEditingDepense(null);
       const bienId = params.get('bienId');
+      const montant = params.get('montant');
+      const desc = params.get('description');
       setFormData((prev) => ({
         ...prev,
         immeuble_id: bienId || prev.immeuble_id,
+        montant: montant || prev.montant,
+        description: desc || prev.description,
+        categorie: montant ? 'Maintenance' : prev.categorie,
+        affectation: bienId ? 'bien' : prev.affectation,
       }));
       setIsModalOpen(true);
     },

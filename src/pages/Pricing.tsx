@@ -10,13 +10,18 @@ import {
   PRICING_PLAN_DEFINITIONS,
   type PricingPlanDefinition,
 } from '../lib/pricingCatalog';
+import { trackPageView, trackEvent } from '../lib/analytics';
 
 interface PricingProps {
   embedded?: boolean;
   onNavigate?: (page: string) => void;
 }
 
-function openPricingConversation(message: string) {
+function openPricingConversation(message: string, eventName?: string) {
+  if (eventName) {
+    trackEvent(eventName);
+  }
+  trackEvent('whatsapp_click');
   window.open(
     `https://wa.me/${CONTACT_WHATSAPP}?text=${encodeURIComponent(message)}`,
     '_blank',
@@ -36,7 +41,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
 
   const handlePlanSelection = (plan: PricingPlanDefinition) => {
     if (plan.id === 'enterprise') {
-      openPricingConversation('Bonjour, je souhaite dimensionner un plan Entreprise Samay Këur.');
+      openPricingConversation('Bonjour, je souhaite dimensionner un plan Entreprise Samay Këur.', 'demo_click');
       return;
     }
 
@@ -48,6 +53,10 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
 
     setCheckoutPlan(plan);
   };
+
+  useEffect(() => {
+    trackPageView('pricing_view');
+  }, []);
 
   useEffect(() => {
     if (!profile) return;
@@ -65,7 +74,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
           plans={PRICING_PLAN_DEFINITIONS}
           onSelectPlan={handlePlanSelection}
           onStart={() => onNavigate?.(profile ? 'abonnement' : 'auth')}
-          onRequestDemo={() => openPricingConversation('Bonjour, je souhaite une démonstration de Samay Këur.')}
+          onRequestDemo={() => openPricingConversation('Bonjour, je souhaite une démonstration de Samay Këur.', 'demo_click')}
           compact
         />
         {checkoutPlan && (
@@ -138,7 +147,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
                 </a>
                 <button
                   type="button"
-                  onClick={() => openPricingConversation('Bonjour, je souhaite une démonstration de Samay Këur.')}
+                  onClick={() => openPricingConversation('Bonjour, je souhaite une démonstration de Samay Këur.', 'demo_click')}
                   className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/25 bg-white/5 px-5 py-2.5 text-sm font-black text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-champagne-100"
                 >
                   Demander une démonstration
@@ -146,25 +155,28 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
               </div>
             </div>
 
-            <div className="border-l border-white/20 pl-5 lg:justify-self-end">
-              <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-200">Une offre lisible</p>
-              <ul className="mt-4 space-y-3 text-sm text-emerald-50/85">
-                {[
-                  'Prix mensuels en F CFA',
-                  'Socle métier commun à tous les plans',
-                  'Plans adaptés au portefeuille et à l’équipe',
-                  'Changement de plan sans suppression de données',
-                ].map((item) => (
-                  <li key={item} className="flex gap-2.5">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-champagne-100" aria-hidden="true" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-5 text-xs font-semibold text-emerald-100/70">
-                Votre plan peut évoluer avec votre portefeuille, sans recommencer votre organisation.
-              </p>
-            </div>
+              <div className="border-l border-white/20 pl-5 lg:justify-self-end">
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-emerald-200">Essai gratuit</p>
+                <p className="mt-4 text-sm font-semibold leading-6 text-white">
+                  Testez toutes les fonctions disponibles dans votre formule pendant 30 jours, sans engagement.
+                </p>
+                <ul className="mt-4 space-y-3 text-sm text-emerald-50/85">
+                  {[
+                    'Prix mensuels en F CFA',
+                    'Socle métier commun à tous les plans',
+                    'Plans adaptés au portefeuille et à l’équipe',
+                    'Changement de plan sans suppression de données',
+                  ].map((item) => (
+                    <li key={item} className="flex gap-2.5">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-champagne-100" aria-hidden="true" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-5 text-xs font-semibold text-emerald-100/70">
+                  Votre plan peut évoluer avec votre portefeuille, sans recommencer votre organisation.
+                </p>
+              </div>
           </div>
         </section>
 
@@ -172,7 +184,7 @@ export function Pricing({ embedded = false, onNavigate }: PricingProps) {
           plans={PRICING_PLAN_DEFINITIONS}
           onSelectPlan={handlePlanSelection}
           onStart={() => onNavigate?.(profile ? 'abonnement' : 'auth')}
-          onRequestDemo={() => openPricingConversation('Bonjour, je souhaite une démonstration de Samay Këur.')}
+          onRequestDemo={() => openPricingConversation('Bonjour, je souhaite une démonstration de Samay Këur.', 'demo_click')}
         />
       </main>
 

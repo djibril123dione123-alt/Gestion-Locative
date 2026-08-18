@@ -444,16 +444,7 @@ dd {
 }
 
 .hero-product::before {
-  content: '';
-  position: absolute;
-  inset: 10% 4% 8% 0;
-  z-index: -1;
-  border-radius: 44px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(245, 130, 32, 0.12)),
-    radial-gradient(circle at 20% 0%, rgba(52, 211, 153, 0.2), transparent 22rem);
-  filter: blur(2px);
-  transform: rotate(-2deg);
+  display: none;
 }
 
 .hero-media,
@@ -910,6 +901,83 @@ dd {
   font-size: 0.72rem;
   font-weight: 950;
   letter-spacing: 0.12em;
+}
+
+.desktop-only {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .desktop-only {
+    display: block;
+  }
+}
+
+.ui-proof-mobile {
+  background: #ffffff;
+  border: 1px solid var(--mk-line-light);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  margin-top: 2rem;
+  font-family: var(--mk-font-sans);
+}
+
+@media (min-width: 1024px) {
+  .ui-proof-mobile {
+    display: none;
+  }
+}
+
+.ui-proof-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--mk-line-light);
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ui-proof-title {
+  font-weight: 700;
+  color: var(--mk-dark);
+  font-size: 1.1rem;
+}
+
+.ui-proof-badge {
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-weight: 600;
+}
+
+.ui-proof-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ui-proof-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.ui-proof-label {
+  font-size: 0.85rem;
+  color: var(--mk-gray-600);
+  margin-bottom: 0.25rem;
+}
+
+.ui-proof-value {
+  font-size: 1.5rem;
+  color: var(--mk-dark);
+  font-family: var(--mk-font-display);
+}
+
+.ui-proof-value.text-red {
+  color: #dc2626;
 }
 
 .workflow-steps strong {

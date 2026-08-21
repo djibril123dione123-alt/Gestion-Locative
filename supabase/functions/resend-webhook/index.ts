@@ -26,19 +26,22 @@ serve(async (req) => {
     }
 
     if (!RESEND_WEBHOOK_SECRET) {
-      console.warn("RESEND_WEBHOOK_SECRET is not set, skipping verification for dev");
-    } else {
-      const wh = new Webhook(RESEND_WEBHOOK_SECRET);
-      try {
-        wh.verify(payloadString, {
-          "svix-id": svixId,
-          "svix-timestamp": svixTimestamp,
-          "svix-signature": svixSignature,
-        });
-      } catch (err) {
-        console.error("Invalid svix signature:", err);
-        return json({ error: "Invalid signature" }, 400);
-      }
+      // Echouer ferme : accepter des evenements non verifies serait pire
+      // que refuser temporairement le trafic tant que le secret manque.
+      console.error("[resend-webhook] RESEND_WEBHOOK_SECRET is not configured");
+      return json({ error: "Webhook not configured" }, 500);
+    }
+
+    const wh = new Webhook(RESEND_WEBHOOK_SECRET);
+    try {
+      wh.verify(payloadString, {
+        "svix-id": svixId,
+        "svix-timestamp": svixTimestamp,
+        "svix-signature": svixSignature,
+      });
+    } catch (err) {
+      console.error("Invalid svix signature:", err);
+      return json({ error: "Invalid signature" }, 400);
     }
 
     const body = JSON.parse(payloadString);
@@ -47,6 +50,28 @@ serve(async (req) => {
 
     if (!emailId || !eventType) {
       return json({ error: "Missing email_id or type" }, 400);
+    }
+
+    // Deduplication atomique, une fois le payload valide : un svix-id
+    // deja vu n'est jamais retraite, quel que soit le nombre de
+    // livraisons ou de retries Resend. Le claim vient apres la
+    // validation du payload pour qu'un evenement malforme (400) reste
+    // rejouable plutot que d'etre silencieusement avale par le dedup.
+    const { data: claimed, error: claimError } = await supabase
+      .from("resend_webhook_events")
+      .insert({ svix_id: svixId, event_type: eventType })
+      .select("svix_id")
+      .maybeSingle();
+
+    if (claimError) {
+      if (claimError.code === "23505") {
+        return json({ message: "Event already processed" }, 200);
+      }
+      console.error("[resend-webhook] Dedup claim failed:", claimError);
+      return json({ error: "Database error" }, 500);
+    }
+    if (!claimed) {
+      return json({ message: "Event already processed" }, 200);
     }
 
     // Map Resend events to our status

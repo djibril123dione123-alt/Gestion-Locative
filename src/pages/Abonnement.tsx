@@ -101,6 +101,7 @@ function SupportLogo({ src, alt, fallback, className }: { src: string; alt: stri
 
 // Plans canoniques — source de vérité pour l'UI
 const PLAN_ICONS: Record<PlanId, typeof Zap> = {
+  starter: Zap,
   pro: Building2,
   business: BarChart3,
   enterprise: Crown,
@@ -186,7 +187,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
 
       if (subRes.data && subRes.data.length > 0) {
         const subs = subRes.data as Subscription[];
-        const activePaidSub = subs.find((sub) => sub.status === 'active' && sub.plan_id !== 'basic');
+        const activePaidSub = subs.find((sub) => sub.status === 'active' && sub.plan_id !== 'starter');
         const effectiveSub = isIndividualOwner ? activePaidSub ?? subs[0] : subs[0];
         setSubscription(effectiveSub);
         setCurrentPlan(activePaidSub?.subscription_plans ?? (!isIndividualOwner ? subs[0].subscription_plans ?? null : null));
@@ -238,8 +239,8 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
   const isSuspended = agency?.status === 'suspended' || agency?.status === 'past_due';
   const statusCfg   = STATUS_CONFIG[agency?.status ?? 'active'] ?? STATUS_CONFIG.active;
 
-  const hasActivePaidSubscription = subscription?.status === 'active' && subscription.plan_id !== 'basic';
-  const currentPlanId = isIndividualOwner && !hasActivePaidSubscription ? 'basic' : currentPlan?.id ?? agency?.plan ?? 'basic';
+  const hasActivePaidSubscription = subscription?.status === 'active' && subscription.plan_id !== 'starter';
+  const currentPlanId = isIndividualOwner && !hasActivePaidSubscription ? 'starter' : currentPlan?.id ?? agency?.plan ?? 'starter';
   const catalogPlan   = PLAN_CATALOG.find((p) => p.id === currentPlanId) ?? PLAN_CATALOG[0];
   const displayedPlanName = catalogPlan.name;
   const selectedCatalogPlan = PLAN_CATALOG.find((p) => p.id === selectedPlanId) ?? PLAN_CATALOG[1];
@@ -267,7 +268,7 @@ export function Abonnement({ embedded = false }: AbonnementProps = {}) {
 
   const openManualProof = () => {
     setProofForm({
-      plan_key: currentPlanId === 'basic' ? 'pro' : currentPlanId,
+      plan_key: currentPlanId === 'starter' ? 'pro' : currentPlanId,
       amount: String(catalogPlan.price_xof > 0 ? catalogPlan.price_xof : 15000),
       method: 'wave',
       reference: '',

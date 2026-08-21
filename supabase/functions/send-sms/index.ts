@@ -171,28 +171,31 @@ serve(async (req) => {
 
       try {
         const providerId = await sendSms(phone, message, notif.id);
-        await supabase.from("notification_queue").update({
+        const { error: sentUpdateErr } = await supabase.from("notification_queue").update({
           status: "sent",
           sent_at: new Date().toISOString(),
-          provider: "orange_sms",
-          provider_message_id: providerId,
+          provider_id: providerId,
         }).eq("id", notif.id);
+        if (sentUpdateErr) {
+          logError("send-sms", "Failed to record sent status for " + notif.id, sentUpdateErr.message);
+        }
         sent++;
       } catch (smsErr) {
         const errMsg = String(smsErr);
         const isValidationError = errMsg.includes('VALIDATION_ERROR:');
-        
+
         // Exponentiel backoff: 15min, 30min, 60min, etc.
         const backoffMinutes = 15 * Math.pow(2, notif.retry_count ?? 0);
-        
-        await supabase.from("notification_queue").update({
+
+        const { error: failUpdateErr } = await supabase.from("notification_queue").update({
           status: (isValidationError || notif.retry_count >= 3) ? "failed" : "pending",
           error: errMsg,
-          provider: "orange_sms",
-          failed_at: (isValidationError || notif.retry_count >= 3) ? new Date().toISOString() : null,
           retry_count: (notif.retry_count ?? 0) + 1,
           scheduled_for: new Date(Date.now() + backoffMinutes * 60_000).toISOString(),
         }).eq("id", notif.id);
+        if (failUpdateErr) {
+          logError("send-sms", "Failed to record failure status for " + notif.id, failUpdateErr.message);
+        }
         failed++;
         logError("send-sms", "SMS error for " + notif.id, errMsg);
       }

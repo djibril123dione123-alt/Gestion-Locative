@@ -31,7 +31,6 @@ import {
   Check,
   X,
 } from 'lucide-react';
-import { LandlordReportSettingsUI } from '../components/bailleurs/LandlordReportSettingsUI';
 import {
   buildRapportDocument,
   generateMandatBailleurPDF,
@@ -1579,10 +1578,9 @@ export function Bailleurs() {
             </div>
           </section>
 
-          <LandlordReportSettingsUI 
-            bailleurId={selectedBailleur.id} 
-            defaultEmail={selectedBailleur.email || ''} 
-          />
+          {/* LandlordReportSettingsUI masqué : dépend de la table landlord_report_settings,
+              dont la migration n'a jamais été appliquée en base (incident du 18/08/2026).
+              Ne pas réactiver avant que la migration correspondante soit auditée et appliquée. */}
 
           {reportDocuments.length === 0 ? (
             <EmptyDrawerState

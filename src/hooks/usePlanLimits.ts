@@ -13,13 +13,46 @@ export interface PlanLimits {
   refresh: () => Promise<void>;
 }
 
+/**
+ * Seul id de plan "gratuit / compte individuel" reellement present dans
+ * subscription_plans/subscriptions.plan_id (verifie en base le 2026-08-18,
+ * apres l'incident ou usePlanLimits.ts comparait a 'basic', un id qui n'a
+ * jamais existe ni en base ni dans le catalogue frontend). Ne pas modifier
+ * sans revalider contre `select id from subscription_plans`.
+ */
+export const STARTER_PLAN_ID = 'starter';
+
+export interface ServerPlanLimits {
+  max_users: number;
+  max_immeubles: number;
+  max_unites: number;
+  plan?: string;
+}
+
+/**
+ * Determine les limites effectives d'une agence. Un compte individuel
+ * (bailleur seul) sans abonnement payant actif retombe sur le plan
+ * starter par defaut ; sinon on fait confiance aux limites renvoyees par
+ * le serveur (RPC check_plan_limits).
+ */
+export function resolveEffectivePlanLimits(
+  isIndividualOwner: boolean,
+  hasPaidSubscription: boolean,
+  serverLimits: ServerPlanLimits | null | undefined,
+): ServerPlanLimits {
+  if (isIndividualOwner && !hasPaidSubscription) {
+    return { max_users: 1, max_immeubles: 3, max_unites: 10, plan: STARTER_PLAN_ID };
+  }
+  return serverLimits ?? { max_users: -1, max_immeubles: -1, max_unites: -1, plan: 'pro' };
+}
+
 export function usePlanLimits(): PlanLimits {
   const { profile, accountProfile } = useAuth();
   const [state, setState] = useState<Omit<PlanLimits, 'refresh'>>({
     canAddImmeuble: true,
     canAddUnite: true,
     canAddUser: true,
-    planName: 'starter',
+    planName: STARTER_PLAN_ID,
     usage: { users: 0, immeubles: 0, unites: 0 },
     limits: { max_users: 1, max_immeubles: 3, max_unites: 10 },
     loading: true,
@@ -41,7 +74,7 @@ export function usePlanLimits(): PlanLimits {
               .select('id, plan_id, status')
               .eq('agency_id', profile.agency_id)
               .eq('status', 'active')
-              .neq('plan_id', 'starter')
+              .neq('plan_id', STARTER_PLAN_ID)
               .limit(1)
               .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
@@ -57,11 +90,11 @@ export function usePlanLimits(): PlanLimits {
 
       const data = limitsResponse.data;
       if (data) {
-        const starterLimits = { max_users: 1, max_immeubles: 3, max_unites: 10, plan: 'starter' };
-        const effectiveLimits =
-          accountProfile.isIndividualOwner && !paidSubscriptionResponse.data
-            ? starterLimits
-            : data.limits ?? { max_users: -1, max_immeubles: -1, max_unites: -1, plan: 'pro' };
+        const effectiveLimits = resolveEffectivePlanLimits(
+          accountProfile.isIndividualOwner,
+          Boolean(paidSubscriptionResponse.data),
+          data.limits,
+        );
         const usage = data.usage ?? { users: 0, immeubles: 0, unites: 0 };
         setState({
           canAddImmeuble: effectiveLimits.max_immeubles === -1 || usage.immeubles < effectiveLimits.max_immeubles,

@@ -11,12 +11,14 @@ export interface PricingComparisonSection {
 }
 
 const INCLUDED = {
+  starter: 'Inclus',
   pro: 'Inclus',
   business: 'Inclus',
   enterprise: 'Périmètre défini',
 } satisfies Record<PlanId, string>;
 
 const BY_MODULE = {
+  starter: 'Selon configuration',
   pro: 'Selon configuration',
   business: 'Selon configuration',
   enterprise: 'Périmètre défini',
@@ -110,11 +112,11 @@ export const PRICING_COMPARISON: PricingComparisonSection[] = [
     rows: [
       {
         label: 'Utilisateurs inclus',
-        values: { pro: '5', business: '15', enterprise: 'À définir' },
+        values: { starter: '1', pro: '5', business: '15', enterprise: 'À définir' },
       },
       {
         label: 'Rôles et permissions',
-        values: { pro: 'Inclus', business: 'Inclus', enterprise: 'Périmètre défini' },
+        values: { starter: 'Compte unique', pro: 'Inclus', business: 'Inclus', enterprise: 'Périmètre défini' },
       },
       { label: 'Journal des actions', values: INCLUDED },
     ],
@@ -125,15 +127,15 @@ export const PRICING_COMPARISON: PricingComparisonSection[] = [
       { label: 'Exports disponibles dans les écrans concernés', values: INCLUDED },
       {
         label: 'Paiement en ligne de l’abonnement',
-        values: { pro: 'Selon disponibilité', business: 'Selon disponibilité', enterprise: 'À définir' },
+        values: { starter: 'Selon disponibilité', pro: 'Selon disponibilité', business: 'Selon disponibilité', enterprise: 'À définir' },
       },
       {
         label: 'API ou intégration spécifique',
-        values: { pro: 'Non commercialisé', business: 'Non commercialisé', enterprise: 'Sur étude' },
+        values: { starter: 'Non commercialisé', pro: 'Non commercialisé', business: 'Non commercialisé', enterprise: 'Sur étude' },
       },
       {
         label: 'Canal de support',
-        values: { pro: 'Prioritaire', business: 'Prioritaire', enterprise: 'Défini sur devis' },
+        values: { starter: 'Email', pro: 'Prioritaire', business: 'Prioritaire', enterprise: 'Défini sur devis' },
       },
     ],
   },
@@ -142,11 +144,11 @@ export const PRICING_COMPARISON: PricingComparisonSection[] = [
     rows: [
       {
         label: 'Unités gérées',
-        values: { pro: '100', business: '500', enterprise: 'À définir' },
+        values: { starter: '10', pro: '100', business: '500', enterprise: 'À définir' },
       },
       {
         label: 'Immeubles',
-        values: { pro: '20', business: '100', enterprise: 'À définir' },
+        values: { starter: '3', pro: '20', business: '100', enterprise: 'À définir' },
       },
     ],
   },

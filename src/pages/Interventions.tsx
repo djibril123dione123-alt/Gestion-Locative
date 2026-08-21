@@ -8,37 +8,53 @@ import { MetricCard } from '../components/ui/MetricCard';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../hooks/useToast';
+import { WizardShell } from '../components/ui/WizardShell';
 import { ToastContainer } from '../components/ui/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Wrench, Plus, AlertTriangle, CheckCircle2, Clock, Search, SlidersHorizontal, MapPin } from 'lucide-react';
+import { Wrench, Plus, ArrowRight, Phone, Building2, AlertTriangle, CheckCircle2, Clock, Search, SlidersHorizontal } from 'lucide-react';
 import { MobileFilterSheet } from '../components/ui/MobileFilterSheet';
+import { ensureE164, formatCurrency, formatInternationalPhone, getInternationalPhoneHref } from '../lib/formatters';
+import { PhoneInput } from '../components/ui/PhoneInput';
 import { PageSkeleton, SkeletonCards } from '../components/ui/Skeleton';
 import { useDirectRoute } from '../hooks/useDirectRoute';
-import { IncidentTimeline } from '../components/maintenance/IncidentTimeline';
-import { Incident, IncidentStatut, IncidentPriority, IncidentCategory, DemandePar } from '../types/maintenance';
-import { WizardShell } from '../components/ui/WizardShell';
-import { formatCurrency, formatInternationalPhone, ensureE164 } from '../lib/formatters';
-import { PhoneInput } from '../components/ui/PhoneInput';
-import { format, parseISO } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
-const statusMap: Record<IncidentStatut, { label: string, color: string }> = {
-  signale: { label: 'Signalé', color: 'bg-slate-100 text-slate-800 border-slate-200' },
-  a_qualifier: { label: 'À qualifier', color: 'bg-amber-100 text-amber-800 border-amber-200' },
-  planifie: { label: 'Planifié', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  devis_a_valider: { label: 'Devis à valider', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  autorise: { label: 'Autorisé', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  en_cours: { label: 'En cours', color: 'bg-orange-100 text-orange-800 border-orange-200' },
-  resolu: { label: 'Résolu', color: 'bg-green-100 text-green-800 border-green-200' },
-  annule: { label: 'Annulé', color: 'bg-red-100 text-red-800 border-red-200' },
-};
+type Statut = 'a_faire' | 'en_cours' | 'termine';
+type Urgence = 'urgente' | 'normale' | 'basse';
+type Categorie = 'plomberie' | 'electricite' | 'peinture' | 'serrurerie' | 'climatisation' | 'autre';
+type DemandePar = 'locataire' | 'bailleur' | 'agent';
+type UrgenceFilter = 'all' | Urgence;
+type CategorieFilter = 'all' | Categorie;
 
-const priorityColors: Record<IncidentPriority, string> = {
+interface Intervention {
+  id: string;
+  titre: string;
+  description: string | null;
+  immeuble_id: string | null;
+  unite_id: string | null;
+  categorie: Categorie | null;
+  urgence: Urgence;
+  demande_par: DemandePar | null;
+  date_demande: string;
+  date_souhaitee: string | null;
+  prestataire_nom: string | null;
+  prestataire_telephone: string | null;
+  cout_estime: number | null;
+  statut: Statut;
+  immeubles?: { nom: string };
+  unites?: { nom: string };
+}
+
+const urgenceColors: Record<Urgence, string> = {
   urgente: 'bg-red-100 text-red-800 border-red-300',
-  haute: 'bg-orange-100 text-orange-800 border-orange-300',
-  normale: 'bg-slate-100 text-slate-700 border-slate-300',
-  basse: 'bg-slate-50 text-slate-500 border-slate-200',
+  normale: 'bg-orange-100 text-orange-800 border-orange-300',
+  basse: 'bg-slate-100 text-slate-700 border-slate-300',
 };
+
+const colonnes: { id: Statut; label: string; bg: string }[] = [
+  { id: 'a_faire', label: 'À faire', bg: 'bg-slate-50' },
+  { id: 'en_cours', label: 'En cours', bg: 'bg-blue-50' },
+  { id: 'termine', label: 'Terminé', bg: 'bg-green-50' },
+];
 
 export function Interventions() {
   const { profile, user } = useAuth();
@@ -47,45 +63,41 @@ export function Interventions() {
   const { clearDirectRouteParams } = useDirectRoute({
     onNew: (params) => {
       const bienId = params.get('bienId');
-      const uniteId = params.get('uniteId');
-      const description = params.get('description');
-      setForm((prev) => ({ 
-        ...prev, 
-        immeuble_id: bienId || prev.immeuble_id,
-        unite_id: uniteId || prev.unite_id,
-        description: description || prev.description,
-      }));
-      setIsOpenCreate(true);
+      setForm((prev) => ({ ...prev, immeuble_id: bienId || prev.immeuble_id }));
+      setIsOpen(true);
     },
   });
 
-  const [items, setItems] = useState<Incident[]>([]);
+  const [items, setItems] = useState<Intervention[]>([]);
   const [immeubles, setImmeubles] = useState<{ id: string; nom: string }[]>([]);
   const [unites, setUnites] = useState<{ id: string; nom: string; immeuble_id: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Modals
-  const [isOpenCreate, setIsOpenCreate] = useState(false);
-  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
-  
+  const [isOpen, setIsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Filters
+  // Toolbar & filtres
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterUrgence, setFilterUrgence] = useState<'all' | IncidentPriority>('all');
-  const [filterStatut, setFilterStatut] = useState<'all' | IncidentStatut | 'ouverts'>('ouverts');
+  const [filterUrgence, setFilterUrgence] = useState<UrgenceFilter>('all');
+  const [filterCategorie, setFilterCategorie] = useState<CategorieFilter>('all');
+  const [filterImmeuble, setFilterImmeuble] = useState<string>('all');
+  const [filterStatut, setFilterStatut] = useState<'all' | Statut>('all');
   const [showFilters, setShowFilters] = useState(false);
-  const activeFilterCount = (filterUrgence !== 'all' ? 1 : 0);
+  const activeFilterCount = (filterUrgence !== 'all' ? 1 : 0) + (filterCategorie !== 'all' ? 1 : 0) + (filterImmeuble !== 'all' ? 1 : 0);
+  const [activeColumn, setActiveColumn] = useState<Statut>('a_faire');
 
   const [form, setForm] = useState({
     titre: '',
     description: '',
     immeuble_id: '',
     unite_id: '',
-    categorie: 'autre' as IncidentCategory,
-    urgence: 'normale' as IncidentPriority,
+    categorie: 'autre' as Categorie,
+    urgence: 'normale' as Urgence,
     demande_par: 'locataire' as DemandePar,
     date_demande: new Date().toISOString().split('T')[0],
+    date_souhaitee: '',
+    prestataire_nom: '',
+    prestataire_telephone: '',
+    cout_estime: '',
   });
 
   const load = useCallback(async () => {
@@ -97,31 +109,26 @@ export function Interventions() {
           .from('interventions')
           .select('*, immeubles(nom), unites(nom)')
           .eq('agency_id', profile.agency_id)
-          .order('created_at', { ascending: false }),
+          .order('date_demande', { ascending: false }),
         supabase.from('immeubles').select('id, nom').eq('agency_id', profile.agency_id),
         supabase.from('unites').select('id, nom, immeuble_id').eq('agency_id', profile.agency_id),
       ]);
-      if (intRes.data) setItems(intRes.data as unknown as Incident[]);
+      if (intRes.data) setItems(intRes.data as unknown as Intervention[]);
       if (immRes.data) setImmeubles(immRes.data);
       if (unitesRes.data) setUnites(unitesRes.data);
-      
-      // Update selected incident if it's currently open
-      if (selectedIncident) {
-        const updated = intRes.data?.find(i => i.id === selectedIncident.id);
-        if (updated) setSelectedIncident(updated as unknown as Incident);
-      }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      const msg = err instanceof Error ? err.message : 'Erreur';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
-  }, [profile?.agency_id, toast, selectedIncident]);
+  }, [profile?.agency_id, toast]);
 
   useEffect(() => {
     if (profile?.agency_id) load();
   }, [profile?.agency_id, load]);
 
-  const submitCreate = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile?.agency_id) return;
     setSubmitting(true);
@@ -136,90 +143,110 @@ export function Interventions() {
         urgence: form.urgence,
         demande_par: form.demande_par,
         date_demande: form.date_demande,
-        statut: 'signale',
-        approval_required: false,
-        approval_status: 'pending',
+        date_souhaitee: form.date_souhaitee || null,
+        prestataire_nom: form.prestataire_nom.trim() || null,
+        prestataire_telephone: form.prestataire_telephone.trim() ? ensureE164(form.prestataire_telephone) : null,
+        cout_estime: form.cout_estime ? parseFloat(form.cout_estime) : null,
+        statut: 'a_faire',
         created_by: user?.id,
       });
       if (error) throw error;
-      toast.success('Incident signalé avec succès');
-      setIsOpenCreate(false);
+      toast.success('Intervention créée avec succès');
+      setIsOpen(false);
       setForm({
-        titre: '', description: '', immeuble_id: '', unite_id: '',
-        categorie: 'autre', urgence: 'normale', demande_par: 'locataire',
+        titre: '',
+        description: '',
+        immeuble_id: '',
+        unite_id: '',
+        categorie: 'autre',
+        urgence: 'normale',
+        demande_par: 'locataire',
         date_demande: new Date().toISOString().split('T')[0],
+        date_souhaitee: '',
+        prestataire_nom: '',
+        prestataire_telephone: '',
+        cout_estime: '',
       });
       load();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Erreur');
+      const msg = err instanceof Error ? err.message : 'Erreur';
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
+  const move = async (id: string, statut: Statut) => {
+    const { error } = await supabase.from('interventions').update({ statut }).eq('id', id);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      load();
+    }
+  };
+
   const filtered = useMemo(() => {
     return items.filter((i) => {
-      if (filterStatut === 'ouverts' && (i.statut === 'resolu' || i.statut === 'annule')) return false;
-      if (filterStatut !== 'all' && filterStatut !== 'ouverts' && i.statut !== filterStatut) return false;
+      if (filterStatut !== 'all' && i.statut !== filterStatut) return false;
       if (filterUrgence !== 'all' && i.urgence !== filterUrgence) return false;
+      if (filterCategorie !== 'all' && i.categorie !== filterCategorie) return false;
+      if (filterImmeuble !== 'all' && i.immeuble_id !== filterImmeuble) return false;
       if (searchTerm) {
         const q = searchTerm.toLowerCase();
-        const matchRef = (i.reference || '').toLowerCase().includes(q);
         const matchTitre = i.titre.toLowerCase().includes(q);
         const matchDesc = (i.description || '').toLowerCase().includes(q);
-        if (!matchRef && !matchTitre && !matchDesc) return false;
+        const matchPrest = (i.prestataire_nom || '').toLowerCase().includes(q);
+        if (!matchTitre && !matchDesc && !matchPrest) return false;
       }
       return true;
     });
-  }, [items, filterStatut, filterUrgence, searchTerm]);
+  }, [items, filterStatut, filterUrgence, filterCategorie, filterImmeuble, searchTerm]);
 
   const stats = useMemo(() => {
-    const ouverts = items.filter(i => i.statut !== 'resolu' && i.statut !== 'annule').length;
-    const urgents = items.filter(i => (i.urgence === 'urgente' || i.urgence === 'haute') && i.statut !== 'resolu' && i.statut !== 'annule').length;
-    const attenteValid = items.filter(i => i.statut === 'devis_a_valider').length;
-    const resolus = items.filter(i => i.statut === 'resolu').length;
-    
-    return { ouverts, urgents, attenteValid, resolus };
+    return {
+      total: items.length,
+      aFaire: items.filter((i) => i.statut === 'a_faire').length,
+      enCours: items.filter((i) => i.statut === 'en_cours').length,
+      termine: items.filter((i) => i.statut === 'termine').length,
+      urgentes: items.filter((i) => i.urgence === 'urgente' && i.statut !== 'termine').length,
+    };
   }, [items]);
-
-  const quickChips: QuickChip[] = useMemo(() => [
-    {
-      id: 'ouverts',
-      label: 'Ouverts',
-      count: stats.ouverts,
-      isActive: filterStatut === 'ouverts',
-      onClick: () => setFilterStatut('ouverts'),
-    },
-    {
-      id: 'urgents',
-      label: 'Urgences',
-      count: stats.urgents,
-      isActive: filterUrgence === 'urgente' || filterUrgence === 'haute',
-      onClick: () => {
-        setFilterUrgence(filterUrgence === 'urgente' ? 'all' : 'urgente');
-        setFilterStatut('ouverts');
-      },
-    },
-    {
-      id: 'devis_a_valider',
-      label: 'En attente devis',
-      count: stats.attenteValid,
-      isActive: filterStatut === 'devis_a_valider',
-      onClick: () => setFilterStatut(filterStatut === 'devis_a_valider' ? 'ouverts' : 'devis_a_valider'),
-    },
-    {
-      id: 'resolus',
-      label: 'Résolus',
-      count: stats.resolus,
-      isActive: filterStatut === 'resolu',
-      onClick: () => setFilterStatut(filterStatut === 'resolu' ? 'ouverts' : 'resolu'),
-    },
-  ], [stats, filterStatut, filterUrgence]);
 
   const filteredUnites = form.immeuble_id ? unites.filter((u) => u.immeuble_id === form.immeuble_id) : unites;
 
+  const quickChips: QuickChip[] = useMemo(() => [
+    {
+      id: 'all',
+      label: 'Toutes',
+      count: items.length,
+      isActive: filterStatut === 'all',
+      onClick: () => setFilterStatut('all'),
+    },
+    {
+      id: 'a_faire',
+      label: 'À faire',
+      count: stats.aFaire,
+      isActive: filterStatut === 'a_faire',
+      onClick: () => setFilterStatut(filterStatut === 'a_faire' ? 'all' : 'a_faire'),
+    },
+    {
+      id: 'en_cours',
+      label: 'En cours',
+      count: stats.enCours,
+      isActive: filterStatut === 'en_cours',
+      onClick: () => setFilterStatut(filterStatut === 'en_cours' ? 'all' : 'en_cours'),
+    },
+    {
+      id: 'termine',
+      label: 'Terminé',
+      count: stats.termine,
+      isActive: filterStatut === 'termine',
+      onClick: () => setFilterStatut(filterStatut === 'termine' ? 'all' : 'termine'),
+    },
+  ], [items.length, stats, filterStatut]);
+
   if (loading && items.length === 0) {
-    return <PageSkeleton title="Incidents & Maintenance" variant="table" />;
+    return <PageSkeleton title="Maintenance" variant="table" />;
   }
 
   return (
@@ -227,26 +254,26 @@ export function Interventions() {
       <PremiumPageHeader
         density="compact"
         eyebrow="OPÉRATIONS TERRAIN"
-        title="Incidents & Maintenance"
-        description="Gérez les signalements, suivez les prestataires, et validez les devis de bout en bout."
+        title="Maintenance"
+        description="Pilotez les interventions, travaux et réparations terrain."
         mobileDescription="Maintenance terrain."
         primaryAction={
-          <PremiumButton variant="create" size="sm" onClick={() => setIsOpenCreate(true)} icon={<Plus className="h-4 w-4" />}>
-            Signaler un incident
+          <PremiumButton variant="create" size="sm" onClick={() => setIsOpen(true)} data-testid="button-new-intervention" icon={<Plus className="h-4 w-4" />}>
+            Nouvelle intervention
           </PremiumButton>
         }
       />
 
       <PremiumKpiGrid density="compact">
-        <MetricCard density="compact" label="Incidents ouverts" value={stats.ouverts} helper="En cours de traitement" icon={Wrench} tone="blue" />
-        <MetricCard density="compact" label="Urgences absolues" value={stats.urgents} helper="Priorité haute/urgente" icon={AlertTriangle} tone="amber" />
-        <MetricCard density="compact" label="À valider" value={stats.attenteValid} helper="Devis en attente bailleur" icon={Clock} tone="purple" />
-        <MetricCard density="compact" label="Résolus" value={stats.resolus} helper="Interventions terminées" icon={CheckCircle2} tone="green" />
+        <MetricCard density="compact" label="Total interventions" value={stats.total} helper="Demandes & tickets" icon={Wrench} tone="emerald" />
+        <MetricCard density="compact" label="À faire" value={stats.aFaire} helper="Planification requise" icon={Clock} tone="amber" />
+        <MetricCard density="compact" label="En cours" value={stats.enCours} helper="Travaux en exécution" icon={AlertTriangle} tone="blue" />
+        <MetricCard density="compact" label="Terminées" value={stats.termine} helper="Chantiers clôturés" icon={CheckCircle2} tone="green" />
       </PremiumKpiGrid>
 
       <PremiumToolbar
         density="compact"
-        ariaLabel="Filtres des incidents"
+        ariaLabel="Filtres des interventions"
         quickChips={quickChips}
         search={
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -254,7 +281,7 @@ export function Interventions() {
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
-                placeholder="Rechercher par référence, titre..."
+                placeholder="Rechercher une intervention ou prestataire..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="!min-h-8 !h-8 w-full rounded-[0.6rem] border border-emerald-950/10 bg-white/95 pl-8 pr-2.5 py-0 text-xs font-medium text-slate-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] outline-none transition focus:border-emerald-700/30 focus:ring-2 focus:ring-emerald-700/10"
@@ -265,14 +292,42 @@ export function Interventions() {
         filters={
           <div className="hidden lg:flex min-w-0 items-center gap-2">
             <SmartCombobox
-              value={filterStatut}
+              value={filterUrgence}
               options={[
-                { value: 'all', label: 'Tous statuts' },
-                { value: 'ouverts', label: 'Ouverts uniquement' },
-                ...Object.entries(statusMap).map(([k, v]) => ({ value: k, label: v.label }))
+                { value: 'all', label: 'Toute urgence' },
+                { value: 'urgente', label: 'Urgente' },
+                { value: 'normale', label: 'Normale' },
+                { value: 'basse', label: 'Basse' },
               ]}
-              onChange={(val) => setFilterStatut((val || 'ouverts') as any)}
-              placeholder="Statut"
+              onChange={(val) => setFilterUrgence((val || 'all') as UrgenceFilter)}
+              placeholder="Urgence"
+              className="w-36 shrink-0"
+              density="compact"
+            />
+            <SmartCombobox
+              value={filterCategorie}
+              options={[
+                { value: 'all', label: 'Toute catégorie' },
+                { value: 'plomberie', label: 'Plomberie' },
+                { value: 'electricite', label: 'Électricité' },
+                { value: 'peinture', label: 'Peinture' },
+                { value: 'serrurerie', label: 'Serrurerie' },
+                { value: 'climatisation', label: 'Climatisation' },
+                { value: 'autre', label: 'Autre' },
+              ]}
+              onChange={(val) => setFilterCategorie((val || 'all') as CategorieFilter)}
+              placeholder="Catégorie"
+              className="w-40 shrink-0"
+              density="compact"
+            />
+            <SmartCombobox
+              value={filterImmeuble}
+              options={[
+                { value: 'all', label: 'Tous immeubles' },
+                ...immeubles.map((i) => ({ value: i.id, label: i.nom })),
+              ]}
+              onChange={(val) => setFilterImmeuble(val || 'all')}
+              placeholder="Immeuble"
               className="w-44 shrink-0"
               density="compact"
             />
@@ -293,87 +348,244 @@ export function Interventions() {
         }
       />
 
+      <MobileFilterSheet
+        isOpen={showFilters}
+        title="Filtres maintenance"
+        onClose={() => setShowFilters(false)}
+        onReset={() => { setFilterUrgence('all'); setFilterCategorie('all'); setFilterImmeuble('all'); }}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-700">Urgence</label>
+            <SmartCombobox
+              value={filterUrgence}
+              options={[
+                { value: 'all', label: 'Toute urgence' },
+                { value: 'urgente', label: 'Urgente' },
+                { value: 'normale', label: 'Normale' },
+                { value: 'basse', label: 'Basse' },
+              ]}
+              onChange={(val) => setFilterUrgence((val || 'all') as UrgenceFilter)}
+              placeholder="Urgence"
+              fullWidth
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-700">Catégorie</label>
+            <SmartCombobox
+              value={filterCategorie}
+              options={[
+                { value: 'all', label: 'Toute catégorie' },
+                { value: 'plomberie', label: 'Plomberie' },
+                { value: 'electricite', label: 'Électricité' },
+                { value: 'peinture', label: 'Peinture' },
+                { value: 'serrurerie', label: 'Serrurerie' },
+                { value: 'climatisation', label: 'Climatisation' },
+                { value: 'autre', label: 'Autre' },
+              ]}
+              onChange={(val) => setFilterCategorie((val || 'all') as CategorieFilter)}
+              placeholder="Catégorie"
+              fullWidth
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-700">Immeuble</label>
+            <SmartCombobox
+              value={filterImmeuble}
+              options={[
+                { value: 'all', label: 'Tous immeubles' },
+                ...immeubles.map((i) => ({ value: i.id, label: i.nom })),
+              ]}
+              onChange={(val) => setFilterImmeuble(val || 'all')}
+              placeholder="Immeuble"
+              fullWidth
+            />
+          </div>
+        </div>
+      </MobileFilterSheet>
+
       {loading ? (
         <SkeletonCards count={4} />
-      ) : filtered.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-          <EmptyState icon={Wrench} title="Aucun incident" description="Tout est en ordre sur vos propriétés." />
+          <EmptyState icon={Wrench} title="Aucune intervention" description="Créez votre première fiche de maintenance." />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map(incident => (
-            <div 
-              key={incident.id} 
-              onClick={() => setSelectedIncident(incident)}
-              className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer flex flex-col h-full"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border uppercase tracking-wider ${statusMap[incident.statut].color}`}>
-                  {statusMap[incident.statut].label}
-                </span>
-                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border uppercase tracking-wider ${priorityColors[incident.urgence]}`}>
-                  {incident.urgence}
-                </span>
-              </div>
-              
-              <h3 className="font-bold text-slate-800 text-sm leading-snug line-clamp-2 mb-1">{incident.titre}</h3>
-              <p className="text-xs text-slate-500 mb-3">{incident.reference || 'INC-N/A'}</p>
+        <>
+          {/* Mobile column tabs */}
+          <div className="flex lg:hidden gap-1 bg-slate-100 p-1 rounded-xl mb-4">
+            {colonnes.map((col) => {
+              const count = filtered.filter((i) => i.statut === col.id).length;
+              return (
+                <button
+                  key={col.id}
+                  type="button"
+                  onClick={() => setActiveColumn(col.id)}
+                  className={`flex-1 text-xs font-semibold py-2 px-1 rounded-lg transition-all ${
+                    activeColumn === col.id ? 'bg-white shadow text-slate-900' : 'text-slate-500'
+                  }`}
+                >
+                  {col.label}
+                  <span className={`ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] ${
+                    activeColumn === col.id ? 'bg-orange-100 text-orange-700' : 'bg-slate-200 text-slate-500'
+                  }`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
 
-              <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
-                <div className="flex items-center gap-1.5 truncate">
-                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span className="truncate">{incident.immeubles?.nom || 'Propriété non spécifiée'}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {colonnes.map((col) => {
+              const list = filtered.filter((i) => i.statut === col.id);
+              return (
+                <div key={col.id} className={`${col.bg} rounded-2xl border border-slate-200/80 p-4 ${activeColumn === col.id ? 'block' : 'hidden'} lg:block shadow-xs`} data-testid={`column-${col.id}`}>
+                  <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-slate-200/60">
+                    <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      {col.label}
+                    </h3>
+                    <span className="bg-white border border-slate-200 text-slate-800 text-xs font-extrabold px-2.5 py-0.5 rounded-full shadow-2xs">
+                      {list.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3.5">
+                    {list.map((i) => (
+                      <div key={i.id} data-testid={`intervention-${i.id}`} className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs hover:shadow-md transition space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-bold text-slate-900 text-xs sm:text-sm leading-snug">{i.titre}</h4>
+                          <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full border uppercase shrink-0 tracking-wider ${urgenceColors[i.urgence]}`}>
+                            {i.urgence}
+                          </span>
+                        </div>
+
+                        {i.description && <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">{i.description}</p>}
+
+                        <div className="text-xs text-slate-600 space-y-1.5 pt-1 border-t border-slate-100">
+                          {(i.immeubles?.nom || i.unites?.nom) && (
+                            <p className="flex items-center gap-1.5 font-semibold text-slate-800 text-xs">
+                              <Building2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                              {[i.immeubles?.nom, i.unites?.nom].filter(Boolean).join(' - ')}
+                            </p>
+                          )}
+
+                          <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                            {i.categorie && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-semibold capitalize">
+                                {i.categorie}
+                              </span>
+                            )}
+
+                            {i.cout_estime && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-[11px]">
+                                {formatCurrency(i.cout_estime)}
+                              </span>
+                            )}
+                          </div>
+
+                          {i.prestataire_nom && (
+                            <div className="flex items-center justify-between gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200/60 mt-1">
+                              <div className="text-[11px] font-medium text-slate-700 truncate">
+                                <span className="text-slate-400">Artisan:</span> <strong className="text-slate-900">{i.prestataire_nom}</strong>
+                              </div>
+                              {i.prestataire_telephone && (
+                                <a
+                                  href={getInternationalPhoneHref(i.prestataire_telephone) ?? undefined}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold shadow-2xs transition shrink-0"
+                                  title="Appeler l'artisan"
+                                >
+                                  <Phone className="h-3 w-3" />
+                                  {formatInternationalPhone(i.prestataire_telephone)}
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions de changement de statut */}
+                        <div className="flex items-center justify-end gap-1.5 pt-2.5 border-t border-slate-100">
+                          {i.statut !== 'a_faire' && (
+                            <button
+                              type="button"
+                              onClick={() => move(i.id, 'a_faire')}
+                              className="text-[11px] px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 font-semibold text-slate-600 transition"
+                            >
+                              À faire
+                            </button>
+                          )}
+                          {i.statut !== 'en_cours' && (
+                            <button
+                              type="button"
+                              onClick={() => move(i.id, 'en_cours')}
+                              className="text-[11px] px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50/50 hover:bg-blue-100 font-bold text-blue-700 transition"
+                            >
+                              En cours
+                            </button>
+                          )}
+                          {i.statut !== 'termine' && (
+                            <button
+                              type="button"
+                              onClick={() => move(i.id, 'termine')}
+                              className="text-[11px] px-2.5 py-1 rounded-lg border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100 font-bold text-emerald-800 flex items-center gap-1 transition"
+                            >
+                              Terminer <ArrowRight className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <span className="shrink-0 pl-2">
-                  {format(parseISO(incident.date_demande), 'dd/MM/yyyy')}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
-      {/* CREATE MODAL */}
       <WizardShell
-        open={isOpenCreate}
+        open={isOpen}
         onClose={() => {
-          setIsOpenCreate(false);
+          setIsOpen(false);
           clearDirectRouteParams();
         }}
         size="simple"
         variant="classic"
-        title="Signaler un incident"
-        description="Créez un ticket d'incident pour démarrer le workflow de maintenance."
+        tone="agency"
+        eyebrow="SAMAY KËUR"
+        title="Nouvelle intervention"
+        description="Planifiez ou consignez une intervention de maintenance sur l'un de vos immeubles ou unités."
         primaryAction={
           <button
             type="button"
-            onClick={submitCreate}
+            onClick={(e) => void submit(e as unknown as React.FormEvent)}
             disabled={submitting}
-            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2 text-[11px] font-bold text-white hover:bg-emerald-800 transition disabled:opacity-50"
+            className="flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-[#0A3F30]/70 bg-gradient-to-br from-[#073728] via-[#062d23] to-[#041812] px-4 py-2 text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(6,45,35,0.18)] outline-none transition hover:-translate-y-0.5 hover:from-[#0A3F30] hover:to-[#06281F] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? 'Enregistrement…' : 'Créer l’incident'}
+            {submitting ? 'Enregistrement…' : 'Créer l’intervention'}
           </button>
         }
         secondaryAction={
           <button
             type="button"
-            onClick={() => { setIsOpenCreate(false); clearDirectRouteParams(); }}
+            onClick={() => {
+              setIsOpen(false);
+              clearDirectRouteParams();
+            }}
             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 transition"
           >
             Annuler
           </button>
         }
       >
-        <form onSubmit={submitCreate} className="space-y-4">
+        <form onSubmit={submit} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Titre de l'incident *</label>
+            <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Titre de l'intervention *</label>
             <input
               type="text"
               required
               placeholder="Ex : Fuite robinet salle de bain"
               value={form.titre}
               onChange={(e) => setForm({ ...form, titre: e.target.value })}
-              className="h-9 w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-800 shadow-xs outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+              className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-xs outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
             />
           </div>
 
@@ -421,7 +633,8 @@ export function Interventions() {
                   { value: 'climatisation', label: 'Climatisation' },
                   { value: 'autre', label: 'Autre' },
                 ]}
-                onChange={(val) => setForm({ ...form, categorie: (val || 'autre') as any })}
+                onChange={(val) => setForm({ ...form, categorie: (val || 'autre') as Categorie })}
+                placeholder="Catégorie"
                 className="w-full"
                 density="compact"
               />
@@ -432,11 +645,11 @@ export function Interventions() {
                 value={form.urgence}
                 options={[
                   { value: 'urgente', label: 'Urgente' },
-                  { value: 'haute', label: 'Haute' },
                   { value: 'normale', label: 'Normale' },
                   { value: 'basse', label: 'Basse' },
                 ]}
-                onChange={(val) => setForm({ ...form, urgence: (val || 'normale') as any })}
+                onChange={(val) => setForm({ ...form, urgence: (val || 'normale') as Urgence })}
+                placeholder="Urgence"
                 className="w-full"
                 density="compact"
               />
@@ -450,7 +663,8 @@ export function Interventions() {
                   { value: 'bailleur', label: 'Bailleur' },
                   { value: 'agent', label: 'Agence' },
                 ]}
-                onChange={(val) => setForm({ ...form, demande_par: (val || 'locataire') as any })}
+                onChange={(val) => setForm({ ...form, demande_par: (val || 'locataire') as DemandePar })}
+                placeholder="Demandeur"
                 className="w-full"
                 density="compact"
               />
@@ -460,22 +674,45 @@ export function Interventions() {
           <div>
             <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Description détaillée</label>
             <textarea
-              rows={3}
+              rows={2}
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs font-medium text-slate-800 shadow-xs outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
-              placeholder="Détaillez le problème constaté..."
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-800 shadow-xs outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+              placeholder="Détaillez le problème ou les travaux à effectuer..."
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-100 pt-3">
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Prestataire</label>
+              <input
+                type="text"
+                placeholder="Nom artisan / société"
+                value={form.prestataire_nom}
+                onChange={(e) => setForm({ ...form, prestataire_nom: e.target.value })}
+                className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-xs outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+              />
+            </div>
+            <div>
+              <PhoneInput
+                label="Téléphone prestataire"
+                value={form.prestataire_telephone}
+                onChange={(value) => setForm({ ...form, prestataire_telephone: value })}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold text-slate-600 mb-1.5">Coût estimé (FCFA)</label>
+              <input
+                type="number"
+                placeholder="0"
+                value={form.cout_estime}
+                onChange={(e) => setForm({ ...form, cout_estime: e.target.value })}
+                className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-xs outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-900/10"
+              />
+            </div>
           </div>
         </form>
       </WizardShell>
-
-      <IncidentTimeline 
-        isOpen={!!selectedIncident}
-        incident={selectedIncident}
-        onClose={() => setSelectedIncident(null)}
-        onUpdate={() => load()}
-      />
 
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
     </div>

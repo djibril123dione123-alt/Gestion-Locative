@@ -19,7 +19,7 @@ export function usePlanLimits(): PlanLimits {
     canAddImmeuble: true,
     canAddUnite: true,
     canAddUser: true,
-    planName: 'basic',
+    planName: 'starter',
     usage: { users: 0, immeubles: 0, unites: 0 },
     limits: { max_users: 1, max_immeubles: 3, max_unites: 10 },
     loading: true,
@@ -41,7 +41,7 @@ export function usePlanLimits(): PlanLimits {
               .select('id, plan_id, status')
               .eq('agency_id', profile.agency_id)
               .eq('status', 'active')
-              .neq('plan_id', 'basic')
+              .neq('plan_id', 'starter')
               .limit(1)
               .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
@@ -57,10 +57,10 @@ export function usePlanLimits(): PlanLimits {
 
       const data = limitsResponse.data;
       if (data) {
-        const basicLimits = { max_users: 1, max_immeubles: 3, max_unites: 10, plan: 'basic' };
+        const starterLimits = { max_users: 1, max_immeubles: 3, max_unites: 10, plan: 'starter' };
         const effectiveLimits =
           accountProfile.isIndividualOwner && !paidSubscriptionResponse.data
-            ? basicLimits
+            ? starterLimits
             : data.limits ?? { max_users: -1, max_immeubles: -1, max_unites: -1, plan: 'pro' };
         const usage = data.usage ?? { users: 0, immeubles: 0, unites: 0 };
         setState({

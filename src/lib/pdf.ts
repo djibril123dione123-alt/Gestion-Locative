@@ -82,10 +82,10 @@ const PDF_SETTINGS_FALLBACK: Partial<AgencySettings> = {
   frais_huissier: DEFAULT_AGENCY_SETTINGS.frais_huissier ?? 37500,
   mention_tribunal:
     DEFAULT_AGENCY_SETTINGS.mention_tribunal ??
-    'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
-  mention_penalites: DEFAULT_AGENCY_SETTINGS.mention_penalites ?? '',
-  mention_frais_huissier: DEFAULT_AGENCY_SETTINGS.mention_frais_huissier ?? '',
-  mention_litige: DEFAULT_AGENCY_SETTINGS.mention_litige ?? '',
+    "En cas de litige, les parties s'en remettent aux juridictions compétentes déterminées par la réglementation applicable.",
+  mention_penalites: DEFAULT_AGENCY_SETTINGS.mention_penalites || 'Les pénalités prévues au bail restent applicables.',
+  mention_frais_huissier: DEFAULT_AGENCY_SETTINGS.mention_frais_huissier || 'Les frais justifiés restent à la charge de la partie défaillante.',
+  mention_litige: DEFAULT_AGENCY_SETTINGS.mention_litige || 'Les parties privilégient une résolution amiable.',
 };
 
 // ---------------------------------------------------------------------------
@@ -1729,10 +1729,10 @@ async function buildContratDocument(
       frais_huissier: formatCurrency(settings.frais_huissier ?? 37500, devise),
       mention_tribunal:
         settings.mention_tribunal ??
-        'Avec attribution exclusive de juridiction au juge des référés du Tribunal de Dakar.',
-      mention_penalites: settings.mention_penalites ?? '',
-      mention_frais_huissier: settings.mention_frais_huissier ?? '',
-      mention_litige: settings.mention_litige ?? '',
+        "En cas de litige, les parties s'en remettent aux juridictions compétentes déterminées par la réglementation applicable.",
+      mention_penalites: settings.mention_penalites || 'Les pénalités prévues au bail restent applicables.',
+      mention_frais_huissier: settings.mention_frais_huissier || 'Les frais justifiés restent à la charge de la partie défaillante.',
+      mention_litige: settings.mention_litige || 'Les parties privilégient une résolution amiable.',
     };
 
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -2343,9 +2343,9 @@ async function buildMandatDocument(
       date_du_jour: new Date().toLocaleDateString('fr-FR'),
       mention_tribunal:
         settings.mention_tribunal ??
-        'En cas de litige, le Tribunal de commerce de Dakar est seul compétent.',
-      mention_penalites: settings.mention_penalites ?? '',
-      mention_frais_huissier: settings.mention_frais_huissier ?? '',
+        "En cas de litige, les parties s'en remettent aux juridictions compétentes déterminées par la réglementation applicable.",
+      mention_penalites: settings.mention_penalites || 'Les pénalités prévues au bail restent applicables.',
+      mention_frais_huissier: settings.mention_frais_huissier || 'Les frais justifiés restent à la charge de la partie défaillante.',
     };
 
     const pageWidth = doc.internal.pageSize.getWidth();
